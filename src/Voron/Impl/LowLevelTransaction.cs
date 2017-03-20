@@ -7,8 +7,10 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Utils;
+using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
+using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
@@ -20,18 +22,8 @@ using Voron.Util;
 
 namespace Voron.Impl
 {
-    public interface IPagerLevelTransactionState : IDisposable
-    {
-        Dictionary<AbstractPager, SparseMemoryMappedPager.TransactionState> SparsePagerTransactionState { get; set; }
-        event Action<IPagerLevelTransactionState> OnDispose;
-        void EnsurePagerStateReference(PagerState state);
-        StorageEnvironment Environment { get; }
-    }
-
     public unsafe class LowLevelTransaction : IPagerLevelTransactionState
     {
-        private const int PagesTakenByHeader = 1;
-
         public readonly AbstractPager DataPager;
         private readonly StorageEnvironment _env;
         private readonly long _id;
@@ -43,10 +35,14 @@ namespace Voron.Impl
 
         public bool FlushedToJournal;
 
+        private long _numberOfModifiedPages;
+
+        public long NumberOfModifiedPages => _numberOfModifiedPages;
+
         private readonly WriteAheadJournal _journal;
         internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
-        Dictionary<AbstractPager, SparseMemoryMappedPager.TransactionState> IPagerLevelTransactionState.SparsePagerTransactionState
+        Dictionary<AbstractPager, TransactionState> IPagerLevelTransactionState.PagerTransactionState32Bits
         {
             get;
             set;
@@ -54,6 +50,11 @@ namespace Voron.Impl
 
         internal class WriteTransactionPool
         {
+#if DEBUG
+            public int BuilderUsages;
+#endif
+            public TableValueBuilder TableValueBuilder = new TableValueBuilder();
+
             public Dictionary<long, PageFromScratchBuffer> ScratchPagesTablePool = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
             public Dictionary<long, long> DirtyOverflowPagesPool = new Dictionary<long, long>(NumericEqualityComparer.Instance);
             public HashSet<long> DirtyPagesPool = new HashSet<long>(NumericEqualityComparer.Instance);
@@ -63,6 +64,7 @@ namespace Voron.Impl
                 ScratchPagesTablePool.Clear();
                 DirtyOverflowPagesPool.Clear();
                 DirtyPagesPool.Clear();
+                TableValueBuilder.Reset();
             }
 
         }
@@ -84,8 +86,6 @@ namespace Voron.Impl
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         internal FixedSizeTree _freeSpaceTree;
 
-        private int _allocatedPagesInTransaction;
-        private int _overflowPagesInTransaction;
         private TransactionHeader* _txHeader;
 
         private readonly HashSet<PageFromScratchBuffer> _transactionPages;
@@ -163,6 +163,7 @@ namespace Voron.Impl
             foreach (var scratchPagerState in previous._pagerStates)
             {
                 scratchPagerState.AddRef();
+                _pagerStates.Add(scratchPagerState);
             }
 
             EnsureNoDuplicateTransactionId(_id);
@@ -287,7 +288,7 @@ namespace Voron.Impl
         {
             if (_state.Root != null)
             {
-                _root = new Tree(this, null, _state.Root) { Name = Constants.RootTreeNameSlice };
+                _root = new Tree(this, null, Constants.RootTreeNameSlice, _state.Root);
             }
         }
 
@@ -307,9 +308,6 @@ namespace Voron.Impl
             _txHeader->TxMarker = TransactionMarker.None;
             _txHeader->CompressedSize = 0;
             _txHeader->UncompressedSize = 0;
-
-            _allocatedPagesInTransaction = 0;
-            _overflowPagesInTransaction = 0;
         }
 
         internal HashSet<PageFromScratchBuffer> GetTransactionPages()
@@ -345,11 +343,13 @@ namespace Voron.Impl
                 int numberOfAllocatedPages;
                 newPage = AllocateOverflowRawPage(currentPage.OverflowSize, out numberOfAllocatedPages, num, currentPage, zeroPage: false);
                 pageSize = Constants.Storage.PageSize * numberOfAllocatedPages;
+                _numberOfModifiedPages += numberOfAllocatedPages;
             }
             else
             {
                 newPage = AllocatePage(1, num, currentPage, zeroPage: false); // allocate new page in a log file but with the same number			
                 pageSize = Environment.Options.PageSize;
+                _numberOfModifiedPages += 1;
             }
 
             Memory.BulkCopy(newPage.Pointer, currentPage.Pointer, pageSize);
@@ -414,6 +414,8 @@ namespace Voron.Impl
                         pagerRef.Pager = DataPager;
                     Debug.Assert(p.PageNumber == pageNumber,
                         string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
+
+                    _env.ValidatePageChecksum(pageNumber, (PageHeader*)p.Pointer);
                 }
             }
 
@@ -477,11 +479,7 @@ namespace Voron.Impl
             pageFromScratchBuffer.PreviousVersion = previousVersion;
             _transactionPages.Add(pageFromScratchBuffer);
 
-            _allocatedPagesInTransaction++;
-            if (numberOfPages > 1)
-            {
-                _overflowPagesInTransaction += (numberOfPages - 1);
-            }
+            _numberOfModifiedPages += numberOfPages;
 
             _scratchPagesTable[pageNumber] = pageFromScratchBuffer;
 
@@ -497,15 +495,18 @@ namespace Voron.Impl
                     pageFromScratchBuffer.PositionInScratchBuffer,
                     numberOfPages);
             }
-
-            var newPage = _env.ScratchBufferPool.ReadPage(this, pageFromScratchBuffer.ScratchFileNumber,
+            
+            var newPagePointer = _env.ScratchBufferPool.AcquirePagePointer(this, pageFromScratchBuffer.ScratchFileNumber,
                 pageFromScratchBuffer.PositionInScratchBuffer);
 
             if (zeroPage)
-                UnmanagedMemory.Set(newPage.Pointer, 0, Constants.Storage.PageSize * numberOfPages);
+                UnmanagedMemory.Set(newPagePointer, 0, Constants.Storage.PageSize * numberOfPages);
 
-            newPage.PageNumber = pageNumber;
-            newPage.Flags = PageFlags.Single;
+            var newPage = new Page(newPagePointer)
+            {
+                PageNumber = pageNumber,
+                Flags = PageFlags.Single
+            };
 
             TrackWritablePage(newPage);
 
@@ -540,8 +541,6 @@ namespace Voron.Impl
 
             _transactionPages.Remove(value);
             _env.ScratchBufferPool.BreakLargeAllocationToSeparatePages(value);
-            _allocatedPagesInTransaction += value.NumberOfPages - 1;
-            _overflowPagesInTransaction -= value.NumberOfPages - 1;
 
             for (int i = 0; i < value.NumberOfPages; i++)
             {
@@ -578,11 +577,6 @@ namespace Voron.Impl
             if (prevNumberOfPages == lowerNumberOfPages)
                 return;
 
-            _transactionPages.Remove(value);
-            _transactionPages.Add(new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer,
-                value.Size, lowerNumberOfPages));
-            _env.ScratchBufferPool.ReduceAllocation(value, lowerNumberOfPages);
-            _overflowPagesInTransaction -= value.NumberOfPages - lowerNumberOfPages;
             for (int i = lowerNumberOfPages; i < prevNumberOfPages; i++)
             {
                 FreePage(page.PageNumber + i);
@@ -665,15 +659,10 @@ namespace Voron.Impl
             }
 
             long numberOfOverflowPages;
-
-            if (_dirtyPages.Remove(pageNumber))
+            
+            if (_dirtyPages.Remove(pageNumber) == false && 
+                _dirtyOverflowPages.TryGetValue(pageNumber, out numberOfOverflowPages))
             {
-                _allocatedPagesInTransaction--;
-            }
-            else if (_dirtyOverflowPages.TryGetValue(pageNumber, out numberOfOverflowPages))
-            {
-                _overflowPagesInTransaction--;
-
                 _dirtyOverflowPages.Remove(pageNumber);
 
                 if (numberOfOverflowPages > 1) // prevent adding range which length is 0
@@ -702,10 +691,9 @@ namespace Voron.Impl
 
             CommitStage1_CompleteTransaction();
 
-            var totalNumberOfAllocatedPages = _allocatedPagesInTransaction + _overflowPagesInTransaction;
-            if (WriteToJournalIsRequired(totalNumberOfAllocatedPages))
+            if (WriteToJournalIsRequired())
             {
-                CommitStage2_WriteToJournal(totalNumberOfAllocatedPages);
+                CommitStage2_WriteToJournal();
             }
 
             CommitStage3_DisposeTransactionResources();
@@ -724,27 +712,32 @@ namespace Voron.Impl
             if (Flags != TransactionFlags.ReadWrite)
                 ThrowReadTranscationCannotDoAsyncCommit();
 
+            // we have to check the state before we complete the transaction
+            // because that would change whatever we need to write to the journal
+            var writeToJournalIsRequired = WriteToJournalIsRequired();
+
             CommitStage1_CompleteTransaction();
 
-            var totalNumberOfAllocatedPages = _allocatedPagesInTransaction + _overflowPagesInTransaction;
             var nextTx = new LowLevelTransaction(this);
-            AsyncCommit = WriteToJournalIsRequired(totalNumberOfAllocatedPages)
-                  ? Task.Run(() => { CommitStage2_WriteToJournal(totalNumberOfAllocatedPages); })
+            AsyncCommit = writeToJournalIsRequired
+                  ? Task.Run(() => { CommitStage2_WriteToJournal(); })
                   : Task.CompletedTask;
+
             try
             {
-
+                _env.IncrementUsageOnNewTransaction();
                 _env.WriteTransactionStarted();
                 _env.ActiveTransactions.Add(nextTx);
-
-
-
+                
                 return nextTx;
             }
             catch (Exception)
             {
                 // failure here means that we'll try to complete the current transaction normaly
                 // then throw as if commit was called normally and the next transaction failed
+
+                _env.DecrementUsageOnTransactionCreationFailure();
+                
                 EndAsyncCommit();
 
                 AsyncCommit = null;
@@ -782,25 +775,27 @@ namespace Voron.Impl
             throw new InvalidOperationException("Cannot call EndAsyncCommit when we don't have an async op running");
         }
 
-        private bool WriteToJournalIsRequired(int totalNumberOfAllocatedPages)
+        private bool WriteToJournalIsRequired()
         {
-            var writeToJournalRequired = totalNumberOfAllocatedPages > 0 || // nothing changed in this transaction
-                                                                            // allow call to writeToJournal for flushing lazy tx
-                                         (IsLazyTransaction == false && _journal?.HasDataInLazyTxBuffer() == true);
-            return writeToJournalRequired;
+            return _dirtyPages.Count > 0
+                   || _dirtyOverflowPages.Count > 0
+                   || _freedPages.Count > 0
+                   // nothing changed in this transaction
+                   // allow call to writeToJournal for flushing lazy tx
+                   || (IsLazyTransaction == false && _journal?.HasDataInLazyTxBuffer() == true);
         }
 
-        private void CommitStage2_WriteToJournal(int totalNumberOfAllocatedPages)
+        private void CommitStage2_WriteToJournal()
         {
             // In the case of non-lazy transactions, we must flush the data from older lazy transactions
             // to ensure the sequentiality of the data.
-            var numberOfWrittenPages = _journal.WriteToJournal(this, totalNumberOfAllocatedPages + PagesTakenByHeader);
+            var numberOfWrittenPages = _journal.WriteToJournal(this);
             FlushedToJournal = true;
 
             if (_requestedCommitStats != null)
             {
-                _requestedCommitStats.NumberOfModifiedPages = totalNumberOfAllocatedPages + PagesTakenByHeader;
-                _requestedCommitStats.NumberOfPagesWrittenToDisk = numberOfWrittenPages;
+                _requestedCommitStats.NumberOfModifiedPages = numberOfWrittenPages.NumberOfUncompressedPages;
+                _requestedCommitStats.NumberOf4KbsWrittenToDisk = numberOfWrittenPages.NumberOf4Kbs;
             }
         }
 
@@ -899,6 +894,7 @@ namespace Voron.Impl
         internal bool FlushInProgressLockTaken;
         private ByteString _txHeaderMemory;
         internal ImmutableAppendOnlyList<JournalFile> JournalFiles;
+        internal bool AlreadyAllowedDisposeWithLazyTransactionRunning;
 
         public void EnsurePagerStateReference(PagerState state)
         {

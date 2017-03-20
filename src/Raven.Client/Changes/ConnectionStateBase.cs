@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Changes
 {
-    public abstract class ConnectionStateBase : IChangesConnectionState
+    internal abstract class ConnectionStateBase : IChangesConnectionState
     {
         public event Action<Exception> OnError;
         private readonly Func<Task> _disconnectAction;
@@ -31,9 +31,9 @@ namespace Raven.Client.Changes
 
         public void Dec()
         {
-            lock(this)
+            lock (this)
             {
-                if(--_value == 0)
+                if (--_value == 0)
                     _disconnectAction();
             }
         }

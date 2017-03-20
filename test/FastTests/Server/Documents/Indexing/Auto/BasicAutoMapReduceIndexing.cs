@@ -1,13 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -54,14 +54,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 {
                     var queryResult = await mri.Query(new IndexQueryServerSide()
                     {
-                        Query = "Count_Range:[Lx2 TO Lx10]"
+                        Query = "Count_L_Range:[2 TO 10]"
                     }, context, OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
 
                     queryResult = await mri.Query(new IndexQueryServerSide()
                     {
-                        Query = "Count_Range:[Lx10 TO NULL]"
+                        Query = "Count_L_Range:[10 TO NULL]"
                     }, context, OperationCancelToken.None);
 
                     Assert.Equal(0, queryResult.Results.Count);
@@ -238,7 +238,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Name = "Count",
                     Highlighted = true,
                     Storage = FieldStorage.Yes,
-                    SortOption = SortOptions.NumericDefault,
+                    SortOption = SortOptions.Numeric,
                     MapReduceOperation = FieldMapReduceOperation.Count
                 };
 
@@ -250,18 +250,18 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     SortOption = SortOptions.String,
                 };
 
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(new [] { "Users" }, new[] { count }, new[] { location })));
+                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count }, new[] { location })));
 
                 var sum = new IndexField
                 {
                     Name = "Sum",
                     Highlighted = false,
                     Storage = FieldStorage.Yes,
-                    SortOption = SortOptions.NumericDefault,
+                    SortOption = SortOptions.Numeric,
                     MapReduceOperation = FieldMapReduceOperation.Sum
                 };
 
-                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition(new[] { "Users" }, new[] { count, sum }, new[] { location })));
+                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { location })));
 
                 var index2 = database.IndexStore.GetIndex(2);
                 index2.SetLock(IndexLockMode.LockedError);
@@ -280,11 +280,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(2, indexes.Count);
 
                 Assert.Equal(1, indexes[0].IndexId);
-                Assert.Equal(1, indexes[0].Definition.Collections.Length);
-                Assert.Equal("Users", indexes[0].Definition.Collections[0]);
+                Assert.Equal(1, indexes[0].Definition.Collections.Count);
+                Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
                 Assert.Equal("Count", indexes[0].Definition.MapFields["Count"].Name);
-                Assert.Equal(SortOptions.NumericDefault, indexes[0].Definition.MapFields["Count"].SortOption);
+                Assert.Equal(SortOptions.Numeric, indexes[0].Definition.MapFields["Count"].SortOption);
                 Assert.True(indexes[0].Definition.MapFields["Count"].Highlighted);
                 Assert.Equal(FieldMapReduceOperation.Count, indexes[0].Definition.MapFields["Count"].MapReduceOperation);
 
@@ -297,20 +297,20 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(SortOptions.String, definition.GroupByFields["Location"].SortOption);
 
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
-                Assert.Equal(IndexPriority.Normal, indexes[0].Priority);
+                Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
                 Assert.Equal(IndexState.Normal, indexes[0].State);
 
                 Assert.Equal(2, indexes[1].IndexId);
-                Assert.Equal(1, indexes[1].Definition.Collections.Length);
-                Assert.Equal("Users", indexes[1].Definition.Collections[0]);
+                Assert.Equal(1, indexes[1].Definition.Collections.Count);
+                Assert.Equal("Users", indexes[1].Definition.Collections.Single());
 
                 Assert.Equal(2, indexes[1].Definition.MapFields.Count);
                 Assert.Equal("Count", indexes[1].Definition.MapFields["Count"].Name);
                 Assert.Equal(FieldMapReduceOperation.Count, indexes[1].Definition.MapFields["Count"].MapReduceOperation);
-                Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields["Count"].SortOption);
+                Assert.Equal(SortOptions.Numeric, indexes[1].Definition.MapFields["Count"].SortOption);
                 Assert.Equal("Sum", indexes[1].Definition.MapFields["Sum"].Name);
                 Assert.Equal(FieldMapReduceOperation.Sum, indexes[1].Definition.MapFields["Sum"].MapReduceOperation);
-                Assert.Equal(SortOptions.NumericDefault, indexes[1].Definition.MapFields["Sum"].SortOption);
+                Assert.Equal(SortOptions.Numeric, indexes[1].Definition.MapFields["Sum"].SortOption);
 
                 definition = indexes[0].Definition as AutoMapReduceIndexDefinition;
 
@@ -321,82 +321,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(SortOptions.String, definition.GroupByFields["Location"].SortOption);
 
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
-                Assert.Equal(IndexPriority.High, indexes[1].Priority);
+                Assert.Equal(IndexPriority.High, indexes[1].Definition.Priority);
                 Assert.Equal(IndexState.Disabled, indexes[1].State);
-            }
-        }
-
-        [Fact]
-        public async Task MultipleAggregationFunctionsCanBeUsed()
-        {
-            using (var db = CreateDocumentDatabase())
-            using (var mri = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
-            {
-                new IndexField
-                {
-                    Name = "Count",
-                    MapReduceOperation = FieldMapReduceOperation.Count,
-                    Storage = FieldStorage.Yes
-                },
-                new IndexField
-                {
-                    Name = "TotalCount",
-                    MapReduceOperation = FieldMapReduceOperation.Count,
-                    Storage = FieldStorage.Yes
-                },
-                new IndexField
-                {
-                    Name = "Age",
-                    MapReduceOperation = FieldMapReduceOperation.Sum,
-                    Storage = FieldStorage.Yes
-                }
-            }, new[]
-            {
-                new IndexField
-                {
-                    Name = "Location",
-                    Storage = FieldStorage.Yes
-                },
-            }), db))
-            {
-                CreateUsers(db, 2, "Poland");
-
-                mri.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
-
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
-                {
-                    var queryResult = await mri.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
-
-                    Assert.Equal(1, queryResult.Results.Count);
-                    var result = queryResult.Results[0].Data;
-
-                    string location;
-                    Assert.True(result.TryGet("Location", out location));
-                    Assert.Equal("Poland", location);
-                    
-                    Assert.Equal(2L, result["Count"]);
-                    
-                    Assert.Equal(2L, result["TotalCount"]);
-                    
-                    Assert.Equal(41L, result["Age"]);
-                }
-
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
-                {
-                    var queryResult = await mri.Query(new IndexQueryServerSide()
-                    {
-                        Query = "Count_Range:[Lx2 TO Lx10]"
-                    }, context, OperationCancelToken.None);
-
-                    Assert.Equal(1, queryResult.Results.Count);
-
-                    queryResult = await mri.Query(new IndexQueryServerSide()
-                    {
-                        Query = "Count_Range:[Lx10 TO NULL]"
-                    }, context, OperationCancelToken.None);
-
-                    Assert.Equal(0, queryResult.Results.Count);
-                }
             }
         }
 
@@ -405,7 +331,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         {
             using (var db = CreateDocumentDatabase())
             using (var mri = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(
-                new [] { "Orders" }, 
+                "Orders", 
                 new []
                 {
                     new IndexField
@@ -482,7 +408,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        private static void CreateUsers(DocumentDatabase db, long numberOfUsers, params string[] locations)
+        public static void CreateUsers(DocumentDatabase db, long numberOfUsers, params string[] locations)
         {
             using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
             {
@@ -495,9 +421,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             ["Name"] = $"User-{i}",
                             ["Location"] = locations[i % locations.Length],
                             ["Age"] = 20 + i,
-                            [Constants.Metadata.Key] = new DynamicJsonValue
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Metadata.Collection] = "Users"
+                                [Constants.Documents.Metadata.Collection] = "Users"
                             }
                         }, $"users/{i}"))
                         {
@@ -514,7 +440,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         public async Task CanUpdateByChangingValue()
         {
             using (var db = CreateDocumentDatabase())
-            using (var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+            using (var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new IndexField
                 {
@@ -556,9 +482,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             ["Name"] = "modified",
                             ["Location"] = "Poland",
                             ["Age"] = 30,
-                            [Constants.Metadata.Key] = new DynamicJsonValue
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Metadata.Collection] = "Users"
+                                [Constants.Documents.Metadata.Collection] = "Users"
                             }
                         }, "users/0"))
                         {
@@ -589,7 +515,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         public async Task CanUpdateByChangingReduceKey()
         {
             using (var db = CreateDocumentDatabase())
-            using (var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+            using (var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new IndexField
                 {
@@ -631,9 +557,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             ["Name"] = "James",
                             ["Location"] = "Israel",
                             ["Age"] = 20,
-                            [Constants.Metadata.Key] = new DynamicJsonValue
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Metadata.Collection] = "Users"
+                                [Constants.Documents.Metadata.Collection] = "Users"
                             }
                         }, "users/0"))
                         {
@@ -667,7 +593,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         public async Task GroupByMultipleFields()
         {
             using (var db = CreateDocumentDatabase())
-            using (var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(new[] { "Orders" }, new[]
+            using (var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition("Orders", new[]
             {
                 new IndexField
                 {
@@ -752,9 +678,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                                     ["Quantity"] = 2
                                 }
                             },
-                            [Constants.Metadata.Key] = new DynamicJsonValue
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Metadata.Collection] = "Orders"
+                                [Constants.Documents.Metadata.Collection] = "Orders"
                             }
                         }, $"orders/{i}"))
                         {
@@ -769,7 +695,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         private static AutoMapReduceIndexDefinition GetUsersCountByLocationIndexDefinition()
         {
-            return new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+            return new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new IndexField
                 {

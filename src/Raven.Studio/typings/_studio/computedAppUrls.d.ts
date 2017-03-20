@@ -5,7 +5,7 @@ interface computedAppUrls {
 
     hasApiKey: KnockoutComputed<string>;
 
-    resources: KnockoutComputed<string>;
+    databases: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;
     patch: KnockoutComputed<string>;
@@ -23,8 +23,6 @@ interface computedAppUrls {
     tasks: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexPerformance: KnockoutComputed<string>;
-    indexBatchSize: KnockoutComputed<string>;
-    indexPrefetches: KnockoutComputed<string>;
     replicationPerfStats: KnockoutComputed<string>;
     sqlReplicationPerfStats: KnockoutComputed<string>;
     requestsCount: KnockoutComputed<string>;
@@ -47,8 +45,6 @@ interface computedAppUrls {
     sqlReplications: KnockoutComputed<string>;
     sqlReplicationsConnections: KnockoutComputed<string>;
     editSqlReplication: KnockoutComputed<string>;
-    scriptedIndexes: KnockoutComputed<string>;
-    customFunctionsEditor: KnockoutComputed<string>;
     databaseStudioConfig: KnockoutComputed<string>;
     statusDebug: KnockoutComputed<string>;
     statusDebugChanges: KnockoutComputed<string>;
@@ -78,31 +74,7 @@ interface computedAppUrls {
 
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
-    resourcesManagement: KnockoutComputed<string>;
+    databasesManagement: KnockoutComputed<string>;
 
-    filesystemFiles: KnockoutComputed<string>;
-    filesystemSearch: KnockoutComputed<string>;
-    filesystemSynchronization: KnockoutComputed<string>;
-    filesystemStatus: KnockoutComputed<string>;
-    filesystemTasks: KnockoutComputed<string>;
-    filesystemSettings: KnockoutComputed<string>;
-    filesystemSynchronizationDestinations: KnockoutComputed<string>;
-    filesystemConfiguration: KnockoutComputed<string>;
-    filesystemSynchronizationConfiguration: KnockoutComputed<string>;
-    filesystemVersioning: KnockoutComputed<string>;
-
-    counterStorages:KnockoutComputed<string>;
-    counterStorageCounters: KnockoutComputed<string>;
-    counterStorageReplication: KnockoutComputed<string>;
-    counterStorageTasks: KnockoutComputed<string>;
-    counterStorageStats: KnockoutComputed<string>;
-    counterStorageConfiguration: KnockoutComputed<string>;
-
-    timeSeriesType: KnockoutComputed<string>;
-    timeSeriesPoints: KnockoutComputed<string>;
-    timeSeriesStats: KnockoutComputed<string>;
-    timeSeriesConfiguration: KnockoutComputed<string>;
-    timeSeriesConfigurationTypes: KnockoutComputed<string>;
-
-    dataSubscriptions: KnockoutComputed<string>;
+    subscriptions: KnockoutComputed<string>;
 }

@@ -1,21 +1,21 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 
 class operation extends abstractNotification {
 
     operationId = ko.observable<number>();
-    progress = ko.observable<Raven.Client.Data.IOperationProgress>();
-    result = ko.observable<Raven.Client.Data.IOperationResult>();
-    status = ko.observable<Raven.Client.Data.OperationStatus>();
+    progress = ko.observable<Raven.Client.Documents.Operations.IOperationProgress>();
+    result = ko.observable<Raven.Client.Documents.Operations.IOperationResult>();
+    status = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
     killable = ko.observable<boolean>();
 
     isCompleted: KnockoutComputed<boolean>;
     isPercentageProgress: KnockoutComputed<boolean>;
 
-    constructor(resource: resource, dto: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
-        super(resource, dto);
+    constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
+        super(db, dto);
 
         this.operationId(dto.OperationId);
         this.updateWith(dto);
@@ -34,7 +34,7 @@ class operation extends abstractNotification {
     }
 
     percentageProgress(): number {
-        const progress = this.progress() as Raven.Client.Data.DeterminateProgress;
+        const progress = this.progress() as Raven.Client.Documents.Operations.DeterminateProgress;
         return Math.round(progress.Processed * 100.0 / progress.Total);
     }
 

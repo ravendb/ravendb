@@ -6,10 +6,10 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.Tests.DistinctFacets
@@ -157,7 +157,7 @@ namespace SlowTests.Tests.DistinctFacets
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6244")]
         public void CanGetDistinctResult_WithFacets_LazyAndCached()
         {
             using (var store = GetDocumentStore())

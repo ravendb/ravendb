@@ -1,18 +1,13 @@
-import database = require("models/resources/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import customColumns = require("models/database/documents/customColumns");
-import customColumnParams = require('models/database/documents/customColumnParams');
-import pagedList = require("common/pagedList");
-import getDocRefsCommand = require("commands/database/debug/getDocRefsCommand");
-import eventsCollector = require("common/eventsCollector");
 
 class statusDebugDocrefs extends viewModelBase {
 
-    currentDocRefs = ko.observable<pagedList>();
-    columns = ko.observable(customColumns.empty());
+    //TODO: use virtualGrid currentDocRefs = ko.observable<pagedList>();
+    //TODO: columns = ko.observable(customColumns.empty());
     docId = ko.observable<string>("");
     canSearch = ko.computed(() => this.docId().length > 0);
-    
+
+    /* TODO
     resultsCount = ko.computed(() => {
         if (!this.currentDocRefs())
             return -1;
@@ -31,15 +26,16 @@ class statusDebugDocrefs extends viewModelBase {
     fetchDocRefs() {
         eventsCollector.default.reportEvent("docrefs", "fetch");
         this.currentDocRefs(this.createPagedList(this.activeDatabase()));
-    }
+    }*/
 
+    /* TODO
     private createPagedList(db: database) : pagedList {
         var fetcher = (skip: number, take: number) => {
             return new getDocRefsCommand(db, this.docId(), skip, take).execute();
         }
 
         return new pagedList(fetcher);
-    }
+    }*/
 }
 
 export = statusDebugDocrefs;

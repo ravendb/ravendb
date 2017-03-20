@@ -11,7 +11,7 @@ import ace = require("ace/ace");
 
 system.debug(true);
 
-type dbCreator = (db: new (dto: Raven.Client.Data.DatabaseInfo) => any) => any;
+type dbCreator = (db: new (dto: Raven.Client.Server.Operations.DatabaseInfo) => any) => any;
 
 type viewmodelTestOpts<T> = {
     viewmodelConstructorArgs?: any[],
@@ -41,9 +41,9 @@ class Utils {
         factory = factory || (x => new x(Utils.databaseNamed("default")));
 
         return new Promise<void>((resolve, reject) => {
-            Utils.injector.require(["models/resources/database", "common/shell/activeResourceTracker"], (dbCtr: new () => any, resourceTracker: any) => {
+            Utils.injector.require(["models/resources/database", "common/shell/activeDatabaseTracker"], (dbCtr: new () => any, databaseTracker: any) => {
                 var dbInstance = factory(dbCtr);
-                resourceTracker.default.resource(dbInstance);
+                databaseTracker.default.database(dbInstance);
                 resolve();
             }, reject);
         });
@@ -53,7 +53,7 @@ class Utils {
         return {
             Name: dbName,
             Disabled: false
-        } as Raven.Client.Data.DatabaseInfo;
+        } as Raven.Client.Server.Operations.DatabaseInfo;
     }
 
     static initInjector() {
@@ -67,7 +67,7 @@ class Utils {
                 .mock('jquery', jQuery);
 
             Utils.mockCommand('commands/auth/getSingleAuthTokenCommand', () => ({ Token: "Fake Token" }));
-            Utils.mockCommand('commands/resources/getResourcesCommand', () => ({ "Databases": [] } as Raven.Client.Data.ResourcesInfo));
+            Utils.mockCommand('commands/resources/getDatabasesCommand', () => ({ "Databases": [] } as Raven.Client.Server.Operations.DatabasesInfo));
 
             return this.aceEditorFacade(Utils.injector)
                 .then(() => Utils.applyConfiguration());

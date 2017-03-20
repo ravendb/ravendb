@@ -1,26 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
 using Raven.Client;
-using Raven.Client.Connection.Async;
-using Raven.Client.Connection.Request;
-using Raven.Client.Data;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
-using Raven.Json.Linq;
-using Raven.Traffic;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Util;
 
-
-namespace TrafficRecorder
+namespace Raven.Traffic
 {
-
     public class Program
     {
         private static void Main(string[] args)
@@ -47,8 +32,7 @@ namespace TrafficRecorder
                         store = new DocumentStore
                         {
                             Url = config.ConnectionString.Url,
-                            DefaultDatabase = config.ResourceName,
-                            Credentials = config.ConnectionString.Credentials,
+                            DefaultDatabase = config.ResourceName
                         }.Initialize();
                     }
                     catch (Exception e)
@@ -61,7 +45,7 @@ namespace TrafficRecorder
                     {
                         try
                         {
-                            store.DatabaseCommands.GetStatistics();
+                            store.Admin.Send(new GetStatisticsOperation());
                         }
                         catch (Exception)
                         {

@@ -143,17 +143,7 @@ gulp.task('z_release:html', function() {
         .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
-gulp.task('z_fix-jquery-ui', function() {
-    /*
-    * Due to https://github.com/mariocasciaro/gulp-concat-css/issues/26 we have to process jquery and remove comments
-    * to enable parsing
-    */
-    return gulp.src('./wwwroot/lib/jquery-ui/themes/base/**/*.css')
-        .pipe(plugins.stripCssComments())
-        .pipe(gulp.dest("./wwwroot/lib/jquery-ui/themes/base-wo-comments/"));
-});
-
-gulp.task('z_release:css', ['z_fix-jquery-ui'], function () {
+gulp.task('z_release:css', function () {
     checkAllFilesExist(PATHS.cssToMerge);
     return gulp.src(PATHS.cssToMerge)
         .pipe(plugins.concatCss('styles.css', { rebaseUrls: false }))
@@ -172,7 +162,7 @@ gulp.task('z_release:libs', function() {
 });
 
 gulp.task('z_release:copy-version', function () {
-    return gulp.src("./version.json")
+    return gulp.src("./wwwroot/version.json")
         .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
@@ -185,7 +175,7 @@ gulp.task('z_release:package', function () {
 gulp.task('z_release:durandal', function () {
     var extraModules = [
         'transitions/fadeIn',
-        'widgets/virtualTable/viewmodel'
+        'ace/ace'
     ];
 
     var aceFileNames = fs.readdirSync(PATHS.aceDir)

@@ -5,12 +5,12 @@ using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Connection;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Client.Exceptions.Security;
-using Raven.NewClient.Client.Http;
+using Raven.Client;
+using Raven.Client.Exceptions.Security;
+using Raven.Client.Extensions;
+using Raven.Client.Http.OAuth;
+using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -47,10 +47,10 @@ namespace Raven.Server.Web.Authentication
                                 return;
                             }
 
-                            Raven.Client.Data.AccessToken old;
+                            AccessToken old;
                             if (Server.AccessTokensByName.TryGetValue(accessToken.Name, out old))
                             {
-                                Raven.Client.Data.AccessToken value;
+                                AccessToken value;
                                 Server.AccessTokensByName.TryRemove(old.Name, out value);
                             }
 
@@ -125,7 +125,7 @@ namespace Raven.Server.Web.Authentication
         }
 
 
-        private async Task<Raven.Client.Data.AccessToken> ProcessToken(JsonOperationContext context, WebSocket webSocket)
+        private async Task<AccessToken> ProcessToken(JsonOperationContext context, WebSocket webSocket)
         {
             using (var reader = await context.ReadFromWebSocket(webSocket, DebugTag, ServerStore.ServerShutdown))
             {
@@ -227,7 +227,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        private Raven.Client.Data.AccessToken BuildAccessTokenAndGetApiKeySecret(string apiKeyName, out string secret)
+        private AccessToken BuildAccessTokenAndGetApiKeySecret(string apiKeyName, out string secret)
         {
 
             TransactionOperationContext context;
@@ -235,7 +235,7 @@ namespace Raven.Server.Web.Authentication
             {
                 context.OpenReadTransaction();
 
-                var apiDoc = ServerStore.Read(context, Constants.ApiKeyPrefix + apiKeyName);
+                var apiDoc = ServerStore.Read(context, Constants.ApiKeys.Prefix + apiKeyName);
 
                 if (apiDoc == null)
                 {
@@ -254,7 +254,7 @@ namespace Raven.Server.Web.Authentication
                     throw new InvalidOperationException($"Missing 'Secret' property in api kye: {apiKeyName}");
                 }
 
-                var databases = new Dictionary<string, Raven.Client.Data.AccessModes>(StringComparer.OrdinalIgnoreCase);
+                var databases = new Dictionary<string, AccessModes>(StringComparer.OrdinalIgnoreCase);
 
                 BlittableJsonReaderObject accessMode;
                 if (apiDoc.TryGet("ResourcesAccessMode", out accessMode) == false)
@@ -272,7 +272,7 @@ namespace Raven.Server.Web.Authentication
                     {
                         throw new InvalidOperationException($"Missing value of dbName -'{prop.Name}' property in api key: {apiKeyName}");
                     }
-                    Raven.Client.Data.AccessModes mode;
+                    AccessModes mode;
                     if (Enum.TryParse(accessValue, out mode) == false)
                     {
                         throw new InvalidOperationException(
@@ -281,7 +281,7 @@ namespace Raven.Server.Web.Authentication
                     databases[prop.Name] = mode;
                 }
 
-                return new Raven.Client.Data.AccessToken
+                return new AccessToken
                 {
                     Name = apiKeyName,
                     Token = Guid.NewGuid().ToString(),

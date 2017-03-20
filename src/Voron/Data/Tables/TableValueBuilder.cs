@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
+using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 using Voron.Util;
 
@@ -11,10 +10,25 @@ namespace Voron.Data.Tables
 {
     public unsafe class TableValueBuilder : IEnumerable
     {
-        private readonly List<PtrSize> _values = new List<PtrSize>();
+        public TableValueBuilder()
+        {
+            
+        }
+        
+        public void Reset()
+        {
+           _values.Clear();
+           _size = 0;
+           _elementSize = 1;
+        }
+
+        private readonly FastList<PtrSize> _values = new FastList<PtrSize>();
+
         private int _size;
         private int _elementSize = 1;
         public int Size => _size + _elementSize * _values.Count + JsonParserState.VariableSizeIntSize(_values.Count);
+
+        public int Count => _values.Count;
 
         public int SizeOf(int index)
         {

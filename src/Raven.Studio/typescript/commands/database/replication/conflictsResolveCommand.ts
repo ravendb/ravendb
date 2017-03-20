@@ -1,8 +1,5 @@
-import pagedResultSet = require("common/pagedResultSet");
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import conflictsInfo = require("models/database/replication/conflictsInfo");
-import appUrl = require("common/appUrl");
 
 class conflictsResolveCommand extends commandBase {
 

@@ -1,23 +1,24 @@
 using FastTests;
 using Xunit;
 using System.Linq;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class WithStartWith : RavenNewTestBase
+    public class WithStartWith : RavenTestBase
     {
         [Fact]
         public void CanQueryDocumentsFilteredByMap()
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Maps = { "from doc in docs let Name = doc[\"@metadata\"][\"Name\"] where Name.StartsWith(\"Raven\") select new { Name }" }
-                    }));
+                        Maps = { "from doc in docs let Name = doc[\"@metadata\"][\"Name\"] where Name.StartsWith(\"Raven\") select new { Name }" },
+                        Name = "test"
+                    }}));
 
                 using (var s = store.OpenSession())
                 {

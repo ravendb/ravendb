@@ -1,15 +1,14 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class IndexLocking : RavenNewTestBase
+    public class IndexLocking : RavenTestBase
     {
         [Fact]
         public async Task LockingIndexesInMemoryWillNotFail()
@@ -18,7 +17,7 @@ namespace SlowTests.Tests.Indexes
             {
                 var index = new IndexSample
                 {
-                    Conventions = new DocumentConvention()
+                    Conventions = new DocumentConventions()
                 };
                 index.Execute(store);
 
@@ -26,7 +25,7 @@ namespace SlowTests.Tests.Indexes
                 Assert.Equal(indexDefinition.LockMode, IndexLockMode.Unlock);
 
                 var database = await GetDatabase(store.DefaultDatabase);
-                database.IndexStore.GetIndex("IndexSample").SetLock(Raven.Abstractions.Indexing.IndexLockMode.LockedIgnore);
+                database.IndexStore.GetIndex("IndexSample").SetLock(IndexLockMode.LockedIgnore);
 
                 indexDefinition = store.Admin.Send(new GetIndexOperation("IndexSample"));
                 Assert.Equal(indexDefinition.LockMode, IndexLockMode.LockedIgnore);

@@ -14,17 +14,14 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Emit;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
-using Raven.NewClient.Client.Exceptions.Compilation;
+using Raven.Client;
+using Raven.Client.Documents.Exceptions.Compilation;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 using Raven.Server.Documents.Transformers;
-using IndexCompilationException = Raven.Client.Exceptions.Compilation.IndexCompilationException;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -375,7 +372,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
 
-            var collectionName = string.IsNullOrWhiteSpace(mapRewriter.CollectionName) ? Constants.Indexing.AllDocumentsCollection : mapRewriter.CollectionName;
+            var collectionName = string.IsNullOrWhiteSpace(mapRewriter.CollectionName) ? Constants.Documents.Indexing.AllDocumentsCollection : mapRewriter.CollectionName;
 
             var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
             var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("docs")), rewrittenExpression);

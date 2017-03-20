@@ -1,11 +1,12 @@
 using FastTests;
-using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Operations.Databases;
+using Raven.Client.Extensions;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiTenancy
 {
-    public class NoCaseSensitive : RavenNewTestBase
+    public class NoCaseSensitive : RavenTestBase
     {
         [Fact]
         public void CanAccessDbUsingDifferentNames()
@@ -14,7 +15,7 @@ namespace SlowTests.Bugs.MultiTenancy
             using (var documentStore = GetDocumentStore())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument("repro");
-                documentStore.Admin.Send(new CreateDatabaseOperation(doc));
+                documentStore.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
                 using (var session = documentStore.OpenSession("repro"))
                 {

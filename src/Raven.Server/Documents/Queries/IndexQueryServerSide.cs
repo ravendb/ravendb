@@ -3,23 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Util;
-using Raven.Client.Data;
-using Raven.Client.Document;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Transformers;
+using Raven.Client.Util;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-
-using TransformerParameter = Raven.Client.Data.Transformers.TransformerParameter;
 
 namespace Raven.Server.Documents.Queries
 {
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
-        public IndexQueryServerSide() : base(null)
+        public IndexQueryServerSide() : base(DocumentConventions.Default)
         {
         }
 

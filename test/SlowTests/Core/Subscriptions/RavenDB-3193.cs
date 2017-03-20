@@ -5,12 +5,13 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
 using FastTests.Server.Documents.Notifications;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Core.Subscriptions
 {
-    public class RavenDB_3193 : RavenNewTestBase
+    public class RavenDB_3193 : RavenTestBase
     {
         [Fact]
         public async Task ShouldRespectCollectionCriteria()
@@ -29,16 +30,12 @@ namespace SlowTests.Core.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria
-                {
-                    Collection = "Users"                    
-                });
+                var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria("Users"));
 
-                using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
-                {
-                    MaxDocsPerBatch = 31,
-                    SubscriptionId = id
-                }))
+                using (var subscription = store.AsyncSubscriptions.Open(
+                    new SubscriptionConnectionOptions(id){
+                        MaxDocsPerBatch = 31
+                    }))
                 {
                     var docs = new List<dynamic>();
 
@@ -48,12 +45,9 @@ namespace SlowTests.Core.Subscriptions
 
                     SpinWait.SpinUntil(() => docs.Count >= 100, TimeSpan.FromSeconds(60));
                     Assert.Equal(100, docs.Count);
-
-                    foreach (var jsonDocument in docs)
+                    foreach (var doc in docs)
                     {
-                        var collection =
-                            jsonDocument[Constants.Metadata.Key].Value<string>(Constants.Metadata.Collection);
-                        Assert.True(collection == "Users");
+                        Assert.True(doc.Id.StartsWith("users/"));
                     }
                 }
             }

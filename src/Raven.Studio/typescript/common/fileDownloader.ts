@@ -21,10 +21,10 @@ class fileDownloader {
         }
     }
 
-    static downloadAsJson(object: any, filename: string, domCacheElementName: string = "link") {
+    static downloadAsJson(object: any, filename: string, domCacheElementName: string = "link", replacer: (key: string, value: any) => any = null) {
         domCacheElementName = _.snakeCase(domCacheElementName);
         fileDownloader.cleanup(domCacheElementName);
-        var modelAsString = JSON.stringify(object, null, 2);
+        var modelAsString = JSON.stringify(object, replacer, 2);
         var blob = new Blob([modelAsString], { type: 'application/json' });
         fileDownloader.createLinkAndStartDownload(blob, filename, domCacheElementName);
     }

@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Collections;
 using Raven.Server.Documents;
-using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
+using TypeConverter = Raven.Server.Utils.TypeConverter;
 
 namespace Raven.Server.Json
 {
@@ -26,7 +27,6 @@ namespace Raven.Server.Json
                         value = lazyStringValue.Size;
                         return true;
                     }
-
 
                     var lazyCompressedStringValue = value as LazyCompressedStringValue;
                     if (lazyCompressedStringValue != null)
@@ -55,8 +55,38 @@ namespace Raven.Server.Json
                         return true;
                     }
 
+                    var obj = value as BlittableJsonReaderObject;
+                    if (obj != null)
+                    {
+                        value = obj.Count;
+                        return true;
+                    }
+
                     value = null;
                     return false;
+                }
+
+                if (value is BlittableJsonReaderObject) // dictionary key e.g. .Where(x => x.Events.Any(y => y.Key.In(dates)))
+                {
+                    var isKey = leftPath == "Key";
+                    if (isKey || leftPath == "Value")
+                    {
+                        var obj = (BlittableJsonReaderObject)value;
+
+                        var index = 0;
+                        var property = new BlittableJsonReaderObject.PropertyDetails();
+                        var values = new object[obj.Count];
+
+                        foreach (var propertyIndex in obj.GetPropertiesByInsertionOrder())
+                        {
+                            obj.GetPropertyByIndex(propertyIndex, ref property);
+                            var val = isKey ? property.Name : property.Value;
+                            values[index++] = TypeConverter.ConvertForIndexing(val);
+                        }
+
+                        value = values;
+                        return true;
+                    } 
                 }
 
                 if (value is DateTime || value is DateTimeOffset || value is TimeSpan)
@@ -79,7 +109,8 @@ namespace Raven.Server.Json
                     return true;
                 }
 
-                throw new InvalidOperationException($"Could not extract {path} from {document.Key}.");
+                value = null;
+                return false;
             }
 
             value = TypeConverter.ConvertForIndexing(value);

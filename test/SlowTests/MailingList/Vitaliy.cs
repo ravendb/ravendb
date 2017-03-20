@@ -7,7 +7,7 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -16,21 +16,21 @@ namespace SlowTests.MailingList
     {
         private class Cgc
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
         }
 
         private class Production
         {
-            public Guid Id { get; set; }
-            public Guid CgcId { get; set; }
+            public string Id { get; set; }
+            public string CgcId { get; set; }
             public string Name { get; set; }
         }
 
         private class CgcAndProduction
         {
-            public Guid ProductionId { get; set; }
-            public Guid CgcId { get; set; }
+            public string ProductionId { get; set; }
+            public string CgcId { get; set; }
             public string CgcName { get; set; }
             public string ProductionName { get; set; }
         }
@@ -43,8 +43,7 @@ namespace SlowTests.MailingList
                                                 .Select(x => new
                                                 {
                                                     ProductionId = (string)null,
-                                                    CgcId =
-                                                                Guid.Parse(x.Id.ToString().Replace("cgcs/", "")),
+                                                    CgcId = x.Id,
                                                     CgcName = x.Name,
                                                     ProductionName = (string)null,
                                                 }));
@@ -52,9 +51,7 @@ namespace SlowTests.MailingList
                 AddMap<Production>(enumerable => enumerable
                                                         .Select(x => new
                                                         {
-                                                            ProductionId =
-                                                                        Guid.Parse(x.Id.ToString().Replace(
-                                                                            "productions/", "")),
+                                                            ProductionId = x.Id,
                                                             x.CgcId,
                                                             CgcName = (string)null,
                                                             ProductionName = x.Name,

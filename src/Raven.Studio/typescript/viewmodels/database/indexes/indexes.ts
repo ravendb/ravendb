@@ -3,7 +3,6 @@ import index = require("models/database/index/index");
 import appUrl = require("common/appUrl");
 import saveIndexLockModeCommand = require("commands/database/index/saveIndexLockModeCommand");
 import app = require("durandal/app");
-import changeSubscription = require("common/changeSubscription");
 import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import getPendingIndexReplacementsCommand = require("commands/database/index/getPendingIndexReplacementsCommand");
 import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
@@ -42,9 +41,11 @@ class indexes extends viewModelBase {
         localState: ko.observableArray<string>([])
     }
 
-    globalIndexingStatus = ko.observable<Raven.Client.Data.Indexes.IndexRunningStatus>();
+    globalIndexingStatus = ko.observable<Raven.Client.Documents.Indexes.IndexRunningStatus>();
 
     resetsInProgress = new Set<string>();
+
+    throttledRefresh: Function;
 
     constructor() {
         super();
@@ -52,12 +53,14 @@ class indexes extends viewModelBase {
         this.bindToCurrentInstance(
             "lowPriority", "highPriority", "normalPriority",
             "resetIndex", "deleteIndex",
-            "unlockIndex", "lockIndex", "lockErrorIndex", "lockSideBySide",
+            "unlockIndex", "lockIndex", "lockErrorIndex",
             "enableIndex", "disableIndex", "disableSelectedIndexes", "enableSelectedIndexes",
             "pauseSelectedIndexes", "resumeSelectedIndexes",
-            "unlockSelectedIndexes", "lockSelectedIndexes", "lockSideBySideSelectedIndexes", "lockErrorSelectedIndexes",
+            "unlockSelectedIndexes", "lockSelectedIndexes", "lockErrorSelectedIndexes",
             "deleteSelectedIndexes", "startIndexing", "stopIndexing", "resumeIndexing", "pauseUntilRestart", "toggleSelectAll"
         );
+
+        this.throttledRefresh = _.throttle(() => setTimeout(() => this.fetchIndexes(), 2000), 5000); // refresh not othen then 5 seconds, but delay refresh by 2 seconds
     }
 
     private getAllIndexes(): index[] {
@@ -130,10 +133,10 @@ class indexes extends viewModelBase {
         const replacementTask = new getPendingIndexReplacementsCommand(this.activeDatabase()).execute(); //TODO: this is not working yet!
 
         return $.when<any>(statsTask, replacementTask, statusTask)
-            .done(([stats]: [Array<Raven.Client.Data.Indexes.IndexStats>], [replacements]: [indexReplaceDocument[]], [statuses]: [Raven.Client.Data.Indexes.IndexingStatus]) => this.processData(stats, replacements, statuses));
+            .done(([stats]: [Array<Raven.Client.Documents.Indexes.IndexStats>], [replacements]: [indexReplaceDocument[]], [statuses]: [Raven.Client.Documents.Indexes.IndexingStatus]) => this.processData(stats, replacements, statuses));
     }
 
-    private processData(stats: Array<Raven.Client.Data.Indexes.IndexStats>, replacements: indexReplaceDocument[], statuses: Raven.Client.Data.Indexes.IndexingStatus) {
+    private processData(stats: Array<Raven.Client.Documents.Indexes.IndexStats>, replacements: indexReplaceDocument[], statuses: Raven.Client.Documents.Indexes.IndexingStatus) {
         //TODO: handle replacements
 
         this.globalIndexingStatus(statuses.Status);
@@ -213,16 +216,14 @@ class indexes extends viewModelBase {
         this.resetsInProgress.delete(i.name);
     }
 
-    private processIndexEvent(e: Raven.Abstractions.Data.IndexChange) {
-        const indexRemovedEvent = "IndexRemoved" as Raven.Abstractions.Data.IndexChangeTypes;
+    private processIndexEvent(e: Raven.Client.Documents.Changes.IndexChange) {
+        const indexRemovedEvent = "IndexRemoved" as Raven.Client.Documents.Changes.IndexChangeTypes;
         if (e.Type === indexRemovedEvent) {
             if (!this.resetsInProgress.has(e.Name)) {
                 this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
             }
         } else {
-            setTimeout(() => {
-                this.fetchIndexes();
-            }, 5000);
+            this.throttledRefresh();
         }
     }
 
@@ -276,12 +277,7 @@ class indexes extends viewModelBase {
         this.updateIndexLockMode(i, "LockedError","Locked (Error)");
     }
 
-    lockSideBySide(i: index) {
-        eventsCollector.default.reportEvent("indexes", "set-lock-mode", "SideBySide");
-        this.updateIndexLockMode(i, "SideBySide","Locked (Side by Side)");
-    }
-
-    private updateIndexLockMode(i: index, newLockMode: Raven.Abstractions.Indexing.IndexLockMode, lockModeStrForTitle: string) {
+    private updateIndexLockMode(i: index, newLockMode: Raven.Client.Documents.Indexes.IndexLockMode, lockModeStrForTitle: string) {
         if (i.lockMode() !== newLockMode) {
             this.spinners.localLockChanges.push(i.name);
 
@@ -307,7 +303,7 @@ class indexes extends viewModelBase {
         this.setIndexPriority(idx, "High");
     }
 
-    private setIndexPriority(idx: index, newPriority: Raven.Client.Data.Indexes.IndexPriority) {
+    private setIndexPriority(idx: index, newPriority: Raven.Client.Documents.Indexes.IndexPriority) {
         const originalPriority = idx.priority();
         if (originalPriority !== newPriority) {
             this.spinners.localPriority.push(idx.name);
@@ -326,7 +322,7 @@ class indexes extends viewModelBase {
     }
 
     protected afterClientApiConnected() {
-        const changesApi = this.changesContext.resourceChangesApi();
+        const changesApi = this.changesContext.databaseChangesApi();
         this.addNotification(changesApi.watchAllIndexes(e => this.processIndexEvent(e)));
         this.addNotification(changesApi.watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, () => this.processReplaceEvent()));
     }
@@ -364,15 +360,11 @@ class indexes extends viewModelBase {
         this.setLockModeSelectedIndexes("LockedIgnore", "Lock");
     }
 
-    lockSideBySideSelectedIndexes() {
-        this.setLockModeSelectedIndexes("SideBySide", "Lock (Side By Side)");
-    }
-
     lockErrorSelectedIndexes() {
         this.setLockModeSelectedIndexes("LockedError", "Lock (Error)");
     }
 
-    private setLockModeSelectedIndexes(lockModeString: Raven.Abstractions.Indexing.IndexLockMode, lockModeStrForTitle: string) {
+    private setLockModeSelectedIndexes(lockModeString: Raven.Client.Documents.Indexes.IndexLockMode, lockModeStrForTitle: string) {
         if (this.lockModeCommon() === lockModeString)
             return;
 

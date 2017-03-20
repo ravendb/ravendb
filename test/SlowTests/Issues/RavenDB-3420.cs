@@ -1,18 +1,15 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Shard;
+using Raven.Client.Documents;
 using Xunit;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3420 : RavenTestBase
     {
-        [Theory]
+        [Theory(Skip = "RavenDB-6283")]
         [InlineData("ShardedDatabase", "ShardedDatabase")]
         [InlineData("ShardedDatabase1", "ShardedDatabase2")]
         public void bulk_insert_sharded(string databaseName1, string databaseName2)
@@ -40,26 +37,26 @@ namespace SlowTests.Issues
                     {"Shard2", shard2}
                 };
 
-                var shardStrategy = new ShardStrategy(shards);
-                shardStrategy.ShardingOn<Profile>(x => x.Location);
+                //var shardStrategy = new ShardStrategy(shards);
+                //shardStrategy.ShardingOn<Profile>(x => x.Location);
 
-                CreateDatabase(shard1, shard1.DefaultDatabase);
-                CreateDatabase(shard2, shard2.DefaultDatabase);
+                //CreateDatabase(shard1, shard1.DefaultDatabase);
+                //CreateDatabase(shard2, shard2.DefaultDatabase);
 
-                using (var shardedDocumentStore = new ShardedDocumentStore(shardStrategy))
-                {
-                    shardedDocumentStore.Initialize();
+                //using (var shardedDocumentStore = new ShardedDocumentStore(shardStrategy))
+                //{
+                //    shardedDocumentStore.Initialize();
 
-                    var entity1 = new Profile { Id = "bulk1", Name = "Hila", Location = "Shard1" };
-                    var entity2 = new Profile { Name = "Jay", Location = "Shard2" };
-                    var entity3 = new Profile { Name = "Jay", Location = "Shard1" };
-                    using (var bulkInsert = shardedDocumentStore.ShardedBulkInsert())
-                    {
-                        bulkInsert.Store(entity1);
-                        bulkInsert.Store(entity2);
-                        bulkInsert.Store(entity3);
-                    }
-                }
+                //    var entity1 = new Profile { Id = "bulk1", Name = "Hila", Location = "Shard1" };
+                //    var entity2 = new Profile { Name = "Jay", Location = "Shard2" };
+                //    var entity3 = new Profile { Name = "Jay", Location = "Shard1" };
+                //    using (var bulkInsert = shardedDocumentStore.ShardedBulkInsert())
+                //    {
+                //        bulkInsert.Store(entity1);
+                //        bulkInsert.Store(entity2);
+                //        bulkInsert.Store(entity3);
+                //    }
+                //}
 
                 using (var store1 = new DocumentStore { Url = server1.WebUrls[0], DefaultDatabase = databaseName1 }.Initialize())
                 {
@@ -92,7 +89,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [Theory(Skip = "RavenDB-6283")]
         [InlineData("ShardedDatabase")]
         public void bulk_insert_sharded_when_specifying_default_database(string databaseName)
         {
@@ -120,26 +117,26 @@ namespace SlowTests.Issues
                     {"Shard2", shard2}
                 };
 
-                var shardStrategy = new ShardStrategy(shards);
-                shardStrategy.ShardingOn<Profile>(x => x.Location);
+                //var shardStrategy = new ShardStrategy(shards);
+                //shardStrategy.ShardingOn<Profile>(x => x.Location);
 
-                CreateDatabase(shard1, databaseName);
-                CreateDatabase(shard2, databaseName);
+                //CreateDatabase(shard1, databaseName);
+                //CreateDatabase(shard2, databaseName);
 
-                using (var shardedDocumentStore = new ShardedDocumentStore(shardStrategy))
-                {
-                    shardedDocumentStore.Initialize();
+                //using (var shardedDocumentStore = new ShardedDocumentStore(shardStrategy))
+                //{
+                //    shardedDocumentStore.Initialize();
 
-                    var entity1 = new Profile { Id = "bulk1", Name = "Hila", Location = "Shard1" };
-                    var entity2 = new Profile { Name = "Jay", Location = "Shard2" };
-                    var entity3 = new Profile { Name = "Jay", Location = "Shard1" };
-                    using (var bulkInsert = shardedDocumentStore.ShardedBulkInsert(databaseName))
-                    {
-                        bulkInsert.Store(entity1);
-                        bulkInsert.Store(entity2);
-                        bulkInsert.Store(entity3);
-                    }
-                }
+                //    var entity1 = new Profile { Id = "bulk1", Name = "Hila", Location = "Shard1" };
+                //    var entity2 = new Profile { Name = "Jay", Location = "Shard2" };
+                //    var entity3 = new Profile { Name = "Jay", Location = "Shard1" };
+                //    using (var bulkInsert = shardedDocumentStore.ShardedBulkInsert(databaseName))
+                //    {
+                //        bulkInsert.Store(entity1);
+                //        bulkInsert.Store(entity2);
+                //        bulkInsert.Store(entity3);
+                //    }
+                //}
 
                 using (var store1 = new DocumentStore { Url = server1.WebUrls[0], DefaultDatabase = databaseName }.Initialize())
                 {
@@ -173,17 +170,10 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void CreateDatabase(IDocumentStore store, string databaseName)
-        {
-            store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
-            {
-                Id = databaseName,
-                Settings =
-                {
-                    { "Raven/DataDir", "~/" + databaseName }
-                }
-            });
-        }
+        //private static void CreateDatabase(IDocumentStore store, string databaseName)
+        //{
+        //    store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument(databaseName));
+        //}
 
         private class Profile
         {

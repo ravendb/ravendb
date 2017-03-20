@@ -1,23 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using Raven.Client.Data;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Replication;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Data.Queries;
-using Raven.Client.Indexing;
-using Raven.Client.Smuggler;
-using Raven.Json.Linq;
-using Raven.NewClient.Client.Data.Collections;
+using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Documents.Transformers;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 using Raven.Server.Commercial;
+using Raven.Server.Documents;
+using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.SQL;
+using Raven.Server.Documents.ETL.Providers.SQL.Connections;
+using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Versioning;
-using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.PeriodicExport;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -50,12 +55,9 @@ namespace TypingsGenerator
                 .WithTypeMapping(TsPrimitive.String, typeof(TimeSpan))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(List<>))
-                .WithTypeMapping(TsPrimitive.Any, typeof(RavenJObject))
-                .WithTypeMapping(TsPrimitive.Any, typeof(RavenJValue))
                 .WithTypeMapping(TsPrimitive.Any, typeof(TreePage))
                 .WithTypeMapping(TsPrimitive.String, typeof(DateTime))
-                .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(RavenJArray))
-                .WithTypeMapping(TsPrimitive.Any, typeof(RavenJToken))
+                .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(BlittableJsonReaderArray))
                 .WithTypeMapping(TsPrimitive.Any, typeof(BlittableJsonReaderObject));
 
             scripter = ConfigureTypes(scripter);
@@ -76,19 +78,28 @@ namespace TypingsGenerator
             scripter.UsingTypeReader(new TypeReaderWithIgnoreMethods());
             scripter.AddType(typeof(CollectionStatistics));
 
+            scripter.AddType(typeof(BatchRequestParser.CommandData));
+
             scripter.AddType(typeof(DatabaseDocument));
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(IndexDefinition));
+            scripter.AddType(typeof(PutIndexResult));
 
             // notifications
             scripter.AddType(typeof(AlertRaised));
             scripter.AddType(typeof(NotificationUpdated));
             scripter.AddType(typeof(OperationChanged));
-            scripter.AddType(typeof(ResourceChanged));
+            scripter.AddType(typeof(DatabaseChanged));
+            scripter.AddType(typeof(DatabaseStatsChanged));
             scripter.AddType(typeof(PerformanceHint));
 
+            // subscriptions
+            scripter.AddType(typeof(SubscriptionCriteria));
+            scripter.AddType(typeof(SubscriptionConnectionStats));
+            scripter.AddType(typeof(SubscriptionConnectionOptions));
+
             // changes
-            scripter.AddType(typeof(OperationStatusChanged));
+            scripter.AddType(typeof(OperationStatusChange));
             scripter.AddType(typeof(DeterminateProgress));
             scripter.AddType(typeof(IndeterminateProgress));
             scripter.AddType(typeof(OperationExceptionResult));
@@ -113,7 +124,7 @@ namespace TypingsGenerator
             // patch
             scripter.AddType(typeof(PatchRequest));
 
-            scripter.AddType(typeof(ResourcesInfo));
+            scripter.AddType(typeof(DatabasesInfo));
 
             // smuggler
             scripter.AddType(typeof(DatabaseSmugglerOptions));
@@ -126,9 +137,9 @@ namespace TypingsGenerator
 
             // sql replication 
             scripter.AddType(typeof(SqlConnections));
-            scripter.AddType(typeof(SqlReplicationConfiguration));
-            scripter.AddType(typeof(SqlReplicationStatistics));
-            scripter.AddType(typeof(SimulateSqlReplication));
+            scripter.AddType(typeof(SqlEtlConfiguration));
+            scripter.AddType(typeof(EtlStatistics));
+            scripter.AddType(typeof(SimulateSqlEtl));
 
             // periodic export
             scripter.AddType(typeof(PeriodicExportConfiguration));
@@ -146,7 +157,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LicenseStatus));
 
             // database admin
-            scripter.AddType(typeof(ResourceDeleteResult));
+            scripter.AddType(typeof(DatabaseDeleteResult));
 
             // io metrics stats
             scripter.AddType(typeof(IOMetricsHistoryStats));

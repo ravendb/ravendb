@@ -1,11 +1,11 @@
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.MapRedue
 {
-    public class LetInReduceFunction : RavenNewTestBase
+    public class LetInReduceFunction : RavenTestBase
     {
         private class User
         {

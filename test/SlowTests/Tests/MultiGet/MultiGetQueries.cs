@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Tests.MultiGet
 {
-    public class MultiGetQueries : RavenNewTestBase
+    public class MultiGetQueries : RavenTestBase
     {
         private class User
         {
@@ -80,14 +82,14 @@ namespace SlowTests.Tests.MultiGet
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats1;
+                    QueryStatistics stats1;
                     var result1 = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats1)
                         .Where(x => x.Age == 0).Skip(1).Take(2)
                         .Lazily();
 
-                    RavenQueryStatistics stats2;
+                    QueryStatistics stats2;
                     var result2 = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats2)
@@ -321,8 +323,8 @@ namespace SlowTests.Tests.MultiGet
                 }
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
-                    RavenQueryStatistics stats2;
+                    QueryStatistics stats;
+                    QueryStatistics stats2;
                     var result1 = session.Query<User>().Statistics(out stats).Where(x => x.Name == "oren").Lazily();
                     var result2 = session.Query<User>().Statistics(out stats2).Where(x => x.Name == "ayende").Lazily();
                     Assert.NotEmpty(result2.Value);

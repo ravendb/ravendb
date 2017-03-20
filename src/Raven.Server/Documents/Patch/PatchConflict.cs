@@ -1,26 +1,12 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Reflection;
 using Jint;
 using Jint.Native;
-using Jint.Parser;
-using Jint.Parser.Ast;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
-using Raven.Abstractions.Data;
-using Raven.Client.Replication.Messages;
-using Raven.Server.Extensions;
+using Raven.Client;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
-using Sparrow.Logging;
-using Voron.Data.Tables;
-using Voron.Exceptions;
-using TypeExtensions = System.Reflection.TypeExtensions;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -74,7 +60,7 @@ namespace Raven.Server.Documents.Patch
             foreach (var doc in _docs)
             {
                 //TODO : add unit test that has a conflict here to make sure that it is ok
-                var jsVal = scope.ToJsObject(jintEngine, doc.Doc, "doc" + index);
+                var jsVal = scope.ToJsObject(jintEngine, doc, "doc" + index);
                 docsArr.FastAddProperty(index.ToString(), jsVal, true, true, true);
                 index++;
             }
@@ -119,12 +105,12 @@ namespace Raven.Server.Documents.Patch
                 return true;
             }
             var obj = scope.ActualPatchResult.AsObject();
-            using (var writer = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+            using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
             {
                 writer.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                 writer.StartWriteObjectDocument();
                 writer.StartWriteObject();
-                var resolvedMetadata = obj.Get(Constants.Metadata.Key);
+                var resolvedMetadata = obj.Get(Constants.Documents.Metadata.Key);
                 if (resolvedMetadata == null ||
                     resolvedMetadata == JsValue.Undefined)
                 {
@@ -132,12 +118,12 @@ namespace Raven.Server.Documents.Patch
                     foreach (var doc in _docs)
                     {
                         BlittableJsonReaderObject metadata;
-                        if (doc.Doc.TryGet(Constants.Metadata.Key, out metadata) == false)
+                        if (doc.Doc.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
                         {
                             continue;
                         }
 
-                        writer.WritePropertyName(Constants.Metadata.Key);
+                        writer.WritePropertyName(Constants.Documents.Metadata.Key);
                         writer.StartWriteObject();
 
                         var prop = new BlittableJsonReaderObject.PropertyDetails();

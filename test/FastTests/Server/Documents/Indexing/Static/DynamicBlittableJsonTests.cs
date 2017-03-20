@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
+using Raven.Client;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Linq;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -52,10 +51,10 @@ namespace FastTests.Server.Documents.Indexing.Static
                         ["Name"] = "John"
                     }
                 },
-                    [Constants.Metadata.Key] = new DynamicJsonValue
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                     {
-                        [Constants.Metadata.Collection] = "Users",
-                        [Constants.Metadata.LastModified] = now.GetDefaultRavenFormat(true)
+                        [Constants.Documents.Metadata.Collection] = "Users",
+                        [Constants.Documents.Metadata.LastModified] = now.GetDefaultRavenFormat(true)
                     }
                 }, "users/1");
 
@@ -68,8 +67,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(22.0, user.Age);
                 Assert.Equal("Arek", user.LazyName);
                 Assert.Equal(2, user.Friends.Length);
-                Assert.Equal("Users", user[Constants.Metadata.Key][Constants.Metadata.Collection]);
-                Assert.Equal(now, user[Constants.Metadata.Key].Value<DateTime>(Constants.Metadata.LastModified));
+                Assert.Equal("Users", user[Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Collection]);
+                Assert.Equal(now, user[Constants.Documents.Metadata.Key].Value<DateTime>(Constants.Documents.Metadata.LastModified));
                 _ctx.ReturnMemory(stringValue.AllocatedMemoryData);
             }
         }

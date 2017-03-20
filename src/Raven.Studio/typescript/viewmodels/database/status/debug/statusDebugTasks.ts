@@ -9,7 +9,7 @@ class statusDebugTasks extends viewModelBase {
 
     constructor() {
         super();
-        this.detailsUrl = ko.computed(() => appUrl.forResourceQuery(this.activeDatabase()) + "/debug/tasks");
+        this.detailsUrl = ko.computed(() => appUrl.forDatabaseQuery(this.activeDatabase()) + "/debug/tasks");
     }
 
     activate(args: any) {

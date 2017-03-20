@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Linq;
-using Raven.Abstractions.Data;
+using Raven.Client;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Queries.Results
@@ -22,7 +21,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
             string id;
             if (TryGetKey(input, out id) == false)
-                throw new InvalidOperationException($"Could not extract '{Constants.Indexing.Fields.DocumentIdFieldName}' from index.");
+                throw new InvalidOperationException($"Could not extract '{Constants.Documents.Indexing.Fields.DocumentIdFieldName}' from index.");
 
             if (_fieldsToFetch.IsProjection || _fieldsToFetch.IsTransformation)
                 return GetProjection(input, score, id);
@@ -37,7 +36,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         public override bool TryGetKey(Lucene.Net.Documents.Document input, out string key)
         {
-            key = input.Get(Constants.Indexing.Fields.DocumentIdFieldName);
+            key = input.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
             return key != null;
         }
 

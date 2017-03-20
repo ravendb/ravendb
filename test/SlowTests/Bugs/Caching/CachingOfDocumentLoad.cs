@@ -9,7 +9,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Caching
 {
-    public class CachingOfDocumentLoad : RavenNewTestBase
+    public class CachingOfDocumentLoad : RavenTestBase
     {
         private class User
         {
@@ -42,38 +42,10 @@ namespace SlowTests.Bugs.Caching
                 using (var s = store.OpenSession())
                 {
                     s.Load<User>("users/1");
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
             }
         }
-
-        [Fact]
-        public void Can_NOT_cache_document_load()
-        {
-            using (var store = GetDocumentStore())
-            {
-                store.Conventions.ShouldCacheRequest = s => false;
-
-                using (var s = store.OpenSession())
-                {
-                    s.Store(new User { Name = "Ayende" });
-                    s.SaveChanges();
-                }
-
-                using (var s = store.OpenSession())
-                {
-                    s.Load<User>("users/1");
-                    s.SaveChanges();
-                }
-
-                using (var s = store.OpenSession())
-                {
-                    s.Load<User>("users/1");
-                    Assert.Equal(0, s.Advanced.RequestExecuter.Cache.NumberOfItems);
-                }
-            }
-        }
-
 
         [Fact]
         public void After_modification_will_get_value_from_server()
@@ -96,14 +68,14 @@ namespace SlowTests.Bugs.Caching
                 {
                     var user = s.Load<User>("users/1");
                     user.Name = "Rahien";
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems);
                     s.SaveChanges();
                 }
 
                 using (var s = store.OpenSession())
                 {
                     s.Load<User>("users/1");
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems); // did NOT get from cache
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems); // did NOT get from cache
                 }
             }
         }

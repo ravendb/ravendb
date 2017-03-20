@@ -3,9 +3,12 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using Raven.Abstractions;
-using Raven.Client.Document;
+using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Extensions;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
+using Raven.Client.Util;
 
 namespace BulkInsert.Benchmark
 {
@@ -69,7 +72,7 @@ namespace BulkInsert.Benchmark
                 if (dbname == null)
                     dbname = "test";
                 var doc = MultiDatabase.CreateDatabaseDocument(dbname);
-                store.AsyncDatabaseCommands.GlobalAdmin.CreateDatabaseAsync(doc).Wait();
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
             }
             catch (Exception ex)
             {

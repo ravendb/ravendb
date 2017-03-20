@@ -1,10 +1,8 @@
 ﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Queries;
@@ -48,9 +46,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
                             {
                                 ["Location"] = "Poland",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -60,9 +58,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/2", new DynamicJsonValue
                             {
                                 ["Location"] = "Poland",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -154,9 +152,9 @@ select new
                                         ["Price"] = 10.7
                                     }
                                 },
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Orders"
+                                    [Constants.Documents.Metadata.Collection] = "Orders"
                                 }
                             }))
                             {
@@ -173,9 +171,9 @@ select new
                                         ["Price"] = 10.5
                                     }
                                 },
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Orders"
+                                    [Constants.Documents.Metadata.Collection] = "Orders"
                                 }
                             }))
                             {
@@ -247,7 +245,7 @@ select new
                     {
                         { "Product", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed} }
                     },
-                    LockMode = IndexLockMode.SideBySide
+                    LockMode = IndexLockMode.LockedError
                 };
                 Assert.Equal(2, database.IndexStore.CreateIndex(defTwo));
 
@@ -258,9 +256,9 @@ select new
                         using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
                         {
                             ["Location"] = "Poland",
-                            [Constants.Metadata.Key] = new DynamicJsonValue
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Metadata.Collection] = "Users"
+                                [Constants.Documents.Metadata.Collection] = "Users"
                             }
                         }))
                         {
@@ -285,13 +283,13 @@ select new
                 Assert.Equal(1, indexes[0].IndexId);
                 Assert.Equal(IndexType.MapReduce, indexes[0].Type);
                 Assert.Equal("Users_ByCount_GroupByLocation", indexes[0].Name);
-                Assert.Equal(1, indexes[0].Definition.Collections.Length);
-                Assert.Equal("Users", indexes[0].Definition.Collections[0]);
+                Assert.Equal(1, indexes[0].Definition.Collections.Count);
+                Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(2, indexes[0].Definition.MapFields.Count);
                 Assert.Contains("Location", indexes[0].Definition.MapFields.Keys);
                 Assert.Contains("Count", indexes[0].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
-                Assert.Equal(IndexPriority.Normal, indexes[0].Priority);
+                Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
                 Assert.Equal(IndexDefinitionCompareDifferences.None, indexes[0].Definition.Compare(defOne));
                 Assert.True(defOne.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
                 Assert.Equal(1, indexes[0].MapReduceWorkContext.NextMapResultId);
@@ -299,15 +297,15 @@ select new
                 Assert.Equal(2, indexes[1].IndexId);
                 Assert.Equal(IndexType.MapReduce, indexes[1].Type);
                 Assert.Equal("Orders_ByCount_GroupByProduct", indexes[1].Name);
-                Assert.Equal(1, indexes[1].Definition.Collections.Length);
-                Assert.Equal("Orders", indexes[1].Definition.Collections[0]);
+                Assert.Equal(1, indexes[1].Definition.Collections.Count);
+                Assert.Equal("Orders", indexes[1].Definition.Collections.Single());
                 Assert.Equal(3, indexes[1].Definition.MapFields.Count);
                 Assert.Contains("Product", indexes[1].Definition.MapFields.Keys);
                 Assert.Equal(FieldIndexing.Analyzed, indexes[1].Definition.MapFields["Product"].Indexing);
                 Assert.Contains("Count", indexes[1].Definition.MapFields.Keys);
                 Assert.Contains("Total", indexes[1].Definition.MapFields.Keys);
-                Assert.Equal(IndexLockMode.SideBySide, indexes[1].Definition.LockMode);
-                Assert.Equal(IndexPriority.Normal, indexes[1].Priority);
+                Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
+                Assert.Equal(IndexPriority.Normal, indexes[1].Definition.Priority);
                 Assert.Equal(IndexDefinitionCompareDifferences.None, indexes[1].Definition.Compare(defTwo));
                 Assert.True(defTwo.Equals(indexes[1].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
                 Assert.Equal(0, indexes[1].MapReduceWorkContext.NextMapResultId);

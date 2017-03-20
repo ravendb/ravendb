@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -28,16 +28,17 @@ namespace SlowTests.MailingList
                     CreateDataSet(session, "stations/energy", "EX");
                 }
 
-               // WaitForUserToContinueTheTest(store);
+                // WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.DocumentQuery<DataSetIndex.Result, DataSetIndex>()
-                                .WaitForNonStaleResults()
-                                .AddOrder("Split_N1_Range", true, typeof(double))
-                                .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId");
+                        .WaitForNonStaleResults()
+                        .AddOrder("Split_N1_D_Range", true)
+                        .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId")
+                        .Take(1024);
                     var result = query.ToList();
-                    Assert.Equal("songs/50", result.First().SongId); //GREEN
+                    Assert.Equal("songs/50", result.First().SongId.ToString()); //GREEN
                 }
             }
         }
@@ -60,21 +61,23 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.DocumentQuery<DataSetIndex.Result, DataSetIndex>()
-                                .WaitForNonStaleResults()
-                                .AddOrder("Split_N1_Range", true, typeof(double))
-                                .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId");
+                        .WaitForNonStaleResults()
+                        .AddOrder("Split_N1_D_Range", true)
+                        .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId")
+                        .Take(1024);
                     var result = query.ToList();
-                    Assert.Equal("songs/50", result.First().SongId); //GREEN
+                    Assert.Equal("songs/50", result.First().SongId.ToString()); //GREEN
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.DocumentQuery<DataSetIndex.Result, DataSetIndex>()
                                 .WaitForNonStaleResults()
-                                .AddOrder("Split_N1_Range", true, typeof(double))
-                                .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId");
+                                .AddOrder("Split_N1_D_Range", true)
+                                .SelectFields<dynamic>("SongId", "Title", "Interpret", "Year", "Attributes", "SID", "SetId")
+                                .Take(1024);
                     var result = query.Lazily().Value.ToList();
-                    Assert.Equal("songs/50", result.First().SongId); //RED! (:
+                    Assert.Equal("songs/50", result.First().SongId.ToString()); //RED! (:
                 }
             }
         }

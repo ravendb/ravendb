@@ -6,15 +6,16 @@
 
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Linq.Indexing;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq.Indexing;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiMapSearch
 {
-    public class MultiMapWildCardSearch : RavenNewTestBase
+    public class MultiMapWildCardSearch : RavenTestBase
     {
         [Fact]
         public void CanSearch()
@@ -36,7 +37,7 @@ namespace SlowTests.Bugs.MultiMapSearch
 
                     session.SaveChanges();
 
-                    RavenQueryStatistics statistics;
+                    QueryStatistics statistics;
                     IQueryable<AccountSearch.ReduceResult> query = session
                         .Query<AccountSearch.ReduceResult, AccountSearch>()
                         .Statistics(out statistics)

@@ -1,9 +1,11 @@
 using Sparrow;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow.Binary;
+using Sparrow.Collections;
 using Voron.Data.BTrees;
 using Voron.Data.RawData;
 using Voron.Impl;
@@ -229,6 +231,7 @@ namespace Voron.Data.Tables
             {
                 int totalSize;
                 var ptr = value.Read(StartIndex, out totalSize);
+                Debug.Assert(totalSize == sizeof(long), $"{totalSize} == sizeof(long) - {Name}");
                 return Bits.SwapBytes(*(long*) ptr);
             }
 
@@ -380,8 +383,12 @@ namespace Voron.Data.Tables
                     tableTree.Add(ActiveSectionSlice, pageNumber);
                 }
 
-                var stats = (TableSchemaStats*) tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats));
-                stats->NumberOfEntries = 0;
+                byte* ptr;
+                using (tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats),out ptr))
+                {
+                    var stats = (TableSchemaStats*)ptr;
+                    stats->NumberOfEntries = 0;
+                }
 
                 var tablePageAllocator = new NewPageAllocator(tx.LowLevelTransaction, tableTree);
                 tablePageAllocator.Create();
@@ -395,10 +402,12 @@ namespace Voron.Data.Tables
                     if (_primaryKey.IsGlobal == false)
                     {
                         
-                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, newPageAllocator: tablePageAllocator))
+                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, _primaryKey.Name, newPageAllocator: tablePageAllocator))
                         {
-                            var treeHeader = tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader));
-                            indexTree.State.CopyTo((TreeRootHeader*) treeHeader);
+                            using (tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader),out ptr))
+                            {
+                                indexTree.State.CopyTo((TreeRootHeader*) ptr);
+                            }
                         }
                     }
                     else
@@ -411,10 +420,12 @@ namespace Voron.Data.Tables
                 {
                     if (indexDef.IsGlobal == false)
                     {
-                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, newPageAllocator: tablePageAllocator))
+                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, indexDef.Name, newPageAllocator: tablePageAllocator))
                         {
-                            var treeHeader = tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader));
-                            indexTree.State.CopyTo((TreeRootHeader*) treeHeader);
+                            using (tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader),out ptr))
+                            {
+                                indexTree.State.CopyTo((TreeRootHeader*)ptr);
+                            }
                         }
                     }
                     else
@@ -425,11 +436,13 @@ namespace Voron.Data.Tables
 
                 // Serialize the schema into the table's tree
                 var serializer = SerializeSchema();
-                var schemaRepresentation = tableTree.DirectAdd(SchemasSlice, serializer.Length);
 
-                fixed (byte* source = serializer)
+                using (tableTree.DirectAdd(SchemasSlice, serializer.Length, out ptr))
                 {
-                    Memory.Copy(schemaRepresentation, source, serializer.Length);
+                    fixed (byte* source = serializer)
+                    {
+                        Memory.Copy(ptr, source, serializer.Length);
+                    }
                 }
             }
         }

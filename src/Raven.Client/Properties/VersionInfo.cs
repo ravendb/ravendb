@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
+using Raven.Client.Properties;
 
-[assembly: Raven.Client.RavenVersion(Build = "40", CommitHash = "400f636", Version = "4.0", FullVersion = "4.0.0-custom-40")]
+[assembly: RavenVersion(Build = "40", CommitHash = "235bb00", Version = "4.0", FullVersion = "4.0.0-custom-40")]
 
-namespace Raven.Client
+namespace Raven.Client.Properties
 {
     [AttributeUsage(AttributeTargets.Assembly)]
     public class RavenVersionAttribute : Attribute
@@ -18,21 +19,7 @@ namespace Raven.Client
 
         private static RavenVersionAttribute _instance;
 
-        public static RavenVersionAttribute Instance
-        {
-            get
-            {
-                if (_instance == null)
-                {
-                    _instance = (RavenVersionAttribute)
-                        typeof(RavenVersionAttribute).GetTypeInfo()
-                            .Assembly.GetCustomAttributes(typeof(RavenVersionAttribute))
-                            .Single();
-                }
-
-                return _instance;
-            }
-        }
+        public static RavenVersionAttribute Instance => _instance ?? (_instance = (RavenVersionAttribute)typeof(RavenVersionAttribute).GetTypeInfo().Assembly.GetCustomAttributes(typeof(RavenVersionAttribute)).Single());
 
         public int BuildVersion
         {

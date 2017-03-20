@@ -1,13 +1,13 @@
 ﻿using System.Linq;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_5297 : RavenNewTestBase
+    public class RavenDB_5297 : RavenTestBase
     {
         private class User
         {
@@ -61,7 +61,7 @@ namespace FastTests.Issues
                 JsonOperationContext context;
                 using (requestExecuter.ContextPool.AllocateOperationContext(out context))
                 {
-                    var command = new QueryCommand(store.Conventions, context, "Users/ByName", new IndexQuery(store.Conventions) { Query = "Name:* -First" });
+                    var command = new QueryCommand(store.Conventions, context, "Users/ByName", new IndexQuery(store.Conventions) { Query = "Name:* AND -Name:First" });
 
                     requestExecuter.Execute(command, context);
 
@@ -101,7 +101,7 @@ namespace FastTests.Issues
                 JsonOperationContext context;
                 using (requestExecuter.ContextPool.AllocateOperationContext(out context))
                 {
-                    var command = new QueryCommand(store.Conventions, context, "Users/ByName", new IndexQuery(store.Conventions) { Query = "Name:* NOT Second" });
+                    var command = new QueryCommand(store.Conventions, context, "Users/ByName", new IndexQuery(store.Conventions) { Query = "Name:* AND NOT Name:Second" });
 
                     requestExecuter.Execute(command, context);
 

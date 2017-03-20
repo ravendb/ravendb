@@ -1,22 +1,22 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class getDocumentsMetadataByIDPrefixCommand extends commandBase {
 
-    constructor(private prefix:string,private resultsAmount: number, private db: database) {
+    constructor(private prefix:string, private pageSize: number, private db: database) {
         super();
     }
 
-    execute(): JQueryPromise<queryResultDto<documentMetadataDto>> {
-        var url = '/docs';//TODO: use endpoints
-        var args = {
-            'startsWith': this.prefix,
-            'exclude': <string> null,
-            'start': 0,
-            'pageSize': this.resultsAmount,
+    execute(): JQueryPromise<Array<metadataAwareDto>> {
+        const args = {
+            startsWith: this.prefix,
+            start: 0,
+            pageSize: this.pageSize,
             'metadata-only': true
         };
-        return this.query<any>(url, args, this.db, x => x.Results);
+        const url = endpoints.databases.document.docs + this.urlEncodeArgs(args);
+        return this.query<Array<metadataAwareDto>>(url, null, this.db, x => x.Results);
     }
 }
 

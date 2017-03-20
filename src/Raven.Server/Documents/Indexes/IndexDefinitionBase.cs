@@ -3,11 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
@@ -25,12 +22,13 @@ namespace Raven.Server.Documents.Indexes
 
         private int? _cachedHashCode;
 
-        protected IndexDefinitionBase(string name, string[] collections, IndexLockMode lockMode, IndexField[] mapFields)
+        protected IndexDefinitionBase(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexField[] mapFields)
         {
             Name = name;
             Collections = collections;
             MapFields = mapFields.ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
             LockMode = lockMode;
+            Priority = priority;
         }
 
         static IndexDefinitionBase()
@@ -38,13 +36,15 @@ namespace Raven.Server.Documents.Indexes
             Slice.From(StorageEnvironment.LabelsContext, "Definition", ByteStringType.Immutable, out DefinitionSlice);
         }
 
-        public string Name { get; }
+        public string Name { get; private set; }
 
-        public string[] Collections { get; }
+        public HashSet<string> Collections { get; }
 
         public Dictionary<string, IndexField> MapFields { get; }
 
         public IndexLockMode LockMode { get; set; }
+
+        public IndexPriority Priority { get; set; }
 
         public virtual bool HasDynamicFields => false;
 
@@ -86,11 +86,11 @@ namespace Raven.Server.Documents.Indexes
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName((nameof(Name)));
+            writer.WritePropertyName(nameof(Name));
             writer.WriteString(Name);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(Collections)));
+            writer.WritePropertyName(nameof(Collections));
             writer.WriteStartArray();
             var isFirst = true;
             foreach (var collection in Collections)
@@ -104,8 +104,13 @@ namespace Raven.Server.Documents.Indexes
 
             writer.WriteEndArray();
             writer.WriteComma();
-            writer.WritePropertyName((nameof(LockMode)));
+
+            writer.WritePropertyName(nameof(LockMode));
             writer.WriteInteger((int)LockMode);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(Priority));
+            writer.WriteInteger((int)Priority);
             writer.WriteComma();
 
             PersistFields(context, writer);
@@ -149,39 +154,44 @@ namespace Raven.Server.Documents.Indexes
             writer.WriteEndArray();
         }
 
+        public void Rename(string name, TransactionOperationContext context, StorageEnvironmentOptions options)
+        {
+            Name = name;
+
+            Persist(context, options);
+        }
+
         public IndexDefinition ConvertToIndexDefinition(Index index)
         {
-            var indexDefinition = CreateIndexDefinition() ?? new IndexDefinition();
+            var indexDefinition = GetOrCreateIndexDefinitionInternal() ?? new IndexDefinition();
             indexDefinition.Name = index.Name;
             indexDefinition.IndexId = index.IndexId;
             indexDefinition.Type = index.Type;
             indexDefinition.LockMode = LockMode;
+            indexDefinition.Priority = Priority;
 
             return indexDefinition;
         }
 
-        protected abstract IndexDefinition CreateIndexDefinition();
+        protected internal abstract IndexDefinition GetOrCreateIndexDefinitionInternal();
 
         public bool ContainsField(string field)
         {
-            if (field.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
-                field = field.Substring(0, field.Length - 6);
+            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
 
             return MapFields.ContainsKey(field);
         }
 
         public IndexField GetField(string field)
         {
-            if (field.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
-                field = field.Substring(0, field.Length - 6);
+            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
 
             return MapFields[field];
         }
 
         public bool TryGetField(string field, out IndexField value)
         {
-            if (field.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
-                field = field.Substring(0, field.Length - 6);
+            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
 
             return MapFields.TryGetValue(field, out value);
         }
@@ -242,10 +252,21 @@ namespace Raven.Server.Documents.Indexes
             return true;
         }
 
+        public static string GetIndexNameSafeForFileSystem(int id, string name)
+        {
+            foreach (var invalidPathChar in Path.GetInvalidFileNameChars())
+            {
+                name = name.Replace(invalidPathChar, '_');
+            }
+            if (name.Length < 64)
+                return $"{id:0000}-{name}";
+            return $"{id:0000}-{name.Substring(0, 64)}";
+        }
+
         protected static string ReadName(BlittableJsonReaderObject reader)
         {
             string name;
-            if (reader.TryGet(nameof(Name), out name) == false || string.IsNullOrWhiteSpace(name))
+            if (reader.TryGet(nameof(Name), out name) == false || String.IsNullOrWhiteSpace(name))
                 throw new InvalidOperationException("No persisted name");
 
             return name;
@@ -271,6 +292,15 @@ namespace Raven.Server.Documents.Indexes
                 throw new InvalidOperationException("No persisted lock mode");
 
             return (IndexLockMode)lockModeAsInt;
+        }
+
+        protected static IndexPriority ReadPriority(BlittableJsonReaderObject reader)
+        {
+            int priorityAsInt;
+            if (reader.TryGet(nameof(Priority), out priorityAsInt) == false)
+                throw new InvalidOperationException("No persisted priority");
+
+            return (IndexPriority)priorityAsInt;
         }
 
         protected static IndexField[] ReadMapFields(BlittableJsonReaderObject reader)

@@ -1,6 +1,4 @@
-import EVENTS = require("common/constants/events");
 import viewModelBase = require("viewmodels/viewModelBase");
-import resourceActivatedEventArgs = require("viewmodels/resources/resourceActivatedEventArgs");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import router = require("plugins/router");
 import database = require("models/resources/database");
@@ -15,12 +13,6 @@ class upgrade extends viewModelBase {
     attached() {
         super.attached();
         this.poolStats();
-
-        ko.postbox.subscribe(EVENTS.Resource.Activate, (e: resourceActivatedEventArgs) => {
-            if (e.resource instanceof database) {
-                this.dbChanged(e.resource as database); 
-            }
-        });
     }
 
     dbChanged(db:database) {
@@ -40,7 +32,7 @@ class upgrade extends viewModelBase {
         clearTimeout(this.timeoutHandle);
     }
 
-    fetchStats(): JQueryPromise<Raven.Client.Data.DatabaseStatistics> {
+    fetchStats(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
         var db = this.activeDatabase();
         if (db) {
             return new getDatabaseStatsCommand(db)

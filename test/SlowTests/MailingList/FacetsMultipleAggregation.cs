@@ -1,11 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -47,7 +45,7 @@ namespace SlowTests.MailingList
                     DisplayName = "Prices",
                     Mode = FacetMode.Ranges,
                     Aggregation = FacetAggregation.Min,
-                    AggregationField = "Prices_Range",
+                    AggregationField = "Prices_D_Range",
                     TermSortMode = FacetTermSortMode.ValueAsc,
                     Ranges = {"[* TO *]"}
                 },
@@ -58,7 +56,7 @@ namespace SlowTests.MailingList
                     Mode = FacetMode.Ranges,
                     MaxResults = 1,
                     Aggregation = FacetAggregation.Max,
-                    AggregationField = "Prices_Range",
+                    AggregationField = "Prices_D_Range",
                     Ranges = {"[* TO *]"}
                 },
             };
@@ -120,7 +118,7 @@ namespace SlowTests.MailingList
                         Prices = p.Variants.Select(v => (decimal)v.ListPrice.Amount).Distinct(),
                     };
 
-                Sort(e => e.Prices, SortOptions.NumericDouble);
+                Sort(e => e.Prices, SortOptions.Numeric);
             }
         }
     }

@@ -6,18 +6,21 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Sparrow.Binary;
+using Sparrow.Collections;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
 using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
 namespace Sparrow.Json
 {
-    public class BlittableWriter<TWriter> : IDisposable
+    public sealed class BlittableWriter<TWriter> : IDisposable
         where TWriter : struct, IUnmanagedWriteBuffer
     {
         private readonly JsonOperationContext _context;
         private TWriter _unmanagedWriteBuffer;
         private AllocatedMemoryData _compressionBuffer;
+        private AllocatedMemoryData _innerBuffer;
         private int _position;
 
         public int Position => _position;
@@ -49,19 +52,23 @@ namespace Sparrow.Json
         {
             _context = context;
             _unmanagedWriteBuffer = writer;
+            _innerBuffer = _context.GetMemory(32);
         }
 
         public BlittableWriter(JsonOperationContext context)
         {
             _context = context;
+            _innerBuffer = _context.GetMemory(32);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void WriteValue(byte* p, int size) // blittable
         {
             _position += WriteVariableSizeInt(size);
             _unmanagedWriteBuffer.Write(p, size);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int WriteValue(long value)
         {
             var startPos = _position;
@@ -69,6 +76,7 @@ namespace Sparrow.Json
             return startPos;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int WriteValue(bool value)
         {
             var startPos = _position;
@@ -78,7 +86,9 @@ namespace Sparrow.Json
 
         public int WriteNull()
         {
-            return _position;
+            var startPos = _position++;
+            _unmanagedWriteBuffer.WriteByte(0);
+            return startPos;
         }
 
         public int WriteValue(double value)
@@ -99,11 +109,13 @@ namespace Sparrow.Json
             return WriteValue((double)value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int WriteValue(LazyDoubleValue value)
         {
             return WriteValue(value.Inner);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int WriteValue(byte value)
         {
             var startPos = _position;
@@ -128,6 +140,11 @@ namespace Sparrow.Json
                 _context.ReturnMemory(_compressionBuffer);
                 _compressionBuffer = null;
             }
+            if (_innerBuffer != null)
+            {
+                _context.ReturnMemory(_innerBuffer);
+                _innerBuffer = null;
+            }
         }
 
         public void ResetAndRenew()
@@ -135,9 +152,10 @@ namespace Sparrow.Json
             _unmanagedWriteBuffer.Dispose();
             _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream();
             _position = 0;
+            _innerBuffer = _context.GetMemory(32);
         }
 
-        public WriteToken WriteObjectMetadata(List<PropertyTag> properties, long firstWrite, int maxPropId)
+        public WriteToken WriteObjectMetadata(FastList<PropertyTag> properties, long firstWrite, int maxPropId)
         {
             _context.CachedProperties.Sort(properties);
 
@@ -157,7 +175,7 @@ namespace Sparrow.Json
                 var sortedProperty = properties[i];
 
                 WriteNumber(objectMetadataStart - sortedProperty.Position, positionSize);
-                WriteNumber(sortedProperty.PropertyId, propertyIdSize);
+                WriteNumber(sortedProperty.Property.PropertyId, propertyIdSize);
                 _unmanagedWriteBuffer.WriteByte(sortedProperty.Type);
                 _position += positionSize + propertyIdSize + sizeof(byte);
             }
@@ -169,8 +187,7 @@ namespace Sparrow.Json
             };
         }
 
-        public int WriteArrayMetadata(List<int> positions, List<BlittableJsonToken> types,
-            ref BlittableJsonToken listToken)
+        public int WriteArrayMetadata(FastList<int> positions, FastList<BlittableJsonToken> types, ref BlittableJsonToken listToken)
         {
             var arrayInfoStart = _position;
 
@@ -197,44 +214,45 @@ namespace Sparrow.Json
             return arrayInfoStart;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int SetPropertyIdSizeFlag(ref BlittableJsonToken objectToken, int maxPropId)
         {
-            int propertyIdSize;
             if (maxPropId <= byte.MaxValue)
             {
-                propertyIdSize = sizeof(byte);
+                
                 objectToken |= BlittableJsonToken.PropertyIdSizeByte;
+                return sizeof(byte);
             }
-            else
-            {
-                if (maxPropId <= ushort.MaxValue)
-                {
-                    propertyIdSize = sizeof(short);
-                    objectToken |= BlittableJsonToken.PropertyIdSizeShort;
-                }
-                else
-                {
-                    propertyIdSize = sizeof(int);
-                    objectToken |= BlittableJsonToken.PropertyIdSizeInt;
-                }
+
+            if (maxPropId <= ushort.MaxValue)
+            {                
+                objectToken |= BlittableJsonToken.PropertyIdSizeShort;
+                return sizeof(short);
             }
-            return propertyIdSize;
+
+            objectToken |= BlittableJsonToken.PropertyIdSizeInt;
+            return sizeof(int);
         }
+
+        [ThreadStatic] private static int[] _propertyArrayOffset;
 
         public int WritePropertyNames(int rootOffset)
         {
             var cachedProperties = _context.CachedProperties;
 
             // Write the property names and register their positions
-            var propertyArrayOffset = new int[cachedProperties.PropertiesDiscovered];
+            if (_propertyArrayOffset == null || _propertyArrayOffset.Length < cachedProperties.PropertiesDiscovered)
+            {
+                _propertyArrayOffset = new int[Bits.NextPowerOf2(cachedProperties.PropertiesDiscovered)];
+            }
 
             unsafe
             {
                 BlittableJsonToken _;
-                for (var index = 0; index < propertyArrayOffset.Length; index++)
+                for (var index = 0; index < cachedProperties.PropertiesDiscovered; index++)
                 {
                     var str = _context.GetLazyStringForFieldWithCaching(cachedProperties.GetProperty(index));
-                    propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size, str.EscapePositions, out _, UsageMode.None, null);
+                    _propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size, str.EscapePositions, out _, UsageMode.None, null);
                 }
             }
 
@@ -250,9 +268,9 @@ namespace Sparrow.Json
 
             // Write property names offsets
             // PERF: Using for to avoid the cost of the enumerator.
-            for (int i = 0; i < propertyArrayOffset.Length; i++)
+            for (int i = 0; i < cachedProperties.PropertiesDiscovered; i++)
             {
-                int offset = propertyArrayOffset[i];
+                int offset = _propertyArrayOffset[i];
                 WriteNumber(propertiesStart - offset, propertyArrayOffsetValueByteSize);
             }
 
@@ -268,28 +286,23 @@ namespace Sparrow.Json
             WriteNumber((int)documentToken, sizeof(byte));
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int SetOffsetSizeFlag(ref BlittableJsonToken objectToken, long distanceFromFirstProperty)
         {
-            int positionSize;
             if (distanceFromFirstProperty <= byte.MaxValue)
-            {
-                positionSize = sizeof(byte);
+            {                
                 objectToken |= BlittableJsonToken.OffsetSizeByte;
+                return sizeof(byte);
             }
-            else
+
+            if (distanceFromFirstProperty <= ushort.MaxValue)
             {
-                if (distanceFromFirstProperty <= ushort.MaxValue)
-                {
-                    positionSize = sizeof(short);
-                    objectToken |= BlittableJsonToken.OffsetSizeShort;
-                }
-                else
-                {
-                    positionSize = sizeof(int);
-                    objectToken |= BlittableJsonToken.OffsetSizeInt;
-                }
+                objectToken |= BlittableJsonToken.OffsetSizeShort;
+                return sizeof(short);
             }
-            return positionSize;
+
+            objectToken |= BlittableJsonToken.OffsetSizeInt;
+            return sizeof(int);
         }
 
 
@@ -300,22 +313,16 @@ namespace Sparrow.Json
             Debug.Assert(sizeOfValue == sizeof(byte) || sizeOfValue == sizeof(short) || sizeOfValue == sizeof(int), $"Unsupported size {sizeOfValue}");
 
             // PERF: With the current JIT at 12 of January of 2017 the switch statement dont get inlined.
-            if (sizeOfValue == sizeof(int))
-            {
-                _unmanagedWriteBuffer.WriteByte((byte)value);
-                _unmanagedWriteBuffer.WriteByte((byte)(value >> 8));
-                _unmanagedWriteBuffer.WriteByte((byte)(value >> 16));
-                _unmanagedWriteBuffer.WriteByte((byte)(value >> 24));
-            }
-            else if (sizeOfValue == sizeof(ushort))
-            {
-                _unmanagedWriteBuffer.WriteByte((byte)value);
-                _unmanagedWriteBuffer.WriteByte((byte)(value >> 8));
-            }
-            else
-            {
-                _unmanagedWriteBuffer.WriteByte((byte)value);
-            }
+            _unmanagedWriteBuffer.WriteByte((byte)value);
+            if (sizeOfValue == sizeof(byte))
+                return;
+
+            _unmanagedWriteBuffer.WriteByte((byte)(value >> 8));
+            if (sizeOfValue == sizeof(ushort))
+                return;
+
+            _unmanagedWriteBuffer.WriteByte((byte)(value >> 16));
+            _unmanagedWriteBuffer.WriteByte((byte)(value >> 24));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -325,7 +332,7 @@ namespace Sparrow.Json
             // https://developers.google.com/protocol-buffers/docs/encoding?csw=1#types
             // for negative values
 
-            var buffer = stackalloc byte[10];
+            var buffer = _innerBuffer.Address;
             var count = 0;
             var v = (ulong)((value << 1) ^ (value >> 63));
             while (v >= 0x80)
@@ -347,7 +354,7 @@ namespace Sparrow.Json
         public unsafe int WriteVariableSizeInt(int value)
         {
             // assume that we don't use negative values very often
-            var buffer = stackalloc byte[5];
+            var buffer = _innerBuffer.Address;
 
             var count = 0;
             var v = (uint)value;
@@ -370,7 +377,7 @@ namespace Sparrow.Json
         public unsafe int WriteVariableSizeIntInReverse(int value)
         {
             // assume that we don't use negative values very often
-            var buffer = stackalloc byte[5];
+            var buffer = _innerBuffer.Address;
             var count = 0;
             var v = (uint)value;
             while (v >= 0x80)
@@ -399,12 +406,12 @@ namespace Sparrow.Json
         }
 
         [ThreadStatic]
-        private static List<int> _intBuffer;
+        private static FastList<int> _intBuffer;
 
         public unsafe int WriteValue(string str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
         {
             if (_intBuffer == null)
-                _intBuffer = new List<int>();
+                _intBuffer = new FastList<int>();
 
             var escapePositionsMaxSize = JsonParserState.FindEscapePositionsMaxSize(str);
             int size = Encoding.UTF8.GetMaxByteCount(str.Length)
@@ -459,6 +466,42 @@ namespace Sparrow.Json
             _position += size;
 
             _position += WriteVariableSizeInt(0);
+            return startPos;
+        }
+
+        public unsafe int WriteValue(byte* buffer, int size, FastList<int> escapePositions, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)
+        {
+            var startPos = _position;
+            token = BlittableJsonToken.String;
+
+            _position += WriteVariableSizeInt(size);
+
+            // if we are more than this size, we want to abort the compression early and just use
+            // the verbatim string
+            int maxGoodCompressionSize = size - sizeof(int) * 2;
+            if (maxGoodCompressionSize > 0)
+            {
+                size = TryCompressValue(ref buffer, size, ref token, mode, initialCompressedSize, maxGoodCompressionSize);
+            }
+
+            _unmanagedWriteBuffer.Write(buffer, size);
+            _position += size;
+
+            if (escapePositions == null)
+            {
+                _position += WriteVariableSizeInt(0);
+                return startPos;
+            }
+
+            // we write the number of the escape sequences required
+            // and then we write the distance to the _next_ escape sequence
+            _position += WriteVariableSizeInt(escapePositions.Count);
+
+            // PERF: Use indexer to avoid the allocation and overhead of the foreach. 
+            int count = escapePositions.Count;
+            for (int i = 0; i < count; i++)
+                _position += WriteVariableSizeInt(escapePositions[i]);
+
             return startPos;
         }
 
@@ -589,9 +632,10 @@ namespace Sparrow.Json
             return compressionBuffer;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int CalculateCompressionAcceleration(int size)
         {
-            return (int)Math.Log(size, 2);
+            return Bits.CeilLog2(size);
         }
 
         private unsafe byte* GetCompressionBuffer(int minSize)

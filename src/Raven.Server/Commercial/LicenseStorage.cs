@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using Raven.Imports.Newtonsoft.Json;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -64,13 +63,14 @@ namespace Raven.Server.Commercial
                 using (var json = context.ReadObject(firstServerStartDate, "DatabaseInfo",
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var tvb = new TableValueBuilder
+                    TableValueBuilder tvb;
+                    using (table.Allocate(out tvb))
                     {
-                        {id.Buffer, id.Size},
-                        {json.BasePointer, json.Size}
-                    };
+                        tvb.Add(id.Buffer, id.Size);
+                        tvb.Add(json.BasePointer, json.Size);
 
-                    table.Set(tvb);
+                        table.Set(tvb);
+                    }
                 }
                 tx.Commit();
             }
@@ -88,12 +88,12 @@ namespace Raven.Server.Commercial
                 TableValueReader infoTvr;
                 using (Slice.From(tx.InnerTransaction.Allocator, FirstServerStartDateKey, out keyAsSlice))
                 {
-                    //It seems like the database was shutdown rudly and never wrote it stats onto the disk
+                    //It seems like the database was shutdown rudely and never wrote it stats onto the disk
                     if (table.ReadByKey(keyAsSlice, out infoTvr) == false)
                         return null;
                 }
 
-                using (var firstServerStartDateJson = Read(context, infoTvr))
+                using (var firstServerStartDateJson = Read(context, ref infoTvr))
                 {
                     DateTime result;
                     if (firstServerStartDateJson.TryGet(FirstServerStartDateKey, out result))
@@ -105,7 +105,7 @@ namespace Raven.Server.Commercial
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe BlittableJsonReaderObject Read(JsonOperationContext context, TableValueReader reader)
+        private unsafe BlittableJsonReaderObject Read(JsonOperationContext context, ref TableValueReader reader)
         {
             int size;
             var ptr = reader.Read(LicenseInfoSchema.LicenseTable.JsonIndex, out size);
@@ -124,13 +124,14 @@ namespace Raven.Server.Commercial
                 using (var json = context.ReadObject(license.ToJson(), LicenseStoargeKey,
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var tvb = new TableValueBuilder
+                    TableValueBuilder tvb;
+                    using (table.Allocate(out tvb))
                     {
-                        {id.Buffer, id.Size},
-                        {json.BasePointer, json.Size}
-                    };
+                        tvb.Add(id.Buffer, id.Size);
+                        tvb.Add(json.BasePointer, json.Size);
 
-                    table.Set(tvb);
+                        table.Set(tvb);
+                    }
                 }
                 tx.Commit();
             }
@@ -152,7 +153,7 @@ namespace Raven.Server.Commercial
                         return null;
                 }
 
-                using (var licenseJson = Read(context, reader))
+                using (var licenseJson = Read(context, ref reader))
                 {
                     return JsonDeserializationServer.License(licenseJson);
                 }

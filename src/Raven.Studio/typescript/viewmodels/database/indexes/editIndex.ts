@@ -1,6 +1,5 @@
 import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
-import index = require("models/database/index/index");
 import document = require("models/database/documents/document");
 import indexDefinition = require("models/database/index/indexDefinition");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
@@ -10,34 +9,19 @@ import jsonUtil = require("common/jsonUtil");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
-import app = require("durandal/app");
 import indexAceAutoCompleteProvider = require("models/database/index/indexAceAutoCompleteProvider");
-import getScriptedIndexesCommand = require("commands/database/index/getScriptedIndexesCommand");
-import scriptedIndexModel = require("models/database/index/scriptedIndex");
-import autoCompleterSupport = require("common/autoCompleterSupport");
-import mergedIndexesStorage = require("common/storage/mergedIndexesStorage");
-import indexMergeSuggestion = require("models/database/index/indexMergeSuggestion");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
-import replaceIndexDialog = require("viewmodels/database/indexes/replaceIndexDialog");
-import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
-import indexReplaceDocument = require("models/database/index/indexReplaceDocument");
 import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionCommand");
 import renameIndexCommand = require("commands/database/index/renameIndexCommand");
-import saveScriptedIndexesCommand = require("commands/database/documents/saveScriptedIndexesCommand");
-import deleteIndexCommand = require("commands/database/index/deleteIndexCommand");
-import cancelSideBySizeConfirm = require("viewmodels/database/indexes/cancelSideBySizeConfirm");
-import copyIndexDialog = require("viewmodels/database/indexes/copyIndexDialog");
-import getCSharpIndexDefinitionCommand = require("commands/database/index/getCSharpIndexDefinitionCommand");
-import showDataDialog = require("viewmodels/common/showDataDialog");
-import formatIndexCommand = require("commands/database/index/formatIndexCommand");
-import renameOrDuplicateIndexDialog = require("viewmodels/database/indexes/renameOrDuplicateIndexDialog");
 import indexFieldOptions = require("models/database/index/indexFieldOptions");
 import getIndexFieldsFromMapCommand = require("commands/database/index/getIndexFieldsFromMapCommand");
 import configurationItem = require("models/database/index/configurationItem");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
 import configuration = require("configuration");
-
+import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
+import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
 import eventsCollector = require("common/eventsCollector");
+import popoverUtils = require("common/popoverUtils");
 
 class editIndex extends viewModelBase { 
 
@@ -58,6 +42,9 @@ class editIndex extends viewModelBase {
     additionalStoragePaths = ko.observableArray<string>([]);
     selectedIndexPath: KnockoutComputed<string>;
 
+    private indexesNames = ko.observableArray<string>();
+    private transformersNames = ko.observableArray<string>();
+
     queryUrl = ko.observable<string>();
     termsUrl = ko.observable<string>();
 
@@ -66,13 +53,6 @@ class editIndex extends viewModelBase {
      mergeSuggestion = ko.observable<indexMergeSuggestion>(null);
     */
 
-    /*TODO scripted index
-        isScriptedIndexBundleActive = ko.observable<boolean>(false);
-        scriptedIndex = ko.observable<scriptedIndexModel>(null);
-        indexScript = ko.observable<string>("");
-        deleteScript = ko.observable<string>("");
-    */
-    
     constructor() {
         super();
 
@@ -83,27 +63,6 @@ class editIndex extends viewModelBase {
 
         this.initializeObservables();
 
-        /* TODO scripted index
-        this.isScriptedIndexBundleActive.subscribe((active: boolean) => {
-            if (active) {
-                this.fetchOrCreateScriptedIndex();
-            }
-        });
-
-        this.indexName.subscribe(name => {
-            if (this.scriptedIndex() !== null) {
-                this.scriptedIndex().indexName(name);
-            }
-        });
-
-        this.scriptedIndex.subscribe(scriptedIndex => {
-            this.indexScript = scriptedIndex.indexScript;
-            this.deleteScript = scriptedIndex.deleteScript;
-            this.initializeDirtyFlag();
-            this.editedIndex().name.valueHasMutated();
-        });*/
-
-        
         /* TODO: side by side
         this.canSaveSideBySideIndex = ko.computed(() => {
             if (!this.isEditingExistingIndex()) {
@@ -179,15 +138,50 @@ class editIndex extends viewModelBase {
 
         this.initializeDirtyFlag();
         this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
-        
-        //TODO: scripted index this.checkIfScriptedIndexBundleIsActive();
+
+        this.initValidation();
+        this.fetchTransformers();
+        this.fetchIndexes();
+    }
+
+    private initValidation() {
+        this.editedIndex().name.extend({
+            validation: [{
+                validator: (val: string) => {
+                    return !_.includes(this.transformersNames(), val);
+                },
+                message: "Already being used by an existing transformer."
+                }, {
+                    validator: (val: string) => {
+                        return val === this.originalIndexName || !_.includes(this.indexesNames(), val);
+                },
+                message: "Already being used by an existing index."
+            }]
+        });
+    }
+
+    private fetchTransformers() {
+        const db = this.activeDatabase();
+        return new getTransformersCommand(db)
+            .execute()
+            .done((transformers: Raven.Client.Documents.Transformers.TransformerDefinition[]) => {
+                this.transformersNames(transformers.map(t => t.Name));
+            });
+    }
+
+    private fetchIndexes() {
+        const db = this.activeDatabase();
+        new getIndexNamesCommand(db)
+            .execute()
+            .done((indexesNames) => {
+                this.indexesNames(indexesNames);
+            });
     }
 
     attached() {
         super.attached();
         this.addMapHelpPopover();
         this.addReduceHelpPopover();
-        //TODO: this.addScriptsLabelPopover();
     }
 
     private updateIndexPaths() {
@@ -196,8 +190,9 @@ class editIndex extends viewModelBase {
             .done((databaseDocument: document) => {
                 const settings = (<any>databaseDocument)["Settings"] as dictionary<string>;
                 const indexStoragePath = settings[configuration.indexing.storagePath];
-                //TODO: don't use .string here: but additionalIndexStoragePaths - waiting for RavenDB-5665)
-                const additionalPaths = settings[configuration.indexing.string] ? settings[configuration.indexing.string].split(";") : [];
+                const additionalPaths = settings[configuration.indexing.additionalStoragePaths]
+                    ? settings[configuration.indexing.additionalStoragePaths].split(";")
+                    : [];
                 this.additionalStoragePaths(additionalPaths);
                 this.defaultIndexPath(indexStoragePath || editIndex.DefaultIndexStoragePath);
             })
@@ -215,7 +210,7 @@ class editIndex extends viewModelBase {
 
     private initializeDirtyFlag() {
         const indexDef: indexDefinition = this.editedIndex();
-        const checkedFieldsArray: Array<KnockoutObservable<any>> = [indexDef.name, indexDef.maps, indexDef.reduce, indexDef.numberOfFields, indexDef.indexStoragePath];
+        const checkedFieldsArray: Array<KnockoutObservable<any>> = [indexDef.name, indexDef.maps, indexDef.reduce, indexDef.numberOfFields, indexDef.indexStoragePath, indexDef.outputReduceToCollection];
 
         const configuration = indexDef.configuration();
         if (configuration) {
@@ -250,11 +245,6 @@ class editIndex extends viewModelBase {
             }
         });
 
-        /* TODO: scripted index part
-            checkedFieldsArray.push(this.indexScript);
-            checkedFieldsArray.push(this.deleteScript);
-        */
-
         this.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray, false, jsonUtil.newLineNormalizingHashFunction);
 
         this.isSaveEnabled = ko.pureComputed(() => {
@@ -276,15 +266,29 @@ class editIndex extends viewModelBase {
         $("#map-title small").popover({
             html: true,
             trigger: 'hover',
-            content: 'Maps project the fields to search on or to group by. It uses LINQ query syntax.<br/><br/>Example:</br><pre><span class="code-keyword">from</span> order <span class="code-keyword">in</span> docs.Orders<br/><span class="code-keyword">where</span> order.IsShipped<br/><span class="code-keyword">select new</span><br/>{</br>   order.Date, <br/>   order.Amount,<br/>   RegionId = order.Region.Id <br />}</pre>Each map function should project the same set of fields.',
+            template: popoverUtils.longPopoverTemplate,
+            container: "body",
+            content: 'Maps project the fields to search on or to group by. It uses LINQ query syntax.<br/>' +
+                'Example:</br><pre><span class="token keyword">from</span> order <span class="token keyword">in</span>' +
+                ' docs.Orders<br/><span class="token keyword">where</span> order.IsShipped<br/>' +
+                '<span class="token keyword">select new</span><br/>{</br>   order.Date, <br/>   order.Amount,<br/>' +
+                '   RegionId = order.Region.Id <br />}</pre>Each map function should project the same set of fields.'
         });
     }
 
     addReduceHelpPopover() {
         $("#reduce-title small").popover({
             html: true,
+            container: "body",
+            template: popoverUtils.longPopoverTemplate,
             trigger: 'hover',
-            content: 'The Reduce function consolidates documents from the Maps stage into a smaller set of documents. It uses LINQ query syntax.<br/><br/>Example:</br><pre><span class="code-keyword">from</span> result <span class="code-keyword">in</span> results<br/><span class="code-keyword">group</span> result <span class="code-keyword">by new</span> { result.RegionId, result.Date } into g<br/><span class="code-keyword">select new</span><br/>{<br/>  Date = g.Key.Date,<br/>  RegionId = g.Key.RegionId,<br/>  Amount = g.Sum(x => x.Amount)<br/>}</pre>The objects produced by the Reduce function should have the same fields as the inputs.',
+            content: 'The Reduce function consolidates documents from the Maps stage into a smaller set of documents.<br />' +
+                'It uses LINQ query syntax.<br/>Example:</br><pre><span class="token keyword">from</span> result ' +
+                '<span class="token keyword">in</span> results<br/><span class="token keyword">group</span> result ' +
+                '<span class="token keyword">by new</span> { result.RegionId, result.Date } into g<br/>' +
+                '<span class="token keyword">select new</span><br/>{<br/>  Date = g.Key.Date,<br/>  ' +
+                'RegionId = g.Key.RegionId,<br/>  Amount = g.Sum(x => x.Amount)<br/>}</pre>' +
+                'The objects produced by the Reduce function should have the same fields as the inputs.'
         });
     }
 
@@ -372,7 +376,7 @@ class editIndex extends viewModelBase {
         });
     }
 
-    private fetchIndexToEdit(indexName: string): JQueryPromise<Raven.Client.Indexing.IndexDefinition> {
+    private fetchIndexToEdit(indexName: string): JQueryPromise<Raven.Client.Documents.Indexes.IndexDefinition> {
         return new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
             .done(result => {
@@ -450,22 +454,12 @@ class editIndex extends viewModelBase {
         //TODO: }
     }
 
-    private saveIndex(indexDto: Raven.Client.Indexing.IndexDefinition): JQueryPromise<any> { //TODO: use type
+    private saveIndex(indexDto: Raven.Client.Documents.Indexes.IndexDefinition): JQueryPromise<Raven.Client.Documents.Indexes.PutIndexResult> {
         eventsCollector.default.reportEvent("index", "save");
-        const commands: Array<JQueryPromise<any>> = [];
 
-        commands.push(new saveIndexDefinitionCommand(indexDto, this.activeDatabase()).execute());
-        /* TODO scripted index
-        if (this.scriptedIndex() !== null) {
-            commands.push(new saveScriptedIndexesCommand([this.scriptedIndex()], this.activeDatabase()).execute());
-        }*/
-
-        return $.when.apply($, commands).done(() => {
-
-            /* TODO
-            if (this.scriptedIndex()) {
-                this.fetchOrCreateScriptedIndex(); // reload scripted index to obtain fresh etag and metadata
-            }*/
+        return new saveIndexDefinitionCommand(indexDto, this.activeDatabase())
+            .execute()
+            .done(() => {
             this.dirtyFlag().reset();
             this.editedIndex().name.valueHasMutated();
             //TODO: merge suggestion: var isSavingMergedIndex = this.mergeSuggestion() != null;
@@ -522,26 +516,30 @@ class editIndex extends viewModelBase {
     }
 
     renameIndex() {
-        const newName = this.editedIndex().name();
-        const oldName = this.originalIndexName;
+        if (this.isValid(this.editedIndex().renameValidationGroup)) {
+            const newName = this.editedIndex().name();
+            const oldName = this.originalIndexName;
 
-        this.renameInProgress(true);
+            this.renameInProgress(true);
 
-        new renameIndexCommand(oldName, newName, this.activeDatabase())
-            .execute()
-            .always(() => this.renameInProgress(false))
-            .done(() => {
-                this.dirtyFlag().reset();
+            new renameIndexCommand(oldName, newName, this.activeDatabase())
+                .execute()
+                .always(() => this.renameInProgress(false))
+                .done(() => {
+                    this.dirtyFlag().reset();
 
-                this.originalIndexName = newName;
-                this.updateUrl(this.editedIndex().name());
-                this.renameMode(false);
-            });
+                    this.originalIndexName = newName;
+                    this.updateUrl(this.editedIndex().name());
+                    this.renameMode(false);
+                });
+        }
     }
 
     cancelRename() {
         this.renameMode(false);
-        this.editedIndex().name(this.originalIndexName);
+        const editedIndex = this.editedIndex();
+        editedIndex.name(this.originalIndexName);
+        editedIndex.renameValidationGroup.errors.showAllMessages(false);
     }
 
     /* TODO
@@ -610,11 +608,6 @@ class editIndex extends viewModelBase {
             var indexDef = this.editedIndex().toDto();
             var replaceDocumentKey = indexReplaceDocument.replaceDocumentPrefix + this.editedIndex().name();
 
-            if (this.scriptedIndex() !== null) {
-                // reset etag as we save different document
-                this.scriptedIndex().__metadata.etag(null);
-            }
-
             this.saveIndex(indexDef)
                 .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save replace index.", response.responseText, response.statusText))
                 .done(() => {
@@ -640,10 +633,6 @@ class editIndex extends viewModelBase {
             var indexToDelete = this.editedIndex().name();
             this.editedIndex().name(this.editedIndex().name().substr(index.TestIndexPrefix.length));
             var indexDef = this.editedIndex().toDto();
-            if (this.scriptedIndex() !== null) {
-                // reset etag as we save different document
-                this.scriptedIndex().__metadata.etag(null);
-            }
 
             this.saveIndex(indexDef)
                 .done(() => {
@@ -660,18 +649,11 @@ class editIndex extends viewModelBase {
                 this.editedIndex().name(index.TestIndexPrefix + this.editedIndex().name());
             }
             var indexDef = this.editedIndex().toDto();
-
-            if (this.scriptedIndex() !== null) {
-                // reset etag as we save different document
-                this.scriptedIndex().__metadata.etag(null);
-            }
-            
             this.saveIndex(indexDef);
         }
     }*/
 
     /* TODO side by side
-
 
     cancelSideBySideIndex() {
         eventsCollector.default.reportEvent("index", "cancel-side-by-side");
@@ -698,40 +680,6 @@ class editIndex extends viewModelBase {
         dialog.show(deleteViewModel);
     }*/
 
-    /* TODO scripted index
-    checkIfScriptedIndexBundleIsActive() {
-        var db = this.activeDatabase();
-        var activeBundles = db.activeBundles();
-        this.isScriptedIndexBundleActive(activeBundles.indexOf("ScriptedIndexResults") != -1);
     }
-
-    fetchOrCreateScriptedIndex() {
-        var self = this;
-        new getScriptedIndexesCommand(this.activeDatabase(), this.indexName())
-            .execute()
-            .done((scriptedIndexes: scriptedIndexModel[]) => {
-                if (scriptedIndexes.length > 0) {
-                    self.scriptedIndex(scriptedIndexes[0]);
-                } else {
-                    self.scriptedIndex(scriptedIndexModel.emptyForIndex(self.indexName()));
-                }
-
-                this.initializeDirtyFlag();
-            });
-    }
-
-    private scriptedIndexCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-      var completions = [ 
-        { name: "LoadDocument", args: "id" },
-        { name: "PutDocument", args: "id, doc" },
-        { name: "DeleteDocument", args: "id" }
-      ];
-        var result = completions
-            .filter(entry => autoCompleterSupport.wordMatches(prefix, entry.name))
-            .map(entry => { return { name: entry.name, value: entry.name, score: 100, meta: entry.args} });
-
-        callback(null, result);
-    }*/
-}
 
 export = editIndex;

@@ -1,10 +1,10 @@
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Linq.Indexing;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -42,7 +42,7 @@ namespace SlowTests.MailingList
 
                 // places/2: perfect match + boost
                 var terms = "UQAM";
-                RavenQueryStatistics stats;
+                QueryStatistics stats;
                 var places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
                     .WaitForNonStaleResults()
                     .Statistics(out stats)
@@ -98,11 +98,11 @@ namespace SlowTests.MailingList
 
                 // places/1: perfect match + boost
                 const string terms = "Université Québec Montréal";
-                RavenQueryStatistics stats;
+                QueryStatistics stats;
                 var places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
                     .WaitForNonStaleResults()
                     .Statistics(out stats)
-                    .RelatesToShape(Constants.Indexing.Fields.DefaultSpatialFieldName, "Point(45.54545 -73.63908)", SpatialRelation.Nearby)
+                    .RelatesToShape(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, "Point(45.54545 -73.63908)", SpatialRelation.Nearby)
                     .Where("(Name:(" + terms + ") OR Terms:(" + terms + "))")
                     .Take(10)
                     .ToList();

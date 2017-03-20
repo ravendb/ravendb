@@ -10,23 +10,23 @@ namespace SlowTests.MailingList
 
         private class Property
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public int BedroomCount { get; set; }
         }
 
         private class Catalog
         {
-            public Guid Id { get; set; }
-            public Guid PropertyId { get; set; }
+            public string Id { get; set; }
+            public string PropertyId { get; set; }
             public string Type { get; set; }
         }
 
         [Fact]
         public void Can_search_with_filters()
         {
-            Property property = new Property { Id = Guid.NewGuid(), Name = "Property Name", BedroomCount = 3 };
-            Catalog catalog = new Catalog() { Id = Guid.NewGuid(), Type = "Waterfront", PropertyId = property.Id };
+            Property property = new Property { Id = Guid.NewGuid().ToString(), Name = "Property Name", BedroomCount = 3 };
+            Catalog catalog = new Catalog() { Id = Guid.NewGuid().ToString(), Type = "Waterfront", PropertyId = property.Id };
 
             using (var store = GetDocumentStore())
             using (var session = store.OpenSession())

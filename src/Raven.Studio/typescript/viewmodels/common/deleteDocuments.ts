@@ -1,14 +1,14 @@
 import dialog = require("plugins/dialog");
 import deleteDocumentsCommand = require("commands/database/documents/deleteDocumentsCommand");
-import appUrl = require("common/appUrl");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/resources/database");
+import messagePublisher = require("common/messagePublisher");
 
 class deleteDocuments extends dialogViewModelBase {
 
     private documents = ko.observableArray<documentBase>();
     private deletionStarted = false;
-    deletionTask = $.Deferred(); // Gives consumers a way to know when the async delete operation completes.
+    deletionTask = $.Deferred<void>();
 
     constructor(documents: Array<documentBase>, private db: database) {
         super(null);
@@ -21,19 +21,30 @@ class deleteDocuments extends dialogViewModelBase {
     }
 
     deleteDocs() {
-        var deletedDocIds = this.documents().map(i => i.getId());
-        var deleteCommand = new deleteDocumentsCommand(deletedDocIds, this.db);
-        var deleteCommandTask = deleteCommand.execute();
+        const deletedDocIds = this.documents().map(i => i.getId());
 
-        deleteCommandTask.done(() => this.deletionTask.resolve(this.documents()));
-        deleteCommandTask.fail(response => this.deletionTask.reject(response));
+        const docCount = deletedDocIds.length;
+        const docsDescription = docCount === 1 ? this.documents()[0].Key : docCount + " docs";
+
+        new deleteDocumentsCommand(deletedDocIds, this.db)
+            .execute()
+            .done(() => {
+                messagePublisher.reportSuccess("Deleted " + docsDescription);
+                this.deletionTask.resolve();
+            })
+            .fail(response => {
+                messagePublisher.reportError("Failed to delete " + docsDescription,
+                    response.responseText,
+                    response.statusText);
+                this.deletionTask.reject(response);
+            });
 
         this.deletionStarted = true;
-        dialog.close(this);
+        dialog.close(this, true);
     }
 
     cancel() {
-        dialog.close(this);
+        dialog.close(this, false);
     }
 
     deactivate(args: any) {

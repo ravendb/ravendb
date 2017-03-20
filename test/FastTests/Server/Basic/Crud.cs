@@ -1,14 +1,15 @@
 ﻿using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
+using Raven.Client;
+using Raven.Client.Documents.Commands;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class Crud : RavenNewTestBase
+    public class Crud : RavenTestBase
     {
         [Fact]
         public async Task CanSaveAndLoad()
@@ -50,7 +51,7 @@ namespace FastTests.Server.Basic
                     {
                         ["Name"] = "Fitzchak",
                         ["LastName"] = "Very big value here, so can reproduce the issue",
-                        [Constants.Metadata.Key] = new DynamicJsonValue
+                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                         {
                             ["SomeMoreData"] = "Make this object bigger",
                             ["SomeMoreData2"] = "Make this object bigger",

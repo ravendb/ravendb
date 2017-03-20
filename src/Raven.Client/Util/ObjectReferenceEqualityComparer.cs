@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
@@ -9,7 +8,7 @@ namespace Raven.Client.Util
     /// A generic object comparer that would only use object's reference, 
     /// ignoring any <see cref="IEquatable{T}"/> or <see cref="object.Equals(object)"/>  overrides.
     /// </summary>
-    public class ObjectReferenceEqualityComparer<T> : EqualityComparer<T>
+    internal class ObjectReferenceEqualityComparer<T> : EqualityComparer<T>
         where T : class
     {
         /// <summary>
@@ -26,7 +25,7 @@ namespace Raven.Client.Util
         /// <param name="x">The first object to compare.</param><param name="y">The second object to compare.</param>
         public override bool Equals(T x, T y)
         {
-            return object.ReferenceEquals(x, y);
+            return ReferenceEquals(x, y);
         }
 
         /// <summary>

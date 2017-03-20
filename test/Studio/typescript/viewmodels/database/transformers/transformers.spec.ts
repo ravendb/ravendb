@@ -23,7 +23,7 @@ describe(viewUnderTest, () => {
 
 });
 
-function getSampleData(): Array<Raven.Abstractions.Indexing.TransformerDefinition> {
+function getSampleData(): Array<Raven.Client.Documents.Transformers.TransformerDefinition> {
     return [
         {
             "Name": "t1",

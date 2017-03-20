@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -15,9 +14,12 @@ using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
 using System.Threading;
-using Raven.Client.Data;
+using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.Utils;
 using Raven.Server.Web;
+using Raven.Server.Web.Authentication;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Routing
 {
@@ -48,7 +50,17 @@ namespace Raven.Server.Routing
             if (tryMatch.Value == null)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                await context.Response.WriteAsync($"There is no handler for path: {method} {path}{context.Request.QueryString}");
+
+                using(var ctx = JsonOperationContext.ShortTermSingleUse())
+                using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+                {
+                    ctx.Write(writer,
+                        new DynamicJsonValue
+                        {
+                            ["Type"] = "Error",
+                            ["Message"] = $"There is no handler for path: {method} {path}{context.Request.QueryString}"
+                        });
+                }
                 return null;
             }
 
@@ -59,10 +71,9 @@ namespace Raven.Server.Routing
                 RouteMatch = tryMatch.Match,
             };
 
-            HandleRequest handler;
-            if (tryMatch.Value.TryGetHandler(reqCtx, out handler) == false)
-                handler = await tryMatch.Value.CreateHandlerAsync(reqCtx);
-            
+            var tuple = tryMatch.Value.TryGetHandler(reqCtx);
+            var handler = tuple.Item1 ?? await tuple.Item2;
+
             reqCtx.Database?.Metrics?.RequestsMeter.Mark();
             _serverMetrics.RequestsMeter.Mark();
 
@@ -70,13 +81,22 @@ namespace Raven.Server.Routing
             if (handler == null)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                await context.Response.WriteAsync($"{{'Type':'Error','Exception': 'There is no handler for {context.Request.Method} {context.Request.Path}'}}");
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+                {
+                    ctx.Write(writer,
+                        new DynamicJsonValue
+                        {
+                            ["Type"] = "Error",
+                            ["Message"] = $"There is no handler for {context.Request.Method} {context.Request.Path}"
+                        });
+                }
                 return null;
             }
 
             if (tryMatch.Value.NoAuthorizationRequired == false)
             {
-                var authResult = await TryAuthorize(context, _ravenServer.Configuration, reqCtx.Database);
+                var authResult = TryAuthorize(context, _ravenServer.Configuration, reqCtx.Database);
                 if (authResult == false)
                     return reqCtx.Database?.ResourceName;
             }
@@ -96,7 +116,7 @@ namespace Raven.Server.Routing
             return reqCtx.Database?.ResourceName;
         }
 
-        private async Task<bool> TryAuthorize(HttpContext context, RavenConfiguration configuration,
+        private bool TryAuthorize(HttpContext context, RavenConfiguration configuration,
             DocumentDatabase database)
         {
             if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin)
@@ -113,7 +133,16 @@ namespace Raven.Server.Routing
             if (token == null)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
-                await context.Response.WriteAsync("The access token is required");
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+                {
+                    ctx.Write(writer,
+                        new DynamicJsonValue
+                        {
+                            ["Type"] = "Error",
+                            ["Message"] = "The access token is required"
+                        });
+                }
                 return false;
             }
 
@@ -121,14 +150,32 @@ namespace Raven.Server.Routing
             if (_ravenServer.AccessTokensById.TryGetValue(token, out accessToken) == false)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
-                await context.Response.WriteAsync("The access token is invalid");
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+                {
+                    ctx.Write(writer,
+                        new DynamicJsonValue
+                        {
+                            ["Type"] = "Error",
+                            ["Message"] = "The access token is invalid"
+                        });
+                }
                 return false;
             }
 
             if (accessToken.IsExpired)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
-                await context.Response.WriteAsync("The access token is expired");
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+                {
+                    ctx.Write(writer,
+                        new DynamicJsonValue
+                        {
+                            ["Type"] = "Error",
+                            ["Message"] = "The access token is expired"
+                        });
+                }
                 return false;
             }
 
@@ -149,13 +196,31 @@ namespace Raven.Server.Routing
             {
                 case AccessModes.None:
                     context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-                    await context.Response.WriteAsync($"Api Key {accessToken.Name} does not have access to {resourceName}");
+                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                    using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+                    {
+                        ctx.Write(writer,
+                            new DynamicJsonValue
+                            {
+                                ["Type"] = "Error",
+                                ["Message"] = $"Api Key {accessToken.Name} does not have access to {resourceName}"
+                            });
+                    }
                     return false;
                 case AccessModes.ReadOnly:
                     if (context.Request.Method != "GET")
                     {
                         context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-                        await context.Response.WriteAsync($"Api Key {accessToken.Name} does not have write access to {resourceName} but made a {context.Request.Method} request");
+                        using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                        using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+                        {
+                            ctx.Write(writer,
+                                new DynamicJsonValue
+                                {
+                                    ["Type"] = "Error",
+                                    ["Message"] = $"Api Key {accessToken.Name} does not have write access to {resourceName} but made a {context.Request.Method} request"
+                                });
+                        }
                         return false;
                     }
                     return true;

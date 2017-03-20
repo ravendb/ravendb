@@ -7,10 +7,11 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
+using Raven.Client.Util;
 using Xunit;
 
 /*
@@ -18,7 +19,7 @@ using Xunit;
  */
 namespace SlowTests.Tests.Linq
 {
-    public class UsingWhereConditions : RavenNewTestBase
+    public class UsingWhereConditions : RavenTestBase
     {
         [Fact]
         public void Can_Use_Where()
@@ -29,13 +30,13 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     AddData(session);
-
-                    store.Admin.Send(new PutIndexOperation(indexName,
-                        new IndexDefinitionBuilder<CommitInfo, CommitInfo>
-                        {
-                            Map = docs => from doc in docs
-                                          select new { doc.Revision },
-                        }.ToIndexDefinition(store.Conventions)));
+                    var indexDefinition = new IndexDefinitionBuilder<CommitInfo, CommitInfo>
+                    {
+                        Map = docs => from doc in docs
+                            select new {doc.Revision},
+                    }.ToIndexDefinition(store.Conventions);
+                    indexDefinition.Name = indexName;
+                    store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
 
                     WaitForIndexing(store);
 

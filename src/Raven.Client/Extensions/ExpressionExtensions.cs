@@ -3,21 +3,19 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using  Raven.Imports.Newtonsoft.Json.Utilities;
 
-namespace Raven.Abstractions.Extensions
+namespace Raven.Client.Extensions
 {
     ///<summary>
     /// Extensions for Linq expressions
     ///</summary>
-    public static class ExpressionExtensions
+    internal static class ExpressionExtensions
     {
         public static Type ExtractTypeFromPath<T>(this Expression<Func<T, object>> path)
         {
@@ -33,14 +31,9 @@ namespace Raven.Abstractions.Extensions
                 {
                     var normalizedProperty = property.Replace(collectionSeparatorAsString, string.Empty);
 
-                    if (type.IsArray)
-                    {
-                        type = type.GetElementType().GetProperty(normalizedProperty).PropertyType;
-                    }
-                    else
-                    {
-                        type = type.GetGenericArguments()[0].GetProperty(normalizedProperty).PropertyType;
-                    }
+                    type = type.IsArray
+                        ? type.GetElementType().GetProperty(normalizedProperty).PropertyType
+                        : type.GetGenericArguments()[0].GetProperty(normalizedProperty).PropertyType;
                 }
                 else
                 {
@@ -113,21 +106,21 @@ namespace Raven.Abstractions.Extensions
                 }
 
                 builder.Append(curValue);
-                
+
             }
             return builder.ToString().Trim(propertySeparator, collectionSeparator);
         }
 
-        public class PropertyPathExpressionVisitor : ExpressionVisitor
+        internal class PropertyPathExpressionVisitor : ExpressionVisitor
         {
-            private readonly string propertySeparator;
-            private readonly string collectionSeparator;
+            private readonly string _propertySeparator;
+            private readonly string _collectionSeparator;
             public Stack<string> Results = new Stack<string>();
 
             public PropertyPathExpressionVisitor(string propertySeparator, string collectionSeparator)
             {
-                this.propertySeparator = propertySeparator;
-                this.collectionSeparator = collectionSeparator;
+                _propertySeparator = propertySeparator;
+                _collectionSeparator = collectionSeparator;
             }
 
             protected override Expression VisitMember(MemberExpression node)
@@ -137,14 +130,14 @@ namespace Raven.Abstractions.Extensions
                 {
                     if (string.IsNullOrEmpty(propertyName) == false)
                     {
-                        Results.Push(propertySeparator);
+                        Results.Push(_propertySeparator);
                         Results.Push("$" + node.Member.Name);
                     }
-                    
+
                     return base.VisitMember(node);
                 }
 
-                Results.Push(propertySeparator);
+                Results.Push(_propertySeparator);
                 Results.Push(node.Member.Name);
                 return base.VisitMember(node);
             }
@@ -155,20 +148,20 @@ namespace Raven.Abstractions.Extensions
 
                 if (node.Member.DeclaringType == null)
                     return false;
-                if (node.Member.DeclaringType.IsGenericType() == false)
+                if (node.Member.DeclaringType.GetTypeInfo().IsGenericType == false)
                     return false;
 
                 var genericTypeDefinition = node.Member.DeclaringType.GetGenericTypeDefinition();
                 if (node.Member.Name == "Value" || node.Member.Name == "Key")
                 {
-                    return genericTypeDefinition == typeof (KeyValuePair<,>);
+                    return genericTypeDefinition == typeof(KeyValuePair<,>);
                 }
 
                 if (node.Member.Name == "Values" || node.Member.Name == "Keys")
                 {
                     propertyName = node.Member.Name;
-                    return genericTypeDefinition == typeof (Dictionary<,>) ||
-                           genericTypeDefinition == typeof (IDictionary<,>);
+                    return genericTypeDefinition == typeof(Dictionary<,>) ||
+                           genericTypeDefinition == typeof(IDictionary<,>);
 
                 }
 
@@ -182,7 +175,7 @@ namespace Raven.Abstractions.Extensions
 
 
                 Visit(node.Arguments[1]);
-                Results.Push(collectionSeparator);
+                Results.Push(_collectionSeparator);
                 Visit(node.Arguments[0]);
 
 

@@ -10,7 +10,7 @@ namespace SlowTests.MailingList
     {
         private class Location
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
 
             public string Name { get; set; }
 

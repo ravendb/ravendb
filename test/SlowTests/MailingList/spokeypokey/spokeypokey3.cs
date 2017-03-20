@@ -2,7 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList.spokeypokey
@@ -61,8 +62,8 @@ namespace SlowTests.MailingList.spokeypokey
 
                 using (var session = documentStore.OpenSession())
                 {
-                    documentStore.DatabaseCommands.DeleteIndex("ProviderSearchIndex1");
-                    documentStore.DatabaseCommands.DeleteIndex("ProviderSearchIndex2");
+                    documentStore.Admin.Send(new DeleteIndexOperation("ProviderSearchIndex1"));
+                    documentStore.Admin.Send(new DeleteIndexOperation("ProviderSearchIndex2"));
                     session.Store(provider1);
                     session.Store(provider2);
                     session.Store(provider3);

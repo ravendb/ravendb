@@ -1,86 +1,74 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Hosting.Internal;
-using Raven.Abstractions.Commands;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
+using Raven.Client;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Patch;
-using Raven.Server.Exceptions;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Exceptions;
-using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents.Handlers
 {
     public class BatchHandler : DatabaseRequestHandler
     {
-       
+
         [RavenAction("/databases/*/bulk_docs", "POST")]
         public async Task BulkDocs()
         {
-            DocumentsOperationContext readDocumentsContext;
-            using (ContextPool.AllocateOperationContext(out readDocumentsContext))
+            DocumentsOperationContext ctx;
+            using (ContextPool.AllocateOperationContext(out ctx))
             {
-                DocumentsOperationContext ctx;
-                using(ContextPool.AllocateOperationContext(out ctx))
+                var cmds = await BatchRequestParser.ParseAsync(ctx, RequestBodyStream());
+
+                var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
+
+                using (var mergedCmd = new MergedBatchCommand
                 {
-                    var cmds = await BatchRequestParser.ParseAsync(ctx, RequestBodyStream());
-
-                    var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
-
-                    using (var mergedCmd = new MergedBatchCommand
+                    Database = Database,
+                    ParsedCommands = cmds,
+                    Reply = new DynamicJsonArray(),
+                })
+                {
+                    if (waitForIndexesTimeout != null)
+                        mergedCmd.ModifiedCollections = new HashSet<string>();
+                    try
                     {
-                        Database = Database,
-                        ParsedCommands = cmds,
-                        Reply = new DynamicJsonArray(),
-                    })
+                        await Database.TxMerger.Enqueue(mergedCmd);
+                    }
+                    catch (ConcurrencyException)
                     {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                        throw;
+                    }
 
-                        if (waitForIndexesTimeout != null)
-                            mergedCmd.ModifiedCollections = new HashSet<string>();
-                        try
-                        {
-                            await Database.TxMerger.Enqueue(mergedCmd);
-                        }
-                        catch (ConcurrencyException)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                            throw;
-                        }
+                    var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
+                    if (waitForReplicasTimeout != null)
+                    {
+                        await WaitForReplicationAsync(waitForReplicasTimeout.Value, mergedCmd);
+                    }
 
-                        var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
-                        if (waitForReplicasTimeout != null)
-                        {
-                            await WaitForReplicationAsync(waitForReplicasTimeout.Value, mergedCmd);
-                        }
+                    if (waitForIndexesTimeout != null)
+                    {
+                        await
+                            WaitForIndexesAsync(waitForIndexesTimeout.Value, mergedCmd.LastEtag,
+                                mergedCmd.ModifiedCollections);
+                    }
 
-                        if (waitForIndexesTimeout != null)
-                        {
-                            await
-                                WaitForIndexesAsync(waitForIndexesTimeout.Value, mergedCmd.LastEtag,
-                                    mergedCmd.ModifiedCollections);
-                        }
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                        using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
+                    using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
+                    {
+                        ctx.Write(writer, new DynamicJsonValue
                         {
-                            ctx.Write(writer, new DynamicJsonValue
-                            {
-                                ["Results"] = mergedCmd.Reply
-                            });
-                        }
+                            ["Results"] = mergedCmd.Reply
+                        });
                     }
                 }
             }
@@ -244,24 +232,34 @@ namespace Raven.Server.Documents.Handlers
                     switch (cmd.Method)
                     {
                         case BatchRequestParser.CommandType.PUT:
-                            var putResult = Database.DocumentsStorage.Put(context, cmd.Key, cmd.Etag,
-                                cmd.Document);
+                            var putResult = Database.DocumentsStorage.Put(context, cmd.Key, cmd.Etag, cmd.Document);
 
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, cmd.Document.Size);
 
                             BlittableJsonReaderObject metadata;
-                            cmd.Document.TryGet(Constants.Metadata.Key, out metadata);
+                            cmd.Document.TryGet(Constants.Documents.Metadata.Key, out metadata);
                             LastEtag = putResult.Etag;
 
                             ModifiedCollections?.Add(putResult.Collection.Name);
 
-                            Reply.Add(new DynamicJsonValue
+                            var changeVector = new DynamicJsonArray();
+                            if (putResult.ChangeVector != null)
                             {
-                                ["Key"] = putResult.Key,
-                                ["Etag"] = putResult.Etag,
+                                foreach (var entry in putResult.ChangeVector)
+                                    changeVector.Add(entry.ToJson());
+                            }
+
+                            var putReply = new DynamicJsonValue
+                            {
+                                [nameof(putResult.Key)] = putResult.Key,
+                                [nameof(putResult.Etag)] = putResult.Etag,
+                                [nameof(putResult.Collection)] = putResult.Collection.Name,
+                                [nameof(putResult.ChangeVector)] = changeVector,
                                 ["Method"] = "PUT",
                                 ["Metadata"] = metadata
-                            });
+                            };
+
+                            Reply.Add(putReply);
                             break;
                         case BatchRequestParser.CommandType.PATCH:
                             // TODO: Move this code out of the merged transaction
@@ -281,7 +279,7 @@ namespace Raven.Server.Documents.Handlers
                                 ["Key"] = cmd.Key,
                                 ["Etag"] = patchResult.Etag,
                                 ["Method"] = "PATCH",
-                                [nameof(BatchResult.PatchStatus)] = patchResult.Status.ToString(),
+                                ["PatchStatus"] = patchResult.Status.ToString(),
                             });
                             break;
                         case BatchRequestParser.CommandType.DELETE:

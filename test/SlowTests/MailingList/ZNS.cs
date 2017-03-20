@@ -9,9 +9,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -60,7 +61,7 @@ namespace SlowTests.MailingList
             {
                 //Create an index
                 store.Initialize();
-                store.DatabaseCommands.PutIndex("TestItemsIndex", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Name = "TestItemsIndex",
                     Maps = { @"from item in docs.TestItems
@@ -70,7 +71,7 @@ namespace SlowTests.MailingList
                     {
                         { "EventDate", new IndexFieldOptions { Storage = FieldStorage.Yes }}
                     }
-                }, true);
+                }}));
 
                 //Insert some events at random dates
                 using (var session = store.OpenSession())
@@ -96,7 +97,7 @@ namespace SlowTests.MailingList
                 }
 
                 //Get all results
-                RavenQueryStatistics stats;
+                QueryStatistics stats;
                 List<TestItem> result = null;
                 using (var session = store.OpenSession())
                 {
@@ -111,7 +112,7 @@ namespace SlowTests.MailingList
 
                 //Get all results, paged
                 List<TestItem> pagedResult = new List<TestItem>();
-                RavenQueryStatistics stats2;
+                QueryStatistics stats2;
 
                 int skip = 0;
                 var take = 10;

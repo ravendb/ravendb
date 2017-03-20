@@ -5,9 +5,8 @@ import getIndexDefinitionCommand = require("commands/database/index/getIndexDefi
 import facet = require("models/database/query/facet");
 import queryFacetsCommand = require("commands/database/query/queryFacetsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import pagedList = require("common/pagedList");
-import pagedResultSet = require("common/pagedResultSet");
 import eventsCollector = require("common/eventsCollector");
+import popoverUtils = require("common/popoverUtils");
 
 class reporting extends viewModelBase {
     selectedIndexName = ko.observable<string>();
@@ -22,7 +21,7 @@ class reporting extends viewModelBase {
     addedValues = ko.observableArray<facet>();
     filter = ko.observable<string>();
     hasFilter = ko.observable(false);
-    reportResults = ko.observable<pagedList>();
+    reportResults = ko.observable<any>(); //TODO: use type
     totalQueryResults = ko.computed(() => this.reportResults() ? this.reportResults().totalResultCount() : null);
     queryDuration = ko.observable<string>();
     appUrls: computedAppUrls;
@@ -85,8 +84,9 @@ class reporting extends viewModelBase {
         $("#filterQueryLabel").popover({
             html: true,
             trigger: "hover",
-            container: ".form-horizontal",
-            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
+            template: popoverUtils.longPopoverTemplate,
+            container: "body",
+            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="token keyword">Name</span>: Hi?berna*<br/><span class="token keyword">Count</span>: [0 TO 10]<br/><span class="token keyword">Title</span>: "RavenDb Queries 1010" <span class="token keyword">AND Price</span>: [10.99 TO *]</pre>'
         });
     }
 
@@ -201,9 +201,9 @@ class reporting extends viewModelBase {
             var command = new queryFacetsCommand(selectedIndex, filterQuery, skip, take, groupedFacets, db, this.isCacheDisable());
             ko.postbox.publish("SetRawJSONUrl", appUrl.forReportingRawData(this.activeDatabase(), this.selectedIndexName()) + command.argsUrl);
             return command.execute()
-                .done((resultSet: pagedResultSet<any>) => this.queryDuration(resultSet.additionalResultInfo));
+                .done((resultSet: pagedResult<any>) => this.queryDuration(resultSet.additionalResultInfo));
         };
-        this.reportResults(new pagedList(resultsFetcher));
+        //TODO: this.reportResults(new pagedList(resultsFetcher));
     }
 
     toggleCacheEnable() {

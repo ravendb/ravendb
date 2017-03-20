@@ -4,26 +4,26 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Lucene.Net.Analysis;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Documents;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
+using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Exceptions;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
 
 namespace FastTests.Client.Indexing
 {
-    public class IndexesFromClient : RavenNewTestBase
+    public class IndexesFromClient : RavenTestBase
     {
         [Fact]
         public async Task CanReset()
@@ -259,7 +259,7 @@ namespace FastTests.Client.Indexing
                 }
 
                 var database = await Server.ServerStore.DatabasesLandlord
-                    .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase, 0))
+                    .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase))
                     ;
 
                 var index = database.IndexStore.GetIndexes().First();
@@ -324,7 +324,7 @@ namespace FastTests.Client.Indexing
                 }
 
                 var database = await Server.ServerStore.DatabasesLandlord
-                    .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase, 0));
+                    .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase));
 
                 var index = database.IndexStore.GetIndexes().First();
                 var serverDefinition = index.GetIndexDefinition();
@@ -334,7 +334,6 @@ namespace FastTests.Client.Indexing
 
                 definition = await store.Admin.SendAsync(new GetIndexOperation(index.Name));
                 Assert.Equal(serverDefinition.Name, definition.Name);
-                Assert.Equal(serverDefinition.IsSideBySideIndex, definition.IsSideBySideIndex);
                 Assert.Equal(serverDefinition.IsTestIndex, definition.IsTestIndex);
                 Assert.Equal(serverDefinition.Reduce, definition.Reduce);
                 Assert.Equal((int)serverDefinition.Type, (int)definition.Type);
@@ -380,7 +379,7 @@ namespace FastTests.Client.Indexing
                 string indexName;
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var people = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
@@ -417,7 +416,7 @@ namespace FastTests.Client.Indexing
                 string indexName2;
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var people = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
@@ -469,7 +468,7 @@ namespace FastTests.Client.Indexing
                 string indexName;
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var people = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
@@ -542,7 +541,7 @@ namespace FastTests.Client.Indexing
                 string indexName;
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var people = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
@@ -587,7 +586,7 @@ namespace FastTests.Client.Indexing
                 string indexName;
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var people = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
@@ -618,7 +617,7 @@ namespace FastTests.Client.Indexing
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var users = session.Query<User>()
                         .Statistics(out stats)
                         .Where(x => x.Name == "Arek")
@@ -634,7 +633,7 @@ namespace FastTests.Client.Indexing
                 {
                     var command = new ExplainQueryCommand(store.Conventions, commands.Context, "dynamic/Users", new IndexQuery(store.Conventions));
 
-                    await commands.RequestExecuter.ExecuteAsync(command, commands.Context);
+                    await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
                     var explanations = command.Result;
 
@@ -662,7 +661,7 @@ namespace FastTests.Client.Indexing
                     var database = await Server
                         .ServerStore
                         .DatabasesLandlord
-                        .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase, 0));
+                        .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase));
 
                     var indexId = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Posts", new[]
                     {
@@ -670,15 +669,15 @@ namespace FastTests.Client.Indexing
                         {
                             Name = "Title",
                             Analyzer = typeof(SimpleAnalyzer).FullName,
-                            Indexing = Raven.Abstractions.Indexing.FieldIndexing.Analyzed,
-                            Storage = Raven.Abstractions.Indexing.FieldStorage.Yes
+                            Indexing = FieldIndexing.Analyzed,
+                            Storage = FieldStorage.Yes
                         },
                         new IndexField
                         {
                             Name = "Desc",
                             Analyzer = typeof(SimpleAnalyzer).FullName,
-                            Indexing = Raven.Abstractions.Indexing.FieldIndexing.Analyzed,
-                            Storage = Raven.Abstractions.Indexing.FieldStorage.Yes
+                            Indexing = FieldIndexing.Analyzed,
+                            Storage = FieldStorage.Yes
                         }
                     }));
 

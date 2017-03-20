@@ -6,8 +6,7 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -16,7 +15,7 @@ namespace SlowTests.MailingList
     {
         private class Blog
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public decimal? Price { get; set; }
         }
 
@@ -31,7 +30,7 @@ namespace SlowTests.MailingList
                                    Price = b.Price
                                };
                 Index(b => b.Price, FieldIndexing.Default);
-                Sort(b => b.Price, SortOptions.NumericDouble);
+                Sort(b => b.Price, SortOptions.Numeric);
             }
         }
 
@@ -62,7 +61,7 @@ namespace SlowTests.MailingList
 
                     var ids = result.Select(b => b.Id).ToArray();
 
-                    Assert.Equal(new[] { 3, 2, 4, 1 }, ids);
+                    Assert.Equal(new[] { "blogs/3", "blogs/2", "blogs/4", "blogs/1" }, ids);
                 }
             }
         }

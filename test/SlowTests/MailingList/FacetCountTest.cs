@@ -1,12 +1,13 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -117,9 +118,9 @@ namespace SlowTests.MailingList
                 {
                     using (var session = store.OpenSession())
                     {
-                        RavenQueryStatistics stats;
+                        QueryStatistics stats;
                         var query = session.Advanced.DocumentQuery<WodsProjection, Wod_Search>()
-                            .SetResultTransformer(wodSearchTransformer.TransformerName)
+                            .SetTransformer(wodSearchTransformer.TransformerName)
                             .WaitForNonStaleResults()
                             .Statistics(out stats)
                             .SelectFields<WodsProjection>();
@@ -130,12 +131,12 @@ namespace SlowTests.MailingList
 
                         var wods = query.ToList();
 
-                        var facets = session.Advanced.DocumentStore.DatabaseCommands.GetFacets(new FacetQuery(store.Conventions)
+                        var facets = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery(store.Conventions)
                         {
                             IndexName = "Wod/Search",
                             Query = query.ToString(),
                             FacetSetupDoc = "Facets/WodFacets"
-                        });
+                        }))[0];
 
                         var pullupsCount = facets.Results["ExerciseList"].Values.First(o => o.Range == "pull-ups").Hits;
 

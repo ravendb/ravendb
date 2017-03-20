@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
@@ -59,7 +60,24 @@ namespace Voron.Platform.Win32
             var length = new FileInfo(filename).Length;
             if (length < journalSize)
             {
-                Win32NativeFileMethods.SetFileLength(_handle, journalSize);
+                try
+                {
+                    Win32NativeFileMethods.SetFileLength(_handle, journalSize);
+                }
+                catch (Exception ex)
+                {
+                    try
+                    {
+                        _handle?.Dispose();
+                        _handle = null;
+                        File.Delete(_filename);
+                    }
+                    catch (Exception)
+                    {
+                        // there's nothing we can do about it
+                    }
+                    throw new IOException("When SetFileLength file " + filename + " to " + journalSize, ex);
+                }
                 length = journalSize;
             }
 
@@ -101,12 +119,14 @@ namespace Voron.Platform.Win32
 
             bool writeSuccess;
             var nNumberOfBytesToWrite = numberOf4Kb*(4*Constants.Size.Kilobyte);
-            using (_options.IoMetrics.MeterIoRate(_filename, IoMetrics.MeterType.JournalWrite, nNumberOfBytesToWrite))
+            using (var metrics = _options.IoMetrics.MeterIoRate(_filename, IoMetrics.MeterType.JournalWrite, nNumberOfBytesToWrite))
             {
                 int written;
                 writeSuccess = Win32NativeFileMethods.WriteFile(_handle, p, nNumberOfBytesToWrite,
                     out written,
                     _nativeOverlapped);
+
+                metrics.IncrementFileSize(NumberOfAllocated4Kb*(4*Constants.Size.Kilobyte));
             }
 
             if (writeSuccess == false)
@@ -119,8 +139,10 @@ namespace Voron.Platform.Win32
 
         public AbstractPager CreatePager()
         {
-            return new Win32MemoryMapPager(_options, _filename);
-            //return new SparseMemoryMappedPager(_options,_filename);
+            if (_options.RunningOn32Bits)
+                return new Windows32BitsMemoryMapPager(_options, _filename);
+
+            return new WindowsMemoryMapPager(_options, _filename);
         }
 
         public bool Read(byte* buffer, long numOfBytes, long offsetInFile)

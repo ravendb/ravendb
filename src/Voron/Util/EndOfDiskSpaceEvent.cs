@@ -5,23 +5,28 @@
 // -----------------------------------------------------------------------
 
 using System.IO;
+using System.Runtime.ExceptionServices;
 
 namespace Voron.Util
 {
     public class EndOfDiskSpaceEvent
     {
         private readonly long _availableSpaceWhenEventOccurred;
-        private DriveInfo _driveInfo;
+        private readonly DriveInfo _driveInfo;
+        private readonly ExceptionDispatchInfo _edi;
 
-        public EndOfDiskSpaceEvent(DriveInfo driveInfo)
+        public EndOfDiskSpaceEvent(DriveInfo driveInfo, ExceptionDispatchInfo edi)
         {
             _availableSpaceWhenEventOccurred = driveInfo.AvailableFreeSpace;
             _driveInfo = driveInfo;
+            _edi = edi;
         }
 
-        public bool CanContinueWriting
+        public void AssertCanContinueWriting()
         {
-            get { return _driveInfo.AvailableFreeSpace > _availableSpaceWhenEventOccurred; }
+            if (_driveInfo.AvailableFreeSpace > _availableSpaceWhenEventOccurred)
+                return;
+            _edi.Throw();
         }
     }
 }

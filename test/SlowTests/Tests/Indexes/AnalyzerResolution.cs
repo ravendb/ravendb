@@ -1,24 +1,28 @@
 using System.Linq;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class AnalyzerResolution : RavenNewTestBase
+    public class AnalyzerResolution : RavenTestBase
     {
         [Fact]
         public void can_resolve_internal_analyzer()
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinitionBuilder<User>
+                var indexDefinition = new IndexDefinitionBuilder<User>
                 {
                     Map = docs => from doc in docs select new { doc.Id },
                     Analyzers = { { x => x.Id, "SimpleAnalyzer" } }
-                }.ToIndexDefinition(store.Conventions)));
+                }.ToIndexDefinition(store.Conventions);
+                indexDefinition.Name = "test";
+                store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
+
             }
         }
     }

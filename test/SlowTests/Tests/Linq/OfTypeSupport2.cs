@@ -7,14 +7,13 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class OfTypeSupport2 : RavenNewTestBase
+    public class OfTypeSupport2 : RavenTestBase
     {
         [Fact]
         public void ShouldCorrectlyMatchTheTypeName()

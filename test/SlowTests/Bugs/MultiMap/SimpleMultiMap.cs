@@ -1,13 +1,13 @@
 using System;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
 using System.Linq;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiMap
 {
-    public class SimpleMultiMap : RavenNewTestBase
+    public class SimpleMultiMap : RavenTestBase
     {
         [Fact]
         public void CanCreateMultiMapIndex()
@@ -29,7 +29,7 @@ namespace SlowTests.Bugs.MultiMap
             }
         }
 
-        [Fact(Skip = "Aviv")]
+        [Fact]
         public void CanQueryUsingMultiMap()
         {
             using (var store = GetDocumentStore())

@@ -1,8 +1,9 @@
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Newtonsoft.Json;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace Raven.Imports.Newtonsoft.Json.Sample
@@ -30,8 +31,8 @@ namespace SlowTests.MailingList
         {
             [Raven.Imports.Newtonsoft.Json.Sample.JsonProperty("EmailAddress")]
             public string Email { get; set; }
-        
-            [Raven.Imports.Newtonsoft.Json.JsonProperty("ZipCode")]
+
+            [JsonProperty("ZipCode")]
             public string Postcode { get; set; }
         }
 
@@ -46,11 +47,11 @@ namespace SlowTests.MailingList
             public StudentDtos_ByEmailDomain()
             {
                 Map = studentDtos => from studentDto in studentDtos
-                                  select new Result
-                                  {
-                                      Email = studentDto.Email,
-                                      Postcode = studentDto.Postcode
-                                  };
+                                     select new Result
+                                     {
+                                         Email = studentDto.Email,
+                                         Postcode = studentDto.Postcode
+                                     };
             }
         }
 
@@ -69,7 +70,7 @@ namespace SlowTests.MailingList
                 store.Conventions.PrettifyGeneratedLinqExpressions = false;
                 new StudentDtos_ByEmailDomain().Execute(store);
 
-                var definition = store.DatabaseCommands.GetIndex(new StudentDtos_ByEmailDomain().IndexName);
+                var definition = store.Admin.Send(new GetIndexOperation(new StudentDtos_ByEmailDomain().IndexName));
 
                 Assert.Equal(@"docs.StudentDtos.Select(studentDto => new {
     Email = studentDto.Email,

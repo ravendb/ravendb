@@ -9,14 +9,15 @@ using System.Collections.Generic;
 using FastTests;
 using Xunit;
 using System.Linq;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
 
 namespace SlowTests.Tests.Querying
 {
-    public class DynamicIndexesWithCollections : RavenNewTestBase
+    public class DynamicIndexesWithCollections : RavenTestBase
     {
         [Fact]
         public void CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection()
@@ -58,7 +59,7 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
-                    var stats = new RavenQueryStatistics();
+                    var stats = new QueryStatistics();
                     var results = s.Query<Blog>()
                         .Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5)))
@@ -178,7 +179,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Highlighting")]
+        [Fact(Skip = "RavenDB-6558")]
         public void CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery()
         {
             var blogOne = new Blog
@@ -235,7 +236,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Highlighting")]
+        [Fact(Skip = "RavenDB-6558")]
         public void CanPerformDynamicQueryWithHighlighting()
         {
             var blogOne = new Blog
@@ -295,16 +296,17 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Highlighting")]
+        [Fact(Skip = "RavenDB-6558")]
         public void ExecutesQueryWithHighlightingsAgainstSimpleIndex()
         {
             using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
-                store.Admin.Send(new PutIndexOperation(indexName,
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
+                        Name = indexName, 
                         Fields = new Dictionary<string, IndexFieldOptions>
                         {
                             {
@@ -326,7 +328,7 @@ namespace SlowTests.Tests.Querying
                                 }
                             }
                         }
-                    }));
+                    }}));
 
                 var blogOne = new Blog
                 {
@@ -384,16 +386,17 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Highlighting")]
+        [Fact(Skip = "RavenDB-6558")]
         public void ExecutesQueryWithHighlightingsAgainstMapReduceIndex()
         {
             using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingMRTests";
-                store.Admin.Send(new PutIndexOperation(indexName,
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
+                        Name = indexName,
                         Reduce = @"from result in results 
                                    group result by result.Category into g
                                    select new { Category = g.Key, Title = g.Select(x=>x.Title).Aggregate(string.Concat) }",
@@ -418,7 +421,7 @@ namespace SlowTests.Tests.Querying
                                 }
                             }
                         }
-                    }));
+                    }}));
 
                 var blogOne = new Blog
                 {
@@ -470,16 +473,17 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Highlighting")]
+        [Fact(Skip = "RavenDB-6558")]
         public void ExecutesQueryWithHighlightingsAndProjections()
         {
             using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
-                store.Admin.Send(new PutIndexOperation(indexName,
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
+                        Name = indexName,
                         Fields = new Dictionary<string, IndexFieldOptions>
                         {
                             {
@@ -501,7 +505,7 @@ namespace SlowTests.Tests.Querying
                                 }
                             }
                         }
-                    }));
+                    }}));
 
                 var blogOne = new Blog
                 {

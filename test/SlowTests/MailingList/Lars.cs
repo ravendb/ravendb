@@ -6,7 +6,8 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -50,7 +51,7 @@ namespace SlowTests.MailingList
             using (var s = GetDocumentStore())
             {
                 new Index().Execute(s);
-                var indexDefinition = s.DatabaseCommands.GetIndex("Index");
+                var indexDefinition = s.Admin.Send(new GetIndexOperation("Index"));
                 Assert.Contains("Enumerable.ToArray(g)", indexDefinition.Reduce);
                 Assert.Contains("Enumerable.Sum", indexDefinition.Reduce);
             }

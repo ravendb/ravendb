@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using Raven.Client.Document;
+﻿using System.Collections.Generic;
 using Xunit;
 
 namespace FastTests.Client.Documents
 {
-    public class Load : RavenNewTestBase
+    public class Load : RavenTestBase
     {
         private class Foo
         {
@@ -23,8 +21,8 @@ namespace FastTests.Client.Documents
             public ushort FooUShortId { get; set; }
             public byte FooByteId { get; set; }
             */
-            public object FooId { get; set; }
-            public List<object> FooIDs { get; set; }
+            public string FooId { get; set; }
+            public List<string> FooIDs { get; set; }
             public string Name { get; set; }
         }
 

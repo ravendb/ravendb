@@ -8,8 +8,9 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.SlowTests.Queries
@@ -56,16 +57,17 @@ namespace SlowTests.SlowTests.Queries
         {
             using (var s = store.OpenSession())
             {
-                store.DatabaseCommands.PutIndex("TestAttributesByAttributes",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
+                        Name = "TestAttributesByAttributes",
                         Maps =
                         {
                           @"from e in docs.TestAttributes
                             from r in e.Attributes
                             select new { Attributes_Key = r.Key, Attributes_Value = r.Value }"
                         }
-                    });
+                    }}));
 
                 foreach (var sample in GetSampleData())
                 {

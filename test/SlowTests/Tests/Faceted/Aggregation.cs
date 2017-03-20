@@ -8,12 +8,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using SlowTests.Core.Utils.Entities.Faceted;
 using Xunit;
-using Raven.Client.Linq;
 
 namespace SlowTests.Tests.Faceted
 {
@@ -36,10 +36,10 @@ namespace SlowTests.Tests.Faceted
                           order.Tax
                       };
 
-                Sort(x => x.Total, SortOptions.NumericDouble);
-                Sort(x => x.Quantity, SortOptions.NumericLong);
-                Sort(x => x.Region, SortOptions.NumericLong);
-                Sort(x => x.Tax, SortOptions.NumericDouble);
+                Sort(x => x.Total, SortOptions.Numeric);
+                Sort(x => x.Quantity, SortOptions.Numeric);
+                Sort(x => x.Region, SortOptions.Numeric);
+                Sort(x => x.Tax, SortOptions.Numeric);
             }
         }
 
@@ -364,7 +364,7 @@ namespace SlowTests.Tests.Faceted
                     var facetResult = r.Results["At"];
                     Assert.Equal(2, facetResult.Values.Count);
 
-                    Assert.Equal(1, facetResult.Values.Count(x => x.Range == DateTime.Today.ToString(Raven.Abstractions.Default.DateTimeFormatsToWrite)));
+                    Assert.Equal(1, facetResult.Values.Count(x => x.Range == DateTime.Today.ToString(Default.DateTimeFormatsToWrite)));
                 }
             }
         }
@@ -442,8 +442,8 @@ namespace SlowTests.Tests.Faceted
                     facetResult = r.Results["Total"];
                     Assert.Equal(4, facetResult.Values.Count);
 
-                    Assert.Equal(12, facetResult.Values.First(x => x.Range == "[NULL TO Dx100]").Sum);
-                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "{Dx1500 TO NULL]").Sum);
+                    Assert.Equal(12, facetResult.Values.First(x => x.Range == "[NULL TO 100]").Sum);
+                    Assert.Equal(3333, facetResult.Values.First(x => x.Range == "{1500 TO NULL]").Sum);
 
 
                 }

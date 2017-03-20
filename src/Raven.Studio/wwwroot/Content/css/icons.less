@@ -36,6 +36,22 @@
     &+span {
         margin-left: 9px;
     }
+
+    &.disabled {
+        opacity:.5;
+        color:@gray;
+
+        &:before, &:after {
+            
+        }
+        &:after {
+            content: "\e9a2";
+            position:absolute;
+            left: -4px;
+            top: 1px;
+            font-size: 24px;
+        }
+    }
 }
 
 .icon-lg {
@@ -92,10 +108,6 @@
     content: "\e943";
 }
 
-.icon-filesystem:before {
-    content: "\e942";
-}
-
 .icon-coffee:before {
     content: "\e941";
 }
@@ -122,10 +134,6 @@
 
 .icon-unlock:before {
     content: "\e905";
-}
-
-.icon-lock-sidebyside:before {
-    content: "\e906";
 }
 
 .icon-lock-error:before {
@@ -363,6 +371,10 @@
     content: "\e99a";
 }
 
+.icon-disabled:before {
+  content: "\e9a2";
+}
+
 .icon-play2:before {
   content: "\e99d";
 }
@@ -458,15 +470,6 @@
 }
 .icon-manage-server:before {
   content: "\e95c";
-}
-.icon-new-counter:before {
-  content: "\e95d";
-}
-.icon-new-filesystem:before {
-  content: "\e95e";
-}
-.icon-new-time-series:before {
-  content: "\e95f";
 }
 .icon-periodic-export:before {
   content: "\e960";
@@ -651,9 +654,6 @@
 .icon-copy-to-clipboard:before {
   content: "\e943";
 }
-.icon-filesystem:before {
-  content: "\e942";
-}
 .icon-coffee:before {
   content: "\e941";
 }
@@ -677,9 +677,6 @@
 }
 .icon-unlock:before {
   content: "\e905";
-}
-.icon-lock-sidebyside:before {
-  content: "\e906";
 }
 .icon-lock-error:before {
   content: "\e907";

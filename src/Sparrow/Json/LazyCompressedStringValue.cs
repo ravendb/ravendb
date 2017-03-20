@@ -19,7 +19,7 @@ namespace Sparrow.Json
         {
             var allocatedUncompressedData = DecompressToAllocatedMemoryData();
 
-            var lazyStringValue = new LazyStringValue(null, allocatedUncompressedData.Address, UncompressedSize, _context);
+            var lazyStringValue = _context.AllocateStringValue(null, allocatedUncompressedData.Address, UncompressedSize);
 
             lazyStringValue.AllocatedMemoryData = allocatedUncompressedData;
             return lazyStringValue;
@@ -44,11 +44,11 @@ namespace Sparrow.Json
 
             try
             {
-                var charCount = self._context.Encoding.GetCharCount(tempBuffer, self.UncompressedSize);
+                var charCount = JsonOperationContext.Encoding.GetCharCount(tempBuffer, self.UncompressedSize);
                 var str = new string(' ', charCount);
                 fixed (char* pStr = str)
                 {
-                    self._context.Encoding.GetChars(tempBuffer, self.UncompressedSize, pStr, charCount);
+                    JsonOperationContext.Encoding.GetChars(tempBuffer, self.UncompressedSize, pStr, charCount);
                     self.String = str;
                     return str;
                 }
@@ -120,6 +120,11 @@ namespace Sparrow.Json
         public override string ToString()
         {
             return (string) this;
+        }
+
+        public string Substring(int startIndex, int length)
+        {
+            return ToString().Substring(startIndex, length);
         }
     }
 }

@@ -87,11 +87,11 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-sm-3 control-label">Resources</label>
+                            <label class="col-sm-3 control-label">Databases</label>
                             <div class="col-sm-9">
                                 
-                                <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase, visible: databases().length == 0" title="Add Resource">
-                                    <i class="icon-plus"></i> Add Resource
+                                <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase, visible: databases().length == 0" title="Add Database">
+                                    <i class="icon-plus"></i> Add database
                                 </button>
                                 <table class="table table-striped table-hover">
                                     <thead>
@@ -99,7 +99,7 @@
                                         <td>Name</td>
                                         <td>Type</td>
                                         <td>
-                                            <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add resource" data-bind="click: addEmptyDatabase, visible: !$root.settingsAccess.isReadOnly()">
+                                            <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add database" data-bind="click: addEmptyDatabase, visible: !$root.settingsAccess.isReadOnly()">
                                                 <i class="icon-plus"></i>
                                             </button>
                                         </td>
@@ -109,7 +109,7 @@
                                     <tr>
                                         <td>
                                             <div class="btn-group">
-                                                <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" data-bind="textInput: tenantId, customValidity: tenantCustomValidityError, attr: { 'id': 'databaseName' + $parentContext.$index() + $index() }" placeholder="Resource name">
+                                                <input tabindex="2" autocomplete="off" required type="text" name="databaseName" class="form-control" data-bind="textInput: tenantId, customValidity: tenantCustomValidityError, attr: { 'id': 'databaseName' + $parentContext.$index() + $index() }" placeholder="Database name">
                                                 <ul class="dropdown-menu scrollable-resource-menu" style="display: none; overflow-x: hidden" data-bind="autoComplete: '#databaseName' + $parentContext.$index() + $index(), foreach: searchResults">
                                                     <li role="presentation" data-bind="click: $parent.tenantId.bind($data)">
                                                         <a role="menuitem" tabindex="-1" href="#" class="nounderline" data-bind="attr : { 'title': $data }">
@@ -132,7 +132,7 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <button type="button" style="display: inline-block; float: none; vertical-align: middle; font-size: 14px;" class="close" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data), visible: !$root.settingsAccess.isReadOnly()" title="Remove this resource">
+                                            <button type="button" style="display: inline-block; float: none; vertical-align: middle; font-size: 14px;" class="close" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data), visible: !$root.settingsAccess.isReadOnly()" title="Remove this database">
                                                 <i class="icon-cancel"></i>
                                             </button>
                                         </td>
@@ -140,7 +140,7 @@
                                     </tbody>
                                 </table>
                                 <div style="color: red" data-bind="visible: needToShowSystemDatabaseWarning">
-                                    * This API Key provides access to all resources but not to the System Database
+                                    * This API Key provides access to all databases but not to the System Database
                                 </div>
                             </div>
                         </div>

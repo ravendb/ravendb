@@ -1,6 +1,7 @@
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -24,15 +25,15 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var items = session.Load<ItemsTransformer, Item>(new[] { "items/1", "items/2" });
-                    Assert.Equal(1 * 3, items[0].Position);
-                    Assert.Equal(2 * 3, items[1].Position);
+                    Assert.Equal(1 * 3, items["items/1"].Position);
+                    Assert.Equal(2 * 3, items["items/2"].Position);
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var items = session.Advanced.Lazily.Load<ItemsTransformer, Item>(new[] { "items/1", "items/2" }).Value;
-                    Assert.Equal(1 * 3, items[0].Position);
-                    Assert.Equal(2 * 3, items[1].Position);
+                    Assert.Equal(1 * 3, items["items/1"].Position);
+                    Assert.Equal(2 * 3, items["items/2"].Position);
                 }
             }
         }
@@ -54,15 +55,15 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var items = session.Load<Item>(new[] { "items/1", "items/2" }, typeof(ItemsTransformer));
-                    Assert.Equal(1 * 3, items[0].Position);
-                    Assert.Equal(2 * 3, items[1].Position);
+                    Assert.Equal(1 * 3, items["items/1"].Position);
+                    Assert.Equal(2 * 3, items["items/2"].Position);
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var items = session.Advanced.Lazily.Load<Item>(new[] { "items/1", "items/2" }, typeof(ItemsTransformer)).Value;
-                    Assert.Equal(1 * 3, items[0].Position);
-                    Assert.Equal(2 * 3, items[1].Position);
+                    Assert.Equal(1 * 3, items["items/1"].Position);
+                    Assert.Equal(2 * 3, items["items/2"].Position);
                 }
             }
         }

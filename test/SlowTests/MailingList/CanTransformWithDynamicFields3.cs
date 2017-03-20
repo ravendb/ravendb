@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
+using Newtonsoft.Json.Linq;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Json.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using SlowTests.Utils;
 using Xunit;
 
@@ -141,7 +142,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        private class GlobalizationTransformer : AbstractTransformerCreationTask<RavenJObject>
+        private class GlobalizationTransformer : AbstractTransformerCreationTask<JObject>
         {
             public const string GlobalizationQueryListenerKey = "Language";
 
@@ -175,10 +176,10 @@ namespace SlowTests.MailingList
             using (var session = _store.OpenSession())
             {
                 var results = session.Advanced.DocumentQuery<BaseEntityResult, TranslatedEntities_Map>()
-                    .SetResultTransformer(typeof(GlobalizationTransformer).Name)
-                    .SetTransformerParameters(new Dictionary<string, RavenJToken>
+                    .SetTransformer(typeof(GlobalizationTransformer).Name)
+                    .SetTransformerParameters(new Dictionary<string, object>
                         {
-                            {GlobalizationTransformer.GlobalizationQueryListenerKey, new RavenJValue("pt")}
+                            {GlobalizationTransformer.GlobalizationQueryListenerKey, "pt"}
                         })
                     .ToList();
 
@@ -200,10 +201,10 @@ namespace SlowTests.MailingList
             using (var session = _store.OpenSession())
             {
                 var results = session.Advanced.DocumentQuery<BaseEntityResult, TranslatedEntities_MapReduce>()
-                    .SetResultTransformer(typeof(GlobalizationTransformer).Name)
-                    .SetTransformerParameters(new Dictionary<string, RavenJToken>
+                    .SetTransformer(typeof(GlobalizationTransformer).Name)
+                    .SetTransformerParameters(new Dictionary<string, object>
                         {
-                            {GlobalizationTransformer.GlobalizationQueryListenerKey, new RavenJValue("pt")}
+                            {GlobalizationTransformer.GlobalizationQueryListenerKey, "pt"}
                         })
                     .ToList();
 

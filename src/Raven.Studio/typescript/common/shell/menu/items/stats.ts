@@ -1,36 +1,12 @@
-﻿import activeResourceTracker = require("common/shell/activeResourceTracker");
-import accessHelper = require("viewmodels/shell/accessHelper");
+﻿import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 
 export = getStatsMenuItem;
 
 function getStatsMenuItem(appUrls: computedAppUrls) {
-    let activeDatabase = activeResourceTracker.default.database;
+    let activeDatabase = activeDatabaseTracker.default.database;
     var items: menuItem[] = [
-        /*TODO
-        new intermediateMenuItem('Indexing',
-            [
-                new leafMenuItem({
-                    route: 'databases/status/indexing/batchSize',
-                    moduleId: 'viewmodels/database/status/indexing/indexBatchSize',
-                    title: 'Index batch size',
-                    tooltip: "Index batch sizes",
-                    nav: true,
-                    css: 'icon-index-batch-size',
-                    dynamicHash: appUrls.indexBatchSize
-                }),
-                new leafMenuItem({
-                    route: 'databases/status/indexing/prefetches',
-                    moduleId: 'viewmodels/database/status/indexing/indexPrefetches',
-                    title: 'Prefetches',
-                    tooltip: "Prefetches",
-                    nav: true,
-                    css: 'icon-prefetches',
-                    dynamicHash: appUrls.indexPrefetches
-                })
-            ],
-            'icon-indexes'),*/
         new leafMenuItem({
             route: 'databases/status/storage/report',
             moduleId: 'viewmodels/database/status/storageReport',
@@ -46,7 +22,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
                 route: 'databases/status/storage',
                 moduleId: 'viewmodels/database/status/storage/statusStorageOnDisk',
                 title: 'On disk',
-                tooltip: "Shows disk usage for active resource",
+                tooltip: "Shows disk usage for active database",
                 nav: accessHelper.isGlobalAdmin(),
                 dynamicHash: appUrls.statusStorageOnDisk
             }),
@@ -76,14 +52,6 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
                 tooltip: 'Shows information about active changes API subscriptions',
                 nav: true,
                 dynamicHash: appUrls.statusDebugChanges
-            }),
-            new leafMenuItem({
-                route: 'databases/status/debug/dataSubscriptions',
-                moduleId: 'viewmodels/database/status/debug/statusDebugDataSubscriptions',
-                title: 'Data subscriptions',
-                tooltip: "Shows information about data subscriptions",
-                nav: true,
-                dynamicHash: appUrls.dataSubscriptions
             }),
             new leafMenuItem({
                 route: 'databases/status/debug/metrics',
@@ -215,6 +183,15 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-stats',
             dynamicHash: appUrls.status
+        }),
+
+        new leafMenuItem({
+            route: 'databases/status/subscriptions',
+            moduleId: 'viewmodels/database/status/subscriptions',
+            title: 'Subscriptions',
+            nav: true,
+            css: 'icon-plus',
+            dynamicHash: appUrls.subscriptions
         }),
         /* TODO: 
         new leafMenuItem({

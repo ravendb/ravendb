@@ -7,7 +7,7 @@ using Xunit;
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
-    public class GroupByMultipleFields : RavenNewTestBase
+    public class GroupByMultipleFields : RavenTestBase
     {
         [Fact]
         public void Group_by_multiple_fields()

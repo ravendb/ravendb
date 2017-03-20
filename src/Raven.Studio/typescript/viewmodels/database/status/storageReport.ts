@@ -3,7 +3,6 @@ import getStorageReportCommand = require("commands/database/debug/getStorageRepo
 import getEnvironmentStorageReportCommand = require("commands/database/debug/getEnvironmentStorageReportCommand");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import generalUtils = require("common/generalUtils");
-import app = require("durandal/app");
 import storageReportItem = require("models/database/status/storageReportItem");
 import d3 = require("d3");
 
@@ -149,10 +148,19 @@ class storageReport extends viewModelBase {
 
     private mapPreAllocatedBuffers(buffersReport: Voron.Debugging.PreAllocatedBuffersReport): storageReportItem {
         const allocationTree = this.mapTree(buffersReport.AllocationTree);
-        const buffersSpace = new storageReportItem("Pre Allocated Buffers Space", "buffers", false, buffersReport.PreAllocatedBuffersSpaceInBytes);
+        const buffersSpace = new storageReportItem("Pre Allocated Buffers Space", "reserved", false, buffersReport.PreAllocatedBuffersSpaceInBytes);
         buffersSpace.pageCount = buffersReport.NumberOfPreAllocatedPages;
 
-        return new storageReportItem("Pre Allocated Buffers", "buffers", false, buffersReport.AllocatedSpaceInBytes, [allocationTree, buffersSpace]);
+        const preAllocatedBuffers = new storageReportItem("Pre Allocated Buffers", "reserved", false, buffersReport.AllocatedSpaceInBytes, [allocationTree, buffersSpace]);
+        preAllocatedBuffers.customSizeProvider = (header: boolean) => {
+            const allocatedSizeFormatted = generalUtils.formatBytesToSize(buffersReport.AllocatedSpaceInBytes);
+            if (header) {
+                return allocatedSizeFormatted;
+            }
+            const originalSizeFormatted = generalUtils.formatBytesToSize(buffersReport.OriginallyAllocatedSpaceInBytes);
+            return `<span title="${allocatedSizeFormatted} available out of ${originalSizeFormatted} reserved">${allocatedSizeFormatted} (out of ${originalSizeFormatted})</span>`;
+        }
+        return preAllocatedBuffers;
     }
 
     private mapTables(tables: Voron.Data.Tables.TableReport[]): storageReportItem {
@@ -188,9 +196,25 @@ class storageReport extends viewModelBase {
     }
 
     private mapTree(tree: Voron.Debugging.TreeReport): storageReportItem {
-        const item = new storageReportItem(tree.Name, "tree", true, tree.AllocatedSpaceInBytes, []);
+        const children = tree.Streams ? tree.Streams.Streams.map(x => this.mapStream(x)) : [];
+        const item = new storageReportItem(tree.Name, "tree", true, tree.AllocatedSpaceInBytes, children);
         item.pageCount = tree.PageCount;
         item.numberOfEntries = tree.NumberOfEntries;
+        return item;
+    }
+
+    private mapStream(stream: Voron.Debugging.StreamDetails): storageReportItem {
+        const item = new storageReportItem(stream.Name, "stream", false, stream.AllocatedSpaceInBytes, []);
+
+        item.customSizeProvider = (header: boolean) => {
+            const allocatedSizeFormatted = generalUtils.formatBytesToSize(stream.AllocatedSpaceInBytes);
+            if (header) {
+                return allocatedSizeFormatted;
+            }
+            const length = generalUtils.formatBytesToSize(stream.Length);
+            return `<span title="stream length: ${length} / total allocation: ${allocatedSizeFormatted}">${length} / ${allocatedSizeFormatted}</span>`;
+        }
+
         return item;
     }
 

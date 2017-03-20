@@ -3,27 +3,26 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Client.Indexes;
 using System.Linq;
 using FastTests;
-
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_299 : RavenTestBase
     {
-        public class Item
+        private class Item
         {
             public Tag[] Tags { get; set; }
         }
 
-        public class Tag
+        private class Tag
         {
             public string Name;
         }
 
-        public class Index : AbstractIndexCreationTask<Item>
+        private class Index : AbstractIndexCreationTask<Item>
         {
             public Index()
             {
@@ -35,13 +34,13 @@ namespace SlowTests.Issues
         [Fact]
         public void CanWorkWithSelectManyOverload()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Item
                     {
-                        Tags = new[]{new Tag{Name = "test"}, }
+                        Tags = new[] { new Tag { Name = "test" }, }
                     });
                     session.SaveChanges();
                 }

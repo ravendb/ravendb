@@ -10,13 +10,12 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
-using Raven.Abstractions.Util;
+using Raven.Client.Util;
 
 namespace Raven.Server.Documents.PeriodicExport.Aws
 {

@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.Client.Replication.Messages;
+using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents
@@ -7,6 +7,8 @@ namespace Raven.Server.Documents
     public class DocumentTombstone
     {
         public LazyStringValue Key;
+
+        public DocumentFlags Flags;
 
         public LazyStringValue LoweredKey;
 

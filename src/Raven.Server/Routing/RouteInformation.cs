@@ -2,9 +2,8 @@ using System;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents;
-using Raven.Server.Exceptions;
 using Raven.Server.Web;
 using Sparrow;
 
@@ -87,9 +86,12 @@ namespace Raven.Server.Routing
         private static async Task UnlikelyWaitForDatabaseToLoad(RequestHandlerContext context, Task<DocumentDatabase> database,
             DatabasesLandlord databasesLandlord, StringSegment databaseName)
         {
-            var result = await Task.WhenAny(database, Task.Delay(databasesLandlord.DatabaseLoadTimeout));
+            var time = databasesLandlord.DatabaseLoadTimeout;
+            var result = await Task.WhenAny(database, Task.Delay(time));
             if (result != database)
+            {
                 ThrowDatabaseLoadTimeout(databaseName, databasesLandlord.DatabaseLoadTimeout);
+            }
             context.Database = await database;
         }
 
@@ -103,27 +105,23 @@ namespace Raven.Server.Routing
             throw new DatabaseDoesNotExistException($"Database '{databaseName}' was not found");
         }
 
-        public bool TryGetHandler(RequestHandlerContext context, out HandleRequest handler)
+        public Tuple<HandleRequest,Task<HandleRequest>> TryGetHandler(RequestHandlerContext context)
         {
             if (_typeOfRoute == RouteType.None)
             {
-                handler = _request;
-                return true;
+                return Tuple.Create<HandleRequest, Task<HandleRequest>>(_request, null);
             }
             var database = CreateDatabase(context);
             if (database.Status == TaskStatus.RanToCompletion)
             {
-                handler = _request;
-                return true;
+                return Tuple.Create<HandleRequest, Task<HandleRequest>>(_request, null);
             }
-            handler = null;
-            return false;
+            return Tuple.Create<HandleRequest, Task<HandleRequest>>(null, WaitForDb(database));
         }
 
-        public async Task<HandleRequest> CreateHandlerAsync(RequestHandlerContext context)
+        private async Task<HandleRequest> WaitForDb(Task databaseLoading)
         {
-            if (_typeOfRoute == RouteType.Databases)
-                await CreateDatabase(context);
+            await databaseLoading;
 
             return _request;
         }

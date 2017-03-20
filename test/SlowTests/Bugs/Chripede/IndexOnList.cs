@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Chripede
 {
 
-    public class IndexOnList : RavenNewTestBase
+    public class IndexOnList : RavenTestBase
     {
         private class Document
         {

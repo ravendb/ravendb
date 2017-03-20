@@ -1,12 +1,12 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Linq;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class Contains : RavenNewTestBase
+    public class Contains : RavenTestBase
     {
         private class TestDoc
         {

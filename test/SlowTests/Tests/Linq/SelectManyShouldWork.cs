@@ -9,14 +9,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class SelectManyShouldWork : RavenNewTestBase
+    public class SelectManyShouldWork : RavenTestBase
     {
         private void Fill(DocumentStore store)
         {

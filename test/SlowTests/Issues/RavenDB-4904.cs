@@ -7,9 +7,9 @@
 using System.Linq;
 using System.Threading;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexing;
-using Raven.Json.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -23,26 +23,28 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-
-                store.DatabaseCommands.Put("companies/1", null, new RavenJObject { { "Name", "HR" } }, new RavenJObject());
-                Assert.Equal(0, store.DatabaseCommands.GetIndexErrors(IndexName).Errors.Length);
-
-                store.DatabaseCommands.PutIndex(IndexName, new IndexDefinition { Maps = { "from doc in docs let x = 0 select new { Total = 3/x };" } });
-                WaitForIndexing(store);
-                Assert.Equal(1, store.DatabaseCommands.GetIndexErrors(IndexName).Errors.Length);
-
-                store.DatabaseCommands.PutSideBySideIndexes(new[]
+                using (var commands = store.Commands())
                 {
-                    new IndexToAdd
-                    {
-                        Name = IndexName,
-                        Definition = new IndexDefinition { Maps = { "from doc in docs select new { Total = 3/1 };" } }
-                    }
-                });
+                    commands.Put("companies/1", null, new { Name = "HR" }, null);
+                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
 
-                SpinWait.SpinUntil(() => store.DatabaseCommands.GetStatistics().Indexes.Length == 2);
-                Assert.Equal(0, store.DatabaseCommands.GetIndexErrors().Where(x => x.Name == IndexName).Sum(x => x.Errors.Length));
-                Assert.Equal(0, store.DatabaseCommands.GetIndexErrors().Where(x => x.Name != IndexName).Sum(x => x.Errors.Length));
+                    store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = IndexName, Maps = { "from doc in docs let x = 0 select new { Total = 3/x };" } }}));
+                    WaitForIndexing(store);
+                    Assert.Equal(1, store.Admin.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
+
+                    //store.DatabaseCommands.PutSideBySideIndexes(new[]
+                    //{
+                    //    new IndexToAdd
+                    //    {
+                    //        Name = IndexName,
+                    //        Definition = new IndexDefinition {Maps = {"from doc in docs select new { Total = 3/1 };"}}
+                    //    }
+                    //});
+
+                    SpinWait.SpinUntil(() => store.Admin.Send(new GetStatisticsOperation()).Indexes.Length == 2);
+                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation()).Where(x => x.Name == IndexName).Sum(x => x.Errors.Length));
+                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation()).Where(x => x.Name != IndexName).Sum(x => x.Errors.Length));
+                }
             }
         }
 
@@ -51,25 +53,28 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put("companies/1", null, new RavenJObject { { "Name", "HR" } }, new RavenJObject());
-                Assert.Equal(0, store.DatabaseCommands.GetIndexErrors(IndexName).Errors.Length);
-
-                store.DatabaseCommands.PutIndex(IndexName, new IndexDefinition { Maps = { "from doc in docs let x = 0 select new { Total = 3/x };" } });
-                WaitForIndexing(store);
-                Assert.Equal(1, store.DatabaseCommands.GetIndexErrors(IndexName).Errors.Length);
-
-                store.DatabaseCommands.PutSideBySideIndexes(new[]
+                using (var commands = store.Commands())
                 {
-                    new IndexToAdd
-                    {
-                        Name = IndexName,
-                        Definition = new IndexDefinition { Maps = {  "from doc in docs let x = 0 select new { Total = 3/x };" } }
-                    }
-                });
+                    commands.Put("companies/1", null, new { Name = "HR" }, null);
+                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
 
-                SpinWait.SpinUntil(() => store.DatabaseCommands.GetStatistics().Indexes.Length == 2);
-                Assert.Equal(1, store.DatabaseCommands.GetIndexErrors().Where(x => x.Name == IndexName).Sum(x => x.Errors.Length));
-                Assert.Equal(0, store.DatabaseCommands.GetIndexErrors().Where(x => x.Name != IndexName).Sum(x => x.Errors.Length));
+                    store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = IndexName, Maps = { "from doc in docs let x = 0 select new { Total = 3/x };" } }}));
+                    WaitForIndexing(store);
+                    Assert.Equal(1, store.Admin.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
+
+                    //store.DatabaseCommands.PutSideBySideIndexes(new[]
+                    //{
+                    //    new IndexToAdd
+                    //    {
+                    //        Name = IndexName,
+                    //        Definition = new IndexDefinition {Maps = {"from doc in docs let x = 0 select new { Total = 3/x };"}}
+                    //    }
+                    //});
+
+                    SpinWait.SpinUntil(() => store.Admin.Send(new GetStatisticsOperation()).Indexes.Length == 2);
+                    Assert.Equal(1, store.Admin.Send(new GetIndexErrorsOperation()).Where(x => x.Name == IndexName).Sum(x => x.Errors.Length));
+                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation()).Where(x => x.Name != IndexName).Sum(x => x.Errors.Length));
+                }
             }
         }
 
@@ -78,25 +83,29 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put("companies/1", null, new RavenJObject { { "Name", "HR" } }, new RavenJObject());
-                Assert.Equal(0, store.DatabaseCommands.GetIndexErrors(IndexName).Errors.Length);
-
-                store.DatabaseCommands.PutIndex(IndexName, new IndexDefinition { Maps = { "from doc in docs select new { Total = 3/1 };" } });
-                WaitForIndexing(store);
-                Assert.Equal(0, store.DatabaseCommands.GetIndexErrors(IndexName).Errors.Length);
-
-                store.DatabaseCommands.PutSideBySideIndexes(new[]
+                using (var commands = store.Commands())
                 {
-                    new IndexToAdd
-                    {
-                        Name = IndexName,
-                        Definition = new IndexDefinition { Maps = {  "from doc in docs let x = 0 select new { Total = 3/x };" } }
-                    }
-                });
+                    commands.Put("companies/1", null, new { Name = "HR" }, null);
+                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
 
-                SpinWait.SpinUntil(() => store.DatabaseCommands.GetStatistics().Indexes.Length == 2);
-                Assert.Equal(1, store.DatabaseCommands.GetIndexErrors().Where(x => x.Name == IndexName).Sum(x => x.Errors.Length));
-                Assert.Equal(0, store.DatabaseCommands.GetIndexErrors().Where(x => x.Name != IndexName).Sum(x => x.Errors.Length));
+                    store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = IndexName,
+                        Maps = { "from doc in docs select new { Total = 3/1 };" }} }));
+                    WaitForIndexing(store);
+                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
+
+                    //store.DatabaseCommands.PutSideBySideIndexes(new[]
+                    //{
+                    //    new IndexToAdd
+                    //    {
+                    //        Name = IndexName,
+                    //        Definition = new IndexDefinition { Maps = {  "from doc in docs let x = 0 select new { Total = 3/x };" } }
+                    //    }
+                    //});
+
+                    SpinWait.SpinUntil(() => store.Admin.Send(new GetStatisticsOperation()).Indexes.Length == 2);
+                    Assert.Equal(1, store.Admin.Send(new GetIndexErrorsOperation()).Where(x => x.Name == IndexName).Sum(x => x.Errors.Length));
+                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation()).Where(x => x.Name != IndexName).Sum(x => x.Errors.Length));
+                }
             }
         }
     }

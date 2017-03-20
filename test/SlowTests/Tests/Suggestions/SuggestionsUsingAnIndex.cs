@@ -6,14 +6,14 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Suggestion;
 using Xunit;
 
 namespace SlowTests.Tests.Suggestions
 {
-    public class SuggestionsUsingAnIndex : RavenNewTestBase
+    public class SuggestionsUsingAnIndex : RavenTestBase
     {
         private class User
         {

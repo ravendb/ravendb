@@ -6,10 +6,9 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted
@@ -31,7 +30,7 @@ namespace SlowTests.Tests.Faceted
                     from item in items
                     select new { item.Active, item.Category, item.Age };
 
-                Sort(x => x.Age, SortOptions.NumericLong);
+                Sort(x => x.Age, SortOptions.Numeric);
             }
         }
 
@@ -81,7 +80,7 @@ namespace SlowTests.Tests.Faceted
                             new Facet
                             {
                                 Name = "Age",
-                                Ranges = Enumerable.Range(0,2048).Select(x=> "[Dx"+ x + " TO Dx" + (x+1)+"]").ToList()
+                                Ranges = Enumerable.Range(0,2048).Select(x=> "["+ x + " TO " + (x+1)+"]").ToList()
                             }
                         });
 
@@ -98,7 +97,7 @@ namespace SlowTests.Tests.Faceted
                             new Facet
                             {
                                 Name = "Age",
-                                Ranges = Enumerable.Range(0,2048).Select(x=> "[Dx"+ x + " TO Dx" + (x+1)+"]").ToList()
+                                Ranges = Enumerable.Range(0,2048).Select(x=> "["+ x + " TO " + (x+1)+"]").ToList()
                             }
                         }).Value;
                     Assert.Equal(facetResultsA.Results["Category"].Values.Count, facetResultsC.Results["Category"].Values.Count);

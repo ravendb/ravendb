@@ -4,8 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -122,7 +123,6 @@ namespace SlowTests.MailingList
 
         private void InitData(IDocumentStore store)
         {
-            store.DatabaseCommands.DisableAllCaching();
             store.ExecuteIndex(new FormOpensByDateAndMediaSourceAndVersion());
 
             var date0901 = new DateTime(2012, 9, 1, 1, 2, 3);

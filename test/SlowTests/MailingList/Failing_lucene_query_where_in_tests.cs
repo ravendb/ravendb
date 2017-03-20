@@ -1,13 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Client.Listeners;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -70,11 +67,6 @@ namespace SlowTests.MailingList
             };
         }
 
-        protected override void ModifyStore(DocumentStore store)
-        {
-            store.RegisterListener(new NonStaleQueryListener());
-        }
-
         [Fact]
         public void Failing_query_using_embedded_store_but_works_against_real_database()
         {
@@ -97,8 +89,9 @@ namespace SlowTests.MailingList
                     var contractDetails = new[] { 1, 2 };
 
                     var query = session.Advanced.DocumentQuery<Contract, Contract_ToContractListViewModel>()
-                            .Projection<Contract, ContractDto>()
-                            .WhereIn(c => c.DetailsId, contractDetails);
+                        .WaitForNonStaleResults()
+                        .Projection<Contract, ContractDto>()
+                        .WhereIn(c => c.DetailsId, contractDetails);
 
                     // returns --> "@in<DetailsId>:(1,2)"
 
@@ -138,6 +131,7 @@ namespace SlowTests.MailingList
 
                     var query =
                         session.Advanced.DocumentQuery<Contract, Contract_ToContractListViewModel>()
+                            .WaitForNonStaleResults()
                             .Projection<Contract, ContractDto>()
                             .WhereIn(c => c.DetailsId, contractDetails);
 
@@ -173,7 +167,7 @@ namespace SlowTests.MailingList
                     Assert.Equal(2, contractA.ContractDetails.Count());
 
                     // Act
-                    var queryA = session.Query<Contract, Contract_ToContractListViewModel>().ToList();
+                    var queryA = session.Query<Contract, Contract_ToContractListViewModel>().Customize(x => x.WaitForNonStaleResults()).ToList();
 
                     // Assert
                     // This works against the real database, but not using the NewDocumentStore
@@ -206,6 +200,7 @@ namespace SlowTests.MailingList
 
                     // Act
                     var queryB = session.Advanced.DocumentQuery<Contract, Contract_ToContractListViewModel>()
+                        .WaitForNonStaleResults()
                         .Projection<Contract, ContractDto>()
                         .ToList();
 
@@ -213,15 +208,6 @@ namespace SlowTests.MailingList
                     // This works against the real database, but not using the NewDocumentStore
                     Assert.Equal(2, queryB.Count);
                 }
-            }
-        }
-
-
-        private class NonStaleQueryListener : IDocumentQueryListener
-        {
-            public void BeforeQueryExecuted(IDocumentQueryCustomization customization)
-            {
-                customization.WaitForNonStaleResults();
             }
         }
     }

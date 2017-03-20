@@ -7,14 +7,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Tests.Querying
 {
-    public class HighlightesTests : RavenNewTestBase
+    public class HighlightesTests : RavenTestBase
     {
         private interface ISearchable
         {
@@ -61,7 +61,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Theory(Skip = "Missing feature: Highlighting")]
+        [Theory(Skip = "RavenDB-6558")]
         [InlineData("session")]
         public void SearchWithHighlightes(string q)
         {

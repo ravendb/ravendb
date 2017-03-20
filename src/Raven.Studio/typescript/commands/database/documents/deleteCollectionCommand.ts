@@ -5,20 +5,21 @@ import endpoints = require("endpoints");
 class deleteCollectionCommand extends commandBase {
     private displayCollectionName: string;
 
-    constructor(private collectionName: string, private db: database) {
+    constructor(private collectionName: string, private db: database, private excludedIds: Array<string>) {
         super();
 
         this.displayCollectionName = (collectionName === "*") ? "All Documents" : collectionName;
     }
 
     execute(): JQueryPromise<operationIdDto> {
-        this.reportInfo("Deleting " + this.displayCollectionName);
-        var args = {
+        const args = {
             name: this.collectionName
         };
-        var url = endpoints.databases.collections.collectionsDocs + this.urlEncodeArgs(args);
-
-        return this.del(url, null, this.db, { dataType: undefined });
+        const url = endpoints.databases.studioCollections.studioCollectionsDocs + this.urlEncodeArgs(args);
+        const payload = {
+            ExcludeIds: this.excludedIds
+        }
+        return this.del(url, JSON.stringify(payload), this.db);
     }
 }
 

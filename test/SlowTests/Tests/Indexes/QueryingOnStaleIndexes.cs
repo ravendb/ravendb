@@ -5,11 +5,12 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
@@ -36,7 +37,7 @@ namespace SlowTests.Tests.Indexes
                 var index = new Users_ByName();
                 index.Execute(store);
 
-                store.DatabaseCommands.Admin.StopIndexing();
+                store.Admin.Send(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {
@@ -44,11 +45,14 @@ namespace SlowTests.Tests.Indexes
                     session.SaveChanges();
                 }
 
-                Assert.True(store.DatabaseCommands.Query(index.IndexName, new IndexQuery(store.Conventions)
+                using (var commands = store.Commands())
                 {
-                    PageSize = 2,
-                    Start = 0,
-                }).IsStale);
+                    Assert.True(commands.Query(index.IndexName, new IndexQuery(store.Conventions)
+                    {
+                        PageSize = 2,
+                        Start = 0,
+                    }).IsStale);
+                }
             }
         }
     }

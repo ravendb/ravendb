@@ -1,13 +1,11 @@
 ﻿using System.Linq;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_5669 : RavenNewTestBase
+    public class RavenDB_5669 : RavenTestBase
     {
         [Fact]
         public void WorkingTestWithDifferentSearchTermOrder()

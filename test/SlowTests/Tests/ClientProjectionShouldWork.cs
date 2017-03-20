@@ -6,13 +6,12 @@
 
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests
 {
-    public class ClientProjectionShouldWork : RavenNewTestBase
+    public class ClientProjectionShouldWork : RavenTestBase
     {
         private class Employee
         {

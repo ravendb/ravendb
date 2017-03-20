@@ -1,7 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import collectionsStats = require("models/database/documents/collectionsStats");
-import collection = require("models/database/documents/collection");
 import endpoints = require("endpoints");
 
 class getCollectionsStatsCommand extends commandBase {
@@ -16,7 +15,7 @@ class getCollectionsStatsCommand extends commandBase {
 
     execute(): JQueryPromise<collectionsStats> {
         var finalResult = $.Deferred<collectionsStats>();
-        this.query<Raven.NewClient.Client.Data.Collections.CollectionStatistics>(endpoints.databases.collections.collectionsStats, null, this.ownerDb)
+        this.query<Raven.Client.Documents.Operations.CollectionStatistics>(endpoints.databases.collections.collectionsStats, null, this.ownerDb)
             .done(results => {
                 var stats = new collectionsStats(results, this.ownerDb);
                 finalResult.resolve(stats);

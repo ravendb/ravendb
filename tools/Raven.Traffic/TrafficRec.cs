@@ -10,13 +10,13 @@ using System.IO.Compression;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
-using Raven.Client.Platform;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
+using Sparrow.Logging;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -27,7 +27,7 @@ namespace Raven.Traffic
         private readonly IDocumentStore _store;
         private readonly TrafficToolConfiguration _config;
         private readonly JsonContextPool _jsonContextPool = new JsonContextPool();
-        private static readonly ILog Logger = LogManager.GetLogger(typeof(TrafficRec));
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TrafficRec>("Raven/Traffic");
 
         public TrafficRec(IDocumentStore store, TrafficToolConfiguration config)
         {
@@ -54,7 +54,7 @@ namespace Raven.Traffic
         }
 
 
-        private async Task<BlittableJsonReaderObject> Receive(RavenClientWebSocket webSocket,
+        private async Task<BlittableJsonReaderObject> Receive(ClientWebSocket webSocket,
             JsonOperationContext context)
         {
             BlittableJsonDocumentBuilder builder = null;
@@ -78,8 +78,10 @@ namespace Raven.Traffic
 
                         if (result.MessageType == WebSocketMessageType.Close)
                         {
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info("Client got close message from server and is closing connection");
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info("Client got close message from server and is closing connection");
+                            }
 
                             builder.Dispose();
                             // actual socket close from dispose
@@ -101,13 +103,17 @@ namespace Raven.Traffic
             catch (WebSocketException ex)
             {
                 builder?.Dispose();
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Failed to receive a message, client was probably disconnected", ex);
+
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info("Failed to receive a message, client was probably disconnected", ex);
+                }
+
                 throw;
             }
         }
 
-       /// <summary>
+        /// <summary>
         /// Connects to raven traffic event source and registers all the requests to the file defined in the config
         /// </summary>
         /// <param name="config">configuration conatining the connection, the file to write to, etc.</param>
@@ -115,7 +121,7 @@ namespace Raven.Traffic
         private async Task RecordRequests(TrafficToolConfiguration config, IDocumentStore store)
         {
             var id = Guid.NewGuid().ToString();
-            using (var client = new RavenClientWebSocket())
+            using (var client = new ClientWebSocket())
             {
                 var url = store.Url + "/traffic-watch/websockets";
                 var uri = new Uri(url.ToWebSocketPath());
@@ -125,11 +131,11 @@ namespace Raven.Traffic
 
 
                 // record traffic no more then 7 days
-                var day = 24*60*60;
-                var timeout = (int)config.Timeout.TotalMilliseconds/1000;
-                timeout = Math.Min(timeout, 7*day);
+                var day = 24 * 60 * 60;
+                var timeout = (int)config.Timeout.TotalMilliseconds / 1000;
+                timeout = Math.Min(timeout, 7 * day);
                 if (timeout <= 0)
-                    timeout = 7*day;
+                    timeout = 7 * day;
 
                 try
                 {
@@ -137,7 +143,7 @@ namespace Raven.Traffic
                     var connectMessage = new DynamicJsonValue
                     {
                         ["Id"] = id,
-                        ["ResourceName"] = resourceName,
+                        ["DatabaseName"] = resourceName,
                         ["Timeout"] = timeout
                     };
 
@@ -211,7 +217,7 @@ namespace Raven.Traffic
                                     if (config.PrintOutput)
                                         Console.Write("\rRequest #{0} Stored...\t\t ", ++requestsCounter);
 
-                                    var jobj = RavenJObject.FromObject(notification);
+                                    var jobj = JObject.FromObject(notification);
                                     jobj.WriteTo(jsonWriter);
 
                                     if (sp.ElapsedMilliseconds > 5000)

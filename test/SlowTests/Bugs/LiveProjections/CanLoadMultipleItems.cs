@@ -1,12 +1,14 @@
 using FastTests;
 using System.Linq;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.Bugs.LiveProjections
 {
-    public class CanLoadMultipleItems : RavenNewTestBase
+    public class CanLoadMultipleItems : RavenTestBase
     {
         private class Person
         {

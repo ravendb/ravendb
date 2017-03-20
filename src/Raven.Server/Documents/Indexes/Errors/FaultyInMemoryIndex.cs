@@ -3,9 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
@@ -19,13 +19,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {
-    public class FaultyInMemoryIndex : Index
+    internal class FaultyInMemoryIndex : Index
     {
         private readonly Exception _e;
 
         public FaultyInMemoryIndex(Exception e, int indexId, string name, IndexingConfiguration configuration)
-            : base(indexId, IndexType.Faulty, new FaultyIndexDefinition(name ?? $"Faulty/Indexes/{indexId}", new[] { "@FaultyIndexes" },
-                   IndexLockMode.Unlock, new IndexField[0]))
+            : base(indexId, IndexType.Faulty, new FaultyIndexDefinition(name ?? $"Faulty/Indexes/{indexId}", new HashSet<string> { "@FaultyIndexes" },
+                   IndexLockMode.Unlock, IndexPriority.Normal, new IndexField[0]))
         {
             _e = e;
             State = IndexState.Error;

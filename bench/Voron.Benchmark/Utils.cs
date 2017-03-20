@@ -211,7 +211,7 @@ namespace Voron.Benchmark
                 {
                     var table = tx.OpenTable(schema, tableNameSlice);
 
-                    foreach (var reader in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
+                    foreach (var reader in table.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                     {
                         Slice key;
                         schema.Key.GetSlice(Configuration.Allocator, ref reader.Reader, out key);

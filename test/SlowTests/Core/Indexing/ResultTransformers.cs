@@ -8,7 +8,10 @@ using System.Collections.Generic;
 using System.Linq;
 
 using FastTests;
-using Raven.NewClient.Client.Operations.Databases.Transformers;
+using Newtonsoft.Json.Linq;
+using Raven.Client;
+using Raven.Client.Documents.Operations.Transformers;
+using Raven.Client.Documents.Linq;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using SlowTests.Core.Utils.Transformers;
@@ -23,7 +26,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Indexing
 {
-    public class ResultTransformers : RavenNewTestBase
+    public class ResultTransformers : RavenTestBase
     {
         [Fact]
         public void BasicTransformer()
@@ -94,20 +97,20 @@ namespace SlowTests.Core.Indexing
                 {
                     var results1 = session.Load<Companies_NameTransformer.Result>(new[] { "companies/1", "companies/2" }, typeof(Companies_NameTransformer));
 
-                    Assert.Equal(2, results1.Length);
-                    Assert.Equal("Amazing", results1[0].Name);
-                    Assert.Equal("Brilliant", results1[1].Name);
+                    Assert.Equal(2, results1.Count);
+                    Assert.Equal("Amazing", results1["companies/1"].Name);
+                    Assert.Equal("Brilliant", results1["companies/2"].Name);
 
                     var results2 = session.Load<Companies_ContactsTransformer.Result[]>(new[] { "companies/1", "companies/2" }, typeof(Companies_ContactsTransformer));
 
-                    Assert.Equal(2, results2.Length);
+                    Assert.Equal(2, results2.Count);
 
-                    Assert.Equal(2, results2[0].Length);
-                    Assert.Equal("email1@email.com", results2[0][0].Email);
-                    Assert.Equal("email2@email.com", results2[0][1].Email);
+                    Assert.Equal(2, results2["companies/1"].Length);
+                    Assert.Equal("email1@email.com", results2["companies/1"][0].Email);
+                    Assert.Equal("email2@email.com", results2["companies/1"][1].Email);
 
-                    Assert.Equal(1, results2[1].Length);
-                    Assert.Equal("email3@email.com", results2[1][0].Email);
+                    Assert.Equal(1, results2["companies/2"].Length);
+                    Assert.Equal("email3@email.com", results2["companies/2"][0].Email);
                 }
             }
         }
@@ -164,13 +167,13 @@ namespace SlowTests.Core.Indexing
 
                     var results = session.Load<CompanyEmployeesTransformer.Result>(new[] { "companies/1", "companies/2" }, typeof(CompanyEmployeesTransformer));
 
-                    Assert.Equal(2, results.Length);
+                    Assert.Equal(2, results.Count);
 
-                    Assert.True(results[0].Employees.SequenceEqual(new[] { "John", "Bob" }));
-                    Assert.Equal("Amazing", results[0].Name);
+                    Assert.True(results["companies/1"].Employees.SequenceEqual(new[] { "John", "Bob" }));
+                    Assert.Equal("Amazing", results["companies/1"].Name);
 
-                    Assert.True(results[1].Employees.SequenceEqual(new[] { "Bob" }));
-                    Assert.Equal("Brilliant", results[1].Name);
+                    Assert.True(results["companies/2"].Employees.SequenceEqual(new[] { "Bob" }));
+                    Assert.Equal("Brilliant", results["companies/2"].Name);
                 }
             }
         }
@@ -301,7 +304,7 @@ namespace SlowTests.Core.Indexing
 
                     var documentQueryResult =
                         session.Advanced.DocumentQuery<PostWithContentTransformer.Result, Posts_ByContent>()
-                            .SetResultTransformer("PostWithContentTransformer")
+                            .SetTransformer("PostWithContentTransformer")
                             .First();
 
                     Assert.Equal("Lorem ipsum...", documentQueryResult.Content);
@@ -381,7 +384,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "RavenDB-6211")]
+        [Fact]
         public void CanUseAsDocumentInTransformer()
         {
             using (var store = GetDocumentStore())
@@ -398,16 +401,15 @@ namespace SlowTests.Core.Indexing
 
                     session.SaveChanges();
 
-                    //var post =
-                    //    session.Query<Post>()
-                    //        .Where(x => x.Title == "Result Transformers")
-                    //        .Customize(x => x.WaitForNonStaleResults())
-                    //        .TransformWith<PostWithAsDocumentTransformer, PostWithAsDocumentTransformer.Result>()
-                    //        .First();
+                    var post = session.Query<Post>()
+                            .Where(x => x.Title == "Result Transformers")
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .TransformWith<PostWithAsDocumentTransformer, PostWithAsDocumentTransformer.Result>()
+                            .First();
 
-                    //Assert.NotNull(post.RawDocument);
-                    //var metadata = (RavenJObject)post.RawDocument[Constants.Metadata.Key];
-                    //Assert.Equal("posts/1", metadata.Value<string>(Constants.Metadata.Id));
+                    Assert.NotNull(post.RawDocument);
+                    var metadata = (JObject)post.RawDocument[Constants.Documents.Metadata.Key];
+                    Assert.Equal("posts/1", metadata.Value<string>(Constants.Documents.Metadata.Id));
                 }
             }
         }

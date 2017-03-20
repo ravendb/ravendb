@@ -1,23 +1,24 @@
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Errors
 {
-    public class CanIndexOnNull : RavenNewTestBase
+    public class CanIndexOnNull : RavenTestBase
     {
         [Fact]
         public void CanIndexOnMissingProps()
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
-                                                    Maps = { "from doc in docs select new { doc.Type, doc.Houses.Wheels} " }
-                                                }));
+                                                    Maps = { "from doc in docs select new { doc.Type, doc.Houses.Wheels} " },
+                                                    Name = "test"
+                                                }}));
 
                 using (var commands = store.Commands())
                 {
@@ -31,7 +32,7 @@ namespace SlowTests.Bugs.Errors
                 {
                     s.Advanced.DocumentQuery<dynamic>("test")
                         .WaitForNonStaleResults()
-                        .WhereGreaterThan("Wheels_Range", 4)
+                        .WhereGreaterThan("Wheels_L_Range", 4)
                         .ToArray();
 
                 }

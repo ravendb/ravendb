@@ -77,8 +77,7 @@ namespace Voron.Impl.FileHeaders
                 }
 
                 if (f1->Version != Constants.CurrentVersion)
-                    throw new InvalidDataException("This is a db file for version " + f1->Version + ", which is not compatible with the current version " + Constants.CurrentVersion + Environment.NewLine +
-                        "Error at " + _env.Options.BasePath);
+                    throw new InvalidDataException($"The db file is for version {f1->Version}, which is not compatible with the current version {Constants.CurrentVersion}");
 
                 if (f1->TransactionId < 0)
                     throw new InvalidDataException("The transaction number cannot be negative");

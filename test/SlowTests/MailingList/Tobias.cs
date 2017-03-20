@@ -7,9 +7,10 @@
 using System.Linq;
 using FastTests;
 using Lucene.Net.Analysis;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -34,10 +35,10 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
 
                     var tst = session.Advanced.DocumentQuery<Data_Search.ReduceResult, Data_Search>()
-                        .SetResultTransformer("Data/SearchTransformer")
+                        .SetTransformer("Data/SearchTransformer")
                         .WaitForNonStaleResults()
                         .Statistics(out stats)
                         .WhereEquals(x => x.Optional, null)
@@ -55,7 +56,7 @@ namespace SlowTests.MailingList
                     Assert.False(stats.IsStale, "Index is stale.");
                     Assert.True(tst1.Count > 0, "Regular query for projection failed.");
 
-                    var tst2 = session.Advanced.DocumentQuery<Data_Search.ReduceResult, Data_Search>().SetResultTransformer("Data/SearchTransformer")
+                    var tst2 = session.Advanced.DocumentQuery<Data_Search.ReduceResult, Data_Search>().SetTransformer("Data/SearchTransformer")
                         .Statistics(out stats)
                         .WhereEquals(x => x.Optional, null)
                         .SelectFields<Data_Search.ProjectionResult>(new string[0])

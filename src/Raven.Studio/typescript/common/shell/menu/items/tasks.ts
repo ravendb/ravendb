@@ -1,4 +1,4 @@
-﻿import activeResourceTracker = require("common/shell/activeResourceTracker");
+﻿import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import appUrl = require("common/appUrl");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
@@ -6,10 +6,9 @@ import leafMenuItem = require("common/shell/menu/leafMenuItem");
 export = getTasksMenuItem;
 
 function getTasksMenuItem(appUrls: computedAppUrls) {
-    let activeDatabase = activeResourceTracker.default.database;
+    let activeDatabase = activeDatabaseTracker.default.database;
     var importDatabaseUrl = ko.computed(() => appUrl.forImportDatabase(activeDatabase()));
     var exportDatabaseUrl = ko.computed(() => appUrl.forExportDatabase(activeDatabase()));
-    var setAcknowledgedEtagUrl = ko.computed(() => appUrl.forSetAcknowledgedEtag(activeDatabase()));
     var sampleDataUrl = ko.computed(() => appUrl.forSampleData(activeDatabase()));
     var csvImportUrl = ko.computed(() => appUrl.forCsvImport(activeDatabase()));
 
@@ -33,15 +32,6 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             css: 'icon-export-database',
             dynamicHash: exportDatabaseUrl
         }),
-        /* TODO:
-        new leafMenuItem({
-            route: 'databases/tasks/subscriptionsTask',
-            moduleId: 'viewmodels/database/tasks/subscriptionsTask',
-            title: 'Subscriptions',
-            nav: activeDatabase() && activeDatabase().isAdminCurrentTenant(),
-            css: 'icon-plus',
-            dynamicHash: setAcknowledgedEtagUrl
-        }),*/
         new leafMenuItem({
             route: 'databases/tasks/sampleData',
             moduleId: 'viewmodels/database/tasks/createSampleData',

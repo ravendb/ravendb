@@ -1,27 +1,27 @@
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
 using Xunit;
 
 namespace SlowTests.Tests.Querying
 {
-    public class SkipDuplicates : RavenNewTestBase
+    public class SkipDuplicates : RavenTestBase
     {
         [Fact]
         public void WillSkipDuplicates()
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation(
-                    "BlogPosts/PostsCountByTag",
-                    new IndexDefinitionBuilder<BlogPost>()
-                    {
-                        Map = posts => from post in posts
-                                       from tag in post.Tags
-                                       select new { Tag = tag }
-                    }.ToIndexDefinition(store.Conventions)));
+                var indexDefinition = new IndexDefinitionBuilder<BlogPost>()
+                {
+                    Map = posts => from post in posts
+                        from tag in post.Tags
+                        select new {Tag = tag}
+                }.ToIndexDefinition(store.Conventions);
+                indexDefinition.Name = "BlogPosts/PostsCountByTag";
+                store.Admin.Send(new PutIndexesOperation( new [] {indexDefinition}));
 
                 using (var session = store.OpenSession())
                 {
@@ -44,14 +44,16 @@ namespace SlowTests.Tests.Querying
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation(
-                    "BlogPosts/PostsCountByTag",
-                    new IndexDefinitionBuilder<BlogPost>
-                    {
-                        Map = posts => from post in posts
-                                       from tag in post.Tags
-                                       select new { Tag = tag }
-                    }.ToIndexDefinition(store.Conventions)));
+                var indexDefinition = new IndexDefinitionBuilder<BlogPost>
+                {
+                    Map = posts => from post in posts
+                                   from tag in post.Tags
+                                   select new { Tag = tag }
+                }.ToIndexDefinition(store.Conventions);
+                indexDefinition.Name = "BlogPosts/PostsCountByTag";
+                store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
+
+               
 
                 using (var session = store.OpenSession())
                 {

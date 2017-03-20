@@ -10,12 +10,12 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using FastTests;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Extensions;
-using Raven.NewClient.Operations.Databases.Documents;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Extensions;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -24,7 +24,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Commands
 {
-    public class Documents : RavenNewTestBase
+    public class Documents : RavenTestBase
     {
         [Fact]
         public void CanCancelPutDocument()
@@ -39,7 +39,7 @@ namespace SlowTests.Core.Commands
                     cts.Cancel();
                     var putTask = commands.PutAsync("test/1", null, document, null, cts.Token);
 
-                    Assert.True(SpinWait.SpinUntil(() => putTask.IsCanceled, TimeSpan.FromSeconds(5)));
+                    Assert.True(SpinWait.SpinUntil(() => putTask.IsCanceled, TimeSpan.FromSeconds(15)));
                     Assert.True(putTask.IsCanceled);
                 }
             }
@@ -63,7 +63,7 @@ namespace SlowTests.Core.Commands
                             Address1 = "To be removed.",
                             Address2 = "Address2"
                         },
-                        new Dictionary<string, string>
+                        new Dictionary<string, object>
                         {
                             {"SomeMetadataKey", "SomeMetadataValue"}
                         });
@@ -102,16 +102,17 @@ namespace SlowTests.Core.Commands
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("MyIndex", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Items select new { doc.Name }" }
-                }));
+                    Maps = { "from doc in docs.Items select new { doc.Name }" },
+                    Name = "MyIndex"
+                }}));
 
                 using (var commands = store.Commands())
                 {
-                    await commands.PutAsync("items/1", null, new { Name = "testname" }, new Dictionary<string, string>
+                    await commands.PutAsync("items/1", null, new { Name = "testname" }, new Dictionary<string, object>
                     {
-                        {Constants.Metadata.Collection, "Items"}
+                        {Constants.Documents.Metadata.Collection, "Items"}
                     });
 
                     WaitForIndexing(store);

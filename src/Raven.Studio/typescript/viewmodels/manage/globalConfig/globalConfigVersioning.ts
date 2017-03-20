@@ -1,12 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import versioningEntry = require("models/database/documents/versioningEntry");
-import appUrl = require("common/appUrl");
-import getVersioningsCommand = require("commands/database/documents/getVersioningsCommand");
-import saveVersioningCommand = require("commands/database/documents/saveVersioningCommand");
-import globalConfig = require("viewmodels/manage/globalConfig/globalConfig");
-import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
-import database = require("models/resources/database");
-
 
 class globalConfigVersioning extends viewModelBase {
     /* TODO:
@@ -61,7 +53,7 @@ class globalConfigVersioning extends viewModelBase {
                 [],
                 this.versionings().map((v) => { return v.toDto(true); }).concat(this.toRemove.map((v) => { return v.toDto(true); })),
                 true).execute();
-            deleteTask.done((saveResult: bulkDocumentDto[]) => {
+            deleteTask.done((saveResult: Raven.Server.Documents.Handlers.CommandData[]) => {
                 this.activated(false);
                 this.versionings([]);
                 this.versioningsSaved(saveResult);
@@ -72,7 +64,7 @@ class globalConfigVersioning extends viewModelBase {
                 this.versionings().map((v) => { return v.toDto(true); }),
                 this.toRemove.map((v) => { return v.toDto(true); }),
                 true).execute();
-            saveTask.done((saveResult: bulkDocumentDto[]) => {
+            saveTask.done((saveResult: Raven.Server.Documents.Handlers.CommandData[]) => {
                 this.versioningsSaved(saveResult);
             });
         }
@@ -96,7 +88,7 @@ class globalConfigVersioning extends viewModelBase {
         this.activated(data.length > 0);
     }
 
-    versioningsSaved(saveResult: bulkDocumentDto[]) {
+    versioningsSaved(saveResult: Raven.Server.Documents.Handlers.CommandData[]) {
         for (var i = 0; i < this.versionings().length; i++) {
             this.versionings()[i].__metadata.etag = saveResult[i].Etag;
         }

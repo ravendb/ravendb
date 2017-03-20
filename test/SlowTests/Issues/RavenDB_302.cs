@@ -6,23 +6,21 @@
 using System;
 using System.Runtime.Serialization;
 
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-
 using Xunit;
 using System.Linq;
 using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Facets;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_302 : RavenTestBase
     {
         [DataContract]
-        public class Item
+        private class Item
         {
             [DataMember]
             public string Version { get; set; }
@@ -31,15 +29,15 @@ namespace SlowTests.Issues
         [Fact]
         public void CanQueryUsingDefaultField()
         {
-            using(var s = GetDocumentStore())
+            using (var s = GetDocumentStore())
             {
                 using (var session = s.OpenSession())
                 {
-                    session.Store(new Item{Version = "first"});
+                    session.Store(new Item { Version = "first" });
                     session.Store(new Item { Version = "second" });
                     session.SaveChanges();
                 }
-                using(var session = s.OpenSession())
+                using (var session = s.OpenSession())
                 {
                     var x = session.Advanced.DocumentQuery<Item>()
                         .WaitForNonStaleResults()
@@ -52,13 +50,13 @@ namespace SlowTests.Issues
             }
         }
 
-        public class Node
+        private class Node
         {
             public string FirstName { get; set; }
             public string LastName { get; set; }
         }
 
-        public class Index : AbstractIndexCreationTask<Node>
+        private class Index : AbstractIndexCreationTask<Node>
         {
             public Index()
             {
@@ -67,7 +65,7 @@ namespace SlowTests.Issues
                       select new
                       {
                           node.LastName,
-                          Query = new[]{node.FirstName, node.LastName}
+                          Query = new[] { node.FirstName, node.LastName }
                       };
             }
         }
@@ -81,8 +79,8 @@ namespace SlowTests.Issues
 
                 using (var session = s.OpenSession())
                 {
-                    session.Store(new Node { FirstName= "jonas", LastName = "brown"});
-                    session.Store(new Node { FirstName = "arik", LastName = "smith"});
+                    session.Store(new Node { FirstName = "jonas", LastName = "brown" });
+                    session.Store(new Node { FirstName = "arik", LastName = "smith" });
                     session.SaveChanges();
                 }
                 using (var session = s.OpenSession())
@@ -132,12 +130,12 @@ namespace SlowTests.Issues
 
                     GC.KeepAlive(x.ToList());// wait for the index to complete
 
-                    var indexQuery = new IndexQuery(s.Conventions) {Query = x.ToString(), DefaultField = "Query"};
+                    var indexQuery = new IndexQuery(s.Conventions) { Query = x.ToString(), DefaultField = "Query" };
                     var facet = FacetQuery.Create("Index", indexQuery, "Raven/Facets/LastName", null, 0, null, s.Conventions);
 
-                    var ravenfacets = s.DatabaseCommands.GetFacets(facet);
+                    var ravenfacets = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(facet))[0];
 
-                    Assert.Equal(1, ravenfacets.Results["LastName"].Values.First(y=>y.Range == "brown").Hits);
+                    Assert.Equal(1, ravenfacets.Results["LastName"].Values.First(y => y.Range == "brown").Hits);
                 }
             }
         }
@@ -147,10 +145,11 @@ namespace SlowTests.Issues
         {
             using (var s = GetDocumentStore())
             {
-                s.DatabaseCommands.PutIndex("items_by_ver", new IndexDefinition
+                s.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
-                    Maps = {"from doc in docs.Items select new { doc.Version }" }
-                });
+                    Name = "items_by_ver",
+                    Maps = { "from doc in docs.Items select new { doc.Version }" }
+                }}));
                 using (var session = s.OpenSession())
                 {
                     session.Store(new Item { Version = "first" });

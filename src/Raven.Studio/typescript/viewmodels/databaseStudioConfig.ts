@@ -67,7 +67,7 @@ class studioConfig extends viewModelBase {
         return new saveDocumentCommand(studioConfig.documentId, newDocument, this.activeDatabase())
             .execute()
             /* TODO
-            .done((saveResult: bulkDocumentDto[]) => {
+            .done((saveResult: Raven.Server.Documents.Handlers.CommandData[]) => {
                 this.configDocument(newDocument);
                 (<any>this.configDocument()).__metadata['@etag'] = saveResult[0].Etag;
             });*/

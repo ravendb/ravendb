@@ -1,8 +1,8 @@
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using SlowTests.Utils.Analyzers;
 using Xunit;
 
@@ -12,7 +12,7 @@ namespace SlowTests.MailingList
     {
         private const string Q = "What words rhyme with concurrency and asymptotic?";
 
-        [Theory(Skip = "Missing feature: Highlighting")]
+        [Theory(Skip = "RavenDB-6558")]
         [InlineData(Q, "con cur", "con cu")]
         [InlineData(Q, "con ency", "con cy")]
         [InlineData(Q, "curr ency", "curr enc")]

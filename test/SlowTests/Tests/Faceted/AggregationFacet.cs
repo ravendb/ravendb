@@ -7,11 +7,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted
@@ -211,7 +211,7 @@ namespace SlowTests.Tests.Faceted
                 session.SaveChanges();
             }
 
-            store.DatabaseCommands.PutIndex("Cars", new IndexDefinition
+            store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
             {
                 Maps = { "from car in docs.Cars select new { car.Make, car.Year, car.Price}" },
                 Fields = new Dictionary<string, IndexFieldOptions>
@@ -220,11 +220,12 @@ namespace SlowTests.Tests.Faceted
                         "Price", new IndexFieldOptions
                         {
                             Storage = FieldStorage.Yes,
-                            Sort = SortOptions.NumericDouble
+                            Sort = SortOptions.Numeric
                         }
                     }
-                }
-            });
+                },
+                Name = "Cars" }
+            }));
 
             WaitForIndexing(store);
         }

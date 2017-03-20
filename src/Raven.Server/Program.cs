@@ -3,8 +3,10 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Loader;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
@@ -20,7 +22,7 @@ namespace Raven.Server
         {
             WelcomeMessage.Print();
 
-            var configuration = new RavenConfiguration();
+            var configuration = new RavenConfiguration(null, ResourceType.Server);
             if (args != null)
             {
                 configuration.AddCommandLine(args);
@@ -114,6 +116,13 @@ namespace Raven.Server
                 ctrlCPressed = true;
             };
 
+            //stop dumping logs
+            LoggingSource.Instance.DisableConsoleLogging();
+            LoggingSource.Instance.SetupLogMode(LogMode.None,
+                Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
+
+            WriteServerStatsAndWaitForEsc(server);
+
             while (true)
             {
                 var lower = Console.ReadLine()?.ToLower();
@@ -195,9 +204,9 @@ namespace Raven.Server
         private static void WriteServerStatsAndWaitForEsc(RavenServer server)
         {
             Console.WriteLine("Showing stats, press ESC to close...");
-            Console.WriteLine("    working set     | native mem      | managed mem     | mmap size         | reqs/sec (now, 5s, 1m, 5m) ");
+            Console.WriteLine("    working set     | native mem      | managed mem     | mmap size         | reqs/sec       | docs (all dbs)");
             var i = 0;
-            while (Console.KeyAvailable == false || Console.ReadKey(true).Key != ConsoleKey.Escape)
+            while (Console.KeyAvailable == false)
             {
                 var json = MemoryStatsHandler.MemoryStatsInternal();
                 var humaneProp = (json["Humane"] as DynamicJsonValue);
@@ -210,15 +219,36 @@ namespace Raven.Server
                 Console.Write($" | {humaneProp?["ManagedAllocations"],-14} ");
                 Console.Write($" | {humaneProp?["TotalMemoryMapped"],-17} ");
 
-                Console.Write($"| {Math.Round(reqCounter.OneSecondRate, 1):#,#.#;;0}, {Math.Round(reqCounter.FiveSecondRate, 1):#,#.#;;0}, {Math.Round(reqCounter.OneMinuteRate, 1):#,#.#;;0}, {Math.Round(reqCounter.FiveMinuteRate, 1):#,#.#;;0}             ");
+                Console.Write($"| {Math.Round(reqCounter.OneSecondRate, 1),-14:#,#.#;;0} ");
+
+                long allDocs = 0;
+                foreach (var value in server.ServerStore.DatabasesLandlord.ResourcesStoresCache.Values)
+                {
+                    if(value.Status != TaskStatus.RanToCompletion)
+                        continue;
+
+                    try
+                    {
+                        allDocs += value.Result.DocumentsStorage.GetNumberOfDocuments();
+                    }
+                    catch (Exception)
+                    {
+                        // may run out of virtual address space, or just shutdown, etc
+                    }
+                }
+
+                Console.Write($"| {allDocs,14:#,#.#;;0}      ");
 
                 for (int j = 0; j < 5 && Console.KeyAvailable == false; j++)
                 {
                     Thread.Sleep(100);
                 }
             }
+
+            Console.ReadKey(true);
             Console.WriteLine();
             Console.WriteLine("Stats halted");
+
         }
     }
 }

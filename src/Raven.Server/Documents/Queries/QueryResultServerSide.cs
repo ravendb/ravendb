@@ -1,10 +1,17 @@
 ﻿using System;
-using Raven.Client.Data.Queries;
+using System.Collections.Generic;
+using Raven.Client.Documents.Queries;
 
 namespace Raven.Server.Documents.Queries
 {
-    public abstract class QueryResultServerSide<T> : QueryResult<T>
+    public abstract class QueryResultServerSide<T> : QueryResult<List<T>>
     {
+        protected QueryResultServerSide()
+        {
+            Results = new List<T>();
+            Includes = new List<T>();
+        }
+
         public abstract void AddResult(T result);
 
         public abstract void HandleException(Exception e);

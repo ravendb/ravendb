@@ -1,5 +1,9 @@
 /// <reference path="../tsd.d.ts"/>
 
+interface disposable {
+    dispose(): void;
+}
+
 interface dictionary<TValue> {
     [key: string]: TValue;
 }
@@ -18,6 +22,34 @@ interface resultsDto<T> {
     Results: T[];
 }
 
+interface resultsWithTotalCountDto<T> extends resultsDto<T> {
+    TotalResults: number;
+}
+
+interface resultsWithCountAndAvailableColumns<T> extends resultsWithTotalCountDto<T> {
+    AvailableColumns: string[];
+}
+
+
+interface documentDto extends metadataAwareDto {
+    [key: string]: any;
+}
+
+
+interface metadataAwareDto {
+    '@metadata'?: documentMetadataDto;
+}
+
+interface documentMetadataDto {
+    '@collection'?: string;
+    'Raven-Clr-Type'?: string;
+    'Non-Authoritative-Information'?: boolean;
+    '@id'?: string;
+    'Temp-Index-Score'?: number;
+    '@last-modified'?: string;
+    '@etag'?: number;
+}
+
 interface connectedDocument {
     id: string;
     href: string;
@@ -32,19 +64,14 @@ interface confirmDialogResult {
     can: boolean;
 }
 
-interface disableResourceResult {
-    QualifiedName: string;
+interface disableDatabaseResult {
+    Name: string;
     Success: boolean;
     Reason: string;
     Disabled: boolean;
 }
 
-interface saveIndexResult {
-    IndexId: number;
-    Index: string;
-}
-
-interface deleteResourceConfirmResult extends confirmDialogResult {
+interface deleteDatabaseConfirmResult extends confirmDialogResult {
     keepFiles: boolean;
 }
 
@@ -88,7 +115,7 @@ interface operationIdDto {
     OperationId: number;
 }
 
-interface resourceCreatedEventArgs {
+interface databaseCreatedEventArgs {
     qualifier: string;
     name: string;
 }
@@ -166,11 +193,73 @@ interface storedQueryDto extends queryDto {
     hash: number;
 }
 
-type resourceDisconnectionCause = "Error" | "ResourceDeleted" | "ResourceDisabled" | "ChangingResource";
+type databaseDisconnectionCause = "Error" | "DatabaseDeleted" | "DatabaseDisabled" | "ChangingDatabase";
 
 type querySortType = "Ascending" | "Descending" | "Range Ascending" | "Range Descending";
 
 interface recentErrorDto extends Raven.Server.NotificationCenter.Notifications.Notification {
     Details: string;
     HttpStatus?: string;
+}
+
+declare module studio.settings {
+    type numberFormatting = "raw" | "formatted";
+    type dontShowAgain = "EditSystemDocument";
+    type usageEnvironment = "Default" | "Dev" | "Test" | "Prod";
+}
+
+interface IndexingPerformanceStatsWithCache extends Raven.Client.Documents.Indexes.IndexingPerformanceStats {
+    StartedAsDate: Date; // used for caching
+    CompletedAsDate: Date; // user for caching
+}
+
+interface IOMetricsRecentStatsWithCache extends Raven.Server.Documents.Handlers.IOMetricsRecentStats {
+    StartedAsDate: Date; // used for caching
+    CompletedAsDate: Date; // used for caching
+}
+
+interface IndexingPerformanceOperationWithParent extends Raven.Client.Documents.Indexes.IndexingPerformanceOperation {
+    Parent: Raven.Client.Documents.Indexes.IndexingPerformanceStats;
+}
+
+interface subscriptionResponseItemDto {
+    SubscriptionId: number;
+    Criteria: Raven.Client.Documents.Subscriptions.SubscriptionCriteria;
+    AckEtag: number;
+    TimeOfReceivingLastAck: string;
+    Connection: subscriptionConnectionInfoDto;
+    RecentConnections: Array<subscriptionConnectionInfoDto>;
+    RecentRejectedConnections: Array<subscriptionConnectionInfoDto>;
+}
+
+interface subscriptionConnectionInfoDto {
+    ClientUri: string;
+    ConnectionException: string;
+    Stats: Raven.Server.Documents.Subscriptions.SubscriptionConnectionStats;
+    Options: Raven.Client.Documents.Subscriptions.SubscriptionConnectionOptions;
+}
+
+interface disabledReason {
+    disabled: boolean;
+    reason?: string;
+}
+
+interface pagedResult<T> {
+    items: T[];
+    totalResultCount: number;
+    resultEtag?: string;
+    additionalResultInfo?: any; 
+}
+
+interface pagedResultWithAvailableColumns<T> extends pagedResult<T> {
+    availableColumns: string[];
+}
+
+type patchOption = "Document" | "Collection" | "Index";
+
+interface patchDto extends documentDto {
+    PatchOnOption: patchOption;
+    Query: string;
+    Script: string;
+    SelectedItem: string;
 }

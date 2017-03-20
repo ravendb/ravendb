@@ -1,6 +1,6 @@
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -40,7 +40,7 @@ namespace SlowTests.MailingList
 
                 // Sort(x => x.Category.Id, Raven.Abstractions.Indexing.SortOptions.Int);
 
-                Index(x => x.Name, Raven.Abstractions.Indexing.FieldIndexing.Analyzed);
+                Index(x => x.Name, FieldIndexing.Analyzed);
             }
         }
 

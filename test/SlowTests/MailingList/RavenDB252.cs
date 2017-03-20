@@ -1,8 +1,9 @@
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexing;
-using Raven.Json.Linq;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -14,21 +15,24 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put("a", null, new RavenJObject
+                using (var commands = store.Commands())
                 {
-                    {"FirstName", "Oren"}
-                }, new RavenJObject
-                {
-                    {Constants.Metadata.Collection, "Users"}
-                });
+                    commands.Put("a", null, new
+                    {
+                        FirstName = "Oren"
+                    }, new Dictionary<string, object>
+                    {
+                        {Constants.Documents.Metadata.Collection, "Users"}
+                    });
 
-                store.DatabaseCommands.Put("b", null, new RavenJObject
-                {
-                    {"FirstName", "Ayende"}
-                }, new RavenJObject
-                {
-                    {Constants.Metadata.Collection, "users"}
-                });
+                    commands.Put("b", null, new
+                    {
+                        FirstName = "Ayende"
+                    }, new Dictionary<string, object>
+                    {
+                        {Constants.Documents.Metadata.Collection, "users"}
+                    });
+                }
 
                 using (var session = store.OpenSession())
                 {
@@ -44,28 +48,32 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put("a", null, new RavenJObject
+                using (var commands = store.Commands())
                 {
-                    {"FirstName", "Oren"}
-                }, new RavenJObject
-                {
-                    {Constants.Metadata.Collection, "Users"}
-                });
+                    commands.Put("a", null, new
+                    {
+                        FirstName = "Oren"
+                    }, new Dictionary<string, object>
+                    {
+                        {Constants.Documents.Metadata.Collection, "Users"}
+                    });
 
-                store.DatabaseCommands.Put("b", null, new RavenJObject
-                {
-                    {"FirstName", "Ayende"}
-                }, new RavenJObject
-                {
-                    {Constants.Metadata.Collection, "users"}
-                });
+                    commands.Put("b", null, new
+                    {
+                        FirstName = "Ayende"
+                    }, new Dictionary<string, object>
+                    {
+                        {Constants.Documents.Metadata.Collection, "users"}
+                    });
+                }
 
                 WaitForIndexing(store);
 
-                store.DatabaseCommands.PutIndex("UsersByName", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
+                    Name = "UsersByName",
                     Maps = { "docs.users.Select(x=>new {x.FirstName })" }
-                });
+                }}));
 
                 WaitForIndexing(store);
 

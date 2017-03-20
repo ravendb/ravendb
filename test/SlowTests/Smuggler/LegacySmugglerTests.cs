@@ -2,15 +2,14 @@
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Client.Operations.Databases.Collections;
-using Raven.NewClient.Client.Smuggler;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Smuggler;
 using Xunit;
 
 namespace SlowTests.Smuggler
 {
-    public class LegacySmugglerTests : RavenNewTestBase
+    public class LegacySmugglerTests : RavenTestBase
     {
         [Theory]
         [InlineData("SlowTests.Smuggler.Northwind_3.5.35168.ravendbdump")]
@@ -78,7 +77,7 @@ namespace SlowTests.Smuggler
                     // not everything can be imported
                     // LoadDocument(key)
                     // Spatial
-                    Assert.True(stats.CountOfIndexes >= 589, $"{stats.CountOfIndexes} >= 589");
+                    Assert.True(stats.CountOfIndexes >= 584, $"{stats.CountOfIndexes} >= 584");
                     Assert.True(stats.CountOfIndexes <= 658, $"{stats.CountOfIndexes} <= 658");
 
                     // not everything can be imported

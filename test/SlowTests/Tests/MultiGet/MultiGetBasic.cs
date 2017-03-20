@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using FastTests;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
+using Raven.Client.Documents.Commands.MultiGet;
 using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.Tests.MultiGet
 {
-    public class MultiGetBasic : RavenNewTestBase
+    public class MultiGetBasic : RavenTestBase
     {
         private class User
         {
@@ -45,7 +44,7 @@ namespace SlowTests.Tests.MultiGet
 
                 using (var commands = store.Commands())
                 {
-                    var command = new MultiGetCommand(commands.Context, commands.RequestExecuter.Cache, new List<GetRequest>
+                    var command = new MultiGetCommand(commands.Context, commands.RequestExecutor.Cache, new List<GetRequest>
                     {
                         new GetRequest
                         {
@@ -59,7 +58,7 @@ namespace SlowTests.Tests.MultiGet
                         }
                     });
 
-                    commands.RequestExecuter.Execute(command, commands.Context);
+                    commands.RequestExecutor.Execute(command, commands.Context);
 
                     string name;
                     var result = (BlittableJsonReaderObject)command.Result[0].Result;
@@ -99,7 +98,7 @@ namespace SlowTests.Tests.MultiGet
 
                 using (var commands = store.Commands())
                 {
-                    var command = new MultiGetCommand(commands.Context, commands.RequestExecuter.Cache, new List<GetRequest>
+                    var command = new MultiGetCommand(commands.Context, commands.RequestExecutor.Cache, new List<GetRequest>
                     {
                         new GetRequest
                         {
@@ -113,7 +112,7 @@ namespace SlowTests.Tests.MultiGet
                         }
                     });
 
-                    commands.RequestExecuter.Execute(command, commands.Context);
+                    commands.RequestExecutor.Execute(command, commands.Context);
 
                     string name;
                     var result = (BlittableJsonReaderObject)command.Result[0].Result;
@@ -146,7 +145,7 @@ namespace SlowTests.Tests.MultiGet
 
                 using (var commands = store.Commands())
                 {
-                    var command = new MultiGetCommand(commands.Context, commands.RequestExecuter.Cache, new List<GetRequest>
+                    var command = new MultiGetCommand(commands.Context, commands.RequestExecutor.Cache, new List<GetRequest>
                     {
                         new GetRequest
                         {
@@ -160,12 +159,12 @@ namespace SlowTests.Tests.MultiGet
                         }
                     });
 
-                    commands.RequestExecuter.Execute(command, commands.Context);
+                    commands.RequestExecutor.Execute(command, commands.Context);
 
                     Assert.True(command.Result[0].Headers.ContainsKey("ETag"));
                     Assert.True(command.Result[1].Headers.ContainsKey("ETag"));
 
-                    command = new MultiGetCommand(commands.Context, commands.RequestExecuter.Cache, new List<GetRequest>
+                    command = new MultiGetCommand(commands.Context, commands.RequestExecutor.Cache, new List<GetRequest>
                     {
                         new GetRequest
                         {
@@ -187,7 +186,7 @@ namespace SlowTests.Tests.MultiGet
                         }
                     });
 
-                    commands.RequestExecuter.Execute(command, commands.Context);
+                    commands.RequestExecutor.Execute(command, commands.Context);
 
                     Assert.Equal(HttpStatusCode.NotModified, command.Result[0].StatusCode);
                     Assert.Equal(HttpStatusCode.NotModified, command.Result[1].StatusCode);

@@ -3,29 +3,121 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client.Replication.Messages;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Http;
+using Raven.Client;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Http;
+using Raven.Client.Server.Commands;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 
 namespace Raven.Server.Utils
 {
-    public static class ReplicationUtils
+    internal static class ReplicationUtils
     {
+        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string key, ChangeVectorEntry[] remote, out ChangeVectorEntry[] conflictingVector)
+        {
+            //tombstones also can be a conflict entry
+            conflictingVector = null;
+            var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, key);
+            if (conflicts.Count > 0)
+            {
+                foreach (var existingConflict in conflicts)
+                {
+                    if (GetConflictStatus(remote, existingConflict.ChangeVector) == ConflictStatus.Conflict)
+                    {
+                        conflictingVector = existingConflict.ChangeVector;
+                        return ConflictStatus.Conflict;
+                    }
+                }
+                // this document will resolve the conflicts when putted
+                return ConflictStatus.Update;
+            }
+
+            var result = context.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, key);
+            ChangeVectorEntry[] local;
+
+            if (result.Item1 != null)
+                local = result.Item1.ChangeVector;
+            else if (result.Item2 != null)
+                local = result.Item2.ChangeVector;
+            else
+                return ConflictStatus.Update; //document with 'key' doesnt exist locally, so just do PUT
+
+
+            var status = GetConflictStatus(remote, local);
+            if (status == ConflictStatus.Conflict)
+            {
+                conflictingVector = local;
+            }
+
+            return status;
+        }
+
+        public static ConflictStatus GetConflictStatus(ChangeVectorEntry[] remote, ChangeVectorEntry[] local)
+        {
+            if (local == null)
+                return ConflictStatus.Update;
+
+            //any missing entries from a change vector are assumed to have zero value
+            var remoteHasLargerEntries = local.Length < remote.Length;
+            var localHasLargerEntries = remote.Length < local.Length;
+
+            int remoteEntriesTakenIntoAccount = 0;
+            for (int index = 0; index < local.Length; index++)
+            {
+                if (remote.Length < index && remote[index].DbId == local[index].DbId)
+                {
+                    remoteHasLargerEntries |= remote[index].Etag > local[index].Etag;
+                    localHasLargerEntries |= local[index].Etag > remote[index].Etag;
+                    remoteEntriesTakenIntoAccount++;
+                }
+                else
+                {
+                    var updated = false;
+                    for (var remoteIndex = 0; remoteIndex < remote.Length; remoteIndex++)
+                    {
+                        if (remote[remoteIndex].DbId == local[index].DbId)
+                        {
+                            remoteHasLargerEntries |= remote[remoteIndex].Etag > local[index].Etag;
+                            localHasLargerEntries |= local[index].Etag > remote[remoteIndex].Etag;
+                            remoteEntriesTakenIntoAccount++;
+                            updated = true;
+                        }
+                    }
+
+                    if (!updated)
+                        localHasLargerEntries = true;
+                }
+            }
+            remoteHasLargerEntries |= remoteEntriesTakenIntoAccount < remote.Length;
+
+            if (remoteHasLargerEntries && localHasLargerEntries)
+                return ConflictStatus.Conflict;
+
+            if (remoteHasLargerEntries == false && localHasLargerEntries == false)
+                return ConflictStatus.AlreadyMerged; // change vectors identical
+
+            return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
+        }
+
+        public enum ConflictStatus
+        {
+            Update,
+            Conflict,
+            AlreadyMerged
+        }
+
+
         public static NodeTopologyInfo GetLocalTopology(
             DocumentDatabase database,
             ReplicationDocument replicationDocument)
@@ -44,7 +136,7 @@ namespace Raven.Server.Utils
 
                 if (TryGetActiveDestination(destination, replicationLoader.OutgoingHandlers, out outgoingHandler))
                 {
-                    
+
                     topologyInfo.Outgoing.Add(
                         new ActiveNodeStatus
                         {
@@ -126,17 +218,29 @@ namespace Raven.Server.Utils
             return false;
         }
 
-        public static async Task<string> GetTcpInfoAsync(JsonOperationContext context,
-        string url,
-        string databaseName,
-        string apiKey)
+        public static TcpConnectionInfo GetTcpInfo(string url, string databaseName, string apiKey)
         {
-            using (var requestExecuter = new RequestExecuter(url, databaseName, apiKey))
+            JsonOperationContext context;
+            using (var requestExecuter = RequestExecutor.CreateForSingleNode(url, databaseName, apiKey))
+            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+            {
+                var getTcpInfoCommand = new GetTcpInfoCommand();
+                requestExecuter.Execute(getTcpInfoCommand, context);
+
+                return getTcpInfoCommand.Result;
+            }
+        }
+
+        public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string apiKey)
+        {
+            JsonOperationContext context;
+            using (var requestExecuter = RequestExecutor.CreateForSingleNode(url, databaseName, apiKey))
+            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
             {
                 var getTcpInfoCommand = new GetTcpInfoCommand();
                 await requestExecuter.ExecuteAsync(getTcpInfoCommand, context);
 
-                return getTcpInfoCommand.Result.Url;
+                return getTcpInfoCommand.Result;
             }
         }
 
@@ -279,7 +383,7 @@ namespace Raven.Server.Utils
             Array.Sort(vectorB);
             int ia = 0, ib = 0;
             var merged = new List<ChangeVectorEntry>();
-            while(ia < vectorA.Length && ib < vectorB.Length)
+            while (ia < vectorA.Length && ib < vectorB.Length)
             {
                 int res = vectorA[ia].CompareTo(vectorB[ib]);
                 if (res == 0)
@@ -335,7 +439,7 @@ namespace Raven.Server.Utils
                     }
                 }
             }
-            
+
             return mergedVector.Select(kvp => new ChangeVectorEntry
             {
                 DbId = kvp.Key,
@@ -347,8 +451,8 @@ namespace Raven.Server.Utils
         {
             string actualCollection;
             BlittableJsonReaderObject metadata;
-            if (obj.TryGet(Constants.Metadata.Key, out metadata) == false ||
-                metadata.TryGet(Constants.Metadata.Collection, out actualCollection) == false ||
+            if (obj.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Collection, out actualCollection) == false ||
                 actualCollection != collection)
             {
                 if (collection == CollectionName.EmptyCollection)

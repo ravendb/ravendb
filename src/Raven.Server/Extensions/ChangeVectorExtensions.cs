@@ -3,37 +3,34 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Raven.Client.Replication.Messages;
-using Raven.Json.Linq;
-using Sparrow.Json.Parsing;
+using Raven.Client.Documents.Replication.Messages;
 
 namespace Raven.Server.Extensions
 {
     public static class ChangeVectorExtensions
-    {
+    {              
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Dictionary<Guid, long> ToDictionary(this ChangeVectorEntry[] changeVector)
         {
             return changeVector.ToDictionary(x => x.DbId, x => x.Etag);
         }
 
-
-        //note - this is a helper to use in unit tests only
-        public static ChangeVectorEntry FromJson(this RavenJToken self)
+        public static bool EqualTo(this ChangeVectorEntry[] self, ChangeVectorEntry[] other)
         {
-            return new ChangeVectorEntry
+            if (self.Length != other.Length)
+                return false;
+
+            for (int i = 0; i < self.Length; i++)
             {
-                DbId = Guid.Parse(self.Value<string>("DbId")),
-                Etag = long.Parse(self.Value<string>("Etag"))
-            };
-        }
+                var otherEntry = other.FirstOrDefault(x => x.DbId == self[i].DbId);
+                if (otherEntry.DbId == Guid.Empty) //not fount relevant entry
+                    return false;
 
-        public static DynamicJsonArray ToJson(this ChangeVectorEntry[] self)
-        {
-            var results = new DynamicJsonArray();
-            foreach (var entry in self)
-                results.Add(entry.ToJson());
-            return results;
+                if (self[i].Etag != otherEntry.Etag)
+                    return false;
+            }
+
+            return true;
         }
 
         public static bool GreaterThan(this ChangeVectorEntry[] self, Dictionary<Guid, long> other)

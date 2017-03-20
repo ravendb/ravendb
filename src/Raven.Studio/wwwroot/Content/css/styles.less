@@ -8,6 +8,7 @@
 @import "prerelease.less";
 @import "basic-layout.less";
 @import "virtual-grid.less";
+@import "column-selector.less";
 
 /*
     Available animations (add "classname;" inside your class)
@@ -23,10 +24,6 @@
 /* LOCAL VARIABLES AND KEYFRAMES*/
 
 @brand-database-color: #ad1457;
-@brand-filesystem-color: #45289f;
-@brand-counter-color: #016064;
-@brand-timeseries-color: #f58017;
-
 
 .shadow-style {
     box-shadow: 0 10px 20px 2px rgba(0, 0, 0, 0.45);
@@ -43,12 +40,12 @@ html {
     height: 100%;
 }
 
+
 body {
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 
     &.loading-active {
-        overflow: hidden;
-
         .loading-overlay {
             opacity: 1;
 
@@ -309,7 +306,7 @@ a {
 
 .flex-row {
     @media (min-width: @screen-sm) {
-        display: flex;
+        display: flex;        
 
         .flex-bottom {
             align-self: flex-end;
@@ -691,7 +688,7 @@ input[type=file] + .form-control {
 }
 
 .processing-spinner {
-    position: absolute;
+    position: fixed;
     bottom: -10px;
     right: -10px;
     width: 130px;
@@ -893,7 +890,7 @@ input[type=file] + .form-control {
         overflow-y: auto;
         overflow-x: hidden;
         position: relative;
-        height: 100%;
+        flex-grow: 1;
     }
 }
 
@@ -1325,6 +1322,10 @@ pre {
     }
 }
 
+.popover-lg {
+    max-width: 100%;
+}
+
 .font-normal {
     font-weight: normal;
 }
@@ -1404,14 +1405,23 @@ pre {
     opacity: @modal-backdrop-opacity;
 }
 
+.has-disable-reason {
+    .btn[disabled] {
+        pointer-events: none;
+    }
+
+    cursor: not-allowed;
+}
+
 
 @import "pages/tasks-sampleData";
 @import "pages/tasks-csvImport";
 @import "pages/tasks-subscriptions";
 @import "pages/documents-edit";
+@import "pages/documents";
 @import "pages/indexes.less";
 @import "pages/transformers.less";
-@import "pages/resources.less";
+@import "pages/databases.less";
 @import "pages/indexes-terms.less";
 @import "pages/storage-report.less";
 @import "pages/sample-data.less";
@@ -1420,3 +1430,4 @@ pre {
 @import "pages/edit-transformer.less";
 @import "pages/query.less";
 @import "pages/patch.less";
+@import "pages/metrics.less";

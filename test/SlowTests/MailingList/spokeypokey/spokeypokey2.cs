@@ -4,7 +4,8 @@ using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList.spokeypokey

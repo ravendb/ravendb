@@ -1,5 +1,141 @@
 @controls-width: 130px;
 
+.patch-save {
+
+
+    .form-control {
+        width: 75% !important;
+        opacity: 0;
+        transition: opacity .2s cubic-bezier(0, 0.5, 0.5, 1), width .2s cubic-bezier(0, 0.5, 0.5, 0.99);
+        float: right;
+        display: table-cell;
+    }
+
+    &.active .form-control {
+        width: 100% !important;
+        opacity: 1;
+    }
+}
+
+.patch-filter {
+    width: 100% !important;
+}
+
+.loadpatch {
+    @media (max-width:@screen-xs-max) {
+        display: block !important;
+    }
+
+    .dropdown-menu {
+        background-color: transparent;
+        padding: 0;
+    }
+
+    .loadpatch-dropdown {
+        width: 100%;
+        height: 500px;
+        max-width: calc(100vw ~"-" @grid-gutter-width/3*4);
+        max-height: 55vh;
+        display: flex;
+
+        @media (min-width:@screen-sm) {
+            width: 1000px;
+            max-height: 65vh;
+        }
+
+        @media (min-width:@screen-md) {
+            max-width: calc(100vw ~"-" @grid-gutter-width/3*7);
+        }
+
+        .patch-preview-container, .patch-list-container {
+            flex-grow: 1;
+            flex-shrink: 0;
+            padding: @grid-gutter-width/4;
+            position: relative;
+            background-color: @gray-dark;
+        }
+
+        .patch-list-container {
+            z-index: 2;
+            width: 100%;
+
+            @media (min-width:@screen-sm) {
+                width: 50%;
+            }
+        }
+
+
+        .patch-preview-container {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            z-index: 1;
+            transform: translateX(100%);
+            transition: transform .2s cubic-bezier(0, 0, 0, 1);
+
+            @media (max-width:@screen-xs-max) {
+                display: none;
+            }
+
+            .pre-container {
+                flex-grow: 1;
+                background-color: @gray-darker;
+                overflow: auto;
+            }
+
+            pre {
+                overflow: auto;
+                background-color: @gray-darker !important;
+            }
+        }
+
+        &.show-preview {
+            .patch-preview-container {
+                transform: translateX(0%);
+            }
+        }
+
+
+        .patch-list {
+            .absolute-fill;
+            overflow-y: auto;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            background-color: @gray-darker;
+
+            li {
+                display: flex;
+                align-items: center;
+
+                &:hover {
+                    background-color: lighten(@gray-darker,3%);
+                }
+            }
+
+            a {
+                display: block;
+                padding: 2px 10px;
+
+                &.patch-link {
+                    display: flex;
+                    flex-grow: 1;
+                    align-items: center;
+                }
+
+                .name {
+                    flex-grow: 1;
+                }
+
+                .modified {
+                    font-size: 11px;
+                    color: @gray;
+                }
+            }
+        }
+    }
+}
+
 .patch-settings {
     width: @controls-width;
 }
@@ -9,11 +145,11 @@
     display: flex;
 
     .patch-main {
-        width:100%;
-
+        width: 100%;
     }
+
     .patch-controls, .query-controls, .test-controls {
-        margin-left:@line-height-computed/2;
+        margin-left: @line-height-computed/2;
         flex-basis: @controls-width;
         flex-shrink: 0;
         display: flex;
@@ -36,13 +172,11 @@
         display: none;
         .slidein-style;
         padding: @grid-gutter-width/2;
-
-
         background-color: @gray-darker;
         width: 100%;
         position: absolute;
         top: 100%;
-        margin-top:@grid-gutter-width/2;
+        margin-top: @grid-gutter-width/2;
     }
 }
 
@@ -87,7 +221,7 @@
 
 .results-info {
     small::after {
-        content: " and"
+        content: " and";
     }
 
     small:last-child:after {
@@ -105,7 +239,6 @@
     right:0;
     bottom:0;
     */
-
     tbody {
         overflow-y: auto;
     }
@@ -119,6 +252,7 @@
         &:hover {
             background-color: @gray-darker;
             cursor: pointer;
+
             span {
                 text-decoration: underline;
             }

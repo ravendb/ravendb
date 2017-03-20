@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
-using Raven.Client.Data.Queries;
-using Raven.Client.Data.Transformers;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Documents.Transformers;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -11,7 +12,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 {
     public class MoreLikeThisQueryServerSide : MoreLikeThisQuery<BlittableJsonReaderObject>
     {
-        public MoreLikeThisQueryServerSide() : base(null)
+        public MoreLikeThisQueryServerSide() : base(DocumentConventions.Default)
         {
         }
 

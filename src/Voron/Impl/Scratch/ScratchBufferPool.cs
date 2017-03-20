@@ -3,6 +3,7 @@ using Sparrow.Binary;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Voron.Global;
 using Voron.Impl.Paging;
@@ -92,7 +93,7 @@ namespace Voron.Impl.Scratch
             {
                 var recycled = current.Value;
 
-                if (recycled.File.Size <= Math.Max(minSize, requestedSize ?? 0) &&
+                if (recycled.File.Size >= Math.Max(minSize, requestedSize ?? 0) &&
                     // even though this is in the recyle bin, there might still be some transactions looking at it
                     // so we have to make sure that this is really unused before actually reusing it
                     recycled.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction) == false)
@@ -300,6 +301,15 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public byte* AcquirePagePointerWithOverflowHandling(LowLevelTransaction tx, int scratchNumber, long p)
+        {
+            var item = GetScratchBufferFile(scratchNumber);
+
+            ScratchBufferFile bufferFile = item.File;
+            return bufferFile.AcquirePagePointerWithOverflowHandling(tx, p);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ScratchBufferItem GetScratchBufferFile(int scratchNumber)
         {
             var currentScratchFile = _current;
@@ -348,13 +358,6 @@ namespace Voron.Impl.Scratch
             var item = GetScratchBufferFile(value.ScratchFileNumber);
             item.File.BreakLargeAllocationToSeparatePages(value);
         }
-
-        public void ReduceAllocation(PageFromScratchBuffer value,int lowerNumberOfPages)
-        {
-            var item = GetScratchBufferFile(value.ScratchFileNumber);
-            item.File.ReduceAllocation(value, lowerNumberOfPages);
-        }
-
 
         public long GetAvailablePagesCount()
         {
@@ -426,6 +429,44 @@ namespace Voron.Impl.Scratch
 
             ScratchBufferFile bufferFile = item.File;
             bufferFile.EnsureMapped(tx, positionInScratchBuffer, numberOfPages);
+        }
+
+        public ScratchBufferPoolInfo InfoForDebug(long oldestActiveTransaction)
+        {
+            var currentFile = _current.File;
+            var scratchBufferPoolInfo = new ScratchBufferPoolInfo
+            {
+                OldestActiveTransaction = oldestActiveTransaction,
+                NumberOfScratchFiles = _scratchBuffers.Count,
+                CurrentFileSizeInMB = currentFile.Size / 1024L / 1024L,
+                PerScratchFileSizeLimitInMB = _options.MaxScratchBufferSize / 1024L / 1024L
+            };
+
+            foreach (var scratchBufferItem in _scratchBuffers.Values.OrderBy(x => x.Number))
+            {
+                var current = _current;
+                var scratchFileUsage = new ScratchFileUsage
+                {
+                    Name = StorageEnvironmentOptions.ScratchBufferName(scratchBufferItem.File.Number),
+                    SizeInKB = scratchBufferItem.File.Size / 1024,
+                    NumberOfAllocations = scratchBufferItem.File.NumberOfAllocations,
+                    CanBeDeleted = scratchBufferItem != current && scratchBufferItem.File.HasActivelyUsedBytes(oldestActiveTransaction) == false,
+                    TxIdAfterWhichLatestFreePagesBecomeAvailable = scratchBufferItem.File.TxIdAfterWhichLatestFreePagesBecomeAvailable
+                };
+
+                foreach (var freePage in scratchBufferItem.File.GetMostAvailableFreePagesBySize())
+                {
+                    scratchFileUsage.MostAvailableFreePages.Add(new MostAvailableFreePagesBySize
+                    {
+                        Size = freePage.Key,
+                        ValidAfterTransactionId = freePage.Value
+                    });
+                }
+
+                scratchBufferPoolInfo.ScratchFilesUsage.Add(scratchFileUsage);
+            }
+
+            return scratchBufferPoolInfo;
         }
     }
 }

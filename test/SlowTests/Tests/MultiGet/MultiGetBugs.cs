@@ -2,12 +2,14 @@ using System;
 using System.Threading.Tasks;
 
 using FastTests;
-using Raven.NewClient.Client;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Tests.MultiGet
 {
-    public class MultiGetBugs : RavenNewTestBase
+    public class MultiGetBugs : RavenTestBase
     {
         private class User
         {
@@ -41,7 +43,7 @@ namespace SlowTests.Tests.MultiGet
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)

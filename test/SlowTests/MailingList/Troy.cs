@@ -8,10 +8,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -38,7 +39,7 @@ namespace SlowTests.MailingList
                 var searchResults = session.Query<Product>().Customize(x => x.WaitForNonStaleResults());
                 Assert.True(searchResults.Count() == 5);
 
-                RavenQueryStatistics stats;
+                QueryStatistics stats;
 
                 // *****************************************************************************************************************************************
                 // We fail to find any Products as expected - Note Phrase is not a match
@@ -100,7 +101,7 @@ namespace SlowTests.MailingList
                 var searchResults = session.Query<Product>().Customize(x => x.WaitForNonStaleResults());
                 Assert.True(searchResults.Count() == 5);
 
-                RavenQueryStatistics stats;
+                QueryStatistics stats;
 
                 // *****************************************************************************************************************************************
                 // We fail to find any Products as expected - Note Phrase is not a match
@@ -160,7 +161,7 @@ namespace SlowTests.MailingList
 
         private class Product
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public string Description { get; set; }
             public string Category { get; set; }
@@ -171,10 +172,10 @@ namespace SlowTests.MailingList
 
         protected override void ModifyStore(DocumentStore store)
         {
-            store.Conventions = new DocumentConvention
+            store.Conventions = new DocumentConventions
             {
-                TransformTypeTagNameToDocumentKeyPrefix = tag => tag,
-                FindTypeTagName = type => type.Name
+                TransformTypeCollectionNameToDocumentIdPrefix = tag => tag,
+                FindCollectionName = type => type.Name
             };
         }
 
@@ -193,7 +194,7 @@ namespace SlowTests.MailingList
             {
                 new Product
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.NewGuid().ToString(),
                     Name = "Blu-Ray Player",
                     Description = "Latest and greated 3D Blu-Ray Player",
                     Created = DateTimeOffset.Now,
@@ -203,7 +204,7 @@ namespace SlowTests.MailingList
                 },
                 new Product
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.NewGuid().ToString(),
                     Name = "Stair Fence",
                     Description = "Protect your young ones from falling down the stairs.",
                     Created = DateTimeOffset.Now,
@@ -213,7 +214,7 @@ namespace SlowTests.MailingList
                 },
                 new Product
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.NewGuid().ToString(),
                     Name = "Gigabit Network Switch",
                     Description = "Portable 12 Port GB Network Switch.",
                     Created = DateTimeOffset.Now,
@@ -223,7 +224,7 @@ namespace SlowTests.MailingList
                 },
                 new Product
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.NewGuid().ToString(),
                     Name = "Cisco 64 Port Switch Commercial Grade",
                     Description = "Commercial 64 Port GB Network Switch.",
                     Created = DateTimeOffset.Now,
@@ -233,7 +234,7 @@ namespace SlowTests.MailingList
                 },
                 new Product
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.NewGuid().ToString(),
                     Name = "Beolit 12 Airplay",
                     Description = "The best portable wireless sounds featuring Apple's Airplay.",
                     Created = DateTimeOffset.Now,

@@ -3,7 +3,7 @@ import endpoints = require("endpoints");
 
 class createDatabaseCommand extends commandBase {
 
-    constructor(private databaseDocument: Raven.Abstractions.Data.DatabaseDocument) {
+    constructor(private databaseDocument: Raven.Client.Server.DatabaseDocument) {
         super();
     }
 

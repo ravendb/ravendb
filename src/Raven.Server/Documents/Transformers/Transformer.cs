@@ -1,18 +1,16 @@
 ﻿using System;
 using System.IO;
 using System.Text;
-using Raven.Abstractions;
-using Raven.Abstractions.Indexing;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
+using Raven.Client.Documents.Transformers;
 using Raven.Server.Config.Categories;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
-using Sparrow.Platform;
-using Voron.Platform.Posix;
 
 namespace Raven.Server.Documents.Transformers
 {
@@ -100,7 +98,7 @@ namespace Raven.Server.Documents.Transformers
             if (_configuration.RunInMemory)
                 return;
 
-            File.WriteAllText(GetPath(TransformerId, Name, _configuration), JsonConvert.SerializeObject(Definition, Formatting.Indented, Default.Converters));
+            File.WriteAllText(GetPath(TransformerId, Name, _configuration).FullPath, JsonConvert.SerializeObject(Definition, Formatting.Indented));
         }
 
         public static Transformer CreateNew(int transformerId, TransformerDefinition definition,
@@ -131,14 +129,11 @@ namespace Raven.Server.Documents.Transformers
             return transformer;
         }
 
-        private static string GetPath(int transformerId, string name, IndexingConfiguration configuration)
+        private static PathSetting GetPath(int transformerId, string name, IndexingConfiguration configuration)
         {
-            var path = Path.Combine(configuration.StoragePath, "Transformers", $"{transformerId}.{Convert.ToBase64String(Encoding.UTF8.GetBytes(name))}{FileExtension}");
-
-            if (PlatformDetails.RunningOnPosix)
-                path = PosixHelper.FixLinuxPath(path);
-
-            return path;
+            return
+                configuration.StoragePath.Combine(Path.Combine("Transformers",
+                    $"{transformerId}.{Convert.ToBase64String(Encoding.UTF8.GetBytes(name))}{FileExtension}"));
         }
 
         public virtual TransformationScope OpenTransformationScope(BlittableJsonReaderObject parameters, IncludeDocumentsCommand include, DocumentsStorage documentsStorage, TransformerStore transformerStore, DocumentsOperationContext context, bool nested = false)
@@ -187,10 +182,21 @@ namespace Raven.Server.Documents.Transformers
                 return;
 
             var path = GetPath(TransformerId, Name, _configuration);
-            if (File.Exists(path) == false)
+            if (File.Exists(path.FullPath) == false)
                 return;
 
-            File.Delete(path);
+            File.Delete(path.FullPath);
+        }
+
+        public void Rename(string newName)
+        {
+            lock (_locker)
+            {
+                var oldName = Name;
+                Definition.Name = newName;
+                Persist();
+                IOExtensions.DeleteFile(GetPath(TransformerId, oldName, _configuration).FullPath);
+            }
         }
     }
 }

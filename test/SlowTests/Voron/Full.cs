@@ -12,7 +12,7 @@ namespace SlowTests.Voron
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {
-            options.MaxLogFileSize = 1000 * Constants.Storage.PageSize;
+            options.MaxLogFileSize = 1000*Constants.Storage.PageSize;
             options.ManualFlushing = true;
         }
 
@@ -51,29 +51,41 @@ namespace SlowTests.Voron
                 tx.Commit();
             }
 
-            Env.FlushLogToDataFile(); // force writing data to the data file - this won't sync data to disk because there was another sync withing last minute
+            Env.FlushLogToDataFile();
+                // force writing data to the data file - this won't sync data to disk because there was another sync withing last minute
+            var sw = new StringWriter();
 
-            BackupMethods.Full.ToFile(Env, Path.Combine(DataDir, "voron-test.backup"));
-
-            BackupMethods.Full.Restore(Path.Combine(DataDir, "voron-test.backup"), Path.Combine(DataDir, "backup-test.data"));
-
-            var options = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "backup-test.data"));
-            options.MaxLogFileSize = Env.Options.MaxLogFileSize;
-
-            using (var env = new StorageEnvironment(options))
+            try
             {
-                using (var tx = env.ReadTransaction())
+                BackupMethods.Full.ToFile(Env, Path.Combine(DataDir, "voron-test.backup"), infoNotify: msg => sw.WriteLine(msg));
+
+                BackupMethods.Full.Restore(Path.Combine(DataDir, "voron-test.backup"), Path.Combine(DataDir, "backup-test.data"));
+                sw.WriteLine();
+                sw.WriteLine("Restoring...");
+                sw.WriteLine();
+
+                var options = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, "backup-test.data"));
+                options.MaxLogFileSize = Env.Options.MaxLogFileSize;
+
+                using (var env = new StorageEnvironment(options))
                 {
-                    var tree = tx.CreateTree("foo");
-                    for (int i = 0; i < 1000; i++)
+                    using (var tx = env.ReadTransaction())
                     {
-                        var readResult = tree.Read("items/" + i);
-                        Assert.NotNull(readResult);
-                        var memoryStream = new MemoryStream();
-                        readResult.Reader.CopyTo(memoryStream);
-                        Assert.Equal(memoryStream.ToArray(), buffer);
+                        var tree = tx.CreateTree("foo");
+                        for (int i = 0; i < 1000; i++)
+                        {
+                            var readResult = tree.Read("items/" + i);
+                            Assert.NotNull(readResult);
+                            var memoryStream = new MemoryStream();
+                            readResult.Reader.CopyTo(memoryStream);
+                            Assert.Equal(memoryStream.ToArray(), buffer);
+                        }
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(sw.GetStringBuilder().ToString(), e);
             }
         }
     }

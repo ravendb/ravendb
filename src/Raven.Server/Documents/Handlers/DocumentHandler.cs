@@ -12,19 +12,19 @@ using System.Net;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.NewClient.Client.Commands;
+using Raven.Client;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Exceptions.Transformers;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Includes;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Voron.Exceptions;
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Handlers
                     if (etag == document.Etag)
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     else
-                        HttpContext.Response.Headers[Constants.MetadataEtagField] = "\"" + document.Etag + "\"";
+                        HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + document.Etag + "\"";
                 }
 
                 return Task.CompletedTask;
@@ -111,7 +111,9 @@ namespace Raven.Server.Documents.Handlers
         private void GetDocuments(DocumentsOperationContext context, Transformer transformer, bool metadataOnly)
         {
             // everything here operates on all docs
-            var actualEtag = ComputeAllDocumentsEtag(context);
+            var actualEtag = DocumentsStorage.ComputeEtag(
+                DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction), Database.DocumentsStorage.GetNumberOfDocuments(context)
+            );
 
             if (GetLongFromHeaders("If-None-Match") == actualEtag)
             {
@@ -131,13 +133,13 @@ namespace Raven.Server.Documents.Handlers
             }
             else if (HttpContext.Request.Query.ContainsKey("startsWith"))
             {
-               documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
-                    HttpContext.Request.Query["startsWith"],
-                    HttpContext.Request.Query["matches"],
-                    HttpContext.Request.Query["exclude"],
-                    start,
-                    pageSize
-                );
+                documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
+                     HttpContext.Request.Query["startsWith"],
+                     HttpContext.Request.Query["matches"],
+                     HttpContext.Request.Query["exclude"],
+                     HttpContext.Request.Query["startAfter"],
+                     start,
+                     pageSize);
             }
             else // recent docs
             {
@@ -163,9 +165,6 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteDocuments(context, documents, metadataOnly);
                 }
 
-                writer.WriteComma();
-                writer.WritePropertyName("NextPageStart");
-                writer.WriteInteger(Database.DocumentsStorage.NextPage);
                 writer.WriteEndObject();
             }
         }
@@ -217,7 +216,7 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            HttpContext.Response.Headers[Constants.MetadataEtagField] = "\"" + actualEtag + "\"";
+            HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
             var blittable = GetBoolValueQueryString("blittable", required: false) ?? false;
 
@@ -263,7 +262,7 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.Headers["Content-Type"] = "binary/blittable-json";
 
             using (var streamBuffer = new UnmanagedStreamBuffer(context, ResponseBodyStream()))
-            using (var writer = new ManualBlittalbeJsonDocumentBuilder<UnmanagedStreamBuffer>(context,
+            using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedStreamBuffer>(context,
                 null, new BlittableWriter<UnmanagedStreamBuffer>(context, streamBuffer)))
             {
                 writer.StartWriteObjectDocument();
@@ -345,18 +344,6 @@ namespace Raven.Server.Documents.Handlers
             return (long)Hashing.Streamed.XXHash64.EndProcess(ctx);
         }
 
-        private unsafe long ComputeAllDocumentsEtag(DocumentsOperationContext context)
-        {
-            var buffer = stackalloc long[2];
-
-            buffer[0] = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
-            buffer[1] = Database.DocumentsStorage.GetNumberOfDocuments(context);
-
-            return (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 2);
-        }
-
-
-
         [RavenAction("/databases/*/docs", "DELETE", "/databases/{databaseName:string}/docs?id={documentId:string}")]
         public async Task Delete()
         {
@@ -371,7 +358,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     Key = id,
                     Database = Database,
-                    ExepctedEtag = etag
+                    ExpectedEtag = etag
                 };
 
                 await Database.TxMerger.Enqueue(cmd);
@@ -596,7 +583,7 @@ namespace Raven.Server.Documents.Handlers
         private class MergedDeleteCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             public string Key;
-            public long? ExepctedEtag;
+            public long? ExpectedEtag;
             public DocumentDatabase Database;
             public ExceptionDispatchInfo ExceptionDispatchInfo;
 
@@ -604,7 +591,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                    Database.DocumentsStorage.Delete(context, Key, ExepctedEtag);
+                    Database.DocumentsStorage.Delete(context, Key, ExpectedEtag);
                 }
                 catch (ConcurrencyException e)
                 {

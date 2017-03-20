@@ -1,8 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
 import appUrl = require("common/appUrl");
-import messagePublisher = require("common/messagePublisher");
-import activeResourceTracker = require("common/shell/activeResourceTracker");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
 import app = require("durandal/app");
 import changeSubscription = require("common/changeSubscription");
@@ -12,27 +11,22 @@ import confirmationDialog = require("viewmodels/common/confirmationDialog");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import document = require("models/database/documents/document");
 import downloader = require("common/downloader");
-import resourcesManager = require("common/shell/resourcesManager");
+import databasesManager = require("common/shell/databasesManager");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import eventsCollector = require("common/eventsCollector");
-import changesApi = require("common/changesApi");
 
 /*
- * Base view model class that provides basic view model services, such as tracking the active resource and providing a means to add keyboard shortcuts.
+ * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
 class viewModelBase {
 
-    protected activeDatabase = activeResourceTracker.default.database;
-    protected activeFilesystem = activeResourceTracker.default.fileSystem;
-    protected activeCounterStorage = activeResourceTracker.default.counterStorage;
-    protected activeTimeSeries = activeResourceTracker.default.timeSeries;
-    protected activeResource = activeResourceTracker.default.resource;
+    protected activeDatabase = activeDatabaseTracker.default.database;
     
     downloader = new downloader();
 
     isBusy = ko.observable<boolean>(false);
 
-    protected resourcesManager = resourcesManager.default;
+    protected databasesManager = databasesManager.default;
 
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
@@ -71,8 +65,7 @@ class viewModelBase {
         setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
         this.downloader.reset();
 
-        this.resourcesManager.activateBasedOnCurrentUrl();
-        return true;
+        return this.databasesManager.activateBasedOnCurrentUrl();
     }
 
     activate(args: any, isShell = false) {
@@ -256,7 +249,6 @@ class viewModelBase {
             this.modelPollingStop();
         }
         this.pollingWithContinuation();
-       
     }
 
     modelPollingStop() {
@@ -294,6 +286,12 @@ class viewModelBase {
         }
 
         return deferred;
+    }
+
+    protected setupDisableReasons() {
+        $('.has-disable-reason').tooltip({
+            container: "body"
+        });
     }
 
     private beforeUnloadListener: EventListener = (e: any): any => {

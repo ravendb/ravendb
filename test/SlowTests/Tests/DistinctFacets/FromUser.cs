@@ -7,10 +7,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.Tests.DistinctFacets
@@ -90,8 +90,8 @@ namespace SlowTests.Tests.DistinctFacets
                                   TotalCount = 1
                               };
                 Store(x => x.Name, FieldStorage.Yes);
-                Sort(x => x.Tag, SortOptions.NumericLong);
-                Sort("TotalCount", SortOptions.NumericLong);
+                Sort(x => x.Tag, SortOptions.Numeric);
+                Sort("TotalCount", SortOptions.Numeric);
             }
 
             public class Result

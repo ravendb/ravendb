@@ -12,15 +12,17 @@ namespace Voron.Platform.Posix
 {
     public unsafe class PosixMemoryMapPager : PosixAbstractPager
     {
+        private readonly StorageEnvironmentOptions _options;
         private int _fd;
         public readonly long SysPageSize;
         private long _totalAllocationSize;
         private readonly bool _isSyncDirAllowed;
         private readonly bool _copyOnWriteMode;
         public override long TotalAllocationSize => _totalAllocationSize;
-        public PosixMemoryMapPager(StorageEnvironmentOptions options,string file, long? initialFileSize = null,
+        public PosixMemoryMapPager(StorageEnvironmentOptions options, string file, long? initialFileSize = null,
             bool usePageProtection = false) : base(options, usePageProtection)
         {
+            _options = options;
             FileName = file;
             _copyOnWriteMode = options.CopyOnWriteMode && file.EndsWith(Constants.DatabaseFilename);
             _isSyncDirAllowed = PosixHelper.CheckSyncDirectoryAllowed(FileName);
@@ -47,7 +49,7 @@ namespace Voron.Platform.Posix
                 _totalAllocationSize != GetFileSize())
             {
                 _totalAllocationSize = NearestSizeToPageSize(_totalAllocationSize);
-                PosixHelper.AllocateFileSpace(_fd, (ulong) _totalAllocationSize, file);
+                PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, file);
             }
 
             if (_isSyncDirAllowed && PosixHelper.SyncDirectory(file) == -1)
@@ -56,8 +58,7 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err, "sync dir for " + file);
             }
 
-            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize +
-                                   ((_totalAllocationSize % Constants.Storage.PageSize) == 0 ? 0 : 1);
+            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
 
             SetPagerState(CreatePagerState());
         }
@@ -99,7 +100,7 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            PosixHelper.AllocateFileSpace(_fd, (ulong) (_totalAllocationSize + allocationSize), FileName);
+            PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize + allocationSize, FileName);
 
             if (_isSyncDirAllowed && PosixHelper.SyncDirectory(FileName) == -1)
             {
@@ -132,9 +133,9 @@ namespace Voron.Platform.Posix
         {
             var fileSize = GetFileSize();
             var mmflags = _copyOnWriteMode ? MmapFlags.MAP_PRIVATE : MmapFlags.MAP_SHARED;
-            var startingBaseAddressPtr = Syscall.mmap(IntPtr.Zero, (UIntPtr)fileSize,
+            var startingBaseAddressPtr = Syscall.mmap64(IntPtr.Zero, (UIntPtr)fileSize,
                                                       MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                                                      mmflags, _fd, IntPtr.Zero);
+                                                      mmflags, _fd, 0L);
 
             if (startingBaseAddressPtr.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
             {
@@ -162,7 +163,7 @@ namespace Voron.Platform.Posix
             return newPager;
         }
 
-        public override void Sync()
+        public override void Sync(long totalUnsynced)
         {
             //TODO: Is it worth it to change to just one call for msync for the entire file?
             var currentState = GetPagerStateAndAddRefAtomically();
@@ -172,7 +173,7 @@ namespace Voron.Platform.Posix
                 {
                     foreach (var alloc in currentState.AllocationInfos)
                     {
-                        metric.IncrementSize(alloc.Size);
+                        metric.IncrementFileSize(alloc.Size);
                         var result = Syscall.msync(new IntPtr(alloc.BaseAddress), (UIntPtr)alloc.Size, MsyncFlags.MS_SYNC);
                         if (result == -1)
                         {
@@ -180,6 +181,7 @@ namespace Voron.Platform.Posix
                             PosixHelper.ThrowLastError(err, "msync on " + FileName);
                         }
                     }
+                    metric.IncrementSize(totalUnsynced);
                 }
             }
             finally

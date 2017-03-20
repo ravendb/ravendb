@@ -1,6 +1,6 @@
 ﻿using System.Threading;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexing;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -14,7 +14,6 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
     {
         [Theory]
         [InlineData(1)]
-        [InlineData(1000)]
         public void When_map_results_do_not_change_then_we_skip_the_reduce_phase(int numberOfDocs)
         {
             using (var database = CreateDocumentDatabase())
@@ -96,9 +95,9 @@ select new
                                         ["Price"] = 10.7
                                     }
                                 },
-                [Constants.Metadata.Key] = new DynamicJsonValue
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                 {
-                    [Constants.Metadata.Collection] = "Orders"
+                    [Constants.Documents.Metadata.Collection] = "Orders"
                 }
             };
         }

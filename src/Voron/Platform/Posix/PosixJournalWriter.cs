@@ -61,18 +61,15 @@ namespace Voron.Platform.Posix
             if (length < journalSize)
             {
                 length = journalSize;
-                int result;
-                if ((options.SafePosixOpenFlags & PerPlatformValues.OpenFlags.O_DIRECT) == 0)
+                try
                 {
-                    // fallocate doesn't supported, we'll use lseek instead
-                    result = Syscall.AllocateUsingLseek(_fd, journalSize);
+                    PosixHelper.AllocateFileSpace(options, _fd, journalSize,filename);
                 }
-                else
+                catch (Exception)
                 {
-                    result = Syscall.posix_fallocate(_fd, IntPtr.Zero, (UIntPtr) journalSize);
+                    Syscall.close(_fd);
+                    throw;
                 }
-                if (result != 0)
-                    PosixHelper.ThrowLastError(result, "when allocating " + filename);
             }
 
             if (PosixHelper.CheckSyncDirectoryAllowed(_filename) && PosixHelper.SyncDirectory(filename) == -1)
@@ -94,8 +91,11 @@ namespace Voron.Platform.Posix
                 Syscall.close(_fdReads);
                 _fdReads = -1;
             }
-            Syscall.close(_fd);
-            _fd = -1;
+            if (_fd != -1)
+            {
+                Syscall.close(_fd);
+                _fd = -1;
+            }
             if (DeleteOnClose)
             {
                 _options.TryStoreJournalForReuse(_filename);
@@ -174,6 +174,9 @@ namespace Voron.Platform.Posix
 
         public AbstractPager CreatePager()
         {
+            if (_options.RunningOn32Bits)
+                return new Posix32BitsMemoryMapPager(_options, _filename);
+
             return new PosixMemoryMapPager(_options, _filename);
         }
 

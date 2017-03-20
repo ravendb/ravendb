@@ -5,7 +5,7 @@ using Voron.Data.Fixed;
 
 namespace Voron.Data.BTrees
 {
-    partial class Tree
+    unsafe partial class Tree
     {
         [MethodImpl(MethodImplOptions.NoInlining)]
         public long Increment(string key, long delta)
@@ -59,13 +59,19 @@ namespace Voron.Data.BTrees
             }
         }
 
+        public DirectAddScope DirectAdd(string key, int len, out byte* ptr)
+        {
+            return DirectAdd(key, len, TreeNodeFlags.Data, out ptr);
+        }
+
+
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public unsafe byte* DirectAdd(string key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data)
+        public DirectAddScope DirectAdd(string key, int len, TreeNodeFlags nodeType, out byte* ptr)
         {
             Slice keySlice;
             using (Slice.From(_llt.Allocator, key, ByteStringType.Immutable, out keySlice))
             {
-                return DirectAdd(keySlice, len, nodeType);
+                return DirectAdd(keySlice, len, nodeType, out ptr);
             }
         }
 

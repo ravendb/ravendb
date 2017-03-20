@@ -1,7 +1,5 @@
-﻿using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
+﻿using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -54,14 +52,14 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Complete_match_for_single_matching_index_with_sort_options()
         {
-            var definition = new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+            var definition = new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new IndexField
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
                     MapReduceOperation = FieldMapReduceOperation.Count,
-                    SortOption = SortOptions.NumericDefault
+                    SortOption = SortOptions.Numeric
                 },
             },
             new[]
@@ -94,7 +92,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 },
                 SortedFields = new[]
                 {
-                    new SortedField("Count_Range"),
+                    new SortedField("Count_L_Range"),
                     new SortedField("Location"),
                 }
             });
@@ -150,7 +148,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Failure_match_for_map_reduce_index_having_different_aggregation_function()
         {
-            var definition = new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+            var definition = new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new IndexField
                 {
@@ -196,7 +194,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Partial_match_for_map_reduce_index_not_having_all_map_fields_defined_in_query()
         {
-            var definition = new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+            var definition = new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new IndexField
                 {
@@ -249,7 +247,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         public void Failure_match_for_map_reduce_index_not_matching_exactly_group_by_fields()
         {
             // missing nick name field to match
-            var usersByCountReducedByAgeAndLocation = new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+            var usersByCountReducedByAgeAndLocation = new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new IndexField
                 {
@@ -273,7 +271,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             });
 
             // additional Age field to match
-            var usersByCountReducedByLocationAndNickNameAndAge = new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+            var usersByCountReducedByLocationAndNickNameAndAge = new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new IndexField
                 {
@@ -335,7 +333,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Complete_match_and_surpassed_map_reduce_index_is_choosen()
         {
-            var usersByCountGroupedByLocation = new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+            var usersByCountGroupedByLocation = new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new IndexField
                 {
@@ -353,7 +351,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 }
             });
 
-            var usersByCountAndTotalAgeGroupedByLocation = new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+            var usersByCountAndTotalAgeGroupedByLocation = new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new IndexField
                 {
@@ -407,7 +405,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Failure_when_sort_options_do_not_match()
         {
-            var definition = new AutoMapReduceIndexDefinition(new[] { "LineItems" }, new[]
+            var definition = new AutoMapReduceIndexDefinition("LineItems", new[]
             {
                 new IndexField
                 {
@@ -431,7 +429,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             var dynamicQuery = DynamicQueryMapping.Create("LineItems", new IndexQueryServerSide
             {
                 Query = "Price:70",
-                SortedFields = new[] { new SortedField("Price_Range") },
+                SortedFields = new[] { new SortedField("Price_L_Range") },
             });
 
             var result = _sut.Match(dynamicQuery);

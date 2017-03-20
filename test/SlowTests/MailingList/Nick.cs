@@ -1,9 +1,9 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using SlowTests.Utils;
 using Xunit;
 
@@ -70,7 +70,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<MyIndex.Result, MyIndex>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.IsSecond)
                         .As<Entity>()
                         .ToList();

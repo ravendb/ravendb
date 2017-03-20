@@ -1,23 +1,24 @@
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class FilterOnMissingProperty : RavenNewTestBase
+    public class FilterOnMissingProperty : RavenTestBase
     {
         [Fact]
         public void CanFilter()
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Maps = { "from doc in docs where doc.Valid select new { doc.Name }" }
-                    }));
+                        Maps = { "from doc in docs where doc.Valid select new { doc.Name }" },
+                        Name = "test"
+                    }}));
 
                 using (var session = store.OpenSession())
                 {

@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-
-using Raven.Abstractions.Data;
-using Raven.Client.Indexing;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
 
@@ -16,8 +16,8 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly bool _hasDynamicFields;
         public readonly IndexDefinition IndexDefinition;
 
-        public MapIndexDefinition(IndexDefinition definition, string[] collections, string[] outputFields, bool hasDynamicFields)
-            : base(definition.Name, collections, definition.LockMode, GetFields(definition, outputFields))
+        public MapIndexDefinition(IndexDefinition definition, HashSet<string> collections, string[] outputFields, bool hasDynamicFields)
+            : base(definition.Name, collections, definition.LockMode ?? IndexLockMode.Unlock, definition.Priority ?? IndexPriority.Normal, GetFields(definition, outputFields))
         {
             _hasDynamicFields = hasDynamicFields;
             IndexDefinition = definition;
@@ -28,10 +28,10 @@ namespace Raven.Server.Documents.Indexes.Static
         private static IndexField[] GetFields(IndexDefinition definition, string[] outputFields)
         {
             IndexFieldOptions allFields;
-            definition.Fields.TryGetValue(Constants.Indexing.Fields.AllFields, out allFields);
+            definition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFields);
 
             var result = definition.Fields
-                .Where(x => x.Key != Constants.Indexing.Fields.AllFields)
+                .Where(x => x.Key != Constants.Documents.Indexing.Fields.AllFields)
                 .Select(x => IndexField.Create(x.Key, x.Value, allFields)).ToList();
 
             foreach (var outputField in outputFields)
@@ -55,9 +55,9 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        protected override IndexDefinition CreateIndexDefinition()
+        protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
-            return IndexDefinition;
+            return IndexDefinition.Clone();
         }
 
         public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition)
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected override int ComputeRestOfHash(int hashCode)
         {
-            return hashCode*397 ^ IndexDefinition.GetHashCode();
+            return hashCode * 397 ^ IndexDefinition.GetHashCode();
         }
 
         public static IndexDefinition Load(StorageEnvironment environment)
@@ -90,6 +90,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     var definition = ReadIndexDefinition(reader);
                     definition.Name = ReadName(reader);
                     definition.LockMode = ReadLockMode(reader);
+                    definition.Priority = ReadPriority(reader);
 
                     return definition;
                 }

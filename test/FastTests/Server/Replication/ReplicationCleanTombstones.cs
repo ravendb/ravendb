@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Replication
@@ -57,7 +58,7 @@ namespace FastTests.Server.Replication
             }
 
             Assert.Equal(1, WaitUntilHasTombstones(store2).Count);
-            Assert.Equal(3, WaitForValue(() => storage1.DocumentReplicationLoader.MinimalEtagForReplication, 3));
+            Assert.Equal(4, WaitForValue(() => storage1.DocumentReplicationLoader.MinimalEtagForReplication, 4));
             storage1.DocumentTombstoneCleaner.ExecuteCleanup(null);
             Assert.Equal(0, WaitUntilHasTombstones(store1,0).Count);
         }

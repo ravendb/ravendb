@@ -3,12 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Text;
 
-namespace Raven.Abstractions.Util
+namespace Raven.Client.Util
 {
-    public static class EscapingHelper
+    internal static class EscapingHelper
     {
          public static string EscapeLongDataString(string data)
          {

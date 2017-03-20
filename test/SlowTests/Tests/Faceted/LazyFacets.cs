@@ -8,8 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted
@@ -58,7 +61,7 @@ namespace SlowTests.Tests.Faceted
 
                     Assert.Equal(facetResults.Results["Facet1"].Values.Count, 0);
 
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var query = session.Advanced.DocumentQuery<Foo, Foos>()
                         .Statistics(out stats)
                         .UsingDefaultOperator(QueryOperator.And)

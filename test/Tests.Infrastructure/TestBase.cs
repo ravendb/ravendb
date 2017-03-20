@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -12,6 +13,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
@@ -30,7 +32,14 @@ namespace FastTests
         private static readonly object ServerLocker = new object();
 
         private bool _doNotReuseServer;
-        public void DoNotReuseServer() => _doNotReuseServer = true;
+
+        private IDictionary<string, string> _customServerSettings = null;
+
+        public void DoNotReuseServer(IDictionary<string, string> customSettings = null)
+        {
+            _customServerSettings = customSettings;
+            _doNotReuseServer = true;
+        }
 
         private static int _serverCounter;
 
@@ -48,7 +57,7 @@ namespace FastTests
 
                 if (_doNotReuseServer)
                 {
-                    _localServer = GetNewServer();
+                    UseNewLocalServer();
                     return _localServer;
                 }
 
@@ -63,19 +72,7 @@ namespace FastTests
                     {
                         Console.WriteLine("\tTo attach debugger to test process, use process id: {0}", Process.GetCurrentProcess().Id);
                         var globalServer = GetNewServer();
-                        AssemblyLoadContext.Default.Unloading += context =>
-                        {
-                            globalServer.Dispose();
-
-                            GC.Collect(2);
-                            GC.WaitForPendingFinalizers();
-
-                            var exceptionAggregator = new ExceptionAggregator("Failed to cleanup test databases");
-
-                            RavenTestHelper.DeletePaths(PathsToDelete, exceptionAggregator);
-
-                            exceptionAggregator.ThrowIfNeeded();
-                        };
+                        AssemblyLoadContext.Default.Unloading += UnloadServer;
                         _globalServer = globalServer;
                     }
                     _localServer = _globalServer;
@@ -84,28 +81,70 @@ namespace FastTests
             }
         }
 
-        protected static RavenServer GetNewServer()
+        private void UnloadServer(AssemblyLoadContext obj)
         {
-            var configuration = new RavenConfiguration();
-            configuration.Initialize();
-            configuration.DebugLog.LogMode = LogMode.None;
-            configuration.Core.ServerUrl = "http://127.0.0.1:0";
-            configuration.Server.Name = ServerName;
-            configuration.Core.RunInMemory = true;
-            configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, $"Tests{Interlocked.Increment(ref _serverCounter)}");
-            configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
-            configuration.Storage.AllowOn32Bits = true;
+            lock (ServerLocker)
+            {
+                var copyGlobalServer = _globalServer;
+                _globalServer = null;
+                if (copyGlobalServer == null)
+                    return;
+                copyGlobalServer.Dispose();
 
-            IOExtensions.DeleteDirectory(configuration.Core.DataDirectory);
 
-            var server = new RavenServer(configuration);
-            server.Initialize();
+                GC.Collect(2);
+                GC.WaitForPendingFinalizers();
 
-            // TODO: Make sure to properly handle this when this is resolved:
-            // TODO: https://github.com/dotnet/corefx/issues/5205
-            // TODO: AssemblyLoadContext.GetLoadContext(typeof(RavenTestBase).GetTypeInfo().Assembly).Unloading +=
+                var exceptionAggregator = new ExceptionAggregator("Failed to cleanup test databases");
 
-            return server;
+                RavenTestHelper.DeletePaths(PathsToDelete, exceptionAggregator);
+
+                exceptionAggregator.ThrowIfNeeded();
+            }
+        }
+
+        public void UseNewLocalServer()
+        {
+            _localServer?.Dispose();
+            _localServer = GetNewServer(_customServerSettings);
+        }
+
+        private readonly object _getNewServerSync = new object();
+
+        protected RavenServer GetNewServer(IDictionary<string, string> customSettings = null)
+        {
+            lock (_getNewServerSync)
+            {
+                var configuration = new RavenConfiguration(Guid.NewGuid().ToString(), ResourceType.Server);
+
+                if (customSettings != null)
+                {
+                    foreach (var setting in customSettings)
+                    {
+                        configuration.SetSetting(setting.Key, setting.Value);
+                    }
+                }
+
+                configuration.Initialize();
+                configuration.DebugLog.LogMode = LogMode.None;
+                configuration.Core.ServerUrl = "http://127.0.0.1:0";
+                configuration.Server.Name = ServerName;
+                configuration.Core.RunInMemory = true;
+                configuration.Core.DataDirectory =
+                    configuration.Core.DataDirectory.Combine($"Tests{Interlocked.Increment(ref _serverCounter)}");
+                configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
+
+                IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
+
+                var server = new RavenServer(configuration);
+                server.Initialize();
+
+                // TODO: Make sure to properly handle this when this is resolved:
+                // TODO: https://github.com/dotnet/corefx/issues/5205
+                // TODO: AssemblyLoadContext.GetLoadContext(typeof(RavenTestBase).GetTypeInfo().Assembly).Unloading +=
+
+                return server;
+            }
         }
 
         protected static string UseFiddler(string url)
@@ -154,16 +193,13 @@ namespace FastTests
 
             Dispose(exceptionAggregator);
 
-            if (_localServer != null)
+            if (_localServer != null && _localServer != _globalServer)
             {
-                if (_doNotReuseServer)
+                exceptionAggregator.Execute(() =>
                 {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        _localServer.Dispose();
-                        _localServer = null;
-                    });
-                }
+                    _localServer.Dispose();
+                    _localServer = null;
+                });
 
                 exceptionAggregator.ThrowIfNeeded();
             }

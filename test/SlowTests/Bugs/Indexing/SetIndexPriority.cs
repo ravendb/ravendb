@@ -5,15 +5,13 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class SetIndexPriority : RavenNewTestBase
+    public class SetIndexPriority : RavenTestBase
     {
         private class FakeIndex : AbstractIndexCreationTask
         {
@@ -40,7 +38,7 @@ namespace SlowTests.Bugs.Indexing
                     var db = GetDocumentDatabaseInstanceFor(store).Result;
                     var indexInstance = db.IndexStore.GetIndex("FakeIndex");
 
-                    Assert.Equal((int)expected, (int)indexInstance.Priority);
+                    Assert.Equal(expected, indexInstance.Definition.Priority);
                 }
             }
         }

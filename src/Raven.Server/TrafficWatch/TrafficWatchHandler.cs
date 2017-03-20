@@ -8,17 +8,17 @@ using System;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
-using Raven.Abstractions.Logging;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.TrafficWatch
 {
    public class TrafficWatchHandler : RequestHandler
     {
-        private static readonly ILog Logger = LogManager.GetLogger(typeof(TrafficWatchHandler));
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TrafficWatchHandler>("Raven/Server");
 
         [RavenAction("/traffic-watch/websockets", "GET", "/traffic-watch/websockets")]
         public async Task TrafficWatchWebsockets()
@@ -42,8 +42,8 @@ namespace Raven.Server.TrafficWatch
                     }
                     catch (Exception ex)
                     {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info("Error encountered in TrafficWatch handler", ex);
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Error encountered in TrafficWatch handler", ex);
 
                         try
                         {
@@ -64,8 +64,8 @@ namespace Raven.Server.TrafficWatch
                         }
                         catch (Exception)
                         {
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info("Failed to send the error in TrafficWatch handler to the client", ex);
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info("Failed to send the error in TrafficWatch handler to the client", ex);
                         }
                     }
                 }

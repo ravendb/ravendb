@@ -6,9 +6,9 @@ class spatialOptions {
     maxX = ko.observable<number>();
     minY = ko.observable<number>();
     maxY = ko.observable<number>();
-    strategy = ko.observable<Raven.Abstractions.Indexing.SpatialSearchStrategy>();
-    type = ko.observable<Raven.Abstractions.Indexing.SpatialFieldType>();
-    units = ko.observable<Raven.Abstractions.Indexing.SpatialUnits>();
+    strategy = ko.observable<Raven.Client.Documents.Indexes.Spatial.SpatialSearchStrategy>();
+    type = ko.observable<Raven.Client.Documents.Indexes.Spatial.SpatialFieldType>();
+    units = ko.observable<Raven.Client.Documents.Indexes.Spatial.SpatialUnits>();
     
     precision: KnockoutComputed<string>;
     availableStrategies = ko.observableArray<string>();
@@ -16,13 +16,13 @@ class spatialOptions {
     canSpecifyTreeLevel: KnockoutComputed<boolean>;
     canSpecifyCoordinates: KnockoutComputed<boolean>;
 
-    private static readonly strategyGeo = "GeohashPrefixTree" as Raven.Abstractions.Indexing.SpatialSearchStrategy;
-    private static readonly strategyBounding = "BoundingBox" as Raven.Abstractions.Indexing.SpatialSearchStrategy;
-    private static readonly strategyQuad = "QuadPrefixTree" as Raven.Abstractions.Indexing.SpatialSearchStrategy;
-    private static readonly typeGeo = "Geography" as Raven.Abstractions.Indexing.SpatialFieldType;
-    private static readonly typeCart = "Cartesian" as Raven.Abstractions.Indexing.SpatialFieldType;
+    private static readonly strategyGeo = "GeohashPrefixTree" as Raven.Client.Documents.Indexes.Spatial.SpatialSearchStrategy;
+    private static readonly strategyBounding = "BoundingBox" as Raven.Client.Documents.Indexes.Spatial.SpatialSearchStrategy;
+    private static readonly strategyQuad = "QuadPrefixTree" as Raven.Client.Documents.Indexes.Spatial.SpatialSearchStrategy;
+    private static readonly typeGeo = "Geography" as Raven.Client.Documents.Indexes.Spatial.SpatialFieldType;
+    private static readonly typeCart = "Cartesian" as Raven.Client.Documents.Indexes.Spatial.SpatialFieldType;
 
-    constructor(dto: Raven.Abstractions.Indexing.SpatialOptions) {
+    constructor(dto: Raven.Client.Documents.Indexes.Spatial.SpatialOptions) {
         this.type(dto.Type);
         this.strategy(dto.Strategy);
         this.maxTreeLevel(dto.MaxTreeLevel);
@@ -44,7 +44,7 @@ class spatialOptions {
         this.strategy.subscribe(newStrategy => this.updateMaxTreeLevelFromStrategy(newStrategy));
     }
 
-    toDto(): Raven.Abstractions.Indexing.SpatialOptions {
+    toDto(): Raven.Client.Documents.Indexes.Spatial.SpatialOptions {
         return {
             Type: this.type(),
             Strategy: this.strategy(),
@@ -58,7 +58,7 @@ class spatialOptions {
     }
 
     static empty(): spatialOptions {
-        const dto: Raven.Abstractions.Indexing.SpatialOptions = {
+        const dto: Raven.Client.Documents.Indexes.Spatial.SpatialOptions = {
             Type: spatialOptions.typeGeo,
             MaxTreeLevel: 9,
             MinX: -180,
@@ -129,7 +129,7 @@ class spatialOptions {
         }
     }
 
-    private getAvailableStrategies(): Raven.Abstractions.Indexing.SpatialSearchStrategy[] {
+    private getAvailableStrategies(): Raven.Client.Documents.Indexes.Spatial.SpatialSearchStrategy[] {
         if (this.type() === spatialOptions.typeGeo) {
             return [spatialOptions.strategyGeo, spatialOptions.strategyQuad, spatialOptions.strategyBounding];
         } else {
@@ -137,7 +137,7 @@ class spatialOptions {
         }
     }
 
-    private updateMaxTreeLevelFromStrategy(strategy: Raven.Abstractions.Indexing.SpatialSearchStrategy) {
+    private updateMaxTreeLevelFromStrategy(strategy: Raven.Client.Documents.Indexes.Spatial.SpatialSearchStrategy) {
         if (strategy === spatialOptions.strategyGeo) {
             this.maxTreeLevel(9);
         } else if (strategy === spatialOptions.strategyQuad) {

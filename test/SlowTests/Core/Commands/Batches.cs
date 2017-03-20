@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using FastTests;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Commands;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations;
 using Sparrow.Json.Parsing;
 using Xunit;
 
@@ -11,7 +11,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Commands
 {
-    public class Batches : RavenNewTestBase
+    public class Batches : RavenTestBase
     {
         [Fact]
         public async Task CanDoBatchOperations()

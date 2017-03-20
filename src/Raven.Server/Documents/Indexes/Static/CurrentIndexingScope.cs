@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;

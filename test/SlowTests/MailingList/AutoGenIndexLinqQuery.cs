@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -71,7 +71,7 @@ namespace SlowTests.MailingList
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var ravenQueryable = session.Query<Book>().Customize(b => b.WaitForNonStaleResultsAsOfLastWrite()).ToList();
+                    var ravenQueryable = session.Query<Book>().Customize(b => b.WaitForNonStaleResults()).ToList();
                 }
 
                 using (var session = documentStore.OpenSession())

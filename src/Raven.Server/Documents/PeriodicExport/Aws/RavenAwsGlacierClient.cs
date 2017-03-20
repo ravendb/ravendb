@@ -9,9 +9,8 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Util;
+using Raven.Client.Util;
+using Raven.Server.Exceptions.PeriodicExport;
 
 namespace Raven.Server.Documents.PeriodicExport.Aws
 {
@@ -54,7 +53,7 @@ namespace Raven.Server.Documents.PeriodicExport.Aws
             if (response.IsSuccessStatusCode)
                 return ReadArchiveId(response);
 
-            throw ErrorResponseException.FromResponseMessage(response);
+            throw StorageException.FromResponseMessage(response);
         }
 
         public override string ServiceName => "glacier";

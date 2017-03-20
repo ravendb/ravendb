@@ -10,19 +10,18 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 using System.Text;
-using Raven.Abstractions.Replication;
-using Raven.Client.Replication.Messages;
 using Raven.Server.ServerWide;
 using Raven.Server.Smuggler.Documents.Processors;
-using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
-using Raven.Server.Documents.Patch;
-using Constants = Raven.Abstractions.Data.Constants;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.Utils;
+using Voron;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Replication
@@ -45,6 +44,8 @@ namespace Raven.Server.Documents.Replication
 
         public long LastHeartbeatTicks;
 
+        public ReplicationStatistics.IncomingBatchStats IncomingStats = new ReplicationStatistics.IncomingBatchStats();
+
         public IncomingReplicationHandler(
             TcpConnectionOptions options,
             ReplicationLatestEtagRequest replicatedLastEtag,
@@ -52,7 +53,7 @@ namespace Raven.Server.Documents.Replication
         {
             _connectionOptions = options;
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
-            
+
             _database = options.DocumentDatabase;
             _tcpClient = options.TcpClient;
             _stream = options.Stream;
@@ -61,6 +62,10 @@ namespace Raven.Server.Documents.Replication
 
             _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
+
+            var replicationDoc = _parent.ReplicationDocument;
+            var scripts = _parent.ScriptConflictResolversCache;
+            _conflictManager = new ConflictManager(_database, replicationDoc, scripts);
         }
 
         public void Start()
@@ -101,7 +106,7 @@ namespace Raven.Server.Documents.Replication
             IsIncomingReplicationThread = true;
             try
             {
-                
+
                 using (_connectionOptions.ConnectionProcessingInProgress())
                 using (_stream)
                 using (var interruptibleRead = new InterruptibleRead(
@@ -151,7 +156,7 @@ namespace Raven.Server.Documents.Replication
                                     }
                                 }
                                 // we reset it after every time we send to the remote server
-                                // because that is when we know that it is up to date with our 
+                                // because that is when we know that it is up to date with our
                                 // status, so no need to send again
                                 _replicationFromAnotherSource.Reset();
                             }
@@ -189,9 +194,9 @@ namespace Raven.Server.Documents.Replication
         }
 
         private void HandleSingleReplicationBatch(
-            DocumentsOperationContext documentsContext, 
-            TransactionOperationContext configurationContext, 
-            BlittableJsonReaderObject message, 
+            DocumentsOperationContext documentsContext,
+            TransactionOperationContext configurationContext,
+            BlittableJsonReaderObject message,
             BlittableJsonTextWriter writer)
         {
             message.BlittableValidation();
@@ -232,7 +237,7 @@ namespace Raven.Server.Documents.Replication
             }
             catch (ObjectDisposedException)
             {
-                //we are shutting down replication, this is ok                                
+                //we are shutting down replication, this is ok
             }
             catch (EndOfStreamException e)
             {
@@ -271,7 +276,7 @@ namespace Raven.Server.Documents.Replication
         private void HandleReceivedIndexOrTransformerBatch(TransactionOperationContext configurationContext, BlittableJsonReaderObject message, long lastIndexOrTransformerEtag)
         {
             int itemCount;
-            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemCount), out itemCount))
+            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out itemCount))
                 throw new InvalidDataException("Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
             var replicatedIndexTransformerCount = itemCount;
 
@@ -285,7 +290,12 @@ namespace Raven.Server.Documents.Replication
         private void HandleReceivedDocumentBatch(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message, long lastDocumentEtag)
         {
             int itemCount;
-            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemCount), out itemCount))
+            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out itemCount))
+                throw new InvalidDataException(
+                    "Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
+
+            int attachmentStreamCount;
+            if (!message.TryGet(nameof(ReplicationMessageHeader.AttachmentStreamsCount), out attachmentStreamCount))
                 throw new InvalidDataException(
                     "Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
 
@@ -296,15 +306,24 @@ namespace Raven.Server.Documents.Replication
             {
                 _parent.UpdateReplicationDocumentWithResolver(resovlerId, resolverVersion);
             }
-
+            IncomingStats = new ReplicationStatistics.IncomingBatchStats
+            {
+                Status = ReplicationStatus.Received,
+                RecievedTime = DateTime.UtcNow,
+                Source = FromToString,
+                RecievedEtag = lastDocumentEtag,
+                ItemsCount = itemCount,
+                AttachmentStreamsCount = attachmentStreamCount,
+            };
             ReceiveSingleDocumentsBatch(documentsContext, itemCount, lastDocumentEtag);
-
+            IncomingStats.DoneReplicateTime = DateTime.UtcNow;
+            _parent.RepliactionStats.Add(IncomingStats);
             OnDocumentsReceived(this);
         }
 
         private unsafe void ReceiveSingleIndexAndTransformersBatch(
             TransactionOperationContext configurationContext,
-            int itemCount, 
+            int itemCount,
             long lastEtag)
         {
             var sw = Stopwatch.StartNew();
@@ -346,7 +365,7 @@ namespace Raven.Server.Documents.Replication
                     var remote = item.ChangeVector;
 
                     ChangeVectorEntry[] conflictingVector;
-                    ConflictStatus conflictStatus;
+                    ReplicationUtils.ConflictStatus conflictStatus;
                     using (configurationContext.OpenReadTransaction())
                         conflictStatus = GetConflictStatusForIndexOrTransformer(configurationContext, item.Name,
                             remote,
@@ -358,13 +377,12 @@ namespace Raven.Server.Documents.Replication
                     {
                         switch (conflictStatus)
                         {
-                            case ConflictStatus.ShouldResolveConflict:
                             //note : PutIndexOrTransformer() is deleting conflicts and merges chnage vectors
                             //of the conflicts. This can be seen in IndexesEtagsStorage::WriteEntry()
-                            case ConflictStatus.Update:                                
+                            case ReplicationUtils.ConflictStatus.Update:
                                 PutIndexOrTransformer(configurationContext, item, definition);
                                 break;
-                            case ConflictStatus.Conflict:
+                            case ReplicationUtils.ConflictStatus.Conflict:
                                 using (var txw = configurationContext.OpenWriteTransaction())
                                 {
                                     HandleConflictForIndexOrTransformer(item, definition, conflictingVector, txw, configurationContext);
@@ -374,7 +392,7 @@ namespace Raven.Server.Documents.Replication
                                     txw.Commit();
                                     return; // skip the UpdateIndexesChangeVector below to avoid duplicate calls
                                 }
-                            case ConflictStatus.AlreadyMerged:
+                            case ReplicationUtils.ConflictStatus.AlreadyMerged:
                                 if (_log.IsInfoEnabled)
                                     _log.Info(
                                         $"Conflict check resolved to AlreadyMerged operation, nothing to do for index = {item.Name}, with change vector = {_tempReplicatedChangeVector.Format()}");
@@ -419,12 +437,12 @@ namespace Raven.Server.Documents.Replication
         }
 
         private void HandleConflictForIndexOrTransformer(
-            ReplicationIndexOrTransformerPositions item, 
-            BlittableJsonReaderObject definition, 
+            ReplicationIndexOrTransformerPositions item,
+            BlittableJsonReaderObject definition,
             ChangeVectorEntry[] conflictingVector,
-            RavenTransaction tx, 
+            RavenTransaction tx,
             TransactionOperationContext configurationContext)
-        {            
+        {
             switch (item.Type)
             {
                 case IndexEntryType.Index:
@@ -452,7 +470,7 @@ namespace Raven.Server.Documents.Replication
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void PutIndexOrTransformer(
             TransactionOperationContext configurationContext,
-            ReplicationIndexOrTransformerPositions item, 
+            ReplicationIndexOrTransformerPositions item,
             BlittableJsonReaderObject definition)
         {
             switch (item.Type)
@@ -479,7 +497,7 @@ namespace Raven.Server.Documents.Replication
 
             try
             {
-                TransformerProcessor.Import(definition, _database, ServerVersion.Build);
+                TransformerProcessor.Import(definition, _database, ServerVersion.BuildType);
             }
             catch (ArgumentException e)
             {
@@ -524,7 +542,7 @@ namespace Raven.Server.Documents.Replication
             _database.IndexStore.TryDeleteIndexIfExists(item.Name);
             try
             {
-                IndexProcessor.Import(definition, _database, ServerVersion.Build, false);               
+                IndexProcessor.Import(definition, _database, ServerVersion.BuildType, false);
             }
             catch (ArgumentException e)
             {
@@ -635,7 +653,7 @@ namespace Raven.Server.Documents.Replication
             _connectionOptions.PinnedBuffer.Used += size;
             return result;
         }
-        
+
         private unsafe void ReceiveSingleDocumentsBatch(DocumentsOperationContext documentsContext, int replicatedDocsCount, long lastEtag)
         {
             if (_log.IsInfoEnabled)
@@ -658,89 +676,9 @@ namespace Raven.Server.Documents.Replication
                     _log.Info(
                         $"Replication connection {FromToString}: received {replicatedDocsCount:#,#;;0} documents with size {totalSize / 1024:#,#;;0} kb to database in {sw.ElapsedMilliseconds:#,#;;0} ms.");
 
-                using (documentsContext.OpenWriteTransaction())
-                {
-                    var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
-                    foreach (var changeVectorEntry in _database.DocumentsStorage.GetDatabaseChangeVector(documentsContext))
-                    {
-                        maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
-                    }
+                var replicationCommand = new MergedDocumentReplicationCommand(this, buffer, totalSize, lastEtag);
+                _database.TxMerger.Enqueue(replicationCommand).Wait();
 
-                    foreach (var doc in _replicatedDocs)
-                    {
-                        documentsContext.TransactionMarkerOffset = doc.TransactionMarker;
-
-                        ReadChangeVector(doc, buffer, maxReceivedChangeVectorByDatabase);                        
-                        BlittableJsonReaderObject json = null;
-                        if (doc.DocumentSize >= 0) //no need to load document data for tombstones
-                                                   // document size == -1 --> doc is a tombstone
-                        {
-                            if (doc.Position + doc.DocumentSize > totalSize)
-                                ThrowInvalidSize(totalSize, doc);
-
-                            //if something throws at this point, this means something is really wrong and we should stop receiving documents.
-                            //the other side will receive negative ack and will retry sending again.
-                            json = new BlittableJsonReaderObject(
-                                buffer + doc.Position + (doc.ChangeVectorCount * sizeof(ChangeVectorEntry)),
-                                doc.DocumentSize, documentsContext);
-                            json.BlittableValidation();
-                        }
-                        
-                        ChangeVectorEntry[] conflictingVector;
-                        var conflictStatus = GetConflictStatusForDocument(documentsContext, doc.Id, _tempReplicatedChangeVector, out conflictingVector);
-
-                        switch (conflictStatus)
-                        {
-                            case ConflictStatus.Update:
-                                if (json != null)
-                                {
-                                    if (_log.IsInfoEnabled)
-                                        _log.Info(
-                                            $"Conflict check resolved to Update operation, doing PUT on doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
-                                    _database.DocumentsStorage.Put(documentsContext, doc.Id, null, json,
-                                        doc.LastModifiedTicks,
-                                        _tempReplicatedChangeVector);
-                                }
-                                else
-                                {
-                                    if (_log.IsInfoEnabled)
-                                        _log.Info(
-                                            $"Conflict check resolved to Update operation, writing tombstone for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
-                                    _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
-                                        documentsContext, doc.Id,
-                                        doc.LastModifiedTicks,
-                                        _tempReplicatedChangeVector,
-                                        doc.Collection);
-                                }
-                                break;
-                            case ConflictStatus.ShouldResolveConflict:
-                                documentsContext.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(documentsContext, doc.Id);
-                                goto case ConflictStatus.Update;
-                            case ConflictStatus.Conflict:
-                                if (_log.IsInfoEnabled)
-                                    _log.Info(
-                                        $"Conflict check resolved to Conflict operation, resolving conflict for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
-                                HandleConflictForDocument(documentsContext,doc, conflictingVector, json);
-                                break;
-                            case ConflictStatus.AlreadyMerged:
-                                if (_log.IsInfoEnabled)
-                                    _log.Info(
-                                        $"Conflict check resolved to AlreadyMerged operation, nothing to do for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
-                                //nothing to do
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(conflictStatus),
-                                    "Invalid ConflictStatus: " + conflictStatus);
-                        }
-                    }
-                    _database.DocumentsStorage.SetDatabaseChangeVector(documentsContext,
-                        maxReceivedChangeVectorByDatabase);
-                    _database.DocumentsStorage.SetLastReplicateEtagFrom(documentsContext, ConnectionInfo.SourceDatabaseId,
-                        lastEtag);
-                    LastDocumentEtag = lastEtag;
-                    documentsContext.Transaction.Commit();
-
-                }
                 sw.Stop();
 
                 if (_log.IsInfoEnabled)
@@ -766,218 +704,6 @@ namespace Raven.Server.Documents.Replication
                 $"Reading past the size of buffer! TotalSize {totalSize} but position is {doc.Position} & size is {doc.DocumentSize}!");
         }
 
-        
-
-        public bool TryResovleConflictByScript(
-            DocumentsOperationContext documentsContext,
-            ReplicationDocumentsPositions docPosition,
-            ChangeVectorEntry[] conflictingVector,
-            BlittableJsonReaderObject doc)
-        {
-            List<DocumentConflict> conflictedDocs = new List<DocumentConflict>(documentsContext.DocumentDatabase.DocumentsStorage.GetConflictsFor(documentsContext, docPosition.Id));
-            bool isTomstone = false;
-
-            if (conflictedDocs.Count == 0)
-            {
-                var relevantLocalDoc = documentsContext.DocumentDatabase.DocumentsStorage
-                            .GetDocumentOrTombstone(
-                                documentsContext,
-                                docPosition.Id);
-                if (relevantLocalDoc.Item1 != null)
-                {
-                    conflictedDocs.Add(DocumentConflict.From(documentsContext, relevantLocalDoc.Item1));
-                }
-                else if (relevantLocalDoc.Item2 != null)
-                {
-                    conflictedDocs.Add(DocumentConflict.From(relevantLocalDoc.Item2));
-                    isTomstone = true;
-                }
-            }
-
-            if (conflictedDocs.Count == 0)
-            {
-                InvalidConflictWhenThereIsNone(docPosition);
-            }
-
-            var collection = CollectionName.GetCollectionName(docPosition.Id, doc);
-
-            conflictedDocs.Add(new DocumentConflict
-            {
-                LoweredKey = conflictedDocs[0].LoweredKey,
-                Key = conflictedDocs[0].Key,
-                Collection = documentsContext.GetLazyStringForFieldWithCaching(collection),
-                ChangeVector = _tempReplicatedChangeVector,
-                Doc = doc
-            });
-
-            ScriptResolver scriptResolver;
-            var hasScript = _parent.ScriptConflictResolversCache.TryGetValue(collection, out scriptResolver);
-            if (!hasScript || scriptResolver == null)
-            {
-                if (_log.IsInfoEnabled)
-                {
-                    _log.Info($"Script not found to resolve the {collection} collection");
-                }
-                return false;
-            }
-
-            return _database.DocumentsStorage.TryResolveConflictByScriptInternal(
-                documentsContext,
-                scriptResolver,
-                conflictedDocs, 
-                documentsContext.GetLazyString(collection), 
-                hasLocalTombstone: isTomstone);
-        }
-
-        private static void InvalidConflictWhenThereIsNone(ReplicationDocumentsPositions docPosition)
-        {
-            throw new InvalidDataException(
-                $"Conflict detected on {docPosition.Id} but there are no conflicts / docs / tombstones for this document");
-        }
-
-        private bool TryResolveUsingDefaultResolver(
-            DocumentsOperationContext context, 
-            ReplicationDocumentsPositions docPosition,
-            ChangeVectorEntry[] conflictingVector,
-            BlittableJsonReaderObject doc)
-        {
-
-            var conflicts = new List<DocumentConflict>(_database.DocumentsStorage.GetConflictsFor(context, docPosition.Id));
-            var localDocumentTuple = _database.DocumentsStorage.GetDocumentOrTombstone(context, docPosition.Id, throwOnConflict: false);
-            var localDoc = DocumentConflict.From(context, localDocumentTuple.Item1) ??
-                           DocumentConflict.From(localDocumentTuple.Item2);
-            if (localDoc != null)
-            {
-                conflicts.Add(localDoc);
-            }
-            conflicts.Add(new DocumentConflict
-            {
-                ChangeVector = conflictingVector,
-                Collection = context.GetLazyStringForFieldWithCaching(
-                    docPosition.Collection ?? 
-                    CollectionName.GetCollectionName(docPosition.Id, doc)),
-                Doc = doc,
-                LoweredKey = context.GetLazyString(docPosition.Id)
-            });
-
-            return _database.DocumentsStorage.TryResolveUsingDefaultResolverInternal(
-                context , 
-                _parent.ReplicationDocument?.DefaultResolver, 
-                conflicts, 
-                localDocumentTuple.Item2 != null);
-        }
-        
-        private void HandleConflictForDocument(
-            DocumentsOperationContext documentsContext,
-            ReplicationDocumentsPositions docPosition,
-            ChangeVectorEntry[] conflictingVector,
-            BlittableJsonReaderObject doc)
-        {
-            if (docPosition.Id.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase))
-            {
-                HandleHiloConflict(documentsContext, docPosition, doc);
-                return;
-            }
-            if (_database.DocumentsStorage.TryResolveIdenticalDocument(
-                documentsContext, 
-                docPosition.Id, 
-                doc,
-                docPosition.LastModifiedTicks,
-                _tempReplicatedChangeVector))
-                return;
-
-            if (TryResovleConflictByScript(
-                documentsContext, 
-                docPosition, 
-                conflictingVector, 
-                doc))
-                return;
-
-            if(TryResolveUsingDefaultResolver(
-                documentsContext,
-                docPosition,
-                _tempReplicatedChangeVector,
-                doc))
-                return;
-
-            switch (_parent.ReplicationDocument?.DocumentConflictResolution ?? StraightforwardConflictResolution.None)
-            {
-                case StraightforwardConflictResolution.ResolveToLatest:
-                    if (conflictingVector == null) //precaution
-                    {
-                        throw new InvalidOperationException(
-                            "Detected conflict on replication, but could not figure out conflicted vector. This is not supposed to happen and is likely a bug.");
-                    }
-
-                    var conflicts = new List<DocumentConflict>
-                    {
-                        new DocumentConflict
-                        {
-                            Doc = doc,
-                            Collection = documentsContext.GetLazyStringForFieldWithCaching(
-                                docPosition.Collection ??
-                                CollectionName.GetCollectionName(doc)
-                                ),
-                            LastModified = new DateTime(docPosition.LastModifiedTicks),
-                            LoweredKey = documentsContext.GetLazyString(docPosition.Id),
-                            ChangeVector = _tempReplicatedChangeVector
-                        }
-                    };
-                    conflicts.AddRange(documentsContext.DocumentDatabase.DocumentsStorage.GetConflictsFor(
-                        documentsContext, docPosition.Id));
-                    var localDocumentTuple =
-                        documentsContext.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(documentsContext,
-                            docPosition.Id, throwOnConflict: false);
-                    var local = DocumentConflict.From(documentsContext, localDocumentTuple.Item1) ?? DocumentConflict.From(localDocumentTuple.Item2);
-                    if (local != null)
-                    {
-                        conflicts.Add(local);
-                    }
-
-                    _database.DocumentsStorage.ResolveToLatest(documentsContext, conflicts, local != null && local.Doc == null);
-                    break;
-                 default:
-                    _database.DocumentsStorage.AddConflict(documentsContext, docPosition, doc, _tempReplicatedChangeVector, docPosition.Collection);
-                    break;
-            }
-        }
-        
-        private void HandleHiloConflict(DocumentsOperationContext context, ReplicationDocumentsPositions docPosition,
-            BlittableJsonReaderObject doc)
-        {
-            long highestMax;
-            if (!doc.TryGet("Max", out highestMax))
-            {
-                throw new InvalidDataException("Tried to resolve HiLo document conflict but failed. Missing property name'Max'");
-            }
-
-            var conflicts = _database.DocumentsStorage.GetConflictsFor(context, docPosition.Id);
-
-            var resolvedHiLoDoc = doc;
-            if (conflicts.Count == 0)
-            {
-                //conflict with another existing document
-                var localHiloDoc = _database.DocumentsStorage.Get(context, docPosition.Id);
-                double max;
-                if (localHiloDoc.Data.TryGet("Max", out max) && max > highestMax)
-                    resolvedHiLoDoc = localHiloDoc.Data;
-
-            }
-            else
-            {
-                foreach (var conflict in conflicts)
-                {
-                    long tmpMax;
-                    if (conflict.Doc.TryGet("Max", out tmpMax) && tmpMax > highestMax)
-                    {
-                        highestMax = tmpMax;
-                        resolvedHiLoDoc = conflict.Doc;
-                    }
-                }
-            }
-            _database.DocumentsStorage.Put(context, docPosition.Id, null, resolvedHiLoDoc);
-        }
-
         private void ReadChangeVector(ReplicationIndexOrTransformerPositions index, Dictionary<Guid, long> maxReceivedChangeVectorByDatabase)
         {
             for (int i = 0; i < index.ChangeVector.Length; i++)
@@ -991,28 +717,8 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void ReadChangeVector(ReplicationDocumentsPositions doc, byte* buffer,
-            Dictionary<Guid, long> maxReceivedChangeVectorByDatabase)
-        {
-            if (_tempReplicatedChangeVector.Length != doc.ChangeVectorCount)
-            {
-                _tempReplicatedChangeVector = new ChangeVectorEntry[doc.ChangeVectorCount];
-            }
-
-            for (int i = 0; i < doc.ChangeVectorCount; i++)
-            {
-                _tempReplicatedChangeVector[i] = ((ChangeVectorEntry*)(buffer + doc.Position))[i];
-
-                long etag;
-                if (maxReceivedChangeVectorByDatabase.TryGetValue(_tempReplicatedChangeVector[i].DbId, out etag) == false ||
-                    etag > _tempReplicatedChangeVector[i].Etag)
-                {
-                    maxReceivedChangeVectorByDatabase[_tempReplicatedChangeVector[i].DbId] = _tempReplicatedChangeVector[i].Etag;
-                }
-            }
-        }
         private void SendHeartbeatStatusToSource(DocumentsOperationContext documentsContext, TransactionOperationContext configurationContext, BlittableJsonTextWriter writer, long lastDocumentEtag, long lastIndexOrTransformerEtag, string handledMessageType)
-        {            
+        {
             var documentChangeVectorAsDynamicJson = new DynamicJsonArray();
             ChangeVectorEntry[] databaseChangeVector;
 
@@ -1064,7 +770,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.ResolverId)] = defaultResolver?.ResolvingDatabaseId,
                 [nameof(ReplicationMessageReply.ResolverVersion)] = defaultResolver?.Version
             };
-           
+
             documentsContext.Write(writer, heartbeat);
 
             writer.Flush();
@@ -1076,10 +782,13 @@ namespace Raven.Server.Documents.Replication
 
         private ChangeVectorEntry[] _tempReplicatedChangeVector = new ChangeVectorEntry[0];
         private readonly List<ReplicationDocumentsPositions> _replicatedDocs = new List<ReplicationDocumentsPositions>();
+        private readonly List<ReplicationAttachment> _replicatedAttachments = new List<ReplicationAttachment>();
+        private readonly List<ReplicationDocumentsPositions> _replicatedAttachmentStreams = new List<ReplicationDocumentsPositions>();
         private readonly List<ReplicationIndexOrTransformerPositions> _replicatedIndexesAndTransformers = new List<ReplicationIndexOrTransformerPositions>();
         private long _lastDocumentEtag;
         private long _lastIndexOrTransformerEtag;
         private readonly TcpConnectionOptions _connectionOptions;
+        private readonly ConflictManager _conflictManager;
 
         public struct ReplicationDocumentsPositions
         {
@@ -1090,6 +799,16 @@ namespace Raven.Server.Documents.Replication
             public int DocumentSize;
             public string Collection;
             public long LastModifiedTicks;
+            public DocumentFlags Flags;
+        }
+
+        public struct ReplicationAttachment
+        {
+            public short TransactionMarker;
+            public byte[] LoweredKey;
+            public string Name;
+            public string ContentType;
+            public byte[] Base64Hash;
         }
 
         public struct ReplicationIndexOrTransformerPositions
@@ -1108,30 +827,68 @@ namespace Raven.Server.Documents.Replication
         private unsafe void ReadDocumentsFromSource(ref UnmanagedWriteBuffer writeBuffer, int replicatedDocs)
         {
             _replicatedDocs.Clear();
+            _replicatedAttachments.Clear();
             for (int x = 0; x < replicatedDocs; x++)
             {
+                var type = *(ReplicationBatchItem.ReplicationItemType*)ReadExactly(sizeof(byte));
+                if (type == ReplicationBatchItem.ReplicationItemType.Attachment)
+                {
+                    var attachment = new ReplicationAttachment
+                    {
+                        TransactionMarker = *(short*)ReadExactly(sizeof(short)),
+                    };
+
+                    var loweredKeySize = *(int*)ReadExactly(sizeof(int));
+                    attachment.LoweredKey = new byte[loweredKeySize];
+                    fixed (byte* pLoweredKey = attachment.LoweredKey)
+                    {
+                        Memory.Copy(pLoweredKey, ReadExactly(loweredKeySize), loweredKeySize);
+                    }
+
+                    var nameSize = *(int*)ReadExactly(sizeof(int));
+                    attachment.Name = Encoding.UTF8.GetString(ReadExactly(nameSize), nameSize);
+
+                    var contentTypeSize = *(int*)ReadExactly(sizeof(int));
+                    attachment.ContentType = Encoding.UTF8.GetString(ReadExactly(contentTypeSize), contentTypeSize);
+
+                    var base64HashSize = *ReadExactly(sizeof(byte));
+                    attachment.Base64Hash = new byte[base64HashSize];
+                    fixed (byte* pBase64HashSize = attachment.Base64Hash)
+                    {
+                        Memory.Copy(pBase64HashSize, ReadExactly(base64HashSize), base64HashSize);
+                    }
+
+                    _replicatedAttachments.Add(attachment);
+                    return;
+                }
+
+                if (type == ReplicationBatchItem.ReplicationItemType.AttachmentStream)
+                {
+                    // TODO;
+                    return;
+                }
+
                 var curDoc = new ReplicationDocumentsPositions
                 {
-                    Position = writeBuffer.SizeInBytes
+                    Position = writeBuffer.SizeInBytes,
+                    ChangeVectorCount = *(int*)ReadExactly(sizeof(int))
                 };
 
-                curDoc.ChangeVectorCount = *(int*) ReadExactly(sizeof(int));
-
-                
-                writeBuffer.Write(ReadExactly(sizeof(ChangeVectorEntry) * curDoc.ChangeVectorCount), sizeof(ChangeVectorEntry)*curDoc.ChangeVectorCount);
+                writeBuffer.Write(ReadExactly(sizeof(ChangeVectorEntry) * curDoc.ChangeVectorCount), sizeof(ChangeVectorEntry) * curDoc.ChangeVectorCount);
 
                 curDoc.TransactionMarker = *(short*)ReadExactly(sizeof(short));
 
                 curDoc.LastModifiedTicks = *(long*)ReadExactly(sizeof(long));
 
+                curDoc.Flags = *(DocumentFlags*)ReadExactly(sizeof(DocumentFlags));
+
                 var keySize = *(int*)ReadExactly(sizeof(int));
-                
                 curDoc.Id = Encoding.UTF8.GetString(ReadExactly(keySize), keySize);
 
                 var documentSize = curDoc.DocumentSize = *(int*)ReadExactly(sizeof(int));
                 if (documentSize != -1) //if -1, then this is a tombstone
                 {
-                    ReadExactly(documentSize,ref writeBuffer);
+                    ReadExactly(documentSize, ref writeBuffer);
                 }
                 else
                 {
@@ -1178,19 +935,21 @@ namespace Raven.Server.Documents.Replication
 
             _replicationFromAnotherSource.Set();
 
-            if (_incomingThread != Thread.CurrentThread)
+            if (_incomingThread != Thread.CurrentThread &&
+                _incomingThread?.ThreadState != ThreadState.Unstarted)
             {
                 _incomingThread?.Join();
             }
 
             _incomingThread = null;
+            _cts.Dispose();
         }
 
         protected void OnFailed(Exception exception, IncomingReplicationHandler instance) => Failed?.Invoke(instance, exception);
         protected void OnDocumentsReceived(IncomingReplicationHandler instance) => DocumentsReceived?.Invoke(instance);
         protected void OnIndexesAndTransformersReceived(IncomingReplicationHandler instance) => IndexesAndTransformersReceived?.Invoke(instance);
 
-        private ConflictStatus GetConflictStatusForIndexOrTransformer(TransactionOperationContext context, string name, ChangeVectorEntry[] remote, out ChangeVectorEntry[] conflictingVector)
+        private ReplicationUtils.ConflictStatus GetConflictStatusForIndexOrTransformer(TransactionOperationContext context, string name, ChangeVectorEntry[] remote, out ChangeVectorEntry[] conflictingVector)
         {
             //tombstones also can be a conflict entry
             conflictingVector = null;
@@ -1199,14 +958,14 @@ namespace Raven.Server.Documents.Replication
             {
                 foreach (var existingConflict in conflicts)
                 {
-                    if (GetConflictStatus(remote, existingConflict.ChangeVector) == ConflictStatus.Conflict)
+                    if (ReplicationUtils.GetConflictStatus(remote, existingConflict.ChangeVector) == ReplicationUtils.ConflictStatus.Conflict)
                     {
                         conflictingVector = existingConflict.ChangeVector;
-                        return ConflictStatus.Conflict;
+                        return ReplicationUtils.ConflictStatus.Conflict;
                     }
                 }
 
-                return ConflictStatus.ShouldResolveConflict;
+                return ReplicationUtils.ConflictStatus.Update;
             }
 
             var metadata = _database.IndexMetadataPersistence.GetIndexMetadataByName(context.Transaction.InnerTransaction, context, name, false);
@@ -1215,11 +974,11 @@ namespace Raven.Server.Documents.Replication
             if (metadata != null)
                 local = metadata.ChangeVector;
             else
-                return ConflictStatus.Update; //index/transformer with 'name' doesn't exist locally, so just do PUT
+                return ReplicationUtils.ConflictStatus.Update; //index/transformer with 'name' doesn't exist locally, so just do PUT
 
 
-            var status = GetConflictStatus(remote, local);
-            if (status == ConflictStatus.Conflict)
+            var status = ReplicationUtils.GetConflictStatus(remote, local);
+            if (status == ReplicationUtils.ConflictStatus.Conflict)
             {
                 conflictingVector = local;
             }
@@ -1227,98 +986,153 @@ namespace Raven.Server.Documents.Replication
             return status;
         }
 
-        private ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string key, ChangeVectorEntry[] remote, out ChangeVectorEntry[] conflictingVector)
+        public unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            //tombstones also can be a conflict entry
-            conflictingVector = null;
-            var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, key);
-            if (conflicts.Count > 0)
-            {
-                foreach (var existingConflict in conflicts)
-                {
-                    if (GetConflictStatus(remote, existingConflict.ChangeVector) == ConflictStatus.Conflict)
-                    {
-                        conflictingVector = existingConflict.ChangeVector;
-                        return ConflictStatus.Conflict;
-                    }
-                }
+            private readonly IncomingReplicationHandler _incoming;
 
-                return ConflictStatus.ShouldResolveConflict;
+            private ChangeVectorEntry[] _changeVector = new ChangeVectorEntry[0];
+
+            private long _lastEtag;
+            private byte* _buffer;
+            private int _totalSize;
+
+            public MergedDocumentReplicationCommand(IncomingReplicationHandler incoming, byte* buffer, int totalSize, long lastEtag)
+            {
+                _incoming = incoming;
+                _buffer = buffer;
+                _totalSize = totalSize;
+                _lastEtag = lastEtag;
             }
 
-            var result = context.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, key);
-            ChangeVectorEntry[] local;
-
-            if (result.Item1 != null)
-                local = result.Item1.ChangeVector;
-            else if (result.Item2 != null)
-                local = result.Item2.ChangeVector;
-            else
-                return ConflictStatus.Update; //document with 'key' doesnt exist locally, so just do PUT
-
-
-            var status = GetConflictStatus(remote, local);
-            if (status == ConflictStatus.Conflict)
+            public override void Execute(DocumentsOperationContext context)
             {
-                conflictingVector = local;
-            }
-
-            return status;
-        }
-
-        public enum ConflictStatus
-        {
-            Update,
-            Conflict,
-            AlreadyMerged,
-            ShouldResolveConflict
-        }
-
-        public static ConflictStatus GetConflictStatus(ChangeVectorEntry[] remote, ChangeVectorEntry[] local)
-        {
-            if(local == null)
-                return ConflictStatus.Update;
-
-            //any missing entries from a change vector are assumed to have zero value
-            var remoteHasLargerEntries = local.Length < remote.Length;
-            var localHasLargerEntries = remote.Length < local.Length;
-
-            int remoteEntriesTakenIntoAccount = 0;
-            for (int index = 0; index < local.Length; index++)
-            {
-                if (remote.Length < index && remote[index].DbId == local[index].DbId)
+                var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
+                var database = _incoming._database;
+                foreach (var changeVectorEntry in database.DocumentsStorage.GetDatabaseChangeVector(context))
                 {
-                    remoteHasLargerEntries |= remote[index].Etag > local[index].Etag;
-                    localHasLargerEntries |= local[index].Etag > remote[index].Etag;
-                    remoteEntriesTakenIntoAccount++;
+                    maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
                 }
-                else
+
+                foreach (var docPosition in _incoming._replicatedDocs)
                 {
-                    var updated = false;
-                    for (var remoteIndex = 0; remoteIndex < remote.Length; remoteIndex++)
+                    context.TransactionMarkerOffset = docPosition.TransactionMarker;
+                    BlittableJsonReaderObject document = null;
+                    try
                     {
-                        if (remote[remoteIndex].DbId == local[index].DbId)
+                        ReadChangeVector(docPosition, _buffer, maxReceivedChangeVectorByDatabase);
+                        if (docPosition.DocumentSize >= 0) //no need to load document data for tombstones
+                            // document size == -1 --> doc is a tombstone
                         {
-                            remoteHasLargerEntries |= remote[remoteIndex].Etag > local[index].Etag;
-                            localHasLargerEntries |= local[index].Etag > remote[remoteIndex].Etag;
-                            remoteEntriesTakenIntoAccount++;
-                            updated = true;
+                            if (docPosition.Position + docPosition.DocumentSize > _totalSize)
+                                ThrowInvalidSize(_totalSize, docPosition);
+
+                            //if something throws at this point, this means something is really wrong and we should stop receiving documents.
+                            //the other side will receive negative ack and will retry sending again.
+                            document = new BlittableJsonReaderObject(
+                                _buffer + docPosition.Position + (docPosition.ChangeVectorCount*sizeof(ChangeVectorEntry)),
+                                docPosition.DocumentSize, context);
+                            document.BlittableValidation();
+                        }
+
+                        if ((docPosition.Flags & DocumentFlags.FromVersionStorage) == DocumentFlags.FromVersionStorage)
+                        {
+                            if (database.BundleLoader.VersioningStorage == null)
+                            {
+                                if (_incoming._log.IsOperationsEnabled)
+                                    _incoming._log.Operations("Versioing storage is disabled but the node got a versioned document from replication.");
+                                continue;
+                            }
+                            database.BundleLoader.VersioningStorage.PutFromDocument(context, docPosition.Id, document, docPosition.Flags, _changeVector);
+                            continue;
+                        }
+
+                        ChangeVectorEntry[] conflictingVector;
+                        var conflictStatus = ReplicationUtils.GetConflictStatusForDocument(context, docPosition.Id, _changeVector, out conflictingVector);
+
+                        switch (conflictStatus)
+                        {
+                            case ReplicationUtils.ConflictStatus.Update:
+                                if (document != null)
+                                {
+                                    if (_incoming._log.IsInfoEnabled)
+                                        _incoming._log.Info(
+                                            $"Conflict check resolved to Update operation, doing PUT on doc = {docPosition.Id}, with change vector = {_changeVector.Format()}");
+                                    database.DocumentsStorage.Put(context, docPosition.Id, null, document,
+                                        docPosition.LastModifiedTicks,
+                                        _changeVector, DocumentFlags.FromReplication);
+                                }
+                                else
+                                {
+                                    if (_incoming._log.IsInfoEnabled)
+                                        _incoming._log.Info(
+                                            $"Conflict check resolved to Update operation, writing tombstone for doc = {docPosition.Id}, with change vector = {_changeVector.Format()}");
+                                    Slice keySlice;
+                                    using (DocumentKeyWorker.GetSliceFromKey(context, docPosition.Id, out keySlice))
+                                    {
+                                        database.DocumentsStorage.Delete(
+                                            context, keySlice, docPosition.Id, null,
+                                            docPosition.LastModifiedTicks,
+                                            _changeVector,
+                                            context.GetLazyString(docPosition.Collection));
+                                    }
+                                }
+                                break;
+                            case ReplicationUtils.ConflictStatus.Conflict:
+                                if (_incoming._log.IsInfoEnabled)
+                                    _incoming._log.Info(
+                                        $"Conflict check resolved to Conflict operation, resolving conflict for doc = {docPosition.Id}, with change vector = {_changeVector.Format()}");
+                                _incoming._conflictManager.HandleConflictForDocument(context, docPosition, document, _changeVector, conflictingVector);
+                                break;
+                            case ReplicationUtils.ConflictStatus.AlreadyMerged:
+                                if (_incoming._log.IsInfoEnabled)
+                                    _incoming._log.Info(
+                                        $"Conflict check resolved to AlreadyMerged operation, nothing to do for doc = {docPosition.Id}, with change vector = {_changeVector.Format()}");
+                                //nothing to do
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(conflictStatus),
+                                    "Invalid ConflictStatus: " + conflictStatus);
                         }
                     }
+                    finally
+                    {
+                        document?.Dispose();
+                    }
+                }
 
-                    if (!updated)
-                        localHasLargerEntries = true;
+                foreach (var attachment in _incoming._replicatedAttachments)
+                {
+                    if (_incoming._log.IsInfoEnabled)
+                        _incoming._log.Info($"Got incoming attachment, doing PUT on attachment = {attachment.Name}, with key = {Encoding.UTF8.GetString(attachment.LoweredKey)}");
+                    // TODO: Fix this code, it isn't a good idea AT ALL
+                    database.DocumentsStorage.AttachmentsStorage.PutFromReplication(context, attachment.LoweredKey, attachment.Name, attachment.ContentType,
+                        attachment.Base64Hash, attachment.TransactionMarker);
+                }
+
+                database.DocumentsStorage.SetDatabaseChangeVector(context,
+                    maxReceivedChangeVectorByDatabase);
+                database.DocumentsStorage.SetLastReplicateEtagFrom(context, _incoming.ConnectionInfo.SourceDatabaseId,
+                    _lastEtag);
+            }
+
+            private void ReadChangeVector(ReplicationDocumentsPositions doc,
+                byte* buffer, Dictionary<Guid, long> maxReceivedChangeVectorByDatabase)
+            {
+                if (_changeVector.Length != doc.ChangeVectorCount)
+                    _changeVector = new ChangeVectorEntry[doc.ChangeVectorCount];
+
+                for (int i = 0; i < doc.ChangeVectorCount; i++)
+                {
+                    _changeVector[i] = ((ChangeVectorEntry*)(buffer + doc.Position))[i];
+
+                    long etag;
+                    if (maxReceivedChangeVectorByDatabase.TryGetValue(_changeVector[i].DbId, out etag) == false ||
+                        etag > _changeVector[i].Etag)
+                    {
+                        maxReceivedChangeVectorByDatabase[_changeVector[i].DbId] = _changeVector[i].Etag;
+                    }
                 }
             }
-            remoteHasLargerEntries |= remoteEntriesTakenIntoAccount < remote.Length;
-
-            if (remoteHasLargerEntries && localHasLargerEntries)
-                return ConflictStatus.Conflict;
-
-            if(remoteHasLargerEntries == false && localHasLargerEntries == false)
-                return ConflictStatus.AlreadyMerged; // change vectors identical
-
-            return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
         }
     }
 }

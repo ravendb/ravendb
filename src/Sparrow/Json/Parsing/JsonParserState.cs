@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Sparrow.Collections;
 
 namespace Sparrow.Json.Parsing
 {
@@ -12,7 +13,7 @@ namespace Sparrow.Json.Parsing
         public JsonParserToken CurrentTokenType;
         public JsonParserTokenContinuation Continuation;
 
-        public readonly List<int> EscapePositions = new List<int>();
+        public readonly FastList<int> EscapePositions = new FastList<int>();
 
         public static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '"' };
         public static readonly byte[] EscapeCharsAsBytes = { (byte)'\b', (byte)'\t', (byte)'\r', (byte)'\n', (byte)'\f', (byte)'\\', (byte)'"' };
@@ -48,15 +49,18 @@ namespace Sparrow.Json.Parsing
         public static int FindEscapePositionsMaxSize(string str)
         {
             var count = 0;
-            var lastEscape = 0;
-            while (true)
-            {
-                var curEscape = str.IndexOfAny(EscapeChars, lastEscape);
-                if (curEscape == -1)
-                    break;
+            var escapeCharsAsBytes = EscapeCharsAsBytes;
 
-                count++;
-                lastEscape = curEscape + 1;
+            for (int i = 0; i < str.Length; i++)
+            {
+                for (int j = 0; j < escapeCharsAsBytes.Length; j++)
+                {
+                    if (str[i] == escapeCharsAsBytes[j])
+                    {
+                        count++;
+                        break;
+                    }
+                }
             }
 
             // we take 5 because that is the max number of bytes for variable size int
@@ -71,7 +75,7 @@ namespace Sparrow.Json.Parsing
             FindEscapePositionsIn(EscapePositions, str, len, previousComputedMaxSize);
         }
 
-        public static void FindEscapePositionsIn(List<int> buffer, byte* str, int len, int previousComputedMaxSize)
+        public static void FindEscapePositionsIn(FastList<int> buffer, byte* str, int len, int previousComputedMaxSize)
         {
             buffer.Clear();
             if (previousComputedMaxSize == 5)
@@ -81,11 +85,13 @@ namespace Sparrow.Json.Parsing
                 return;
             }
             var lastEscape = 0;
+            var escapeCharsAsBytes = EscapeCharsAsBytes;
+
             for (int i = 0; i < len; i++)
             {
-                for (int j = 0; j < EscapeCharsAsBytes.Length; j++)
+                for (int j = 0; j < escapeCharsAsBytes.Length; j++)
                 {
-                    if (str[i] == EscapeCharsAsBytes[j])
+                    if (str[i] == escapeCharsAsBytes[j])
                     {
                         buffer.Add(i - lastEscape);
                         lastEscape = i + 1;

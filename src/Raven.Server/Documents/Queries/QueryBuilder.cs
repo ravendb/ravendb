@@ -8,7 +8,7 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
-using Raven.Client.Data;
+using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Utils;
@@ -21,23 +21,22 @@ namespace Raven.Server.Documents.Queries
         private const string FieldRegexVal = @"([@\w<>,]+?):";
         private const string MethodRegexVal = @"(@\w+<[^>]+>):";
         private const string DateTimeVal = @"\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)";
-        static readonly Regex fieldQuery = new Regex(FieldRegexVal, RegexOptions.Compiled);
-        static readonly Regex untokenizedQuery = new Regex(FieldRegexVal + @"[\s\(]*(\[\[.+?\]\])|(?<=,)\s*(\[\[.+?\]\])(?=\s*[,\)])", RegexOptions.Compiled);
-        static readonly Regex searchQuery = new Regex(FieldRegexVal + @"\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
-        static readonly Regex dateQuery = new Regex(FieldRegexVal + DateTimeVal, RegexOptions.Compiled);
-        static readonly Regex inDatesQuery = new Regex(MethodRegexVal + @"\s*(\([^)]*" + DateTimeVal + @"[^)]*\))", RegexOptions.Compiled | RegexOptions.Singleline);
-        static readonly Regex rightOpenRangeQuery = new Regex(FieldRegexVal + @"\[(\S+)\sTO\s(\S+)\}", RegexOptions.Compiled);
-        static readonly Regex leftOpenRangeQuery = new Regex(FieldRegexVal + @"\{(\S+)\sTO\s(\S+)\]", RegexOptions.Compiled);
-        static readonly Regex commentsRegex = new Regex(@"( //[^""]+?)$", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex FieldQuery = new Regex(FieldRegexVal, RegexOptions.Compiled);
+        private static readonly Regex UntokenizedQuery = new Regex(FieldRegexVal + @"[\s\(]*(\[\[.+?\]\])|(?<=,)\s*(\[\[.+?\]\])(?=\s*[,\)])", RegexOptions.Compiled);
+        private static readonly Regex SearchQuery = new Regex(FieldRegexVal + @"\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
+        private static readonly Regex DateQuery = new Regex(FieldRegexVal + DateTimeVal, RegexOptions.Compiled);
+        private static readonly Regex InDatesQuery = new Regex(MethodRegexVal + @"\s*(\([^)]*" + DateTimeVal + @"[^)]*\))", RegexOptions.Compiled | RegexOptions.Singleline);
+        private static readonly Regex RightOpenRangeQuery = new Regex(FieldRegexVal + @"\[(\S+)\sTO\s(\S+)\}", RegexOptions.Compiled);
+        private static readonly Regex LeftOpenRangeQuery = new Regex(FieldRegexVal + @"\{(\S+)\sTO\s(\S+)\]", RegexOptions.Compiled);
+        private static readonly Regex CommentsRegex = new Regex(@"( //[^""]+?)$", RegexOptions.Compiled | RegexOptions.Multiline);
 
-        public static bool UseLuceneASTParser { get { return useLuceneASTParser; } set { useLuceneASTParser = value; } }
-        private static bool useLuceneASTParser = true;
+        public static bool UseLuceneASTParser { get; set; } = true;
 
         /* The reason that we use @emptyIn<PermittedUsers>:(no-results)
          * instead of using @in<PermittedUsers>:()
          * is that lucene does not access an empty () as a valid syntax.
          */
-        private static readonly Dictionary<string, Func<string, List<string>, Query>> queryMethods = new Dictionary<string, Func<string, List<string>, Query>>(StringComparer.OrdinalIgnoreCase)
+        private static readonly Dictionary<string, Func<string, List<string>, Query>> QueryMethods = new Dictionary<string, Func<string, List<string>, Query>>(StringComparer.OrdinalIgnoreCase)
         {
             {"in", (field, args) => new TermsMatchQuery(field, args)},
             {"emptyIn", (field, args) => new TermsMatchQuery(field, args)}
@@ -64,7 +63,7 @@ namespace Raven.Server.Documents.Queries
                             {
                                 Analayzer = analyzer,
                                 DefaultOperator = defaultOperator,
-                                FieldName = defaultField ?? string.Empty
+                                FieldName = new FieldName(defaultField ?? string.Empty)
                             });
                         // The parser should throw ParseException in this case.
                         if (res == null) throw new GeoAPI.IO.ParseException("Could not parse query");
@@ -118,7 +117,7 @@ namespace Raven.Server.Documents.Queries
         {
             // First we should check if this query might match the regex because regex are expenssive...
             if (!MightMatchComments(query)) return query;
-            var matches = commentsRegex.Matches(query);
+            var matches = CommentsRegex.Matches(query);
             if (matches.Count < 1)
                 return query;
             var q = new StringBuilder(query);
@@ -188,7 +187,7 @@ namespace Raven.Server.Documents.Queries
             return query;
         }
 
-        private static Regex unescapedSplitter = new Regex("(?<!`),(?!`)", RegexOptions.Compiled);
+        private static Regex _unescapedSplitter = new Regex("(?<!`),(?!`)", RegexOptions.Compiled);
 
         internal static Query HandleMethodsForQueryAndTerm(Query query, Term term)
         {
@@ -197,7 +196,7 @@ namespace Raven.Server.Documents.Queries
             if (TryHandlingMethodForQueryAndTerm(ref field, out value) == false)
                 return query;
 
-            var parts = unescapedSplitter.Split(term.Text);
+            var parts = _unescapedSplitter.Split(term.Text);
             var list = new List<string>(
                     from part in parts
                     where string.IsNullOrWhiteSpace(part) == false
@@ -229,7 +228,7 @@ namespace Raven.Server.Documents.Queries
             var method = field.Substring(1, indexOfFieldStart - 1);
             field = field.Substring(indexOfFieldStart + 1, indexOfFieldEnd - indexOfFieldStart - 1);
 
-            if (queryMethods.TryGetValue(method, out value) == false)
+            if (QueryMethods.TryGetValue(method, out value) == false)
             {
                 throw new InvalidOperationException("Method call " + field + " is invalid.");
             }
@@ -252,12 +251,12 @@ namespace Raven.Server.Documents.Queries
         {
             // First we should check if this query might match the regex because regex are expenssive...
             if (!MightMatchDateTerms(query)) return query;
-            var searchMatches = dateQuery.Matches(query);
+            var searchMatches = DateQuery.Matches(query);
             if (searchMatches.Count > 0)
             {
                 query = TokenReplace(query, searchMatches, queryParser.ReplaceToken);
             }
-            searchMatches = inDatesQuery.Matches(query);
+            searchMatches = InDatesQuery.Matches(query);
             if (searchMatches.Count == 0)
                 return query;
             return TokenReplace(query, searchMatches, queryParser.ReplaceDateTimeTokensInMethod);
@@ -297,7 +296,7 @@ namespace Raven.Server.Documents.Queries
         {
             // First we should check if this query might match the regex because regex are expenssive...
             if (!MightMatchSearchTerms(query)) return query;
-            var searchMatches = searchQuery.Matches(query);
+            var searchMatches = SearchQuery.Matches(query);
             if (searchMatches.Count < 1)
                 return query;
 
@@ -354,7 +353,7 @@ namespace Raven.Server.Documents.Queries
         {
             // First we should check if this query might match the regex because regex are expenssive...
             if (!MightMatchUntokenizedTerms(query)) return query;
-            var untokenizedMatches = untokenizedQuery.Matches(query);
+            var untokenizedMatches = UntokenizedQuery.Matches(query);
             if (untokenizedMatches.Count < 1)
                 return query;
 
@@ -375,7 +374,7 @@ namespace Raven.Server.Documents.Queries
                     value = match.Groups[3].Value;
                     term = match.Groups[3];
                     if (fieldMatches == null)
-                        fieldMatches = fieldQuery.Matches(query);
+                        fieldMatches = FieldQuery.Matches(query);
 
                     var lastField = fieldMatches.Cast<Match>().LastOrDefault(x => x.Index <= term.Index);
                     if (lastField != null)
@@ -505,7 +504,7 @@ namespace Raven.Server.Documents.Queries
             StringBuilder queryStringBuilder = null;
             var tempSb = new StringBuilder();
 
-            var rightOpenRanges = rightOpenRangeQuery.Matches(query);
+            var rightOpenRanges = RightOpenRangeQuery.Matches(query);
             if (rightOpenRanges.Count > 0) // // field:[x, y} - right-open interval convert to (field: [x, y] AND NOT field:y)
             {
                 queryStringBuilder = new StringBuilder(query);
@@ -525,7 +524,7 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            var leftOpenRanges = leftOpenRangeQuery.Matches(queryStringBuilder != null ? queryStringBuilder.ToString() : query);
+            var leftOpenRanges = LeftOpenRangeQuery.Matches(queryStringBuilder != null ? queryStringBuilder.ToString() : query);
 
             if (leftOpenRanges.Count > 0) // field:{x, y] - left-open interval convert to (field: [x, y] AND NOT field:x)
             {

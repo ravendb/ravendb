@@ -1,8 +1,7 @@
 using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Utils;
 using Xunit;
 
@@ -10,12 +9,12 @@ namespace SlowTests.Tests.Indexes
 {
     public class WithDecimalValue : RavenTestBase
     {
-        public class Item
+        private class Item
         {
             public decimal Value { get; set; }
         }
 
-        public class Dec : AbstractIndexCreationTask<Item>
+        private class Dec : AbstractIndexCreationTask<Item>
         {
             public Dec()
             {

@@ -17,7 +17,7 @@ namespace SlowTests.Issues
                     await session.StoreAsync(entity);
                     await session.SaveChangesAsync();
 
-                    var metaData = await session.Advanced.GetMetadataForAsync(entity);
+                    var metaData = session.Advanced.GetMetadataFor(entity);
 
                     Assert.NotNull(metaData);
                 }

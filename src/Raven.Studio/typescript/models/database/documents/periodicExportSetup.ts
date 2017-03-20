@@ -38,7 +38,6 @@ class periodicExportSetup {
 
     private dbSettingsDto: documentDto;
 
-    private FILE_SYSTEM = "fileSystem";
     private GLACIER_VAULT = "glacierVault";
     private S3_BUCKET = "s3bucket";
     private AZURE_STORAGE = "azureStorage";

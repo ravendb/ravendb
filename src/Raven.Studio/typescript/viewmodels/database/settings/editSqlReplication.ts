@@ -6,7 +6,6 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import messagePublisher = require("common/messagePublisher");
 import app = require("durandal/app");
 import database = require("models/resources/database");
-import collection = require("models/database/documents/collection");
 import sqlReplication = require("models/database/sqlReplication/sqlReplication");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collectionsStats = require("models/database/documents/collectionsStats");
@@ -15,13 +14,11 @@ import document = require("models/database/documents/document");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import resetSqlReplicationCommand = require("commands/database/sqlReplication/resetSqlReplicationCommand");
 import sqlReplicationSimulationDialog = require("viewmodels/database/status/sqlReplicationSimulationDialog");
 import sqlReplicationConnections = require("models/database/sqlReplication/sqlReplicationConnections");
 import predefinedSqlConnection = require("models/database/sqlReplication/predefinedSqlConnection");
-import getEffectiveSqlReplicationConnectionStringsCommand = require("commands/database/globalConfig/getEffectiveSqlReplicationConnectionStringsCommand");
 import getSqlReplicationConnectionsCommand = require("commands/database/sqlReplication/getSqlReplicationConnectionsCommand");
 import eventsCollector = require("common/eventsCollector");
 
@@ -71,9 +68,11 @@ class editSqlReplication extends viewModelBase {
         var popOverSettings: PopoverOptions = {
             html: true,
             trigger: 'hover',
-            content: 'Replication scripts use JavaScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="code-keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="code-keyword">this</span>.Lines.length,<br/>   TotalCost: 0<br/>};<br/><br/>for (<span class="code-keyword">var</span> i = 0; i &lt; <span class="code-keyword">this</span>.Lines.length; i++) {<br/>   <span class="code-keyword">var</span> line = <span class="code-keyword">this</span>.Lines[i];<br/>   <span class="code-keyword">var</span> lineCost = ((line.Quantity * line.PricePerUnit) <br />                     * (1 - line.Discount));<br/>   orderData.TotalCost += lineCost;<br/><br/>   replicateToOrderLines({<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: lineCost<br/>   });<br/>}<br/><br/>replicateToOrders(orderData);</pre>',
+            content: 'Replication scripts use JavaScript.<br/><br/>The script will be called once for each document in the source document collection, with <span class="token keyword">this</span> representing the document, and the document id available as <i>documentId</i>.<br/><br/>Call <i>replicateToTableName</i> for each row you want to write to the database.<br/><br/>Example:</br><pre><span class="token keyword">var</span> orderData = {<br/>   Id: documentId,<br/>   OrderLinesCount: <span class="token keyword">this</span>.Lines.length,<br/>   TotalCost: 0<br/>};<br/><br/>for (<span class="token keyword">var</span> i = 0; i &lt; <span class="token keyword">this</span>.Lines.length; i++) {<br/>   <span class="token keyword">var</span> line = <span class="token keyword">this</span>.Lines[i];<br/>   <span class="token keyword">var</span> lineCost = ((line.Quantity * line.PricePerUnit) <br />                     * (1 - line.Discount));<br/>   orderData.TotalCost += lineCost;<br/><br/>   replicateToOrderLines({<br/>      OrderId: documentId,<br/>      Qty: line.Quantity,<br/>      Product: line.Product,<br/>      Cost: lineCost<br/>   });<br/>}<br/><br/>replicateToOrders(orderData);</pre>',
             selector: '.script-label',
             placement: "right"
+
+            //TODO: long popover?
         };
         $('body').popover(popOverSettings);
         $('form :input[name="ravenEntityName"]').on("keypress", (e) => e.which != 13);
@@ -82,7 +81,7 @@ class editSqlReplication extends viewModelBase {
     loadSqlReplicationConnections(): JQueryPromise<any> {
         return new getSqlReplicationConnectionsCommand(this.activeDatabase())
             .execute()
-            .done((dto: Raven.Server.Documents.SqlReplication.SqlConnections) => {
+            .done((dto: Raven.Server.Documents.ETL.Providers.SQL.Connections.SqlConnections) => {
                 var connections = new sqlReplicationConnections(dto);
 
                 if (connections.predefinedConnections().length > 0) {
@@ -138,13 +137,14 @@ class editSqlReplication extends viewModelBase {
         $.when(this.fetchSqlReplicationToEdit(replicationToLoadName), this.fetchCollections(this.activeDatabase()))
             .done(() => {
                 this.editedReplication().collections = this.collections;
+                /* TODO:
                 new getDocumentsMetadataByIDPrefixCommand(editSqlReplication.sqlReplicationDocumentPrefix, 256, this.activeDatabase())
                     .execute()
                     .done((results: queryResultDto<string>) => {
                         this.loadedSqlReplications = results.Results;
                         loadDeferred.resolve();
                     }).
-                    fail(() => loadDeferred.reject());
+                    fail(() => loadDeferred.reject());*/
             })
             .fail(() => {
                 loadDeferred.reject();
@@ -274,7 +274,7 @@ class editSqlReplication extends viewModelBase {
         this.editedReplication().script(this.script());
 
         if (this.initialReplicationId !== currentDocumentId) {
-            delete this.editedReplication().__metadata.etag();
+            this.editedReplication().__metadata.etag(undefined);
             delete this.editedReplication().__metadata.lastModified;
         }
 
@@ -304,7 +304,7 @@ class editSqlReplication extends viewModelBase {
 
     attachReservedMetaProperties(id: string, target: documentMetadata) {
         //TODO: target.etag = '';
-        target.ravenEntityName = !target.ravenEntityName ? document.getEntityNameFromId(id) : target.ravenEntityName;
+        target.collection = target.collection || document.getCollectionFromId(id);
         target.id = id;
     }
 

@@ -3,15 +3,15 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Runtime.Serialization;
 
-namespace Raven.Abstractions.Exceptions
+using System;
+
+namespace Raven.Client.Exceptions
 {
     /// <summary>
     /// This exception is raised when a bad request is made to the server
     /// </summary>
-    public class BadRequestException : Exception
+    public class BadRequestException : RavenException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="BadRequestException"/> class.

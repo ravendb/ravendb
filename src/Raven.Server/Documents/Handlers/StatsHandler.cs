@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-
-using Raven.Client.Data;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -30,10 +29,12 @@ namespace Raven.Server.Documents.Handlers
                 stats.LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
                 stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
                 stats.CountOfRevisionDocuments = Database.BundleLoader.VersioningStorage?.GetNumberOfRevisionDocuments(context);
+                stats.CountOfAttachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
                 stats.CountOfIndexes = indexes.Count;
                 stats.CountOfTransformers = transformersCount;
                 stats.DatabaseId = Database.DocumentsStorage.Environment.DbId;
                 stats.Is64Bit = IntPtr.Size == sizeof(long);
+                stats.Pager = Database.DocumentsStorage.Environment.Options.DataPager.GetType().ToString();
 
                 stats.Indexes = new IndexInformation[indexes.Count];
                 for (var i = 0; i < indexes.Count; i++)
@@ -46,6 +47,7 @@ namespace Raven.Server.Documents.Handlers
                         Name = index.Name,
                         IndexId = index.IndexId,
                         LockMode = index.Definition.LockMode,
+                        Priority = index.Definition.Priority,
                         Type = index.Type,
                         LastIndexingTime = index.LastIndexingTime
                     };

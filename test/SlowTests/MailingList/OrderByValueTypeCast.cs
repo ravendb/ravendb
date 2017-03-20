@@ -3,6 +3,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
 using FastTests.Server.Basic.Entities;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.MailingList

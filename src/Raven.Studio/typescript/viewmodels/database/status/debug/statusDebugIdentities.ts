@@ -1,14 +1,9 @@
-import database = require("models/resources/database");
 import viewModelBase = require("viewmodels/viewModelBase");
-import pagedList = require("common/pagedList");
-import customColumns = require("models/database/documents/customColumns");
-import customColumnParams = require('models/database/documents/customColumnParams');
-import getIdentitiesCommand = require("commands/database/debug/getIdentitiesCommand");
 
 class statusDebugIdentities extends viewModelBase {
 
-    currentIdentities = ko.observable<pagedList>();
-    columns = ko.observable(customColumns.empty());
+    /* TODO currentIdentities = ko.observable<pagedList>();
+    //TODO: columns = ko.observable(customColumns.empty());
 
     resultsCount = ko.computed(() => {
         if (!this.currentIdentities())
@@ -36,7 +31,7 @@ class statusDebugIdentities extends viewModelBase {
             return new getIdentitiesCommand(db, skip, take).execute();
         }
         return new pagedList(fetcher);
-    }
+    }*/
 }
 
 export = statusDebugIdentities;

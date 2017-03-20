@@ -9,7 +9,7 @@ namespace SlowTests.MailingList
     {
         private class TestModel
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
         }
 
         //This test attempts to lookup an existing item when none exist in the
@@ -23,8 +23,8 @@ namespace SlowTests.MailingList
                 store.Conventions.AllowQueriesOnId = true;
                 using (var session = store.OpenSession())
                 {
-                    TestModel testModelItem = session.Query<TestModel>().SingleOrDefault(t => t.Id == 1) ??
-                                              new TestModel { Id = 1 };
+                    TestModel testModelItem = session.Query<TestModel>().SingleOrDefault(t => t.Id == 1.ToString()) ??
+                                              new TestModel { Id = 1.ToString() };
                     Assert.NotNull(testModelItem);
                     session.Store(testModelItem);
                     session.SaveChanges();
@@ -52,11 +52,11 @@ namespace SlowTests.MailingList
                 store.Conventions.AllowQueriesOnId = true;
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new TestModel { Id = 1 });
+                    session.Store(new TestModel { Id = 1.ToString() });
                     session.SaveChanges();
 
-                    TestModel testModelItem = session.Query<TestModel>().SingleOrDefault(t => t.Id == 2) ??
-                                                  new TestModel { Id = 2 };
+                    TestModel testModelItem = session.Query<TestModel>().SingleOrDefault(t => t.Id == 2.ToString()) ??
+                                                  new TestModel { Id = 2.ToString() };
                     Assert.NotNull(testModelItem);
                     session.Store(testModelItem);
                     session.SaveChanges();
@@ -80,15 +80,15 @@ namespace SlowTests.MailingList
                 store.Conventions.AllowQueriesOnId = true;
                 using (var session = store.OpenSession())
                 {
-                    var deletedModel = new TestModel { Id = 1 };
+                    var deletedModel = new TestModel { Id = 1.ToString() };
                     session.Store(deletedModel);
                     session.SaveChanges();
 
                     session.Delete(deletedModel);
                     session.SaveChanges();
 
-                    TestModel testModelItem = session.Query<TestModel>().SingleOrDefault(t => t.Id == 2) ??
-                                                  new TestModel { Id = 2 };
+                    TestModel testModelItem = session.Query<TestModel>().SingleOrDefault(t => t.Id == 2.ToString()) ??
+                                                  new TestModel { Id = 2.ToString() };
                     Assert.NotNull(testModelItem);
                     session.Store(testModelItem);
                     session.SaveChanges();

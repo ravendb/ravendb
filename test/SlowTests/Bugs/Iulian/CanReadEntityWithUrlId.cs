@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Iulian
 {
-    public class CanReadEntityWithUrlId : RavenNewTestBase
+    public class CanReadEntityWithUrlId : RavenTestBase
     {
         private class Event
         {

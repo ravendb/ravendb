@@ -3,7 +3,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Identifiers
 {
-    public class WithBase64Characters : RavenNewTestBase
+    public class WithBase64Characters : RavenTestBase
     {
         private class Entity
         {

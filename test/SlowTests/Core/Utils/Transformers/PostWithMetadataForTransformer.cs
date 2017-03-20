@@ -6,8 +6,9 @@
 
 using System;
 using System.Linq;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using Post = SlowTests.Core.Utils.Entities.Post;
 
 namespace SlowTests.Core.Utils.Transformers
@@ -26,7 +27,7 @@ namespace SlowTests.Core.Utils.Transformers
                                         select new Result
                                         {
                                             Title = post.Title,
-                                            LastModified = MetadataFor(post).Value<DateTime>(Constants.Metadata.LastModified)
+                                            LastModified = MetadataFor(post).Value<DateTime>(Constants.Documents.Metadata.LastModified)
                                         };
         }
     }

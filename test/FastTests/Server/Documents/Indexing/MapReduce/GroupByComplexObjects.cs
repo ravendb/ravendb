@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -296,9 +295,9 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     {
                         "sport", "books"
                     },
-                    [Constants.Metadata.Key] = new DynamicJsonValue
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                     {
-                        [Constants.Metadata.Collection] = "Users"
+                        [Constants.Documents.Metadata.Collection] = "Users"
                     }
                 }))
                 {
@@ -320,9 +319,9 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     {
                         "music", "sport"
                     },
-                    [Constants.Metadata.Key] = new DynamicJsonValue
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                     {
-                        [Constants.Metadata.Collection] = "Users"
+                        [Constants.Documents.Metadata.Collection] = "Users"
                     }
                 }))
                 {
@@ -344,9 +343,9 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     {
                         ["Country"] = "UK"
                     },
-                    [Constants.Metadata.Key] = new DynamicJsonValue
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                     {
-                        [Constants.Metadata.Collection] = "Users"
+                        [Constants.Documents.Metadata.Collection] = "Users"
                     }
                 }))
                 {

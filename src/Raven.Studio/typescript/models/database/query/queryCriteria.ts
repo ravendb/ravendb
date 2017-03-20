@@ -106,6 +106,7 @@ class queryCriteria {
     }
 
     setSelectedIndex(indexName: string) {
+        this.queryText("");
         this.selectedIndex(indexName);
         this.transformer(null);
         this.transformerParameters([]);

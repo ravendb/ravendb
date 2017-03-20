@@ -2,7 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -21,7 +22,6 @@ namespace SlowTests.MailingList
                     session.Store(new Foo { Id = "foos/1", Dates = { { "hello", DateTimeOffset.UtcNow } } });
                     session.SaveChanges();
 
-                    WaitForUserToContinueTheTest(store);
                     var results = session.Load<FooTransformer, FooTransformer.Result>("foos/1");
                     Assert.Equal(1, results.Keys.Count);
                 }

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -38,7 +39,7 @@ namespace SlowTests.MailingList
                 }
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var item = session.Query<Entity>()
                             .Customize(x => x.WaitForNonStaleResults())
                             .Statistics(out stats)

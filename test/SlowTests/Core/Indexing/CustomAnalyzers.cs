@@ -8,7 +8,8 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using FastTests;
-using Raven.NewClient.Client;
+using Raven.Client;
+using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Indexes;
 
 using Xunit;
@@ -17,7 +18,7 @@ using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Indexing
 {
-    public class CustomAnalyzers : RavenNewTestBase
+    public class CustomAnalyzers : RavenTestBase
     {
         [Fact]
         public void CreateAndQuerySimpleIndexWithSortingAndCustomCollateral()
@@ -59,7 +60,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature: Highlighting")]
+        [Fact(Skip = "RavenDB-6558")]
         public void CreateAndQuerySimpleIndexWithCustomAnalyzersAndFieldOptions()
         {
             using (var store = GetDocumentStore())

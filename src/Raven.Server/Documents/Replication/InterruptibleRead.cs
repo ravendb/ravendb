@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +12,8 @@ namespace Raven.Server.Documents.Replication
     public class InterruptibleRead : IDisposable
     {
         private Task<Result> _prevCall;
-        private Task[] _waitableTasks;
+        private readonly Dictionary<AsyncManualResetEvent, Task<Task>> _previousWait = new Dictionary<AsyncManualResetEvent, Task<Task>>();
+
         private readonly DocumentsContextPool _contextPool;
         private readonly Stream _stream;
 
@@ -37,36 +39,60 @@ namespace Raven.Server.Documents.Replication
 
         public Result ParseToMemory(
             AsyncManualResetEvent interrupt,
-            string debugTag, 
-            int timeout, 
-            JsonOperationContext.ManagedPinnedBuffer buffer, 
+            string debugTag,
+            int timeout,
+            JsonOperationContext.ManagedPinnedBuffer buffer,
             CancellationToken token)
         {
             if (_prevCall == null)
             {
                 _prevCall = ReadNextObject(debugTag, buffer);
+                _previousWait.Clear();
             }
-            if (_waitableTasks == null)
-                _waitableTasks = new Task[2];
 
-            _waitableTasks[0] = _prevCall;
-            _waitableTasks[1] = interrupt.WaitAsync();
+            if (_prevCall.IsCompleted)
+            {
+                return ReturnAndClearValue();
+            }
 
-            var state = Task.WaitAny(_waitableTasks, timeout, token);
+            Task<Task> task;
+            if (_previousWait.TryGetValue(interrupt, out task) == false)
+            {
+                _previousWait[interrupt] = task = Task.WhenAny(_prevCall, interrupt.WaitAsync());
+            }
 
-            if (state == -1)
-                return new Result {Timeout = true};
+            if (task.Wait(timeout, token) == false)
+                return new Result { Timeout = true };
 
-            if (state != 0)
-                return new Result {Interrupted = true};
+            if (task.Result != _prevCall)
+            {
+                _previousWait.Remove(interrupt);
+                return new Result { Interrupted = true };
+            }
 
+            return ReturnAndClearValue();
+        }
+
+        private Result ReturnAndClearValue()
+        {
             try
             {
                 return _prevCall.Result;
             }
+            catch (ObjectDisposedException)
+            {
+                //we are disposing, so don't care about this exception.
+                //this is thrown from inside ParseToMemoryAsync() call 
+                //from inside of ReadNextObject() when disposing (thrown from disposed stream basically)
+                return new Result
+                {
+                    Interrupted = true
+                };
+            }
             finally
             {
                 _prevCall = null;
+                _previousWait.Clear();
             }
         }
 
@@ -77,7 +103,8 @@ namespace Raven.Server.Documents.Replication
             try
             {
                 var jsonReaderObject =
-                    await context.ParseToMemoryAsync(_stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None, buffer);
+                    await context.ParseToMemoryAsync(_stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None,
+                        buffer);
                 return new Result
                 {
                     Document = jsonReaderObject,

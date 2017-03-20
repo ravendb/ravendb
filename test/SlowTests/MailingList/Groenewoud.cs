@@ -9,8 +9,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collation.Cultures;
 using Xunit;
 
@@ -83,7 +85,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var qRoot =
                         session.Query<ZC_CountryCityStateCodeACIndex.Result, ZC_CountryCityStateCodeACIndex>()
                             .OrderBy(ci => ci.CityOrder)
@@ -92,8 +94,6 @@ namespace SlowTests.MailingList
                             .Where(ci => ci.CountryCode == "CH" && ci.City.StartsWith("Z"))
                             .As<ZipCityStateCountry>()
                             .ToList();
-
-                    WaitForUserToContinueTheTest(store);
 
                     Assert.Equal(8, qRoot.Count);
                     AssertOrder(qRoot);

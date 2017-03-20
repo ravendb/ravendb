@@ -2,8 +2,8 @@
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexing;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Queries;
@@ -51,9 +51,9 @@ select new
                                 var user = new DynamicJsonValue()
                                 {
                                     ["Location"] = randomLocation,
-                                    [Constants.Metadata.Key] = new DynamicJsonValue
+                                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                     {
-                                        [Constants.Metadata.Collection] = "Users"
+                                        [Constants.Documents.Metadata.Collection] = "Users"
                                     }
                                 };
 

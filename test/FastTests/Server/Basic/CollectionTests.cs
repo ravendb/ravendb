@@ -1,12 +1,12 @@
 ﻿using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Documents;
+using Raven.Client.Documents.Operations;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class CollectionTests : RavenNewTestBase
+    public class CollectionTests : RavenTestBase
     {
         [Fact]
         public async Task CanDeleteCollection()

@@ -32,27 +32,31 @@ class indexDefinition {
     maps = ko.observableArray<mapItem>();
     reduce = ko.observable<string>();
     isTestIndex = ko.observable<boolean>(false);
-    isSideBySideIndex = ko.observable<boolean>(false);
     fields = ko.observableArray<indexFieldOptions>();
     defaultFieldOptions = ko.observable<indexFieldOptions>();
+
+    outputReduceToCollection = ko.observable<string>();
 
     numberOfFields = ko.pureComputed(() => this.fields().length);
     numberOfConfigurationFields = ko.pureComputed(() => this.configuration() ? this.configuration().length : 0);
 
     configuration = ko.observableArray<configurationItem>();
-    lockMode: Raven.Abstractions.Indexing.IndexLockMode;
+    lockMode: Raven.Client.Documents.Indexes.IndexLockMode;
     indexStoragePath = ko.observable<string>();
+
+    priority = ko.observable<Raven.Client.Documents.Indexes.IndexPriority>();
 
     hasReduce = ko.observable<boolean>(false);
 
     validationGroup: KnockoutValidationGroup;
+    renameValidationGroup: KnockoutValidationGroup;
 
-    constructor(dto: Raven.Client.Indexing.IndexDefinition) {
+    constructor(dto: Raven.Client.Documents.Indexes.IndexDefinition) {
         this.name(dto.Name);
         this.maps(dto.Maps.map(x => new mapItem(x)));
         this.reduce(dto.Reduce);
         this.isTestIndex(dto.IsTestIndex);
-        this.isSideBySideIndex(dto.IsSideBySideIndex);
+        this.outputReduceToCollection(dto.OutputReduceToCollection);
         this.fields(_.map(dto.Fields, (fieldDto, indexName) => new indexFieldOptions(indexName, fieldDto, indexFieldOptions.defaultFieldOptions())));
         const defaultFieldOptions = this.fields().find(x => x.name() === indexFieldOptions.DefaultFieldOptions);
         if (defaultFieldOptions) {
@@ -65,6 +69,7 @@ class indexDefinition {
             });
         }
         this.lockMode = dto.LockMode;
+        this.priority(dto.Priority);
         this.configuration(this.parseConfiguration(dto.Configuration));
 
         const existingIndexStoragePath = this.configuration().find(x => x.key() === configuration.indexing.storagePath);
@@ -84,7 +89,7 @@ class indexDefinition {
             validation: [
                 {
                     validator: (val: string) => rg1.test(val),
-                    message: "Can't use backslash in index name"
+                    message: "Can't use backslash in index name."
                 }]
         });
 
@@ -98,9 +103,13 @@ class indexDefinition {
             name: this.name,
             reduce: this.reduce
         });
+
+        this.renameValidationGroup = ko.validatedObservable({
+            name: this.name
+        });
     }
 
-    private parseConfiguration(config: Raven.Client.Indexing.IndexConfiguration): Array<configurationItem> {
+    private parseConfiguration(config: Raven.Client.Documents.Indexes.IndexConfiguration): Array<configurationItem> {
         const configurations = [] as configurationItem[];
 
         if (config) {
@@ -112,12 +121,12 @@ class indexDefinition {
         return configurations;
     }
 
-    private detectIndexType(): Raven.Client.Data.Indexes.IndexType {
+    private detectIndexType(): Raven.Client.Documents.Indexes.IndexType {
         return this.reduce() ? "MapReduce" : "Map";
     }
 
-    private fieldToDto(): dictionary<Raven.Client.Indexing.IndexFieldOptions> {
-        const fields = {} as dictionary<Raven.Client.Indexing.IndexFieldOptions>;
+    private fieldToDto(): dictionary<Raven.Client.Documents.Indexes.IndexFieldOptions> {
+        const fields = {} as dictionary<Raven.Client.Documents.Indexes.IndexFieldOptions>;
 
         this.fields().forEach((indexField: indexFieldOptions) => {
             fields[indexField.name()] = indexField.toDto();
@@ -130,8 +139,8 @@ class indexDefinition {
         return fields;
     }
 
-    private configurationToDto(): Raven.Client.Indexing.IndexConfiguration {
-        const result = {} as Raven.Client.Indexing.IndexConfiguration;
+    private configurationToDto(): Raven.Client.Documents.Indexes.IndexConfiguration {
+        const result = {} as Raven.Client.Documents.Indexes.IndexConfiguration;
 
         this.configuration().forEach((configItem: configurationItem) => {
             result[configItem.key()] = configItem.value();
@@ -144,7 +153,7 @@ class indexDefinition {
         return result;
     }
 
-    toDto(): Raven.Client.Indexing.IndexDefinition {
+    toDto(): Raven.Client.Documents.Indexes.IndexDefinition {
         return {
             Name: this.name(),
             Maps: this.maps().map(m => m.map()),
@@ -152,10 +161,11 @@ class indexDefinition {
             IndexId: null,
             Type: this.detectIndexType(),
             LockMode: this.lockMode,
+            Priority: this.priority(),
             Configuration: this.configurationToDto(),
             Fields: this.fieldToDto(),
-            IsSideBySideIndex: false, //TODO side by side
             IsTestIndex: false, //TODO: test indexes
+            OutputReduceToCollection: this.outputReduceToCollection()
         }
     }
 
@@ -205,10 +215,11 @@ class indexDefinition {
             Name: "",
             LockMode: "Unlock",
             Reduce: undefined,
+            Priority: "Normal",
             Configuration: null,
-            IsSideBySideIndex: false,
             IsTestIndex: false,
-            Type: "Map"
+            Type: "Map",
+            OutputReduceToCollection: null
         });
     }
 }

@@ -9,6 +9,7 @@ namespace Sparrow
         public class MeterItem
         {
             public long Size;
+            public long FileSize;
             public DateTime Start;
             public DateTime End;
             public IoMetrics.MeterType Type;
@@ -25,6 +26,7 @@ namespace Sparrow
             public DateTime TotalTimeEnd;
             public long Count;
             public IoMetrics.MeterType Type;
+            public long TotalFileSize;
         }
 
         public IoMeterBuffer(int metricsBufferSize, int summaryBufferSize)
@@ -67,13 +69,17 @@ namespace Sparrow
             private readonly IoMetrics.MeterType _type;
             public long Size;
             private readonly DateTime _start;
+            private long _fileSize;
+            public Action<MeterItem> _onFileChange;
 
-            public DurationMeasurement(IoMeterBuffer parent, IoMetrics.MeterType type, long size)
+            public DurationMeasurement(IoMeterBuffer parent, IoMetrics.MeterType type, long size, long filesize, Action<MeterItem> onFileChange)
             {
                 Parent = parent;
                 _type = type;
                 Size = size;
+                _fileSize = filesize;
                 _start = DateTime.UtcNow;
+                _onFileChange = onFileChange;
             }
 
             public void IncrementSize(long size)
@@ -83,19 +89,27 @@ namespace Sparrow
 
             public void Dispose()
             {
-                Parent.Mark(Size, _start, DateTime.UtcNow, _type);
+                Parent.Mark(Size, _start, DateTime.UtcNow, _type, _fileSize, _onFileChange);
+            }
+
+            public void IncrementFileSize(long fileSize)
+            {
+                _fileSize += fileSize;
             }
         }
 
-        internal void Mark(long size, DateTime start, DateTime end, IoMetrics.MeterType type)
+        internal void Mark(long size, DateTime start, DateTime end, IoMetrics.MeterType type, long filesize, Action<MeterItem> onFileChange = null)
         {
             var meterItem = new MeterItem
             {
                 Start = start,
-                Size = size,
+                Size = size,            
+                FileSize  = filesize,
                 Type = type,
                 End = end
             };
+
+            onFileChange?.Invoke(meterItem);
 
             var pos = Interlocked.Increment(ref _bufferPos);
             var adjustedTail = pos%_buffer.Length;
@@ -112,6 +126,7 @@ namespace Sparrow
                 MinTime = meterItem.Duration,
                 TotalTime = meterItem.Duration,
                 TotalSize = meterItem.Size,
+                TotalFileSize = meterItem.FileSize,
                 Type = meterItem.Type
             };
 
@@ -126,6 +141,7 @@ namespace Sparrow
                     newSummary.MaxTime = newSummary.MaxTime > oldVal.Duration ? newSummary.MaxTime : oldVal.Duration;
                     newSummary.MinTime = newSummary.MinTime > oldVal.Duration ? oldVal.Duration : newSummary.MinTime;
                     newSummary.TotalSize += oldVal.Size;
+                    newSummary.TotalFileSize = oldVal.FileSize; // take last size to history
                     newSummary.TotalTime += oldVal.Duration;
                 }
             }

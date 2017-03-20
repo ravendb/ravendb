@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -29,21 +29,25 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Delete("1", null);
-                store.DatabaseCommands.Delete("2", null);
-                store.DatabaseCommands.Delete("3", null);
-                store.DatabaseCommands.Delete("4", null);
-                store.DatabaseCommands.Delete("5", null);
-
-                store.DatabaseCommands.DeleteIndex("test");
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                using (var commands = store.Commands())
                 {
+                    commands.Delete("1", null);
+                    commands.Delete("2", null);
+                    commands.Delete("3", null);
+                    commands.Delete("4", null);
+                    commands.Delete("5", null);
+                }
+
+                store.Admin.Send(new DeleteIndexOperation("test"));
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                {
+                    Name = "test",
                     Maps = { "from doc in docs.Docs select new { DocId = doc.DocId, _ = doc.Map.Select(p => CreateField(p.Key, p.Value)) }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
-                        { "X", new IndexFieldOptions { Sort = SortOptions.NumericDefault } }
+                        { "X", new IndexFieldOptions { Sort = SortOptions.Numeric } }
                     }
-                });
+                }}));
                 using (var session = store.OpenSession())
                 {
                     // Insert valid documents.

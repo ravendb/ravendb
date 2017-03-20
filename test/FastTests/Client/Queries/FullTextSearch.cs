@@ -1,14 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace FastTests.Client.Queries
 {
-    public class FullTextSearchOnTags : RavenNewTestBase
+    public class FullTextSearchOnTags : RavenTestBase
     {
         private class Image
         {
@@ -32,10 +31,11 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Images select new { doc.Tags }" }
-                }));
+                    Maps = { "from doc in docs.Images select new { doc.Tags }" },
+                    Name = "test"
+                }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -68,10 +68,11 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Images select new { doc.Tags,doc.Name }" }
-                }));
+                    Maps = { "from doc in docs.Images select new { doc.Tags,doc.Name }" },
+                    Name = "test"
+                }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -107,10 +108,11 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Images select new { doc.Tags }" }
-                }));
+                    Maps = { "from doc in docs.Images select new { doc.Tags }" },
+                    Name = "test"
+                }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -293,10 +295,11 @@ namespace FastTests.Client.Queries
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Images select new { doc.Tags }" }
-                }));
+                    Maps = { "from doc in docs.Images select new { doc.Tags }" },
+                    Name = "test"
+                }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -352,10 +355,11 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Images select new { doc.Tags, doc.Users }" }
-                }));
+                    Maps = { "from doc in docs.Images select new { doc.Tags, doc.Users }" },
+                    Name = "test"
+                }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -384,14 +388,15 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs.Images select new { doc.Tags, doc.Users }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
                         { "Tags", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed,Suggestions = true} }
-                    }
-                }));
+                    },
+                    Name = "test"
+                }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -420,14 +425,15 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs.Images select new { doc.Name }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
                         { "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } }
-                    }
-                }));
+                    },
+                    Name = "test"
+                }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -454,14 +460,15 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs.Images select new { doc.Name }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
                         { "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } }
-                    }
-                }));
+                    },
+                    Name = "test"
+                }}));
 
                 using (var session = store.OpenSession())
                 {

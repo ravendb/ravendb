@@ -1,11 +1,11 @@
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class CanHaveAnIndexNameThatStartsWithDynamic : RavenNewTestBase
+    public class CanHaveAnIndexNameThatStartsWithDynamic : RavenTestBase
     {
         private class SomeDoc
         {

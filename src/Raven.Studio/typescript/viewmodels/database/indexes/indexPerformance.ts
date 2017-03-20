@@ -1,6 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import app = require("durandal/app");
-import getIndexesPerformance = require("commands/database/debug/getIndexesPerformance");
 import fileDownloader = require("common/fileDownloader");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import d3 = require("d3");
@@ -8,6 +6,9 @@ import rbush = require("rbush");
 import gapFinder = require("common/helpers/graph/gapFinder");
 import generalUtils = require("common/generalUtils");
 import rangeAggregator = require("common/helpers/graph/rangeAggregator");
+import liveIndexPerformanceWebSocketClient = require("common/liveIndexPerformanceWebSocketClient");
+import inProgressAnimator = require("common/helpers/graph/inProgressAnimator");
+import messagePublisher = require("common/messagePublisher");
 
 type rTreeLeaf = {
     minX: number;
@@ -18,18 +19,13 @@ type rTreeLeaf = {
     arg: any;
 }
 
-interface IndexingPerformanceGap {
-    DurationInMilliseconds: number;
-    StartTime: string;     
-}
-
 class hitTest {
     cursor = ko.observable<string>("auto");
     private rTree = rbush<rTreeLeaf>();
     private container: d3.Selection<any>;
     private onToggleIndex: (indexName: string) => void;
-    private handleTrackTooltip: (item: Raven.Client.Data.Indexes.IndexingPerformanceOperation, x: number, y: number) => void;
-    private handleGapTooltip: (item: IndexingPerformanceGap, x: number, y: number) => void;
+    private handleTrackTooltip: (item: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, x: number, y: number) => void;   
+    private handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void;
     private removeTooltip: () => void;
    
     reset() {
@@ -38,8 +34,8 @@ class hitTest {
 
     init(container: d3.Selection<any>,
         onToggleIndex: (indeName: string) => void,
-        handleTrackTooltip: (item: Raven.Client.Data.Indexes.IndexingPerformanceOperation, x: number, y: number) => void,
-        handleGapTooltip: (item: IndexingPerformanceGap, x: number, y: number) => void,
+        handleTrackTooltip: (item: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, x: number, y: number) => void,       
+        handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void,
         removeTooltip: () => void) {       
         this.container = container;
         this.onToggleIndex = onToggleIndex;
@@ -48,7 +44,7 @@ class hitTest {
         this.removeTooltip = removeTooltip;        
     }
 
-    registerTrackItem(x: number, y: number, width: number, height: number, element: Raven.Client.Data.Indexes.IndexingPerformanceOperation) {
+    registerTrackItem(x: number, y: number, width: number, height: number, element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation) {
         const data = {
             minX: x,
             minY: y,
@@ -71,8 +67,8 @@ class hitTest {
         } as rTreeLeaf;
         this.rTree.insert(data);
     }
-
-    registerGapItem(x: number, y: number, width: number, height: number, element: IndexingPerformanceGap) {
+   
+    registerGapItem(x: number, y: number, width: number, height: number, element: timeGapInfo) {
         const data = {
             minX: x,
             minY: y,
@@ -104,14 +100,17 @@ class hitTest {
 
     onMouseMove() {
         const clickLocation = d3.mouse(this.container.node());
-        const items = this.findItems(clickLocation[0], clickLocation[1]);              
+        const items = this.findItems(clickLocation[0], clickLocation[1]);
 
-        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Data.Indexes.IndexingPerformanceOperation)[0];
+        const overToggleIndex = items.filter(x => x.actionType === "toggleIndex").length > 0;
+        this.cursor(overToggleIndex ? "pointer" : "auto");
+
+        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Documents.Indexes.IndexingPerformanceOperation)[0];
         if (currentItem) {
-            this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);           
+            this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
         }
         else {
-            const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as IndexingPerformanceGap)[0];
+            const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
             if (currentGapItem) {
                 this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
             }
@@ -125,13 +124,15 @@ class hitTest {
         return this.rTree.search({
             minX: x,
             maxX: x,
-            minY: y - metrics.brushSectionHeight,
-            maxY: y - metrics.brushSectionHeight
+            minY: y - indexPerformance.brushSectionHeight,
+            maxY: y - indexPerformance.brushSectionHeight
         });
     }
 }
 
-class metrics extends viewModelBase {
+class indexPerformance extends viewModelBase {
+
+    /* static */
 
     static readonly colors = {
         axis: "#546175",
@@ -174,7 +175,8 @@ class metrics extends viewModelBase {
             "Aggregation/NestedValues": "#d81a60",
             "Lucene/FlushToDisk": "#a487ba",
             "Storage/Commit": "#5b912d",
-            "Lucene/RecreateSearcher": "#b79ec7"
+            "Lucene/RecreateSearcher": "#b79ec7",
+            "SaveOutputDocuments": "#fed101"
         }
     }
 
@@ -187,15 +189,30 @@ class metrics extends viewModelBase {
     private static readonly closedTrackPadding = 2;
     private static readonly openedTrackPadding = 4;
     private static readonly axisHeight = 35; 
+    private static readonly inProgressStripesPadding = 7;
 
     private static readonly maxRecursion = 5;
     private static readonly minGapSize = 10 * 1000; // 10 seconds
+    private static readonly initialOffset = 100;
+    private static readonly step = 200;
 
-    private data: Raven.Client.Data.Indexes.IndexPerformanceStats[] = [];
-    private totalWidth: number;
-    private totalHeight: number;
 
+    private static readonly openedTrackHeight = indexPerformance.openedTrackPadding
+    + (indexPerformance.maxRecursion + 1) * indexPerformance.trackHeight
+    + indexPerformance.maxRecursion * indexPerformance.stackPadding
+    + indexPerformance.openedTrackPadding;
+
+    private static readonly closedTrackHeight = indexPerformance.closedTrackPadding
+    + indexPerformance.trackHeight
+    + indexPerformance.closedTrackPadding;
+
+    /* observables */
+
+    hasAnyData = ko.observable<boolean>(false);
     private searchText = ko.observable<string>();
+
+    private liveViewClient = ko.observable<liveIndexPerformanceWebSocketClient>();
+    private autoScroll = ko.observable<boolean>(false);
 
     private indexNames = ko.observableArray<string>();
     private filteredIndexNames = ko.observableArray<string>();
@@ -203,11 +220,30 @@ class metrics extends viewModelBase {
     private isImport = ko.observable<boolean>(false);
     private importFileName = ko.observable<string>();
 
-    private isoParser = d3.time.format.iso;
+    private canExpandAll: KnockoutComputed<boolean>;
+
+    /* private */
+
+    private data: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = [];
+    private totalWidth: number;
+    private totalHeight: number;
+    private currentYOffset = 0;
+    private maxYOffset = 0;
+    private hitTest = new hitTest();
+    private gapFinder: gapFinder;
+    private dialogVisible = false;
+
+    private inProgressAnimator: inProgressAnimator;
+    private inProgressMarkerCanvas: HTMLCanvasElement;    
+
+    /* d3 */
+
     private xTickFormat = d3.time.format("%H:%M:%S");
     private canvas: d3.Selection<any>;
+    private inProgressCanvas: d3.Selection<any>;
     private svg: d3.Selection<any>; // spans to canvas size (to provide brush + zoom/pan features)
     private brush: d3.svg.Brush<number>;
+    private brushAndZoomCallbacksDisabled = false;
     private xBrushNumericScale: d3.scale.Linear<number, number>;
     private xBrushTimeScale: d3.time.Scale<number, number>;
     private yBrushValueScale: d3.scale.Linear<number, number>;
@@ -216,24 +252,7 @@ class metrics extends viewModelBase {
     private brushContainer: d3.Selection<any>;
     private zoom: d3.behavior.Zoom<any>;
     private yScale: d3.scale.Ordinal<string, number>;
-    private currentYOffset = 0;
-    private maxYOffset = 0;
-    private hitTest = new hitTest();
-    private tooltip: d3.Selection<Raven.Client.Data.Indexes.IndexingPerformanceOperation | IndexingPerformanceGap>;   
-
-    private gapFinder: gapFinder;
-
-    private dialogVisible = false;
-    private canExpandAll: KnockoutComputed<boolean>;
-
-    private static readonly openedTrackHeight = metrics.openedTrackPadding
-        + (metrics.maxRecursion + 1) * metrics.trackHeight
-        + metrics.maxRecursion * metrics.stackPadding
-        + metrics.openedTrackPadding;
-
-    private static readonly closedTrackHeight = metrics.closedTrackPadding
-        + metrics.trackHeight
-        + metrics.closedTrackPadding;
+    private tooltip: d3.Selection<Raven.Client.Documents.Indexes.IndexingPerformanceOperation | timeGapInfo>;      
 
     constructor() {
         super();
@@ -245,17 +264,36 @@ class metrics extends viewModelBase {
             return indexNames.length && indexNames.length !== expandedTracks.length;
         });
 
-        this.searchText.throttle(200).subscribe(() => this.filterIndexes());
+        this.searchText.throttle(200).subscribe(() => {
+            this.filterIndexes();
+            this.drawMainSection();
+        });
+
+        this.autoScroll.subscribe(v => {
+            if (v) {
+                this.scrollToRight();
+            } else {
+                // cancel transition (if any)
+                this.brushContainer
+                    .transition(); 
+            }
+        });
     }
 
-    activate(args: { indexName: string, database: string}): JQueryPromise<any> {
+    activate(args: { indexName: string, database: string}): void {
         super.activate(args);
 
         if (args.indexName) {
             this.expandedTracks.push(args.indexName);
         }
+    }
 
-        return this.getIndexesPerformanceData();        
+    deactivate() {
+        super.deactivate();
+
+        if (this.liveViewClient()) {
+            this.cancelLiveView();
+        }
     }
 
     compositionComplete() {
@@ -264,33 +302,47 @@ class metrics extends viewModelBase {
         this.tooltip = d3.select(".tooltip");
 
         [this.totalWidth, this.totalHeight] = this.getPageHostDimenensions();
+        this.totalWidth -= 1;
 
         this.totalHeight -= 50; // substract toolbar height
 
-        this.initCanvas();
+        this.initCanvases();
+
         this.hitTest.init(this.svg,
             (indexName) => this.onToggleIndex(indexName),          
             (item, x, y) => this.handleTrackTooltip(item, x, y),
             (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
             () => this.hideTooltip());
 
-        this.draw();
+        this.enableLiveView();
     }
 
-    private initCanvas() {
-        const metricsContainer = d3.select("#metricsContainer");
+    private initCanvases() {
+        const metricsContainer = d3.select("#indexPerfMetricsContainer");
         this.canvas = metricsContainer
             .append("canvas")
-            .attr("width", this.totalWidth)
+            .attr("width", this.totalWidth + 1)
             .attr("height", this.totalHeight);
+
+        this.inProgressCanvas = metricsContainer
+            .append("canvas")
+            .attr("width", this.totalWidth + 1)
+            .attr("height", this.totalHeight - indexPerformance.brushSectionHeight)
+            .style("top", (indexPerformance.brushSectionHeight + indexPerformance.axisHeight) + "px");
+
+        const inProgressCanvasNode = this.inProgressCanvas.node() as HTMLCanvasElement;
+        const inProgressContext = inProgressCanvasNode.getContext("2d");
+        inProgressContext.translate(0, -indexPerformance.axisHeight);
+
+        this.inProgressAnimator = new inProgressAnimator(inProgressCanvasNode);
 
         this.svg = metricsContainer
             .append("svg")
-            .attr("width", this.totalWidth)
+            .attr("width", this.totalWidth + 1)
             .attr("height", this.totalHeight);
 
         this.xBrushNumericScale = d3.scale.linear<number>()
-            .range([0, this.totalWidth - 1]) // substract 1px to avoid issue with missing right stroke
+            .range([0, this.totalWidth])
             .domain([0, this.totalWidth]);
 
         this.xNumericScale = d3.scale.linear<number>()
@@ -309,8 +361,8 @@ class metrics extends viewModelBase {
             .append("svg:rect")
             .attr("class", "pane")
             .attr("width", this.totalWidth)
-            .attr("height", this.totalHeight - metrics.brushSectionHeight)
-            .attr("transform", "translate(" + 0 + "," + metrics.brushSectionHeight + ")")
+            .attr("height", this.totalHeight - indexPerformance.brushSectionHeight)
+            .attr("transform", "translate(" + 0 + "," + indexPerformance.brushSectionHeight + ")")
             .call(this.zoom)
             .call(d => this.setupEvents(d));
     }
@@ -333,6 +385,19 @@ class metrics extends viewModelBase {
         selection
             .on("mousedown.tip", () => selection.on("mousemove.tip", null))
             .on("mouseup.tip", () => selection.on("mousemove.tip", onMove));
+
+        selection
+            .on("mousedown.live", () => {
+                if (this.liveViewClient()) {
+                    this.liveViewClient().pauseUpdates();
+                }
+            });
+        selection
+            .on("mouseup.live", () => {
+                if (this.liveViewClient()) {
+                    this.liveViewClient().resumeUpdates();
+                }
+            });
 
         selection
             .on("mousedown.yShift", () => {
@@ -360,53 +425,140 @@ class metrics extends viewModelBase {
         const criteria = this.searchText().toLowerCase();
 
         this.filteredIndexNames(this.indexNames().filter(x => x.toLowerCase().includes(criteria)));
-
-        this.drawMainSection();
     }
 
-    private draw() {
-        if (this.data.length === 0) {
-            //TODO: show no data section
-            return;
-        }
+    private enableLiveView() {
+        let firstTime = true;
 
-        this.prepareBrushSection();
-        this.prepareMainSection();
+        const onDataUpdate = (data: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) => {
+            let timeRange: [Date, Date];
+            if (!firstTime) {
+                const timeToRemap = this.brush.empty() ? this.xBrushNumericScale.domain() as [number, number] : this.brush.extent() as [number, number];
+                timeRange = timeToRemap.map(x => this.xBrushTimeScale.invert(x));
+            }
+
+            this.data = data;
+
+            const [workData, maxConcurrentIndexes] = this.prepareTimeData();
+
+            if (!firstTime) {
+                const newBrush: [number, number] = timeRange.map(x => this.xBrushTimeScale(x));
+                this.setZoomAndBrush(newBrush, brush => brush.extent(newBrush));
+            }
+
+            if (this.autoScroll()) {
+                this.scrollToRight();
+            }
+
+            this.draw(workData, maxConcurrentIndexes, firstTime);
+
+            if (firstTime) {
+                firstTime = false;
+            }
+        };
+
+        this.liveViewClient(new liveIndexPerformanceWebSocketClient(this.activeDatabase(), onDataUpdate));
+    }
+
+    scrollToRight() {
+        const currentExtent = this.brush.extent() as [number, number];
+        const extentWidth = currentExtent[1] - currentExtent[0];
+
+        const existingBrushStart = currentExtent[0];
+
+        if (currentExtent[1] < this.totalWidth) {
+
+            const rightPadding = 100;
+            const desiredShift = rightPadding * extentWidth / this.totalWidth;
+
+            const desiredExtentStart = this.totalWidth + desiredShift - extentWidth;
+
+            const moveFunc = (startX: number) => {
+                this.brush.extent([startX, startX + extentWidth]);
+                this.brushContainer.call(this.brush);
+
+                this.onBrush();
+            };
+
+            this.brushContainer
+                .transition()
+                .duration(500)
+                .tween("side-effect", () => {
+                    const interpolator = d3.interpolate(existingBrushStart, desiredExtentStart);
+
+                    return (t) => {
+                        const currentStart = interpolator(t);
+                        moveFunc(currentStart);
+                    }
+                });
+        }
+    }
+
+    private cancelLiveView() {
+        if (!!this.liveViewClient()) {
+            this.liveViewClient().dispose();
+            this.liveViewClient(null);
+        }
+    }
+
+    private draw(workData: indexesWorkData[], maxConcurrentIndexes: number, resetFilteredIndexNames: boolean) {
+        this.hasAnyData(this.data.length > 0);
+
+        this.prepareBrushSection(workData, maxConcurrentIndexes);
+        this.prepareMainSection(resetFilteredIndexNames);
 
         const canvas = this.canvas.node() as HTMLCanvasElement;
         const context = canvas.getContext("2d");
 
-        context.clearRect(0, 0, this.totalWidth, metrics.brushSectionHeight);
+        context.clearRect(0, 0, this.totalWidth, indexPerformance.brushSectionHeight);
         context.drawImage(this.brushSection, 0, 0);
         this.drawMainSection();
     }
 
-    private prepareBrushSection() {
-        const timeRanges = this.extractTimeRanges(); 
-        const aggregatedRanges = new rangeAggregator(timeRanges);
-        const workData = aggregatedRanges.aggregate();
-        const maxConcurrentIndexes = aggregatedRanges.maxConcurrentIndexes;
+    private prepareTimeData(): [indexesWorkData[], number] {
+        let timeRanges = this.extractTimeRanges(); 
 
-        this.brushSection = document.createElement("canvas");
-        this.brushSection.width = this.totalWidth;
-        this.brushSection.height = metrics.brushSectionHeight;
+        let maxConcurrentIndexes: number;
+        let workData: indexesWorkData[];
 
-        this.gapFinder = new gapFinder(timeRanges, metrics.minGapSize);
+        if (timeRanges.length === 0) {
+            // no data - create fake scale
+            timeRanges = [[new Date(), new Date()]];
+            maxConcurrentIndexes = 1;
+            workData = [];
+        } else {
+            const aggregatedRanges = new rangeAggregator(timeRanges);
+            workData = aggregatedRanges.aggregate();
+            maxConcurrentIndexes = aggregatedRanges.maxConcurrentIndexes;
+        }
+
+        this.gapFinder = new gapFinder(timeRanges, indexPerformance.minGapSize);
         this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 0);
-        
+
+        return [workData, maxConcurrentIndexes];
+    }
+
+    private prepareBrushSection(workData: indexesWorkData[], maxConcurrentIndexes: number) {
+        this.brushSection = document.createElement("canvas");
+        this.brushSection.width = this.totalWidth + 1;
+        this.brushSection.height = indexPerformance.brushSectionHeight;
+
         this.yBrushValueScale = d3.scale.linear()
             .domain([0, maxConcurrentIndexes])
-            .range([0, metrics.brushSectionIndexesWorkHeight]); 
+            .range([0, indexPerformance.brushSectionIndexesWorkHeight]); 
 
         const context = this.brushSection.getContext("2d");
-        this.drawXaxis(context, this.xBrushTimeScale, metrics.brushSectionHeight);
 
-        context.strokeStyle = metrics.colors.axis;
-        context.strokeRect(0.5, 0.5, this.totalWidth - 1, metrics.brushSectionHeight - 1);
+        const ticks = this.getTicks(this.xBrushTimeScale);
+        this.drawXaxisTimeLines(context, ticks, 0, indexPerformance.brushSectionHeight);
+        this.drawXaxisTimeLabels(context, ticks, 5, 5);
 
-        context.fillStyle = metrics.colors.brushChartColor;  
-        context.strokeStyle = metrics.colors.brushChartStrokeColor; 
-        context.lineWidth = metrics.brushSectionLineWidth;
+        context.strokeStyle = indexPerformance.colors.axis;
+        context.strokeRect(0.5, 0.5, this.totalWidth, indexPerformance.brushSectionHeight - 1);
+
+        context.fillStyle = indexPerformance.colors.brushChartColor;  
+        context.strokeStyle = indexPerformance.colors.brushChartStrokeColor; 
+        context.lineWidth = indexPerformance.brushSectionLineWidth;
 
         // Draw area chart showing indexes work
         let x1: number, x2: number, y0: number = 0, y1: number;
@@ -416,13 +568,13 @@ class metrics extends viewModelBase {
             x1 = this.xBrushTimeScale(new Date(workData[i].pointInTime));
             y1 = Math.round(this.yBrushValueScale(workData[i].numberOfIndexesWorking)) + 0.5;
             x2 = this.xBrushTimeScale(new Date(workData[i + 1].pointInTime));
-            context.moveTo(x1, metrics.brushSectionHeight - y0);
-            context.lineTo(x1, metrics.brushSectionHeight - y1);
+            context.moveTo(x1, indexPerformance.brushSectionHeight - y0);
+            context.lineTo(x1, indexPerformance.brushSectionHeight - y1);
 
             // Don't want to draw line -or- rect at level 0
             if (y1 !== 0) {
-                context.lineTo(x2, metrics.brushSectionHeight - y1);
-                context.fillRect(x1, metrics.brushSectionHeight - y1, x2-x1, y1);
+                context.lineTo(x2, indexPerformance.brushSectionHeight - y1);
+                context.fillRect(x1, indexPerformance.brushSectionHeight - y1, x2-x1, y1);
             } 
 
             context.stroke();
@@ -431,8 +583,8 @@ class metrics extends viewModelBase {
 
         // Draw last line:
         context.beginPath();
-        context.moveTo(x2, metrics.brushSectionHeight - y1);
-        context.lineTo(x2, metrics.brushSectionHeight);
+        context.moveTo(x2, indexPerformance.brushSectionHeight - y1);
+        context.lineTo(x2, indexPerformance.brushSectionHeight);
         context.stroke(); 
 
         this.drawBrushGaps(context);
@@ -443,11 +595,11 @@ class metrics extends viewModelBase {
         for (let i = 0; i < this.gapFinder.gapsPositions.length; i++) {
             const gap = this.gapFinder.gapsPositions[i];
 
-            context.strokeStyle = metrics.colors.gaps;
+            context.strokeStyle = indexPerformance.colors.gaps;
 
             const gapX = this.xBrushTimeScale(gap.start);
             context.moveTo(gapX, 1);
-            context.lineTo(gapX, metrics.brushSectionHeight - 2);
+            context.lineTo(gapX, indexPerformance.brushSectionHeight - 2);
             context.stroke();
         }
     }
@@ -464,13 +616,21 @@ class metrics extends viewModelBase {
                 .call(this.brush)
                 .selectAll("rect")
                 .attr("y", 0)
-                .attr("height", metrics.brushSectionHeight - 1);
+                .attr("height", indexPerformance.brushSectionHeight - 1);
         }
     }
 
-    private prepareMainSection() {
-        this.indexNames(this.findIndexNames());
-        this.filteredIndexNames(this.indexNames());
+    private prepareMainSection(resetFilteredIndexNames: boolean) {
+        this.findAndSetIndexNames();
+
+        if (resetFilteredIndexNames) {
+            this.searchText("");
+        }
+        this.filterIndexes();
+    }
+
+    private findAndSetIndexNames() {
+        this.indexNames(_.uniq(this.data.map(x => x.IndexName)));
     }
 
     private fixCurrentOffset() {
@@ -478,7 +638,7 @@ class metrics extends viewModelBase {
     }
 
     private constructYScale() {
-        let currentOffset = metrics.axisHeight - this.currentYOffset;
+        let currentOffset = indexPerformance.axisHeight - this.currentYOffset;
         let domain = [] as Array<string>;
         let range = [] as Array<number>;
 
@@ -492,9 +652,9 @@ class metrics extends viewModelBase {
 
             const isOpened = _.includes(this.expandedTracks(), indexName);
 
-            const itemHeight = isOpened ? metrics.openedTrackHeight : metrics.closedTrackHeight;
+            const itemHeight = isOpened ? indexPerformance.openedTrackHeight : indexPerformance.closedTrackHeight;
 
-            currentOffset += itemHeight + metrics.trackMargin;
+            currentOffset += itemHeight + indexPerformance.trackMargin;
         }
 
         this.yScale = d3.scale.ordinal<string, number>()
@@ -506,83 +666,90 @@ class metrics extends viewModelBase {
         const expandedTracksCount = this.expandedTracks().length;
         const closedTracksCount = this.filteredIndexNames().length - expandedTracksCount;
 
-        const offset = metrics.axisHeight
-            + this.filteredIndexNames().length * metrics.trackMargin
-            + expandedTracksCount * metrics.openedTrackHeight
-            + closedTracksCount * metrics.closedTrackHeight;
+        const offset = indexPerformance.axisHeight
+            + this.filteredIndexNames().length * indexPerformance.trackMargin
+            + expandedTracksCount * indexPerformance.openedTrackHeight
+            + closedTracksCount * indexPerformance.closedTrackHeight;
 
-        const availableHeightForTracks = this.totalHeight - metrics.brushSectionHeight;
+        const availableHeightForTracks = this.totalHeight - indexPerformance.brushSectionHeight;
 
         const extraBottomMargin = 100;
 
         this.maxYOffset = Math.max(offset + extraBottomMargin - availableHeightForTracks, 0);
     }
 
-    private findIndexNames(): string[] {
-        const result = new Set<string>();
-
-        this.data.forEach(perfItem => {
-            result.add(perfItem.IndexName);
-        });
-
-        return Array.from(result);
-    }
-
-    private drawXaxis(context: CanvasRenderingContext2D, scale: d3.time.Scale<number, number>, height: number) {
-        context.save();
-
-        const step = 200;
-        const initialOffset = 100;
-
-        const ticks = d3.range(initialOffset, this.totalWidth - step, step)
+    private getTicks(scale: d3.time.Scale<number, number>) : Date[] {
+        return d3.range(indexPerformance.initialOffset, this.totalWidth - indexPerformance.step, indexPerformance.step)
             .map(y => scale.invert(y));
-
-        context.strokeStyle = metrics.colors.axis;
-        context.fillStyle = metrics.colors.axis;
-
-        context.beginPath();
-        context.setLineDash([4, 2]);
-
-        ticks.forEach((x, i) => {
-            context.moveTo(initialOffset + (i * step) + 0.5, 0);
-            context.lineTo(initialOffset + (i * step) + 0.5, height);
-        });
-        context.stroke();
-
-        context.beginPath();
-
-        context.textAlign = "left";
-        context.textBaseline = "top";
-        context.font = "10px Lato";
-        ticks.forEach((x, i) => {
-            // draw text with 5px left padding
-            context.fillText(this.xTickFormat(x), initialOffset + (i * step) + 5, 5);
-        });
-        context.restore();
     }
+
+    private drawXaxisTimeLines(context: CanvasRenderingContext2D, ticks: Date[], yStart: number, yEnd: number) {
+        try {
+            context.save();
+            context.beginPath();
+
+            context.setLineDash([4, 2]);
+            context.strokeStyle = indexPerformance.colors.axis;
+           
+            ticks.forEach((x, i) => {
+                context.moveTo(indexPerformance.initialOffset + (i * indexPerformance.step) + 0.5, yStart);
+                context.lineTo(indexPerformance.initialOffset + (i * indexPerformance.step) + 0.5, yEnd);
+            });
+
+            context.stroke();
+        }
+        finally {
+            context.restore();
+        }
+    }
+
+    private drawXaxisTimeLabels(context: CanvasRenderingContext2D, ticks: Date[], timePaddingLeft: number, timePaddingTop: number) {
+        try {
+            context.save();
+            context.beginPath();
+
+            context.textAlign = "left";
+            context.textBaseline = "top";
+            context.font = "10px Lato";
+            context.fillStyle = indexPerformance.colors.axis;
+           
+            ticks.forEach((x, i) => {
+                context.fillText(this.xTickFormat(x), indexPerformance.initialOffset + (i * indexPerformance.step) + timePaddingLeft, timePaddingTop);
+            });            
+        }
+        finally {
+            context.restore();
+        }
+    }   
 
     private onZoom() {
-        this.brush.extent(this.xNumericScale.domain() as [number, number]);
-        this.brushContainer
-            .call(this.brush);
+        this.autoScroll(false);
+        if (!this.brushAndZoomCallbacksDisabled) {
+            this.brush.extent(this.xNumericScale.domain() as [number, number]);
+            this.brushContainer
+                .call(this.brush);
 
-        this.drawMainSection();
+            this.drawMainSection();
+        }
     }
 
     private onBrush() {
-        this.xNumericScale.domain((this.brush.empty() ? this.xBrushNumericScale.domain() : this.brush.extent()) as [number, number]);
-        this.zoom.x(this.xNumericScale);
-        this.drawMainSection();
+        if (!this.brushAndZoomCallbacksDisabled) {
+            this.xNumericScale.domain((this.brush.empty() ? this.xBrushNumericScale.domain() : this.brush.extent()) as [number, number]);
+            this.zoom.x(this.xNumericScale);
+            this.drawMainSection();
+        }
     }
 
     private extractTimeRanges(): Array<[Date, Date]> {
         const result = [] as Array<[Date, Date]>;
         this.data.forEach(indexStats => {
             indexStats.Performance.forEach(perfStat => {
-                const start = this.isoParser.parse(perfStat.Started);
+                const perfStatsWithCache = perfStat as IndexingPerformanceStatsWithCache;
+                const start = perfStatsWithCache.StartedAsDate;
                 let end: Date;
                 if (perfStat.Completed) {
-                    end = this.isoParser.parse(perfStat.Completed);
+                    end = perfStatsWithCache.CompletedAsDate;
                 } else {
                     end = new Date(start.getTime() + perfStat.DurationInMilliseconds);
                 }
@@ -594,11 +761,12 @@ class metrics extends viewModelBase {
     }
 
     private drawMainSection() {
+        this.inProgressAnimator.reset();
         this.hitTest.reset();
         this.calcMaxYOffset();
         this.fixCurrentOffset();
         this.constructYScale();
-       
+
         const visibleTimeFrame = this.xNumericScale.domain().map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
 
         const xScale = this.gapFinder.trimmedScale(visibleTimeFrame, this.totalWidth, 0);
@@ -608,104 +776,160 @@ class metrics extends viewModelBase {
 
         context.save();
         try {
-            context.translate(0, metrics.brushSectionHeight);
-            context.clearRect(0, 0, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
+            context.translate(0, indexPerformance.brushSectionHeight);
+            context.clearRect(0, 0, this.totalWidth, this.totalHeight - indexPerformance.brushSectionHeight);
 
             this.drawTracksBackground(context, xScale);
 
-            if (xScale.domain().length) {
-                this.drawXaxis(context, xScale, this.totalHeight);
+            if (xScale.domain().length) {               
+                const ticks = this.getTicks(xScale);
+
+                context.save();
+                context.beginPath();
+                context.rect(0, indexPerformance.axisHeight - 3, this.totalWidth, this.totalHeight - indexPerformance.brushSectionHeight);
+                context.clip();
+                const timeYStart = this.yScale.range()[0] || indexPerformance.axisHeight;
+                this.drawXaxisTimeLines(context, ticks, timeYStart - 3, this.totalHeight);
+                context.restore();
+
+                this.drawXaxisTimeLabels(context, ticks, -20, 17);
             }
 
             context.save();
+            try {
+                context.beginPath();
+                context.rect(0, indexPerformance.axisHeight, this.totalWidth, this.totalHeight - indexPerformance.brushSectionHeight);
+                context.clip();
 
-            context.beginPath();
-            context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
-            context.clip();
-
-            this.drawTracks(context, xScale);
-            this.drawIndexNames(context);
-            this.drawGaps(context, xScale);
-
-            context.restore();
+                this.drawTracks(context, xScale, visibleTimeFrame);
+                this.drawIndexNames(context);
+                this.drawGaps(context, xScale);
+            } finally {
+                context.restore();
+            }
         } finally {
             context.restore();
         }
+
+        this.inProgressAnimator.animate();
     }
 
     private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
         context.save();
 
         context.beginPath();
-        context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
+        context.rect(0, indexPerformance.axisHeight, this.totalWidth, this.totalHeight - indexPerformance.brushSectionHeight);
         context.clip();
 
         this.data.forEach(perfStat => {
             const yStart = this.yScale(perfStat.IndexName);
 
-            perfStat.Performance.forEach(perf => {
-                const isOpened = _.includes(this.expandedTracks(), perfStat.IndexName);
+            const isOpened = _.includes(this.expandedTracks(), perfStat.IndexName);
 
-                context.fillStyle = metrics.colors.trackBackground;
-                context.fillRect(0, yStart, this.totalWidth, isOpened ? metrics.openedTrackHeight : metrics.closedTrackHeight);
-            });
+            context.beginPath();
+            context.fillStyle = indexPerformance.colors.trackBackground;
+            context.fillRect(0, yStart, this.totalWidth, isOpened ? indexPerformance.openedTrackHeight : indexPerformance.closedTrackHeight);
         });
 
         context.restore();
     }
 
-    private drawTracks(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
+    private drawTracks(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>, visibleTimeFrame: [Date, Date]) {
         if (xScale.domain().length === 0) {
             return;
         }
 
+        const visibleStartDateAsInt = visibleTimeFrame[0].getTime();
+        const visibleEndDateAsInt = visibleTimeFrame[1].getTime();
+
         const extentFunc = gapFinder.extentGeneratorForScaleWithGaps(xScale);
 
         this.data.forEach(perfStat => {
+            if (!_.includes(this.filteredIndexNames(), perfStat.IndexName)) {
+                return;
+            }
+
             const isOpened = _.includes(this.expandedTracks(), perfStat.IndexName);
             let yStart = this.yScale(perfStat.IndexName);
-            yStart += isOpened ? metrics.openedTrackPadding : metrics.closedTrackPadding;
+            yStart += isOpened ? indexPerformance.openedTrackPadding : indexPerformance.closedTrackPadding;
 
-            perfStat.Performance.forEach(perf => {
-                const startDate = this.isoParser.parse(perf.Started);
+            const performance = perfStat.Performance;
+            const perfLength = performance.length;
+            for (let perfIdx = 0; perfIdx < perfLength; perfIdx++) {
+                const perf = performance[perfIdx];
+                const startDate = (perf as IndexingPerformanceStatsWithCache).StartedAsDate;
                 const x1 = xScale(startDate);
 
-                const yOffset = isOpened ? metrics.trackHeight + metrics.stackPadding : 0;
+                const startDateAsInt = startDate.getTime();
 
+                const endDateAsInt = startDateAsInt + perf.DurationInMilliseconds;
+                if (endDateAsInt < visibleStartDateAsInt || visibleEndDateAsInt < startDateAsInt)
+                    continue;
+
+                const yOffset = isOpened ? indexPerformance.trackHeight + indexPerformance.stackPadding : 0;
                 this.drawStripes(context, [perf.Details], x1, yStart + (isOpened ? yOffset : 0), yOffset, extentFunc);
-            });
 
+                if (!perf.Completed) {
+                    this.findInProgressAction(context, perf, extentFunc, x1, yStart + (isOpened ? yOffset : 0), yOffset);
+                }
+            }
         });
     }
 
-    private getColorForOperation(operationName: string): string {
-        if (operationName.startsWith("Collection_")) {
-            return metrics.colors.tracks.Collection;
+    private findInProgressAction(context: CanvasRenderingContext2D, perf: Raven.Client.Documents.Indexes.IndexingPerformanceStats, extentFunc: (duration: number) => number,
+        xStart: number, yStart: number, yOffset: number): void {
+
+        const extractor = (perfs: Raven.Client.Documents.Indexes.IndexingPerformanceOperation[], xStart: number, yStart: number, yOffset: number) => {
+
+            let currentX = xStart;
+
+            perfs.forEach(op => {
+                const dx = extentFunc(op.DurationInMilliseconds);
+
+                this.inProgressAnimator.register([currentX, yStart, dx, indexPerformance.trackHeight]);
+
+                if (op.Operations.length > 0) {
+                    extractor(op.Operations, currentX, yStart + yOffset, yOffset);
+                }
+                currentX += dx;
+            });
         }
 
-        if (operationName in metrics.colors.tracks) {
-            return (metrics.colors.tracks as dictionary<string>)[operationName];
+        extractor([perf.Details], xStart, yStart, yOffset);
+    }
+
+    private getColorForOperation(operationName: string): string {
+        const { tracks } = indexPerformance.colors;
+        if (operationName in tracks) {
+            return (tracks as dictionary<string>)[operationName];
+        }
+
+        if (operationName.startsWith("Collection_")) {
+            return tracks.Collection;
         }
 
         throw new Error("Unable to find color for: " + operationName);
     }
 
-    private drawStripes(context: CanvasRenderingContext2D, operations: Array<Raven.Client.Data.Indexes.IndexingPerformanceOperation>, xStart: number, yStart: number,
+    private drawStripes(context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>, xStart: number, yStart: number,
         yOffset: number, extentFunc: (duration: number) => number) {
 
         let currentX = xStart;
-        for (let i = 0; i < operations.length; i++) {
+        const length = operations.length;
+        for (let i = 0; i < length; i++) {
             const op = operations[i];
             context.fillStyle = this.getColorForOperation(op.Name);
 
             const dx = extentFunc(op.DurationInMilliseconds);
 
-            context.fillRect(currentX, yStart, dx, metrics.trackHeight);
+            context.fillRect(currentX, yStart, dx, indexPerformance.trackHeight);
 
             if (yOffset !== 0) { // track is opened
-                this.hitTest.registerTrackItem(currentX, yStart, dx, metrics.trackHeight, op);
+                if (dx >= 0.8) { // don't show tooltip for very small items
+                    this.hitTest.registerTrackItem(currentX, yStart, dx, indexPerformance.trackHeight, op);
+                }
                 if (op.Name.startsWith("Collection_")) {
-                    context.fillStyle = metrics.colors.collectionNameTextColor;
+                    context.fillStyle = indexPerformance.colors.collectionNameTextColor;
                     const text = op.Name.substr("Collection_".length);
                     const textWidth = context.measureText(text).width
                     const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
@@ -732,39 +956,45 @@ class metrics extends viewModelBase {
             context.font = "12px Lato";
             const rectWidth = context.measureText(indexName).width + 2 * 3 /* left right padding */ + 8 /* arrow space */ + 4; /* padding between arrow and text */ 
 
-            context.fillStyle = metrics.colors.trackNameBg;
-            context.fillRect(2, yScale(indexName) + metrics.closedTrackPadding, rectWidth, metrics.trackHeight);
-            this.hitTest.registerIndexToggle(2, yScale(indexName), rectWidth, metrics.
-                trackHeight, indexName);
-            context.fillStyle = metrics.colors.trackNameFg;
+            context.fillStyle = indexPerformance.colors.trackNameBg;
+            context.fillRect(2, yScale(indexName) + indexPerformance.closedTrackPadding, rectWidth, indexPerformance.trackHeight);
+            this.hitTest.registerIndexToggle(2, yScale(indexName), rectWidth, indexPerformance.trackHeight, indexName);
+            context.fillStyle = indexPerformance.colors.trackNameFg;
             context.fillText(indexName, textStart + 0.5, yScale(indexName) + textShift);
 
             const isOpened = _.includes(this.expandedTracks(), indexName);
-            context.fillStyle = isOpened ? metrics.colors.openedTrackArrow : metrics.colors.closedTrackArrow;
+            context.fillStyle = isOpened ? indexPerformance.colors.openedTrackArrow : indexPerformance.colors.closedTrackArrow;
             graphHelper.drawArrow(context, 5, yScale(indexName) + 6, !isOpened);
         });
     }
 
     private drawGaps(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {      
+        // xScale.range has screen pixels locations of Activity periods
+        // xScale.domain has Start & End times of Activity periods
 
         const range = xScale.range();
-        context.strokeStyle = metrics.colors.gaps;
 
-        for (let i = 1; i < range.length; i += 2) { 
+        context.beginPath();
+        context.strokeStyle = indexPerformance.colors.gaps;       
+
+        for (let i = 1; i < range.length - 1; i += 2) { 
             const gapX = Math.floor(range[i]) + 0.5;
-
-            context.beginPath();
-            context.moveTo(gapX, metrics.axisHeight);
+            
+            context.moveTo(gapX, indexPerformance.axisHeight);
             context.lineTo(gapX, this.totalHeight);
-            context.stroke();
 
-            const indexToGapFinderPosition = (i - 1) / 2; 
-            const gapInfo = this.gapFinder.gapsPositions[indexToGapFinderPosition];
+            // Can't use xScale.invert here because there are Duplicate Values in xScale.range,
+            // Using direct array access to xScale.domain instead
+            const gapStartTime = xScale.domain()[i];
+            const gapInfo = this.gapFinder.getGapInfoByTime(gapStartTime);
+
             if (gapInfo) {
-                this.hitTest.registerGapItem(gapX - 5, metrics.axisHeight, 10, this.totalHeight,
-                    { DurationInMilliseconds: gapInfo.durationInMillis, StartTime: gapInfo.start.toLocaleTimeString() });
+                this.hitTest.registerGapItem(gapX - 5, indexPerformance.axisHeight, 10, this.totalHeight,
+                    { durationInMillis: gapInfo.durationInMillis, start: gapInfo.start });
             }
         }
+
+        context.stroke();
     }
 
     private onToggleIndex(indexName: string) {
@@ -786,72 +1016,94 @@ class metrics extends viewModelBase {
         this.expandedTracks([]);
         this.drawMainSection();
     }
-
-    /*
-     * Called by hitTest class on mouse move    
-     */
-    
-    private handleGapTooltip(element: IndexingPerformanceGap, x: number, y: number) {
+   
+    private handleGapTooltip(element: timeGapInfo, x: number, y: number) {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== element) {
-            const tooltipHtml = "Gap start time: " + (element).StartTime +
-                                  "<br />Gap duration: " + generalUtils.formatMillis((element).DurationInMilliseconds);       
+            const tooltipHtml = "Gap start time: " + (element).start.toLocaleTimeString() +
+                "<br/>Gap duration: " + generalUtils.formatMillis((element).durationInMillis);       
             this.handleTooltip(element, x, y, tooltipHtml);
         }
     } 
 
-    private handleTrackTooltip(element: Raven.Client.Data.Indexes.IndexingPerformanceOperation, x: number, y: number) {
+    private handleTrackTooltip(element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, x: number, y: number) {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== element) {
             let tooltipHtml = `${element.Name}<br/>Duration: ${generalUtils.formatMillis((element).DurationInMilliseconds)}`;
 
+            const opWithParent = element as IndexingPerformanceOperationWithParent;
+
+            if (opWithParent.Parent) {
+                const parentStats = opWithParent.Parent;
+                let countsDetails: string;
+                countsDetails = `<br/>*** Entries details ***<br/>`;
+                countsDetails += `Input Count: ${parentStats.InputCount.toLocaleString()}<br/>`;
+                countsDetails += `Output Count: ${parentStats.OutputCount.toLocaleString()}<br/>`;
+                countsDetails += `Failed Count: ${parentStats.FailedCount.toLocaleString()}<br/>`;
+                countsDetails += `Success Count: ${parentStats.SuccessCount.toLocaleString()}<br/>`;
+
+                tooltipHtml += countsDetails;
+            }
+
             if (element.CommitDetails) {   
                 let commitDetails: string;
                 commitDetails = `<br/>*** Commit details ***<br/>`;
-                commitDetails += `Modified pages: ${element.CommitDetails.NumberOfModifiedPages}<br/>`;
-                commitDetails += `Pages written to disk: ${element.CommitDetails.NumberOfPagesWrittenToDisk}`;
+                commitDetails += `Modified pages: ${element.CommitDetails.NumberOfModifiedPages.toLocaleString()}<br/>`;
+                commitDetails += `Pages written to disk: ${element.CommitDetails.NumberOf4KbsWrittenToDisk.toLocaleString()}`;
                 tooltipHtml += commitDetails;
             }
             if (element.MapDetails) {
                 let mapDetails: string;
                 mapDetails = `<br/>*** Map details ***<br/>`;
-                mapDetails += `Allocation budget: ${element.MapDetails.AllocationBudget}<br/>`;
-                mapDetails += `Batch complete reason: ${element.MapDetails.BatchCompleteReason}<br/>`;
-                mapDetails += `Currently allocated: ${element.MapDetails.CurrentlyAllocated}<br/>`;
-                mapDetails += `Process private memory: ${element.MapDetails.ProcessPrivateMemory}<br/>`;
-                mapDetails += `Process working set: ${element.MapDetails.ProcessWorkingSet}`;
+                mapDetails += `Allocation budget: ${generalUtils.formatBytesToSize(element.MapDetails.AllocationBudget)}<br/>`;
+                mapDetails += `Batch status: ${element.MapDetails.BatchCompleteReason || 'In progress'}<br/>`;
+                mapDetails += `Currently allocated: ${generalUtils.formatBytesToSize(element.MapDetails.CurrentlyAllocated)} <br/>`;
+                mapDetails += `Process private memory: ${generalUtils.formatBytesToSize(element.MapDetails.ProcessPrivateMemory)}<br/>`;
+                mapDetails += `Process working set: ${generalUtils.formatBytesToSize(element.MapDetails.ProcessWorkingSet)}`;
                 tooltipHtml += mapDetails;
             }
             if (element.ReduceDetails) {
                 let reduceDetails: string;
                 reduceDetails = `<br/>*** Reduce details ***<br/>`;
-                reduceDetails += `Compressed leaves: ${element.ReduceDetails.NumberOfCompressedLeafs}<br/>`;
-                reduceDetails += `Modified branches: ${element.ReduceDetails.NumberOfModifiedBranches}<br/>`;
-                reduceDetails += `Modified leaves: ${element.ReduceDetails.NumberOfModifiedLeafs}`;
+                reduceDetails += `Compressed leaves: ${element.ReduceDetails.NumberOfCompressedLeafs.toLocaleString()}<br/>`;
+                reduceDetails += `Modified branches: ${element.ReduceDetails.NumberOfModifiedBranches.toLocaleString()}<br/>`;
+                reduceDetails += `Modified leaves: ${element.ReduceDetails.NumberOfModifiedLeafs.toLocaleString()}`;
                 tooltipHtml += reduceDetails;
             }           
 
             this.handleTooltip(element, x, y, tooltipHtml);
         }
     }
-
-    private handleTooltip(element: Raven.Client.Data.Indexes.IndexingPerformanceOperation | IndexingPerformanceGap, x: number, y: number, tooltipHtml: string) {
+    
+    private handleTooltip(element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation | timeGapInfo, x: number, y: number, tooltipHtml: string) {
         if (element && !this.dialogVisible) {
-            const tooltipWidth = $("#indexingPerformance .tooltip").width() + 30;
-            x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
+            const canvas = this.canvas.node() as HTMLCanvasElement;
+            const context = canvas.getContext("2d");
+            context.font = this.tooltip.style("font");
 
-            this.tooltip.transition()
-                .duration(200)                                                          
-                .style("opacity", 1)              
+            const longestLine = generalUtils.findLongestLine(tooltipHtml); 
+            const tooltipWidth = context.measureText(longestLine).width + 60;
+
+            const numberOfLines = generalUtils.findNumberOfLines(tooltipHtml);
+            const tooltipHeight = numberOfLines * 30 + 60;
+
+            x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
+            y = Math.min(y, Math.max(this.totalHeight - tooltipHeight, 0));
+
+            this.tooltip
                 .style("left", (x + 10) + "px")
                 .style("top", (y + 10) + "px");
 
             this.tooltip
+                .transition()
+                .duration(250)
+                .style("opacity", 1);
+
+            this.tooltip
                 .html(tooltipHtml)
                 .datum(element);
-
         } else {
             this.hideTooltip();
         }
@@ -859,7 +1111,7 @@ class metrics extends viewModelBase {
 
     private hideTooltip() {
         this.tooltip.transition()
-            .duration(200)
+            .duration(250)
             .style("opacity", 0);
          
         this.tooltip.datum(null);      
@@ -886,31 +1138,65 @@ class metrics extends viewModelBase {
         this.importFileName(fileInput.files[0].name);
 
         // Must clear the filePicker element value so that user will be able to import the -same- file after closing the imported view...
-        let $input = $("#importFilePicker");
+        const $input = $("#importFilePicker");
         $input.val(null);
     }
 
     private dataImported(result: string) {
-        this.data = JSON.parse(result);
-        this.expandedTracks([]);
-        this.draw();
-        this.isImport(true);
-        this.searchText("");
+        this.cancelLiveView();
+
+        try {            
+            const importedData: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = JSON.parse(result);
+
+            // Data validation
+            if (!_.isArray(importedData)) {
+                messagePublisher.reportError("Invalid indexing performance file format", undefined, undefined);
+            }
+            else {                                
+                this.data = importedData;
+                this.fillCache();
+                this.resetGraphData();
+                const [workData, maxConcurrentIndexes] = this.prepareTimeData();
+                this.draw(workData, maxConcurrentIndexes, true);
+                this.isImport(true);
+            }         
+        }
+        catch (e) {
+            messagePublisher.reportError("Failed to parse json data", undefined, undefined);
+        }              
     }
 
-    closeImport() {      
-        this.getIndexesPerformanceData().done(() => {
-            this.expandedTracks([]);
-            this.draw();
-            this.isImport(false);
-            this.searchText("");
+    private fillCache() {
+        this.data.forEach(indexStats => {
+            indexStats.Performance.forEach(perfStat => {
+                liveIndexPerformanceWebSocketClient.fillCache(perfStat);
+            });
         });
     }
 
-    private getIndexesPerformanceData(): JQueryPromise<Raven.Client.Data.Indexes.IndexPerformanceStats[]> {
-        return new getIndexesPerformance(this.activeDatabase())
-            .execute()
-            .done(result => this.data = result);
+    closeImport() {
+        this.isImport(false);
+        this.resetGraphData();
+        this.enableLiveView();
+    }
+
+    private resetGraphData() {
+        this.setZoomAndBrush([0, this.totalWidth], brush => brush.clear());
+
+        this.expandedTracks([]);
+        this.searchText("");
+    }
+
+    private setZoomAndBrush(scale: [number, number], brushAction: (brush: d3.svg.Brush<any>) => void) {
+        this.brushAndZoomCallbacksDisabled = true;
+
+        this.xNumericScale.domain(scale);
+        this.zoom.x(this.xNumericScale);
+
+        brushAction(this.brush);
+        this.brushContainer.call(this.brush);
+
+        this.brushAndZoomCallbacksDisabled = false;
     }
 
     exportAsJson() {  
@@ -918,15 +1204,20 @@ class metrics extends viewModelBase {
 
         if (this.isImport()) {           
             exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));                    
-        }
-        else {
+        } else {
             exportFileName = `indexPerf of ${this.activeDatabase().name} ${moment().format("YYYY-MM-DD HH-mm")}`; 
         }
 
-        fileDownloader.downloadAsJson(this.data, exportFileName + ".json", exportFileName);
+        const keysToIgnore: Array<keyof IndexingPerformanceStatsWithCache | keyof IndexingPerformanceOperationWithParent> = ["StartedAsDate", "CompletedAsDate", "Parent"];
+        fileDownloader.downloadAsJson(this.data, exportFileName + ".json", exportFileName, (key, value) => {
+            if (_.includes(keysToIgnore, key)) {
+                return undefined;
+            }
+            return value;
+        });
     }
 
 }
 
-export = metrics; 
+export = indexPerformance; 
  

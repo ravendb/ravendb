@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Abstractions.Exceptions;
+using Raven.Client.Documents.Exceptions.Indexes;
+using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
@@ -31,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var transformerName = GetStringQueryString("transformer", required: false);
             var start = GetStart();
-            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
+            var pageSize = GetPageSize(int.MaxValue);
 
             Transformer transformer = null;
             if (string.IsNullOrEmpty(transformerName) == false)
@@ -57,9 +56,9 @@ namespace Raven.Server.Documents.Handlers
                         HttpContext.Request.Query["startsWith"],
                         HttpContext.Request.Query["matches"],
                         HttpContext.Request.Query["excludes"],
+                        HttpContext.Request.Query["startAfter"],
                         start,
-                        pageSize
-                    );
+                        pageSize);
                 }
                 else // recent docs
                 {
@@ -123,7 +122,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         await runner.ExecuteStreamQuery(indexName, query, HttpContext.Response, writer, token).ConfigureAwait(false);
                     }
-                    catch (IndexDoesNotExistsException)
+                    catch (IndexDoesNotExistException)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     }

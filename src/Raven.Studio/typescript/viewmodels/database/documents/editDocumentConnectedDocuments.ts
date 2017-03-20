@@ -10,13 +10,11 @@ import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDo
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 
 import appUrl = require("common/appUrl");
-import pagedResultSet = require("common/pagedResultSet");
-import pagedResult = require("widgets/virtualGrid/pagedResult");
-import virtualGrid = require("widgets/virtualGrid/virtualGrid");
-import virtualColumn = require("widgets/virtualGrid/virtualColumn");
-import hyperlinkColumn = require("widgets/virtualGrid/hyperlinkColumn");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import documentHelpers = require("common/helpers/database/documentHelpers");
 import starredDocumentsStorage = require("common/storage/starredDocumentsStorage");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 
 class connectedDocuments {
 
@@ -25,7 +23,7 @@ class connectedDocuments {
     db: KnockoutObservable<database>;
     searchInput = ko.observable<string>("");
     columns: virtualColumn[] = [
-        new hyperlinkColumn("id", "href", "", "100%")
+        new hyperlinkColumn<connectedDocument>(x => x.id, x => x.href, "", "100%")
     ];
     currentDocumentIsStarred = ko.observable<boolean>(false);
     currentTab = ko.observable<string>(connectedDocuments.connectedDocsTabs.related);
@@ -35,6 +33,8 @@ class connectedDocuments {
     isRecentActive = ko.pureComputed(() => this.currentTab() === connectedDocuments.connectedDocsTabs.recent);
     isStarredActive = ko.pureComputed(() => this.currentTab() === connectedDocuments.connectedDocsTabs.starred);
 
+    gridController = ko.observable<virtualGridController<connectedDocument>>();
+
     static connectedDocsTabs = {
         related: "related",
         collection: "collection",
@@ -43,13 +43,20 @@ class connectedDocuments {
     };
 
     constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, loadDocument: (docId: string) => void) {
-
         _.bindAll(this, "toggleStar" as keyof this);
 
         this.document = document;
         this.db = db;
         this.document.subscribe((doc) => this.onDocumentLoaded(doc));
         this.loadDocumentAction = loadDocument;
+    }
+
+    compositionComplete() {
+        const grid = this.gridController();
+        grid.headerVisible(false);
+        grid.init((s, t) => this.fetchCurrentTabDocs(s, t), () => this.columns);
+
+        this.currentTab.subscribe(() => this.gridController().reset());
     }
 
     fetchCurrentTabDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
@@ -91,8 +98,8 @@ class connectedDocuments {
         }
 
         // Fetch collection size.
-        // Why? Because calling collection.fetchDocuments returns a pagedResultSet with .totalResultCount = 0. :-(
-        const collectionName = doc.getEntityName();
+        // Why? Because calling collection.fetchDocuments returns a pagedResult with .totalResultCount = 0. :-(
+        const collectionName = doc.getCollection();
         const collectionSizeTask = new getCollectionsStatsCommand(this.db())
             .execute()
             .then((stats: collectionsStats) => stats.getCollectionCount(collectionName));
@@ -100,14 +107,14 @@ class connectedDocuments {
         // Fetch the chunk of documents.        
         const newCollection = new collection(collectionName, this.db());
         const fetchDocsTask = newCollection.fetchDocuments(skip, take)
-            .then((result: pagedResultSet<any>) => {
+            .then((result: pagedResult<any>) => {
                 // Convert the items from document to connectedDocument.
                 result.items = result.items.map(doc => this.documentToConnectedDoc(doc));
                 return result;
             });
 
         return $.when<any>(collectionSizeTask, fetchDocsTask)
-            .then((collectionSize: number, docsResult: pagedResultSet<connectedDocument>) => {
+            .then((collectionSize: number, docsResult: pagedResult<connectedDocument>) => {
                 docsResult.totalResultCount = collectionSize;
                 return docsResult;
             });

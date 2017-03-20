@@ -9,7 +9,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Transformers;
 using SlowTests.Utils;
 using Xunit;
 

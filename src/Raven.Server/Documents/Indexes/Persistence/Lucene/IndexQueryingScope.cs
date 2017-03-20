@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 
 using Lucene.Net.Search;
-
-using Raven.Abstractions.Data;
-using Raven.Client.Data.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 
@@ -67,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     {
                         var scoreDoc = search.ScoreDocs[i];
                         var document = _searcher.Doc(scoreDoc.Doc);
-                        var alreadyPagedKey = document.Get(Constants.Indexing.Fields.DocumentIdFieldName);
+                        var alreadyPagedKey = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
 
                         _alreadySeenDocumentKeysInPreviousPage.Add(alreadyPagedKey);
                     }
@@ -77,7 +76,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     // that's not a sorted query so we need just to ensure that we won't return the last item of the previous page
                     var scoreDoc = search.ScoreDocs[_query.Start - 1];
                     var document = _searcher.Doc(scoreDoc.Doc);
-                    var alreadyPagedKey = document.Get(Constants.Indexing.Fields.DocumentIdFieldName);
+                    var alreadyPagedKey = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
 
                     _alreadySeenDocumentKeysInPreviousPage.Add(alreadyPagedKey);
                 }

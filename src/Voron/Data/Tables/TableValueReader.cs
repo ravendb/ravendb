@@ -9,11 +9,11 @@ using Sparrow.Json;
 
 namespace Voron.Data.Tables
 {
-    public unsafe class TableValueReader
+    public unsafe struct TableValueReader
     {
         private readonly byte* _dataPtr;
         private readonly int _dataSize;
-        private readonly int _elementSize = 1;
+        private readonly int _elementSize;
 
         public readonly long Id;
 
@@ -27,10 +27,13 @@ namespace Voron.Data.Tables
             Id = id;
             Pointer = ptr;
             Size = size;
-            if (size > byte.MaxValue)
-                _elementSize = 2;
+
             if (size > ushort.MaxValue)
                 _elementSize = 4;
+            else if (size > byte.MaxValue)
+                _elementSize = 2;
+            else
+                _elementSize = 1;
 
             byte offset;
             Count = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
@@ -49,7 +52,7 @@ namespace Voron.Data.Tables
             var hasNext = index + 1 < Count;
 
             if ((index < 0) || (index >= Count))
-                throw new ArgumentOutOfRangeException(nameof(index));
+                ThrowIndexOutOfRange();
 
             int position;
             int nextPos;
@@ -69,11 +72,23 @@ namespace Voron.Data.Tables
                     nextPos = hasNext ? ((int*) _dataPtr)[index + 1] : _dataSize;
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(_elementSize), "Unknown element size " + _elementSize);
+                    ThrowInvalidElementSize();
+                    goto case 1; // never hit
             }
 
             size = nextPos - position;
             return _dataPtr + position;
+        }
+
+        private void ThrowInvalidElementSize()
+        {
+            throw new ArgumentOutOfRangeException(nameof(_elementSize), "Unknown element size " + _elementSize);
+        }
+
+        private static void ThrowIndexOutOfRange()
+        {
+            // ReSharper disable once NotResolvedInText
+            throw new ArgumentOutOfRangeException("index");
         }
     }
 }

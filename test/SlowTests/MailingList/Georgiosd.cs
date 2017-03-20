@@ -1,10 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -25,7 +24,7 @@ namespace SlowTests.MailingList
 
                     for (int i = 0; i < 10; ++i)
                     {
-                        session.Store(new Org { Id = i + 1, Sectors = new List<Sector> { i % 2 == 0 ? sector1 : sector2 } });
+                        session.Store(new Org { Id = (i + 1).ToString(), Sectors = new List<Sector> { i % 2 == 0 ? sector1 : sector2 } });
                     }
 
                     session.Store(new LocalFacet());
@@ -59,7 +58,7 @@ namespace SlowTests.MailingList
 
         private class Org
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public IList<Sector> Sectors { get; set; }
         }
 

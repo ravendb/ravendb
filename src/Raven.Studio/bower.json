@@ -32,7 +32,9 @@
     "knockout-validation": "ko-validation#^2.0.3",
     "google-analytics": "https://www.google-analytics.com/analytics.js",
     "lodash": "^4.17.2",
-    "toastr": "^2.1.3"
+    "toastr": "^2.1.3",
+    "prism": "^1.6.0",
+    "Sortable": "1.4.2"
   },
   "resolutions": {
     "jquery": "^2.2.0",

@@ -1,13 +1,12 @@
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Linq.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq.Indexing;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiMap
 {
-    public class MultiMapWithNullableEnum : RavenNewTestBase
+    public class MultiMapWithNullableEnum : RavenTestBase
     {
         [Fact]
         public void Can_create_index()

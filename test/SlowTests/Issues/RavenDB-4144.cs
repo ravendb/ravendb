@@ -6,7 +6,7 @@
 
 using System.Collections.Generic;
 using FastTests;
-using Raven.Client.Data;
+using Raven.Client.Documents.Operations;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -29,13 +29,13 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
+                store.Operations.Send(new PatchOperation(foo.Id, null, new PatchRequest
                 {
                     Script = @"var list = ['my', 'list']; 
                                 for(var x in list){
                                     this.List[x] = list[x];
                                 }"
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -61,11 +61,11 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
+                store.Operations.Send(new PatchOperation(foo.Id, null, new PatchRequest
                 {
                     Script = @"var test = ['My', 'Array'];
                                this.Name = test.RemoveWhere;"
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -91,11 +91,11 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
+                store.Operations.Send(new PatchOperation(foo.Id, null, new PatchRequest
                 {
                     Script = @"var test = ['My', 'Array'];
                                this.Name = function() {}"
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -121,13 +121,13 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
+                store.Operations.Send(new PatchOperation(foo.Id, null, new PatchRequest
                 {
                     Script = @"function myConverter(str) {
                                   return str + ' whoeeehoeee'
                                }
                                this.Name = myConverter;"
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -153,13 +153,13 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
+                store.Operations.Send(new PatchOperation(foo.Id, null, new PatchRequest
                 {
                     Script = @"function myConverter(str) {
                                   return str + ' whoeeehoeee'
                                }
                                this.Name = myConverter(this.Name);"
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {

@@ -1,7 +1,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -43,7 +43,7 @@ namespace SlowTests.MailingList
 
         private class Album
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Title { get; set; }
             public decimal Price { get; set; }
         }

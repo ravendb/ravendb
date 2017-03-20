@@ -1,10 +1,10 @@
 ﻿using System.Linq;
-using Raven.NewClient.Client.Data;
+using Raven.Client.Documents.Queries;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries
 {
-    public class DocumentQueryWithDefaultOperator : RavenNewTestBase
+    public class DocumentQueryWithDefaultOperator : RavenTestBase
     {
         private class Person
         {

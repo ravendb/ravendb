@@ -1,14 +1,15 @@
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class WithStringReverse : RavenNewTestBase
+    public class WithStringReverse : RavenTestBase
     {
         private class User
         {
@@ -31,11 +32,12 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("StringReverseIndex",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Maps = { "from doc in docs select new { doc.Name, ReverseName = doc.Name.Reverse()}" }
-                    }));
+                        Maps = { "from doc in docs select new { doc.Name, ReverseName = doc.Name.Reverse()}" },
+                        Name = "StringReverseIndex"
+                    }}));
 
                 using (IDocumentSession documentSession = store.OpenSession())
                 {
@@ -71,11 +73,12 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("StringReverseIndex",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Maps = { "from doc in docs select new { doc.Name, ReverseName = doc.Name.Reverse()}" }
-                    }));
+                        Maps = { "from doc in docs select new { doc.Name, ReverseName = doc.Name.Reverse()}" },
+                        Name = "StringReverseIndex"
+                    }}));
 
                 using (IDocumentSession documentSession = store.OpenSession())
                 {

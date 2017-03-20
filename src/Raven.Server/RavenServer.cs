@@ -5,22 +5,24 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
-using Raven.Abstractions.Data;
-using Raven.Client.Data;
-using Raven.Client.Json;
-using Raven.NewClient.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Database;
+using Raven.Client.Json.Converters;
+using Raven.Client.Server.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Attributes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -30,6 +32,8 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using AccessModes = Raven.Client.Server.Operations.ApiKeys.AccessModes;
+using AccessToken = Raven.Server.Web.Authentication.AccessToken;
 
 namespace Raven.Server
 {
@@ -41,7 +45,7 @@ namespace Raven.Server
 
         public ConcurrentDictionary<string, AccessToken> AccessTokensById = new ConcurrentDictionary<string, AccessToken>();
         public ConcurrentDictionary<string, AccessToken> AccessTokensByName = new ConcurrentDictionary<string, AccessToken>();
-        
+
         public Timer ServerMaintenanceTimer;
 
         public readonly ServerStore ServerStore;
@@ -182,9 +186,9 @@ namespace Raven.Server
                     _logger.Info("Could not setup license check.", e);
 
                 var alert = AlertRaised.Create("License manager initialization error",
-                    "Could not intitalize the license manager", 
+                    "Could not intitalize the license manager",
                     AlertType.LicenseManager_InitializationError,
-                    NotificationSeverity.Info, 
+                    NotificationSeverity.Info,
                     details: new ExceptionDetails(e));
 
                 ServerStore.NotificationCenter.Add(alert);
@@ -194,6 +198,30 @@ namespace Raven.Server
         public string[] WebUrls { get; set; }
 
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
+
+        internal readonly Lazy<CertificateHolder> ServerCertificate = new Lazy<CertificateHolder>(GenerateSelfSignedCertificate);
+
+        public class CertificateHolder
+        {
+            public string CertificateForclients;
+            public X509Certificate2 Certificate;
+        }
+
+        private static CertificateHolder GenerateSelfSignedCertificate()
+        {
+            //TODO: remove this when https://github.com/dotnet/coreclr/issues/8148 is fixed
+            var @var = Environment.GetEnvironmentVariable("COMPlus_ReadyToRunExcludeList");
+            if (@var != "System.Security.Cryptography.X509Certificates")
+            {
+                throw new ArgumentException("Missing environment variable $env:COMPlus_ReadyToRunExcludeList=\"System.Security.Cryptography.X509Certificates\" setting, can't use SslStream on dotnet core 1.1.0");
+            }
+            var generateSelfSignedCertificate = CertificateUtils.CreateSelfSignedCertificate("RavenDB", "Hibernating Rhinos");
+            return new CertificateHolder
+            {
+                Certificate = generateSelfSignedCertificate,
+                CertificateForclients = Convert.ToBase64String(generateSelfSignedCertificate.Export(X509ContentType.Cert))
+            };
+        }
 
         public class TcpListenerStatus
         {
@@ -241,7 +269,7 @@ namespace Raven.Server
                     {
                         throw new IOException("Unable to start tcp listener on " + ipAddress + " on port " + port, ex);
                     }
-                    var listenerLocalEndpoint = (IPEndPoint) listener.LocalEndpoint;
+                    var listenerLocalEndpoint = (IPEndPoint)listener.LocalEndpoint;
                     status.Port = listenerLocalEndpoint.Port;
 
                     for (int i = 0; i < 4; i++)
@@ -262,7 +290,7 @@ namespace Raven.Server
                 {
                     tcpListener.Stop();
                 }
-               
+
                 throw;
             }
         }
@@ -303,7 +331,7 @@ namespace Raven.Server
                     }
             }
         }
-        
+
         private void ListenToNewTcpConnection(TcpListener listener)
         {
             Task.Run(async () =>
@@ -333,7 +361,8 @@ namespace Raven.Server
                     tcpClient.NoDelay = true;
                     tcpClient.ReceiveBufferSize = 32 * 1024;
                     tcpClient.SendBufferSize = 4096;
-                    var stream = tcpClient.GetStream();
+                    Stream stream = tcpClient.GetStream();
+                    stream = await AuthenticateAsServerIfSslNeeded(stream);
                     tcp = new TcpConnectionOptions
                     {
                         ContextPool = _tcpContextPool,
@@ -349,9 +378,9 @@ namespace Raven.Server
                         using (_tcpContextPool.AllocateOperationContext(out context))
                         {
                             using (var headerJson = await context.ParseToMemoryAsync(
-                                stream, 
+                                stream,
                                 "tcp-header",
-                                BlittableJsonDocumentBuilder.UsageMode.None, 
+                                BlittableJsonDocumentBuilder.UsageMode.None,
                                 tcp.PinnedBuffer
                                 ))
                             {
@@ -360,6 +389,17 @@ namespace Raven.Server
                                 {
                                     _logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName} from {tcpClient.Client.RemoteEndPoint}");
                                 }
+                            }
+                            if (TryAuthorize(context, Configuration, tcp.Stream, header) == false)
+                            {
+                                string msg =
+                                    $"New {header.Operation} TCP connection to {header.DatabaseName} from {tcpClient.Client.RemoteEndPoint}" +
+                                    $" is not authorized to access {header.DatabaseName}";
+                                if (_logger.IsInfoEnabled)
+                                {
+                                    _logger.Info(msg);
+                                }
+                                throw new UnauthorizedAccessException(msg);
                             }
                         }
 
@@ -381,6 +421,7 @@ namespace Raven.Server
                         }
 
                         tcp.DocumentDatabase = await databaseLoadingTask;
+
                         tcp.DocumentDatabase.RunningTcpConnections.Add(tcp);
 
                         switch (header.Operation)
@@ -400,7 +441,7 @@ namespace Raven.Server
                                 responder.AcceptIncomingConnectionAndRespond(tcp);
                                 break;
                             default:
-                                throw new InvalidOperationException("Unknown operation for tcp " + header.Operation);
+                                throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);
                         }
 
                         //since the responsers to TCP connections mostly continue to run
@@ -445,6 +486,86 @@ namespace Raven.Server
             });
         }
 
+        private async Task<Stream> AuthenticateAsServerIfSslNeeded(Stream stream)
+        {
+            if (Configuration.Encryption.UseSsl)
+            {
+                SslStream sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) =>
+                {
+                    return errors == SslPolicyErrors.None ||
+                           // it is fine that the client doesn't have a cert, we just care that they
+                           // are connecting to us securely
+                           errors == SslPolicyErrors.RemoteCertificateNotAvailable;
+                });
+                stream = sslStream;
+                await sslStream.AuthenticateAsServerAsync(ServerCertificate.Value.Certificate, true, SslProtocols.Tls12, false);
+            }
+
+            return stream;
+        }
+
+        private bool TryAuthorize(JsonOperationContext context, RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header)
+        {
+            using (var writer = new BlittableJsonTextWriter(context, stream))
+            {
+                if (configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.Admin)
+                {
+                    ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));
+                    return true;
+                }
+
+                if (header.AuthorizationToken == null)
+                {
+                    ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.AuthorizationTokenRequired));
+                }
+                AccessToken accessToken;
+                if (AccessTokensById.TryGetValue(header.AuthorizationToken, out accessToken) == false)
+                {
+                    ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.BadAuthorizationToken));
+                    return false;
+                }
+                if (accessToken.IsExpired)
+                {
+                    ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.ExpiredAuthorizationToken));
+                    return false;
+                }
+                AccessModes mode;
+                var hasValue =
+                    accessToken.AuthorizedDatabases.TryGetValue(header.DatabaseName, out mode) ||
+                    accessToken.AuthorizedDatabases.TryGetValue("*", out mode);
+
+                if (hasValue == false)
+                    mode = AccessModes.None;
+
+                switch (mode)
+                {
+                    case AccessModes.None:
+                        ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden));
+                        return false;
+                    case AccessModes.ReadOnly:
+                        ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.ForbiddenReadOnly));
+                        return false;
+                    case AccessModes.ReadWrite:
+                    case AccessModes.Admin:
+                        ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));
+                        return true;
+                    default:
+                        throw new ArgumentOutOfRangeException("Unknown access mode: " + mode);
+                }
+            }
+
+        }
+
+
+        private static void ReplyStatus(BlittableJsonTextWriter writer, string status)
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Status));
+            writer.WriteString(status);
+            writer.WriteEndObject();
+            writer.Flush();
+        }
+
         private static void ThrowTimeoutOnDatabaseLoad(TcpConnectionHeaderMessage header)
         {
             throw new DatabaseLoadTimeoutException($"Timeout when loading database {header.DatabaseName}, try again later");
@@ -464,35 +585,41 @@ namespace Raven.Server
         {
             if (Disposed)
                 return;
-            Disposed = true;
-            Metrics?.Dispose();
-            _webHost?.Dispose();
-            if (_tcpListenerTask != null)
+            lock (this)
             {
-                if (_tcpListenerTask.IsCompleted)
+                if (Disposed)
+                    return;
+
+                Disposed = true;
+                Metrics?.Dispose();
+                _webHost?.Dispose();
+                if (_tcpListenerTask != null)
                 {
-                    CloseTcpListeners(_tcpListenerTask.Result.Listeners);
-                }
-                else
-                {
-                    if (_tcpListenerTask.Exception != null)
+                    if (_tcpListenerTask.IsCompleted)
                     {
-                        if(_tcpLogger.IsInfoEnabled)
-                            _tcpLogger.Info("Cannot dispose of tcp server because it has errored", _tcpListenerTask.Exception);
+                        CloseTcpListeners(_tcpListenerTask.Result.Listeners);
                     }
                     else
                     {
-                        _tcpListenerTask.ContinueWith(t =>
+                        if (_tcpListenerTask.Exception != null)
                         {
-                            CloseTcpListeners(t.Result.Listeners);
-                        }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                            if (_tcpLogger.IsInfoEnabled)
+                                _tcpLogger.Info("Cannot dispose of tcp server because it has errored", _tcpListenerTask.Exception);
+                        }
+                        else
+                        {
+                            _tcpListenerTask.ContinueWith(t =>
+                            {
+                                CloseTcpListeners(t.Result.Listeners);
+                            }, TaskContinuationOptions.OnlyOnRanToCompletion);
+                        }
                     }
                 }
-            }
 
-            ServerStore?.Dispose();
-            ServerMaintenanceTimer?.Dispose();
-            _latestVersionCheck?.Dispose();
+                ServerStore?.Dispose();
+                ServerMaintenanceTimer?.Dispose();
+                _latestVersionCheck?.Dispose();
+            }
         }
 
         private void CloseTcpListeners(List<TcpListener> listeners)
@@ -509,7 +636,7 @@ namespace Raven.Server
                         _tcpLogger.Info("Failed to properly dispose the tcp listener", e);
                 }
             }
-            
+
         }
     }
 }

@@ -8,13 +8,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class In : RavenNewTestBase
+    public class In : RavenTestBase
     {
         private class Document
         {

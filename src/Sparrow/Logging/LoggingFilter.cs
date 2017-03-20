@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Raven.Abstractions.Extensions;
+using Sparrow.Extensions;
 
 namespace Sparrow.Logging
 {
@@ -107,7 +107,7 @@ namespace Sparrow.Logging
             return false;
         }
 
-        private string GetField(LogEntryFields field, LogEntry entry)
+        private string GetField(LogEntryFields field, ref LogEntry entry)
         {
             switch (field)
             {
@@ -126,12 +126,13 @@ namespace Sparrow.Logging
             }
         }
 
-        public bool Forward(LogEntry entry)
+        public bool Forward(ref LogEntry entry)
         {
             foreach (var rule in _rules)
+            {
                 foreach (var filter in rule.Value)
                 {
-                    var value = GetField(rule.Key, entry);
+                    var value = GetField(rule.Key, ref entry);
                     if (value == null)
                         return !filter.MatchIsValid;
 
@@ -139,6 +140,7 @@ namespace Sparrow.Logging
                     if (filter.MatchIsValid != isMatch)
                         return false;
                 }
+            }
             return true;
         }
 

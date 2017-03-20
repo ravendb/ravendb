@@ -1,12 +1,12 @@
 ﻿using FastTests;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5615 : RavenNewTestBase
+    public class RavenDB_5615 : RavenTestBase
     {
         [Fact]
         public void CanEnableAndDisableIndex()

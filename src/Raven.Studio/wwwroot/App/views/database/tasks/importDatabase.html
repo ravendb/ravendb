@@ -72,12 +72,6 @@
 
             <div data-bind="collapse: showAdvancedOptions, with: model">
                 <div class="toggle">
-                    <input id="shouldDisableVersioningBundle" type="checkbox" data-bind="checked: shouldDisableVersioningBundle">
-                    <label for="shouldDisableVersioningBundle">
-                        Disable versioning bundle during import
-                    </label>
-                </div>
-                <div class="toggle">
                     <input id="includeExpiredDocuments" type="checkbox" data-bind="checked: includeExpiredDocuments">
                     <label for="includeExpiredDocuments">
                         Include Expired documents
@@ -87,10 +81,8 @@
                 <div class="form-group">
                     <div class="toggle">
                         <input id="useTransformScript" type="checkbox" data-bind="checked: $root.showTransformScript">
-                        <label for="useTransformScript">
-                            Use Transform script <a class="text-info" target="_blank" id="transformScriptPopover" href="#">
-                                <span class="icon-help"></span>
-                            </a>
+                        <label for="useTransformScript" class="use-transform-script">
+                            Use Transform script <small><i class="icon-info"></i></small>
                         </label>
                     </div>
                     <div data-bind="collapse: $root.showTransformScript">

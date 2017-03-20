@@ -1,20 +1,17 @@
 ﻿using System;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
-
-using Raven.Abstractions;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Connection;
-using Raven.Client.Data;
-using Raven.Client.Data.Queries;
-using Raven.Json.Linq;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Util;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.ServerWide;
-
 using Sparrow;
-
+using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Client.Indexing
@@ -41,7 +38,7 @@ namespace FastTests.Client.Indexing
                     q = session.Advanced.DocumentQuery<Person>()
                         .WhereEquals(x => x.Name, "John")
                         .Take(20)
-                        .GetIndexQuery(isAsync: false);
+                        .GetIndexQuery();
                 }
 
                 var query1 = new IndexQueryServerSide
@@ -86,7 +83,7 @@ namespace FastTests.Client.Indexing
                 var database = await Server
                     .ServerStore
                     .DatabasesLandlord
-                    .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase, 0));
+                    .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase));
 
                 var index = database.IndexStore.GetIndex(1);
 
@@ -95,56 +92,69 @@ namespace FastTests.Client.Indexing
                 index.CurrentlyRunningQueries.TryAdd(new ExecutingQueryInfo(now, query2, 11, OperationCancelToken.None));
                 index.CurrentlyRunningQueries.TryAdd(new ExecutingQueryInfo(now, query3, 12, OperationCancelToken.None));
 
-                string jsonString;
-                using (var client = new HttpClient())
+                var conventions = new DocumentConventions();
+
+                using (var commands = store.Commands())
                 {
-                    jsonString = await client.GetStringAsync($"{store.Url.ForDatabase(store.DefaultDatabase)}/debug/queries/running");
-                }
+                    var json = commands.RawGetJson<BlittableJsonReaderObject>("/debug/queries/running");
 
-                var json = RavenJObject.Parse(jsonString);
-                var array = json.Value<RavenJArray>(index.Name);
+                    BlittableJsonReaderArray array;
+                    Assert.True(json.TryGet(index.Name, out array));
 
-                Assert.Equal(3, array.Length);
+                    Assert.Equal(3, array.Length);
 
-                foreach (var info in array)
-                {
-                    var queryId = info.Value<int>(nameof(ExecutingQueryInfo.QueryId));
-
-                    Assert.NotNull(array[0].Value<string>(nameof(ExecutingQueryInfo.Duration)));
-                    Assert.Equal(now, info.Value<DateTime>(nameof(ExecutingQueryInfo.StartTime)));
-                    Assert.Null(info.Value<OperationCancelToken>(nameof(ExecutingQueryInfo.Token)));
-
-                    if (queryId == 10)
+                    foreach (BlittableJsonReaderObject info in array)
                     {
-                        var query = info
-                            .Value<RavenJObject>(nameof(ExecutingQueryInfo.QueryInfo))
-                            .JsonDeserialization<IndexQuery>();
+                        int queryId;
+                        Assert.True(info.TryGet(nameof(ExecutingQueryInfo.QueryId), out queryId));
 
-                        Assert.True(q.Equals(query));
-                        continue;
+                        string duration;
+                        Assert.True(info.TryGet(nameof(ExecutingQueryInfo.Duration), out duration));
+                        Assert.NotNull(duration);
+
+                        string startTimeAsString;
+                        Assert.True(info.TryGet(nameof(ExecutingQueryInfo.StartTime), out startTimeAsString));
+                        Assert.Equal(now, DateTime.Parse(startTimeAsString));
+
+                        object token;
+                        Assert.False(info.TryGetMember(nameof(ExecutingQueryInfo.Token), out token));
+                        Assert.Null(token);
+
+                        if (queryId == 10)
+                        {
+                            BlittableJsonReaderObject queryInfo;
+                            Assert.True(info.TryGet(nameof(ExecutingQueryInfo.QueryInfo), out queryInfo));
+
+                            var query = (IndexQuery)conventions.DeserializeEntityFromBlittable(typeof(IndexQuery), queryInfo);
+
+                            Assert.True(q.Equals(query));
+                            continue;
+                        }
+
+                        if (queryId == 11)
+                        {
+                            BlittableJsonReaderObject queryInfo;
+                            Assert.True(info.TryGet(nameof(ExecutingQueryInfo.QueryInfo), out queryInfo));
+
+                            var query = (MoreLikeThisQuery)conventions.DeserializeEntityFromBlittable(typeof(MoreLikeThisQuery), queryInfo);
+
+                            Assert.Equal(query2.DocumentId, query.DocumentId);
+                            continue;
+                        }
+
+                        if (queryId == 12)
+                        {
+                            BlittableJsonReaderObject queryInfo;
+                            Assert.True(info.TryGet(nameof(ExecutingQueryInfo.QueryInfo), out queryInfo));
+
+                            var query = (FacetQuery)conventions.DeserializeEntityFromBlittable(typeof(FacetQuery), queryInfo);
+
+                            Assert.Equal(query3.FacetSetupDoc, query.FacetSetupDoc);
+                            continue;
+                        }
+
+                        throw new NotSupportedException("Should not happen.");
                     }
-
-                    if (queryId == 11)
-                    {
-                        var query = info
-                            .Value<RavenJObject>(nameof(ExecutingQueryInfo.QueryInfo))
-                            .JsonDeserialization<MoreLikeThisQuery>();
-
-                        Assert.Equal(query2.DocumentId, query.DocumentId);
-                        continue;
-                    }
-
-                    if (queryId == 12)
-                    {
-                        var query = info
-                            .Value<RavenJObject>(nameof(ExecutingQueryInfo.QueryInfo))
-                            .JsonDeserialization<FacetQuery>();
-
-                        Assert.Equal(query3.FacetSetupDoc, query.FacetSetupDoc);
-                        continue;
-                    }
-
-                    throw new NotSupportedException("Should not happen.");
                 }
             }
         }

@@ -1,11 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Replication;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Shard;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -32,8 +31,8 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public async Task TestLoadWithTransfomer()
+        [Fact(Skip = "RavenDB-6283")]
+        public void TestLoadWithTransfomer()
         {
             using (var shard1 = GetDocumentStore())
             using (var shard2 = GetDocumentStore())
@@ -47,6 +46,7 @@ namespace SlowTests.MailingList
                 shards.Add("0", shard1);
                 shards.Add("1", shard2);
 
+                /*
                 var shardStrategy = new ShardStrategy(shards)
                       .ShardingOn<Company>(); // RoundRobin here
 
@@ -82,7 +82,7 @@ namespace SlowTests.MailingList
                     var results = await session.LoadAsync<SampleCompanyTransformer, dynamic>(ids: idsToQuery.ToList());
                     Assert.NotEmpty(results);
                 }
-
+                */
             }
         }
     }

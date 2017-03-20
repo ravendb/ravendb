@@ -7,10 +7,9 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Listeners;
-using Raven.Json.Linq;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -21,13 +20,12 @@ namespace SlowTests.MailingList
         /// The only thing i could not recreate here is the fact that the versioning bundle is active.
         /// So im not sure if the @last-modified meta-field will ever be filled in this case
         /// </summary>
-        [Fact]
+        [Fact(Skip = "RavenDB-6264")]
         public void CreateDataAndQuery()
         {
             using (var store = GetDocumentStore())
             {
-
-                store.RegisterListener(new AuditListener(() => "DataImporter"));
+                //store.RegisterListener(new AuditListener(() => "DataImporter"));
                 new CustomerListingTransformer().Execute(store);
 
                 using (var session = store.OpenSession())
@@ -74,7 +72,7 @@ namespace SlowTests.MailingList
                                                     Type = customer.CustomerType.ToString(),
                                                     CreatedOn = customer.CreatedOn.ToLocalTime(),
                                                     ChangedBy = this.MetadataFor(customer).Value<string>("Updated-By"),
-                                                    ChangedOn = this.MetadataFor(customer).Value<DateTime?>(Constants.Metadata.LastModified),
+                                                    ChangedOn = this.MetadataFor(customer).Value<DateTime?>(Constants.Documents.Metadata.LastModified),
                                                 };
 
             }
@@ -121,6 +119,7 @@ namespace SlowTests.MailingList
 
         }
 
+        /*
         private class AuditListener : IDocumentStoreListener
         {
             private Func<string> authenticator;
@@ -145,5 +144,6 @@ namespace SlowTests.MailingList
 
             }
         }
+        */
     }
 }

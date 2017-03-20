@@ -6,15 +6,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Lucene.Net.Util;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
-using Raven.Server.Documents.Queries.Parse;
+using Raven.Client;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
-using Constants = Raven.Abstractions.Data.Constants;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Faceted
 {
@@ -35,12 +34,11 @@ namespace Raven.Server.Documents.Queries.Faceted
                     if (string.IsNullOrEmpty(facet.AggregationField))
                         throw new InvalidOperationException($"Facet {facet.Name} cannot have aggregation set to {facet.Aggregation} without having a value in AggregationField");
 
-                    if (facet.AggregationField.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix) == false)
+                    if (facet.AggregationField.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix) == false)
                     {
-                        if (FacetedQueryHelper.IsAggregationTypeNumerical(facet.AggregationType))
-                            facet.AggregationField = facet.AggregationField + Constants.Indexing.Fields.RangeFieldSuffix;
+                        var rangeType = FacetedQueryHelper.GetRangeTypeForAggregationType(facet.AggregationType);
+                        facet.AggregationField = FieldUtil.ApplyRangeSuffixIfNecessary(facet.AggregationField, rangeType);
                     }
-
                 }
 
                 switch (facet.Mode)
@@ -87,21 +85,8 @@ namespace Raven.Server.Documents.Queries.Faceted
                 HighValue = trimmedHigh.Substring(0, trimmedHigh.Length - 1)
             };
 
-            if (RangeQueryParser.NumericRangeValue.IsMatch(parsedRange.LowValue))
-            {
-                parsedRange.LowValue = NumericStringToSortableNumeric(parsedRange.LowValue);
-            }
-
-            if (RangeQueryParser.NumericRangeValue.IsMatch(parsedRange.HighValue))
-            {
-                parsedRange.HighValue = NumericStringToSortableNumeric(parsedRange.HighValue);
-            }
-
-
-            if (parsedRange.LowValue == "NULL" || parsedRange.LowValue == "*")
-                parsedRange.LowValue = null;
-            if (parsedRange.HighValue == "NULL" || parsedRange.HighValue == "*")
-                parsedRange.HighValue = null;
+            parsedRange.LowValue = ConvertFieldValue(field, parsedRange.LowValue);
+            parsedRange.HighValue = ConvertFieldValue(field, parsedRange.HighValue);
 
             parsedRange.LowValue = UnescapeValueIfNecessary(parsedRange.LowValue);
             parsedRange.HighValue = UnescapeValueIfNecessary(parsedRange.HighValue);
@@ -123,19 +108,23 @@ namespace Raven.Server.Documents.Queries.Faceted
             return value;
         }
 
-        private static string NumericStringToSortableNumeric(string value)
+        private static string ConvertFieldValue(string field, string value)
         {
-            var number = NumberUtil.StringToNumber(value);
-            if (number is long)
-            {
-                return NumericUtils.LongToPrefixCoded((long)number);
-            }
-            if (number is double)
-            {
-                return NumericUtils.DoubleToPrefixCoded((double)number);
-            }
+            if (NumberUtil.IsNull(value))
+                return null;
 
-            throw new ArgumentException("Unknown type for " + number.GetType() + " which started as " + value);
+            var rangeType = FieldUtil.GetRangeTypeFromFieldName(field);
+            switch (rangeType)
+            {
+                case RangeType.Long:
+                    var longValue = NumberUtil.StringToLong(value);
+                    return NumericUtils.LongToPrefixCoded(longValue.Value);
+                case RangeType.Double:
+                    var doubleValue = NumberUtil.StringToDouble(value);
+                    return NumericUtils.DoubleToPrefixCoded(doubleValue.Value);
+                default:
+                    return value;
+            }
         }
 
         private static bool IsInclusive(char ch)

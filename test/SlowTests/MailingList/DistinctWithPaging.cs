@@ -7,9 +7,9 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -29,7 +29,7 @@ namespace SlowTests.MailingList
                       from item in items
                       select new { item.Val };
                 Store(x => x.Val, FieldStorage.Yes);
-                Sort(x => x.Val, SortOptions.NumericDefault);
+                Sort(x => x.Val, SortOptions.Numeric);
             }
         }
 
@@ -51,7 +51,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var results = session.Query<Item, ItemIndex>()
                                          .Statistics(out stats)
                                          .Customize(x => x.WaitForNonStaleResults())

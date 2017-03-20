@@ -9,6 +9,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Binary;
+using Sparrow.Collections;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -30,8 +32,44 @@ namespace Sparrow.Json
         private AllocatedMemoryData _tempBuffer;
         private List<GCHandle> _pinnedObjects;
 
-        private readonly Dictionary<string, LazyStringValue> _fieldNames =
-            new Dictionary<string, LazyStringValue>(StringComparer.Ordinal);
+        private struct StringEqualityStructComparer : IEqualityComparer<string>
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool Equals(string x, string y)
+            {
+                return x.Length == y.Length && string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int GetHashCode(string str)
+            {                
+                return str.GetHashCode();                
+            }
+        }
+
+        private readonly FastDictionary<string, LazyStringValue, StringEqualityStructComparer> _fieldNames = new FastDictionary<string, LazyStringValue, StringEqualityStructComparer>(default(StringEqualityStructComparer));
+
+        private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
+        private int _numberOfAllocatedStringsValues;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe LazyStringValue AllocateStringValue(string str, byte* ptr, int size)
+        {
+            if (_numberOfAllocatedStringsValues < _allocateStringValues.Count)
+            {
+                var lazyStringValue = _allocateStringValues[_numberOfAllocatedStringsValues++];
+                lazyStringValue.Renew(str,ptr, size);
+                return lazyStringValue;
+            }
+
+            var allocateStringValue = new LazyStringValue(str, ptr, size, this);
+            if (_numberOfAllocatedStringsValues < 25 * 1000)
+            {
+                _allocateStringValues.Add(allocateStringValue);
+                _numberOfAllocatedStringsValues++;
+            }
+            return allocateStringValue;
+        }
 
         private bool _disposed;
 
@@ -99,7 +137,7 @@ namespace Sparrow.Json
 
         private Stack<ManagedPinnedBuffer> _managedBuffers;
 
-        public UTF8Encoding Encoding;
+        public static readonly UTF8Encoding Encoding = new UTF8Encoding();
 
         public CachedProperties CachedProperties;
 
@@ -109,10 +147,7 @@ namespace Sparrow.Json
         private readonly ObjectJsonParser _objectJsonParser;
         private readonly BlittableJsonDocumentBuilder _documentBuilder;
 
-        public int Generation
-        {
-            get { return _generation; }
-        }
+        public int Generation => _generation;
 
         public long AllocatedMemory => _arenaAllocator.TotalUsed;
 
@@ -127,7 +162,6 @@ namespace Sparrow.Json
             _longLivedSize = longLivedSize;
             _arenaAllocator = new ArenaMemoryAllocator(initialSize);
             _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(longLivedSize);
-            Encoding = new UTF8Encoding();
             CachedProperties = new CachedProperties(this);
             _jsonParserState = new JsonParserState();
             _objectJsonParser = new ObjectJsonParser(_jsonParserState, this);
@@ -253,16 +287,41 @@ namespace Sparrow.Json
             _disposed = true;
         }
 
+        public LazyStringValue GetLazyStringForFieldWithCaching(StringSegment key)
+        {
+            LazyStringValue value;
+
+            var field = key.Value;
+            if (_fieldNames.TryGetValue(field, out value))
+            {
+                //sanity check, in case the 'value' is manually disposed outside of this function
+                Debug.Assert(value.IsDisposed == false);
+                return value;
+            }
+
+            value = GetLazyString(key, longLived: true);
+            _fieldNames[field] = value;
+
+            //sanity check, in case the 'value' is manually disposed outside of this function
+            Debug.Assert(value.IsDisposed == false);
+            return value;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue GetLazyStringForFieldWithCaching(string field)
         {
             LazyStringValue value;
 
-            if (!_fieldNames.TryGetValue(field, out value))
+            if (_fieldNames.TryGetValue(field, out value))
             {
-                var key = new StringSegment(field, 0, field.Length);
-                value = GetLazyString(key, longLived: true);
-                _fieldNames[field] = value;
+                // PERF: This is usually the most common scenario, so actually being contiguous improves the behavior.
+                Debug.Assert(value.IsDisposed == false);
+                return value;
             }
+
+            var key = new StringSegment(field, field.Length);
+            value = GetLazyString(key, longLived: true);
+            _fieldNames[field] = value;
 
             //sanity check, in case the 'value' is manually disposed outside of this function
             Debug.Assert(value.IsDisposed == false);
@@ -294,10 +353,8 @@ namespace Sparrow.Json
                 state.FindEscapePositionsIn(address, actualSize, escapePositionsSize);
 
                 state.WriteEscapePositionsTo(address + actualSize);
-                var result = new LazyStringValue(field, address, actualSize, this)
-                {
-                    AllocatedMemoryData = memory
-                };
+                LazyStringValue result = longLived == false ? AllocateStringValue(field, address, actualSize) : new LazyStringValue(field, address, actualSize, this);
+                result.AllocatedMemoryData = memory;
 
                 if (state.EscapePositions.Count > 0)
                 {
@@ -350,6 +407,9 @@ namespace Sparrow.Json
             if (_documentBuilder.Read() == false)
                 throw new InvalidOperationException("Partial content in object json parser shouldn't happen");
             _documentBuilder.FinalizeDocument();
+            
+            _objectJsonParser.Reset(null);
+
             var reader = _documentBuilder.CreateReader();
             return reader;
         }
@@ -559,20 +619,22 @@ namespace Sparrow.Json
                     _arenaAllocatorForLongLivedValues.Return(mem.AllocatedMemoryData);
                     mem.AllocatedMemoryData = null;
                     mem.Dispose();
-                }                
-                
+                }        
+                        
+                _arenaAllocatorForLongLivedValues = null;
+
                 // at this point, the long lived section is far too large, this is something that can happen
                 // if we have dynamic properties. A back of the envelope calculation gives us roughly 32K 
                 // property names before this kicks in, which is a true abuse of the system. In this case, 
                 // in order to avoid unlimited growth, we'll reset the long lived section
                 allocatorForLongLivedValues.Dispose();
-                _arenaAllocatorForLongLivedValues = null;
 
                 _fieldNames.Clear();
                 CachedProperties = null; // need to release this so can be collected
             }
             _objectJsonParser.Reset(null);
             _arenaAllocator.ResetArena();
+            _numberOfAllocatedStringsValues = 0;
             _generation = _generation + 1;
         }
 
@@ -597,6 +659,8 @@ namespace Sparrow.Json
             _objectJsonParser.Read();
 
             WriteObject(writer, _jsonParserState, _objectJsonParser);
+
+            _objectJsonParser.Reset(null);
         }
 
         public void Write(BlittableJsonTextWriter writer, DynamicJsonValue json)
@@ -612,6 +676,8 @@ namespace Sparrow.Json
             _objectJsonParser.Read();
 
             WriteArray(writer, _jsonParserState, _objectJsonParser);
+
+            _objectJsonParser.Reset(null);
         }
 
         public unsafe void WriteObject(BlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
@@ -635,7 +701,7 @@ namespace Sparrow.Json
                     writer.WriteComma();
                 first = false;
 
-                var lazyStringValue = new LazyStringValue(null, state.StringBuffer, state.StringSize, this);
+                var lazyStringValue = AllocateStringValue(null, state.StringBuffer, state.StringSize);
                 writer.WritePropertyName(lazyStringValue);
 
                 if (parser.Read() == false)
@@ -668,11 +734,11 @@ namespace Sparrow.Json
                     }
                     else
                     {
-                        writer.WriteString(new LazyStringValue(null, state.StringBuffer, state.StringSize, this));
+                        writer.WriteString(AllocateStringValue(null, state.StringBuffer, state.StringSize));
                     }
                     break;
                 case JsonParserToken.Float:
-                    writer.WriteDouble(new LazyDoubleValue(new LazyStringValue(null, state.StringBuffer, state.StringSize, this)));
+                    writer.WriteDouble(new LazyDoubleValue(AllocateStringValue(null, state.StringBuffer, state.StringSize)));
                     break;
                 case JsonParserToken.Integer:
                     writer.WriteInteger(state.Long);

@@ -2,12 +2,13 @@
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using FastTests.Server.Documents.Notifications;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Client.Subscriptions
 {
-    public class RavenDB_3082 : RavenNewTestBase
+    public class RavenDB_3082 : RavenTestBase
     {
         [Fact]
         public async Task StronglyTypedDataSubscriptions()
@@ -61,12 +62,8 @@ namespace FastTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.AsyncSubscriptions.Open<PersonWithAddress>(new SubscriptionConnectionOptions
-                        {
-                            SubscriptionId = id
-                        }))
+                        store.AsyncSubscriptions.Open<PersonWithAddress>(new SubscriptionConnectionOptions(id)))
                 {
-
                     var users = new BlockingCollection<PersonWithAddress>();
 
                     subscription.Subscribe(users.Add);

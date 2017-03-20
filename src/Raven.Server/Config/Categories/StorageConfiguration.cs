@@ -1,9 +1,8 @@
-using System;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Config.Categories
 {
@@ -57,19 +56,17 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(null)]
         [ConfigurationEntry("Raven/Storage/TempPath")]
         [LegacyConfigurationEntry("Raven/Voron/TempPath")]
-        public string TempPath { get; set; }
+        public PathSetting TempPath { get; set; }
 
         [DefaultValue(null)]
         [ConfigurationEntry("Raven/Storage/TransactionJournalsPath")]
         [LegacyConfigurationEntry("Raven/TransactionJournalsPath")]
-        public string JournalsStoragePath { get; set; }
+        public PathSetting JournalsStoragePath { get; set; }
 
-        // TODO: We always uses voron
-        [Description("Whether to allow Voron to run in 32 bits process.")]
+        [Description("Use the 32 bits memory mapped pager, even when running in 64 bits")]
         [DefaultValue(false)]
-        [ConfigurationEntry("Raven/Storage/AllowOn32Bits")]
-        [LegacyConfigurationEntry("Raven/Voron/AllowOn32Bits")]
-        public bool AllowOn32Bits { get; set; }
+        [ConfigurationEntry("Raven/Storage/ForceUsing32BitsPager")]
+        public bool ForceUsing32BitsPager { get; set; }
 
         [Description("How long transaction mode (Danger/Lazy) last before returning to Safe mode. Value in Minutes. Default one day. Zero for infinite time")]
         [DefaultValue(1440)]
@@ -83,9 +80,9 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/Storage/MaxConcurrentFlushes")]
         public int MaxConcurrentFlushes { get; set; }
 
-        public override void Initialize(IConfigurationRoot settings)
+        public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {
-            base.Initialize(settings);
+            base.Initialize(settings, serverWideSettings, type, resourceName);
 
             if (ScratchBufferSizeNotificationThreshold == null)
             {

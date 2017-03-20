@@ -4,11 +4,11 @@ import endpoints = require("endpoints");
 
 class saveIndexDefinitionCommand extends commandBase {
 
-    constructor(private index: Raven.Client.Indexing.IndexDefinition, private db: database) {
+    constructor(private index: Raven.Client.Documents.Indexes.IndexDefinition, private db: database) {
         super();
     }
 
-    execute(): JQueryPromise<any> {
+    execute(): JQueryPromise<Raven.Client.Documents.Indexes.PutIndexResult> {
         return this.saveDefinition()
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to save " + this.index.Name, response.responseText, response.statusText);
@@ -19,13 +19,18 @@ class saveIndexDefinitionCommand extends commandBase {
 
     }
 
-    private saveDefinition(): JQueryPromise<saveIndexResult> {
-        const args = {
-            name: this.index.Name
-        };
-        const payload = JSON.stringify(this.index);
-        const url = endpoints.databases.index.indexes + this.urlEncodeArgs(args);
-        return this.put(url, payload, this.db);
+    private saveDefinition(): JQueryPromise<Raven.Client.Documents.Indexes.PutIndexResult> {
+        const payload = JSON.stringify([this.index]);
+        const url = endpoints.databases.index.indexes;
+        const saveTask = $.Deferred<Raven.Client.Documents.Indexes.PutIndexResult>();
+        this.put(url, payload, this.db)
+            .done((results: Array<Raven.Client.Documents.Indexes.PutIndexResult>) => {
+                saveTask.resolve(results[0]);
+            })
+            .fail(response => saveTask.reject(response));
+
+        return saveTask;
+
     }
 }
 

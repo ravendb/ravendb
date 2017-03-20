@@ -1,5 +1,5 @@
 using FastTests;
-using Raven.NewClient.Client.Data.Queries;
+using Raven.Client.Documents.Queries.MoreLikeThis;
 using SlowTests.Core.Utils.Indexes;
 using SlowTests.Core.Utils.Transformers;
 
@@ -12,7 +12,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Bundles
 {
-    public class MoreLikeThis : RavenNewTestBase
+    public class MoreLikeThis : RavenTestBase
     {
         [Fact]
         public void CanUseBasicMoreLikeThis()

@@ -5,7 +5,7 @@
 <nav class="navbar navbar-inverse navbar-fixed-top">
     <div class="container-fluid">
         <div class="navbar-header">
-            <a class="navbar-brand hidden-xs" href="#resources">RavenDB</a>
+            <a class="navbar-brand hidden-xs" href="#databases">RavenDB</a>
         </div>
         <div id="navbar">
             <ul class="nav navbar-nav navbar-right">
@@ -19,7 +19,7 @@
                 <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
                 <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
             </ul>
-            <div class="inputs-container hidden-xs">
+            <div class="inputs-container hidden-xs hidden-sm">
                 <div class="search-prerelease"><i class="icon-search"></i><span>search</span> <span class="text-muted"> | in development</span></div>
                 <!--<div class="search-container">
                     <input type="search" class="form-control omnisearch" placeholder="search" />
@@ -72,19 +72,19 @@
                         </div>
                     </div>
                 </div>-->
-                <div class="resource-switcher-container" data-bind="with: resourceSwitcher">
-                    <div class="form-control btn-toggle resource-switcher">
-                        <span class="database" data-bind="text: $root.activeResource() ? $root.activeResource().name:''"></span>
+                <div class="database-switcher-container" data-bind="with: databaseSwitcher">
+                    <div class="form-control btn-toggle database-switcher">
+                        <span class="database" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
                     </div>
                     <div class="box-container">
-                        <div class="resource-filter-container">
+                        <div class="database-filter-container">
                             <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />
                         </div>
                         <div class="scroller">
                             <section>
-                                <ul class="database-list" data-bind="foreach: filteredResources">
+                                <ul class="database-list" data-bind="foreach: filteredDatabases">
                                     <li>
-                                        <a href="#" data-bind="click: $parent.selectResource.bind($parent)" class="database">
+                                        <a href="#" data-bind="click: $parent.selectDatabase.bind($parent)" class="database">
                                             <span data-bind="text: name"></span> 
                                             <span data-bind="visible: disabled" class="badge badge-info">Disabled</span>
                                             <span data-bind="visible: errored" class="badge badge-danger">Errored</span>

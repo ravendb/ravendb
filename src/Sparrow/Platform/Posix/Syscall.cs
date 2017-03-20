@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Security;
 using Voron.Platform.Posix;
@@ -63,15 +65,15 @@ namespace Sparrow.Platform.Posix
         // posix_fallocate(P)
         //    int posix_fallocate(int fd, off_t offset, size_t len);
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int posix_fallocate(int fd, IntPtr offset, UIntPtr len);
+        public static extern int posix_fallocate64(int fd, long offset, long len);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int msync(IntPtr start, UIntPtr len, MsyncFlags flags);
 
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern IntPtr mmap(IntPtr start, UIntPtr length,
-            MmapProts prot, MmapFlags flags, int fd, IntPtr offset);
+        public static extern IntPtr mmap64(IntPtr start, UIntPtr length,
+            MmapProts prot, MmapFlags flags, int fd, long offset);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int munmap(IntPtr start, UIntPtr length);
@@ -114,7 +116,7 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern IntPtr pwrite(int fd, IntPtr buf, UIntPtr count, IntPtr offset);
 
-        public static unsafe long pwrite(int fd, void* buf, ulong count, long offset)
+        public static long pwrite(int fd, void* buf, ulong count, long offset)
         {
             return (long) pwrite(fd, (IntPtr) buf, (UIntPtr) count, (IntPtr) offset);
         }
@@ -125,7 +127,7 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern IntPtr write(int fd, IntPtr buf, UIntPtr count);
 
-        public static unsafe long write(int fd, void* buf, ulong count)
+        public static long write(int fd, void* buf, ulong count)
         {
             return (long) write(fd, (IntPtr) buf, (UIntPtr) count);
         }
@@ -147,30 +149,41 @@ namespace Sparrow.Platform.Posix
         public static extern int ftruncate(int fd, IntPtr size);
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int lseek(int fd, long offset, WhenceFlags whence);
-
-        public static unsafe int AllocateUsingLseek(int fd, long size)
-        {
-            if (size <= 0)
-                return 0;
-            var orig = lseek(fd, 0, WhenceFlags.SEEK_CUR);
-            var offset = lseek(fd, size - 1, WhenceFlags.SEEK_SET);
-            if (offset == -1)
-                return offset;
-
-            int zero = 0;
-
-            int rc = (int) write(fd, &zero, 1UL);
-
-            orig = lseek(fd, orig, WhenceFlags.SEEK_SET);
-            if (rc == -1)
-                return rc;
-
-            return orig;
-        }
+        public static extern long lseek64(int fd, long offset, WhenceFlags whence);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mprotect(IntPtr start, ulong size, ProtFlag protFlag);
 
+        public static int AllocateFileSpace(int fd, long size, string file, out bool usingWrite)
+        {
+            usingWrite = false;
+            int result;
+            int retries = 1024;
+            while (true)
+            {
+                var len = new FileInfo(file).Length;
+
+                result = posix_fallocate64(fd, len, (size - len));
+                switch (result)
+                {
+                    case (int)Errno.EINVAL:
+                        // fallocate is not supported, we'll use lseek instead
+                        usingWrite = true;
+                        byte b = 0;
+                        if (pwrite(fd, &b, 1, size - 1) != 1)
+                        {
+                            return Marshal.GetLastWin32Error();
+                        }
+                        return 0;
+                }
+
+                if (result != (int)Errno.EINTR)
+                    break;
+                if (retries-- > 0)
+                    throw new IOException($"Tried too many times to call posix_fallocate {file}, but always got EINTR, cannot retry again");
+            }
+            
+            return result;
+        }
     }
 }

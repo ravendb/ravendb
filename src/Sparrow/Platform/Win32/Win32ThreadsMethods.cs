@@ -5,19 +5,19 @@ namespace Sparrow
 {
     public static class Win32ThreadsMethods
     {
-        [DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
+        [DllImport("kernel32.dll", CallingConvention = CallingConvention.Winapi, SetLastError = true)]
         public static extern int SetThreadPriority(IntPtr hThread, int nPriority);
 
-        [DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
+        [DllImport("kernel32.dll", CallingConvention = CallingConvention.Winapi, SetLastError = true)]
         public static extern ThreadPriority GetThreadPriority(IntPtr hThread);
 
-        [DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
+        [DllImport("kernel32.dll", CallingConvention = CallingConvention.Winapi, SetLastError = true)]
         public static extern uint GetCurrentThreadId();
 
-        [DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
+        [DllImport("kernel32.dll", CallingConvention = CallingConvention.Winapi, SetLastError = true)]
         public static extern IntPtr OpenThread(ThreadAccess desiredAccess, bool inheritHandle, uint threadId);
 
-        [DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
+        [DllImport("kernel32.dll", CallingConvention = CallingConvention.Winapi, SetLastError = true)]
         public static extern bool CloseHandle(IntPtr handle);
 
         [DllImport("kernel32.dll")]

@@ -1,14 +1,14 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class CanCallLastOnArray : RavenNewTestBase
+    public class CanCallLastOnArray : RavenTestBase
     {
         private class Student
         {
@@ -72,7 +72,7 @@ namespace SlowTests.Tests.Linq
         [Fact]
         public void AssertMapDefinition()
         {
-            var indexDefinition = new Students_ByEmailDomain { Conventions = new DocumentConvention { PrettifyGeneratedLinqExpressions = false } }.CreateIndexDefinition();
+            var indexDefinition = new Students_ByEmailDomain { Conventions = new DocumentConventions { PrettifyGeneratedLinqExpressions = false } }.CreateIndexDefinition();
 
             Assert.Equal(@"docs.Students.Select(student => new {
     EmailDomain = DynamicEnumerable.LastOrDefault(student.Email.Split(new char[] {

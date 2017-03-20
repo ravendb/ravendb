@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Lucene.Net.Analysis;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class WiseShrek : RavenNewTestBase
+    public class WiseShrek : RavenTestBase
     {
         private class Soft
         {
@@ -30,7 +29,7 @@ namespace SlowTests.Bugs.Indexing
             //inMemoryRavenConfiguration.Initialize();
 
             //var fieldOptions1 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed };
-            //var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Sort = SortOptions.NumericLong };
+            //var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Sort = SortOptions.Numeric };
             //var fieldOptions3 = new IndexFieldOptions { Indexing = FieldIndexing.Analyzed, Analyzer = typeof(KeywordAnalyzer).AssemblyQualifiedName };
 
             //var simpleIndex = new SimpleIndex(ramDirectory, 0, new IndexDefinition
@@ -69,10 +68,10 @@ namespace SlowTests.Bugs.Indexing
             using (var session = store.OpenSession())
             {
                 var fieldOptions1 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed };
-                var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Sort = SortOptions.NumericLong };
+                var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Sort = SortOptions.Numeric };
                 var fieldOptions3 = new IndexFieldOptions { Indexing = FieldIndexing.Analyzed, Analyzer = typeof(KeywordAnalyzer).AssemblyQualifiedName };
 
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { @"from s in docs.Softs select new { s.f_platform, s.f_name, s.f_alias,s.f_License,s.f_totaldownload}" },
 
@@ -83,9 +82,10 @@ namespace SlowTests.Bugs.Indexing
                         {"f_totaldownload" , fieldOptions2 },
                         {"f_name" , fieldOptions3 },
                         {"f_alias" , fieldOptions3 }
-                    }
+                    },
+                    Name = "test"
 
-                }));
+                }}));
 
                 Soft entity = new Soft
                 {

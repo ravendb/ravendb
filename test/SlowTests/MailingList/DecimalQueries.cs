@@ -1,7 +1,8 @@
 using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Utils;
 using SlowTests.Utils.Attributes;
 using Xunit;
@@ -15,7 +16,7 @@ namespace SlowTests.MailingList
             public decimal Amount { get; set; }
         }
 
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
+        [Fact]
         public void CanQuery()
         {
             using (var store = GetDocumentStore())
@@ -32,6 +33,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var moneys = session.Query<Money>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Amount == 10.000m)
                         .ToArray();
 
@@ -61,6 +63,7 @@ namespace SlowTests.MailingList
                     using (var session = store.OpenSession())
                     {
                         var moneys = session.Query<Money>()
+                            .Customize(x => x.WaitForNonStaleResults())
                             .Where(x => x.Amount == 12.34m)
                             .ToArray();
 

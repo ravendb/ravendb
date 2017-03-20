@@ -1,23 +1,29 @@
 ﻿using System;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Replication;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
-using Raven.Client.Replication.Messages;
-using Raven.Client.Smuggler;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Documents.Transformers;
+using Raven.Client.Server;
+using Raven.Client.Server.Tcp;
 using Raven.Server.Commercial;
+using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.SQL;
+using Raven.Server.Documents.ETL.Providers.SQL.Connections;
+using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
-using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
+using Facet = Raven.Client.Documents.Queries.Facets.Facet;
+using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 
 namespace Raven.Server.Json
 {
-    public class JsonDeserializationServer : JsonDeserializationBase
+    internal class JsonDeserializationServer : JsonDeserializationBase
     {
         public static readonly Func<BlittableJsonReaderObject, TopologyDiscoveryRequest> TopologyDiscoveryRequest =
             GenerateJsonDeserializationRoutine<TopologyDiscoveryRequest>();
@@ -41,19 +47,22 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationMessageReply> ReplicationMessageReply = GenerateJsonDeserializationRoutine<ReplicationMessageReply>();
 
+        public static readonly Func<BlittableJsonReaderObject, TcpConnectionHeaderResponse> TcpConnectionHeaderResponse = GenerateJsonDeserializationRoutine<TcpConnectionHeaderResponse>();
+
         public static readonly Func<BlittableJsonReaderObject, ReplicationLatestEtagRequest> ReplicationLatestEtagRequest = GenerateJsonDeserializationRoutine<ReplicationLatestEtagRequest>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionClientMessage> SubscriptionConnectionClientMessage = GenerateJsonDeserializationRoutine<SubscriptionConnectionClientMessage>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionOptions> SubscriptionConnectionOptions = GenerateJsonDeserializationRoutine<SubscriptionConnectionOptions>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, ReplicationDocument> ReplicationDocument = GenerateJsonDeserializationRoutine<ReplicationDocument>();
 
-        public static readonly Func<BlittableJsonReaderObject, SqlReplicationConfiguration> SqlReplicationConfiguration = GenerateJsonDeserializationRoutine<SqlReplicationConfiguration>();
-        public static readonly Func<BlittableJsonReaderObject, SqlReplicationStatus> SqlReplicationStatus = GenerateJsonDeserializationRoutine<SqlReplicationStatus>();
-        public static readonly Func<BlittableJsonReaderObject, SimulateSqlReplication> SimulateSqlReplication = GenerateJsonDeserializationRoutine<SimulateSqlReplication>();
-        public static readonly Func<BlittableJsonReaderObject, PredefinedSqlConnection> PredefinedSqlConnection = GenerateJsonDeserializationRoutine<PredefinedSqlConnection>();
+        public static readonly Func<BlittableJsonReaderObject, EtlConfiguration> EtlConfiguration = GenerateJsonDeserializationRoutine<EtlConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, EtlProcessStatus> EtlProcessStatus = GenerateJsonDeserializationRoutine<EtlProcessStatus>();
 
+        public static readonly Func<BlittableJsonReaderObject, SqlEtlConfiguration> SqlReplicationConfiguration = GenerateJsonDeserializationRoutine<SqlEtlConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, SimulateSqlEtl> SimulateSqlReplication = GenerateJsonDeserializationRoutine<SimulateSqlEtl>();
+        public static readonly Func<BlittableJsonReaderObject, PredefinedSqlConnection> PredefinedSqlConnection = GenerateJsonDeserializationRoutine<PredefinedSqlConnection>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionCriteria> SubscriptionCriteria = GenerateJsonDeserializationRoutine<SubscriptionCriteria>();
 
@@ -77,5 +86,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, License> License = GenerateJsonDeserializationRoutine<License>();
 
         public static readonly Func<BlittableJsonReaderObject, UserRegistrationInfo> UserRegistrationInfo = GenerateJsonDeserializationRoutine<UserRegistrationInfo>();
+
+        public static readonly Func<BlittableJsonReaderObject, DatabaseDocument> DatabaseDocument = GenerateJsonDeserializationRoutine<DatabaseDocument>();
+
     }
 }

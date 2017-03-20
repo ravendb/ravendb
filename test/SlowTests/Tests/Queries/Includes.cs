@@ -2,12 +2,12 @@ using System;
 using System.Linq;
 
 using FastTests;
-using Raven.NewClient.Client;
+using Raven.Client.Documents;
 using Xunit;
 
 namespace SlowTests.Tests.Queries
 {
-    public class Includes : RavenNewTestBase
+    public class Includes : RavenTestBase
     {
         [Fact]
         public void Can_use_includes_within_multi_load()

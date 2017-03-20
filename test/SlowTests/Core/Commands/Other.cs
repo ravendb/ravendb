@@ -7,9 +7,8 @@
 using System.Threading.Tasks;
 
 using FastTests;
-
-using Raven.Json.Linq;
-
+using Raven.Client.Documents.Operations;
+using Raven.Client.Server.Operations;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -23,7 +22,7 @@ namespace SlowTests.Core.Commands
         {
             using (var store = GetDocumentStore())
             {
-                var buildNumber = await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
+                var buildNumber = await store.Admin.Server.SendAsync(new GetBuildNumberOperation());
 
                 Assert.NotNull(buildNumber);
             }
@@ -34,7 +33,7 @@ namespace SlowTests.Core.Commands
         {
             using (var store = GetDocumentStore())
             {
-                var databaseStatistics = await store.AsyncDatabaseCommands.GetStatisticsAsync();
+                var databaseStatistics = await store.Admin.SendAsync(new GetStatisticsOperation());
 
                 Assert.NotNull(databaseStatistics);
 
@@ -47,7 +46,7 @@ namespace SlowTests.Core.Commands
         {
             using (var store = GetDocumentStore())
             {
-                var names = await store.AsyncDatabaseCommands.GlobalAdmin.GetDatabaseNamesAsync(25);
+                var names = await store.Admin.Server.SendAsync(new GetDatabaseNamesOperation(0, 25));
                 Assert.Contains(store.DefaultDatabase, names);
             }
         }
@@ -58,30 +57,39 @@ namespace SlowTests.Core.Commands
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
             {
-                store1.DatabaseCommands.Put(
-                    "items/1",
-                    null,
-                    RavenJObject.FromObject(new
-                    {
-                        Name = "For store1"
-                    }),
-                    new RavenJObject());
-                store2.DatabaseCommands.Put(
-                    "items/2",
-                    null,
-                    RavenJObject.FromObject(new
-                    {
-                        Name = "For store2"
-                    }),
-                    new RavenJObject());
+                using (var commands1 = store1.Commands())
+                using (var commands2 = store2.Commands())
+                {
+                    commands1.Put(
+                        "items/1",
+                        null,
+                        new
+                        {
+                            Name = "For store1"
+                        },
+                        null);
 
-                var doc = store1.DatabaseCommands.ForDatabase(store2.DefaultDatabase).Get("items/2");
-                Assert.NotNull(doc);
-                Assert.Equal("For store2", doc.DataAsJson.Value<string>("Name"));
+                    commands2.Put(
+                        "items/2",
+                        null,
+                        new
+                        {
+                            Name = "For store2"
+                        },
+                        null);
+                }
 
-                doc = store1.DatabaseCommands.ForDatabase(store1.DefaultDatabase).Get("items/1");
-                Assert.NotNull(doc);
-                Assert.Equal("For store1", doc.DataAsJson.Value<string>("Name"));
+                using (var commands1 = store1.Commands(store2.DefaultDatabase))
+                using (var commands2 = store2.Commands(store1.DefaultDatabase))
+                {
+                    dynamic doc = commands1.Get("items/2");
+                    Assert.NotNull(doc);
+                    Assert.Equal("For store2", doc.Name.ToString());
+
+                    doc = commands2.Get("items/1");
+                    Assert.NotNull(doc);
+                    Assert.Equal("For store1", doc.Name.ToString());
+                }
             }
         }
 
@@ -90,39 +98,9 @@ namespace SlowTests.Core.Commands
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put(
-                    "items/1",
-                    null,
-                    RavenJObject.FromObject(new Company
-                    {
-                        Name = "Name"
-                    }),
-                    new RavenJObject());
-                Assert.Equal(store.Url + "/databases/" + store.DefaultDatabase + "/docs?id=items/1", store.DatabaseCommands.UrlFor("items/1"));
+                Assert.Equal(store.Url + "/databases/" + store.DefaultDatabase + "/docs?id=items/1", store.GetRequestExecuter().UrlFor("items/1"));
             }
         }
 
-        [Fact]
-        public void CanDisableAllCaching()
-        {
-            using (var store = GetDocumentStore())
-            {
-                store.DatabaseCommands.Put("companies/1", null, RavenJObject.FromObject(new Company()), new RavenJObject());
-                Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
-                store.DatabaseCommands.Get("companies/1");
-                Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
-                store.DatabaseCommands.Get("companies/1");
-                Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
-
-                store.JsonRequestFactory.DisableAllCaching();
-                store.JsonRequestFactory.ResetCache();
-                Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
-
-                store.DatabaseCommands.Get("companies/1");
-                Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
-                store.DatabaseCommands.Get("companies/1");
-                Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
-            }
-        }
     }
 }

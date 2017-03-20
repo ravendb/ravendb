@@ -8,8 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Listeners;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -18,11 +18,6 @@ namespace SlowTests.MailingList
     {
         private readonly DocumentStore _store;
         private readonly IDocumentSession _session;
-
-        protected override void ModifyStore(DocumentStore store)
-        {
-            store.RegisterListener(new NoStaleQueriesAllowed());
-        }
 
         public ProjectionTests()
         {
@@ -51,13 +46,14 @@ namespace SlowTests.MailingList
         public void ActuallyGetData()
         {
             var foos = _session.Query<Foo>()
-                              .Where(foo => foo.Data > 1)
-                              .Select(foo => new FooWithId
-                              {
-                                  Id = foo.Id,
-                                  Data = foo.Data
-                              })
-                              .ToList();
+                .Customize(x => x.WaitForNonStaleResults())
+                .Where(foo => foo.Data > 1)
+                .Select(foo => new FooWithId
+                {
+                    Id = foo.Id,
+                    Data = foo.Data
+                })
+                .ToList();
 
             Assert.True(foos.Count == 3);
         }
@@ -67,13 +63,14 @@ namespace SlowTests.MailingList
         public void ShouldBeAbleToProjectIdOntoAnotherFieldCalledId()
         {
             var foos = _session.Query<Foo>()
-                              .Where(foo => foo.Data > 1)
-                              .Select(foo => new FooWithId
-                              {
-                                  Id = foo.Id,
-                                  Data = foo.Data
-                              })
-                              .ToList();
+                .Customize(x => x.WaitForNonStaleResults())
+                .Where(foo => foo.Data > 1)
+                .Select(foo => new FooWithId
+                {
+                    Id = foo.Id,
+                    Data = foo.Data
+                })
+                .ToList();
 
             Assert.NotNull(foos[0].Id);
         }
@@ -136,14 +133,6 @@ namespace SlowTests.MailingList
             public string FooId { set; get; }
             public string Id { set; get; }
             public int Data2 { set; get; }
-        }
-
-        private class NoStaleQueriesAllowed : IDocumentQueryListener
-        {
-            public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
-            {
-                queryCustomization.WaitForNonStaleResults();
-            }
         }
     }
 }

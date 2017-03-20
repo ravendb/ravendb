@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries.Facets;
+
 
 namespace SlowTests
 {
@@ -15,10 +16,10 @@ namespace SlowTests
         {
             var index = new CameraCostIndex();
 
-            store.DatabaseCommands.PutIndex(index.IndexName, index.CreateIndexDefinition());
+            store.Admin.Send(new PutIndexesOperation(new [] {index.CreateIndexDefinition()}));
         }
 
-        public class CameraCostIndex : Raven.Client.Indexes.AbstractIndexCreationTask
+        public class CameraCostIndex : AbstractIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
             {
@@ -127,7 +128,7 @@ namespace SlowTests
             {
                 cameraList.Add(new Camera
                 {
-                    Id = i,
+                    Id = i.ToString(),
                     DateOfListing = new DateTime(1980 + random.Next(1, 30), random.Next(1, 12), random.Next(1, 27)),
                     Manufacturer = Manufacturers[(int)(random.NextDouble() * Manufacturers.Count)],
                     Model = Models[(int)(random.NextDouble() * Models.Count)],
@@ -144,7 +145,7 @@ namespace SlowTests
 
         protected class Camera
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
 
             public DateTime DateOfListing { get; set; }
             public string Manufacturer { get; set; }
@@ -202,7 +203,7 @@ namespace SlowTests
 
             public override int GetHashCode()
             {
-                return (int)(Megapixels * 100) ^ (int)(Cost * 100) ^ (int)DateOfListing.Ticks ^ Id;
+                return (int)(Megapixels * 100) ^ (int)(Cost * 100) ^ (int)DateOfListing.Ticks ^ Id.Length;
             }
         }
     }

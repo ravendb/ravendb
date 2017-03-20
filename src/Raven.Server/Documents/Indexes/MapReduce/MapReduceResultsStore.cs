@@ -56,7 +56,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private void InitializeTree(bool create)
         {
             var treeName = ReduceTreePrefix + _reduceKeyHash;
-            Tree = create ? _tx.CreateTree(treeName, flags: TreeFlags.LeafsCompressed, pageLocator: _pageLocator) : _tx.ReadTree(treeName, pageLocator: _pageLocator);
+            var options = _tx.LowLevelTransaction.Environment.Options.RunningOn32Bits ? TreeFlags.None : TreeFlags.LeafsCompressed;
+            Tree = create ? _tx.CreateTree(treeName, flags: options, pageLocator: _pageLocator) : _tx.ReadTree(treeName, pageLocator: _pageLocator);
 
             ModifiedPages = new HashSet<long>();
             FreedPages = new HashSet<long>();
@@ -113,8 +114,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     
                     using (Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long), out entrySlice))
                     {
-                        var pos = Tree.DirectAdd(entrySlice, result.Size);
-                        result.CopyTo(pos);
+                        byte* ptr;
+                        using (Tree.DirectAdd(entrySlice, result.Size,out ptr))
+                            result.CopyTo(ptr);
                     }
 
                     break;

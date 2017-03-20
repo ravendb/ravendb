@@ -9,8 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
-using Raven.Server.Config;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.SlowTests.Issues
@@ -35,13 +34,12 @@ namespace SlowTests.SlowTests.Issues
                     }
                 });
 
-
                 // Test that the indexing can complete, without being in an infinite indexing run due to touches to documents increasing the etag.
-                WaitForIndexing(store, timeout: Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(sp.Elapsed.TotalSeconds / 2));
+                WaitForIndexing(store, timeout: Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(Math.Max(sp.Elapsed.TotalSeconds / 2, 60)));
             }
         }
 
-        public class EmailIndex : AbstractIndexCreationTask<EmailDocument, EmailIndexDoc>
+        private class EmailIndex : AbstractIndexCreationTask<EmailDocument, EmailIndexDoc>
         {
             public EmailIndex()
             {
@@ -57,7 +55,7 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        public class EmailDocument
+        private class EmailDocument
         {
             public string Id { get; set; }
             public string To { get; set; }
@@ -65,13 +63,13 @@ namespace SlowTests.SlowTests.Issues
             public string Subject { get; set; }
         }
 
-        public class EmailText
+        private class EmailText
         {
             public string Id { get; set; }
             public string Body { get; set; }
         }
 
-        public class EmailIndexDoc
+        private class EmailIndexDoc
         {
             public string Id { get; set; }
             public string To { get; set; }

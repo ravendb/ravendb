@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace SlowTests.Bugs.Metadata
 {
-    public class Querying : RavenNewTestBase
+    public class Querying : RavenTestBase
     {
         [Fact]
         public void Can_query_metadata()

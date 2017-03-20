@@ -1,9 +1,10 @@
 ﻿using System;
 using Jint;
 using Jint.Native;
-using Raven.Client.Smuggler;
+using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents
@@ -36,7 +37,7 @@ namespace Raven.Server.Smuggler.Documents
 
             using (var scope = new OperationScope())
             {
-                var jsObject = scope.ToJsObject(_engine, document.Data);
+                var jsObject = scope.ToJsObject(_engine, document);
                 var jsObjectTransformed = _engine.Invoke("Transform", jsObject);
 
                 if (jsObjectTransformed.IsObject() == false)
@@ -57,7 +58,9 @@ namespace Raven.Server.Smuggler.Documents
                 return new Document
                 {
                     Data = newDocument,
-                    Key = document.Key
+                    Key = document.Key,
+                    Flags = document.Flags,
+                    NonPersistentFlags = document.NonPersistentFlags
                 };
             }
         }
@@ -76,12 +79,12 @@ namespace Raven.Server.Smuggler.Documents
 
             public override string PutDocument(string key, JsValue document, JsValue metadata, JsValue etagJs, Engine engine)
             {
-                throw new NotSupportedException("LoadDocument is not supported.");
+                throw new NotSupportedException("PutDocument is not supported.");
             }
 
             public override void DeleteDocument(string documentKey)
             {
-                throw new NotSupportedException("LoadDocument is not supported.");
+                throw new NotSupportedException("DeleteDocument is not supported.");
             }
         }
     }

@@ -12,7 +12,6 @@ using System.Runtime.InteropServices;
 using System.Security;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
-using Sparrow;
 using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation

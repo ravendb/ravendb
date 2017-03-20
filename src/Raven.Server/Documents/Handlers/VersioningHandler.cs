@@ -4,11 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Exceptions.Versioning;
+using Raven.Client.Documents.Exceptions.Versioning;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -25,7 +24,7 @@ namespace Raven.Server.Documents.Handlers
             if (versioningStorage == null)
                 throw new VersioningDisabledException();
 
-            var key = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+            var key = GetQueryStringValueAndAssertIfSingleAndNotEmpty("key");
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))

@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace SlowTests.Tests.Linq
 {
-    public class CanQueryWithSavedKeywords : RavenNewTestBase
+    public class CanQueryWithSavedKeywords : RavenTestBase
     {
         private class TestDoc
         {

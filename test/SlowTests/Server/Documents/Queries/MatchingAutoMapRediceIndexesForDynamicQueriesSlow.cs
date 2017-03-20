@@ -1,7 +1,7 @@
 ﻿using FastTests.Server.Documents.Queries.Dynamic.MapReduce;
-using Raven.Abstractions;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
@@ -16,7 +16,7 @@ namespace SlowTests.Server.Documents.Queries
         [Fact]
         public void Failure_if_matching_index_has_lot_of_errors()
         {
-            var definition = new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
+            var definition = new AutoMapReduceIndexDefinition("Users", new[]
              {
                 new IndexField
                 {

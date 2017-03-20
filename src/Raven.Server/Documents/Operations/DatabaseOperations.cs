@@ -5,10 +5,11 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Data;
+using Raven.Client.Documents.Exceptions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -90,7 +91,7 @@ namespace Raven.Server.Documents.Operations
                 Status = OperationStatus.InProgress
             };
 
-            var notification = new OperationStatusChanged
+            var notification = new OperationStatusChange
             {
                 OperationId = id,
                 State = operationState
@@ -171,7 +172,7 @@ namespace Raven.Server.Documents.Operations
             return operation.Task;
         }
 
-        private void RaiseNotifications(OperationStatusChanged change, Operation operation)
+        private void RaiseNotifications(OperationStatusChange change, Operation operation)
         {
             var operationChanged = OperationChanged.Create(change.OperationId, operation.Description, change.State, operation.Killable);
 

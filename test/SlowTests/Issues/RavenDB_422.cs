@@ -1,8 +1,6 @@
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -32,8 +30,8 @@ namespace SlowTests.Issues
                         .SelectFields<dynamic>("UN", "UE")
                         .Single();
 
-                    Assert.Equal("aye", r.UN);
-                    Assert.Equal("de", r.UE);
+                    Assert.Equal("aye", r.UN.ToString());
+                    Assert.Equal("de", r.UE.ToString());
                 }
             }
         }

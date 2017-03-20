@@ -4,16 +4,18 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Client.Data;
+using Raven.Client.Extensions;
+using Raven.Client.Server.Operations;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.SqlReplication;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
@@ -24,8 +26,8 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Impl.Backup;
-using DatabaseInfo = Raven.Client.Data.DatabaseInfo;
-using Size = Raven.Client.Data.Size;
+using DatabaseInfo = Raven.Client.Server.Operations.DatabaseInfo;
+using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents
 {
@@ -36,6 +38,10 @@ namespace Raven.Server.Documents
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
 
         private readonly object _idleLocker = new object();
+        /// <summary>
+        /// The current lock, used to make sure indexes/transformers have a unique names
+        /// </summary>
+        private readonly object _indexAndTransformerLocker = new object();
         private Task _indexStoreTask;
         private Task _transformerStoreTask;
         private long _usages;
@@ -54,17 +60,17 @@ namespace Raven.Server.Documents
             ResourceName = "db/" + name;
             Configuration = configuration;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
+            IoChanges = new IoChangesNotifications();
             Changes = new DocumentsChanges();
             DocumentsStorage = new DocumentsStorage(this);
-            IndexStore = new IndexStore(this);
-            TransformerStore = new TransformerStore(this);
-            SqlReplicationLoader = new SqlReplicationLoader(this);
+            IndexStore = new IndexStore(this, _indexAndTransformerLocker);
+            TransformerStore = new TransformerStore(this, _indexAndTransformerLocker);
+            EtlLoader = new EtlLoader(this);
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
             SubscriptionStorage = new SubscriptionStorage(this);
             Operations = new DatabaseOperations(this);
             Metrics = new MetricsCountersManager();
-            IoMetrics = serverStore?.IoMetrics ?? new IoMetrics(256, 256);
             Patch = new PatchDocument(this);
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
             HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
@@ -82,7 +88,7 @@ namespace Raven.Server.Documents
 
         public readonly PatchDocument Patch;
 
-        public TransactionOperationsMerger TxMerger;
+        public readonly TransactionOperationsMerger TxMerger;
 
         public SubscriptionStorage SubscriptionStorage { get; }
 
@@ -104,15 +110,14 @@ namespace Raven.Server.Documents
 
         public DocumentsChanges Changes { get; }
 
-        public NotificationCenter.NotificationCenter NotificationCenter { get; }
+        public IoChangesNotifications IoChanges { get; }
 
+        public NotificationCenter.NotificationCenter NotificationCenter { get; private set; }
         public DatabaseOperations Operations { get; private set; }
 
         public HugeDocuments HugeDocuments { get; }
 
         public MetricsCountersManager Metrics { get; }
-
-        public IoMetrics IoMetrics { get; }
 
         public IndexStore IndexStore { get; private set; }
 
@@ -122,9 +127,9 @@ namespace Raven.Server.Documents
 
         public IndexesEtagsStorage IndexMetadataPersistence => ConfigurationStorage.IndexesEtagsStorage;
 
-        public SqlReplicationLoader SqlReplicationLoader { get; private set; }
-
         public DocumentReplicationLoader DocumentReplicationLoader { get; private set; }
+
+        public EtlLoader EtlLoader { get; private set; }
 
         public ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
 
@@ -154,6 +159,7 @@ namespace Raven.Server.Documents
             catch (Exception)
             {
                 Dispose();
+                throw;
             }
         }
 
@@ -192,7 +198,7 @@ namespace Raven.Server.Documents
                 if (_skipUsagesCount)
                     return;
 
-                var  currentUsagesCount = Interlocked.Decrement(ref _parent._usages);
+                var currentUsagesCount = Interlocked.Decrement(ref _parent._usages);
 
                 if (_parent._databaseShutdown.IsCancellationRequested && currentUsagesCount == 0)
                     _parent._waitForUsagesOnDisposal.Set();
@@ -207,7 +213,7 @@ namespace Raven.Server.Documents
 
             _indexStoreTask = IndexStore.InitializeAsync();
             _transformerStoreTask = TransformerStore.InitializeAsync();
-            SqlReplicationLoader.Initialize();
+            EtlLoader.Initialize();
 
             DocumentTombstoneCleaner.Initialize();
             BundleLoader = new BundleLoader(this);
@@ -237,121 +243,138 @@ namespace Raven.Server.Documents
             ConfigurationStorage.Initialize(IndexStore, TransformerStore);
 
             DocumentReplicationLoader.Initialize();
-            NotificationCenter.Initialize();
+
+            NotificationCenter.Initialize(this);
         }
 
         public void Dispose()
         {
-            //before we dispose of the database we take its latest info to be displayed in the studio
-            var databaseInfo = GenerateDatabaseInfo();
-            if (databaseInfo!= null)
-                DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
+            if (_databaseShutdown.IsCancellationRequested)
+                return; // double dispose?
 
-            _databaseShutdown.Cancel();
-            // we'll wait for 1 minute to drain all the requests
-            // from the database
-
-            var sp = Stopwatch.StartNew();
-            while (sp.ElapsedMilliseconds < 60 * 1000)
+            lock (this)
             {
-                if (Interlocked.Read(ref _usages) == 0)
-                    break;
+                if (_databaseShutdown.IsCancellationRequested)
+                    return; // double dispose?
 
-                if (_waitForUsagesOnDisposal.Wait(1000))
-                    _waitForUsagesOnDisposal.Reset();
-            }
+                //before we dispose of the database we take its latest info to be displayed in the studio
+                var databaseInfo = GenerateDatabaseInfo();
+                if (databaseInfo != null)
+                    DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
 
-            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)}");
+                _databaseShutdown.Cancel();
 
-            foreach (var connection in RunningTcpConnections)
-            {
+                // we'll wait for 1 minute to drain all the requests
+                // from the database
+
+                var sp = Stopwatch.StartNew();
+                while (sp.ElapsedMilliseconds < 60 * 1000)
+                {
+                    if (Interlocked.Read(ref _usages) == 0)
+                        break;
+
+                    if (_waitForUsagesOnDisposal.Wait(1000))
+                        _waitForUsagesOnDisposal.Reset();
+                }
+
+                var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
+
+                foreach (var connection in RunningTcpConnections)
+                {
+                    exceptionAggregator.Execute(() =>
+                    {
+                        connection.Dispose();
+                    });
+                }
+
                 exceptionAggregator.Execute(() =>
                 {
-                    connection.Dispose();
+                    TxMerger.Dispose();
                 });
-            }
 
-            exceptionAggregator.Execute(() =>
-            {
-                TxMerger.Dispose();
-            });
+                if (_indexStoreTask != null)
+                {
+                    exceptionAggregator.Execute(() =>
+                    {
+                        _indexStoreTask.Wait(DatabaseShutdown);
+                        _indexStoreTask = null;
+                    });
+                }
 
-            exceptionAggregator.Execute(() =>
-            {
-                DocumentReplicationLoader.Dispose();
-            });
+                if (_transformerStoreTask != null)
+                {
+                    exceptionAggregator.Execute(() =>
+                    {
+                        _transformerStoreTask.Wait(DatabaseShutdown);
+                        _transformerStoreTask = null;
+                    });
+                }
 
-            if (_indexStoreTask != null)
-            {
                 exceptionAggregator.Execute(() =>
                 {
-                    _indexStoreTask.Wait(DatabaseShutdown);
-                    _indexStoreTask = null;
+                    IndexStore?.Dispose();
+                    IndexStore = null;
                 });
-            }
 
-            if (_transformerStoreTask != null)
-            {
                 exceptionAggregator.Execute(() =>
                 {
-                    _transformerStoreTask.Wait(DatabaseShutdown);
-                    _transformerStoreTask = null;
+                    BundleLoader?.Dispose();
+                    BundleLoader = null;
                 });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    DocumentTombstoneCleaner?.Dispose();
+                    DocumentTombstoneCleaner = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    DocumentReplicationLoader?.Dispose();
+                    DocumentReplicationLoader = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    EtlLoader?.Dispose();
+                    EtlLoader = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    Operations?.Dispose(exceptionAggregator);
+                    Operations = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    NotificationCenter?.Dispose();
+                    NotificationCenter = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    SubscriptionStorage?.Dispose();
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    ConfigurationStorage?.Dispose();
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    DocumentsStorage?.Dispose();
+                    DocumentsStorage = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    _databaseShutdown.Dispose();
+                });
+
+                exceptionAggregator.ThrowIfNeeded();
             }
-
-            exceptionAggregator.Execute(() =>
-            {
-                IndexStore?.Dispose();
-                IndexStore = null;
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                BundleLoader?.Dispose();
-                BundleLoader = null;
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                DocumentTombstoneCleaner?.Dispose();
-                DocumentTombstoneCleaner = null;
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                DocumentReplicationLoader?.Dispose();
-                DocumentReplicationLoader = null;
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                SqlReplicationLoader?.Dispose();
-                SqlReplicationLoader = null;
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                Operations?.Dispose(exceptionAggregator);
-                Operations = null;
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                SubscriptionStorage?.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                ConfigurationStorage?.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                DocumentsStorage?.Dispose();
-                DocumentsStorage = null;
-            });
-
-            exceptionAggregator.ThrowIfNeeded();
         }
 
         private static readonly string CachedDatabaseInfo = "CachedDatabaseInfo";
@@ -363,19 +386,19 @@ namespace Raven.Server.Documents
             Size size = new Size(envs.Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));
             var databaseInfo = new DynamicJsonValue
             {
-                [nameof(ResourceInfo.Bundles)] = new DynamicJsonArray(BundleLoader.GetActiveBundles()),
-                [nameof(ResourceInfo.IsAdmin)] = true, //TODO: implement me!
-                [nameof(ResourceInfo.Name)] = Name,
-                [nameof(ResourceInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
-                [nameof(ResourceInfo.TotalSize)] = new DynamicJsonValue
+                [nameof(DatabaseInfo.Bundles)] = new DynamicJsonArray(BundleLoader.GetActiveBundles()),
+                [nameof(DatabaseInfo.IsAdmin)] = true, //TODO: implement me!
+                [nameof(DatabaseInfo.Name)] = Name,
+                [nameof(DatabaseInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
+                [nameof(DatabaseInfo.TotalSize)] = new DynamicJsonValue
                 {
                     [nameof(Size.HumaneSize)] = size.HumaneSize,
                     [nameof(Size.SizeInBytes)] = size.SizeInBytes
                 },
-                [nameof(ResourceInfo.Errors)] = IndexStore.GetIndexes().Sum(index => index.GetErrors().Count),
-                [nameof(ResourceInfo.Alerts)] = NotificationCenter.GetAlertCount(),
-                [nameof(ResourceInfo.UpTime)] = null, //it is shutting down
-                [nameof(ResourceInfo.BackupInfo)] = BundleLoader.GetBackupInfo(),
+                [nameof(DatabaseInfo.Errors)] = IndexStore.GetIndexes().Sum(index => index.GetErrors().Count),
+                [nameof(DatabaseInfo.Alerts)] = NotificationCenter.GetAlertCount(),
+                [nameof(DatabaseInfo.UpTime)] = null, //it is shutting down
+                [nameof(DatabaseInfo.BackupInfo)] = BundleLoader.GetBackupInfo(),
                 [nameof(DatabaseInfo.DocumentsCount)] = DocumentsStorage.GetNumberOfDocuments(),
                 [nameof(DatabaseInfo.IndexesCount)] = IndexStore.GetIndexes().Count(),
                 [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!

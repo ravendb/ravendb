@@ -1,11 +1,11 @@
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiMap
 {
-    public class MultiMapWithCustomProperties : RavenNewTestBase
+    public class MultiMapWithCustomProperties : RavenTestBase
     {
         [Fact]
         public void Can_create_index()

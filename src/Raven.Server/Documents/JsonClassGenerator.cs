@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
-using Raven.Abstractions.Data;
+using Raven.Client;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents
@@ -207,7 +207,7 @@ namespace Raven.Server.Documents
                 throw new ArgumentNullException("document");
 
             BlittableJsonReaderObject metadata;
-            document.Data.TryGet(Constants.Metadata.Key, out metadata);
+            document.Data.TryGet(Constants.Documents.Metadata.Key, out metadata);
 
             var @class = "Class";
             var @namespace = "Unknown";
@@ -217,7 +217,7 @@ namespace Raven.Server.Documents
                 // "Raven-Clr-Type": "Namespace.ClassName, AssemblyName"
 
                 LazyStringValue lazyStringValue;
-                if (metadata.TryGet(Constants.Headers.RavenClrType, out lazyStringValue))
+                if (metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out lazyStringValue))
                 {
                     var values = lazyStringValue.ToString().Split(',');
                     if (values.Length == 2)

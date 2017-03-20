@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using FastTests;
-using Raven.Abstractions.Commands;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Listeners;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -146,7 +145,7 @@ namespace SlowTests.MailingList
                         Id = doc.Id,
                         Slug = doc.Slug,
                         Status = LoadDocument<Credentials>(doc.Id + "/credentials").Status,
-                        DateUpdated = MetadataFor(doc).Value<DateTime>(Constants.Metadata.LastModified),
+                        DateUpdated = MetadataFor(doc).Value<DateTime>(Constants.Documents.Metadata.LastModified),
                         ManagedItems =
                             from r in doc.Relations
                             where r.Type == "CaseManagerOf"
@@ -236,7 +235,6 @@ namespace SlowTests.MailingList
             using (var store = GetDocumentStore())
             {
                 new UserProfileIndex().Execute(store);
-                store.RegisterListener(new NonStaleQueryListener());
 
                 OrganizationProfile[] organizations =
                 {
@@ -258,13 +256,32 @@ namespace SlowTests.MailingList
 
                 WaitForIndexing(store);
 
-                IEnumerable<PatchCommandData> patches = orgAdmins.SelectMany(orgAdmin =>
+                IEnumerable<ICommandData> patches = orgAdmins.SelectMany(orgAdmin =>
                     Establish(orgAdmin.User, new ManagerOf(orgAdmin.Org),
                         orgAdmin.Org, new HasManager(orgAdmin.User)));
 
-                BatchResult[] results = ((IDocumentStore)store).DatabaseCommands.Batch(patches.ToArray());
-                if (results.Any(r => r.PatchStatus.Value != PatchStatus.Patched))
-                    throw new InvalidOperationException("Some patches failed");
+                using (var commands = store.Commands())
+                {
+                    dynamic user1 = commands.Get("users/1");
+                    dynamic user2 = commands.Get("users/2");
+
+                    var relations1 = user1.Relations;
+                    var relations2 = user2.Relations;
+
+                    Assert.Equal(0, relations1.Length);
+                    Assert.Equal(0, relations2.Length);
+
+                    commands.Batch(patches.ToList());
+
+                    user1 = commands.Get("users/1");
+                    user2 = commands.Get("users/2");
+
+                    relations1 = user1.Relations;
+                    relations2 = user2.Relations;
+
+                    Assert.Equal(1, relations1.Length);
+                    Assert.Equal(1, relations2.Length);
+                }
             }
         }
 
@@ -276,33 +293,25 @@ namespace SlowTests.MailingList
                                        "   (thisArg || _this).Relations.push(_.extend({ '$type': clrType }, relation));" +
                                        "}" + "addRelation(relationClrType, relation);";
 
-            yield return new PatchCommandData
+            yield return new PatchCommandData(user.Id, null, new PatchRequest
             {
-                Id = user.Id,
-                Patch = new PatchRequest
+                Script = patchScript,
+                Values = new Dictionary<string, object>
                 {
-                    Script = patchScript,
-                    Values = new Dictionary<string, object>
-                    {
-                        {"relation", managerOf},
-                        {"relationClrType", ClrType(managerOf.GetType())}
-                    }
+                    {"relation", managerOf},
+                    {"relationClrType", ClrType(managerOf.GetType())}
                 }
-            };
+            }, null);
 
-            yield return new PatchCommandData
+            yield return new PatchCommandData(organization.Id, null, new PatchRequest
             {
-                Id = organization.Id,
-                Patch = new PatchRequest
+                Script = patchScript,
+                Values = new Dictionary<string, object>
                 {
-                    Script = patchScript,
-                    Values = new Dictionary<string, object>
-                    {
-                        {"relation", hasManager},
-                        {"relationClrType", ClrType(hasManager.GetType())}
-                    }
+                    {"relation", hasManager},
+                    {"relationClrType", ClrType(hasManager.GetType())}
                 }
-            };
+            }, null);
         }
 
         private static string ClrType(Type t)
@@ -319,14 +328,6 @@ namespace SlowTests.MailingList
                 foreach (object obj in objs)
                     session.Store(obj);
                 session.SaveChanges();
-            }
-        }
-
-        private class NonStaleQueryListener : IDocumentQueryListener
-        {
-            public void BeforeQueryExecuted(IDocumentQueryCustomization customization)
-            {
-                customization.WaitForNonStaleResults();
             }
         }
     }

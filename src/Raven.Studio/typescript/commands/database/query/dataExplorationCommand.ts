@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import pagedResultSet = require("common/pagedResultSet");
 import appUrl = require("common/appUrl");
 
 class dataExplorationCommand extends commandBase {
@@ -11,7 +10,7 @@ class dataExplorationCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Data.Queries.QueryResult<any>> { //TODO avoid using any? 
+    execute(): JQueryPromise<Raven.Client.Documents.Queries.QueryResult<any>> { //TODO avoid using any? 
         var self = this;
         var queryTask = this.query(this.getUrl(), null, this.db);
         queryTask.fail((response: JQueryXHR) => this.reportError("Error during query", response.responseText, response.statusText));
@@ -26,7 +25,7 @@ class dataExplorationCommand extends commandBase {
         var requestWithCsvDownload: any = this.request;
         requestWithCsvDownload.download = "true";
         requestWithCsvDownload.format = "excel";
-        return appUrl.forResourceQuery(this.db) + "/streams/exploration/" + this.urlEncodeArgs(requestWithCsvDownload);//TODO: use endpoints
+        return appUrl.forDatabaseQuery(this.db) + "/streams/exploration/" + this.urlEncodeArgs(requestWithCsvDownload);//TODO: use endpoints
     }
 }
 

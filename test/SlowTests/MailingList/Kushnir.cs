@@ -7,9 +7,7 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
-using Raven.Client.Listeners;
-using Raven.Json.Linq;
+using Raven.Client.Documents.Indexes;
 using SlowTests.Utils;
 using Xunit;
 
@@ -19,12 +17,12 @@ namespace SlowTests.MailingList
     {
         private const string Alphabet = "abcdefghijklmnopqrstuvwxyz";
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6264")]
         public void SortOnMetadata()
         {
             using (var store = GetDocumentStore())
             {
-                store.RegisterListener(new CreateDateMetadataConversion());
+                //store.RegisterListener(new CreateDateMetadataConversion());
                 new Foos_ByNameDateCreated().Execute(store);
 
 
@@ -70,6 +68,7 @@ namespace SlowTests.MailingList
             public DateTime DateCreated { get; set; }
         }
 
+        /*
         private class CreateDateMetadataConversion : IDocumentConversionListener
         {
             private int _count;
@@ -106,6 +105,7 @@ namespace SlowTests.MailingList
                 }
             }
         }
+        */
 
         private class Foos_ByNameDateCreated : AbstractIndexCreationTask<Foo>
         {

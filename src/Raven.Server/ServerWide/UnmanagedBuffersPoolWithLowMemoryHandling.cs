@@ -1,5 +1,4 @@
-﻿using Raven.Client.Util;
-using Raven.Server.ServerWide.LowMemoryNotification;
+﻿using Raven.Server.ServerWide.LowMemoryNotification;
 using Sparrow.Json;
 
 namespace Raven.Server.ServerWide

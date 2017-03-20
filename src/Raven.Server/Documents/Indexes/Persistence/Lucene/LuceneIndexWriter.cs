@@ -7,11 +7,8 @@
 using System;
 
 using Lucene.Net.Analysis;
-using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
-
-using Raven.Abstractions.Logging;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
@@ -51,11 +48,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             RecreateIndexWriter();
         }
 
-        public void AddDocument(global::Lucene.Net.Documents.Document doc)
-        {
-            indexWriter.AddDocument(doc);
-        }
-
         public void AddDocument(global::Lucene.Net.Documents.Document doc, Analyzer a)
         {
             indexWriter.AddDocument(doc, a);
@@ -64,11 +56,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public void DeleteDocuments(Term term)
         {
             indexWriter.DeleteDocuments(term);
-        }
-
-        public void DeleteDocuments(Term[] terms)
-        {
-            indexWriter.DeleteDocuments(terms);
         }
 
         public void Commit()
@@ -156,16 +143,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public void Dispose(bool waitForMerges)
         {
             DisposeIndexWriter(waitForMerges);
-        }
-
-        public LuceneIndexWriter CreateRamWriter()
-        {
-            var ramDirectory = new RAMDirectory();
-            if (_indexReaderWarmer != null)
-            {
-                indexWriter.MergedSegmentWarmer = _indexReaderWarmer;
-            }
-            return new LuceneIndexWriter(ramDirectory, analyzer, indexDeletionPolicy, maxFieldLength, _indexReaderWarmer, _documentDatabase);
         }
 
         public void AddIndexesNoOptimize(Directory[] directories, int count)

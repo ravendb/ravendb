@@ -3,7 +3,7 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Util;
+using Raven.Client.Util;
 using Sparrow.Collections;
 
 namespace Raven.Server.Json

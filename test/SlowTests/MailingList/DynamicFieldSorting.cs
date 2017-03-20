@@ -9,8 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -145,7 +144,7 @@ namespace SlowTests.MailingList
                 {
                     var items = s.Advanced.DocumentQuery<WithDynamicIndex.ProjectionItem, WithDynamicIndex>()
                         .WaitForNonStaleResults()
-                        .AddOrder("N1_Range", true, typeof(double))
+                        .AddOrder("N1_D_Range", true)
                         .SelectFields<WithDynamicIndex.ProjectionItem>("SongId", "NumericAttributes")
                         .Take(128)
                         .ToList();

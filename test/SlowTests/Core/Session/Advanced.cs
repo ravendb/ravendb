@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using FastTests;
-using Raven.NewClient.Client.Data.Commands;
-using Raven.NewClient.Client.Exceptions;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Exceptions;
 using Sparrow.Json.Parsing;
 using Xunit;
 
@@ -11,7 +11,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Session
 {
-    public class Advanced : RavenNewTestBase
+    public class Advanced : RavenTestBase
     {
         [Fact]
         public void CanGetChangesInformation()
@@ -199,7 +199,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact(Skip = "Missing feature: Optimistic concurrency")]
+        [Fact]
         public void CanUseOptmisticConcurrency()
         {
             const string entityId = "users/1";
@@ -226,7 +226,7 @@ namespace SlowTests.Core.Session
                     user.Name = "Name";
                     session.Store(user);
                     var e = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
-                    Assert.Equal("PUT attempted on document '" + entityId + "' using a non current etag", e.Message);
+                    Assert.Equal($"Document {entityId} has etag 2, but Put was called with etag 1. Optimistic concurrency violation, transaction will be aborted.", e.Message);
                 }
             }
         }
@@ -260,7 +260,7 @@ namespace SlowTests.Core.Session
             {
                 using (var commands = store.Commands())
                 {
-                    commands.Put(companyId, null, new Company { Id = companyId }, new Dictionary<string, string> { { attrKey, attrVal } });
+                    commands.Put(companyId, null, new Company { Id = companyId }, new Dictionary<string, object> { { attrKey, attrVal } });
                 }
 
                 using (var session = store.OpenSession())
@@ -452,14 +452,14 @@ namespace SlowTests.Core.Session
                 {
                     Assert.Equal(0, session.Advanced.NumberOfRequests);
                     session.Load<User>("users/1");
-                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
 
                 using (var session = store.OpenSession())
                 {
                     session.Load<User>("users/1");
-                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     for (var i = 0; i <= 20; i++)

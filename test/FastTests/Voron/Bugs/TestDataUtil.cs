@@ -11,7 +11,7 @@ namespace FastTests.Voron.Bugs
 
         public static IDictionary<long, byte[]> ReadData(string fileName)
         {
-            var assembly = typeof(IndexPointToNonLeafPageTests).GetTypeInfo().Assembly;
+            var assembly = typeof(TestDataUtil).GetTypeInfo().Assembly;
             using (var fs = assembly.GetManifestResourceStream("FastTests.Voron.Bugs.Data." + fileName))
             using (var reader = new StreamReader(fs))
             {

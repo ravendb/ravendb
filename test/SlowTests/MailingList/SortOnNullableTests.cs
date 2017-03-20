@@ -6,9 +6,9 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -36,7 +36,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats = null;
+                    QueryStatistics stats = null;
                     var tst = session.Advanced.DocumentQuery<SortOnNullableEntity, SortOnNullableEntity_Search>()
                         .WaitForNonStaleResults()
                         .Statistics(out stats)
@@ -73,7 +73,7 @@ namespace SlowTests.MailingList
                 Index(x => x.Text, FieldIndexing.Analyzed);
                 Index(x => x.Num, FieldIndexing.Default);
 
-                Sort(x => x.Num, SortOptions.NumericDefault);
+                Sort(x => x.Num, SortOptions.Numeric);
             }
         }
     }

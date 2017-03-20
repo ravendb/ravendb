@@ -1,7 +1,7 @@
-import pagedResultSet = require("common/pagedResultSet");
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import conflictsInfo = require("models/database/replication/conflictsInfo");
+import conflict = require("models/database/replication/conflict");
 
 class getConflictsCommand extends commandBase {
 
@@ -13,7 +13,7 @@ class getConflictsCommand extends commandBase {
         }
     }
 
-    execute(): JQueryPromise<pagedResultSet<any>> {
+    execute(): JQueryPromise<pagedResult<any>> {
         
         var args = {
             sort: "-ConflictDetectedAt",
@@ -24,13 +24,15 @@ class getConflictsCommand extends commandBase {
 
         var resultsSelector = (dto: conflictsInfoDto) => new conflictsInfo(dto);
         var url = "/indexes/Raven/ConflictDocuments";//TODO: use endpoints
-        var conflictsTask = $.Deferred();
+        var conflictsTask = $.Deferred<pagedResult<conflict>>();
         this.query<conflictsInfo>(url, args, this.ownerDb, resultsSelector).
             fail(response => conflictsTask.reject(response)).
             done(conflicts => {
                 var items = conflicts.results;
-                var resultsSet = new pagedResultSet(items, conflicts.totalResults);
-                conflictsTask.resolve(resultsSet);
+                conflictsTask.resolve({
+                    items: items,
+                    totalResultCount: conflicts.totalResults
+                });
             });
 
         return conflictsTask;

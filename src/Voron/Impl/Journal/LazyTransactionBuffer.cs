@@ -31,9 +31,9 @@ namespace Voron.Impl.Journal
             _lazyTransactionPager.EnsureContinuous(0, sizeInPages);
         }
 
-        public void AddToBuffer(long position, CompressedPagesResult pages, int uncompressedPageCount)
+        public void AddToBuffer(long position, CompressedPagesResult pages)
         {
-            NumberOfPages += uncompressedPageCount;
+            NumberOfPages += pages.NumberOfUncompressedPages;
             if (_firstPositionInJournalFile == null)
             {
                 _firstPositionInJournalFile = position; // first lazy tx saves position to all lazy tx that comes afterwards
@@ -56,6 +56,7 @@ namespace Voron.Impl.Journal
             // scratch file to the data file before the lazy transaction buffers have
             // actually been flushed to the journal file
             _readTransaction = tx.Environment.NewLowLevelTransaction(_transactionPersistentContext, TransactionFlags.Read);
+            tx.Environment.AllowDisposeWithLazyTransactionRunning(_readTransaction);
         }
 
         public void WriteBufferToFile(JournalFile journalFile, LowLevelTransaction tx)

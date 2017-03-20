@@ -4,7 +4,6 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Patch;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -28,7 +27,7 @@ namespace Raven.Server.Documents.Handlers
             public BlittableJsonReaderObject Document;
             public PatchRequest Patch;
             public PatchRequest PatchIfMissing;
-            public long? Etag;
+            public long? Etag { get; set; } //TODO: revert to field once https://github.com/cjlpowers/TypeScripter/pull/12 will be merged
         }
 
         [ThreadStatic]
@@ -101,7 +100,7 @@ namespace Raven.Server.Documents.Handlers
                         {
                             ThrowUnexpectedToken(JsonParserToken.String, state);
                         }
-                        switch (GetPropertyType(state, ctx))
+                        switch (GetPropertyType(state))
                         {
                             case CommandPropertyName.Method:
                                 while (parser.Read() == false)
@@ -274,7 +273,7 @@ namespace Raven.Server.Documents.Handlers
             // other properties are ignore (for legacy support)
         }
 
-        private static unsafe CommandPropertyName GetPropertyType(JsonParserState state, JsonOperationContext ctx)
+        private static unsafe CommandPropertyName GetPropertyType(JsonParserState state)
         {
             // here we confirm that the value is matching our expectation, in order to save CPU instructions
             // we compare directly against the precomputed values
@@ -358,7 +357,7 @@ namespace Raven.Server.Documents.Handlers
         private static unsafe void ThrowInvalidProperty(JsonParserState state, JsonOperationContext ctx)
         {
             throw new InvalidOperationException("Invalid property name: " +
-                                                new LazyStringValue(null, state.StringBuffer, state.StringSize, ctx));
+                                                ctx.AllocateStringValue(null, state.StringBuffer, state.StringSize));
         }
 
         private static void ThrowUnexpectedToken(JsonParserToken jsonParserToken, JsonParserState state)

@@ -1,8 +1,6 @@
 ﻿using System.IO;
 using System.Text;
-
-using Raven.Abstractions.Data;
-
+using Raven.Client;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -46,7 +44,7 @@ namespace FastTests.Blittable
             {
                 var input = new DynamicJsonValue
                 {
-                    [Constants.Indexing.Fields.DocumentIdFieldName] = "tracks/1",
+                    [Constants.Documents.Indexing.Fields.DocumentIdFieldName] = "tracks/1",
                     ["Title"] = "A and G motor vehicles"
                 };
 
@@ -54,7 +52,7 @@ namespace FastTests.Blittable
                 {
                     var output = new DynamicJsonValue
                     {
-                        [Constants.Indexing.Fields.DocumentIdFieldName] = "tracks/1",
+                        [Constants.Documents.Indexing.Fields.DocumentIdFieldName] = "tracks/1",
                     };
 
                     var value = traverser.Read(inputJson, "Title");

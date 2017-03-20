@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Issues
 {
-    public class RavenDB_3691 : RavenNewTestBase
+    public class RavenDB_3691 : RavenTestBase
     {
         [Fact]
         public void CanPutDocumentWithMetadataPropertyBeingNull()
@@ -14,7 +14,7 @@ namespace SlowTests.Tests.Issues
             {
                 using (var commands = store.Commands())
                 {
-                    commands.Put("test", null, new { }, new Dictionary<string, string> { { "Foo", null } });
+                    commands.Put("test", null, new { }, new Dictionary<string, object> { { "Foo", (string)null } });
                 }
             }
         }

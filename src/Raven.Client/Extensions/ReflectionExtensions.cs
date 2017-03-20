@@ -7,19 +7,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
 using System.Reflection;
 
-namespace Raven.Abstractions.Extensions
+namespace Raven.Client.Extensions
 {
-    public static class ReflectionExtensions
+    internal static class ReflectionExtensions
     {
-        public static void InvokeMember(this Type type, string name, BindingFlags invokeAttr, object target)
-        {
-            var method = type.GetMethod(name);
-            method.Invoke(target, null);
-        }
-
         public static Type GetMemberType(this MemberInfo member)
         {
             var propertyInfo = member as PropertyInfo;
@@ -33,15 +26,54 @@ namespace Raven.Abstractions.Extensions
             throw new NotSupportedException(member.GetType().ToString());
         }
 
-        private static bool TestAccessibility(MethodBase member, BindingFlags bindingFlags)
+        internal static Type GetElementType(this Type seqType)
         {
-            bool visibility = (member.IsPublic && bindingFlags.HasFlag(BindingFlags.Public)) ||
-              (!member.IsPublic && bindingFlags.HasFlag(BindingFlags.NonPublic));
+            Type ienum = FindIEnumerable(seqType);
+            if (ienum == null)
+                return seqType;
+            return ienum.GetGenericArguments()[0];
+        }
 
-            bool instance = (member.IsStatic && bindingFlags.HasFlag(BindingFlags.Static)) ||
-              (!member.IsStatic && bindingFlags.HasFlag(BindingFlags.Instance));
+        public static bool IsNullableType(this Type type)
+        {
+            return type != null && type.GetTypeInfo().IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
+        }
 
-            return visibility && instance;
+        public static Type GetNonNullableType(this Type type)
+        {
+            if (IsNullableType(type))
+                return type.GetGenericArguments()[0];
+            return type;
+        }
+
+        private static Type FindIEnumerable(Type seqType)
+        {
+            if (seqType == null || seqType == typeof(string))
+                return null;
+            if (seqType.IsArray)
+                return typeof(IEnumerable<>).MakeGenericType(seqType.GetElementType());
+            if (seqType.GetTypeInfo().IsGenericType)
+            {
+                foreach (var arg in seqType.GetGenericArguments())
+                {
+                    var ienum = typeof(IEnumerable<>).MakeGenericType(arg);
+                    if (ienum.IsAssignableFrom(seqType))
+                        return ienum;
+                }
+            }
+            var ifaces = seqType.GetInterfaces();
+            if (ifaces != null && ifaces.Any())
+            {
+                foreach (var iface in ifaces)
+                {
+                    var ienum = FindIEnumerable(iface);
+                    if (ienum != null)
+                        return ienum;
+                }
+            }
+            if (seqType.GetTypeInfo().BaseType != null && seqType.GetTypeInfo().BaseType != typeof(object))
+                return FindIEnumerable(seqType.GetTypeInfo().BaseType);
+            return null;
         }
     }
 }

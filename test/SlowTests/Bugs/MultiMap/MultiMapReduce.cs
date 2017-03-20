@@ -1,13 +1,12 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiMap
 {
-    public class MultiMapReduce : RavenNewTestBase
+    public class MultiMapReduce : RavenTestBase
     {
         [Fact]
         public void CanGetDataFromMultipleDocumentSources()

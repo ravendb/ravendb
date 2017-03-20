@@ -11,7 +11,7 @@ namespace Raven.Client.Exceptions
     /// <summary>
     /// This exception is raised when a concurrency conflict is encountered
     /// </summary>
-    public class ConcurrencyException : Exception
+    public class ConcurrencyException : ConflictException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ConcurrencyException"/> class.

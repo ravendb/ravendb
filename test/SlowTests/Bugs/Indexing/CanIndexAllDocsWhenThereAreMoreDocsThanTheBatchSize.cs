@@ -1,15 +1,15 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Server;
 using Raven.Server.Config;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize : RavenNewTestBase
+    public class CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize : RavenTestBase
     {
         private class User
         {
@@ -41,11 +41,12 @@ namespace SlowTests.Bugs.Indexing
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Maps = { "from doc in docs select new { doc.Name}" }
-                    }));
+                        Maps = { "from doc in docs select new { doc.Name}" },
+                        Name = "test"
+                    }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -61,11 +62,12 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore(modifyDatabaseDocument: _modifyMapTimeout))
             {
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Maps = { "from doc in docs select new { doc.Name}" }
-                    }));
+                        Maps = { "from doc in docs select new { doc.Name}" },
+                        Name = "test"
+                    }}));
 
                 using (var session = store.OpenSession())
                 {

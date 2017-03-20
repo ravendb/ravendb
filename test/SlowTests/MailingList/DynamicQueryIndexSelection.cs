@@ -2,8 +2,10 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -68,8 +70,9 @@ namespace SlowTests.MailingList
 
                     session.SaveChanges();
 
-                    store.DatabaseCommands.PutIndex("Foos/TestDynamicQueries", new IndexDefinition()
+                    store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition()
                     {
+                        Name = "Foos/TestDynamicQueries",
                         Maps =
                         {
                             @"from doc in docs.Foos
@@ -84,9 +87,9 @@ namespace SlowTests.MailingList
                                     Bar = doc.Bar
                                 }"
                         }
-                    }, true);
+                    }}));
 
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
 
                     var result = session.Query<Foo>()
                         .Where(x =>

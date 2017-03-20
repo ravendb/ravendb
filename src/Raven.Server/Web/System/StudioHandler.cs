@@ -12,13 +12,14 @@ using System.IO.Compression;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
-using Raven.Abstractions.Data;
 using Raven.Server.Routing;
-using Raven.Abstractions.Extensions;
 using System.Linq;
 using System.Net.Http.Headers;
 using Microsoft.Extensions.Primitives;
-using Raven.Abstractions;
+using Raven.Client;
+using Raven.Client.Extensions;
+using Raven.Client.Extensions.Streams;
+using Raven.Client.Util;
 using StringSegment = Sparrow.StringSegment;
 
 namespace Raven.Server.Web.System
@@ -31,15 +32,17 @@ namespace Raven.Server.Web.System
 
         private static Dictionary<string, FileInfo> _fileNamesCaseInsensitive = new Dictionary<string, FileInfo>(StringComparer.OrdinalIgnoreCase);
 
-        public static string[] LookupPaths = {
+        public static readonly string[] LookupPaths = {
             "src/Raven.Studio/wwwroot",
              "wwwroot",
             "../Raven.Studio/wwwroot",
             "../src/Raven.Studio/wwwroot",
-            "../../../../../Raven.Studio/wwwroot"
+            "../../../../src/Raven.Studio/wwwroot",
+            "../../../../../src/Raven.Studio/wwwroot",
+            "../../../../../../src/Raven.Studio/wwwroot"
         };
 
-        public static Dictionary<string, string> FileExtensionToContentTypeMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        public static readonly Dictionary<string, string> FileExtensionToContentTypeMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             {".html", "text/html"},
             {".htm", "text/html"},
@@ -125,8 +128,7 @@ namespace Raven.Server.Web.System
         {
             var fileName = new StringSegment(
                 RouteMatch.Url,
-                RouteMatch.MatchLength,
-                RouteMatch.Url.Length - RouteMatch.MatchLength);
+                RouteMatch.Url.Length - RouteMatch.MatchLength, RouteMatch.MatchLength);
 
             var env = (IHostingEnvironment)HttpContext.RequestServices.GetService(typeof(IHostingEnvironment));
 
@@ -222,7 +224,7 @@ namespace Raven.Server.Web.System
 
         protected void WriteETag(string etag)
         {
-            HttpContext.Response.Headers[Constants.MetadataEtagField] = etag.ToInvariantString();
+            HttpContext.Response.Headers[Constants.Headers.Etag] = etag.ToInvariantString();
         }
 
         private void WriteEmbeddedFileNotFound(string docPath)

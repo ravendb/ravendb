@@ -301,8 +301,8 @@ namespace Voron.Impl.Journal
             return checked((int)(size / Constants.Storage.PageSize) + (size % Constants.Storage.PageSize == 0 ? 0 : 1));
         }
 
-        Dictionary<AbstractPager, SparseMemoryMappedPager.TransactionState> IPagerLevelTransactionState.
-            SparsePagerTransactionState
+        Dictionary<AbstractPager, TransactionState> IPagerLevelTransactionState.
+            PagerTransactionState32Bits
         { get; set; }
 
         public event Action<IPagerLevelTransactionState> OnDispose;

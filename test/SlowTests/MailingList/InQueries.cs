@@ -1,7 +1,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -13,7 +13,7 @@ namespace SlowTests.MailingList
             public string Country { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6402")]
         public void WhenQueryContainsQuestionMark()
         {
             using (var store = GetDocumentStore())

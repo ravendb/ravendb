@@ -5,11 +5,10 @@ using System.Linq;
 using System.Reflection;
 
 using Lucene.Net.Analysis;
-using Lucene.Net.Analysis.Standard;
 using Lucene.Net.Search;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries;
 using Sparrow.Logging;
@@ -32,8 +31,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         
         protected static RavenPerFieldAnalyzerWrapper CreateAnalyzer(Func<Analyzer> createDefaultAnalyzer, Dictionary<string, IndexField> fields, bool forQuerying = false)
         {
-            if (fields.ContainsKey(Constants.Indexing.Fields.AllFields))
-                throw new InvalidOperationException($"Detected '{Constants.Indexing.Fields.AllFields}'. This field should not be present here, because inheritance is done elsewhere.");
+            if (fields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
+                throw new InvalidOperationException($"Detected '{Constants.Documents.Indexing.Fields.AllFields}'. This field should not be present here, because inheritance is done elsewhere.");
 
             var defaultAnalyzer = createDefaultAnalyzer();
 

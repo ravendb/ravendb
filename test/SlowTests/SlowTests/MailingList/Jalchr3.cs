@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Newtonsoft.Json;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Imports.Newtonsoft.Json;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.SlowTests.MailingList
@@ -19,7 +21,6 @@ namespace SlowTests.SlowTests.MailingList
             {
                 store.Conventions.CustomizeJsonSerializer = serializer =>
                                                             serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-                store.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
                 store.Conventions.AllowQueriesOnId = true;
 
                 new User_Entity().Execute(store);
@@ -36,7 +37,7 @@ namespace SlowTests.SlowTests.MailingList
                         for (int i = 0; i < 672; i++)
                         {
                             var user = new User();
-                            user.Id = Guid.NewGuid();
+                            user.Id = Guid.NewGuid().ToString();
                             user.Name = "User" + ("-" + k + "-" + i);
                             user.CreatedDate = now.AddHours(i);
                             list.Add(user);
@@ -53,13 +54,13 @@ namespace SlowTests.SlowTests.MailingList
                 // Warm-up
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var query = session.Query<User, User_Entity>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats);
                     query = query.Where(x => x.CreatedDate >= start.Date);
                     query = query.Where(x => x.CreatedDate <= DateTime.Now.Date);
-                    var result = query.OrderBy(x => x.CreatedDate).ToList();
+                    var result = query.OrderBy(x => x.CreatedDate).Take(25).ToList();
 
                     Assert.True(result.Count > 0);
                     count = query.Count();
@@ -70,7 +71,7 @@ namespace SlowTests.SlowTests.MailingList
                 var orderedList = list.OrderBy(x => x.CreatedDate).ToList();
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var query = session.Query<User, User_Entity>()
                         .Statistics(out stats);
 
@@ -99,7 +100,7 @@ namespace SlowTests.SlowTests.MailingList
         }
         private class User
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public DateTime CreatedDate { get; set; }
         }

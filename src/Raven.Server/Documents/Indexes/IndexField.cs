@@ -1,6 +1,5 @@
 ﻿using System;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes
 {

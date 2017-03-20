@@ -1,4 +1,3 @@
-import pagedResultSet = require("common/pagedResultSet");
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 
@@ -12,7 +11,7 @@ class getDocRefsCommand extends commandBase {
         }
     }
 
-    execute(): JQueryPromise<pagedResultSet<any>> {
+    execute(): JQueryPromise<pagedResult<any>> {
         
         var args = {
             id: this.docId,
@@ -31,7 +30,10 @@ class getDocRefsCommand extends commandBase {
                         getDocumentPropertyNames: () => <Array<string>>["Id"]
                     }
                 });
-                var resultsSet = new pagedResultSet(items, docRefs.TotalCount);
+                var resultsSet: pagedResult<any> = {
+                    items: items,
+                    totalResultCount: docRefs.TotalCount
+                };
                 docRefsTask.resolve(resultsSet);
             });
 

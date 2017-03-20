@@ -1,8 +1,7 @@
 using System.Diagnostics;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -69,7 +68,7 @@ namespace SlowTests.MailingList
                 Map = foos => from foo in foos
                               select new { foo.Num };
 
-                Sort(x => x.Num, SortOptions.NumericDefault);
+                Sort(x => x.Num, SortOptions.Numeric);
             }
         }
     }

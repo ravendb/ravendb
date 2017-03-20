@@ -23,7 +23,8 @@ class documentHelpers {
             }
             else if (typeof curField == "object" && !!curField) {
                 for (let curInnerField in curField) {
-                    documentNodesFlattenedList.push(curField[curInnerField]);
+                    var item = curField[curInnerField];
+                    documentNodesFlattenedList.push(item);
                 }
             }
         }
@@ -147,11 +148,11 @@ class documentHelpers {
         const docDto = documentHelpers.findSchemaForObject(documents.map(x => x.toDto(false)));
 
         const metadatas = documents.map(x => x.__metadata);
-        const ravenEntityName = documentHelpers.findCommonValue(metadatas, "ravenEntityName");
+        const collection = documentHelpers.findCommonValue(metadatas, "collection");
         const ravenClrType = documentHelpers.findCommonValue(metadatas, "ravenClrType");
 
         docDto["@metadata"] = {
-            "@collection": ravenEntityName,
+            "@collection": collection,
             "Raven-Clr-Type": ravenClrType
         }
         return new document(docDto);
@@ -173,7 +174,7 @@ class documentHelpers {
         return result;
     }
 
-    private static findCommonValue(elements: Array<any>, property: string): any {
+    private static findCommonValue<T>(elements: Array<T>, property: keyof T): any {
         const extractedValues = elements.map(doc => doc[property]);
         const [firstValue, ...restValues] = extractedValues;
 

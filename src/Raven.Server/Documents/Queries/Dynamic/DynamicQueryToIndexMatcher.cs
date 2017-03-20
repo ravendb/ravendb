@@ -2,12 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Queries.Sorting;
@@ -107,7 +104,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             if (definition.Collections.Contains(collection, StringComparer.OrdinalIgnoreCase) == false)
             {
-                if (definition.Collections.Length == 0)
+                if (definition.Collections.Count == 0)
                     explanations?.Add(new Explanation(indexName, "Query is specific for collection, but the index searches across all of them, may result in a different type being returned."));
                 else
                     explanations?.Add(new Explanation(indexName, $"Index does not apply to collection '{collection}'"));
@@ -116,7 +113,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
             else
             {
-                if (definition.Collections.Length > 1) // we only allow indexes with a single entity name
+                if (definition.Collections.Count > 1) // we only allow indexes with a single entity name
                 {
                     explanations?.Add(new Explanation(indexName, "Index contains more than a single entity name, may result in a different type being returned."));
                     return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
@@ -166,15 +163,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 var sortFieldName = index.Type.IsAuto() ? sortInfo.Name : sortInfo.NormalizedName;
 
-                if (sortFieldName.StartsWith(Constants.Indexing.Fields.AlphaNumericFieldName) ||
-                    sortFieldName.StartsWith(Constants.Indexing.Fields.RandomFieldName) ||
-                    sortFieldName.StartsWith(Constants.Indexing.Fields.CustomSortFieldName))
+                if (sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.AlphaNumericFieldName) ||
+                    sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName) ||
+                    sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                 {
                     sortFieldName = SortFieldHelper.ExtractName(sortFieldName);
                 }
 
-                if (sortFieldName.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
-                    sortFieldName = sortFieldName.Substring(0, sortFieldName.Length - Constants.Indexing.Fields.RangeFieldSuffix.Length);
+                sortFieldName = FieldUtil.RemoveRangeSuffixIfNecessary(sortFieldName);
 
                 IndexField indexField = null;
                 // if the field is not in the output, then we can't sort on it. 

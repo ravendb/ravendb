@@ -8,9 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -27,7 +27,7 @@ namespace SlowTests.MailingList
                     CreateData(session);
                     new PerformanceItemsByMonthNumSortByMonthNum().Execute(store);
 
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     session.Query<PerformanceItem>()
                            .Statistics(out stats)
                            .OrderBy(f => f.MonthNum)
@@ -137,7 +137,7 @@ namespace SlowTests.MailingList
                 Map = docs => from doc in docs
                               select new { MonthNum = doc.MonthNum };
 
-                Sort(x => x.MonthNum, SortOptions.NumericDefault);
+                Sort(x => x.MonthNum, SortOptions.Numeric);
             }
         }
 

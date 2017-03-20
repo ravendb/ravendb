@@ -4,11 +4,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Replication.Messages;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Operations.Databases.Transformers;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Exceptions.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Operations.Transformers;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Documents.Transformers;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -622,7 +624,7 @@ namespace FastTests.Server.Replication
                 userByNameIndex.Execute(store);
 
                 var usernameToUpperTransformer = new UsernameToUpperTransformer("FooBar");
-                Assert.Throws<RavenException>(() => usernameToUpperTransformer.Execute(store));
+                Assert.Throws<IndexOrTransformerAlreadyExistException>(() => usernameToUpperTransformer.Execute(store));
             }
         }
 
@@ -635,7 +637,7 @@ namespace FastTests.Server.Replication
                 usernameToUpperTransformer.Execute(store);
 
                 var userByNameIndex = new UserByNameIndex("FooBar");
-                Assert.Throws<RavenException>(() => userByNameIndex.Execute(store));
+                Assert.Throws<IndexOrTransformerAlreadyExistException>(() => userByNameIndex.Execute(store));
             }
         }
 
@@ -744,8 +746,8 @@ namespace FastTests.Server.Replication
                     }
                 }
 
-                indexesPath = databaseStore.Configuration.Indexing.StoragePath;
-                databasePath = databaseStore.Configuration.Core.DataDirectory;
+                indexesPath = databaseStore.Configuration.Indexing.StoragePath.FullPath;
+                databasePath = databaseStore.Configuration.Core.DataDirectory.FullPath;
                 foreach (var indexFolder in Directory.GetDirectories(indexesPath))
                     IOExtensions.DeleteDirectory(indexFolder);
 

@@ -9,7 +9,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Data;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Server.Config;
 using Xunit;
 
@@ -26,14 +28,14 @@ namespace SlowTests.SlowTests.Bugs
 #pragma warning restore 414,649
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6274")]
         public async Task AwaitAsyncPatchByIndexShouldWork()
         {
             using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"))
             {
                 string lastUserId = null;
 
-                RavenQueryStatistics stats;
+                QueryStatistics stats;
                 using (var session = store.OpenSession())
                 {
                     session.Query<User>()
@@ -58,14 +60,14 @@ namespace SlowTests.SlowTests.Bugs
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
 
-                await (await store.AsyncDatabaseCommands.UpdateByIndexAsync(
+                await (await store.Operations.SendAsync(new PatchByIndexOperation(
                     stats.IndexName,
                     new IndexQuery(store.Conventions) { Query = string.Empty },
                     new PatchRequest
                     {
                         Script = "this.FullName = this.FirstName + ' ' + this.LastName;"
                     }
-                ))
+                )))
                 .WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 using (var db = store.OpenAsyncSession())

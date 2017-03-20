@@ -1,28 +1,46 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using Sparrow;
 using Voron.Data.Fixed;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using Voron.Util;
 
 namespace Voron.Data.BTrees
 {
     public unsafe partial class Tree
     {
-        private const int StreamSizeValue = -1;// known invalid value for the chunks
-
-        [StructLayout(LayoutKind.Explicit, Size = 12)]
+        [StructLayout(LayoutKind.Explicit, Size = SizeOf)]
         public struct ChunkDetails
         {
+            public const byte SizeOf = 12;
+
             [FieldOffset(0)]
             public long PageNumber;
+
             [FieldOffset(8)]
             public int ChunkSize;
+        }
+
+        [StructLayout(LayoutKind.Explicit, Size = SizeOf)]
+        public struct StreamInfo
+        {
+            public const int SizeOf = 16;
+
+            [FieldOffset(0)]
+            public long TotalSize;
+
+            [FieldOffset(8)]
+            public int Version;
+
+            [FieldOffset(12)]
+            public int TagSize;
+
+            public static byte* GetTagPtr(StreamInfo* info)
+            {
+                return (byte*)info + SizeOf;
+            }
         }
 
         [ThreadStatic]
@@ -42,15 +60,16 @@ namespace Voron.Data.BTrees
 
             private FixedSizeTree _tree;
             private int _version;
+            private Slice? _tag;
 
-
-            public void Init(Tree parent, Slice key, int? initialNumberOfPagesPerChunk)
+            public void Init(Tree parent, Slice key, Slice? tag, int? initialNumberOfPagesPerChunk)
             {
                 _parent = parent;
                 _numberOfPagesPerChunk = 1;
-                _tree = _parent.FixedTreeFor(key, valSize: (byte)sizeof(ChunkDetails));
+                _tree = _parent.FixedTreeFor(key, ChunkDetails.SizeOf);
                 _version = _parent.DeleteStream(key);
                 _numberOfPagesPerChunk = initialNumberOfPagesPerChunk ?? 1;
+                _tag = tag;
             }
 
             public void Write(Stream stream)
@@ -79,12 +98,27 @@ namespace Voron.Data.BTrees
                             AllocateMorePages();
                         }
                     }
+
                     var chunkSize = (int)(_writePos - _currentPage.DataPointer);
                     FlushPage(_currentPage.PageNumber, chunkSize);
-                    _parent._tx.LowLevelTransaction.ShrinkOverflowPage(_currentPage.PageNumber, chunkSize);
-                    RecordVersionAndSize();
-                }
 
+                    var remaining = _writePosEnd - _writePos;
+                    var infoSize = StreamInfo.SizeOf;
+
+                    if (_tag != null)
+                        infoSize += _tag.Value.Size;
+
+                    if (remaining < infoSize)
+                    {
+                        AllocateMorePages();
+                        chunkSize = 0;
+                        FlushPage(_currentPage.PageNumber, chunkSize);
+                    }
+
+                    RecordStreamInfo();
+
+                    _parent._tx.LowLevelTransaction.ShrinkOverflowPage(_currentPage.PageNumber, chunkSize + infoSize); 
+                }
             }
 
             private long WriteBufferToPage(byte* pBuffer, long size)
@@ -104,25 +138,28 @@ namespace Voron.Data.BTrees
                     PageNumber = pageNumber,
                     ChunkSize = chunkSize
                 };
+
                 Slice value;
-                using (Slice.External(_parent._tx.Allocator, (byte*)&chunkDetails, sizeof(ChunkDetails), out value))
+                using (Slice.External(_parent._tx.Allocator, (byte*)&chunkDetails, ChunkDetails.SizeOf, out value))
                 {
                     _tree.Add(_chunkNumber++, value);
                 }
             }
 
-            private void RecordVersionAndSize()
+            private void RecordStreamInfo()
             {
-                var chunkDetails = new ChunkDetails
+                var info = (StreamInfo*)_writePos;
+
+                info->TotalSize = _totalSize;
+                info->Version = _version + 1;
+
+                if (_tag != null)
                 {
-                    PageNumber = _totalSize,
-                    ChunkSize = _version + 1
-                };
-                Slice value;
-                using (Slice.External(_parent._tx.Allocator, (byte*)&chunkDetails, sizeof(ChunkDetails), out value))
-                {
-                    _tree.Add(StreamSizeValue, value);
+                    _tag.Value.CopyTo(StreamInfo.GetTagPtr(info));
+                    info->TagSize = _tag.Value.Size;
                 }
+                else
+                    info->TagSize = 0;
             }
 
             private void AllocateMorePages()
@@ -137,17 +174,30 @@ namespace Voron.Data.BTrees
             }
         }
 
-        public void AddStream(string key, Stream stream, int? initialNumberOfPagesPerChunk = null)
+        public void AddStream(string key, Stream stream, string tag = null, int? initialNumberOfPagesPerChunk = null)
         {
             Slice str;
+            
             using (Slice.From(_tx.Allocator, key, out str))
-                AddStream(str, stream, initialNumberOfPagesPerChunk);
+            {
+                if (tag != null)
+                {
+                    Slice tagStr;
+                    using (Slice.From(_tx.Allocator, tag, out tagStr))
+                        AddStream(str, stream, tagStr, initialNumberOfPagesPerChunk);
+                }
+                else
+                    AddStream(str, stream, null, initialNumberOfPagesPerChunk);
+            }
         }
-        public void AddStream(Slice key, Stream stream, int? initialNumberOfPagesPerChunk = null)
+
+        public void AddStream(Slice key, Stream stream, Slice? tag = null, int? initialNumberOfPagesPerChunk = null)
         {
             var writer = new StreamToPageWriter();
-            writer.Init(this, key, initialNumberOfPagesPerChunk);
+            writer.Init(this, key, tag, initialNumberOfPagesPerChunk);
             writer.Write(stream);
+
+            State.Flags |= TreeFlags.Streams;
         }
 
         public VoronStream ReadStream(string key)
@@ -159,8 +209,8 @@ namespace Voron.Data.BTrees
 
         public VoronStream ReadStream(Slice key)
         {
-            var tree = FixedTreeFor(key, valSize: (byte)sizeof(ChunkDetails));
-            var numberOfChunks = tree.NumberOfEntries - 1; //-1 for the StreamSize entry
+            var tree = FixedTreeFor(key, ChunkDetails.SizeOf);
+            var numberOfChunks = tree.NumberOfEntries;
 
             if (numberOfChunks <= 0)
                 return null;
@@ -181,61 +231,55 @@ namespace Voron.Data.BTrees
                         chunksDetails[i++] = *(ChunkDetails*)slice.Content.Ptr;
                     }
                 } while (it.MoveNext());
-
             }
             return new VoronStream(tree.Name, chunksDetails, _llt);
         }
 
         public int TouchStream(Slice key)
         {
-            var tree = FixedTreeFor(key, valSize: (byte)sizeof(ChunkDetails));
+            var info = GetStreamInfo(key, writeable: true);
 
-            if (tree.NumberOfEntries == 0)
-            {
+            if (info == null)
                 return 0;
-            }
 
-            Slice slice;
-            using (tree.Read(StreamSizeValue, out slice))
-            {
-                if (slice.HasValue == false)
-                    return 0;
-
-                var chunkDetails = *((ChunkDetails*)slice.Content.Ptr);
-                chunkDetails.ChunkSize++;
-                Slice val;
-                using (Slice.External(_tx.Allocator, (byte*)&chunkDetails, sizeof(ChunkDetails), out val))
-                {
-                    tree.Add(StreamSizeValue, val);
-                }
-                return chunkDetails.ChunkSize;
-            }
+            return ++info->Version;
         }
 
-        public void GetStreamLengthAndVersion(Slice key, out long length, out int version)
+        public StreamInfo* GetStreamInfo(Slice key, bool writeable)
         {
-            var tree = FixedTreeFor(key, valSize: (byte)sizeof(ChunkDetails));
+            var tree = FixedTreeFor(key, ChunkDetails.SizeOf);
+
             if (tree.NumberOfEntries == 0)
-            {
-                length = -1;
-                version = 0;
-                return;
-            }
+                return null;
 
-            Slice slice;
-            using (tree.Read(StreamSizeValue, out slice))
+            ChunkDetails lastChunk;
+            using (var it = tree.Iterate())
             {
-                if (slice.HasValue == false)
+                if (it.SeekToLast() == false)
+                    return null;
+
+                Slice slice;
+                using (tree.Read(it.CurrentKey, out slice))
                 {
-                    length = -1;
-                    version = 0;
-                    return;
-                }
+                    if (slice.HasValue == false)
+                        return null;
 
-                var chunkDetails = ((ChunkDetails*)slice.Content.Ptr);
-                length = chunkDetails->PageNumber;
-                version = chunkDetails->ChunkSize;
+                    lastChunk = *(ChunkDetails*) slice.Content.Ptr;
+                }
             }
+
+            var pagerRef = new LowLevelTransaction.PagerRef();
+            var page = _llt.GetPage(lastChunk.PageNumber, pagerRef);
+
+            if (writeable)
+                page = _llt.ModifyPage(page.PageNumber);
+
+            return (StreamInfo*)(page.DataPointer + lastChunk.ChunkSize);
+        }
+
+        internal FixedSizeTree GetStreamChunksTree(Slice key)
+        {
+            return FixedTreeFor(key, ChunkDetails.SizeOf);
         }
 
         public int DeleteStream(string key)
@@ -249,26 +293,21 @@ namespace Voron.Data.BTrees
         {
             var tree = FixedTreeFor(key, valSize: (byte)sizeof(ChunkDetails));
             int version = 0;
-            Slice value;
-            using (tree.Read(StreamSizeValue, out value))
+
+            var info = GetStreamInfo(key, writeable: false);
+
+            if (info != null)
+                version = info->Version;
+
+            using (var it = tree.Iterate())// we can use the iterator exactly once
             {
-                if (value.HasValue)
+                var llt = _tx.LowLevelTransaction;
+
+                if (it.Seek(0) == false)
+                    return version;
+
+                do
                 {
-                    var chunkDetails = (ChunkDetails*)value.Content.Ptr;
-                    version = chunkDetails->ChunkSize;
-                }
-            }
-            tree.Delete(StreamSizeValue);
-
-            while (true)
-            {
-                using (var it = tree.Iterate())// we can use the iterator exactly once
-                {
-                    var llt = _tx.LowLevelTransaction;
-
-                    if (!it.SeekToLast())
-                        break;
-
                     var chunkDetails = ((ChunkDetails*)it.CreateReaderForCurrent().Base);
                     var pageNumber = chunkDetails->PageNumber;
                     var numberOfPages = llt.DataPager.GetNumberOfOverflowPages(chunkDetails->ChunkSize);
@@ -278,10 +317,33 @@ namespace Voron.Data.BTrees
                         _pageLocator.Reset(pageNumber + i);
                     }
                     State.OverflowPages -= numberOfPages;
-                    tree.Delete(it.CurrentKey);
-                }
+                } while (it.MoveNext());
             }
+
+            DeleteFixedTreeFor(key, ChunkDetails.SizeOf);
+
             return version;
+        }
+
+        public string GetStreamTag(Slice key)
+        {
+            var info = GetStreamInfo(key, writeable: false);
+
+            if (info == null || info->TagSize == 0)
+                return null;
+
+            Slice result;
+            using (Slice.From(_tx.Allocator, StreamInfo.GetTagPtr(info), info->TagSize, out result))
+            {
+                return result.ToString();
+            }
+        }
+
+        public string GetStreamTag(string key)
+        {
+            Slice str;
+            using (Slice.From(_tx.Allocator, key, out str))
+                return GetStreamTag(str);
         }
     }
 }

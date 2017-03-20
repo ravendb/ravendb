@@ -2,12 +2,12 @@ using System;
 using System.Linq;
 
 using FastTests;
-using Raven.NewClient.Client;
+using Raven.Client.Documents;
 using Xunit;
 
 namespace SlowTests.Tests.MultiGet
 {
-    public class MultiGetNonStaleResults : RavenNewTestBase
+    public class MultiGetNonStaleResults : RavenTestBase
     {
         private class User
         {

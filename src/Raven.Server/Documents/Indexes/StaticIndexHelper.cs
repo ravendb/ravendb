@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
@@ -11,6 +10,16 @@ namespace Raven.Server.Documents.Indexes
 {
     public static class StaticIndexHelper
     {
+        public static bool CanReplace(MapIndex index, bool isStale, DocumentDatabase database, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+        {
+            return isStale == false;
+        }
+
+        public static bool CanReplace(MapReduceIndex index, bool isStale, DocumentDatabase database, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext)
+        {
+            return isStale == false;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsStale(MapIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff)
         {
@@ -48,7 +57,7 @@ namespace Raven.Server.Documents.Indexes
                 // we haven't handled references for that collection yet
                 // in theory we could check what is the last etag for that collection in documents store
                 // but this was checked earlier by the base index class
-                if (lastIndexedEtag == 0) 
+                if (lastIndexedEtag == 0)
                     continue;
 
                 foreach (var referencedCollection in referencedCollections)

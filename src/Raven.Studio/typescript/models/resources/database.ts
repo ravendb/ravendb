@@ -1,14 +1,17 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
-
-import resource = require("models/resources/resource");
-import license = require("models/auth/license");
-
-class database extends resource {
+class database {
     static readonly type = "database";
     static readonly qualifier = "db";
 
-    constructor(dbInfo: Raven.Client.Data.DatabaseInfo) {
-        super(dbInfo);
+    name: string;
+
+    activeBundles = ko.observableArray<string>();
+    disabled = ko.observable<boolean>(false);
+    errored = ko.observable<boolean>(false);
+    isAdminCurrentTenant = ko.observable<boolean>(false);
+
+
+    constructor(dbInfo: Raven.Client.Server.Operations.DatabaseInfo) {
 
         this.updateUsing(dbInfo);
         /* TODO
@@ -24,6 +27,14 @@ class database extends resource {
         });*/
         const dbName = dbInfo.Name;
         
+    }
+
+    updateUsing(incomingCopy: Raven.Client.Server.Operations.DatabaseInfo) {
+        this.isAdminCurrentTenant(incomingCopy.IsAdmin);
+        this.activeBundles(incomingCopy.Bundles);
+        this.name = incomingCopy.Name;
+        this.disabled(incomingCopy.Disabled);
+        this.errored(!!incomingCopy.LoadError);
     }
 
     private attributeValue(attributes: any, bundleName: string) {
@@ -47,6 +58,7 @@ class database extends resource {
         return false;
     }
 
+    //TODO: remove those props?
     get fullTypeName() {
         return "Database";
     }
@@ -61,12 +73,6 @@ class database extends resource {
 
     get type() {
         return database.type;
-    }
-
-    updateUsing(incomingCopy: Raven.Client.Data.DatabaseInfo): void {
-        super.updateUsing(incomingCopy);
-
-        //TODO: assign other props
     }
 }
 

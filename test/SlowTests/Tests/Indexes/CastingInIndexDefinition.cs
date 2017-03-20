@@ -1,12 +1,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class CastingInIndexDefinition : RavenNewTestBase
+    public class CastingInIndexDefinition : RavenTestBase
     {
         [Fact]
         public void CanCastValuesToString()

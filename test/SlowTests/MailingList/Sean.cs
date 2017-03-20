@@ -6,8 +6,7 @@
 
 using System;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Data;
+using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.MailingList

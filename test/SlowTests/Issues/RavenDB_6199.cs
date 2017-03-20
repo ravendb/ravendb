@@ -5,16 +5,15 @@ using Xunit;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Collections;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_6199 : RavenNewTestBase
+    public class RavenDB_6199 : RavenTestBase
     {
         private class User
         {
@@ -89,7 +88,8 @@ namespace SlowTests.Issues
                 var notificationsQueue = new AsyncQueue<Notification>();
                 using (db.NotificationCenter.TrackActions(notificationsQueue, null))
                 {
-                    store.Admin.Send(new PutIndexOperation(index.IndexName, definition));
+                    definition.Name = index.IndexName;
+                    store.Admin.Send(new PutIndexesOperation(new[] { definition}));
 
                     WaitForIndexing(store);
 

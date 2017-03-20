@@ -6,6 +6,8 @@ $DEV_BUILD_NUMBER = 40
 . '.\scripts\checkPrerequisites.ps1'
 . '.\scripts\restore.ps1'
 . '.\scripts\clean.ps1'
+. '.\scripts\arm.ps1'
+. '.\scripts\archive.ps1'
 . '.\scripts\package.ps1'
 . '.\scripts\buildProjects.ps1'
 . '.\scripts\getScriptDirectory.ps1'
@@ -13,7 +15,6 @@ $DEV_BUILD_NUMBER = 40
 . '.\scripts\env.ps1'
 . '.\scripts\updateSourceWithBuildInfo.ps1'
 . '.\scripts\nuget.ps1'
-. '.\scripts\dotnetForRpi.ps1'
 
 CheckPrerequisites
 
@@ -30,9 +31,6 @@ $OUT_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
 
 $CLIENT_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client")
 $CLIENT_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client", "bin", "Release")
-
-$NEW_CLIENT_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.NewClient")
-$NEW_CLIENT_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.NewClient", "bin", "Release")
 
 $SERVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Server")
 
@@ -66,8 +64,8 @@ $SPECS = @(
     },
     @{
        "Name" = "raspberry-pi";
-       "Runtime" = "ubuntu.16.04-x64";
-       "PkgType" = "tar";
+       "Runtime" = "";
+       "PkgType" = "tar.bz2";
        "IsUnix" = $True;
     }
 );
@@ -84,9 +82,7 @@ UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
 BuildSparrow $SPARROW_SRC_DIR
 
 BuildClient $CLIENT_SRC_DIR $CLIENT_OUT_DIR $spec.Name
-BuildNewClient $NEW_CLIENT_SRC_DIR $NEW_CLIENT_OUT_DIR $spec.Name
 
-CreateNugetPackage $NEW_CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
 CreateNugetPackage $CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
 
 BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
@@ -95,12 +91,12 @@ BuildStudio $STUDIO_SRC_DIR $PROJECT_DIR $version
 Foreach ($spec in $SPECS) {
     $runtime = $spec.Runtime
     $specOutDir = [io.path]::combine($OUT_DIR, $spec.Name)
+
     BuildServer $SERVER_SRC_DIR $specOutDir $runtime $spec.Name
 
     $specOutDirs = @{
         "Main" = $specOutDir;
         "Client" = $CLIENT_OUT_DIR;
-        "NewClient" = $NEW_CLIENT_OUT_DIR;
         "Server" = $([io.path]::combine($specOutDir, "Server"));
         "Studio" = $STUDIO_OUT_DIR;
         "Sparrow" = $SPARROW_OUT_DIR;

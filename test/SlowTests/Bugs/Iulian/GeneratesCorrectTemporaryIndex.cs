@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Iulian
 {
-    public class GeneratesCorrectTemporaryIndex : RavenNewTestBase
+    public class GeneratesCorrectTemporaryIndex : RavenTestBase
     {
         private class Inner
         {

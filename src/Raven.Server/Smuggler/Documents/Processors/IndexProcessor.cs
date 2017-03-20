@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -15,42 +13,41 @@ namespace Raven.Server.Smuggler.Documents.Processors
 {
     public static class IndexProcessor
     {
-        public static object ReadIndexDefinition(BlittableJsonReaderObject reader, long buildVersion, out IndexType type)
+        public static object ReadIndexDefinition(BlittableJsonReaderObject reader, BuildVersionType buildVersionType, out IndexType type)
         {
-            if (buildVersion == 0) // pre 4.0 support
+            switch (buildVersionType)
             {
-                var indexDefinition = ReadLegacyIndexDefinition(reader);
+                case BuildVersionType.V3:
+                    // pre 4.0 support
+                    var indexDefinition = ReadLegacyIndexDefinition(reader);
 
-                type = indexDefinition.Type;
-                Debug.Assert(type.IsStatic());
+                    type = indexDefinition.Type;
+                    Debug.Assert(type.IsStatic());
 
-                return indexDefinition;
+                    return indexDefinition;
+                case BuildVersionType.V4:
+                    type = ReadIndexType(reader, out reader);
+                    switch (type)
+                    {
+                        case IndexType.AutoMap:
+                            return AutoMapIndexDefinition.LoadFromJson(reader);
+                        case IndexType.AutoMapReduce:
+                            return AutoMapReduceIndexDefinition.LoadFromJson(reader);
+                        case IndexType.Map:
+                        case IndexType.MapReduce:
+                            return JsonDeserializationServer.IndexDefinition(reader);
+                        default:
+                            throw new NotSupportedException(type.ToString());
+                    }
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(buildVersionType), buildVersionType, null);
             }
-
-            if (buildVersion >= 40000 && buildVersion <= 44999 || buildVersion == 40)
-            {
-                type = ReadIndexType(reader, out reader);
-                switch (type)
-                {
-                    case IndexType.AutoMap:
-                        return AutoMapIndexDefinition.LoadFromJson(reader);
-                    case IndexType.AutoMapReduce:
-                        return AutoMapReduceIndexDefinition.LoadFromJson(reader);
-                    case IndexType.Map:
-                    case IndexType.MapReduce:
-                        return JsonDeserializationServer.IndexDefinition(reader);
-                    default:
-                        throw new NotSupportedException(type.ToString());
-                }
-            }
-
-            throw new NotSupportedException($"We do not support importing indexes from '{buildVersion}' build.");
         }
 
-        public static void Import(BlittableJsonReaderObject indexDefinitionDoc, DocumentDatabase database, long buildVersion, bool removeAnalyzers)
+        public static void Import(BlittableJsonReaderObject indexDefinitionDoc, DocumentDatabase database, BuildVersionType buildType, bool removeAnalyzers)
         {
             IndexType indexType;
-            var definition = ReadIndexDefinition(indexDefinitionDoc, buildVersion, out indexType);
+            var definition = ReadIndexDefinition(indexDefinitionDoc, buildType, out indexType);
             
             switch (indexType)
             {
@@ -65,9 +62,6 @@ namespace Raven.Server.Smuggler.Documents.Processors
                 case IndexType.Map:
                 case IndexType.MapReduce:
                     var indexDefinition = (IndexDefinition)definition;
-                    if (string.Equals(indexDefinition.Name, "Raven/DocumentsByEntityName", StringComparison.OrdinalIgnoreCase))
-                        return;
-
                     if (removeAnalyzers)
                     {
                         foreach (var indexDefinitionField in indexDefinition.Fields)
@@ -180,11 +174,11 @@ namespace Raven.Server.Smuggler.Documents.Processors
                     case LegacyIndexDefinition.LegacySortOptions.Long:
                     case LegacyIndexDefinition.LegacySortOptions.Int:
                     case LegacyIndexDefinition.LegacySortOptions.Byte:
-                        sortOptions = SortOptions.NumericLong;
+                        sortOptions = SortOptions.Numeric;
                         break;
                     case LegacyIndexDefinition.LegacySortOptions.Float:
                     case LegacyIndexDefinition.LegacySortOptions.Double:
-                        sortOptions = SortOptions.NumericDouble;
+                        sortOptions = SortOptions.Numeric;
                         break;
                     case LegacyIndexDefinition.LegacySortOptions.Custom:
                         throw new NotImplementedException(kvp.Value.ToString());

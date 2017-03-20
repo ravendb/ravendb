@@ -41,9 +41,7 @@ namespace Sparrow.Json
         public static implicit operator string(LazyDoubleValue self)
         {
             return self.ToString();
-            
         }
-
 
         public static implicit operator decimal(LazyDoubleValue self)
         {
@@ -148,8 +146,16 @@ namespace Sparrow.Json
 
         public string ToString(string format)
         {
-            var @double = (double) this;
+            var @double = (double)this;
             return @double.ToString(format);
+        }
+
+        public bool IsNaN()
+        {
+            if (_val.HasValue && double.IsNaN(_val.Value))
+                return true;
+
+            return Inner.Equals("NaN");
         }
     }
 }

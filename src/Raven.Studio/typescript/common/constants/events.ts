@@ -2,8 +2,8 @@
     LevelChanged: 'MainMenu.LevelChanged'
 };
 
-const ResourceSwitcher = {
-    ItemSelected: 'ResourceSwitcher.ItemSelected'
+const DatabaseSwitcher = {
+    ItemSelected: 'DatabaseSwitcher.ItemSelected'
 };
 
 const SearchBox = {
@@ -14,9 +14,8 @@ const ChangesApi = {
     Reconnected: 'ChangesApi.Reconnected'
 }
 
-const Resource = {
-    Activate: 'Resource.Activate',
-    Disconnect: 'Resource.Disconnect'
+const Database = {
+    Disconnect: 'Database.Disconnect'
 };
 
 const NotificationCenter = {
@@ -25,9 +24,9 @@ const NotificationCenter = {
 
 export = {
     Menu,
-    ResourceSwitcher,
+    DatabaseSwitcher,
     SearchBox,
-    Resource,
+    Database,
     ChangesApi,
     NotificationCenter
 };

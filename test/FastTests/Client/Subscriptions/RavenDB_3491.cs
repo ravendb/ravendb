@@ -5,12 +5,13 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using FastTests.Server.Documents.Notifications;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Client.Subscriptions
 {
-    public class RavenDB_3491 : RavenNewTestBase
+    public class RavenDB_3491 : RavenTestBase
     {
         private readonly TimeSpan _waitForDocTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
 
@@ -35,25 +36,19 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
 
                     var user2Etag = session.Advanced.GetEtagFor(us2);
-                    var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria
-                    {
-                        Collection = "Users"
-                    }, user2Etag ?? 0);
+                    var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria("Users"), user2Etag ?? 0);
 
                     var users = new List<dynamic>();
 
-                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
-                    {
-                        SubscriptionId = id
-                    }))
+                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(id)))
                     {
 
                         var docs = new BlockingCollection<dynamic>();
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
-                        subscription.Subscribe(x => keys.Add(x[Constants.Metadata.Key].Value<string>("@id")));
-                        subscription.Subscribe(x => ages.Add(x.Value<int>("Age")));
+                        subscription.Subscribe(x => keys.Add(x.Id));
+                        subscription.Subscribe(x => ages.Add(x.Age));
 
                         subscription.Subscribe(docs.Add);
 
@@ -120,10 +115,7 @@ namespace FastTests.Client.Subscriptions
 
                     var users = new List<User>();
 
-                    using (var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions
-                    {
-                        SubscriptionId = id
-                    }))
+                    using (var subscription = store.AsyncSubscriptions.Open<User>(new SubscriptionConnectionOptions(id)))
                     {
 
                         var docs = new BlockingCollection<User>();
@@ -194,25 +186,18 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
 
                     var user2Etag = session.Advanced.GetEtagFor(us2);
-                    subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria
-                    {
-                        Collection = "Users"
-                    }, user2Etag ?? 0);
-
+                    subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria("Users"), user2Etag ?? 0);
 
                     var users = new List<dynamic>();
 
-                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
-                    {
-                        SubscriptionId = subscriptionId
-                    }))
+                    using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
                     {
                         var docs = new BlockingCollection<dynamic>();
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
-                        subscription.Subscribe(x => keys.Add(x[Constants.Metadata.Key].Value<string>("@id")));
-                        subscription.Subscribe(x => ages.Add(x.Value<int>("Age")));
+                        subscription.Subscribe(x => keys.Add(x.Id));
+                        subscription.Subscribe(x => ages.Add(x.Age));
 
                         subscription.Subscribe(docs.Add);
 
@@ -250,12 +235,8 @@ namespace FastTests.Client.Subscriptions
                     }
                 }
 
-                using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
+                using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
                 {
-                    SubscriptionId = subscriptionId
-                }))
-                {
-
                     var docs = new BlockingCollection<dynamic>();
 
                     subscription.Subscribe(o => docs.Add(o));

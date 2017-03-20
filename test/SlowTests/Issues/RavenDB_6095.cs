@@ -1,12 +1,10 @@
 ﻿using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Indexing;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_6095 : RavenNewTestBase
+    public class RavenDB_6095 : RavenTestBase
     {
         [Fact]
         public void ShouldCompile()
@@ -78,7 +76,7 @@ select new {
                     Fields =
                     {
                         {"__all_fields", new IndexFieldOptions { Storage =  FieldStorage.Yes} },
-                        {"StartTick", new IndexFieldOptions {Sort = SortOptions.NumericLong} }
+                        {"StartTick", new IndexFieldOptions {Sort = SortOptions.Numeric} }
                     }
                 };
             }

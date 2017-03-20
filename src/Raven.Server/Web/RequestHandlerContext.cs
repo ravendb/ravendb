@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Http;
-
 using Raven.Server.Documents;
 using Raven.Server.Routing;
 

@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
-using Raven.Client.Data;
-using Raven.Server.ServerWide;
+﻿using System.Runtime.CompilerServices;
+using Raven.Client.Server.Operations;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -60,23 +55,22 @@ namespace Raven.Server.Documents
 
 
                 using (var id = context.GetLazyString(databaseName.ToLowerInvariant()))
-                using (
-                    var json = context.ReadObject(databaseInfo, "DatabaseInfo",
-                        BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                using ( var json = context.ReadObject(databaseInfo, "DatabaseInfo", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var tvb = new TableValueBuilder
+                    TableValueBuilder tvb;
+                    using (table.Allocate(out tvb))
                     {
-                        {id.Buffer, id.Size},
-                        {json.BasePointer, json.Size}
-                    };
+                        tvb.Add(id.Buffer, id.Size);
+                        tvb.Add(json.BasePointer, json.Size);
 
-                    table.Set(tvb);
+                        table.Set(tvb);
+                    }
                 }
                 tx.Commit();
             }
         }
 
-        public bool TryWriteOfflineDatabaseStatustoRequest(TransactionOperationContext ctx, BlittableJsonTextWriter writer, string databaseName, bool disabled, string indexingStatus)
+        public unsafe bool TryWriteOfflineDatabaseStatustoRequest(TransactionOperationContext ctx, BlittableJsonTextWriter writer, string databaseName, bool disabled, string indexingStatus)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -92,14 +86,14 @@ namespace Raven.Server.Documents
                         return false;
                 }
                 //It seems like the database was shutdown rudely and never wrote it stats onto the disk
-                if (infoTvr == null)
+                if (infoTvr.Pointer == null)
                     return false;
 
                 using (var databaseInfoJson = Read(context, ref infoTvr))
                 {
                     databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
                     {
-                        [nameof(ResourceInfo.Disabled)] = disabled,
+                        [nameof(DatabaseInfo.Disabled)] = disabled,
                         [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus
                     };
 

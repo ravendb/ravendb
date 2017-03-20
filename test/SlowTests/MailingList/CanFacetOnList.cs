@@ -1,10 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -75,8 +74,8 @@ namespace SlowTests.MailingList
                                {
                                    Tags = b.Tags
                                };
-                Store("Tags", Raven.Abstractions.Indexing.FieldStorage.Yes);
-                Index("Tags", Raven.Abstractions.Indexing.FieldIndexing.NotAnalyzed);
+                Store("Tags", FieldStorage.Yes);
+                Index("Tags", FieldIndexing.NotAnalyzed);
             }
         }
     }

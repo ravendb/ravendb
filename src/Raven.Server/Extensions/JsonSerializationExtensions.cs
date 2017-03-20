@@ -1,5 +1,5 @@
-﻿using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
+﻿using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Extensions
@@ -10,9 +10,10 @@ namespace Raven.Server.Extensions
         {
             var result = new DynamicJsonValue();
             result[nameof(IndexDefinition.IndexId)] = definition.IndexId;
-            result[nameof(IndexDefinition.IsSideBySideIndex)] = definition.IsSideBySideIndex;
             result[nameof(IndexDefinition.IsTestIndex)] = definition.IsTestIndex;
-            result[nameof(IndexDefinition.LockMode)] = definition.LockMode.ToString();
+            result[nameof(IndexDefinition.LockMode)] = definition.LockMode?.ToString();
+            result[nameof(IndexDefinition.Priority)] = definition.Priority?.ToString();
+            result[nameof(IndexDefinition.OutputReduceToCollection)] = definition.OutputReduceToCollection;
             result[nameof(IndexDefinition.Name)] = definition.Name;
             result[nameof(IndexDefinition.Reduce)] = definition.Reduce;
             result[nameof(IndexDefinition.Type)] = definition.Type.ToString();

@@ -3,8 +3,13 @@
 import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import database = require("models/resources/database");
+import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
+import collection = require("models/database/documents/collection");
+import document = require("models/database/documents/document");
 
 class queryUtil {
+
+    static readonly DynamicPrefix = "dynamic/";
 
     /**
      * Escapes lucene single term
@@ -29,9 +34,37 @@ class queryUtil {
         return output;
     }
 
-    static queryCompleter(indexFields: KnockoutObservableArray<string>, selectedIndex: KnockoutObservable<string>, dynamicPrefix: string, activeDatabase: KnockoutObservable<database>, editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-        var currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
-        /*
+    static fetchIndexFields(db: database, indexName: string, outputFields: KnockoutObservableArray<string>): void {
+        outputFields([]);
+
+        // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
+        // Fields don't show for All Documents.
+        const isAllDocumentsDynamicQuery = indexName === "All Documents";
+        if (!isAllDocumentsDynamicQuery) {
+
+            //if index is not dynamic, get columns using index definition, else get it using first index result
+            if (indexName.startsWith(queryUtil.DynamicPrefix)) {
+                new collection(indexName.substr(queryUtil.DynamicPrefix.length), db)
+                    .fetchDocuments(0, 1)
+                    .done(result => {
+                        if (result && result.items.length > 0) {
+                            const propertyNames = new document(result.items[0]).getDocumentPropertyNames();
+                            outputFields(propertyNames);
+                        }
+                    });
+            } else {
+                new getIndexEntriesFieldsCommand(indexName, db)
+                    .execute()
+                    .done((fields) => {
+                        //TODO: self.isTestIndex(result.IsTestIndex);
+                        outputFields(fields);
+                    });
+            }
+        }
+    }
+
+    static queryCompleter(indexFields: KnockoutObservableArray<string>, selectedIndex: KnockoutObservable<string>, activeDatabase: KnockoutObservable<database>, editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
+        const currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
         if (!currentToken || typeof currentToken.type === "string") {
             // if in beginning of text or in free text token
             if (!currentToken || currentToken.type === "text") {
@@ -42,14 +75,14 @@ class queryUtil {
                 // if right after, or a whitespace after keyword token ([column name]:)
 
                 // first, calculate and validate the column name
-                var currentColumnName: string = null;
-                var currentValue: string = "";
+                let currentColumnName: string = null;
+                let currentValue: string = "";
 
                 if (currentToken.type == "keyword") {
                     currentColumnName = currentToken.value.substring(0, currentToken.value.length - 1);
                 } else {
                     currentValue = currentToken.value.trim();
-                    var rowTokens: any[] = session.getTokens(pos.row);
+                    const rowTokens: any[] = session.getTokens(pos.row);
                     if (!!rowTokens && rowTokens.length > 1) {
                         currentColumnName = rowTokens[rowTokens.length - 2].value.trim();
                         currentColumnName = currentColumnName.substring(0, currentColumnName.length - 1);
@@ -57,38 +90,36 @@ class queryUtil {
                 }
 
                 // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
+                if (currentColumnName && indexFields().find(x => x === currentColumnName)) {
 
-                if (!!currentColumnName && !!indexFields.find(x=> x === currentColumnName)) {
-
-                    if (selectedIndex().indexOf(dynamicPrefix) !== 0) {
-                        new getIndexTermsCommand(selectedIndex(), currentColumnName, activeDatabase())
+                    if (!selectedIndex().startsWith(queryUtil.DynamicPrefix)) {
+                        new getIndexTermsCommand(selectedIndex(), currentColumnName, activeDatabase(), 20)
                             .execute()
                             .done(terms => {
-                            if (!!terms && terms.length > 0) {
-                                callback(null, terms.map(curVal => {
-                                    return { name: curVal, value: curVal, score: 10, meta: "value" };
-                                }));
-                            }
-                        });
-                    } else {
-
-                        if (currentValue.length > 0) {
-                            new getDocumentsMetadataByIDPrefixCommand(currentValue, 10, activeDatabase())
-                                .execute()
-                                .done((results: string[]) => {
-                                if (!!results && results.length > 0) {
-                                    callback(null, results.map(curVal => {
-                                        return { name: curVal["@metadata"]["@id"], value: curVal["@metadata"]["@id"], score: 10, meta: "value" };
+                                if (terms && terms.Terms.length > 0) {
+                                    callback(null, terms.Terms.map(curVal => {
+                                        return { name: curVal, value: curVal, score: 10, meta: "value" };
                                     }));
                                 }
                             });
+                    } else {
+                        if (currentValue.length > 0) {
+                            new getDocumentsMetadataByIDPrefixCommand(currentValue, 10, activeDatabase())
+                                .execute()
+                                .done((results: metadataAwareDto[]) => {
+                                    if (results && results.length > 0) {
+                                        callback(null, results.map(curVal => {
+                                            return { name: curVal["@metadata"]["@id"], value: curVal["@metadata"]["@id"], score: 10, meta: "value" };
+                                        }));
+                                    }
+                                });
                         } else {
                             callback([{ error: "notext" }], null);
                         }
                     }
                 }
             }
-        }*/
+        }
     }
     
 }

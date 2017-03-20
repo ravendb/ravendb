@@ -9,8 +9,8 @@ using System.Dynamic;
 using System.Threading.Tasks;
 
 using FastTests;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Client.Exceptions.Session;
+using Raven.Client.Documents.Exceptions.Session;
+using Raven.Client.Extensions;
 using SlowTests.Core.Utils.Transformers;
 
 using Xunit;
@@ -22,7 +22,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Session
 {
-    public class Crud : RavenNewTestBase
+    public class Crud : RavenTestBase
     {
         [Fact]
         public async Task CanSaveAndLoad()

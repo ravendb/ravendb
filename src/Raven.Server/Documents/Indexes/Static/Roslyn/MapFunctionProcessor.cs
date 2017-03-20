@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
     {
         private readonly CollectionNameRetriever _collectionRetriever;
         private readonly ReferencedCollectionsRetriever _refCollectionsRetriever;
-        private SelectManyRewriter _selectManyRewriter;
+        private readonly SelectManyRewriter _selectManyRewriter;
 
         public MapFunctionProcessor(CollectionNameRetriever collectionRetriever, SelectManyRewriter selectManyRewriter)
         {
@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 _collectionRetriever,
                 _refCollectionsRetriever,
                 _selectManyRewriter,
+                new ThrowOnInvalidMethodCalls(),
                 DynamicInvocationExpressionsRewriter.Instance,
                 DynamicExtensionMethodsRewriter.Instance,
                 DynamicLambdaExpressionsRewriter.Instance,

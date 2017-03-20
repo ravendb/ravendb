@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Raven.Client.Data;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Raven.Client.Data.Collection;
-using Raven.NewClient.Client.Data.Collections;
-using Raven.NewClient.Client.Operations.Databases.Collections;
 using Raven.Server.Documents.Operations;
+using Raven.Server.NotificationCenter.Notifications;
 
 namespace Raven.Server.Documents.Handlers
 {

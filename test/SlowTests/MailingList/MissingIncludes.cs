@@ -1,6 +1,6 @@
 using System.Linq;
 using FastTests;
-using Raven.Client;
+using Raven.Client.Documents;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -30,8 +30,8 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    session.Include<Item>(x => x.Parent).Load(1);
-                    Assert.Null(session.Load<Item>(2));
+                    session.Include<Item>(x => x.Parent).Load("items/1");
+                    Assert.Null(session.Load<Item>("items/2"));
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
@@ -54,7 +54,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     session.Query<Item>().Include(x => x.Parent).Customize(x => x.WaitForNonStaleResults()).ToList();
-                    Assert.Null(session.Load<Item>(2));
+                    Assert.Null(session.Load<Item>("items/2"));
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }

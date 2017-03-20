@@ -1,14 +1,10 @@
 using System;
 using System.Globalization;
-namespace Raven.Abstractions.Extensions
-{
-    public static class CharExtensions
-    {
-        public static string CharToString(this char c)
-        {
-            return c.ToString();
-        }
 
+namespace Raven.Client.Extensions
+{
+    internal static class CharExtensions
+    {
         public static string ToInvariantString(this object obj)
         {
             return obj is IConvertible ? ((IConvertible)obj).ToString(CultureInfo.InvariantCulture)

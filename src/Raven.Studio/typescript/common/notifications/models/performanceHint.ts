@@ -1,7 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 
 class performanceHint extends abstractNotification {
 
@@ -10,8 +10,8 @@ class performanceHint extends abstractNotification {
     hintType = ko.observable<Raven.Server.NotificationCenter.Notifications.PerformanceHintType>();
     dontShowAgain = ko.observable<boolean>(false);
 
-    constructor(resource: resource, dto: Raven.Server.NotificationCenter.Notifications.PerformanceHint) {
-        super(resource, dto);
+    constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.PerformanceHint) {
+        super(db, dto);
 
         this.updateWith(dto);
         this.hasDetails = ko.pureComputed(() => !!this.details());

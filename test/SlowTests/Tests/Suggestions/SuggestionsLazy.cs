@@ -7,23 +7,24 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Tests.Suggestions
 {
-    public class SuggestionsLazy : RavenNewTestBase
+    public class SuggestionsLazy : RavenTestBase
     {
         [Fact(Skip = "Missing feature: Suggestions")]
         public void UsingLinq()
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("Test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
+                    Name = "Test",
                     Maps = { "from doc in docs.Users select new { doc.Name }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
@@ -32,7 +33,7 @@ namespace SlowTests.Tests.Suggestions
                             new IndexFieldOptions { Suggestions = true }
                         }
                     }
-                }));
+                }}));
 
                 using (var s = store.OpenSession())
                 {

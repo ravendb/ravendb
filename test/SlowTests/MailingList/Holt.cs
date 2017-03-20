@@ -1,10 +1,9 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Listeners;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -53,7 +52,6 @@ namespace SlowTests.MailingList
         private IDocumentStore Store()
         {
             var store = GetDocumentStore();
-            store.RegisterListener(new NonStaleQueryListener());
             new TransactionBalances_ByYear().Execute(store);
             return store;
         }
@@ -70,14 +68,6 @@ namespace SlowTests.MailingList
             public decimal Balance
             {
                 get { return Debit - Credit; }
-            }
-        }
-
-        private class NonStaleQueryListener : IDocumentQueryListener
-        {
-            public void BeforeQueryExecuted(IDocumentQueryCustomization customization)
-            {
-                customization.WaitForNonStaleResults();
             }
         }
 
@@ -117,7 +107,7 @@ namespace SlowTests.MailingList
                 Index(x => x.AccountName, FieldIndexing.Default);
                 Index(x => x.Year, FieldIndexing.Default);
 
-                Sort(x => x.Year, SortOptions.NumericDefault);
+                Sort(x => x.Year, SortOptions.Numeric);
             }
 
             public class Result

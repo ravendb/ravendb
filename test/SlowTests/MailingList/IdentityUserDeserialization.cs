@@ -7,10 +7,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json;
 using Raven.Client;
-using Raven.Imports.Newtonsoft.Json;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList

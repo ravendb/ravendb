@@ -6,7 +6,8 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -32,7 +33,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var stats = store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+                var stats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(40000, stats.EntriesCount);
             }
         }
@@ -56,7 +57,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var stats = store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+                var stats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(30000, stats.EntriesCount);
             }
         }

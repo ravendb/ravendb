@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Operations.Databases.ApiKeys;
+using Raven.Client.Documents;
+using Raven.Client.Exceptions;
+using Raven.Client.Server.Operations.ApiKeys;
 using Xunit;
 
 namespace FastTests.Client.Queries
 {
-    public class Take : RavenNewTestBase
+    public class Take : RavenTestBase
     {
         [Fact]
         public async Task ExplictTakeWhichIsGreaterThanMaxPageSizeShouldThrow()
@@ -28,7 +28,7 @@ namespace FastTests.Client.Queries
 
                 exception = await Assert.ThrowsAsync<RavenException>(async () =>
                 {
-                    await store.Admin.SendAsync(new GetApiKeysOperation(0, 2048));
+                    await store.Admin.Server.SendAsync(new GetApiKeysOperation(0, 2048));
                 });
                 Assert.Contains("Your page size (2048) is more than the max page size which is 1024.", exception.Message);
                 Assert.DoesNotContain("Stream", exception.Message);

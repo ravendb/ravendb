@@ -10,8 +10,7 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Raven.Client.Data;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 
 namespace Raven.Server.Documents.Queries.Parse
@@ -19,8 +18,30 @@ namespace Raven.Server.Documents.Queries.Parse
     public class LuceneASTQueryConfiguration
     {
         public Analyzer Analayzer { get; set; }
-        public string FieldName { get; set; }
+        public FieldName FieldName { get; set; }
         public QueryOperator DefaultOperator { get; set; }
+    }
+
+    public class FieldName
+    {
+        public FieldName(string field, FieldType type = FieldType.String)
+        {
+            Field = field;
+            Type = type;
+        }
+        public string Field { get; set; }
+        public FieldType Type { get; set; }
+        public override string ToString()
+        {
+            return Field;
+        }
+
+        public enum FieldType
+        {
+            String,
+            Long,
+            Double
+        }
     }
 
     public abstract class LuceneASTNodeBase
@@ -79,12 +100,12 @@ namespace Raven.Server.Documents.Queries.Parse
 
         public override string ToString()
         {
-            return GetPrefixString() + "*:*";
+            return GetPrefixString()+ "*:*";
         }
     }
     public class FieldLuceneASTNode : LuceneASTNodeBase
     {
-        public string FieldName { get; set; }
+        public FieldName FieldName { get; set; }
         public LuceneASTNodeBase Node { get; set; }
         public override IEnumerable<LuceneASTNodeBase> Children
         {
@@ -98,18 +119,18 @@ namespace Raven.Server.Documents.Queries.Parse
         }
         public override string ToString()
         {
-            return string.Format("{0}{1}:{2}", GetPrefixString(), FieldName, Node);
+            return string.Format("{0}{1}:{2}",GetPrefixString(), FieldName, Node);
         }
     }
-
+    
     public class MethodLuceneASTNode : LuceneASTNodeBase
-    {
+    {        
         public MethodLuceneASTNode(string rawMethodStr, List<TermLuceneASTNode> matches)
-        {
+        {            
             var fieldStartPos = rawMethodStr.IndexOf('<');
-            MethodName = rawMethodStr.Substring(1, fieldStartPos - 1);
+            MethodName = rawMethodStr.Substring(1, fieldStartPos-1);
             var fieldEndPos = rawMethodStr.IndexOf('>');
-            FieldName = rawMethodStr.Substring(fieldStartPos + 1, fieldEndPos - fieldStartPos - 1);
+            FieldName = rawMethodStr.Substring(fieldStartPos + 1, fieldEndPos - fieldStartPos-1);
             Matches = matches;
         }
 
@@ -123,7 +144,7 @@ namespace Raven.Server.Documents.Queries.Parse
         }
         public override Query ToQuery(LuceneASTQueryConfiguration configuration)
         {
-            configuration.FieldName = FieldName;
+            configuration.FieldName = new FieldName (FieldName);
             var matchList = new List<string>();
             foreach (var match in Matches)
             {
@@ -152,7 +173,7 @@ namespace Raven.Server.Documents.Queries.Parse
             {
                 case TermType.Quoted:
                 case TermType.UnQuoted:
-                    var tokenStream = configuration.Analayzer.ReusableTokenStream(configuration.FieldName, new StringReader(Term));
+                    var tokenStream = configuration.Analayzer.ReusableTokenStream(configuration.FieldName.Field, new StringReader(Term));
                     while (tokenStream.IncrementToken())
                     {
                         var attribute = (TermAttribute)tokenStream.GetAttribute<ITermAttribute>();
@@ -161,7 +182,7 @@ namespace Raven.Server.Documents.Queries.Parse
                     break;
                 case TermType.QuotedWildcard:
                 case TermType.WildCardTerm:
-                case TermType.PrefixTerm:
+                case TermType.PrefixTerm:				    
                     yield return GetWildcardTerm(configuration).Text;
                     break;
                 case TermType.Float:
@@ -185,17 +206,17 @@ namespace Raven.Server.Documents.Queries.Parse
         {
             var qouted = Type == TermType.QuotedWildcard;
             var reader = new StringReader(qouted ? Term.Substring(1, Term.Length - 2) : Term);
-            var tokenStream = configuration.Analayzer.ReusableTokenStream(configuration.FieldName, reader);
+            var tokenStream = configuration.Analayzer.ReusableTokenStream(configuration.FieldName.Field, reader);
             var terms = new List<string>();
             while (tokenStream.IncrementToken())
             {
                 var attribute = (TermAttribute)tokenStream.GetAttribute<ITermAttribute>();
                 terms.Add(attribute.Term);
             }
-
+            
             if (terms.Count == 0)
             {
-                return new Term(configuration.FieldName, Term);
+                return new Term(configuration.FieldName.Field, Term);
             }
 
             var sb = new StringBuilder();
@@ -208,11 +229,11 @@ namespace Raven.Server.Documents.Queries.Parse
                 if (Term.EndsWith("*") && !firstTerm.EndsWith("*")) sb.Append('*');
                 var res = sb.ToString();
                 expectedLength = (qouted ? 2 : 0) + res.Length;
-                Debug.Assert(expectedLength == Term.Length,
+                Debug.Assert(expectedLength  == Term.Length,
 @"if analyzer changes length of term and removes wildcards after processing it, 
 there is no way to know where to put the wildcard character back after the analysis. 
 This edge-case has a very slim chance of happening, but still we should not ignore it completely.");
-                return new Term(configuration.FieldName, res);
+                return new Term(configuration.FieldName.Field, res);
             }
 
             foreach (var currentTerm in terms)
@@ -235,7 +256,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
 there is no way to know where to put the wildcard character back after the analysis. 
 This edge-case has a very slim chance of happening, but still we should not ignore it completely.");
 
-            return new Term(configuration.FieldName, analyzedTermString);
+            return new Term(configuration.FieldName.Field, analyzedTermString);
         }
 
         private Query AnalyzedWildCardQueries(LuceneASTQueryConfiguration configuration)
@@ -253,7 +274,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 var qouted = Term[2] == '\"' && Term[originalLength - 3] == '\"';
                 var start = qouted ? 3 : 2;
                 var length = qouted ? originalLength - 6 : originalLength - 4;
-                return new TermQuery(new Term(configuration.FieldName, Term.Substring(start, length))) { Boost = boost };
+                return new TermQuery(new Term(configuration.FieldName.Field, Term.Substring(start, length))) { Boost = boost };
             }
             switch (Type)
             {
@@ -263,14 +284,14 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 case TermType.DateTime:
                 case TermType.Int:
                 case TermType.Long:
-                    return new TermQuery(new Term(configuration.FieldName, Term)) { Boost = boost };
+                    return new TermQuery(new Term(configuration.FieldName.Field, Term)) { Boost = boost };
             }
 
             if (Type == TermType.QuotedWildcard)
             {
                 var res = AnalyzedWildCardQueries(configuration);
                 res.Boost = boost;
-                return res;
+                return res;		        
             }
 
             if (Type == TermType.WildCardTerm)
@@ -280,9 +301,9 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 return res;
             }
 
-            var tokenStream = configuration.Analayzer.ReusableTokenStream(configuration.FieldName, new StringReader(Term));
+            var tokenStream = configuration.Analayzer.ReusableTokenStream(configuration.FieldName.Field, new StringReader(Term));
             var terms = new List<string>();
-
+            
             while (tokenStream.IncrementToken())
             {
                 var attribute = (TermAttribute)tokenStream.GetAttribute<ITermAttribute>();
@@ -294,18 +315,18 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 {
                     var first = terms.First();
                     var actualTerm = first[first.Length - 1] == '*' ? first.Substring(0, first.Length - 1) : first;
-                    return new PrefixQuery(new Term(configuration.FieldName, actualTerm)) { Boost = boost };
+                    return new PrefixQuery(new Term(configuration.FieldName.Field, actualTerm)) { Boost = boost };
                 }
                 // if the term that we are trying to prefix has been removed entirely by the analyzer, then we are going
                 // to cheat a bit, and check for both the term in as specified and the term in lower case format so we can
                 // find it regardless of casing
-                var removeStar = Term.Substring(0, Term.Length - 1);
+                var removeStar = Term.Substring(0, Term.Length-1);
                 var booleanQuery = new BooleanQuery
                 {
                     Clauses =
                     {
-                        new BooleanClause(new PrefixQuery(new Term(configuration.FieldName, removeStar )), Occur.SHOULD),
-                        new BooleanClause(new PrefixQuery(new Term(configuration.FieldName, removeStar.ToLowerInvariant())), Occur.SHOULD)
+                        new BooleanClause(new PrefixQuery(new Term(configuration.FieldName.Field, removeStar )), Occur.SHOULD),
+                        new BooleanClause(new PrefixQuery(new Term(configuration.FieldName.Field, removeStar.ToLowerInvariant())), Occur.SHOULD)
                     }
                     , Boost = boost
                 };
@@ -324,12 +345,12 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 }*/
                 if (terms.Count == 1)
                 {
-                    return new TermQuery(new Term(configuration.FieldName, terms.First())) { Boost = boost };
+                    return new TermQuery(new Term(configuration.FieldName.Field,terms.First())){Boost = boost};
                 }
                 var pq = new PhraseQuery() { Boost = boost };
                 foreach (var term in terms)
                 {
-                    pq.Add(new Term(configuration.FieldName, term));
+                    pq.Add(new Term(configuration.FieldName.Field,term));
                 }
                 return pq;
                 //return new TermQuery(new Term(configuration.FieldName, Term.Substring(1, Term.Length - 2))){Boost = boost};
@@ -339,16 +360,16 @@ This edge-case has a very slim chance of happening, but still we should not igno
             {
                 var similarity = float.Parse(Similarity);
 
-                return new FuzzyQuery(new Term(configuration.FieldName, terms.FirstOrDefault()), similarity, 0) { Boost = boost };
+                return new FuzzyQuery(new Term(configuration.FieldName.Field, terms.FirstOrDefault()), similarity, 0) { Boost = boost };
             }
             if (terms.Count == 1)
             {
-                return new TermQuery(new Term(configuration.FieldName, terms.First())) { Boost = boost };
+                return new TermQuery(new Term(configuration.FieldName.Field, terms.First())) {Boost = boost};
             }
             var phrase = new PhraseQuery() { Boost = boost };
             foreach (var term in terms)
             {
-                phrase.Add(new Term(configuration.FieldName, term));
+                phrase.Add(new Term(configuration.FieldName.Field,term));
             }
             return phrase;
         }
@@ -381,8 +402,8 @@ This edge-case has a very slim chance of happening, but still we should not igno
         public override string ToString()
         {
             var prefix = Prefix == PrefixOperator.Plus ? "+" : Prefix == PrefixOperator.Minus ? "-" : "";
-            var boost = string.IsNullOrEmpty(Boost) ? string.Empty : "^" + Boost;
-            var proximity = string.IsNullOrEmpty(Proximity) ? string.Empty : "~" + Proximity;
+            var boost = string.IsNullOrEmpty(Boost)? string.Empty : "^" + Boost;
+            var proximity = string.IsNullOrEmpty(Proximity)? string.Empty : "~" + Proximity;
             var similarity = string.IsNullOrEmpty(Similarity) ? string.Empty : "~" + Similarity;
             return String.Format("{0}{1}{2}{3}{4}", prefix, Term, boost, proximity, similarity);
         }
@@ -398,120 +419,65 @@ This edge-case has a very slim chance of happening, but still we should not igno
 
     public class RangeLuceneASTNode : LuceneASTNodeBase
     {
+        private bool _maxIsNull;
+        private bool _minIsNull;
         public override IEnumerable<LuceneASTNodeBase> Children
         {
             get { yield break; }
         }
         public override Query ToQuery(LuceneASTQueryConfiguration configuration)
         {
-            // For numeric values { NUll TO <number> } should be [ <min value> TO <number>} but not for string values.
-            OverideInclusive();
-            if (RangeMin.Type == TermLuceneASTNode.TermType.Float || RangeMax.Type == TermLuceneASTNode.TermType.Float)
+            switch (configuration.FieldName.Type)
             {
-                //Need to handle NULL values...
-                var min = (RangeMin.Type == TermLuceneASTNode.TermType.Null || RangeMin.Term == "*") ? float.MinValue : float.Parse(RangeMin.Term.Substring(2));
-                var max = (RangeMax.Type == TermLuceneASTNode.TermType.Null || RangeMax.Term == "*") ? float.MaxValue : float.Parse(RangeMax.Term.Substring(2));
-                return NumericRangeQuery.NewFloatRange(configuration.FieldName, 4, min, max, InclusiveMin, InclusiveMax);
-            }
-            if (RangeMin.Type == TermLuceneASTNode.TermType.Double || RangeMax.Type == TermLuceneASTNode.TermType.Double)
-            {
-                //numbers inside range without prefix are treated as strings.
-                if (!RangeMin.Term.StartsWith("Dx") && !RangeMax.Term.StartsWith("Dx"))
-                    return new TermRangeQuery(configuration.FieldName,
-                        RangeMin.Type == TermLuceneASTNode.TermType.Null ? null : RangeMin.Term,
-                        RangeMax.Type == TermLuceneASTNode.TermType.Null ? null : RangeMax.Term,
-                        InclusiveMin, InclusiveMax);
-                var min = (RangeMin.Type == TermLuceneASTNode.TermType.Null || RangeMin.Term == "*") ? double.MinValue : double.Parse(RangeMin.Term.Substring(2));
-                var max = (RangeMax.Type == TermLuceneASTNode.TermType.Null || RangeMax.Term == "*") ? double.MaxValue : double.Parse(RangeMax.Term.Substring(2));
-                return NumericRangeQuery.NewDoubleRange(configuration.FieldName, 4, min, max, InclusiveMin, InclusiveMax);
-            }
-            if (RangeMin.Type == TermLuceneASTNode.TermType.Int || RangeMax.Type == TermLuceneASTNode.TermType.Int)
-            {
-                //numbers inside range without prefix are treated as strings.
-                if (!RangeMin.Term.StartsWith("Ix") && !RangeMax.Term.StartsWith("Ix"))
-                    return new TermRangeQuery(configuration.FieldName,
-                        RangeMin.Type == TermLuceneASTNode.TermType.Null ? null : RangeMin.Term,
-                        RangeMax.Type == TermLuceneASTNode.TermType.Null ? null : RangeMax.Term,
-                        InclusiveMin, InclusiveMax);
-                var intMin = (RangeMin.Type == TermLuceneASTNode.TermType.Null || RangeMin.Term == "*") ? int.MinValue : int.Parse(RangeMin.Term.Substring(2));
-                var intMax = (RangeMax.Type == TermLuceneASTNode.TermType.Null || RangeMax.Term == "*") ? int.MaxValue : int.Parse(RangeMax.Term.Substring(2));
-                return NumericRangeQuery.NewIntRange(configuration.FieldName, 4, intMin, intMax, InclusiveMin, InclusiveMax);
-            }
-            if (RangeMin.Type == TermLuceneASTNode.TermType.Long || RangeMax.Type == TermLuceneASTNode.TermType.Long)
-            {
-                var longMin = (RangeMin.Type == TermLuceneASTNode.TermType.Null || RangeMin.Term == "*") ? long.MinValue : long.Parse(RangeMin.Term.Substring(2));
-                var longMax = (RangeMax.Type == TermLuceneASTNode.TermType.Null || RangeMax.Term == "*") ? long.MaxValue : long.Parse(RangeMax.Term.Substring(2));
-                return NumericRangeQuery.NewLongRange(configuration.FieldName, 4, longMin, longMax, InclusiveMin, InclusiveMax);
-            }
-            if (RangeMin.Type == TermLuceneASTNode.TermType.Hex || RangeMax.Type == TermLuceneASTNode.TermType.Hex)
-            {
-                long longMin;
-                long longMax;
-                if (RangeMin.Type == TermLuceneASTNode.TermType.Hex)
-                {
-                    if (RangeMin.Term.Length <= 10)
+                case FieldName.FieldType.String:
+                    if (RangeMin.Type == TermLuceneASTNode.TermType.Null && RangeMax.Type == TermLuceneASTNode.TermType.Null)
                     {
-                        var intMin = int.Parse(RangeMin.Term.Substring(2), NumberStyles.HexNumber);
-                        var intMax = (RangeMax.Type == TermLuceneASTNode.TermType.Null || RangeMax.Term == "*") ? int.MaxValue : int.Parse(RangeMax.Term.Substring(2), NumberStyles.HexNumber);
-                        return NumericRangeQuery.NewIntRange(configuration.FieldName, 4, intMin, intMax, InclusiveMin, InclusiveMax);
+                        return new WildcardQuery(new Term(configuration.FieldName.Field, "*"));
                     }
-                    longMin = long.Parse(RangeMin.Term.Substring(2), NumberStyles.HexNumber);
-                    longMax = (RangeMax.Type == TermLuceneASTNode.TermType.Null || RangeMax.Term == "*") ? long.MaxValue : long.Parse(RangeMax.Term.Substring(2), NumberStyles.HexNumber);
-                    return NumericRangeQuery.NewLongRange(configuration.FieldName, 4, longMin, longMax, InclusiveMin, InclusiveMax);
-                }
-                if (RangeMax.Term.Length <= 10)
-                {
-                    var intMin = (RangeMin.Type == TermLuceneASTNode.TermType.Null || RangeMin.Term == "*") ? int.MinValue : int.Parse(RangeMin.Term.Substring(2), NumberStyles.HexNumber);
-                    var intMax = int.Parse(RangeMax.Term.Substring(2), NumberStyles.HexNumber);
-                    return NumericRangeQuery.NewIntRange(configuration.FieldName, 4, intMin, intMax, InclusiveMin, InclusiveMax);
-                }
-                longMin = (RangeMin.Type == TermLuceneASTNode.TermType.Null || RangeMin.Term == "*") ? long.MinValue : long.Parse(RangeMin.Term.Substring(2), NumberStyles.HexNumber);
-                longMax = long.Parse(RangeMax.Term.Substring(2), NumberStyles.HexNumber);
-                return NumericRangeQuery.NewLongRange(configuration.FieldName, 4, longMin, longMax, InclusiveMin, InclusiveMax);
-            }
-            if (RangeMin.Type == TermLuceneASTNode.TermType.Null && RangeMax.Type == TermLuceneASTNode.TermType.Null)
-            {
-                return new WildcardQuery(new Term(configuration.FieldName, "*"));
-            }
-            return new TermRangeQuery(configuration.FieldName,
-                        RangeMin.Type == TermLuceneASTNode.TermType.Null ? null : RangeMin.Term,
-                        RangeMax.Type == TermLuceneASTNode.TermType.Null ? null : RangeMax.Term,
-                        InclusiveMin, InclusiveMax);
+                    return new TermRangeQuery(configuration.FieldName.Field,
+                                RangeMin.Type == TermLuceneASTNode.TermType.Null ? null : RangeMin.Term,
+                                RangeMax.Type == TermLuceneASTNode.TermType.Null ? null : RangeMax.Term,
+                                InclusiveMin, InclusiveMax);
+                case FieldName.FieldType.Long:
+                    OverideInclusiveForKnownNumericRange();
+                    var longMin = _minIsNull ? long.MinValue : ParseTermToLong(RangeMin);
+                    var longMax = _maxIsNull ? long.MaxValue : ParseTermToLong(RangeMax);
+                    return NumericRangeQuery.NewLongRange(configuration.FieldName.Field, 4, longMin, longMax, InclusiveMin, InclusiveMax);
+                case FieldName.FieldType.Double:
+                    OverideInclusiveForKnownNumericRange();
+                    var doubleMin = _minIsNull ? double.MinValue : double.Parse(RangeMin.Term);
+                    var doubleMax = _maxIsNull ? double.MaxValue : double.Parse(RangeMax.Term);
+                    return NumericRangeQuery.NewDoubleRange(configuration.FieldName.Field, 4, doubleMin, doubleMax, InclusiveMin, InclusiveMax);
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }                                  
         }
 
-        private void OverideInclusive()
+        private long? ParseTermToLong(TermLuceneASTNode rangeMin)
         {
-            if (shouldOverideInclusive(RangeMin, RangeMax))
+            return rangeMin.Type == TermLuceneASTNode.TermType.Hex
+                ? long.Parse(rangeMin.Term.Substring(2), NumberStyles.HexNumber)
+                : long.Parse(rangeMin.Term);
+        }
+
+
+        /// <summary>
+        /// For numeric values { NUll TO <number/> } should be [ <min-value/> TO <number/>} but not for string values.
+        /// </summary>
+        private void OverideInclusiveForKnownNumericRange()
+        {
+            if (RangeMax.Type == TermLuceneASTNode.TermType.Null || RangeMax.Term == "*")
+            {
+                _maxIsNull = true;
                 InclusiveMax = true;
-            if (shouldOverideInclusive(RangeMax, RangeMin))
+            }
+            if (RangeMin.Type == TermLuceneASTNode.TermType.Null || RangeMin.Term == "*")
+            {
+                _minIsNull = true;
                 InclusiveMin = true;
+            }
         }
 
-        private bool shouldOverideInclusive(TermLuceneASTNode min, TermLuceneASTNode max)
-        {
-            bool shouldOverride = false;
-            switch (min.Type)
-            {
-                case TermLuceneASTNode.TermType.Int:
-                    shouldOverride = min.Term.StartsWith("Ix");
-                    break;
-                case TermLuceneASTNode.TermType.Long:
-                    shouldOverride = min.Term.StartsWith("Lx");
-                    break;
-                case TermLuceneASTNode.TermType.Float:
-                    shouldOverride = true;
-                    break;
-                case TermLuceneASTNode.TermType.Double:
-                    shouldOverride = true;
-                    break;
-                case TermLuceneASTNode.TermType.Hex:
-                    shouldOverride = true;
-                    break;
-            }
-            if (shouldOverride && (max.Type == TermLuceneASTNode.TermType.Null || max.Term == "*"))
-                return true;
-            return false;
-        }
 
         public TermLuceneASTNode RangeMin { get; set; }
         public TermLuceneASTNode RangeMax { get; set; }
@@ -533,8 +499,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
             if (rightHandBooleanNode == null || 
                 rightHandBooleanNode.Op == Operator.AND || 
                 rightHandBooleanNode.Op == Operator.INTERSECT || 
-                (rightHandBooleanNode.Op == Operator.Implicit && isDefaultOperatorAnd) ||
-                rightHandBooleanNode.Op == Operator.NOT)
+                (rightHandBooleanNode.Op == Operator.Implicit && isDefaultOperatorAnd))
             {
                 LeftNode = leftNode;
                 RightNode = rightNode;
@@ -571,9 +536,6 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 case Operator.OR:
                     LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD));
                     RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD));
-                    break;
-                case Operator.NOT:
-                    query.Add(LeftNode.ToQuery(configuration), Occur.MUST_NOT);
                     break;
                 case Operator.Implicit:
                     switch (configuration.DefaultOperator)
@@ -627,9 +589,6 @@ This edge-case has a very slim chance of happening, but still we should not igno
                     LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD));
                     RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD));
                     break;
-                case Operator.NOT:
-                    query.Add(LeftNode.ToQuery(configuration), Occur.MUST_NOT);
-                    break;
                 case Operator.Implicit:
                     switch (configuration.DefaultOperator)
                     {
@@ -658,7 +617,6 @@ This edge-case has a very slim chance of happening, but still we should not igno
         {
             AND,
             OR,
-            NOT,
             Implicit,
             INTERSECT
         }
@@ -669,10 +627,6 @@ This edge-case has a very slim chance of happening, but still we should not igno
         public Operator Op { get; set; }
         public override string ToString()
         {
-            if (Op == Operator.NOT)
-            {
-                return "NOT " + LeftNode.ToString();
-            }
             if (Op == Operator.Implicit)
             {
                 return LeftNode + " " + RightNode;
@@ -709,14 +663,14 @@ This edge-case has a very slim chance of happening, but still we should not igno
         public override string ToString()
         {
             var sb = new StringBuilder();
-            sb.Append('(').Append(Node).Append(')').Append(string.IsNullOrEmpty(Boost) ? string.Empty : string.Format("^{0}", Boost));
+            sb.Append('(').Append(Node).Append(')').Append(string.IsNullOrEmpty(Boost)?string.Empty:string.Format("^{0}",Boost));
             return sb.ToString();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float GetBoost()
         {
-            return Boost == null ? 1 : float.Parse(Boost);
+            return  Boost == null ? 1 : float.Parse(Boost);
         }
 
     }
@@ -727,3 +681,4 @@ This edge-case has a very slim chance of happening, but still we should not igno
         public string Proximity { get; set; }
     }
 }
+

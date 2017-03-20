@@ -4,19 +4,19 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using FastTests.Server.Documents.Versioning;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Smuggler;
-using Raven.NewClient.Operations.Databases;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Transformers;
 using Raven.Server.Documents.Expiration;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Smuggler
 {
-    public class SmugglerApiTests : RavenNewTestBase
+    public class SmugglerApiTests : RavenTestBase
     {
         private class Users_ByName : AbstractIndexCreationTask<User>
         {
@@ -132,7 +132,7 @@ namespace FastTests.Smuggler
                         var person1 = new Person { Name = "Name1" };
                         await session.StoreAsync(person1).ConfigureAwait(false);
                         var metadata = session.Advanced.GetMetadataFor(person1);
-                        metadata[Constants.Expiration.RavenExpirationDate] = database.Time.GetUtcNow().AddSeconds(10).ToString(Default.DateTimeOffsetFormatsToWrite);
+                        metadata[Constants.Documents.Expiration.ExpirationDate] = database.Time.GetUtcNow().AddSeconds(10).ToString(Default.DateTimeOffsetFormatsToWrite);
 
                         await session.SaveChangesAsync().ConfigureAwait(false);
                     }
@@ -221,6 +221,65 @@ namespace FastTests.Smuggler
             }
         }
 
+        [Fact]
+        public async Task WillNotCreateMoreRevisionsAfterImport()
+        {
+            var file = Path.GetTempFileName();
+            try
+            {
+                using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await VersioningHelper.SetupVersioning(store1);
+
+                        await session.StoreAsync(new Person { Name = "Name1" });
+                        await session.StoreAsync(new Person { Name = "Name2" });
+                        await session.StoreAsync(new Company { Name = "Hibernaitng Rhinos " });
+                        await session.SaveChangesAsync();
+                    }
+
+                    for (int i = 0; i < 2; i++)
+                    {
+                        using (var session = store1.OpenAsyncSession())
+                        {
+                            var company = await session.LoadAsync<Company>("companies/1");
+                            var person = await session.LoadAsync<Person>("people/1");
+                            company.Name += " update " + i;
+                            person.Name += " update " + i;
+                            await session.StoreAsync(company);
+                            await session.StoreAsync(person);
+                            await session.SaveChangesAsync();
+                        }
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        var person = await session.LoadAsync<Person>("people/2");
+                        Assert.NotNull(person);
+                        session.Delete(person);
+                        await session.SaveChangesAsync();
+                    }
+
+                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), file);
+
+                    var stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(5, stats.CountOfDocuments);
+                    Assert.Equal(7, stats.CountOfRevisionDocuments);
+
+                    await store1.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
+
+                    stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(5, stats.CountOfDocuments);
+                    Assert.Equal(14, stats.CountOfRevisionDocuments);
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
         private static async Task SetupExpiration(DocumentStore store)
         {
             using (var session = store.OpenAsyncSession())
@@ -229,7 +288,7 @@ namespace FastTests.Smuggler
                 {
                     Active = true,
                     DeleteFrequencySeconds = 100,
-                }, Constants.Expiration.ConfigurationDocumentKey);
+                }, Constants.Documents.Expiration.ConfigurationKey);
 
                 await session.SaveChangesAsync();
             }

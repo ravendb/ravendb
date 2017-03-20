@@ -1,16 +1,18 @@
-﻿using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Operations.Databases.Indexes;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Client.Indexing
 {
-    public class StaticIndexesFromClient : RavenNewTestBase
+    public class StaticIndexesFromClient : RavenTestBase
     {
         [Fact]
-        public async Task CanPut()
+        public async Task Can_Put()
         {
             using (var store = GetDocumentStore())
             {
@@ -24,13 +26,14 @@ namespace FastTests.Client.Indexing
 
                 var input = new IndexDefinition
                 {
+                    Name = "Users_ByName",
                     Maps = { "from user in docs.Users select new { user.Name }" },
                     Type = IndexType.Map
                 };
 
                 await store
                     .Admin
-                    .SendAsync(new PutIndexOperation("Users_ByName", input));
+                    .SendAsync(new PutIndexesOperation(new []{input}));
 
                 var output = await store
                     .Admin
@@ -38,6 +41,125 @@ namespace FastTests.Client.Indexing
 
                 Assert.Equal(1, output.IndexId);
                 Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false));
+            }
+        }
+
+        public class UserAndAge
+        {
+            public string Name { set; get; }
+            public int Age { set; get; }
+        }
+
+        [Fact]
+        public async Task Can_Put_And_Replace()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new UserAndAge { Name = "Boki", Age = 14});
+                    await session.StoreAsync(new UserAndAge { Name = "Toli", Age = 5 });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var input = new IndexDefinition
+                {
+                    Maps = { "from user in docs.UserAndAges select new { user.Name }" },
+                    Type = IndexType.Map,
+                    Name = "Users_ByName"
+                };
+
+                var input2 = new IndexDefinition
+                {
+                    Maps = { "from user in docs.UserAndAges select new { user.Age }" },
+                    Type = IndexType.Map,
+                    Name = "Users_ByName"
+                };
+
+                await store
+                    .Admin
+                    .SendAsync(new PutIndexesOperation(new[] { input }));
+
+                var output = await store
+                    .Admin
+                    .SendAsync(new GetIndexOperation("Users_ByName"));
+
+                Assert.Equal(1, output.IndexId);
+                Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false));
+
+                await store
+                    .Admin
+                    .SendAsync(new PutIndexesOperation(new[] { input2 }));
+
+                WaitForIndexing(store);
+
+                output = await store
+                    .Admin
+                    .SendAsync(new GetIndexOperation("Users_ByName"));
+
+                Assert.Equal(2, output.IndexId);
+                Assert.Equal("Users_ByName", output.Name);
+                Assert.True(input2.Equals(output, compareIndexIds: false, ignoreFormatting: false));
+
+            }
+        }
+
+        [Fact]
+        public async Task Can_Put_Replace_And_Back_To_Original()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new UserAndAge { Name = "Boki", Age = 14 });
+                    await session.StoreAsync(new UserAndAge { Name = "Toli", Age = 5 });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var input = new IndexDefinition
+                {
+                    Maps = { "from user in docs.UserAndAges select new { user.Name }" },
+                    Type = IndexType.Map,
+                    Name = "Users_ByName"
+                };
+
+                var input2 = new IndexDefinition
+                {
+                    Maps = { "from user in docs.UserAndAges select new { user.Age }" },
+                    Type = IndexType.Map,
+                    Name = "Users_ByName"
+                };
+
+                await store
+                    .Admin
+                    .SendAsync(new PutIndexesOperation(new[] { input }));
+
+                var output = await store
+                    .Admin
+                    .SendAsync(new GetIndexOperation("Users_ByName"));
+
+                Assert.Equal(1, output.IndexId);
+                Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false));
+
+                await store
+                    .Admin
+                    .SendAsync(new PutIndexesOperation(new[] { input2 }));
+
+                await store
+                   .Admin
+                   .SendAsync(new PutIndexesOperation(new[] { input }));
+
+                WaitForIndexing(store);
+
+                output = await store
+                    .Admin
+                    .SendAsync(new GetIndexOperation("Users_ByName"));
+
+                Assert.NotEqual(2, output.IndexId);
+                Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false));
+
             }
         }
     }

@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
-using Raven.Abstractions.Data;
+using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -53,8 +52,14 @@ namespace Raven.Server.Documents
             }
         }
 
+        private bool _isDisposed = false;
+
         public override void Dispose()
         {
+            if (_isDisposed)
+                return;
+            _isDisposed = true;
+
             if (_replaced == false)
             {
                 if (_context.Transaction != null && _context.Transaction != this)

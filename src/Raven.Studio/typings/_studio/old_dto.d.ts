@@ -1,17 +1,9 @@
 /// <reference path="../../typescript/common/constants.ts"/>
 
-interface collectionInfoDto extends Raven.Client.Data.Queries.QueryResult<documentDto> {
+interface collectionInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<documentDto>> {
 }
 
-interface documentDto extends metadataAwareDto {
-    [key:string]: any;
-}
-
-interface conflictsInfoDto extends Raven.Client.Data.Queries.QueryResult<conflictDto> {
-}
-
-interface metadataAwareDto {
-    '@metadata'?: documentMetadataDto;
+interface conflictsInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<conflictDto>> {
 }
 
 interface logNotificationDto {
@@ -28,175 +20,6 @@ interface logNotificationDto {
     InnerRequestsCount?: number;
     QueryTimings: any;
 
-}
-
-interface documentMetadataDto {
-    '@collection'?: string;
-    'Raven-Clr-Type'?: string;
-    'Non-Authoritative-Information'?: boolean;
-    '@id'?: string;
-    'Temp-Index-Score'?: number;
-    '@last-modified'?: string;
-    '@etag'?: number;
-}
-
-interface databaseStatisticsDto {
-    ApproximateTaskCount: number;
-    CountOfDocuments: number;
-    CountOfIndexes: number;
-    CurrentNumberOfItemsToIndexInSingleBatch: number;
-    CountOfStaleIndexesExcludingDisabledAndAbandoned: number;
-    CountOfIndexesExcludingDisabledAndAbandoned: number;
-    CurrentNumberOfItemsToReduceInSingleBatch: number;
-    DatabaseId: string;
-    DatabaseTransactionVersionSizeInMB: number;
-    Errors: serverErrorDto[];
-    InMemoryIndexingQueueSizes: number[];
-    Indexes: indexStatisticsDto[];
-    LastDocEtag: string;
-    LastIndexingDateTime: string;
-    Prefetches: futureBatchStatsDto[];
-    StaleIndexes: string[];
-    SupportsDtc: boolean;
-    Is64Bit: boolean;
-}
-
-interface futureBatchStatsDto {
-    Timestamp: string;
-    Duration: string;
-    Size: number;
-    Retries: number;
-    PrefetchingUser: string;
-}
-
-interface indexStatisticsDto {
-    Name: string;
-    IndexingAttempts: number;
-    IndexingSuccesses: number;
-    IndexingErrors: number;
-    LastIndexedEtag: string;
-    LastIndexedTimestamp: string;
-    LastQueryTimestamp: string;
-    TouchCount: number;
-    Priority: string;
-    ReduceIndexingAttempts: number;
-    ReduceIndexingSuccesses: number;
-    ReduceIndexingErrors: number;
-    LastReducedEtag: string;
-    LastReducedTimestamp: string;
-    CreatedTimestamp: string;
-    LastIndexingTime: string;
-    IsOnRam: string; // Yep, it's really a string. Example values: "false", "true (3 KBytes)"
-    LockMode: string;
-    IsMapReduce: boolean;
-    ForEntityName: string[];
-    Performance: indexPerformanceDto[];
-    DocsCount: number;
-    IsInvalidIndex: boolean;
-    IsTestIndex: boolean;
-}
-
-interface indexingBatchInfoDto {
-    Id: number;
-    BatchType: string;
-    IndexesToWorkOn: string[];
-    TotalDocumentCount: number;
-    TotalDocumentSize: number;
-    StartedAt: string; // ISO date string.
-    StartedAtDate?: Date;
-    TotalDurationMs: number;
-    PerfStats: indexNameAndMapPerformanceStats[];  
-}
-
-interface indexNameAndMapPerformanceStats {
-    indexName: string;
-    stats: indexPerformanceDto;
-    CacheThreadCount?: number;
-}
-
-interface indexPerformanceDto {
-    Operation: string;
-    ItemsCount: number;
-    InputCount: number;
-    OutputCount: number;
-    Started: string; // Date
-    Completed: string; // Date
-    Duration: string;
-    DurationMilliseconds: number;
-    Operations: basePerformanceStatsDto[];
-    WaitingTimeSinceLastBatchCompleted: string;
-}
-
-interface reducingBatchInfoDto {
-    Id: number;
-    IndexesToWorkOn: string[];
-    StartedAt: string; // ISO date string.
-    StartedAtDate?: Date;
-    TotalDurationMs: number;
-    TimeSinceFirstReduceInBatchCompletedMs: number;
-    PerfStats: indexNameAndReducingPerformanceStats[];
-}
-
-interface deletionBatchInfoDto {
-    Id: number;
-    IndexName: string;
-    TotalDocumentCount: number;
-    StartedAt: string; // ISO date string.
-    StartedAtDate?: Date;
-    TotalDurationMs: number;
-    PerformanceStats: deletionPerformanceStatsDto[];
-}
-
-interface indexNameAndReducingPerformanceStats {
-    indexName: string;
-    stats: reducePerformanceStatsDto;
-    parent?: reducingBatchInfoDto;
-}
-
-interface reducePerformanceStatsDto {
-    ReduceType?: string;
-    LevelStats: reduceLevelPeformanceStatsDto[];
-}
-
-interface deletionPerformanceStatsDto extends basePerformanceStatsDto {
-    Name: string;
-}
-
-interface reduceLevelPeformanceStatsDto {
-    Level: number;
-    ItemsCount: number;
-    InputCount: number;
-    OutputCount: number;
-    Started: string; // ISO date string
-    Completed: string; // Date
-    Duration: string;
-    DurationMs: number;
-    Operations: basePerformanceStatsDto[];
-    parent?: indexNameAndReducingPerformanceStats;
-    CacheThreadCount?: number;
-}
-
-interface basePerformanceStatsDto {
-    DurationMs: number;
-    CacheWidth?: number;
-    CacheCumulativeSum?: number;
-    CacheIsSingleThread?: boolean;
-}
-
-interface performanceStatsDto extends basePerformanceStatsDto {
-    Name: string;
-    ParallelParent?: parallelBatchStatsDto;
-}
-
-interface parallelPefromanceStatsDto extends basePerformanceStatsDto {
-    NumberOfThreads: number;
-    BatchedOperations: parallelBatchStatsDto[];
-}
-
-interface parallelBatchStatsDto {
-    StartDelay: number;
-    Operations: performanceStatsDto[];
-    Parent?: parallelPefromanceStatsDto;
 }
 
 interface apiKeyDto extends documentDto {
@@ -297,11 +120,6 @@ interface documentCountDto {
     IsEtl: boolean;
 }
 
-interface documentPreviewDto {
-    Results: documentDto[];
-    TotalResults: number;
-}
-
 interface replicationDestinationDto {
     Url: string;
     Username: string;
@@ -365,32 +183,8 @@ interface databaseAccessDto {
     ReadOnly: boolean;
 }
 
-interface windowsAuthDataDto {
-    Name: string;
-    Enabled: boolean;
-    Databases: databaseAccessDto[];
-}
-
-interface windowsAuthDto {
-    RequiredGroups: windowsAuthDataDto[];
-    RequiredUsers: windowsAuthDataDto[];
-}
-
 interface storedPatchDto extends patchDto {
     Hash: number;
-}
-
-interface bulkDocumentDto {
-    Key: string;
-    Method: string;
-    AdditionalData?: any[];
-    Document?: documentDto; // Can be null when Method == "DELETE"
-    Metadata?: documentMetadataDto; // Can be null when Method == "DELETE"
-    Etag?: number; // Often is null on sending to server, non-null when returning from server.
-    PatchResult?: any;
-    Deleted?: any;
-    DebugMode?: boolean;
-    Patch?: scriptedPatchRequestDto;
 }
 
 interface scriptedPatchRequestDto {
@@ -440,11 +234,6 @@ interface databaseRestoreRequestDto extends restoreRequestDto {
     DatabaseLocation: string;
     DisableReplicationDestinations: boolean;
     GenerateNewDatabaseId?: boolean;
-}
-
-interface filesystemRestoreRequestDto extends restoreRequestDto {
-    FilesystemName: string;
-    FilesystemLocation: string;
 }
 
 interface restoreStatusDto {
@@ -508,11 +297,6 @@ interface facetValueDto {
     Average: number;
 }
 
-interface scriptedIndexDto extends documentDto {
-    IndexScript: string;
-    DeleteScript: string;
-}
-
 interface conflictDto extends documentDto {
     Id: string;
     ConflictDetectedAt: string;
@@ -536,10 +320,6 @@ interface documentBase extends dictionary<any> {
     getDocumentPropertyNames(): Array<string>;
 }
 
-interface ICollectionBase {
-    colorClass: string;
-}
-
 interface customColumnParamsDto {
     Header?: string;
     Binding: string;
@@ -549,19 +329,6 @@ interface customColumnParamsDto {
 
 interface customColumnsDto {
     Columns: Array<customColumnParamsDto>;
-}
-
-interface patchValueDto {
-    Key: string;
-    Value: string;
-}
-
-interface patchDto extends documentDto {
-    PatchOnOption: string;
-    Query: string;
-    Script: string;
-    SelectedItem: string;
-    Values: Array<patchValueDto>;
 }
 
 interface statusStorageOnDiskDto {
@@ -579,9 +346,6 @@ interface statusDebugChangesDto {
     Id: string;
     Connected: boolean;
     DocumentStore: statusDebugChangesDocumentStoreDto;
-    FileSystem: statusDebugChangesFileSystemDto;
-    CounterStorage: statusDebugChangesCounterStorageDto;
-    TimeSeries: statusDebugChangesTimeSeriesDto;
     WatchAllDocuments: boolean;
     WatchAllIndexes: boolean;
     WatchConfig: boolean;
@@ -595,40 +359,6 @@ interface statusDebugChangesDto {
     WatchedFolders: Array<string>;
 }
 
-interface statusDebugDataSubscriptionsDto {
-    SubscriptionId: number;
-    Criteria: subscriptionCriteriaDto;
-    AckEtag: string;
-    TimeOfSendingLastBatch: string;
-    TimeOfLastClientActivity: string;
-    IsOpen: boolean;
-    ConnectionOptions: subscriptionConnectionOptionsDto;
-}
-
-interface subscriptionDto {
-    SubscriptionId: number;
-    AckEtag: string;
-}
-
-interface subscriptionCriteriaDto {
-    KeyStartsWith: string;
-    BelongsToAnyCollection: Array<string>;
-    PropertiesMatch: Array<{ Key: string; Value: string}>;
-    PropertiesNotMatch: Array<{ Key: string; Value: string }>;
-}
-
-interface subscriptionConnectionOptionsDto {
-    ConnectionId: string;
-    BatchOptions: subscriptionBatchOptionsDto;
-    ClientAliveNotificationInterval: string;
-    IgnoreSubscribersErrors: boolean;
-}
-
-interface subscriptionBatchOptionsDto {
-    MaxSize: number;
-    MaxDocCount: number;
-    AcknowledgmentTimeout: string;
-}
 
 interface statusDebugChangesDocumentStoreDto {
     WatchAllDocuments: boolean;
@@ -641,14 +371,6 @@ interface statusDebugChangesDocumentStoreDto {
     WatchedDocumentsInCollection: Array<string>;
     WatchedDocumentsOfType: Array<string>;
     WatchedBulkInserts: Array<string>;
-}
-
-interface statusDebugChangesFileSystemDto {
-    WatchConflicts: boolean;
-    WatchSync: boolean;
-    WatchCancellations: boolean;
-    WatchConfig: boolean;
-    WatchedFolders: Array<string>;
 }
 
 interface statusDebugMetricsDto {
@@ -800,11 +522,6 @@ interface resourceStyleMap {
     styleMap: any;
 }
 
-interface timeSeriesDto {
-    Name: string;
-    Path?: string;
-}
-
 interface changesApiEventDto {
     Time: string; // ISO date string
     Type: string;
@@ -823,19 +540,6 @@ interface tenantDto {
     Disabled: boolean;
     Bundles: Array<string>;
     IsAdminCurrentTenant: boolean;
-}
-
-interface fileSystemDto extends tenantDto {
-}
-
-interface counterStorageDto extends tenantDto {
-}
-
-interface timeSeriesDto extends tenantDto {
-}
-
-interface customFunctionsDto {
-    Functions: string;
 }
 
 interface suggestionsDto {
@@ -871,42 +575,15 @@ interface visualizerDataObjectDto {
     idx: number;
 }
 
-interface visualizerDataObjectNodeDto {
-    children?: visualizerDataObjectNodeDto[];
-    name?: string;
-    level?: number;
-    origin?: visualizerDataObjectNodeDto;
-    x?: number;
-    y?: number;
-    depth?: number;
-    parent?: visualizerDataObjectNodeDto;
-    payload?: mappedResultInfo;
-    connections?: visualizerDataObjectNodeDto[];
-    cachedId?: string;
-}
-
 interface queryIndexDebugMapArgsDto {
     key?: string;
     sourceId?: string;
     startsWith?: string;
 }
 
-interface graphLinkDto {
-    source: visualizerDataObjectNodeDto;
-    target: visualizerDataObjectNodeDto;
-    cachedId?: string;
-}
-
 interface mergeResult {
   Document: string;
   Metadata: string;
-}
-
-interface visualizerExportDto {
-    indexName: string;
-    docKeys: string[];
-    reduceKeys: string[];
-    tree: visualizerDataObjectNodeDto;
 }
 
 interface operationStatusDto {
@@ -955,8 +632,6 @@ interface importOperationStatusDto extends operationStatusDto{
 
 interface globalTopologyDto {
     Databases: replicationTopologyDto;
-    FileSystems: synchronizationTopologyDto;
-    Counters: countersReplicationTopologyDto;
 }
 
 interface replicationTopologyDto {
@@ -968,12 +643,6 @@ interface replicationTopologyDto {
 interface synchronizationTopologyDto {
     Servers: string[];
     Connections: synchronizationTopologyConnectionDto[];
-    SkippedResources: string[];
-}
-
-interface countersReplicationTopologyDto {
-    Servers: string[];
-    Connections: countersReplicationTopologyConnectionDto[];
     SkippedResources: string[];
 }
 
@@ -1002,18 +671,6 @@ interface synchronizationTopologyConnectionDto {
     UiType: string;
 }
 
-interface countersReplicationTopologyConnectionDto {
-    Destination: string;
-    DestinationToSourceState: string;
-    Errors: string[];
-    LastEtag: string;
-    SendServerId: string;
-    Source: string;
-    SourceToDestinationState: string;
-    StoredServerId: string;
-    UiType: string;
-}
-
 interface runningTaskDto {
     Id: number;
     Status: operationStateDto;
@@ -1032,13 +689,6 @@ interface adminLogsConfigEntryDto {
     category: string;
     level: string;
     includeStackTrace: boolean;
-}
-
-interface fileSystemSettingsDto {
-    name: string;
-    path: string;
-    logsPath: string;
-    storageEngine: string;
 }
 
 interface performanceTestRequestDto {
@@ -1096,14 +746,6 @@ interface destinationInformationDto {
     DatabaseName: string;
     ServerInstanceId: string;
     LastDocumentEtag: string;
-}
-
-
-
-interface synchronizationConfigDto {
-    FileConflictResolution: string;
-    MaxNumberOfSynchronizationsPerDestination: number;
-    SynchronizationLockTimeoutMiliseconds: number;
 }
 
 interface pluginsInfoDto {
@@ -1164,8 +806,6 @@ interface clusterNodeStatusDto {
 interface serverSmugglingItemDto {
     Name: string;
     Incremental: boolean;
-    StripReplicationInformation: boolean;
-    ShouldDisableVersioningBundle: boolean;
 }
 
 interface serverConnectionInfoDto {
@@ -1202,8 +842,6 @@ interface consoleJsSampleDto {
     Code: string;
 }
 
-
-
 interface diskIoPerformanceRunDto {
     ProcessId: number;
     ProcessName: string;
@@ -1233,25 +871,7 @@ interface performanceRunItemDto {
     documentId: string;
 }
 
-
-interface filteredOutIndexStatDto {
-    Timestamp: string;
-    TimestampParsed?: Date;
-    IndexName: string;
-}
-
 interface generatedCodeDto {
     Document: string;
     Code: string;
-}
-
-
-interface fetcherDto<T> {
-    (skip: number, take: number): JQueryPromise<PagedResultSet<T>>;
-}
-
-interface PagedResultSet<T> {
-    items: Array<T>;
-    totalResultCount: number;
-    additionalResultInfo?: any;
 }

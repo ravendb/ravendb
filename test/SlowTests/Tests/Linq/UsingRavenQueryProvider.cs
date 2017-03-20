@@ -8,18 +8,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Client.Linq;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
+using Raven.Client.Util;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class UsingRavenQueryProvider : RavenNewTestBase
+    public class UsingRavenQueryProvider : RavenTestBase
     {
         private class User
         {
@@ -50,14 +49,14 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     AddData(session);
-
-                    store.Admin.Send(new PutIndexOperation(indexName,
-                            new IndexDefinitionBuilder<User, User>()
-                            {
-                                Map = docs => from doc in docs
-                                              select new { doc.Name, doc.Age },
-                                SortOptions = { { x => x.Name, SortOptions.StringVal } }
-                            }.ToIndexDefinition(store.Conventions)));
+                    var indexDefinition = new IndexDefinitionBuilder<User, User>()
+                    {
+                        Map = docs => from doc in docs
+                            select new {doc.Name, doc.Age},
+                        SortOptions = {{x => x.Name, SortOptions.StringVal}}
+                    }.ToIndexDefinition(store.Conventions);
+                    indexDefinition.Name = indexName;
+                store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
 
                     WaitForQueryToComplete(session);
 
@@ -101,14 +100,14 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     AddData(session);
-
-                    store.Admin.Send(new PutIndexOperation(indexName,
-                        new IndexDefinitionBuilder<User, User>()
-                        {
-                            Map = docs => from doc in docs
-                                          select new { doc.Name, doc.Age },
-                            SortOptions = { { x => x.Name, SortOptions.StringVal } }
-                        }.ToIndexDefinition(store.Conventions)));
+                    var indexDefinition = new IndexDefinitionBuilder<User, User>()
+                    {
+                        Map = docs => from doc in docs
+                                      select new { doc.Name, doc.Age },
+                        SortOptions = { { x => x.Name, SortOptions.StringVal } }
+                    }.ToIndexDefinition(store.Conventions);
+                    indexDefinition.Name = indexName;
+                    store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
 
                     WaitForQueryToComplete(session);
 
@@ -140,14 +139,15 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     AddData(session);
-
-                    store.Admin.Send(new PutIndexOperation(indexName,
-                        new IndexDefinitionBuilder<User, User>()
+                    var indexDefinition = new IndexDefinitionBuilder<User, User>()
                         {
                             Map = docs => from doc in docs
-                                          select new { doc.Name, doc.Age },
-                            Indexes = { { x => x.Name, FieldIndexing.Analyzed } }
-                        }.ToIndexDefinition(store.Conventions)));
+                                select new {doc.Name, doc.Age},
+                            Indexes = {{x => x.Name, FieldIndexing.Analyzed}}
+                        }
+                        .ToIndexDefinition(store.Conventions);
+                    indexDefinition.Name = indexName;
+                    store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
 
                     WaitForQueryToComplete(session);
 
@@ -185,19 +185,20 @@ namespace SlowTests.Tests.Linq
                     session.Store(new User() { Name = "Matt", Info = "Male Age 35", Active = false });
                     session.SaveChanges();
 
-                    store.Admin.Send(new PutIndexOperation(indexName,
-                        new IndexDefinitionBuilder<User, User>()
-                        {
-                            Map = docs => from doc in docs
-                                          select new
-                                          {
-                                              doc.Name,
-                                              doc.Age,
-                                              doc.Info,
-                                              doc.Active
-                                          },
-                            Indexes = { { x => x.Name, FieldIndexing.Analyzed } }
-                        }.ToIndexDefinition(store.Conventions)));
+                    var indexDefinition = new IndexDefinitionBuilder<User, User>()
+                    {
+                        Map = docs => from doc in docs
+                            select new
+                            {
+                                doc.Name,
+                                doc.Age,
+                                doc.Info,
+                                doc.Active
+                            },
+                        Indexes = {{x => x.Name, FieldIndexing.Analyzed}}
+                    }.ToIndexDefinition(store.Conventions);
+                    indexDefinition.Name = indexName;
+                    store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
 
                     WaitForIndexing(store);
 
@@ -233,17 +234,19 @@ namespace SlowTests.Tests.Linq
                     session.Store(new User { Name = "Third", Created = thirdTime });
                     session.SaveChanges();
 
-                    store.Admin.Send(new PutIndexOperation(indexName,
-                        new IndexDefinitionBuilder<User, User>()
-                        {
-                            Map = docs => from doc in docs
-                                          select new
-                                          {
-                                              doc.Name,
-                                              doc.Created
-                                          },
-                        }.ToIndexDefinition(store.Conventions)));
+                    var indexDefinition = new IndexDefinitionBuilder<User, User>()
+                    {
+                        Map = docs => from doc in docs
+                                      select new
+                                      {
+                                          doc.Name,
+                                          doc.Created
+                                      },
+                    }.ToIndexDefinition(store.Conventions);
+                    indexDefinition.Name = indexName;
+                    store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
+                    
                     WaitForIndexing(store);
 
                     Assert.Equal(3, session.Query<User>(indexName).ToArray().Length);
@@ -298,11 +301,14 @@ namespace SlowTests.Tests.Linq
                     session.Store(new User() { Name = "Second", Age = 20 });
                     session.SaveChanges();
 
-                    store.Admin.Send(new PutIndexOperation(indexName,
-                            new IndexDefinitionBuilder<User, User>()
-                            {
-                                Map = docs => from doc in docs select new { doc.Name, doc.Age },
-                            }.ToIndexDefinition(store.Conventions)));
+                    var indexDefinition = new IndexDefinitionBuilder<User, User>()
+                    {
+                        Map = docs => from doc in docs select new { doc.Name, doc.Age },
+                    }.ToIndexDefinition(store.Conventions);
+                    indexDefinition.Name = indexName;
+                    store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
+
+                   
 
                     WaitForQueryToComplete(session);
 
@@ -323,12 +329,13 @@ namespace SlowTests.Tests.Linq
             {
                 store.Initialize();
 
-                store.Admin.Send(new PutIndexOperation("DateTime",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                         new IndexDefinition
                         {
+                            Name = "DateTime",
                             Maps = { @"from info in docs.DateTimeInfos                                    
                                     select new { info.TimeOfDay }" }
-                        }));
+                        }}));
 
                 var currentTime = SystemTime.UtcNow;
                 using (var s = store.OpenSession())
@@ -367,12 +374,13 @@ namespace SlowTests.Tests.Linq
             {
                 store.Initialize();
 
-                store.Admin.Send(new PutIndexOperation("DateTime",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
+                        Name = "DateTime",
                         Maps = { @"from info in docs.DateTimeInfos                                    
                                     select new { info.TimeOfDay }" }
-                    }));
+                    }}));
 
                 using (var s = store.OpenSession())
                 {
@@ -401,12 +409,13 @@ namespace SlowTests.Tests.Linq
             {
                 store.Initialize();
 
-                store.Admin.Send(new PutIndexOperation("DateTime",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
+                        Name = "DateTime",
                         Maps = { @"from info in docs.DateTimeInfos                                    
                                     select new { info.TimeOfDay }" }
-                    }));
+                    }}));
 
                 var currentTime = SystemTime.UtcNow;
                 using (var s = store.OpenSession())
@@ -441,9 +450,10 @@ namespace SlowTests.Tests.Linq
             {
                 store.Initialize();
 
-                store.Admin.Send(new PutIndexOperation("ByLineCost",
+                store.Admin.Send(new PutIndexesOperation(new [] {
                     new IndexDefinition
                     {
+                        Name = "ByLineCost",
                         Maps = { @"from order in docs.Orders
                                     from line in order.Lines
                                     select new { Cost = line.Cost }" },
@@ -451,7 +461,7 @@ namespace SlowTests.Tests.Linq
                         {
                             {"Cost", new IndexFieldOptions {Storage = FieldStorage.Yes}}
                         }
-                    }));
+                    }}));
 
                 using (var s = store.OpenSession())
                 {
@@ -481,7 +491,7 @@ namespace SlowTests.Tests.Linq
 
                     //This is the lucene query we want to mimic
                     var luceneResult = s.Advanced.DocumentQuery<OrderItem>("ByLineCost")
-                            .Where("Cost_Range:{Dx1 TO NULL}")
+                            .Where("Cost_D_Range:{1 TO NULL}")
                             .SelectFields<SomeDataProjection>("Cost")
                             .ToArray();
 
@@ -592,7 +602,7 @@ namespace SlowTests.Tests.Linq
             documentSession.SaveChanges();
         }
 
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
+        [Fact]
         public void Can_Use_In_Array_In_Where_Clause()
         {
             using (var store = GetDocumentStore())
@@ -723,7 +733,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
+        [Fact]
         public void Can_Use_In_IEnumerable_In_Where_Clause_with_negation()
         {
             using (var store = GetDocumentStore())
@@ -753,7 +763,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
+        [Fact]
         public void Can_Use_In_Params_In_Where_Clause()
         {
             using (var store = GetDocumentStore())
@@ -781,7 +791,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-4916")]
+        [Fact]
         public void Can_Use_In_IEnumerable_In_Where_Clause()
         {
             using (var store = GetDocumentStore())

@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import appUrl = require("common/appUrl");
 import replicationDestination = require("models/database/replication/replicationDestination");
 
 class replicateTransformersCommand extends commandBase {

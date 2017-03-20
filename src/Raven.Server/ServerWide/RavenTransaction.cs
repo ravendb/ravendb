@@ -1,5 +1,4 @@
 ﻿using System;
-using Raven.Server.Documents;
 using Voron.Impl;
 
 namespace Raven.Server.ServerWide

@@ -8,17 +8,17 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Exceptions.Security;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Operations.Databases.ApiKeys;
+using Raven.Client.Documents;
+using Raven.Client.Exceptions.Security;
+using Raven.Client.Http;
+using Raven.Client.Http.OAuth;
+using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.Config.Attributes;
 using Xunit;
 
 namespace FastTests.Server.OAuth
 {
-    public class CanAuthenticate : RavenNewTestBase
+    public class CanAuthenticate : RavenTestBase
     {
         private readonly ApiKeyDefinition _apiKey = new ApiKeyDefinition
         {
@@ -41,8 +41,8 @@ namespace FastTests.Server.OAuth
             {
                 _apiKey.ResourcesAccessMode["db/" + store.DefaultDatabase] = AccessModes.ReadWrite;
 
-                store.Admin.Send(new PutApiKeyOperation("super", _apiKey));
-                var doc = store.Admin.Send(new GetApiKeyOperation("super"));
+                store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
+                var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
                 Assert.NotNull(doc);
 
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
@@ -65,8 +65,8 @@ namespace FastTests.Server.OAuth
             Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
             using (var store = GetDocumentStore(apiKey: "super/" + "bad secret"))
             {
-                store.Admin.Send(new PutApiKeyOperation("super", _apiKey));
-                var doc = store.Admin.Send(new GetApiKeyOperation("super"));
+                store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
+                var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
                 Assert.NotNull(doc);
 
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
@@ -84,16 +84,16 @@ namespace FastTests.Server.OAuth
 
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutApiKeyOperation("super", _apiKey));
-                var doc = store.Admin.Send(new GetApiKeyOperation("super"));
+                store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
+                var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
                 Assert.NotNull(doc);
 
                 _apiKey.Enabled = false;
-                store.Admin.Send(new PutApiKeyOperation("duper", _apiKey));
-                store.Admin.Send(new PutApiKeyOperation("shlumper", _apiKey));
-                store.Admin.Send(new DeleteApiKeyOperation("shlumper"));
+                store.Admin.Server.Send(new PutApiKeyOperation("duper", _apiKey));
+                store.Admin.Server.Send(new PutApiKeyOperation("shlumper", _apiKey));
+                store.Admin.Server.Send(new DeleteApiKeyOperation("shlumper"));
 
-                var apiKeys = store.Admin.Send(new GetApiKeysOperation(0, 1024)).ToList();
+                var apiKeys = store.Admin.Server.Send(new GetApiKeysOperation(0, 1024)).ToList();
                 Assert.Equal(2, apiKeys.Count);
                 Assert.Equal("duper", apiKeys[0].UserName);
                 Assert.False(apiKeys[0].Enabled);
@@ -130,8 +130,8 @@ namespace FastTests.Server.OAuth
                 // Admin should be able to save apiKey
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
                 _apiKey.ResourcesAccessMode["db/" + store.DefaultDatabase] = AccessModes.ReadWrite;
-                store.Admin.Send(new PutApiKeyOperation("super", _apiKey));
-                var doc = store.Admin.Send(new GetApiKeyOperation("super"));
+                store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
+                var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
                 Assert.NotNull(doc);
 
                 // Should get token
@@ -162,8 +162,8 @@ namespace FastTests.Server.OAuth
             Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
             using (var store = GetDocumentStore(apiKey: "super/" + "secret"))
             {
-                store.Admin.Send(new PutApiKeyOperation("super", _apiKey));
-                var doc = store.Admin.Send(new GetApiKeyOperation("super"));
+                store.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
+                var doc = store.Admin.Server.Send(new GetApiKeyOperation("super"));
                 Assert.NotNull(doc);
 
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;

@@ -6,15 +6,13 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
+using Raven.Client;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Voron.Exceptions;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -237,18 +235,17 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 foreach (var bulkInsertDoc in docsToWrite)
                 {
-                    var reader = new BlittableJsonReaderObject(bulkInsertDoc.Pointer, bulkInsertDoc.Used,
-                        context);
+                    var reader = new BlittableJsonReaderObject(bulkInsertDoc.Pointer, bulkInsertDoc.Used, context);
                     reader.BlittableValidation();
 
                     string docKey;
                     BlittableJsonReaderObject metadata;
-                    if (reader.TryGet(Constants.Metadata.Key, out metadata) == false)
+                    if (reader.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
                     {
                         const string message = "'@metadata' is missing in received document for bulk insert";
                         throw new InvalidDataException(message);
                     }
-                    if (metadata.TryGet(Constants.Metadata.Id, out docKey) == false)
+                    if (metadata.TryGet(Constants.Documents.Metadata.Id, out docKey) == false)
                     {
                         const string message = "'@id' is missing in received document for bulk insert";
                         throw new InvalidDataException(message);

@@ -1,17 +1,17 @@
+using System.Linq;
 using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
-using Raven.Json.Linq;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
+using Sparrow.Json;
+using Xunit;
 
 namespace SlowTests.Issues
 {
-    using System.Linq;
-    using Raven.Abstractions.Data;
-    using Xunit;
-
     public class RavenDB_554 : RavenTestBase
     {
-        public class Person
+        private class Person
         {
             public string FirstName { get; set; }
 
@@ -28,12 +28,17 @@ namespace SlowTests.Issues
             using (var docStore = GetDocumentStore())
             {
 
-                docStore.DatabaseCommands.PutIndex(IndexName, new IndexDefinition
+                docStore.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
-                    Maps = { "from doc in docs select new { doc.FirstName, doc.LastName, Query = new[] { doc.FirstName, doc.LastName, doc.MiddleName } }" }
-                });
+                    Name = IndexName,
+                    Maps =
+                    {
+                        "from doc in docs select new { doc.FirstName, doc.LastName, Query = new[] { doc.FirstName, doc.LastName, doc.MiddleName } }"
+                    }
+                }
+            }))
+            ;
 
-                
                 using (var session = docStore.OpenSession())
                 {
                     session.Store(new Person { FirstName = "John", MiddleName = null, LastName = null });
@@ -48,14 +53,16 @@ namespace SlowTests.Issues
                         .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
-                    var queryResult = docStore.DatabaseCommands.Query(IndexName, new IndexQuery(docStore.Conventions), false, true);
-                    foreach (var result in queryResult.Results)
+                    using (var commands = docStore.Commands())
                     {
-                        RavenJToken q;
-                        result.TryGetValue("Query", out q);
-                        if (q != null)
+                        var queryResult = commands.Query(IndexName, new IndexQuery(docStore.Conventions), false, true);
+                        foreach (BlittableJsonReaderObject result in queryResult.Results)
                         {
-                            Assert.False(q.ToString().Contains(Constants.NullValue));
+                            string q;
+                            if (result.TryGet("Query", out q))
+                            {
+                                Assert.False(q.Contains(Constants.Documents.Indexing.Fields.NullValue));
+                            }
                         }
                     }
                 }

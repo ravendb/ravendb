@@ -1,17 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
-using Raven.Client;
-using Raven.Client.Indexes;
-#if v35
-using Raven.Abstractions.Data;
-#else
-using Raven.Client.Data;
-using Raven.Client.Data.Queries;
-#endif
+using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Queries;
+using Sparrow.Json;
 
 namespace Indexing.Benchmark
 {
@@ -19,25 +12,25 @@ namespace Indexing.Benchmark
     {
         private readonly IDocumentStore _store;
 
-        public IndexingBenchmark(IDocumentStore store)
+        protected IndexingBenchmark(IDocumentStore store)
         {
             _store = store;
         }
-        
+
         public abstract IndexingTestRun[] IndexTestRuns { get; }
-        
+
         public void Execute()
         {
             foreach (var test in IndexTestRuns)
             {
                 test.Index.Execute(_store);
-                
+
                 Console.WriteLine($"{Environment.NewLine}{test.Index.IndexName} index created. Waiting for non-stale results ...");
 
                 var sw = Stopwatch.StartNew();
 
-                var stalenessTimeout = TimeSpan.FromMinutes(5);
-                QueryResult result = null;
+                var stalenessTimeout = TimeSpan.FromMinutes(15);
+                QueryResult result;
 
 #if !v35
                 //Task.Factory.StartNew(() =>
@@ -53,13 +46,25 @@ namespace Indexing.Benchmark
                 //    } while ((result != null && result.IsStale == false) || sw.Elapsed > stalenessTimeout);
                 //}, TaskCreationOptions.LongRunning);
 
-                result = _store.DatabaseCommands.Query(test.Index.IndexName, new IndexQuery(_store.Conventions)
+                var requestExecuter = _store.GetRequestExecuter();
+                JsonOperationContext context;
+                using (requestExecuter.ContextPool.AllocateOperationContext(out context))
                 {
-                    WaitForNonStaleResultsTimeout = stalenessTimeout,
-                    PageSize = 0,
-                    Start = 0
-                });
+                    do
+                    {
+                        var queryCommand = new QueryCommand(_store.Conventions, context, test.Index.IndexName, new IndexQuery(_store.Conventions)
+                        {
+                            PageSize = 0,
+                            Start = 0
+                        });
 
+                        requestExecuter.Execute(queryCommand, context);
+
+                        result = queryCommand.Result;
+
+                        Thread.Sleep(100);
+                    } while (result.IsStale || sw.Elapsed > stalenessTimeout);
+                }
 #else
                 do
                 {

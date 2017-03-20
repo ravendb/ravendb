@@ -1,9 +1,8 @@
 using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Net.Sockets;
 using System.Threading;
-using Raven.Abstractions.Data;
-using Raven.Server.ServerWide.Context;
+using Raven.Client.Server.Tcp;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
@@ -28,7 +27,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public TcpConnectionHeaderMessage.OperationTypes Operation;
 
-        public NetworkStream Stream;
+        public Stream Stream;
 
         public TcpClient TcpClient;
 

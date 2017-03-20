@@ -1,8 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import changesContext = require("common/changesContext");
 import moment = require("moment");
-import changeSubscription = require("common/changeSubscription");
 import tableNavigationTrait = require("common/tableNavigationTrait");
 
 class indexErrors extends viewModelBase {
@@ -24,7 +21,7 @@ class indexErrors extends viewModelBase {
     }
 
     afterClientApiConnected(): void {
-        const changesApi = this.changesContext.resourceChangesApi();
+        const changesApi = this.changesContext.databaseChangesApi();
         this.addNotification(changesApi.watchAllIndexes(() => this.fetchIndexErrors()));
     }
 
@@ -38,7 +35,7 @@ class indexErrors extends viewModelBase {
         clearTimeout(this.updateNowTimeoutHandle);
     }
 
-    fetchIndexErrors(): JQueryPromise<databaseStatisticsDto> {
+    fetchIndexErrors(): JQueryPromise<any> { //TODO: use type
         var db = this.activeDatabase();
         if (db) {
             /* TODO

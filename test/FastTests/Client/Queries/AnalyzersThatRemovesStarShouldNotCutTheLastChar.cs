@@ -1,10 +1,10 @@
 ﻿using System.Linq;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace FastTests.Client.Queries
 {
-    public class AnalyzersThatRemovesStarShouldNotCutTheLastChar : RavenNewTestBase
+    public class AnalyzersThatRemovesStarShouldNotCutTheLastChar : RavenTestBase
     {
         [Fact]
         public void CanDoPrefixQueryOnAnalyzedFields()

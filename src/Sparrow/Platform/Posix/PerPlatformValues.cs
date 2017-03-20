@@ -26,6 +26,12 @@ namespace Voron.Platform.Posix
              RuntimeInformation.OSArchitecture == Architecture.Arm64)
                 ? 16384 // value directly from printf("%d", O_DIRECTORY)
                 : 65536); // value directly from printf("%d", O_DIRECTORY) on the pi
+
+            public static Posix.OpenFlags O_LARGEFILE = (Posix.OpenFlags)(
+           (RuntimeInformation.OSArchitecture == Architecture.Arm ||
+            RuntimeInformation.OSArchitecture == Architecture.Arm64)
+               ? 131072 // value directly from printf("%d", O_DIRECT) on the pi
+               : 32768); // value directly from printf("%d", O_DIRECT)
         }
     }
 }

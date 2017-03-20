@@ -1,28 +1,56 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
-using Raven.Client.Connection;
-using Raven.Json.Linq;
-using Raven.NewClient.Abstractions.Connection;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Client.Json;
-using Raven.NewClient.Client.Replication;
-using Raven.NewClient.Client.Replication.Messages;
+using Newtonsoft.Json;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Exceptions;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
+using Raven.Client.Http;
+using Raven.Client.Json;
+using Raven.Client.Json.Converters;
+using Raven.Server.Documents.Replication;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Server.Replication
 {
-    public class ReplicationTestsBase : RavenNewTestBase
+    public class ReplicationTestsBase : RavenTestBase
     {
+
+        protected List<object> GetRevisions(DocumentStore store,string id)
+        {
+            using (var commands = store.Commands())
+            {
+                var command = new GetRevisionsCommand(id);
+
+                commands.RequestExecutor.Execute(command, commands.Context);
+
+                return command.Result;
+            }
+        }
+
+        protected ReplicationStatistics GetReplicationStats(DocumentStore store)
+        {
+            using (var commands = store.Commands())
+            using (var session = store.OpenSession())
+            {                
+                var command = new GetReplicationStatsCommand((DocumentSession)session);
+
+                commands.RequestExecutor.Execute(command, commands.Context);
+
+                return command.Result;
+            }
+        }
+
         protected void EnsureReplicating(DocumentStore src, DocumentStore dst)
         {
             var id = "marker/" + Guid.NewGuid().ToString();
@@ -35,25 +63,25 @@ namespace FastTests.Server.Replication
         }
 
 
-        protected Dictionary<string,string[]> GetConnectionFaliures(DocumentStore store)
+        protected Dictionary<string, string[]> GetConnectionFaliures(DocumentStore store)
         {
             using (var commands = store.Commands())
             {
                 var command = new GetConncectionFailuresCommand();
 
-                commands.RequestExecuter.Execute(command, commands.Context);
+                commands.RequestExecutor.Execute(command, commands.Context);
 
                 return command.Result;
             }
         }
 
-        protected Dictionary<string, List<ChangeVectorEntry[]>> GetConflicts(DocumentStore store, string docId)
+        protected GetConflictsResult GetConflicts(DocumentStore store, string docId)
         {
             using (var commands = store.Commands())
             {
                 var command = new GetReplicationConflictsCommand(docId);
 
-                commands.RequestExecuter.Execute(command, commands.Context);
+                commands.RequestExecutor.Execute(command, commands.Context);
 
                 return command.Result;
             }
@@ -68,25 +96,32 @@ namespace FastTests.Server.Replication
 
             if (Debugger.IsAttached)
                 timeout *= 100;
-            Dictionary<string, List<ChangeVectorEntry[]>> conflicts;
+            GetConflictsResult conflicts;
             var sw = Stopwatch.StartNew();
             do
             {
                 conflicts = GetConflicts(store, docId);
 
                 List<ChangeVectorEntry[]> list;
-                if (conflicts.TryGetValue(docId, out list) == false)
+                if (conflicts.Results.Length == 0)
                     list = new List<ChangeVectorEntry[]>();
-                if (list.Count >= count)
+                else if (conflicts.Results.Length >= count)
                     break;
 
                 if (sw.ElapsedMilliseconds > timeout)
                 {
+                    var replicationStats = GetReplicationStats(store);
+
                     Assert.False(true,
-                        "Timed out while waiting for conflicts on " + docId + " we have " + list.Count + " conflicts");
+                        "Timed out while waiting for conflicts on " + docId + " we have " + conflicts.Results.Length + " conflicts \r\n" +
+                        JsonConvert.SerializeObject(replicationStats, Formatting.Indented));
                 }
             } while (true);
-            return conflicts;
+
+            return new Dictionary<string, List<ChangeVectorEntry[]>>
+            {
+                { conflicts.Key, new List<ChangeVectorEntry[]>(conflicts.Results.Select(x => x.ChangeVector)) }
+            };
         }
 
         protected bool WaitForDocumentDeletion(DocumentStore store,
@@ -125,7 +160,7 @@ namespace FastTests.Server.Replication
 
         protected bool WaitForDocument<T>(DocumentStore store,
             string docId,
-            Func<T, bool> predicate, 
+            Func<T, bool> predicate,
             int timeout = 10000)
         {
             if (Debugger.IsAttached)
@@ -176,7 +211,7 @@ namespace FastTests.Server.Replication
                         if (doc != null)
                             return true;
                     }
-                    catch (ConflictException)
+                    catch (DocumentConflictException)
                     {
                         // expected that we might get conflict, ignore and wait
                     }
@@ -194,7 +229,7 @@ namespace FastTests.Server.Replication
 
         protected T WaitForValue<T>(Func<T> act, T expectedVal)
         {
-            int timeout = 5000;
+            int timeout = 10000;
             if (Debugger.IsAttached)
                 timeout *= 100;
             var sw = Stopwatch.StartNew();
@@ -247,7 +282,7 @@ namespace FastTests.Server.Replication
             {
                 var command = new GetReplicationTombstonesCommand();
 
-                commands.RequestExecuter.Execute(command, commands.Context);
+                commands.RequestExecutor.Execute(command, commands.Context);
 
                 return command.Result;
             }
@@ -259,7 +294,7 @@ namespace FastTests.Server.Replication
             {
                 var command = new GetFullTopologyCommand();
 
-                commands.RequestExecuter.Execute(command, commands.Context);
+                commands.RequestExecutor.Execute(command, commands.Context);
 
                 return command.Result;
             }
@@ -282,6 +317,26 @@ namespace FastTests.Server.Replication
             return default(T);
         }
 
+        public static void SetScriptResolution(DocumentStore store, string script, string collection)
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new ReplicationDocument
+                {
+                    DocumentConflictResolution = StraightforwardConflictResolution.None,
+                    ResolveByCollection = new Dictionary<string, ScriptResolver>{
+                            { collection, new ScriptResolver
+                                {
+                                    Script = script
+                                }
+                            }
+                        }
+                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
+
+                session.SaveChanges();
+            }
+        }
+
         protected static void SetReplicationConflictResolution(DocumentStore store,
             StraightforwardConflictResolution conflictResolution)
         {
@@ -292,7 +347,7 @@ namespace FastTests.Server.Replication
                 {
                     Destinations = destinations,
                     DocumentConflictResolution = conflictResolution
-                }, Constants.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
                 session.SaveChanges();
             }
         }
@@ -314,12 +369,12 @@ namespace FastTests.Server.Replication
                 {
                     Destinations = destinations,
                     DocumentConflictResolution = builtinConflictResolution
-                }, Constants.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
                 session.SaveChanges();
             }
         }
 
-        protected static void SetupReplication(DocumentStore fromStore, Dictionary<string,string> etlScripts, params DocumentStore[] toStores)
+        protected static void SetupReplication(DocumentStore fromStore, Dictionary<string, string> etlScripts, params DocumentStore[] toStores)
         {
             using (var session = fromStore.OpenSession())
             {
@@ -335,39 +390,73 @@ namespace FastTests.Server.Replication
                 session.Store(new ReplicationDocument
                 {
                     Destinations = destinations
-                }, Constants.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
                 session.SaveChanges();
             }
         }
 
 
-        protected static void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
+        protected void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
         {
-            SetupReplication(fromStore, 
+            SetupReplication(fromStore,
                 new ReplicationDocument
                 {
-                    
-                }, 
+
+                },
                 toStores);
         }
 
-        protected static void SetupReplication(DocumentStore fromStore, ReplicationDocument configOptions, params DocumentStore[] toStores)
+        protected void SetupReplication(DocumentStore fromStore, ReplicationDocument configOptions, params DocumentStore[] toStores)
         {
             using (var session = fromStore.OpenSession())
             {
                 var destinations = new List<ReplicationDestination>();
                 foreach (var store in toStores)
-                    destinations.Add(
-                        new ReplicationDestination
-                        {
-                            Database = store.DefaultDatabase,
-                            Url = store.Url,
-                        });
-                
+                {
+                    var replicationDestination = new ReplicationDestination
+                    {
+                        Database = store.DefaultDatabase,
+                        Url = store.Url
+                    };
+                    ModifyReplicationDestination(replicationDestination);
+                    destinations.Add(replicationDestination);
+                }
+
                 configOptions.Destinations = destinations;
-                session.Store(configOptions, Constants.Replication.DocumentReplicationConfiguration);
+                session.Store(configOptions, Constants.Documents.Replication.ReplicationConfigurationDocument);
                 session.SaveChanges();
             }
+        }
+
+        protected static void DeleteReplication(DocumentStore fromStore, DocumentStore deletedStoreDestination)
+        {
+            ReplicationDocument replicationConfigDocument;
+
+            using (var session = fromStore.OpenSession())
+            {
+                replicationConfigDocument =
+                    session.Load<ReplicationDocument>(Constants.Documents.Replication.ReplicationConfigurationDocument);
+
+                if (replicationConfigDocument == null)
+                    return;
+
+                session.Delete(replicationConfigDocument);
+                session.SaveChanges();
+            }
+
+            using (var session = fromStore.OpenSession())
+            {
+
+                replicationConfigDocument.Destinations.RemoveAll(
+                    x => x.Database == deletedStoreDestination.DefaultDatabase);
+
+                session.Store(replicationConfigDocument);
+                session.SaveChanges();
+            }
+        }
+
+        protected virtual void ModifyReplicationDestination(ReplicationDestination replicationDestination)
+        {
         }
 
         protected static void SetupReplicationWithCustomDestinations(DocumentStore fromStore, params ReplicationDestination[] toDestinations)
@@ -377,11 +466,52 @@ namespace FastTests.Server.Replication
                 session.Store(new ReplicationDocument
                 {
                     Destinations = toDestinations.ToList()
-                }, Constants.Replication.DocumentReplicationConfiguration);
+                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
                 session.SaveChanges();
             }
         }
+        
+        private class GetRevisionsCommand : RavenCommand<List<object>>
+        {
+            private readonly string _id;
 
+            public GetRevisionsCommand(string id)
+            {
+                if (id == null)
+                    throw new ArgumentNullException(nameof(id));
+
+                _id = id;
+            }
+            public override bool IsReadRequest => true;
+            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/revisions?key={_id}";
+
+                ResponseType = RavenCommandResponseType.Object;
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get
+                };
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    ThrowInvalidResponse();
+
+                BlittableJsonReaderArray array;
+                if (response.TryGet("Results", out array) == false)
+                    ThrowInvalidResponse();
+
+                var result = new List<object>();
+                foreach (var arrayItem in array.Items)
+                {
+                    result.Add(arrayItem);
+                }
+
+                Result = result;
+            }
+        }
 
         private class GetConncectionFailuresCommand : RavenCommand<Dictionary<string, string[]>>
         {
@@ -400,7 +530,7 @@ namespace FastTests.Server.Replication
             public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
             {
                 List<string> list = new List<string>();
-                Dictionary<string,string[]> result = new Dictionary<string, string[]>();
+                Dictionary<string, string[]> result = new Dictionary<string, string[]>();
                 foreach (BlittableJsonReaderObject responseItem in response.Items)
                 {
                     BlittableJsonReaderObject obj;
@@ -417,7 +547,7 @@ namespace FastTests.Server.Replication
                         arrItem.TryGet("Reason", out reason);
                         list.Add(reason);
                     }
-                    result.Add(name,list.ToArray());
+                    result.Add(name, list.ToArray());
                 }
                 Result = result;
             }
@@ -487,7 +617,35 @@ namespace FastTests.Server.Replication
             }
         }
 
-        private class GetReplicationConflictsCommand : RavenCommand<Dictionary<string, List<ChangeVectorEntry[]>>>
+        private class GetReplicationStatsCommand : RavenCommand<ReplicationStatistics>
+        {
+            private readonly InMemoryDocumentSessionOperations _session;
+            public override bool IsReadRequest => true;
+
+            public GetReplicationStatsCommand(InMemoryDocumentSessionOperations session)
+            {
+                _session = session;
+            }
+            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/replication/stats";
+
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get
+                };
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    ThrowInvalidResponse();
+                
+                Result = (ReplicationStatistics)_session.Conventions.DeserializeEntityFromBlittable(typeof(ReplicationStatistics),response);
+            }
+        }
+
+        private class GetReplicationConflictsCommand : RavenCommand<GetConflictsResult>
         {
             private readonly string _id;
 
@@ -514,46 +672,9 @@ namespace FastTests.Server.Replication
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
                 if (response == null)
-                    ThrowInvalidResponse();
+                    ThrowInvalidResponse();               
 
-                BlittableJsonReaderArray array;
-                if (response.TryGet("Results", out array) == false)
-                    ThrowInvalidResponse();
-
-                var result = new Dictionary<string, List<ChangeVectorEntry[]>>();
-                foreach (BlittableJsonReaderObject json in array)
-                {
-                    string key;
-                    if (json.TryGet("Key", out key) == false)
-                        ThrowInvalidResponse();
-
-                    BlittableJsonReaderArray vectorsArray;
-                    if (json.TryGet("ChangeVector", out vectorsArray) == false)
-                        ThrowInvalidResponse();
-
-                    var vectors = new ChangeVectorEntry[vectorsArray.Length];
-                    for (int i = 0; i < vectorsArray.Length; i++)
-                    {
-                        var vectorJson = (BlittableJsonReaderObject)vectorsArray[i];
-                        var vector = new ChangeVectorEntry();
-
-                        if (vectorJson.TryGet(nameof(ChangeVectorEntry.DbId), out vector.DbId) == false)
-                            ThrowInvalidResponse();
-
-                        if (vectorJson.TryGet(nameof(ChangeVectorEntry.Etag), out vector.Etag) == false)
-                            ThrowInvalidResponse();
-
-                        vectors[i] = vector;
-                    }
-
-                    List<ChangeVectorEntry[]> values;
-                    if (result.TryGetValue(key, out values) == false)
-                        result[key] = values = new List<ChangeVectorEntry[]>();
-
-                    values.Add(vectors);
-                }
-
-                Result = result;
+                Result = JsonDeserializationClient.GetConflictsResult(response);
             }
         }
     }

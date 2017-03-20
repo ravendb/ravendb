@@ -1,18 +1,10 @@
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
-import pagedList = require("common/pagedList");
 import database = require("models/resources/database");
 import conflictVersion = require("models/database/replication/conflictVersion");
-import customColumns = require("models/database/documents/customColumns");
-import customColumnParams = require('models/database/documents/customColumnParams');
-
-import changesContext = require("common/changesContext");
-
-import getConflictsCommand = require("commands/database/replication/getConflictsCommand");
 import getReplicationSourcesCommand = require("commands/database/replication/getReplicationSourcesCommand");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import getSingleTransformerCommand = require("commands/database/transformers/getSingleTransformerCommand");
-import changeSubscription = require('common/changeSubscription');
 import conflictsResolveCommand = require("commands/database/replication/conflictsResolveCommand");
 import getEffectiveConflictResolutionCommand = require("commands/database/globalConfig/getEffectiveConflictResolutionCommand");
 import eventsCollector = require("common/eventsCollector");
@@ -26,14 +18,14 @@ class conflicts extends viewModelBase {
 
     private refreshConflictsObservable = ko.observable<number>();
     private conflictsSubscription: KnockoutSubscription;
-    currentColumns = ko.observable(customColumns.empty());
+    //TODO: currentColumns = ko.observable(customColumns.empty());
     hasAnyConflict: KnockoutComputed<boolean>;
 
     static performedIndexChecks: Array<string> = [];
     static conflictsIndexName = "Raven/ConflictDocuments";
     static conflictsTransformerName = "Raven/ConflictDocumentsTransformer";
 
-    currentConflictsPagedItems = ko.observable<pagedList>();
+    currentConflictsPagedItems = ko.observable<any>(); //TODO: use virtualGrid + type
     selectedDocumentIndices = ko.observableArray<number>();
 
     serverConflictResolution = ko.observable<string>();
@@ -41,7 +33,7 @@ class conflicts extends viewModelBase {
     static gridSelector = "#conflictsGrid";
 
     afterClientApiConnected(): void {
-        const changesApi = this.changesContext.resourceChangesApi();
+        const changesApi = this.changesContext.databaseChangesApi();
         //TODO: this.addNotification changesApi.watchAllReplicationConflicts((e) => this.refreshConflictsObservable(new Date().getTime())) 
     }
 
@@ -72,11 +64,12 @@ class conflicts extends viewModelBase {
             return false;
         });
 
+        /* TODO
         this.currentColumns().columns([
             new customColumnParams({ Header: "Detected At (UTC)", Binding: "conflictDetectedAt", DefaultWidth: 300 }),
             new customColumnParams({ Header: "Versions", Binding: "versions", DefaultWidth: 400, Template: 'versions-template' })
         ]);
-        this.currentColumns().customMode(true);
+        this.currentColumns().customMode(true);*/
 
         return this.performIndexCheck(this.activeDatabase()).then(() => {
             return this.loadReplicationSources(this.activeDatabase());
@@ -95,7 +88,7 @@ class conflicts extends viewModelBase {
     }
 
     fetchConflicts(database: database) {
-        this.currentConflictsPagedItems(this.createPagedList(database));
+        //TODO: this.currentConflictsPagedItems(this.createPagedList(database));
     }
 
     loadReplicationSources(db: database): JQueryPromise<dictionary<string>> {
@@ -142,10 +135,11 @@ class conflicts extends viewModelBase {
         });
     }
 
+    /* TODO
     private createPagedList(database: database): pagedList {
         var fetcher = (skip: number, take: number) => new getConflictsCommand(database, skip, take).execute();
         return new pagedList(fetcher);
-    }
+    }*/
 
     getUrlForConflict(conflictVersion: conflictVersion) {
         return appUrl.forEditDoc(conflictVersion.id, this.activeDatabase());

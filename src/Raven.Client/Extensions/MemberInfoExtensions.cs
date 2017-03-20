@@ -3,12 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Reflection;
 
-namespace Raven.Abstractions.Extensions
+namespace Raven.Client.Extensions
 {
-    public static class MemberInfoExtensions
+    internal static class MemberInfoExtensions
     {
         public static bool CanWrite(this MemberInfo memberInfo)
         {

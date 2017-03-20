@@ -1,7 +1,5 @@
-﻿using System.Linq;
-using System.Text;
+﻿using System.Text;
 using Voron;
-using Voron.Data.Tables;
 using Voron.Util.Conversion;
 using Xunit;
 
@@ -37,10 +35,10 @@ namespace FastTests.Voron.Tables
                 bool gotValues = false;
                 using (Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1L), out etag))
                 {
-                    foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], etag))
+                    foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], etag, 0))
                     {
                         Assert.Equal(1L, reader.Key.CreateReader().ReadBigEndianInt64());
-                        var handle = reader.Results.Single().Reader;
+                        var handle = reader.Result.Reader;
                         int size;
                         Assert.Equal("{'Name': 'Oren'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
 
@@ -89,7 +87,7 @@ namespace FastTests.Voron.Tables
 
                 Slice key;
                 Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1), out key);
-                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], key);
+                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], key, 0);
                 Assert.Empty(reader);
             }
         }
@@ -131,11 +129,11 @@ namespace FastTests.Voron.Tables
                 bool gotValues = false;
                 using (Slice.From(Allocator, EndianBitConverter.Big.GetBytes(1L), out etag))
                 {
-                    foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], etag))
+                    foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], etag, 0))
                     {
                         Assert.Equal(2L, reader.Key.CreateReader().ReadBigEndianInt64());
 
-                        var handle = reader.Results.Single();
+                        var handle = reader.Result;
                         int size;
                         Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Reader.Read(3, out size), size));
                         tx.Commit();

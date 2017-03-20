@@ -8,7 +8,9 @@ using System;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -22,7 +24,7 @@ namespace SlowTests.MailingList
                 stamp = DateTime.UtcNow.Second;
             }
 
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string key { get; set; }
             public int stamp { get; set; }
         }
@@ -49,7 +51,7 @@ namespace SlowTests.MailingList
             new Simple_Index().Execute(store);
             using (var session = store.OpenSession())
             {
-                RavenQueryStatistics stats = null;
+                QueryStatistics stats = null;
                 session.Query<Simple, Simple_Index>().Statistics(out stats).Take(0).ToArray();
                 if (stats.TotalResults > 0) return;
             }
@@ -73,13 +75,13 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
             }
@@ -90,19 +92,17 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.DisableProfiling = false;
-
                 Populate(store);
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
             }
@@ -113,18 +113,17 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.DisableProfiling = true;
                 Populate(store);
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
             }
@@ -135,18 +134,17 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.DisableProfiling = false;
                 Populate(store);
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).ToArray();
                     Assert.True(dump.Length > 0);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).ToArray();
                     Assert.True(dump.Length > 0);
                 }
             }
@@ -157,18 +155,17 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.DisableProfiling = false;
                 Populate(store);
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var dump = session.Query<Simple, Simple_Index>().Lazily().Value.ToArray();
+                    var dump = session.Query<Simple, Simple_Index>().Take(1024).Lazily().Value.ToArray();
                     Assert.True(dump.Length > 0);
                 }
             }

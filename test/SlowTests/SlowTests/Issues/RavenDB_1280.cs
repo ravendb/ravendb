@@ -3,8 +3,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.SlowTests.Issues
@@ -71,7 +72,8 @@ namespace SlowTests.SlowTests.Issues
 
                 for (int i = 0; i < 4; i++)
                 {
-                    store.DatabaseCommands.PutIndex("email" + i, indexDefinition);
+                    indexDefinition.Name = "email" + i;
+                    store.Admin.Send(new PutIndexesOperation(new [] {indexDefinition}));
 
                 }
 
@@ -86,7 +88,7 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        public class EmailIndex : AbstractIndexCreationTask<EmailDocument, EmailIndexDoc>
+        private class EmailIndex : AbstractIndexCreationTask<EmailDocument, EmailIndexDoc>
         {
             public EmailIndex()
             {
@@ -103,7 +105,7 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        public class EmailDocument
+        private class EmailDocument
         {
             public string Id { get; set; }
             public string To { get; set; }
@@ -111,13 +113,13 @@ namespace SlowTests.SlowTests.Issues
             public string Subject { get; set; }
         }
 
-        public class EmailText
+        private class EmailText
         {
             public string Id { get; set; }
             public string Body { get; set; }
         }
 
-        public class EmailIndexDoc
+        private class EmailIndexDoc
         {
             public string Id { get; set; }
             public string To { get; set; }

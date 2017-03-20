@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
+using Raven.Client;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
-using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -33,7 +31,7 @@ namespace Raven.Server.Documents.Handlers
                     using (context.OpenReadTransaction())
                     {
                         configurationDocument = Database.DocumentsStorage.Get(context,
-                            Constants.Replication.DocumentReplicationConfiguration);
+                            Constants.Documents.Replication.ReplicationConfigurationDocument);
                         configurationDocumentData = configurationDocument?.Data.Clone(context);
                     }
                     //This is the case where we don't have real replication topology.
@@ -65,7 +63,7 @@ namespace Raven.Server.Documents.Handlers
                 ReplicationDocument replicationDocument;
                 using (context.OpenReadTransaction())
                 {
-                    var configurationDocument = Database.DocumentsStorage.Get(context, Constants.Replication.DocumentReplicationConfiguration);
+                    var configurationDocument = Database.DocumentsStorage.Get(context, Constants.Documents.Replication.ReplicationConfigurationDocument);
                     if (configurationDocument == null)
                     {
                         WriteEmptyTopology(context);

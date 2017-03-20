@@ -1,8 +1,8 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Extensions;
 using Xunit;
 
 namespace SlowTests.Issues

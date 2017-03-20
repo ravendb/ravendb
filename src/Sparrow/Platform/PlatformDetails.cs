@@ -5,7 +5,7 @@ namespace Sparrow.Platform
 {
     public static class PlatformDetails
     {
-        public static readonly bool Is64Bits = IntPtr.Size == 8;
+        public static readonly bool Is32Bits = IntPtr.Size == sizeof(int);
 
 
         public static readonly bool RunningOnPosix = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||

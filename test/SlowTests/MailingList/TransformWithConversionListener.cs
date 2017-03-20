@@ -6,21 +6,20 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
-using Raven.Client.Listeners;
-using Raven.Json.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
     public class TransformWithConversionListener : RavenTestBase
     {
-         private class Item
-         {
-             public string Id { get; set; }
+        private class Item
+        {
+            public string Id { get; set; }
 
-             public string Name { get; set; }
-         }
+            public string Name { get; set; }
+        }
 
         private class TransformedItem
         {
@@ -43,6 +42,7 @@ namespace SlowTests.MailingList
             }
         }
 
+        /*
         private class DocumentConversionListener  : IDocumentConversionListener
         {
             
@@ -63,20 +63,20 @@ namespace SlowTests.MailingList
             {
                 ((TransformedItem)entity).Converted = true;
             }
-        }
+        }*/
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6264")]
         public void SyncApi()
         {
             using (var store = GetDocumentStore())
             {
                 new EtagTransformer().Execute(store);
 
-                store.RegisterListener(new DocumentConversionListener());
+                //store.RegisterListener(new DocumentConversionListener());
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Item{Name = "oren"});
+                    session.Store(new Item { Name = "oren" });
                     session.SaveChanges();
                 }
 
@@ -90,14 +90,14 @@ namespace SlowTests.MailingList
         }
 
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6264")]
         public void AsyncApi()
         {
             using (var store = GetDocumentStore())
             {
-                new EtagTransformer().ExecuteAsync(store.AsyncDatabaseCommands, store.Conventions).Wait();
+                new EtagTransformer().ExecuteAsync(store).Wait();
 
-                store.RegisterListener(new DocumentConversionListener());
+                //store.RegisterListener(new DocumentConversionListener());
 
                 using (var session = store.OpenAsyncSession())
                 {

@@ -1,10 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
-using System.Threading;
 
 namespace Sparrow.Json
 {
@@ -152,7 +151,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void WriteString(LazyStringValue str)
+        public void WriteString(LazyStringValue str)
         {
             if (str == null)
             {
@@ -173,13 +172,14 @@ namespace Sparrow.Json
 
                 EnsureBuffer(1);
                 _buffer[_pos++] = Quote;
+
                 return;
             }
 
             UnlikelyWriteEscapeSequences(str, numberOfEscapeSequences, escapeSequencePos, strBuffer, size);
         }
 
-        private unsafe void UnlikelyWriteEscapeSequences(LazyStringValue str, int numberOfEscapeSequences, int escapeSequencePos,
+        private void UnlikelyWriteEscapeSequences(LazyStringValue str, int numberOfEscapeSequences, int escapeSequencePos,
             byte* strBuffer, int size)
         {
             while (numberOfEscapeSequences > 0)
@@ -227,7 +227,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void WriteString(LazyCompressedStringValue str)
+        public void WriteString(LazyCompressedStringValue str)
         {
             AllocatedMemoryData allocated;
             var strBuffer = str.DecompressToTempBuffer(out allocated);
@@ -265,6 +265,15 @@ namespace Sparrow.Json
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteRawStringWhichMustBeWithoutEscapeChars(byte* buffer, int size)
+        {
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
+            WriteRawString(buffer, size);
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
+        }
 
         private void WriteRawString(byte* buffer, int size)
         {
@@ -395,6 +404,15 @@ namespace Sparrow.Json
             _buffer[_pos++] = Colon;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WritePropertyName(StringSegment prop)
+        {
+            var lazyProp = _context.GetLazyStringForFieldWithCaching(prop);
+            WriteString(lazyProp);
+            EnsureBuffer(1);
+            _buffer[_pos++] = Colon;
+        }
+
         public void WriteInteger(long val)
         {
             if (val == 0)
@@ -428,12 +446,24 @@ namespace Sparrow.Json
 
         public void WriteDouble(LazyDoubleValue val)
         {
+            if (val.IsNaN())
+            {
+                WriteString("NaN");
+                return;
+            }
+
             var lazyStringValue = val.Inner;
             WriteRawString(lazyStringValue.Buffer, lazyStringValue.Size);
         }
 
         public void WriteDouble(double val)
         {
+            if (double.IsNaN(val))
+            {
+                WriteString("NaN");
+                return;
+            }
+
             using (var lazyStr = _context.GetLazyString(val.ToString(CultureInfo.InvariantCulture)))
             {
                 WriteRawString(lazyStr.Buffer, lazyStr.Size);
@@ -462,6 +492,5 @@ namespace Sparrow.Json
             _buffer[_pos++] = (byte)'\r';
             _buffer[_pos++] = (byte)'\n';
         }
-
     }
 }

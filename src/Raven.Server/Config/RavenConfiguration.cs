@@ -1,15 +1,19 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using Microsoft.Extensions.Configuration;
-
+using Microsoft.Extensions.Configuration.Memory;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
+using Raven.Server.Config.Settings;
+using Raven.Server.ServerWide;
 using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
-using Sparrow;
-using Sparrow.Logging;
 using Sparrow.Platform;
 
 namespace Raven.Server.Config
@@ -60,11 +64,15 @@ namespace Raven.Server.Config
 
         public TombstoneConfiguration Tombstones { get; }
 
+        internal IConfigurationRoot ServerWideSettings { get; set; }
+
         protected IConfigurationRoot Settings { get; set; }
 
-        public RavenConfiguration()
+        public RavenConfiguration(string resoureName, ResourceType resourceType)
         {
-            
+            ResourceName = resoureName;
+            ResourceType = resourceType;
+
             _configBuilder = new ConfigurationBuilder();
             AddEnvironmentVariables(_configBuilder);
             AddJsonConfigurationVariables();
@@ -77,7 +85,7 @@ namespace Raven.Server.Config
             Storage = new StorageConfiguration();
             Encryption = new EncryptionConfiguration();
             PerformanceHints = new PerformanceHintsConfiguration();
-            Indexing = new IndexingConfiguration(() => DatabaseName, () => Core.RunInMemory, () => Core.DataDirectory);
+            Indexing = new IndexingConfiguration(this);
             WebSockets = new WebSocketsConfiguration();
             Monitoring = new MonitoringConfiguration();
             Queries = new QueryConfiguration();
@@ -105,7 +113,7 @@ namespace Raven.Server.Config
 
         private static void AddEnvironmentVariables(IConfigurationBuilder configurationBuilder)
         {
-            foreach (DictionaryEntry  de in Environment.GetEnvironmentVariables())
+            foreach (DictionaryEntry de in Environment.GetEnvironmentVariables())
             {
                 var s = de.Key as string;
                 if (s == null)
@@ -119,30 +127,32 @@ namespace Raven.Server.Config
 
         public DebugLoggingConfiguration DebugLog { get; set; }
 
-        public string DatabaseName { get; set; }
+        public string ResourceName { get; }
+
+        public ResourceType ResourceType { get; }
 
         public RavenConfiguration Initialize()
         {
-            Core.Initialize(Settings);
-            Replication.Initialize(Settings);
-            SqlReplication.Initialize(Settings);
-            Queries.Initialize(Settings);
-            Patching.Initialize(Settings);
-            DebugLog.Initialize(Settings);
-            BulkInsert.Initialize(Settings);
-            Server.Initialize(Settings);
-            Memory.Initialize(Settings);
-            Storage.Initialize(Settings);
-            Encryption.Initialize(Settings);
-            Indexing.Initialize(Settings);
-            Monitoring.Initialize(Settings);
-            Expiration.Initialize(Settings);
-            Studio.Initialize(Settings);
-            Databases.Initialize(Settings);
-            PerformanceHints.Initialize(Settings);
-            Licensing.Initialize(Settings);
-            Quotas.Initialize(Settings);
-            Tombstones.Initialize(Settings);
+            Core.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Replication.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            SqlReplication.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Queries.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Patching.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            DebugLog.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            BulkInsert.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Server.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Memory.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Storage.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Encryption.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Indexing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Monitoring.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Expiration.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Studio.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Databases.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            PerformanceHints.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Licensing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Quotas.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Tombstones.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
 
             PostInit();
 
@@ -153,6 +163,7 @@ namespace Raven.Server.Config
 
         public void PostInit()
         {
+            CheckDirectoryPermissions();
         }
 
         public void CopyParentSettings(RavenConfiguration serverConfiguration)
@@ -160,7 +171,9 @@ namespace Raven.Server.Config
             Encryption.UseSsl = serverConfiguration.Encryption.UseSsl;
             Encryption.UseFips = serverConfiguration.Encryption.UseFips;
 
-            Storage.AllowOn32Bits = serverConfiguration.Storage.AllowOn32Bits;
+            Storage.ForceUsing32BitsPager = serverConfiguration.Storage.ForceUsing32BitsPager;
+
+            Queries.MaxClauseCount = serverConfiguration.Queries.MaxClauseCount;
         }
 
         public void SetSetting(string key, string value)
@@ -176,20 +189,33 @@ namespace Raven.Server.Config
             return Settings[key];
         }
 
+        public string GetServerWideSetting(string key)
+        {
+            return ServerWideSettings?[key];
+        }
+
         public static string GetKey<T>(Expression<Func<RavenConfiguration, T>> getKey)
         {
             var prop = ExpressionExtensions.ToProperty(getKey);
             return prop.GetCustomAttributes<ConfigurationEntryAttribute>().OrderBy(x => x.Order).First().Key;
         }
 
-        public static RavenConfiguration CreateFrom(RavenConfiguration parent)
+        public static object GetDefaultValue<T>(Expression<Func<RavenConfiguration, T>> getKey)
         {
-            var result = new RavenConfiguration
-            {
-                Settings = parent._configBuilder.Build()
-            };
+            var prop = ExpressionExtensions.ToProperty(getKey);
+            return prop.GetCustomAttributes<DefaultValueAttribute>().FirstOrDefault()?.Value;
+        }
 
-            result.Settings[GetKey(x => x.Core.RunInMemory)] = parent.Core.RunInMemory.ToString();
+        public static RavenConfiguration CreateFrom(RavenConfiguration parent, string name, ResourceType type)
+        {
+            var result = new RavenConfiguration(name, type)
+            {
+                ServerWideSettings = parent.Settings,
+                Settings = new ConfigurationRoot(new List<IConfigurationProvider> { new MemoryConfigurationProvider(new MemoryConfigurationSource()) })
+                {
+                    [GetKey(x => x.Core.RunInMemory)] = parent.Core.RunInMemory.ToString()
+                }
+            };
 
             return result;
         }
@@ -198,6 +224,66 @@ namespace Raven.Server.Config
         {
             _configBuilder.AddCommandLine(args);
             Settings = _configBuilder.Build();
+        }
+
+        private void CheckDirectoryPermissions()
+        {
+            if (Core.RunInMemory)
+                return;
+
+            Dictionary<string, KeyValuePair<string, string>> results = null;
+            foreach (var configurationProperty in typeof(RavenConfiguration).GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            {
+                if (configurationProperty.PropertyType.GetTypeInfo().IsSubclassOf(typeof(ConfigurationCategory)) == false)
+                    continue;
+
+                var categoryValue = configurationProperty.GetValue(this);
+
+                foreach (var categoryProperty in configurationProperty.PropertyType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+                {
+                    if (categoryProperty.PropertyType != typeof(PathSetting))
+                        continue;
+
+                    var pathSettingValue = categoryProperty.GetValue(categoryValue) as PathSetting;
+                    if (pathSettingValue == null)
+                        continue;
+
+                    var fileName = Guid.NewGuid().ToString("N");
+                    var path = pathSettingValue.ToFullPath();
+                    var fullPath = Path.Combine(path, fileName);
+                    var configurationKey = categoryProperty.GetCustomAttributes<ConfigurationEntryAttribute>()
+                        .OrderBy(x => x.Order)
+                        .First()
+                        .Key;
+
+                    try
+                    {
+                        if (Directory.Exists(path) == false)
+                            Directory.CreateDirectory(path);
+
+                        File.WriteAllText(fullPath, string.Empty);
+                        File.Delete(fullPath);
+                    }
+                    catch (Exception e)
+                    {
+                        if (results == null)
+                            results = new Dictionary<string, KeyValuePair<string, string>>();
+
+                        results[configurationKey] = new KeyValuePair<string, string>(path, e.Message);
+                    }
+                }
+            }
+
+            if (results == null || results.Count == 0)
+                return;
+
+            var sb = new StringBuilder("Could not access some of the specified paths. Please check if you have sufficient privileges to access following paths:");
+            sb.Append(Environment.NewLine);
+
+            foreach (var result in results)
+                sb.AppendLine($"Key: '{result.Key}' Path: '{result.Value.Key}' Error: '{result.Value.Value}'");
+
+            throw new InvalidOperationException(sb.ToString());
         }
     }
 }

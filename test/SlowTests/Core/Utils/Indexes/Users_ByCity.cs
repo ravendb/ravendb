@@ -1,5 +1,5 @@
 ﻿using System.Linq;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using SlowTests.Core.Utils.Entities;
 
 namespace SlowTests.Core.Utils.Indexes

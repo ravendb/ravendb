@@ -19,8 +19,8 @@ namespace Sparrow.Platform
             var allocatedSize = ((sizeInPages + 2) * 4096); 
 
 
-            var virtualAlloc = (byte*)Syscall.mmap(IntPtr.Zero, (UIntPtr)allocatedSize, MmapProts.PROT_NONE,
-                MmapFlags.MAP_PRIVATE | MmapFlags.MAP_ANONYMOUS, -1, IntPtr.Zero);
+            var virtualAlloc = (byte*)Syscall.mmap64(IntPtr.Zero, (UIntPtr)allocatedSize, MmapProts.PROT_NONE,
+                MmapFlags.MAP_PRIVATE | MmapFlags.MAP_ANONYMOUS, -1, 0L);
 
             if (virtualAlloc == (byte*)-1)
             {
@@ -34,9 +34,9 @@ namespace Sparrow.Platform
                 throw new InvalidOperationException("Failed to free call msync " + (IntPtr)virtualAlloc + ". Err=" + Marshal.GetLastWin32Error());
             }
 
-            virtualAlloc = (byte*)Syscall.mmap((IntPtr)virtualAlloc, (UIntPtr)allocatedSize, 
+            virtualAlloc = (byte*)Syscall.mmap64((IntPtr)virtualAlloc, (UIntPtr)allocatedSize, 
                 MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                MmapFlags.MAP_FIXED | MmapFlags.MAP_SHARED | MmapFlags.MAP_ANONYMOUS, -1, IntPtr.Zero);
+                MmapFlags.MAP_FIXED | MmapFlags.MAP_SHARED | MmapFlags.MAP_ANONYMOUS, -1, 0L);
 
             if (virtualAlloc == (byte*)-1)
             {

@@ -7,15 +7,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries.Suggestion;
 using Xunit;
 
 namespace SlowTests.Tests.Suggestions
 {
-    public class Suggestions : RavenNewTestBase
+    public class Suggestions : RavenTestBase
     {
         private class User
         {
@@ -26,8 +27,9 @@ namespace SlowTests.Tests.Suggestions
 
         public void Setup(IDocumentStore store)
         {
-            store.Admin.Send(new PutIndexOperation("Test", new IndexDefinition
+            store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
             {
+                Name = "test",
                 Maps = { "from doc in docs.Users select new { doc.Name }" },
                 Fields = new Dictionary<string, IndexFieldOptions>
                 {
@@ -36,7 +38,7 @@ namespace SlowTests.Tests.Suggestions
                         new IndexFieldOptions { Suggestions = true }
                     }
                 }
-            }));
+            }}));
 
             using (var s = store.OpenSession())
             {

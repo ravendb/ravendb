@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Config;
 using Xunit;
@@ -49,7 +48,7 @@ namespace SlowTests.SlowTests.Bugs
             var missed = new List<int>();
             for (int i = 0; i < 15000; i++)
             {
-                if (users.Any(user => user.Id == i + 1) == false)
+                if (users.Any(user => user.Id == (i + 1).ToString()) == false)
                 {
                     missed.Add(i + 1);
                 }
@@ -60,7 +59,7 @@ namespace SlowTests.SlowTests.Bugs
 
         private class User
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
         }
     }
 }

@@ -1,6 +1,6 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
-import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import messagePublisher = require("common/messagePublisher");
@@ -9,18 +9,17 @@ abstract class abstractWebSocketClient<T> {
 
     private static readonly readyStateOpen = 1;
 
-    private static messageWasShownOnce: boolean = false;
-
     connectToWebSocketTask: JQueryDeferred<void>;
 
-    private readonly resourcePath: string;
-    private webSocket: WebSocket;
+    protected readonly resourcePath: string;
+    protected webSocket: WebSocket;
     
-    private disposed: boolean = false;
-    private sentMessages: chagesApiConfigureRequestDto[] = [];
+    protected disposed: boolean = false;
+
+    protected abstract get autoReconnect(): boolean;
    
-    protected constructor(protected rs: resource) {
-        this.resourcePath = appUrl.forResourceQuery(this.rs);
+    protected constructor(protected db: database) {
+        this.resourcePath = appUrl.forDatabaseQuery(this.db);
         this.connectToWebSocketTask = $.Deferred<void>();
 
         if ("WebSocket" in window) {
@@ -56,7 +55,7 @@ abstract class abstractWebSocketClient<T> {
             this.connectToWebSocketTask = $.Deferred<void>();
         }
 
-        new getSingleAuthTokenCommand(this.rs)
+        new getSingleAuthTokenCommand(this.db)
             .execute()
             .done((tokenObject: singleAuthToken) => {
                 action.call(this, tokenObject);
@@ -109,8 +108,11 @@ abstract class abstractWebSocketClient<T> {
             this.onClose(e);
             if (!e.wasClean) {
                 this.onError(e);
-                // Connection has closed uncleanly, so try to reconnect.
-                this.connect(this.connectWebSocket);
+
+                if (this.autoReconnect) {
+                    // Connection has closed uncleanly, so try to reconnect.
+                    this.connect(this.connectWebSocket);
+                }
             }
         }
         this.webSocket.onopen = () => {
@@ -126,60 +128,17 @@ abstract class abstractWebSocketClient<T> {
         this.connectToWebSocketTask.resolve();
     }
 
-    private reconnect() {
-        //send changes connection args after reconnecting
-        this.sentMessages.forEach(args => this.send(args.Command, args.Param, false));
-
-        if (abstractWebSocketClient.messageWasShownOnce) {
-            messagePublisher.reportSuccess("Successfully reconnected to changes stream!");
-            abstractWebSocketClient.messageWasShownOnce = false;
-        }
+    protected reconnect() {
+        // empty by design
     }
 
     protected onError(e: Event) {
-        if (abstractWebSocketClient.messageWasShownOnce === false && !this.disposed) {
-            messagePublisher.reportError("Changes stream was disconnected!", "Retrying connection shortly.");
-            abstractWebSocketClient.messageWasShownOnce = true;
-        }
+        // empty by design
     }
 
-    protected send(command: string, value?: string, needToSaveSentMessages: boolean = true) {
-        this.connectToWebSocketTask.done(() => {
-            const args: chagesApiConfigureRequestDto = {
-                Command: command
-            };
-            if (value !== undefined) {
-                args.Param = value;
-            }
-
-            const payload = JSON.stringify(args, null, 2);
-
-            if (!this.closingOrClosed() || !this.isUnwatchCommand(command)) {
-                this.webSocket.send(payload);
-            }
-                
-            this.saveSentMessages(needToSaveSentMessages, command, args);
-        });
-    }
-
-    private closingOrClosed() {
+    protected closingOrClosed() {
         const state = this.webSocket.readyState;
         return WebSocket.CLOSED === state || WebSocket.CLOSING === state;
-    }
-
-    private isUnwatchCommand(command: string) {
-        return command.slice(0, 2) === "un";
-    }
-
-    private saveSentMessages(needToSaveSentMessages: boolean, command: string, args: chagesApiConfigureRequestDto) {
-        if (needToSaveSentMessages) {
-            if (this.isUnwatchCommand(command)) {
-                const commandName = command.slice(2, command.length);
-                this.sentMessages = this.sentMessages.filter(msg => msg.Command !== commandName);
-            } else {
-                this.sentMessages.push(args);
-            }
-        }
     }
 
     protected fireEvents<T>(events: Array<any>, param: T, filter: (element: T) => boolean) {
@@ -200,8 +159,8 @@ abstract class abstractWebSocketClient<T> {
         });
     }
 
-    getResource() {
-        return this.rs;
+    getDatabase() {
+        return this.db;
     }
 }
 

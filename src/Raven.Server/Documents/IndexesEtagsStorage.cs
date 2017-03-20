@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Raven.Client.Replication.Messages;
+using Raven.Client.Documents.Exceptions.Indexes;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
-using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -185,14 +185,16 @@ namespace Raven.Server.Documents
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
                     byte byteAsType = (byte)type;
-                    conflictsTable.Set(new TableValueBuilder
+                    TableValueBuilder tableValueBuilder;
+                    using (conflictsTable.Allocate(out tableValueBuilder))
                     {
-                        indexNameAsSlice,
-                        {&bitSwappedEtag, sizeof(long)},
-                        {&byteAsType, sizeof(byte)},
-                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
-                        {definition.BasePointer, definition.Size}
-                    });
+                        tableValueBuilder.Add(indexNameAsSlice);
+                        tableValueBuilder.Add(&bitSwappedEtag, sizeof(long));
+                        tableValueBuilder.Add(&byteAsType, sizeof(byte));
+                        tableValueBuilder.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
+                        tableValueBuilder.Add(definition.BasePointer, definition.Size);
+                        conflictsTable.Set(tableValueBuilder);
+                    }
                 }
             }
         }
@@ -217,7 +219,7 @@ namespace Raven.Server.Documents
         }
 
         private long WriteEntry(Transaction tx, string indexName, IndexEntryType type, int indexIndexId,
-            TransactionOperationContext context, bool isConflicted = false, bool allowOverwrite = false, ChangeVectorEntry[] changeVector = null)
+            TransactionOperationContext context, bool isConflicted = false, bool allowOverwrite = false)
         {
             var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
             Debug.Assert(table != null);
@@ -233,8 +235,8 @@ namespace Raven.Server.Documents
                 table.ReadByKey(nameAsSlice, out tvr);
 
                 //SetIndexTransformerChangeVectorForLocalChange also merges vectors if conflicts exist
-                changeVectorForWrite = SetIndexTransformerChangeVectorForLocalChange(tx, context, nameAsSlice, ref tvr, newEtag, changeVector);
-                if (tvr != null)
+                changeVectorForWrite = SetIndexTransformerChangeVectorForLocalChange(tx, nameAsSlice, ref tvr, newEtag);
+                if (tvr.Pointer != null)
                 {
                     existing = TableValueToMetadata(ref tvr, context, false);
                 }
@@ -257,15 +259,19 @@ namespace Raven.Server.Documents
 
                     var bitSwappedId = Bits.SwapBytes(indexIndexId);
 
-                    table.Set(new TableValueBuilder
-                        {
-                            {(byte*) &bitSwappedId, sizeof(int)},
-                            {(byte*) &bitSwappedEtag, sizeof(long)},
-                            indexNameAsSlice,
-                            {(byte*) &type, sizeof(byte)},
-                            {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVectorForWrite.Length},
-                            {(byte*) &isConflicted, sizeof(bool)}
-                        });
+                    TableValueBuilder tvb;
+                    using (table.Allocate(out tvb))
+                    {
+                        tvb.Add((byte*)&bitSwappedId, sizeof(int));
+                        tvb.Add((byte*)&bitSwappedEtag, sizeof(long));
+                        tvb.Add(indexNameAsSlice);
+                        tvb.Add((byte*)&type, sizeof(byte));
+                        tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVectorForWrite.Length);
+                        tvb.Add((byte*)&isConflicted, sizeof(bool));
+
+                        table.Set(tvb);
+                    }
+                        
                 }
             }
 
@@ -288,18 +294,29 @@ namespace Raven.Server.Documents
 
             Debug.Assert(table != null);
 
-            var idsToDelete = new List<long>();
-            foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], etag))
+            while (true)
             {
-                if (taken++ >= take)
-                    break;
-                var metadata = TableValueToMetadata(ref tvr.Reader, context, false);
-                if (metadata.Id == -1)
-                    idsToDelete.Add(tvr.Reader.Id);
-            }
+                var more = false;
+                foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], etag, 0))
+                {
+                    more = true;
+                    if (taken++ >= take)
+                    {
+                        more = false;
+                        break;
+                    }
 
-            foreach (var id in idsToDelete)
-                table.Delete(id);
+                    var metadata = TableValueToMetadata(ref tvr.Reader, context, false);
+                    if (metadata.Id == -1)
+                    {
+                        table.Delete(tvr.Reader.Id);
+                        break;
+                    }
+                }
+
+                if (more == false)
+                    break;
+            }
 
             if (Logger.IsInfoEnabled)
             {
@@ -308,19 +325,19 @@ namespace Raven.Server.Documents
 
         }
 
-        private ChangeVectorEntry[] SetIndexTransformerChangeVectorForLocalChange(Transaction tx, TransactionOperationContext context, Slice loweredName, ref TableValueReader oldValue, long newEtag, ChangeVectorEntry[] vector)
+        private ChangeVectorEntry[] SetIndexTransformerChangeVectorForLocalChange(Transaction tx, Slice loweredName, ref TableValueReader oldValue, long newEtag)
         {
-            if (oldValue != null)
+            if (oldValue.Pointer != null)
             {
                 var changeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)MetadataFields.ChangeVector);
                 return ReplicationUtils.UpdateChangeVectorWithNewEtag(_environment.DbId, newEtag, changeVector);
             }
 
-            return GetMergedConflictChangeVectorsAndDeleteConflicts(tx, context, loweredName, newEtag);
+            return GetMergedConflictChangeVectorsAndDeleteConflicts(tx, loweredName, newEtag);
         }
 
 
-        private ChangeVectorEntry[] GetMergedConflictChangeVectorsAndDeleteConflicts(Transaction tx, TransactionOperationContext context, Slice name, long newEtag, ChangeVectorEntry[] existing = null)
+        private ChangeVectorEntry[] GetMergedConflictChangeVectorsAndDeleteConflicts(Transaction tx, Slice name, long newEtag, ChangeVectorEntry[] existing = null)
         {
             var conflictChangeVectors = DeleteConflictsFor(tx, name);
 
@@ -383,36 +400,28 @@ namespace Raven.Server.Documents
             Debug.Assert(table != null);
 
             var list = new List<ChangeVectorEntry[]>();
+
             while (true)
             {
-                bool deleted = false;
-                // deleting a value might cause other ids to change, so we can't just pass the list
-                // of ids to be deleted, because they wouldn't remain stable during the deletions
-                foreach (var seekResult in table.SeekForwardFrom(ConflictsTableSchema.Indexes[NameAndEtagIndexName], name, true))
+                var more = false;
+                foreach (var tvr in table.SeekForwardFrom(ConflictsTableSchema.Indexes[NameAndEtagIndexName], name, 0, true))
                 {
-                    foreach (var tvr in seekResult.Results)
-                    {
-                        deleted = true;
-                        list.Add(ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr.Reader, (int)MetadataFields.ChangeVector));
+                    more = true;
+                    list.Add(ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr.Result.Reader, (int)MetadataFields.ChangeVector));
 
-                        //Ids might change due to delete
-                        table.Delete(tvr.Reader.Id);
-                        break;
-                    }
+                    table.Delete(tvr.Result.Reader.Id);
+                    break;
                 }
 
-                if (deleted == false)
-                {
-                    return list;
-                }
+                if (more == false)
+                    break;
             }
-        }
 
+            return list;
+        }
 
         public IEnumerable<IndexConflictEntry> GetConflictsFor(Transaction tx, TransactionOperationContext context, string name, int start, int take)
         {
-            int taken = 0;
-            int skipped = 0;
             var table = tx.OpenTable(ConflictsTableSchema, SchemaNameConstants.ConflictMetadataTable);
 
             Debug.Assert(table != null);
@@ -420,20 +429,13 @@ namespace Raven.Server.Documents
             Slice nameSlice;
             using (DocumentKeyWorker.GetSliceFromKey(context, name, out nameSlice))
             {
-                foreach (var seekResult in table.SeekForwardFrom(ConflictsTableSchema.Indexes[NameAndEtagIndexName], nameSlice, true))
-                    foreach (var tvr in seekResult.Results)
-                    {
-                        if (start > skipped)
-                        {
-                            skipped++;
-                            continue;
-                        }
+                foreach (var tvr in table.SeekForwardFrom(ConflictsTableSchema.Indexes[NameAndEtagIndexName], nameSlice, start, true))
+                {
+                    if (take-- <= 0)
+                        yield break;
 
-                        if (taken++ >= take)
-                            yield break;
-
-                        yield return TableValueToConflict(ref tvr.Reader, context);
-                    }
+                    yield return TableValueToConflict(ref tvr.Result.Reader, context);
+                }
             }
         }
 
@@ -443,20 +445,13 @@ namespace Raven.Server.Documents
         public List<IndexEntryMetadata> GetAfter(Transaction tx, JsonOperationContext context, long etag, int start, int take)
         {
             int taken = 0;
-            int skipped = 0;
             var table = tx.OpenTable(IndexesTableSchema, SchemaNameConstants.IndexMetadataTable);
 
             Debug.Assert(table != null);
 
             var results = new List<IndexEntryMetadata>();
-            foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], etag))
+            foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], etag, start))
             {
-                if (start > skipped)
-                {
-                    skipped++;
-                    continue;
-                }
-
                 if (taken++ >= take)
                     break;
 
@@ -564,7 +559,7 @@ namespace Raven.Server.Documents
                     break;
                 case IndexEntryType.Transformer:
                     msg =
-                        $"Tried to create an transformer with a name of {name}, but an index or a transformer under the same name exist";
+                        $"Tried to create a transformer with a name of {name}, but an index or a transformer under the same name exist";
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type),
@@ -603,7 +598,7 @@ namespace Raven.Server.Documents
             if (returnNullIfTombstone && metadata.Id == -1)
                 return null;
 
-            metadata.Name = new LazyStringValue(null, tvr.Read((int)MetadataFields.Name, out size), size, context).ToString();
+            metadata.Name = context.AllocateStringValue(null, tvr.Read((int)MetadataFields.Name, out size), size).ToString();
 
             metadata.ChangeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)MetadataFields.ChangeVector);
             metadata.Type = (IndexEntryType)(*tvr.Read((int)MetadataFields.Type, out size));
@@ -620,7 +615,7 @@ namespace Raven.Server.Documents
 
             int size;
 
-            data.Name = new LazyStringValue(null, tvr.Read((int)ConflictFields.Name, out size), size, context).ToString();
+            data.Name = context.AllocateStringValue(null, tvr.Read((int)ConflictFields.Name, out size), size).ToString();
 
             data.ChangeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictFields.ChangeVector);
             data.Type = (IndexEntryType)(*tvr.Read((int)ConflictFields.Type, out size));
@@ -646,13 +641,12 @@ namespace Raven.Server.Documents
             if (table.NumberOfEntries == 0)
                 return 0;
 
-            var result = table.SeekBackwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], long.MaxValue);
-            var tvr = result.FirstOrDefault();
-            if (tvr == null)
+            var result = table.ReadLast(IndexesTableSchema.FixedSizeIndexes[EtagIndexName]);
+            if (result == null)
                 return 0;
 
             int size;
-            return Bits.SwapBytes(*(long*)tvr.Reader.Read((int)MetadataFields.Etag, out size));
+            return Bits.SwapBytes(*(long*)result.Reader.Read((int)MetadataFields.Etag, out size));
         }
 
         private void DeleteIndexMetadataForRemovedIndexesAndTransformers(Transaction tx, TransactionOperationContext context, IndexStore indexStore,
@@ -661,7 +655,7 @@ namespace Raven.Server.Documents
             var toRemove = new List<IndexEntryMetadata>();
             var table = tx.OpenTable(IndexesTableSchema,
                 SchemaNameConstants.IndexMetadataTable);
-            foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], 0))
+            foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], 0, 0))
             {
                 var metadata = TableValueToMetadata(ref tvr.Reader, context, true);
                 if (metadata == null) //noting to do if it is a tombstone

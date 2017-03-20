@@ -1,13 +1,11 @@
 ﻿using System.Linq;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_6064 : RavenNewTestBase
+    public class RavenDB_6064 : RavenTestBase
     {
         [Fact]
         public void MapOnSeveralCompressedStrings()

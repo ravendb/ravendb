@@ -11,10 +11,10 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Index;
 using Lucene.Net.Util;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         var propertyName = term.Field;
                         if (propertyName.EndsWith("_ConvertToJson") ||
                             propertyName.EndsWith("_IsArray") ||
-                            propertyName.EndsWith(Raven.Abstractions.Data.Constants.Indexing.Fields.RangeFieldSuffix))
+                            propertyName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
                             continue;
 
                         var oldValue = result[propertyName];
@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private static bool LowPrecisionNumber(string field, string val)
         {
-            if (field.EndsWith(Raven.Abstractions.Data.Constants.Indexing.Fields.RangeFieldSuffix) == false)
+            if (field.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix) == false)
                 return false;
 
             if (string.IsNullOrEmpty(val))

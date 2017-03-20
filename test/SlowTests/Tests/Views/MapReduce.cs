@@ -8,19 +8,18 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace SlowTests.Tests.Views
 {
-    public class MapReduce : RavenNewTestBase
+    public class MapReduce : RavenTestBase
     {
         private const string Map =
             @"from post in docs.Blogs
@@ -40,15 +39,16 @@ select new {
 
         private static void Fill(IDocumentStore store)
         {
-            store.Admin.Send(new PutIndexOperation("CommentsCountPerBlog", new IndexDefinition
+            store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
             {
+                Name = "CommentsCountPerBlog",
                 Maps = { Map },
                 Reduce = Reduce,
                 Fields = new Dictionary<string, IndexFieldOptions>
                 {
                     { "blog_id", new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed } }
                 }
-            }));
+            }}));
         }
 
         [Fact]
@@ -80,7 +80,7 @@ select new {
                         using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(values[i])))
                         {
                             var json = commands.Context.ReadForMemory(stream, "blog");
-                            commands.Put("blogs/" + i, null, json, new Dictionary<string, string> { { "@collection", "Blogs" } });
+                            commands.Put("blogs/" + i, null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                         }
                     }
 
@@ -105,7 +105,7 @@ select new {
                         using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{'blog_id': " + i + ", 'comments': [{},{},{}]}")))
                         {
                             var json = commands.Context.ReadForMemory(stream, "blog");
-                            commands.Put("blogs/" + i, null, json, new Dictionary<string, string> { { "@collection", "Blogs" } });
+                            commands.Put("blogs/" + i, null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                         }
                     }
 
@@ -179,7 +179,7 @@ select new {
                         using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(values[i])))
                         {
                             var json = commands.Context.ReadForMemory(stream, "blog");
-                            commands.Put("blogs/" + i, null, json, new Dictionary<string, string> { { "@collection", "Blogs" } });
+                            commands.Put("blogs/" + i, null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                         }
                     }
 
@@ -190,7 +190,7 @@ select new {
                     using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{'blog_id': 3, 'comments': [{}]}")))
                     {
                         var json = commands.Context.ReadForMemory(stream, "blog");
-                        commands.Put("blogs/0", null, json, new Dictionary<string, string> { { "@collection", "Blogs" } });
+                        commands.Put("blogs/0", null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                     }
 
                     q = GetUnstableQueryResult(store, commands, "blog_id:3");
@@ -230,7 +230,7 @@ select new {
                         using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(values[i])))
                         {
                             var json = commands.Context.ReadForMemory(stream, "blog");
-                            commands.Put("blogs/" + i, null, json, new Dictionary<string, string> { { "@collection", "Blogs" } });
+                            commands.Put("blogs/" + i, null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                         }
                     }
 
@@ -274,7 +274,7 @@ select new {
                         using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(values[i])))
                         {
                             var json = commands.Context.ReadForMemory(stream, "blog");
-                            commands.Put("blogs/" + i, null, json, new Dictionary<string, string> { { "@collection", "Blogs" } });
+                            commands.Put("blogs/" + i, null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                         }
                     }
 
@@ -283,7 +283,7 @@ select new {
                     using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{'blog_id': 7, 'comments': [{}]}")))
                     {
                         var json = commands.Context.ReadForMemory(stream, "blog");
-                        commands.Put("blogs/0", null, json, new Dictionary<string, string> { { "@collection", "Blogs" } });
+                        commands.Put("blogs/0", null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                     }
 
                     var q = GetUnstableQueryResult(store, commands, "blog_id:3");

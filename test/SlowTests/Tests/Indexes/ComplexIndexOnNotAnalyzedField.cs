@@ -8,17 +8,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using FastTests;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class ComplexIndexOnNotAnalyzedField : RavenNewTestBase
+    public class ComplexIndexOnNotAnalyzedField : RavenTestBase
     {
         [Fact]
         public void CanQueryOnKey()
@@ -30,12 +29,13 @@ namespace SlowTests.Tests.Indexes
                     using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{'Name':'Hibernating Rhinos', 'Partners': ['companies/49', 'companies/50']}")))
                     {
                         var json = commands.Context.ReadForMemory(stream, "doc");
-                        commands.Put("companies/", null, json, new Dictionary<string, string> { { Constants.Metadata.Collection, "Companies" } });
+                        commands.Put("companies/", null, json, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "Companies" } });
                     }
 
-                    store.Admin.Send(new PutIndexOperation("CompaniesByPartners", new IndexDefinition
+                    store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                     {
-                        Maps = { "from company in docs.Companies from partner in company.Partners select new { Partner = partner }" }
+                        Maps = { "from company in docs.Companies from partner in company.Partners select new { Partner = partner }" },
+                        Name = "CompaniesByPartners" }
                     }));
 
                     QueryResult queryResult;

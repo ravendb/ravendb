@@ -16,7 +16,6 @@ namespace Raven.Server.Documents
         [ThreadStatic]
         private static JsonParserState _jsonParserState;
 
-
         public static ByteStringContext<ByteStringMemoryCache>.ExternalScope GetSliceFromKey<TTransaction>(
             TransactionOperationContext<TTransaction> context, string key, out Slice keySlice)
             where TTransaction : RavenTransaction
@@ -199,6 +198,18 @@ namespace Raven.Server.Documents
             throw new ArgumentException(
                 $"Key cannot exceed 512 bytes, but the key was {Utf8.GetByteCount(str)} bytes. The invalid key is '{str}'.",
                 nameof(str));
+        }
+
+        public static IDisposable GetStringPreserveCase(DocumentsOperationContext context, string str, out Slice strSlice)
+        {
+            byte* lowerKey;
+            int lowerKeySize;
+            byte* key;
+            int keySize;
+            // TODO: Optimize this
+            GetLowerKeySliceAndStorageKey(context, str, out lowerKey, out lowerKeySize, out key, out keySize);
+
+            return Slice.From(context.Allocator, key, keySize, out strSlice);
         }
     }
 }

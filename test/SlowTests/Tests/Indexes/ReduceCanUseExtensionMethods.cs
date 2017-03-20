@@ -1,9 +1,10 @@
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
@@ -27,7 +28,7 @@ namespace SlowTests.Tests.Indexes
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("Hi", new IndexDefinitionBuilder<InputData, Result>()
+                var indexDefinition = new IndexDefinitionBuilder<InputData, Result>()
                 {
                     Map = documents => from doc in documents
                                        let tags = ((string[])doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
@@ -35,7 +36,9 @@ namespace SlowTests.Tests.Indexes
                                        {
                                            Tags = tags.ToArray()
                                        }
-                });
+                }.ToIndexDefinition(store.Conventions);
+                indexDefinition.Name = "Hi";
+                store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
                 using (var session = store.OpenSession())
                 {
@@ -46,8 +49,7 @@ namespace SlowTests.Tests.Indexes
 
                 WaitForIndexing(store);
 
-                var errors = store.DatabaseCommands.GetIndexErrors("Hi");
-                Assert.Empty(errors.Errors);
+                TestHelper.AssertNoIndexErrors(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -55,7 +57,6 @@ namespace SlowTests.Tests.Indexes
                         .Search(d => d.Tags, "only-one")
                         .As<InputData>()
                         .ToList();
-
 
                     Assert.Single(results);
                 }
@@ -65,7 +66,7 @@ namespace SlowTests.Tests.Indexes
         [Fact]
         public void CorrectlyUseExtensionMethodsOnConvertedType()
         {
-            var indexDefinition = new PainfulIndex { Conventions = new DocumentConvention() }.CreateIndexDefinition();
+            var indexDefinition = new PainfulIndex { Conventions = new DocumentConventions() }.CreateIndexDefinition();
             var map = indexDefinition.Maps.First();
             Assert.Contains("((String[]) doc.Tags.Split(", map);
         }

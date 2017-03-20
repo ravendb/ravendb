@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Data;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
@@ -20,7 +20,7 @@ namespace FastTests.Server.Documents.Operations
             {
                 var token = new OperationCancelToken(TimeSpan.FromMinutes(2), CancellationToken.None);
 
-                var notifications = new BlockingCollection<OperationStatusChanged>();
+                var notifications = new BlockingCollection<OperationStatusChange>();
                 var mre = new ManualResetEventSlim(false);
 
                 var operationId = db.Operations.GetNextOperationId();
@@ -50,7 +50,7 @@ namespace FastTests.Server.Documents.Operations
                         };
                     }), operationId, token);
 
-                OperationStatusChanged change;
+                OperationStatusChange change;
                 Assert.True(notifications.TryTake(out change, TimeSpan.FromSeconds(1)));
                 Assert.NotNull(change.OperationId);
                 Assert.Equal(OperationStatus.InProgress, change.State.Status);
@@ -91,7 +91,7 @@ namespace FastTests.Server.Documents.Operations
             {
                 long operationId = db.Operations.GetNextOperationId();
 
-                var notifications = new BlockingCollection<OperationStatusChanged>();
+                var notifications = new BlockingCollection<OperationStatusChange>();
 
                 db.Changes.OnOperationStatusChange += notifications.Add;
 
@@ -101,7 +101,7 @@ namespace FastTests.Server.Documents.Operations
                        throw new Exception("Something bad happened");
                     }), operationId, OperationCancelToken.None);
 
-                OperationStatusChanged change;
+                OperationStatusChange change;
 
                 Assert.True(notifications.TryTake(out change, TimeSpan.FromSeconds(1)));
                 Assert.NotNull(change.OperationId);
@@ -123,7 +123,7 @@ namespace FastTests.Server.Documents.Operations
                 var token = new OperationCancelToken(TimeSpan.Zero, CancellationToken.None);
                 token.Cancel();
 
-                var notifications = new BlockingCollection<OperationStatusChanged>();
+                var notifications = new BlockingCollection<OperationStatusChange>();
 
                 var operationId = db.Operations.GetNextOperationId();
 
@@ -136,7 +136,7 @@ namespace FastTests.Server.Documents.Operations
                         return null;
                     }, token.Token), operationId, token);
 
-                OperationStatusChanged change;
+                OperationStatusChange change;
 
                 Assert.True(notifications.TryTake(out change, TimeSpan.FromSeconds(1)));
                 Assert.NotNull(change.OperationId);

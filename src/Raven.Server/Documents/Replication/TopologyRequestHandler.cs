@@ -1,7 +1,7 @@
 ﻿using System;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client.Replication.Messages;
+using Raven.Client;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Replication
                 ReplicationDocument replicationDocument = null;
                 using (context.OpenReadTransaction())
                 {
-                    var configurationDocument = tcp.DocumentDatabase.DocumentsStorage.Get(context, Constants.Replication.DocumentReplicationConfiguration);
+                    var configurationDocument = tcp.DocumentDatabase.DocumentsStorage.Get(context, Constants.Documents.Replication.ReplicationConfigurationDocument);
                     if (configurationDocument != null)
                         replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
 

@@ -1,18 +1,19 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Data;
-using Raven.Client.Data.Collection;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents
 {
-    public class CollectionRunner
+    internal class CollectionRunner
     {
-        private readonly DocumentsOperationContext _context;
-        private readonly DocumentDatabase _database;
+        protected readonly DocumentsOperationContext _context;
+        protected readonly DocumentDatabase _database;
 
         public CollectionRunner(DocumentDatabase database, DocumentsOperationContext context)
         {
@@ -20,8 +21,7 @@ namespace Raven.Server.Documents
             _context = context;
         }
 
-
-        public IOperationResult ExecuteDelete(string collectionName, CollectionOperationOptions options, DocumentsOperationContext documentsOperationContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public virtual IOperationResult ExecuteDelete(string collectionName, CollectionOperationOptions options, DocumentsOperationContext documentsOperationContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             return ExecuteOperation(collectionName, options, _context, onProgress, key => _database.DocumentsStorage.Delete(_context, key, null), token);
         }
@@ -31,8 +31,8 @@ namespace Raven.Server.Documents
             return ExecuteOperation(collectionName, options, _context, onProgress, key => _database.Patch.Apply(context, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false), token);
         }
 
-        private IOperationResult ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,
-             Action<DeterminateProgress> onProgress, Action<string> action, OperationCancelToken token)
+        protected IOperationResult ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,
+             Action<DeterminateProgress> onProgress, Action<LazyStringValue> action, OperationCancelToken token)
         {
             const int batchSize = 1024;
             var progress = new DeterminateProgress();
@@ -42,8 +42,8 @@ namespace Raven.Server.Documents
             long totalCount;
             using (context.OpenReadTransaction())
             {
-                lastEtag = _database.DocumentsStorage.GetLastDocumentEtag(context, collectionName);
-                _database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, collectionName, 0, out totalCount);
+                lastEtag = GetLastEtagForCollection(context, collectionName);
+                totalCount = GetTotalCountForCollection(context, collectionName);
             }
             progress.Total = totalCount;
             long startEtag = 0;
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents
 
                     using (var tx = context.OpenWriteTransaction())
                     {
-                        var documents = _database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag, 0, batchSize).ToList();
+                        var documents = GetDocuments(context, collectionName, startEtag, batchSize);
                         foreach (var document in documents)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
@@ -77,7 +77,7 @@ namespace Raven.Server.Documents
                                 break;
                             }
 
-                            startEtag = document.Etag;
+                            startEtag = document.Etag + 1;
 
                             action(document.Key);
 
@@ -101,6 +101,23 @@ namespace Raven.Server.Documents
             {
                 Total = progress.Processed
             };
+        }
+
+        protected virtual List<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize)
+        {
+            return _database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag, 0, batchSize).ToList();
+        }
+
+        protected virtual long GetTotalCountForCollection(DocumentsOperationContext context, string collectionName)
+        {
+            long totalCount;
+            _database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, collectionName, 0, out totalCount);
+            return totalCount;
+        }
+
+        protected virtual long GetLastEtagForCollection(DocumentsOperationContext context, string collection)
+        {
+            return _database.DocumentsStorage.GetLastDocumentEtag(context, collection);
         }
     }
 }

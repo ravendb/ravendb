@@ -36,6 +36,32 @@ namespace Sparrow
         }
     }
 
+    public unsafe struct StringSegmentEqualityStructComparer : IEqualityComparer<StringSegment>
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(StringSegment x, StringSegment y)
+        {
+            if (x.Length != y.Length)
+                return false;
+
+            fixed (char* pX = x.String)
+            fixed (char* pY = y.String)
+            {
+                return Memory.Compare((byte*)pX + x.Start * sizeof(char), (byte*)pY + y.Start * sizeof(char), x.Length * sizeof(char)) == 0;
+            }
+
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(StringSegment str)
+        {
+            fixed (char* p = str.String)
+            {
+                return (int)Hashing.XXHash32.CalculateInline(((byte*)p + str.Start * sizeof(char)), str.Length * sizeof(char));
+            }
+        }
+    }
+
     public class StringSegmentEqualityComparer : IEqualityComparer<StringSegment>
     {
         public static StringSegmentEqualityComparer Instance = new StringSegmentEqualityComparer();
@@ -72,15 +98,63 @@ namespace Sparrow
         private string _valueString;
         public string Value => _valueString ?? (_valueString = String.Substring(Start, Length));
 
-        public StringSegment(string s, int start, int count = -1)
+
+        // PERF: Included this version to exploit the knowledge that we are going to get a full string.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public StringSegment(string s)
         {
             String = s;
-            Start = start;
-            Length = count == -1 ? String.Length - start : count;
-            _valueString = start == 0 && Length == s.Length ? s : null;
+            Start = 0;
+            Length = s.Length;
+            _valueString = s;
+        }
 
-            if (Start + Length > String.Length)
-                throw new IndexOutOfRangeException();
+        // PERF: Included this version to exploit the knowledge that we are going to get a substring starting at 0.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public StringSegment(string source, int length)
+        {
+            String = source;
+            Start = 0;
+            Length = length;
+
+            int stringLength = source.Length;            
+
+            if (length <= stringLength)
+            {
+                // PERF: Inverted the condition to ensure the layout of the code will be continuous
+                _valueString = length == stringLength ? source : null;
+            }
+            else
+            {
+                ThrowIndexOutOfRangeException();
+                _valueString = null; // will never reach, this exist to fool the compiler.
+            }
+        }
+
+        // PERF: Rearranged the parameters to make the other constructors available.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public StringSegment(string source, int length, int start)
+        {
+            String = source;
+            Start = start;
+            Length = length;
+
+            int stringLength = source.Length;
+            if (start + length <= stringLength)
+            {
+                // PERF: Inverted the condition to ensure the layout of the code will be continuous
+                _valueString = start == 0 && length == stringLength ? source : null;
+            }
+            else
+            {
+                ThrowIndexOutOfRangeException();
+                _valueString = null; // will never reach, this exist to fool the compiler.
+            }
+        }
+
+        private static void ThrowIndexOutOfRangeException()
+        {
+            throw new IndexOutOfRangeException();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -91,7 +165,7 @@ namespace Sparrow
             else if (start + length > String.Length)
                 throw new ArgumentOutOfRangeException(nameof(length));
 
-            return new StringSegment(String, Start + start, length);
+            return new StringSegment(String, length, Start + start);
         }
 
         public char this[int index]
@@ -108,7 +182,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator StringSegment(string str)
         {
-            return new StringSegment(str, 0);
+            return new StringSegment(str);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

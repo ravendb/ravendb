@@ -1,9 +1,10 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -18,7 +19,7 @@ namespace SlowTests.MailingList
                       from doc in docs
                       select new
                       {
-                          LastModified = MetadataFor(doc)[Constants.Metadata.LastModified],
+                          LastModified = MetadataFor(doc)[Constants.Documents.Metadata.LastModified],
                       };
             }
         }
@@ -36,8 +37,8 @@ namespace SlowTests.MailingList
                 TransformResults = results => from doc in results
                                               select new
                                               {
-                                                  InternalId = MetadataFor(doc)[Constants.Metadata.Id],
-                                                  LastModified = MetadataFor(doc)[Constants.Metadata.LastModified],
+                                                  InternalId = MetadataFor(doc)[Constants.Documents.Metadata.Id],
+                                                  LastModified = MetadataFor(doc)[Constants.Documents.Metadata.LastModified],
                                               };
             }
         }
@@ -70,7 +71,7 @@ namespace SlowTests.MailingList
                     var user3 = session.Load<User>(user1.InternalId);
                     Assert.NotNull(user3);
                     var metadata = session.Advanced.GetMetadataFor(user3);
-                    var lastModified = metadata.Value<DateTime>(Constants.Metadata.LastModified);
+                    var lastModified = DateTime.Parse(metadata.GetString(Constants.Documents.Metadata.LastModified));
 
                     var modifiedDocuments = (from u in session.Query<User, AmazingIndex2>()
                                                 .TransformWith<AmazingTransformer2, AmazingTransformer2.ModifiedDocuments>()

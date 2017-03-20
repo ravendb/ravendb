@@ -2,11 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-
-using Raven.Abstractions;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -38,7 +35,7 @@ namespace Raven.Server.Documents.Indexes
 
         public const int MaxNumberOfKeptErrors = 500;
 
-        internal bool _simulateCorruption;
+        internal bool _simulateCorruption = false;
 
         public IndexStorage(Index index, TransactionContextPool contextPool, DocumentDatabase database)
         {
@@ -112,30 +109,26 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public unsafe void WritePriority(IndexPriority priority)
+        public void WritePriority(IndexPriority priority)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
-                var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
-                var priorityInt = (int)priority;
-                Slice prioritySlice;
-                using (Slice.External(context.Allocator, (byte*)&priorityInt, sizeof(int), out prioritySlice))
-                    statsTree.Add(IndexSchema.PrioritySlice, prioritySlice);
+                var oldPriority = _index.Definition.Priority;
+                try
+                {
+                    _index.Definition.Priority = priority;
+                    _index.Definition.Persist(context, _environment.Options);
 
-                tx.Commit();
+                    tx.Commit();
+                }
+                catch (Exception)
+                {
+                    _index.Definition.Priority = oldPriority;
+                    throw;
+                }
             }
-        }
-
-        public IndexPriority ReadPriority(RavenTransaction tx)
-        {
-            var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
-            var priority = statsTree.Read(IndexSchema.PrioritySlice);
-            if (priority == null)
-                return IndexPriority.Normal;
-
-            return (IndexPriority)priority.Reader.ReadLittleEndianInt32();
         }
 
         public unsafe void WriteState(IndexState state)
@@ -196,27 +189,24 @@ namespace Raven.Server.Documents.Indexes
             {
                 var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
-                foreach (var sr in table.SeekForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys))
+                foreach (var tvr in table.SeekForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys, 0))
                 {
-                    foreach (var a in sr.Results)
-                    {
-                        int size;
-                        var error = new IndexingError();
+                    int size;
+                    var error = new IndexingError();
 
-                        var ptr = a.Reader.Read(0, out size);
-                        error.Timestamp = new DateTime(IPAddress.NetworkToHostOrder(*(long*)ptr), DateTimeKind.Utc);
+                    var ptr = tvr.Result.Reader.Read(0, out size);
+                    error.Timestamp = new DateTime(IPAddress.NetworkToHostOrder(*(long*)ptr), DateTimeKind.Utc);
 
-                        ptr = a.Reader.Read(1, out size);
-                        error.Document = new LazyStringValue(null, ptr, size, context);
+                    ptr = tvr.Result.Reader.Read(1, out size);
+                    error.Document = context.AllocateStringValue(null, ptr, size);
 
-                        ptr = a.Reader.Read(2, out size);
-                        error.Action = new LazyStringValue(null, ptr, size, context);
+                    ptr = tvr.Result.Reader.Read(2, out size);
+                    error.Action = context.AllocateStringValue(null, ptr, size);
 
-                        ptr = a.Reader.Read(3, out size);
-                        error.Error = new LazyStringValue(null, ptr, size, context);
+                    ptr = tvr.Result.Reader.Read(3, out size);
+                    error.Error = context.AllocateStringValue(null, ptr, size);
 
-                        errors.Add(error);
-                    }
+                    errors.Add(error);
                 }
             }
 
@@ -414,10 +404,13 @@ namespace Raven.Server.Documents.Indexes
 
                 var currentMaxNumberOfOutputs = statsTree.Read(IndexSchema.MaxNumberOfOutputsPerDocument)?.Reader.ReadLittleEndianInt32();
 
-                *(int*) statsTree.DirectAdd(IndexSchema.MaxNumberOfOutputsPerDocument, sizeof(int)) =
-                    currentMaxNumberOfOutputs > stats.MaxNumberOfOutputsPerDocument
+                byte* ptr;
+                using (statsTree.DirectAdd(IndexSchema.MaxNumberOfOutputsPerDocument, sizeof(int), out ptr))
+                {
+                    *(int*)ptr = currentMaxNumberOfOutputs > stats.MaxNumberOfOutputsPerDocument
                         ? currentMaxNumberOfOutputs.Value
                         : stats.MaxNumberOfOutputsPerDocument;
+                }
 
                 if (_index.Type.IsMapReduce())
                 {
@@ -610,6 +603,21 @@ namespace Raven.Server.Documents.Indexes
                 referencesTree.MultiDelete(key, referenceKey);
                 collectionTree?.MultiDelete(referenceKey, key);
                 referenceKey.Release(tx.InnerTransaction.Allocator);
+            }
+        }
+
+        public void Rename(string name)
+        {
+            if (_index.Definition.Name == name)
+                return;
+
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                _index.Definition.Rename(name, context, _environment.Options);
+
+                tx.Commit();
             }
         }
 

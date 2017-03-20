@@ -5,7 +5,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class OrderBy : RavenNewTestBase
+    public class OrderBy : RavenTestBase
     {
         private class Section
         {

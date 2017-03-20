@@ -4,9 +4,7 @@ import adminLogsClient = require("common/adminLogsClient");
 import fileDownloader = require("common/fileDownloader");
 import adminLogsConfigureDialog = require("viewmodels/manage/adminLogsConfigureDialog");
 import adminLogsConfig = require("models/database/debug/adminLogsConfig");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import adminLogsConfigEntry = require("models/database/debug/adminLogsConfigEntry");
-import appUrl = require('common/appUrl');
 import accessHelper = require("viewmodels/shell/accessHelper");
 import eventsCollector = require("common/eventsCollector");
 
@@ -111,7 +109,7 @@ class adminLogs extends viewModelBase {
                     tokenDeferred.resolve();
                 })
                 .fail(() => {
-                    app.showBootstrapMessage("You are not authorized to trace this resource", "Authorization error");
+                    app.showBootstrapMessage("You are not authorized to trace this database", "Authorization error");
                 });*/
         } else {
             tokenDeferred.resolve();

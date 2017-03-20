@@ -1,6 +1,6 @@
 ﻿using System;
 using Microsoft.AspNetCore.Http;
-using Raven.Client.Smuggler;
+using Raven.Client.Documents.Smuggler;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents.Data
@@ -24,8 +24,6 @@ namespace Raven.Server.Smuggler.Documents.Data
                         result.IncludeExpired = bool.Parse(item.Value[0]);
                     else if (string.Equals(key, "removeAnalyzers", StringComparison.OrdinalIgnoreCase))
                         result.RemoveAnalyzers = bool.Parse(item.Value[0]);
-                    else if (string.Equals(key, "disableVersioningBundle", StringComparison.OrdinalIgnoreCase))
-                        result.DisableVersioningBundle = bool.Parse(item.Value[0]);
                     else if (string.Equals(key, "transformScript", StringComparison.OrdinalIgnoreCase))
                         result.TransformScript = Uri.UnescapeDataString(item.Value[0]);
                     else if (string.Equals(key, "maxStepsForTransformScript", StringComparison.OrdinalIgnoreCase))

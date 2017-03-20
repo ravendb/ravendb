@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Util;
+using Raven.Client;
+using Raven.Client.Documents.Exceptions.Indexes;
+using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
@@ -79,7 +79,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 var result = new DocumentQueryResult();
                 _context.OpenReadTransaction();
-
                 FillCountOfResultsAndIndexEtag(result, collection);
 
                 if (existingResultEtag.HasValue)
@@ -88,8 +87,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         return new CompletedTask<DocumentQueryResult>(DocumentQueryResult.NotModifiedResult);
                 }
 
-
                 ExecuteCollectionQuery(result, query, collection);
+
                 return new CompletedTask<DocumentQueryResult>(result);
             }
 
@@ -120,7 +119,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private void ExecuteCollectionQuery(QueryResultServerSide resultToFill, IndexQueryServerSide query, string collection)
         {
-            var isAllDocsCollection = collection == Constants.Indexing.AllDocumentsCollection;
+            var isAllDocsCollection = collection == Constants.Documents.Indexing.AllDocumentsCollection;
 
             // we optimize for empty queries without sorting options
             resultToFill.IndexName = isAllDocsCollection ? "AllDocs" : collection;
@@ -172,7 +171,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var buffer = stackalloc long[3];
 
-            if (collection == Constants.Indexing.AllDocumentsCollection)
+            if (collection == Constants.Documents.Indexing.AllDocumentsCollection)
             {
                 var numberOfDocuments = _documents.GetNumberOfDocuments(_context);
                 buffer[0] = DocumentsStorage.ReadLastDocumentEtag(_context.Transaction.InnerTransaction);
@@ -196,7 +195,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         private Index MatchIndex(string dynamicIndexName, IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, out string collection)
         {
             collection = dynamicIndexName.Length == DynamicIndex.Length
-                ? Constants.Indexing.AllDocumentsCollection
+                ? Constants.Documents.Indexing.AllDocumentsCollection
                 : dynamicIndexName.Substring(DynamicIndexPrefix.Length);
 
             var map = DynamicQueryMapping.Create(collection, query);
@@ -208,7 +207,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (TryMatchExistingIndexToQuery(map, out index) == false)
             {
                 if (createAutoIndexIfNoMatchIsFound == false)
-                    throw new IndexDoesNotExistsException("Could not find index for a given query.");
+                    throw new IndexDoesNotExistException("Could not find index for a given query.");
 
                 var definition = map.CreateAutoIndexDefinition();
 
@@ -281,7 +280,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         {
                             _indexStore.DeleteIndex(supercededIndex.IndexId);
                         }
-                        catch (IndexDoesNotExistsException)
+                        catch (IndexDoesNotExistException)
                         {
                         }
                     }

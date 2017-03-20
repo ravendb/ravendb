@@ -1,0 +1,172 @@
+.databases {
+
+    .databasesToolbar-toggleCompactView {
+
+        display: inline-block;
+        margin-left:10px;
+
+    }
+
+    .databasesToolbar-actions {
+        display: inline-block;
+        margin-left: @grid-gutter-width / 2;
+    }
+
+    .databasesToolbar-typeSelector {
+        .btn {
+            .badge {
+                margin-left: 5px;
+            }
+        }
+    }
+
+    .align-checkboxes {
+        margin-left: 22px;
+        position: relative;
+        top: -2px;
+    }
+
+    .vertical-divider {
+        position: relative;
+        @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
+            margin-left: 20px;
+        }
+        @media (min-width:@screen-xl) {
+            &:before {
+                content: '';
+                display: block;
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                border-left: 1px solid @gray-dark;
+            }
+        }
+    }
+
+    .database {
+        padding-left: 30px;
+        position: relative;
+
+        &:hover {
+            background-color: lighten(@gray-darker, 3%);
+            transition: background-color 0.15s ease;
+        }
+
+        .info-container {
+            font-size: 19px;
+
+            .icon-database {
+               // color: @brand-database-color;
+            }
+
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+
+            @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
+                .info-container {
+                    order: 1;
+                }
+
+                .properties-container {
+                    order: 3;
+                }
+
+                .actions-container {
+                    order: 2;
+                }
+            }
+        }
+
+        .database-name {
+            color: @brand-primary;
+            font-size: 118%;
+            margin-left: 30px;
+            margin-bottom: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .checkbox {
+            position: relative;
+            margin: 0;
+            top: -2px;
+            float: left;
+        }
+
+        .state {
+            cursor: pointer;
+        }
+
+        .state.state-warning {
+            cursor: auto;
+        }
+    }
+
+    .properties-container {
+        flex-direction: column;
+        height: 80px;
+        align-content: flex-start;
+        overflow: hidden;
+
+        .properties-item {
+
+            .set-size {
+                padding: 0px 10px;
+            }
+
+            height: 22px;
+        }
+    }
+
+    &.databases_compact {
+        .panel {
+            margin-bottom: 10px;
+        }
+        .database  {
+
+            .checkbox {
+                top: -7px;
+            }
+
+            .database-name {
+                top: 0;
+                font-size: 85%;
+                line-height: 120%;
+            }
+
+            .state::before {
+                content: '';
+            }
+
+            .properties-container {
+                top: 5px;
+                height: 25px;
+                display: inline;
+
+                .properties-item {
+                    width: auto;
+                    float: left;
+                    font-size: 90%;
+                    text-overflow: ellipsis;
+
+                    .set-size {
+                        position: static;
+                        padding-right: 10px;
+                    }
+                }
+            }
+
+            .database {
+                .btn-group .btn {
+                    .btn-sm;
+                }
+            }
+        }
+
+    }
+}

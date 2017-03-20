@@ -24,11 +24,28 @@ namespace Voron
     public abstract class StorageEnvironmentOptions : IDisposable
     {
         public string TempPath { get; }
+        public IoMetrics IoMetrics { get; set; }
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
         public event EventHandler<NonDurabalitySupportEventArgs> OnNonDurabaleFileSystemError;
         private long _reuseCounter;
         public abstract override string ToString();
+
+        private bool _forceUsing32BitsPager;
+        public bool ForceUsing32BitsPager
+        {
+            get
+            {
+                return _forceUsing32BitsPager;
+            }
+            set
+            {
+                _forceUsing32BitsPager = value;
+                MaxLogFileSize = (value ? 32 : 256)*Constants.Size.Megabyte;
+                MaxScratchBufferSize = (value ? 32 : 256) * Constants.Size.Megabyte;
+                MaxNumberOfPagesInJournalBeforeFlush = (value ? 4 : 32) * Constants.Size.Megabyte / Constants.Storage.PageSize;
+            }
+        }
 
         public void InvokeRecoveryError(object sender, string message, Exception e)
         {
@@ -76,8 +93,15 @@ namespace Voron
             {
                 if (value > MaxLogFileSize)
                     MaxLogFileSize = value;
+                if(value <= 0)
+                    ThrowInitialLogFileSizeOutOfRange();
                 _initialLogFileSize = value;
             }
+        }
+
+        private static void ThrowInitialLogFileSizeOutOfRange()
+        {
+            throw new ArgumentOutOfRangeException("InitialLogFileSize", "The initial log for the Voron must be above zero");
         }
 
         public int PageSize => Constants.Storage.PageSize;
@@ -113,24 +137,27 @@ namespace Voron
         protected bool Disposed;
         private long _initialLogFileSize;
         private long _maxLogFileSize;
-        public IoMetrics IoMetrics { get; set; }
-
 
         public Func<string, bool> ShouldUseKeyPrefix { get; set; }
 
-        protected StorageEnvironmentOptions(string tempPath)
+        protected StorageEnvironmentOptions(string tempPath, IoChangesNotifications ioChangesNotifications)
         {
+            SafePosixOpenFlags = SafePosixOpenFlags | DefaultPosixFlags;
+
+            DisposeWaitTime = TimeSpan.FromSeconds(15);
+
             TempPath = tempPath;
 
             ShouldUseKeyPrefix = name => false;
 
-            MaxLogFileSize = 256*Constants.Size.Megabyte;
+            MaxLogFileSize = ((sizeof(int) == IntPtr.Size ? 32 : 256)*Constants.Size.Megabyte);
 
-            InitialLogFileSize = 64*Constants.Size.Kilobyte;
+            InitialLogFileSize = 64 * Constants.Size.Kilobyte;
 
-            MaxScratchBufferSize = 256*Constants.Size.Megabyte;
+            MaxScratchBufferSize = ((sizeof(int) == IntPtr.Size ? 32 : 256) * Constants.Size.Megabyte);
 
-            MaxNumberOfPagesInJournalBeforeFlush = (32*Constants.Size.Megabyte)/Constants.Storage.PageSize;
+            MaxNumberOfPagesInJournalBeforeFlush =
+                ((sizeof(int) == IntPtr.Size ? 4 : 32)*Constants.Size.Megabyte)/Constants.Storage.PageSize;
 
             IdleFlushTimeout = 5000; // 5 seconds
 
@@ -138,28 +165,34 @@ namespace Voron
 
             IncrementalBackupEnabled = false;
 
-            IoMetrics = new IoMetrics(256, 256);
+            IoMetrics = new IoMetrics(256, 256, ioChangesNotifications);
 
             _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(tempPath);
+
+            var shouldForceEnvVar = Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager");
+
+            bool result;
+            if (bool.TryParse(shouldForceEnvVar, out result))
+                ForceUsing32BitsPager = result;
         }
 
 
-        public static StorageEnvironmentOptions CreateMemoryOnly(string name = null, string tempPath = null)
+        public static StorageEnvironmentOptions CreateMemoryOnly(string name = null, string tempPath = null, IoChangesNotifications ioChangesNotifications = null)
         {
             if (tempPath == null)
                 tempPath = Path.GetTempPath();
 
-            return new PureMemoryStorageEnvironmentOptions(name, tempPath);
+            return new PureMemoryStorageEnvironmentOptions(name, tempPath, ioChangesNotifications);
         }
 
-        public static StorageEnvironmentOptions ForPath(string path, string tempPath = null, string journalPath = null)
+        public static StorageEnvironmentOptions ForPath(string path, string tempPath = null, string journalPath = null, IoChangesNotifications ioChangesNotifications = null)
         {
             if (RunningOnPosix)
             {
                 path = PosixHelper.FixLinuxPath(path);
                 tempPath = PosixHelper.FixLinuxPath(tempPath);
             }
-            return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath);
+            return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath, ioChangesNotifications);
         }
 
         public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
@@ -172,9 +205,8 @@ namespace Voron
             private readonly ConcurrentDictionary<string, Lazy<IJournalWriter>> _journals =
                 new ConcurrentDictionary<string, Lazy<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
 
-            public DirectoryStorageEnvironmentOptions(string basePath, string tempPath, string journalPath)
-                : base(string.IsNullOrEmpty(tempPath) == false ? Path.GetFullPath(tempPath) : Path.GetFullPath(basePath)
-                )
+            public DirectoryStorageEnvironmentOptions(string basePath, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications)
+                : base(string.IsNullOrEmpty(tempPath) == false ? Path.GetFullPath(tempPath) : Path.GetFullPath(basePath), ioChangesNotifications)
             {
                 _basePath = Path.GetFullPath(basePath);
                 _journalPath = !string.IsNullOrEmpty(journalPath) ? Path.GetFullPath(journalPath) : _basePath;
@@ -191,11 +223,8 @@ namespace Voron
                 _dataPager = new Lazy<AbstractPager>(() =>
                 {
                     FilePath = Path.Combine(_basePath, Constants.DatabaseFilename);
-                    if (RunningOnPosix)
-                        return new PosixMemoryMapPager(this, FilePath, InitialFileSize, usePageProtection: true);
 
-                    return new Win32MemoryMapPager(this, FilePath, InitialFileSize, usePageProtection: true);
-                    //return new SparseMemoryMappedPager(this, FilePath, InitialFileSize);
+                    return GetMemoryMapPager(this, InitialFileSize, FilePath, usePageProtection: true);
                 });
 
                 GatherRecyclableJournalFiles();
@@ -259,10 +288,7 @@ namespace Voron
 
             public override AbstractPager OpenPager(string filename)
             {
-                if (RunningOnPosix)
-                    return new PosixMemoryMapPager(this, filename);
-
-                return new Win32MemoryMapPager(this, filename);
+                return GetMemoryMapPager(this, null, filename);
             }
 
 
@@ -282,7 +308,19 @@ namespace Voron
                     return new Win32FileJournalWriter(this, path, journalSize);
                 }));
 
-                if (result.Value.Disposed)
+                var createJournal = false;
+                try
+                {
+                    createJournal = result.Value.Disposed;
+                }
+                catch
+                {
+                    Lazy<IJournalWriter> _;
+                    _journals.TryRemove(name, out _);
+                    throw;
+                }
+
+                if (createJournal)
                 {
                     var newWriter = new Lazy<IJournalWriter>(() =>
                     {
@@ -441,7 +479,15 @@ namespace Voron
                     File.Delete(file);
             }
 
-            public override AbstractPager CreateScratchPager(string name, long initialSize)
+            /// <summary>
+            /// This is used to generate a pager that is long lived, in 64 bits, it is the same
+            /// as CreateScratchPager, but in 32 bits, it reserve all the required space ahead
+            /// of time, and doesn't release it per transaction. This is used for the compression
+            /// pager, which requires a large amount of continious space and can grow quickly under
+            /// certain conditions, leading to fragmentation and eventually inability to process
+            /// transactions
+            /// </summary>
+            public override AbstractPager CreateLongLivedScratchPager(string name, long initialSize)
             {
                 var scratchFile = Path.Combine(TempPath, name);
                 if (File.Exists(scratchFile))
@@ -454,25 +500,97 @@ namespace Voron
                         DeleteOnClose = true
                     };
                 }
-                //return new SparseMemoryMappedPager(this, scratchFile,initialSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
-                return new Win32MemoryMapPager(this, scratchFile, initialSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
+
+                var attributes = Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary |
+                                 Win32NativeFileAttributes.RandomAccess;
+
+                return new WindowsMemoryMapPager(this, scratchFile, initialSize, attributes);
+            }
+
+            public override AbstractPager CreateScratchPager(string name, long initialSize)
+            {
+                var scratchFile = Path.Combine(TempPath, name);
+                if (File.Exists(scratchFile))
+                    File.Delete(scratchFile);
+
+                return GetMemoryMapPager(this, initialSize, scratchFile, deleteOnClose: true);
+            }
+
+            private AbstractPager GetMemoryMapPager(StorageEnvironmentOptions options, long? initialSize, string file,
+                bool deleteOnClose = false,
+                bool usePageProtection = false)
+            {
+                if (RunningOnPosix)
+                {
+                    if (RunningOn32Bits)
+                    {
+                        return new Posix32BitsMemoryMapPager(options, file, initialSize,
+                            usePageProtection: usePageProtection)
+                        {
+                            DeleteOnClose = deleteOnClose
+                        };
+                    }
+                    return new PosixMemoryMapPager(options, file, initialSize, usePageProtection: usePageProtection)
+                    {
+                        DeleteOnClose = deleteOnClose
+                    };
+                }
+
+                var attributes = deleteOnClose
+                    ? Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary | Win32NativeFileAttributes.RandomAccess
+                    : Win32NativeFileAttributes.Normal;
+
+                if (RunningOn32Bits)
+                    return new Windows32BitsMemoryMapPager(options, file, initialSize, attributes, usePageProtection: usePageProtection);
+
+                return new WindowsMemoryMapPager(options, file, initialSize, attributes, usePageProtection: usePageProtection);
             }
 
             public override AbstractPager OpenJournalPager(long journalNumber)
             {
                 var name = JournalName(journalNumber);
                 var path = Path.Combine(_journalPath, name);
-                if (File.Exists(path) == false)
+                var fileInfo = new FileInfo(path);
+                if (fileInfo.Exists == false)
                     throw new InvalidOperationException("No such journal " + path);
+
+                if (fileInfo.Length < InitialLogFileSize)
+                {
+                    EnsureMinimumSize(fileInfo, path);
+                }
+
                 if (RunningOnPosix)
+                {
+                    if (RunningOn32Bits)
+                        return new Posix32BitsMemoryMapPager(this, path);
                     return new PosixMemoryMapPager(this, path);
-                var win32MemoryMapPager = new Win32MemoryMapPager(this, path, access: Win32NativeFileAccess.GenericRead,
+                }
+
+                if (RunningOn32Bits)
+                    return new Windows32BitsMemoryMapPager(this, path, access: Win32NativeFileAccess.GenericRead,
+                        fileAttributes: Win32NativeFileAttributes.SequentialScan);
+                
+                var windowsMemoryMapPager = new WindowsMemoryMapPager(this, path, access: Win32NativeFileAccess.GenericRead,
                     fileAttributes: Win32NativeFileAttributes.SequentialScan);
-                win32MemoryMapPager.TryPrefetchingWholeFile();
-                return win32MemoryMapPager;
-                //return new SparseMemoryMappedPager(this, path,
-                //    access: Win32NativeFileAccess.GenericRead,
-                //    fileAttributes: Win32NativeFileAttributes.SequentialScan);
+                windowsMemoryMapPager.TryPrefetchingWholeFile();
+                return windowsMemoryMapPager;
+            }
+
+            private void EnsureMinimumSize(FileInfo fileInfo, string path)
+            {
+                try
+                {
+                    using (var stream = fileInfo.Open(FileMode.OpenOrCreate))
+                    {
+                        stream.SetLength(InitialLogFileSize);
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException(
+                        "Journal file " + path + " could not be opened because it's size is too small and we couldn't increase it",
+                        e);
+                }
             }
         }
 
@@ -492,10 +610,10 @@ namespace Voron
 
             public override void SetPosixOptions()
             {
-                PosixOpenFlags = 0;
+                PosixOpenFlags = DefaultPosixFlags;
             }
 
-            public PureMemoryStorageEnvironmentOptions(string name, string tempPath) : base(tempPath)
+            public PureMemoryStorageEnvironmentOptions(string name, string tempPath, IoChangesNotifications ioChangesNotifications) : base(tempPath, ioChangesNotifications)
             {
                 _name = name;
                 _instanceId = Interlocked.Increment(ref _counter);
@@ -504,14 +622,8 @@ namespace Voron
 
                 WinOpenFlags = Win32NativeFileAttributes.Temporary | Win32NativeFileAttributes.DeleteOnClose;
 
-                _dataPager = new Lazy<AbstractPager>(() =>
-                {
-                    if (RunningOnPosix)
-                        return new PosixTempMemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize);
-                    return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize, 
-                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
-                    //return new SparseMemoryMappedPager(this, Path.Combine(TempPath, filename), InitialFileSize);
-                }, true);
+                _dataPager = new Lazy<AbstractPager>(() => GetTempMemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize,
+                    Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary), true);
             }
 
             public override string ToString()
@@ -606,26 +718,49 @@ namespace Voron
                 Memory.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
             }
 
+            private AbstractPager GetTempMemoryMapPager(PureMemoryStorageEnvironmentOptions options, string path, long? intialSize, Win32NativeFileAttributes win32NativeFileAttributes)
+            {
+                if (RunningOnPosix)
+                {
+                    if (RunningOn32Bits)
+                        return new PosixTempMemoryMapPager(options, path, intialSize); // need to change to 32 bit pager
+
+                    return new PosixTempMemoryMapPager(options, path, intialSize);
+                }
+                if (RunningOn32Bits)
+                    return new Windows32BitsMemoryMapPager(options, path, intialSize,
+                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+
+                return new WindowsMemoryMapPager(options, path, intialSize,
+                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+            }
+
+            public override AbstractPager CreateLongLivedScratchPager(string name, long initialSize)
+            {
+                return CreateScratchPager(name, initialSize);
+            }
+
             public override AbstractPager CreateScratchPager(string name, long intialSize)
             {
                 var guid = Guid.NewGuid();
                 var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}-{guid}";
 
-                if (RunningOnPosix)
-                    return new PosixTempMemoryMapPager(this, Path.Combine(TempPath, filename), intialSize);
-
-                //return new SparseMemoryMappedPager(this, Path.Combine(TempPath, filename), intialSize,
-                //     Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
-                return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), intialSize,
-                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                return GetTempMemoryMapPager(this, Path.Combine(TempPath, filename), intialSize, Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
             }
 
             public override AbstractPager OpenPager(string filename)
             {
                 if (RunningOnPosix)
+                {
+                    if (RunningOn32Bits)
+                        return new Posix32BitsMemoryMapPager(this, filename);
                     return new PosixMemoryMapPager(this, filename);
-                return new Win32MemoryMapPager(this, filename);
-                //return new SparseMemoryMappedPager(this, filename);
+                }
+
+                if (RunningOn32Bits)
+                    return new Windows32BitsMemoryMapPager(this, filename);
+
+                return new WindowsMemoryMapPager(this, filename);
             }
 
             public override AbstractPager OpenJournalPager(long journalNumber)
@@ -668,6 +803,8 @@ namespace Voron
 
         public abstract AbstractPager CreateScratchPager(string name, long initialSize);
 
+        public abstract AbstractPager CreateLongLivedScratchPager(string name, long initialSize);
+
         public abstract AbstractPager OpenJournalPager(long journalNumber);
 
         public abstract AbstractPager OpenPager(string filename);
@@ -676,13 +813,18 @@ namespace Voron
             => RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
                RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
+        public bool RunningOn32Bits => IntPtr.Size == sizeof(int) || ForceUsing32BitsPager;
+
+
         public TransactionsMode TransactionsMode { get; set; }
         public OpenFlags PosixOpenFlags;
         public Win32NativeFileAttributes WinOpenFlags = SafeWin32OpenFlags;
         public DateTime? NonSafeTransactionExpiration { get; set; }
+        public TimeSpan DisposeWaitTime { get; set; }
 
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
+        public OpenFlags DefaultPosixFlags = PlatformDetails.Is32Bits ? PerPlatformValues.OpenFlags.O_LARGEFILE : 0;
         public OpenFlags SafePosixOpenFlags = OpenFlags.O_DSYNC | PerPlatformValues.OpenFlags.O_DIRECT;
         private readonly Logger _log;
 

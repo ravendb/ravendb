@@ -2,21 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Exceptions.Patching;
-using Raven.NewClient.Client.Http;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Documents;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Exceptions.Patching;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
+//using Raven.Server.Documents.Patch;
 using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Server.Documents.Patching
 {
-    public class AdvancedPatching : RavenNewTestBase
+    public class AdvancedPatching : RavenTestBase
     {
         private class CustomType
         {
@@ -374,28 +372,28 @@ namespace FastTests.Server.Documents.Patching
             {
                 using (var commands = store.Commands())
                 {
-                    await commands.PutAsync("doc", null, _test, null);
+                    await commands.PutAsync(_test.Id, null, _test, null);
 
                     var command = new PatchOperation.PatchCommand(
                         store.Conventions,
                         commands.Context,
-                        "doc",
+                        _test.Id,
                         null,
                         new PatchRequest
                         {
-                            Script = "output(this.Id)",
+                            Script = "output(__document_id)",
                         },
                         patchIfMissing: null,
                         skipPatchIfEtagMismatch: false,
                         returnDebugInformation: true);
 
-                    await commands.RequestExecuter.ExecuteAsync(command, commands.Context);
+                    await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
                     var result = command.Result;
                     var array = (BlittableJsonReaderArray)result.Debug["Info"];
                     var someId = array[0].ToString();
 
-                    Assert.Equal("someId", someId);
+                    Assert.Equal(_test.Id, someId);
                 }
             }
         }
@@ -492,7 +490,7 @@ this.Value = another.Value;
             }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public async Task CanPatchMetadata()
         {
             using (var store = GetDocumentStore())
@@ -515,7 +513,7 @@ this.Value = another.Value;
                 using (var commands = store.Commands())
                 {
                     dynamic doc = await commands.GetAsync("CustomTypes/1");
-                    dynamic metadata = doc[Constants.Metadata.Key];
+                    dynamic metadata = doc[Constants.Documents.Metadata.Key];
                     var clrType = metadata["Raven-Clr-Type"].ToString();
                     var pythonType = metadata["Raven-Python-Type"].ToString();
 
@@ -590,7 +588,7 @@ this.Value = another.Value;
                 using (var commands = store.Commands())
                 {
                     dynamic doc = await commands.GetAsync("NewTypes/1");
-                    dynamic metadata = doc[Constants.Metadata.Key];
+                    dynamic metadata = doc[Constants.Documents.Metadata.Key];
                     var copiedValue = (int)doc.CopiedValue;
                     var createdBy = metadata.CreatedBy.ToString();
 
@@ -627,7 +625,7 @@ this.Value = another.Value;
                 using (var commands = store.Commands())
                 {
                     dynamic doc = await commands.GetAsync("NewTypes/1");
-                    dynamic metadata = doc[Constants.Metadata.Key];
+                    dynamic metadata = doc[Constants.Documents.Metadata.Key];
                     var copiedValue = (int)doc.CopiedValue;
                     var createdBy = metadata.CreatedBy.ToString();
 
@@ -739,7 +737,7 @@ this.Value = another.Value;
                     }));
                 });
 
-                Assert.Contains("Document Items/1 does not exists, but Put was called with etag 123456789. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
+                Assert.Contains("Document Items/1 does not exist, but Put was called with etag 123456789. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
             }
         }
 
@@ -808,11 +806,12 @@ this.Value = another.Value;
                     await session.SaveChangesAsync();
                 }
 
-                store.Admin.Send(new PutIndexOperation("TestIndex", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Maps = { @"from doc in docs.CustomTypes 
-                            select new { doc.Value }" }
-                }));
+                            select new { doc.Value }" },
+                    Name = "TestIndex"
+                }}));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -890,10 +889,10 @@ this.Value = another.Value;
                 using (var commands = store.Commands())
                 {
                     dynamic resultDoc = await commands.GetAsync(_test.Id);
-                    var metadata = resultDoc[Constants.Metadata.Key];
+                    var metadata = resultDoc[Constants.Documents.Metadata.Key];
                     var result = commands.Deserialize<CustomType>(resultDoc.BlittableJson);
 
-                    Assert.NotEqual("Something new", metadata[Constants.Metadata.Id].ToString());
+                    Assert.NotEqual("Something new", metadata[Constants.Documents.Metadata.Id].ToString());
                     Assert.Equal(2, result.Comments.Count);
                     Assert.Equal("one test", result.Comments[0]);
                     Assert.Equal("two", result.Comments[1]);
@@ -930,12 +929,13 @@ this.Value = another.Value;
                     await session.SaveChangesAsync();
                 }
 
-                store.Admin.Send(new PutIndexOperation("TestIndex",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { @"from doc in docs.CustomTypes 
-                                     select new { doc.Owner }" }
-                    }));
+                                     select new { doc.Owner }" },
+                        Name = "TestIndex"
+                    }}));
 
                 WaitForIndexing(store);
 

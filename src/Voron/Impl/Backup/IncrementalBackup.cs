@@ -13,7 +13,6 @@ using System.IO.Compression;
 using System.Linq;
 using Voron.Data.BTrees;
 using Voron.Impl.Journal;
-using Voron.Impl.Paging;
 using Voron.Global;
 using Voron.Util;
 
@@ -271,7 +270,7 @@ namespace Voron.Impl.Backup
             }
         }
 
-        public void Restore(string outPath, IEnumerable<string> backupPaths)
+        public void Restore(string outPath, IEnumerable<string> backupPaths, Action<StorageEnvironmentOptions> configure = null)
         {
             foreach (var backupPath in backupPaths)
             {
@@ -284,6 +283,7 @@ namespace Voron.Impl.Backup
                         using (var options = StorageEnvironmentOptions.ForPath(Path.Combine(outPath, dir.Key)))
                         {
                             options.ManualFlushing = true;
+                            configure?.Invoke(options);
                             using (var env = new StorageEnvironment(options))
                             {
                                 Restore(env, dir);
@@ -342,6 +342,7 @@ namespace Voron.Impl.Backup
             try
             {
                 TransactionHeader* lastTxHeader = null;
+                var lastTxHeaderStackLocation = stackalloc TransactionHeader[1];
 
                 long journalNumber = -1;
                 foreach (var entry in entries)
@@ -373,15 +374,20 @@ namespace Voron.Impl.Backup
                                     env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
                             toDispose.Add(recoveryPager);
 
-                            using (
-                                var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, 0,
-                                    lastTxHeader))
+                            using (var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, 0,
+                                lastTxHeader))
                             {
                                 while (reader.ReadOneTransactionToDataFile(env.Options))
                                 {
                                     lastTxHeader = reader.LastTransactionHeader;
                                 }
+                                if (lastTxHeader != null)
+                                {
+                                    *lastTxHeaderStackLocation = *lastTxHeader;
+                                    lastTxHeader = lastTxHeaderStackLocation;
+                                }
                             }
+                            
                             break;
 
                         default:
@@ -392,11 +398,10 @@ namespace Voron.Impl.Backup
                 if (lastTxHeader == null)
                     return; // there was no valid transactions, nothing to do
 
-                env.Options.DataPager.Sync();
+                env.Options.DataPager.Sync(0);
 
 
-                var root = Tree.Open(txw, null, &lastTxHeader->Root);
-                root.Name = Constants.RootTreeNameSlice;
+                var root = Tree.Open(txw, null, Constants.RootTreeNameSlice, & lastTxHeader->Root);
 
                 txw.UpdateRootsIfNeeded(root);
 

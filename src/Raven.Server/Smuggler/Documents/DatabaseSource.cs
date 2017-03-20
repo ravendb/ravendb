@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Smuggler;
-using Raven.NewClient.Abstractions.Extensions;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Transformers;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

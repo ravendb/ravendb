@@ -1,14 +1,15 @@
 ﻿using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Operations.Databases;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Extensions;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class CreateIndexesOnRemoteServer : RavenNewTestBase
+    public class CreateIndexesOnRemoteServer : RavenTestBase
     {
         [Fact]
         public void CanCreateIndex()
@@ -21,7 +22,7 @@ namespace SlowTests.Bugs.Indexing
             {
                 store.Initialize();
 
-                store.Admin.Send(new CreateDatabaseOperation(doc));
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
                 new SimpleIndex().Execute(store);
                 new SimpleIndex().Execute(store);

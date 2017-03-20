@@ -2,13 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions;
+using Raven.Client;
+using Raven.Client.Util;
 using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class Any : RavenNewTestBase
+    public class Any : RavenTestBase
     {
         private class TestDoc
         {

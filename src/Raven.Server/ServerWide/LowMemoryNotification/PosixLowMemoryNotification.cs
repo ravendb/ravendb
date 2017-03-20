@@ -1,13 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Runtime.InteropServices;
 using System.Threading;
-using Microsoft.Extensions.Configuration;
-using Raven.Abstractions.Logging;
 using Raven.Server.Config;
-using Raven.Server.Config.Settings;
-using Voron.Platform.Posix;
 using Sparrow.Logging;
 
 namespace Raven.Server.ServerWide.LowMemoryNotification
@@ -25,7 +18,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
             shutdownNotification.Register(() => _shutdownRequested.Set());
             _shutdownNotification = shutdownNotification;
             _configuration = configuration;
-            _logger = LoggingSource.Instance.GetLogger<PosixLowMemoryNotification>(configuration.DatabaseName);
+            _logger = LoggingSource.Instance.GetLogger<PosixLowMemoryNotification>(configuration.ResourceName);
             new Thread(MonitorMemoryUsage)
             {
                 IsBackground = true,

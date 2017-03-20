@@ -11,7 +11,7 @@ namespace Raven.Server.Config.Categories
         /// different resources get loaded at the same time
         /// </summary>
         [Description("The time in seconds to allow a tenant database to be idle")]
-        [DefaultValue(15)]
+        [DefaultValue(1)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Databases/ConcurrentResourceLoadTimeoutInSec")]
         public TimeSetting ConcurrentResourceLoadTimeout { get; set; }

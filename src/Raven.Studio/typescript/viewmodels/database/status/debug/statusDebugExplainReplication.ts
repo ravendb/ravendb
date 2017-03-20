@@ -1,7 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import extensions = require("common/extensions");
 import getReplicationsCommand = require('commands/database/replication/getReplicationsCommand');
-import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import explainReplicationCommand = require("commands/database/replication/explainReplicationCommand");
 import eventsCollector = require("common/eventsCollector");
 
@@ -58,13 +57,14 @@ class statusDebugExplainReplication extends viewModelBase {
 
     fetchDocSearchResults(query: string) {
         if (query.length >= 2) {
+            /* TODO
             new getDocumentsMetadataByIDPrefixCommand(query, 10, this.activeDatabase())
                 .execute()
                 .done((results: queryResultDto<string>) => {
                     if (this.documentId() === query) {
                         this.documentIdSearchResults(results.Results);
                     }
-                });
+                });*/
         } else if (query.length == 0) {
             this.documentIdSearchResults.removeAll();
         }

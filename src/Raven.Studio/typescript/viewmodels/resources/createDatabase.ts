@@ -1,22 +1,13 @@
-import appUrl = require("common/appUrl");
 import dialog = require("plugins/dialog");
 import database = require("models/resources/database");
-import EVENTS = require("common/constants/events");
-import createResourceBase = require("viewmodels/resources/createResourceBase");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import getPluginsInfoCommand = require("commands/database/debug/getPluginsInfoCommand");
-import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import getStatusDebugConfigCommand = require("commands/database/debug/getStatusDebugConfigCommand");
-import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
-import topology = require("models/database/replication/topology");
-import shell = require("viewmodels/shell");
-import resourcesManager = require("common/shell/resourcesManager");
+import databasesManager = require("common/shell/databasesManager");
 import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
 
 import databaseCreationModel = require("models/resources/creation/databaseCreationModel");
 import eventsCollector = require("common/eventsCollector");
 
-class createDatabase extends createResourceBase {
+class createDatabase extends dialogViewModelBase {
 
     readonly databaseBundles: Array<availableBundle> = [
         {
@@ -31,20 +22,19 @@ class createDatabase extends createResourceBase {
         }
     ];
 
-    bundlesEnabled = {
-        encryption: this.isBundleActiveComputed("Encryption")
-    }
+    databaseModel = new databaseCreationModel();
 
-    resourceModel = new databaseCreationModel();
+    advancedConfigurationVisible = ko.observable<boolean>(false);
+    showWideDialog: KnockoutComputed<boolean>;
 
     indexesPathPlaceholder: KnockoutComputed<string>;
 
-    getResourceByName(name: string): database {
-        return resourcesManager.default.getDatabaseByName(name);
+    getDatabaseByName(name: string): database {
+        return databasesManager.default.getDatabaseByName(name);
     }
 
     activate() {
-        super.activate();
+        this.initObservables();
 
         //TODO: if cluster mode preselect replication bundle
         //TODO: if !!this.licenseStatus() && this.licenseStatus().IsCommercial && this.licenseStatus().Attributes.periodicBackup !== "true" preselect periodic export
@@ -53,10 +43,11 @@ class createDatabase extends createResourceBase {
     }
 
     protected initObservables() {
-        super.initObservables();
+        this.showWideDialog = ko.pureComputed(() => this.advancedConfigurationVisible());
+        this.databaseModel.setupValidation((name: string) => !this.getDatabaseByName(name));
 
         this.indexesPathPlaceholder = ko.pureComputed(() => {
-            const name = this.resourceModel.name();
+            const name = this.databaseModel.name();
             return `~/${name || "{Database Name}"}/Indexes/`;
         });
 
@@ -65,13 +56,6 @@ class createDatabase extends createResourceBase {
                 bundle.validationGroup = undefined;
             }
         });
-
-        const encryptionConfig = this.databaseBundles.find(x => x.name === "Encryption");
-        encryptionConfig.validationGroup = this.resourceModel.encryptionValidationGroup;
-    }
-
-    advancedVisibility = {
-        encryption: ko.pureComputed(() => this.advancedBundleConfigurationVisible() === "Encryption")
     }
 
     getAvailableBundles() {
@@ -79,47 +63,46 @@ class createDatabase extends createResourceBase {
         return this.databaseBundles;
     }
 
-    createResource() {
-        eventsCollector.default.reportEvent('resource', 'create');
+    createDatabase() {
+        eventsCollector.default.reportEvent('database', 'create');
 
-        const globalValid = this.isValid(this.resourceModel.globalValidationGroup);
-        const advancedValid = this.isValid(this.resourceModel.advancedValidationGroup);
-        const encryptionValid = !this.bundlesEnabled.encryption() || this.isValid(this.resourceModel.encryptionValidationGroup);
+        const globalValid = this.isValid(this.databaseModel.globalValidationGroup);
+        const advancedValid = this.isValid(this.databaseModel.advancedValidationGroup);
 
-        const allValid = globalValid && advancedValid && encryptionValid;
+        const allValid = globalValid && advancedValid;
 
         if (allValid) {
-            this.createResourceInternal();
+            this.createDatabaseInternal();
         } else {
-            if (!advancedValid) {
-                if (!this.advancedConfigurationVisible()) {
-                    this.showAdvancedConfiguration();
-                }
-            } else if (!encryptionValid) {
-                if (!this.advancedVisibility.encryption()) {
-                    this.showAdvancedConfigurationFor("Encryption");   
-                }
+            if (!advancedValid && !this.advancedConfigurationVisible()) {
+                this.showAdvancedConfiguration();
             }
-            //TODO: iterate on invalid sections
         }
     }
 
-    private createResourceInternal() {
-        const databaseDocument = this.resourceModel.toDto();
+    showAdvancedConfiguration() {
+        this.advancedConfigurationVisible.toggle();
+    }
 
-        resourcesManager.default.activateAfterCreation(database.qualifier, databaseDocument.Id);
+    isBundleActive(name: string): boolean {
+        //TODO: implement me!
+        return true;
+    }
+
+    private createDatabaseInternal() {
+        const databaseDocument = this.databaseModel.toDto();
+
+        databasesManager.default.activateAfterCreation(databaseDocument.Id);
 
         new createDatabaseCommand(databaseDocument)
             .execute()
             .always(() => {
                 dialog.close(this);
             });
-
-        //TODO: issue requests for additional bundles configuration + show dialog about encryption configuration so user can save this 
     }
 
     private isBundleActiveComputed(bundleName: string) {
-        return ko.pureComputed(() => _.includes(this.resourceModel.activeBundles(), bundleName));
+        return ko.pureComputed(() => _.includes(this.databaseModel.activeBundles(), bundleName));
     }
 
 }

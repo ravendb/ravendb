@@ -2,11 +2,9 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Lucene.Net.Support;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -41,7 +39,7 @@ namespace SlowTests.MailingList
 
                       };
 
-                Sort(x => x.Price, SortOptions.NumericDouble);
+                Sort(x => x.Price, SortOptions.Numeric);
             }
         }
 
@@ -78,14 +76,14 @@ namespace SlowTests.MailingList
                             },
                             new Facet
                             {
-                                Name = "Price_Range",
+                                Name = "Price_D_Range",
                                 Mode = FacetMode.Ranges,
                                 Ranges = new List<string>
                                 {
-                                    "[NULL TO Dx0]",
-                                    "[Dx0.001 TO Dx0.999]",
-                                    "[Dx0.999 TO Dx1.999]",
-                                    "[Dx1.999 TO NULL]"
+                                    "[NULL TO 0]",
+                                    "[0.001 TO 0.999]",
+                                    "[0.999 TO 1.999]",
+                                    "[1.999 TO NULL]"
                                 }
                             }
                         }
@@ -101,7 +99,7 @@ namespace SlowTests.MailingList
                     var query = s.Query<Product>("Products/Stats");
                     var facetResults = query.ToFacets("facets/StatsFacet");
 
-                    var priceFacet = facetResults.Results["Price_Range"];
+                    var priceFacet = facetResults.Results["Price_D_Range"];
 
                     foreach (var val in priceFacet.Values)
                         Assert.NotEqual(0, val.Hits);

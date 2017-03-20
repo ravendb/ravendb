@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Operations.Databases.Collections;
+using Raven.Client;
+using Raven.Client.Documents.Operations;
 using Xunit;
 
 namespace FastTests.Server.Documents
 {
-    public class Collections : RavenNewTestBase
+    public class Collections : RavenTestBase
     {
         [Fact]
         public void CanSurviveRestart()
@@ -16,19 +16,19 @@ namespace FastTests.Server.Documents
             {
                 using (var commands = store.Commands())
                 {
-                    commands.Put("orders/1", null, new { }, new Dictionary<string, string>
+                    commands.Put("orders/1", null, new { }, new Dictionary<string, object>
                     {
-                        {Constants.Metadata.Collection, "Orders"}
+                        {Constants.Documents.Metadata.Collection, "Orders"}
                     });
 
-                    commands.Put("orders/2", null, new { }, new Dictionary<string, string>
+                    commands.Put("orders/2", null, new { }, new Dictionary<string, object>
                     {
-                        {Constants.Metadata.Collection, "orders"}
+                        {Constants.Documents.Metadata.Collection, "orders"}
                     });
 
-                    commands.Put("people/1", null, new { }, new Dictionary<string, string>
+                    commands.Put("people/1", null, new { }, new Dictionary<string, object>
                     {
-                        {Constants.Metadata.Collection, "People"}
+                        {Constants.Documents.Metadata.Collection, "People"}
                     });
 
                     var collectionStats = store.Admin.Send(new GetCollectionStatisticsOperation());

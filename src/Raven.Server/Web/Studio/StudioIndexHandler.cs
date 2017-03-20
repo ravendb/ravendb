@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Compilation;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Exceptions.Compilation;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;

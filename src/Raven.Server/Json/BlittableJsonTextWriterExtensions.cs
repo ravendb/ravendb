@@ -1,42 +1,77 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Data.Queries;
-using Raven.Client.Indexing;
-using Raven.Client.Replication.Messages;
+using Raven.Client;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Documents.Transformers;
+using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Utils;
+using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Data.BTrees;
 
 namespace Raven.Server.Json
 {
-    public static class BlittableJsonTextWriterExtensions
+    internal static class BlittableJsonTextWriterExtensions
     {
-        public static void WriteChangeVector(this BlittableJsonTextWriter writer, JsonOperationContext context,
-            ChangeVectorEntry[] changeVector)
+        public static void WriteChangeVector(this BlittableJsonTextWriter writer, ChangeVectorEntry[] changeVector)
         {
+            if (changeVector == null)
+            {
+                writer.WriteStartArray();
+                writer.WriteEndArray();
+                return;
+            }
+
             writer.WriteStartArray();
+            var first = true;
+
             for (int i = 0; i < changeVector.Length; i++)
             {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
                 var entry = changeVector[i];
-                writer.WriteChangeVectorEntry(context, entry);
-                writer.WriteComma();
+                writer.WriteChangeVectorEntry(entry);
             }
             writer.WriteEndArray();
         }
 
-        public static void WriteChangeVectorEntry(this BlittableJsonTextWriter writer, JsonOperationContext context, ChangeVectorEntry entry)
+        public static void WritePerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<IndexPerformanceStats> stats)
+        {
+            writer.WriteArray(context, stats, (w, c, stat) =>
+            {
+                w.WriteStartObject();
+
+                w.WritePropertyName(nameof(stat.IndexName));
+                w.WriteString(stat.IndexName);
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(stat.IndexId));
+                w.WriteInteger(stat.IndexId);
+                w.WriteComma();
+
+                w.WritePropertyName(nameof(stat.Performance));
+                w.WriteArray(c, stat.Performance, (wp, cp, performance) => { wp.WriteIndexingPerformanceStats(context, performance); });
+
+                w.WriteEndObject();
+            });
+        }
+
+        public static void WriteChangeVectorEntry(this BlittableJsonTextWriter writer, ChangeVectorEntry entry)
         {
             writer.WriteStartObject();
 
@@ -259,7 +294,7 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             var type = typeof(T);
-            if (type == typeof(Document))
+            if (type == typeof(List<Document>))
             {
                 writer.WritePropertyName(nameof(result.Results));
                 writer.WriteDocuments(context, (List<Document>)(object)result.Results, metadataOnly);
@@ -269,7 +304,7 @@ namespace Raven.Server.Json
                 writer.WriteDocuments(context, (List<Document>)(object)result.Includes, metadataOnly);
                 writer.WriteComma();
             }
-            else if (type == typeof(BlittableJsonReaderObject))
+            else if (type == typeof(List<BlittableJsonReaderObject>))
             {
                 writer.WritePropertyName(nameof(result.Results));
                 writer.WriteObjects(context, (List<BlittableJsonReaderObject>)(object)result.Results);
@@ -467,7 +502,9 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName((nameof(query.WaitForNonStaleResultsTimeout)));
             if (query.WaitForNonStaleResultsTimeout.HasValue)
-                writer.WriteString((query.WaitForNonStaleResultsTimeout.Value.ToString()));
+                writer.WriteString(query.WaitForNonStaleResultsTimeout.Value.ToString());
+            else
+                writer.WriteNull();
             writer.WriteComma();
 
             writer.WritePropertyName((nameof(query.DynamicMapReduceFields)));
@@ -647,6 +684,10 @@ namespace Raven.Server.Json
                 writer.WriteComma();
             }
 
+            writer.WritePropertyName((nameof(statistics.CountOfAttachments)));
+            writer.WriteInteger(statistics.CountOfAttachments);
+            writer.WriteComma();
+
             writer.WritePropertyName((nameof(statistics.CountOfTransformers)));
             writer.WriteInteger(statistics.CountOfTransformers);
             writer.WriteComma();
@@ -657,6 +698,10 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName((nameof(statistics.Is64Bit)));
             writer.WriteBool(statistics.Is64Bit);
+            writer.WriteComma();
+
+            writer.WritePropertyName((nameof(statistics.Pager)));
+            writer.WriteString(statistics.Pager);
             writer.WriteComma();
 
             writer.WritePropertyName((nameof(statistics.LastDocEtag)));
@@ -699,6 +744,10 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName((nameof(index.LockMode)));
                 writer.WriteString((index.LockMode.ToString()));
+                writer.WriteComma();
+
+                writer.WritePropertyName((nameof(index.Priority)));
+                writer.WriteString((index.Priority.ToString()));
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(index.State));
@@ -764,8 +813,22 @@ namespace Raven.Server.Json
             writer.WriteString((indexDefinition.Type.ToString()));
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.LockMode)));
-            writer.WriteString((indexDefinition.LockMode.ToString()));
+            writer.WritePropertyName(nameof(indexDefinition.LockMode));
+            if (indexDefinition.LockMode.HasValue)
+                writer.WriteString(indexDefinition.LockMode.ToString());
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(indexDefinition.Priority));
+            if (indexDefinition.Priority.HasValue)
+                writer.WriteString(indexDefinition.Priority.ToString());
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
+            writer.WritePropertyName((nameof(indexDefinition.OutputReduceToCollection)));
+            writer.WriteString((indexDefinition.OutputReduceToCollection));
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.Configuration));
@@ -782,10 +845,6 @@ namespace Raven.Server.Json
                 writer.WriteString(kvp.Value);
             }
             writer.WriteEndObject();
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(indexDefinition.IsSideBySideIndex)));
-            writer.WriteBool(indexDefinition.IsSideBySideIndex);
             writer.WriteComma();
 
             writer.WritePropertyName((nameof(indexDefinition.IsTestIndex)));
@@ -969,22 +1028,22 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName((nameof(options.Spatial.MaxX)));
                 LazyStringValue lazyStringValue;
-                using (lazyStringValue = context.GetLazyString(options.Spatial.MaxX.ToInvariantString()))
+                using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MaxX)))
                     writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 
                 writer.WritePropertyName((nameof(options.Spatial.MaxY)));
-                using (lazyStringValue = context.GetLazyString(options.Spatial.MaxY.ToInvariantString()))
+                using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MaxY)))
                     writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 
                 writer.WritePropertyName((nameof(options.Spatial.MinX)));
-                using (lazyStringValue = context.GetLazyString(options.Spatial.MinX.ToInvariantString()))
+                using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MinX)))
                     writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 
                 writer.WritePropertyName((nameof(options.Spatial.MinY)));
-                using (lazyStringValue = context.GetLazyString(options.Spatial.MinY.ToInvariantString()))
+                using (lazyStringValue = context.GetLazyString(CharExtensions.ToInvariantString(options.Spatial.MinY)))
                     writer.WriteDouble(new LazyDoubleValue(lazyStringValue));
                 writer.WriteComma();
 
@@ -1074,15 +1133,15 @@ namespace Raven.Server.Json
 
             writer.WriteStartObject();
             BlittableJsonReaderObject metadata;
-            document.Data.TryGet(Constants.Metadata.Key, out metadata);
+            document.Data.TryGet(Constants.Documents.Metadata.Key, out metadata);
             WriteMetadata(writer, document, metadata);
 
             writer.WriteEndObject();
         }
 
-        private static void WriteMetadata(BlittableJsonTextWriter writer, Document document, BlittableJsonReaderObject metadata)
+        public static void WriteMetadata(this BlittableJsonTextWriter writer, Document document, BlittableJsonReaderObject metadata)
         {
-            writer.WritePropertyName(Constants.Metadata.Key);
+            writer.WritePropertyName(Constants.Documents.Metadata.Key);
             writer.WriteStartObject();
             bool first = true;
             if (metadata != null)
@@ -1102,59 +1161,84 @@ namespace Raven.Server.Json
                     writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                 }
             }
+
+            if (first == false)
+            {
+                writer.WriteComma();
+            }
+            writer.WritePropertyName(Constants.Documents.Metadata.ChangeVector);
+            writer.WriteChangeVector(document.ChangeVector);
+            first = false;
+
             if (document.Flags != DocumentFlags.None)
             {
-                if (first == false)
+                writer.WriteComma();
+                writer.WritePropertyName(Constants.Documents.Metadata.Flags);
+                writer.WriteString(document.Flags.ToString());
+
+                if ((document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                 {
                     writer.WriteComma();
+                    writer.WriteAttachments(document.Attachments);
                 }
-                first = false;
-                writer.WritePropertyName(Constants.Metadata.Flags);
-                writer.WriteString(document.Flags.ToString());
             }
             if (document.Etag != 0)
             {
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
-                writer.WritePropertyName(Constants.Metadata.Etag);
+                writer.WriteComma();
+                writer.WritePropertyName(Constants.Documents.Metadata.Etag);
                 writer.WriteInteger(document.Etag);
             }
             if (document.Key != null)
             {
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
-                writer.WritePropertyName(Constants.Metadata.Id);
+                writer.WriteComma();
+                writer.WritePropertyName(Constants.Documents.Metadata.Id);
                 writer.WriteString(document.Key);
 
             }
             if (document.IndexScore != null)
             {
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
-                writer.WritePropertyName(Constants.Metadata.IndexScore);
+                writer.WriteComma();
+                writer.WritePropertyName(Constants.Documents.Metadata.IndexScore);
                 writer.WriteDouble(document.IndexScore.Value);
             }
             if (document.LastModified != DateTime.MinValue)
             {
-                if (first == false)
-                {
-                    writer.WriteComma();
-                }
-                first = false;
-                writer.WritePropertyName(Constants.Metadata.LastModified);
+                writer.WriteComma();
+                writer.WritePropertyName(Constants.Documents.Metadata.LastModified);
                 writer.WriteString(document.LastModified.GetDefaultRavenFormat());
             }
             writer.WriteEndObject();
         }
+
+        private static unsafe void WriteAttachments(this BlittableJsonTextWriter writer, IEnumerable<Attachment> attachments)
+        {
+            writer.WritePropertyName(Constants.Documents.Metadata.Attachments);
+
+            writer.WriteStartArray();
+
+            var first = true;
+            foreach (var attachment in attachments)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(AttachmentResult.Name));
+                writer.WriteString(attachment.Name);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(AttachmentResult.Hash));
+                writer.WriteRawStringWhichMustBeWithoutEscapeChars(attachment.Base64Hash.Content.Ptr, attachment.Base64Hash.Size);
+
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+        }
+
+        private static readonly StringSegment MetadataKeySegment = new StringSegment(Constants.Documents.Metadata.Key);
 
         public static void WriteDocument(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
         {
@@ -1163,7 +1247,7 @@ namespace Raven.Server.Json
 
             writer.WriteStartObject();
 
-            var metadataField = context.GetLazyStringForFieldWithCaching(Constants.Metadata.Key);
+            var metadataField = context.GetLazyStringForFieldWithCaching(MetadataKeySegment);
             bool first = true;
             BlittableJsonReaderObject metadata = null;
             var size = document.Data.GetPropertiesByInsertionOrder(_buffers);
@@ -1364,5 +1448,21 @@ namespace Raven.Server.Json
 
             writer.WriteEndArray();
         }
+
+        public static void WriteArray(this BlittableJsonTextWriter writer, IEnumerable<LazyStringValue> items)
+        {
+            writer.WriteStartArray();
+            var first = true;
+            foreach (var item in items)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WriteString(item);
+            }
+            writer.WriteEndArray();
+        }
+
     }
 }

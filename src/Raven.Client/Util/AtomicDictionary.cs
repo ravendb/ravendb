@@ -4,53 +4,48 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Util;
 
 namespace Raven.Client.Util
 {
-    public class AtomicDictionary<TVal> : IEnumerable<KeyValuePair<string, TVal>>
+    internal class AtomicDictionary<TVal> : IEnumerable<KeyValuePair<string, TVal>>
     {
-        private readonly ConcurrentDictionary<string, object> locks;
-        private readonly ConcurrentDictionary<string, TVal> items;
-        private readonly EasyReaderWriterLock globalLocker = new EasyReaderWriterLock();
-        private List<TVal> snapshot;
-        private long snapshotVersion;
-        private long version;
+        private readonly ConcurrentDictionary<string, object> _locks;
+        private readonly ConcurrentDictionary<string, TVal> _items;
+        private readonly EasyReaderWriterLock _globalLocker = new EasyReaderWriterLock();
+        private List<TVal> _snapshot;
+        private long _snapshotVersion;
+        private long _version;
         private static readonly string NullValue = "Null Replacement: " + Guid.NewGuid();
 
         public AtomicDictionary()
         {
-            items = new ConcurrentDictionary<string, TVal>();
-            locks = new ConcurrentDictionary<string, object>();
+            _items = new ConcurrentDictionary<string, TVal>();
+            _locks = new ConcurrentDictionary<string, object>();
         }
 
         public AtomicDictionary(IEqualityComparer<string> comparer)
         {
-            items = new ConcurrentDictionary<string, TVal>(comparer);
-            locks = new ConcurrentDictionary<string, object>(comparer);
+            _items = new ConcurrentDictionary<string, TVal>(comparer);
+            _locks = new ConcurrentDictionary<string, object>(comparer);
         }
 
-        public IEnumerable<TVal> Values
-        {
-            get { return items.Values; }
-        }
+        public IEnumerable<TVal> Values => _items.Values;
 
         public TVal GetOrAdd(string key, Func<string, TVal> valueGenerator)
         {
-            using (globalLocker.EnterReadLock())
+            using (_globalLocker.EnterReadLock())
             {
                 var actualGenerator = valueGenerator;
                 if (key == null)
                     actualGenerator = s => valueGenerator(null);
                 key = key ?? NullValue;
                 TVal val;
-                if (items.TryGetValue(key, out val))
+                if (_items.TryGetValue(key, out val))
                     return val;
-                lock (locks.GetOrAdd(key, new object()))
+                lock (_locks.GetOrAdd(key, new object()))
                 {
-                    var result = items.GetOrAdd(key, actualGenerator);
-                    Interlocked.Increment(ref version);
+                    var result = _items.GetOrAdd(key, actualGenerator);
+                    Interlocked.Increment(ref _version);
                     return result;
                 }
             }
@@ -60,21 +55,21 @@ namespace Raven.Client.Util
         {
             get
             {
-                var currentVersion = Interlocked.Read(ref version);
-                if (currentVersion != snapshotVersion || snapshot == null)
+                var currentVersion = Interlocked.Read(ref _version);
+                if (currentVersion != _snapshotVersion || _snapshot == null)
                 {
-                    snapshot = items.Values.ToList();
-                    snapshotVersion = currentVersion;
+                    _snapshot = _items.Values.ToList();
+                    _snapshotVersion = currentVersion;
                 }
-                return snapshot;
+                return _snapshot;
             }
         }
 
         public IDisposable WithLockFor(string key)
         {
-            using (globalLocker.EnterReadLock())
+            using (_globalLocker.EnterReadLock())
             {
-                var locker = locks.GetOrAdd(key, new object());
+                var locker = _locks.GetOrAdd(key, new object());
                 var release = new DisposableAction(() => Monitor.Exit(locker));
                 Monitor.Enter(locker);
                 return release;
@@ -83,45 +78,45 @@ namespace Raven.Client.Util
 
         public void Set(string key, Func<string, TVal> valueGenerator)
         {
-            using (globalLocker.EnterReadLock())
+            using (_globalLocker.EnterReadLock())
             {
                 key = key ?? NullValue;
-                lock (locks.GetOrAdd(key, new object()))
+                lock (_locks.GetOrAdd(key, new object()))
                 {
                     var addValue = valueGenerator(key);
-                    items.AddOrUpdate(key, addValue, (s, val) => addValue);
-                    Interlocked.Increment(ref version);
+                    _items.AddOrUpdate(key, addValue, (s, val) => addValue);
+                    Interlocked.Increment(ref _version);
                 }
             }
         }
 
         public void Remove(string key)
         {
-            using (globalLocker.EnterReadLock())
+            using (_globalLocker.EnterReadLock())
             {
                 key = key ?? NullValue;
                 object value;
-                if (locks.TryGetValue(key, out value) == false)
+                if (_locks.TryGetValue(key, out value) == false)
                 {
                     TVal val;
-                    items.TryRemove(key, out val); // just to be on the safe side
-                    Interlocked.Increment(ref version);
+                    _items.TryRemove(key, out val); // just to be on the safe side
+                    Interlocked.Increment(ref _version);
                     return;
                 }
                 lock (value)
                 {
                     object o;
-                    locks.TryRemove(key, out o);
+                    _locks.TryRemove(key, out o);
                     TVal val;
-                    items.TryRemove(key, out val);
-                    Interlocked.Increment(ref version);
+                    _items.TryRemove(key, out val);
+                    Interlocked.Increment(ref _version);
                 }
             }
         }
 
         public IEnumerator<KeyValuePair<string, TVal>> GetEnumerator()
         {
-            return items.GetEnumerator();
+            return _items.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -131,38 +126,38 @@ namespace Raven.Client.Util
 
         public void Clear()
         {
-            items.Clear();
-            locks.Clear();
+            _items.Clear();
+            _locks.Clear();
 
-            Interlocked.Increment(ref version);
+            Interlocked.Increment(ref _version);
         }
 
         public bool TryGetValue(string key, out TVal val)
         {
-            return items.TryGetValue(key, out val);
+            return _items.TryGetValue(key, out val);
         }
 
         public bool TryRemove(string key, out TVal val)
         {
-            using (globalLocker.EnterReadLock())
+            using (_globalLocker.EnterReadLock())
             {
-                var result = items.TryRemove(key, out val);
+                var result = _items.TryRemove(key, out val);
                 object value;
-                locks.TryRemove(key, out value);
+                _locks.TryRemove(key, out value);
 
-                Interlocked.Increment(ref version);
+                Interlocked.Increment(ref _version);
                 return result;
             }
         }
 
         public IDisposable WithAllLocks()
         {
-            return globalLocker.EnterWriteLock();
+            return _globalLocker.EnterWriteLock();
         }
 
         public IDisposable TryWithAllLocks()
         {
-            return globalLocker.TryEnterWriteLock(TimeSpan.FromSeconds(3));
+            return _globalLocker.TryEnterWriteLock(TimeSpan.FromSeconds(3));
         }
     }
 }

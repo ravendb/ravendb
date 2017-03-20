@@ -1,14 +1,13 @@
 using System;
 using FastTests;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Operations.Databases.Documents;
+using Raven.Client.Documents.Operations;
 using Sparrow.Json;
 using Xunit;
 using Post = SlowTests.Core.Utils.Entities.Post;
 
 namespace SlowTests.Core.Commands
 {
-    public class Patching : RavenNewTestBase
+    public class Patching : RavenTestBase
     {
         [Fact]
         public void CanDoScriptedPatching()
@@ -148,7 +147,7 @@ namespace SlowTests.Core.Commands
                         skipPatchIfEtagMismatch: false,
                         returnDebugInformation: true);
 
-                    commands.RequestExecuter.Execute(command, commands.Context);
+                    commands.RequestExecutor.Execute(command, commands.Context);
 
                     var commandResult = command.Result;
                     var array = (BlittableJsonReaderArray)commandResult.Debug["Info"];
@@ -202,7 +201,7 @@ namespace SlowTests.Core.Commands
                         skipPatchIfEtagMismatch: false,
                         returnDebugInformation: true);
 
-                    commands.RequestExecuter.Execute(command, commands.Context);
+                    commands.RequestExecutor.Execute(command, commands.Context);
 
                     var result = command.Result;
                     var array = (BlittableJsonReaderArray)result.Debug["Info"];
@@ -232,7 +231,7 @@ namespace SlowTests.Core.Commands
                         skipPatchIfEtagMismatch: false,
                         returnDebugInformation: true);
 
-                    commands.RequestExecuter.Execute(command, commands.Context);
+                    commands.RequestExecutor.Execute(command, commands.Context);
 
                     result = command.Result;
                     array = (BlittableJsonReaderArray)result.Debug["Info"];

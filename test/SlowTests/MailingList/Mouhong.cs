@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -110,7 +110,7 @@ namespace SlowTests.MailingList
                                };
 
                 //Index(x => x.Weight, Raven.Abstractions.Indexing.FieldIndexing.NotAnalyzed);
-                Sort(x => x.Weight, Raven.Abstractions.Indexing.SortOptions.NumericDouble);
+                Sort(x => x.Weight, SortOptions.Numeric);
             }
         }
     }

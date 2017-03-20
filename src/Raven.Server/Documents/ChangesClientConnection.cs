@@ -5,9 +5,9 @@ using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Client.Data;
+using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Util;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -23,7 +23,9 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _documentDatabase;
         private readonly AsyncQueue<ChangeValue> _sendQueue = new AsyncQueue<ChangeValue>();
 
-        private readonly CancellationTokenSource _disposeToken = new CancellationTokenSource();
+        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+        private readonly CancellationToken _disposeToken;
+
         private readonly DateTime _startedAt;
 
         private readonly ConcurrentSet<string> _matchingIndexes =
@@ -60,6 +62,7 @@ namespace Raven.Server.Documents
             _webSocket = webSocket;
             _documentDatabase = documentDatabase;
             _startedAt = SystemTime.UtcNow;
+            _disposeToken = _cts.Token;
         }
 
         public long Id = Interlocked.Increment(ref _counter);
@@ -146,6 +149,31 @@ namespace Raven.Server.Documents
             Interlocked.Decrement(ref _watchAllTransformers);
         }
 
+
+        private static bool HasItemStartingWith(ConcurrentSet<string> set, string value)
+        {
+            if (set.Count == 0)
+                return false;
+            foreach (string item in set)
+            {
+                if (value.StartsWith(item, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool HasItemEqualsTo(ConcurrentSet<string> set, string value)
+        {
+            if (set.Count == 0)
+                return false;
+            foreach (string item in set)
+            {
+                if (value.Equals(item, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
         public void SendDocumentChanges(DocumentChange change)
         {
             // this is a precaution, in order to overcome an observed race condition between change client disconnection and raising changes
@@ -163,24 +191,21 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            var hasPrefix = change.Key != null && _matchingDocumentPrefixes
-                .Any(x => change.Key.StartsWith(x, StringComparison.OrdinalIgnoreCase));
+            var hasPrefix = change.Key != null && HasItemStartingWith(_matchingDocumentPrefixes, change.Key);
             if (hasPrefix)
             {
                 Send(change);
                 return;
             }
 
-            var hasCollection = change.CollectionName != null && _matchingDocumentsInCollection
-                .Any(x => string.Equals(x, change.CollectionName, StringComparison.OrdinalIgnoreCase));
+            var hasCollection = change.CollectionName != null && HasItemEqualsTo(_matchingDocumentsInCollection, change.CollectionName);
             if (hasCollection)
             {
                 Send(change);
                 return;
             }
 
-            var hasType = change.TypeName != null && _matchingDocumentsOfType
-                .Any(x => string.Equals(x, change.TypeName, StringComparison.OrdinalIgnoreCase));
+            var hasType = change.TypeName != null && HasItemEqualsTo(_matchingDocumentsOfType, change.TypeName);
             if (hasType)
             {
                 Send(change);
@@ -302,7 +327,7 @@ namespace Raven.Server.Documents
             Interlocked.Decrement(ref _watchAllOperations);
         }
 
-        public void SendOperationStatusChangeNotification(OperationStatusChanged change)
+        public void SendOperationStatusChangeNotification(OperationStatusChange change)
         {
             if (_watchAllOperations > 0)
             {
@@ -316,15 +341,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void Send(OperationStatusChanged change)
+        private void Send(OperationStatusChange change)
         {
             var value = new DynamicJsonValue
             {
-                ["Type"] = "OperationStatusChanged",
+                ["Type"] = "OperationStatusChange",
                 ["Value"] = new DynamicJsonValue
                 {
-                    [nameof(OperationStatusChanged.OperationId)] = (int)change.OperationId,
-                    [nameof(OperationStatusChanged.State)] = change.State.ToJson()
+                    [nameof(OperationStatusChange.OperationId)] = (int)change.OperationId,
+                    [nameof(OperationStatusChange.State)] = change.State.ToJson()
                 },
             };
 
@@ -356,13 +381,8 @@ namespace Raven.Server.Documents
                             do
                             {
                                 var value = await GetNextMessage(throttleConnection);
-                                if (_disposeToken.IsCancellationRequested)
+                                if (value == null || _disposeToken.IsCancellationRequested)
                                     break;
-
-                                if (value == null)
-                                {
-                                    break;
-                                }
 
                                 context.Write(writer, value);
                                 writer.WriteNewLine();
@@ -370,6 +390,10 @@ namespace Raven.Server.Documents
                                     break;
                             } while (_sendQueue.Count > 0 && sp.Elapsed < TimeSpan.FromSeconds(5));
                         }
+
+                        if (_disposeToken.IsCancellationRequested)
+                            break;
+
                         if (ms.Length == 0)
                         {
                             // ensure that we send _something_ over the network, to keep the 
@@ -380,7 +404,7 @@ namespace Raven.Server.Documents
 
                         ArraySegment<byte> bytes;
                         ms.TryGetBuffer(out bytes);
-                        await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _disposeToken.Token);
+                        await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _disposeToken);
                     }
                 }
             }
@@ -421,8 +445,13 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             Interlocked.Exchange(ref _isDisposed, 1);
-            _disposeToken.Cancel();
-            _sendQueue.Dispose();
+            _cts.Cancel();
+            _sendQueue.Enqueue(new ChangeValue
+            {
+                AllowSkip = false,
+                ValueToSend = null
+            });
+            _cts.Dispose();
         }
 
         public void Confirm(int commandId)

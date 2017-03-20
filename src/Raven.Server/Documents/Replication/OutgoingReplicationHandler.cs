@@ -2,28 +2,27 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Exceptions.Database;
+using Raven.Client.Http.OAuth;
+using Raven.Client.Server;
+using Raven.Client.Server.Commands;
+using Raven.Client.Server.Tcp;
+using Raven.Client.Util;
 using Raven.Server.Json;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client.Document;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using System.Net.Http;
-using Raven.Abstractions.Connection;
-using Raven.Client.Connection;
-using Raven.Client.Extensions;
-using Raven.Client.Replication.Messages;
-using Raven.Json.Linq;
-using Raven.NewClient.Client.Exceptions.Database;
-using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Utils;
 using Sparrow;
 
 namespace Raven.Server.Documents.Replication
@@ -37,11 +36,15 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private readonly AsyncManualResetEvent _waitForChanges = new AsyncManualResetEvent();
         private readonly CancellationTokenSource _cts;
+        private readonly ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();
         private Thread _sendingThread;
         internal readonly DocumentReplicationLoader _parent;
         internal long _lastSentDocumentEtag;
         public long LastAcceptedDocumentEtag;
         internal long _lastSentIndexOrTransformerEtag;
+
+        internal ReplicationStatistics.OutgoingBatchStats OutgoingStats = new ReplicationStatistics.OutgoingBatchStats();
+        internal ReplicationStatistics ReplicationStats;
 
         internal DateTime _lastDocumentSentTime;
         internal DateTime _lastIndexOrTransformerSentTime;
@@ -65,7 +68,7 @@ namespace Raven.Server.Documents.Replication
         internal string DestinationDbId;
 
         public long LastHeartbeatTicks;
-        private NetworkStream _stream;
+        private Stream _stream;
         private InterruptibleRead _interruptableRead;
 
         public event Action<OutgoingReplicationHandler, Exception> Failed;
@@ -84,6 +87,7 @@ namespace Raven.Server.Documents.Replication
             _database.Changes.OnIndexChange += OnIndexChange;
             _database.Changes.OnTransformerChange += OnTransformerChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
+            ReplicationStats = _parent.RepliactionStats;
         }
 
         public void Start()
@@ -96,46 +100,20 @@ namespace Raven.Server.Documents.Replication
             _sendingThread.Start();
         }
 
-        private TcpConnectionInfo GetTcpInfo()
-        {
-            var convention = new DocumentConvention();
-            //since we use it only once when the connection is initialized, no reason to keep requestFactory around for long
-            using (var requestFactory = new HttpJsonRequestFactory(1))
-            using (
-                var request =
-                    requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
-                        string.Format("{0}/info/tcp",
-                            MultiDatabase.GetRootDatabaseUrl(_destination.Url)),
-                        HttpMethod.Get,
-                        new OperationCredentials(_destination.ApiKey, CredentialCache.DefaultCredentials), convention)
-                    {
-                        Timeout = TimeSpan.FromSeconds(15)
-                    }))
-            {
-
-                var result = request.ReadResponseJson();
-                var tcpConnectionInfo =
-                    convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
-                if (_log.IsInfoEnabled)
-                {
-                    _log.Info(
-                        $"Will replicate to {_destination.Database} @ {_destination.Url} via {tcpConnectionInfo.Url}");
-                }
-                return tcpConnectionInfo;
-            }
-        }
-
         private void ReplicateToDestination()
         {
             try
             {
-                var connectionInfo = GetTcpInfo();
+                var connectionInfo = ReplicationUtils.GetTcpInfo(MultiDatabase.GetRootDatabaseUrl(_destination.Url), _destination.Database, _destination.ApiKey);
+
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Will replicate to {_destination.Database} @ {_destination.Url} via {connectionInfo.Url}");
 
                 using (_tcpClient = new TcpClient())
                 {
                     ConnectSocket(connectionInfo, _tcpClient);
 
-                    using (_stream = _tcpClient.GetStream())
+                    using (_stream = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo).Result)
                     using (_interruptableRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
                     using (_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                     {
@@ -143,7 +121,6 @@ namespace Raven.Server.Documents.Replication
                         var indexAndTransformerSender = new ReplicationIndexTransformerSender(_stream, this, _log);
 
                         WriteHeaderToRemotePeer();
-
                         //handle initial response to last etag and staff
                         try
                         {
@@ -155,13 +132,13 @@ namespace Raven.Server.Documents.Replication
                                         new InvalidOperationException(response.Item2.Exception));
                                 throw new InvalidOperationException(response.Item2.Exception);
                             }
-                            
+
                             if (response.Item1 == ReplicationMessageReply.ReplyType.Ok)
                             {
                                 _parent.UpdateReplicationDocumentWithResolver(
-                                    response.Item2.ResolverId, 
+                                    response.Item2.ResolverId,
                                     response.Item2.ResolverVersion);
-                            }                          
+                            }
                         }
                         catch (DatabaseDoesNotExistException e)
                         {
@@ -272,7 +249,7 @@ namespace Raven.Server.Documents.Replication
                 _database.NotificationCenter.AddAfterTransactionCommit(
                     AlertRaised.Create(AlertTitle, msg, AlertType.Replication, NotificationSeverity.Warning, key: FromToString, details: new ExceptionDetails(e)),
                     txw);
-                
+
                 txw.Commit();
             }
         }
@@ -283,15 +260,18 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
+                var token = AsyncHelpers.RunSync(() => _authenticator.GetAuthenticationTokenAsync(_destination.ApiKey, _destination.Url, documentsContext));
                 //send initial connection information
                 documentsContext.Write(writer, new DynamicJsonValue
                 {
                     [nameof(TcpConnectionHeaderMessage.DatabaseName)] = _destination.Database,
                     [nameof(TcpConnectionHeaderMessage.Operation)] =
                     TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
+                    [nameof(TcpConnectionHeaderMessage.AuthorizationToken)] = token
                 });
-
-              //start request/response for fetching last etag
+                writer.Flush();
+                ReadHeaderResponseAndThrowIfUnAuthorized();
+                //start request/response for fetching last etag
                 var request = new DynamicJsonValue
                 {
                     ["Type"] = "GetLastEtag",
@@ -308,12 +288,42 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private void ReadHeaderResponseAndThrowIfUnAuthorized()
+        {
+            var timeout = 2 * 60 * 1000; // TODO: configurable
+            using (var replicationTcpConnectReplyMessage = _interruptableRead.ParseToMemory(
+                _connectionDisposed,
+                "replication acknowledge response",
+                timeout,
+                _buffer,
+                CancellationToken))
+            {
+                if (replicationTcpConnectReplyMessage.Timeout)
+                {
+                    ThrowTimeout(timeout);
+                }
+                if (replicationTcpConnectReplyMessage.Interrupted)
+                {
+                    ThrowConnectionClosed();
+                }
+                var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(replicationTcpConnectReplyMessage.Document);
+                switch (headerResponse.Status)
+                {
+                    case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
+                        //All good nothing to do
+                        break;
+                    default:
+                        throw new UnauthorizedAccessException($"{_destination.Url}/{_destination.Database} replied with failure {headerResponse.Status}");
+                }
+            }
+        }
+
         private bool WaitForChanges(int timeout, CancellationToken token)
         {
             while (true)
             {
                 using (var result = _interruptableRead.ParseToMemory(
-                    _waitForChanges, 
+                    _waitForChanges,
                     "replication notify message",
                     timeout,
                     _buffer,
@@ -404,8 +414,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private string FromToString => $"from {_database.ResourceName} to {_destination.Database} at {_destination.Url}"
-            ;
+        public string FromToString => $"from {_database.ResourceName} to {_destination.Database} at {_destination.Url}";
 
         public ReplicationDestination Destination => _destination;
 
@@ -418,13 +427,13 @@ namespace Raven.Server.Documents.Replication
                 try
                 {
                     var heartbeat = new DynamicJsonValue
-                {
-                    [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Heartbeat,
-                    [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastSentDocumentEtag,
-                    [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _lastSentIndexOrTransformerEtag,
-                    [nameof(ReplicationMessageHeader.ItemCount)] = 0
-                };
-                documentsContext.Write(writer, heartbeat);
+                    {
+                        [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Heartbeat,
+                        [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastSentDocumentEtag,
+                        [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _lastSentIndexOrTransformerEtag,
+                        [nameof(ReplicationMessageHeader.ItemsCount)] = 0
+                    };
+                    documentsContext.Write(writer, heartbeat);
                     writer.Flush();
                 }
                 catch (Exception e)
@@ -436,7 +445,7 @@ namespace Raven.Server.Documents.Replication
 
                 try
                 {
-                    HandleServerResponse();                
+                    HandleServerResponse();
                 }
                 catch (Exception e)
                 {
@@ -455,7 +464,7 @@ namespace Raven.Server.Documents.Replication
                 using (var replicationBatchReplyMessage = _interruptableRead.ParseToMemory(
                     _connectionDisposed,
                     "replication acknowledge message",
-                    timeout, 
+                    timeout,
                     _buffer,
                     CancellationToken))
                 {
@@ -552,12 +561,22 @@ namespace Raven.Server.Documents.Replication
             {
                 tcpClient.ConnectAsync(host, port).Wait(CancellationToken);
             }
-            catch (SocketException e)
+            catch (AggregateException ae) when (ae.InnerException is SocketException)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info(
-                        $"Failed to connect to remote replication destination {connection.Url}. Socket Error Code = {e.SocketErrorCode}",
-                        e);
+                        $"Failed to connect to remote replication destination {connection.Url}. Socket Error Code = {((SocketException) ae.InnerException).SocketErrorCode}",
+                        ae.InnerException);
+                throw;
+            }
+            catch (AggregateException ae) when (ae.InnerException is OperationCanceledException)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info(
+                        $@"Tried to connect to remote replication destination {connection.Url}, but the operation was aborted. 
+                            This is not necessarily an issue, it might be that replication destination document has changed at 
+                            the same time we tried to connect. We will try to reconnect later.",
+                        ae.InnerException);
                 throw;
             }
             catch (OperationCanceledException e)
@@ -625,7 +644,7 @@ namespace Raven.Server.Documents.Replication
             _database.Changes.OnTransformerChange -= OnTransformerChange;
 
             _cts.Cancel();
-          
+
             try
             {
                 _tcpClient?.Dispose();
@@ -638,6 +657,8 @@ namespace Raven.Server.Documents.Replication
             {
                 _sendingThread?.Join();
             }
+
+            _cts.Dispose();
         }
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);

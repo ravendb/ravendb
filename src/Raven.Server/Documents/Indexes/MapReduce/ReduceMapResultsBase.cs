@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
@@ -17,7 +18,6 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
-using Raven.Client.Data.Indexes;
 using Voron.Data.Compression;
 using Voron.Global;
 
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 });
         }
 
-        public string Name => "Reduce";
+        public string Name { get; } = "Reduce";
 
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation,
                             IndexingStatsScope stats, CancellationToken token)
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return false;
         }
 
-        public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
+        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, long currentEtag, long maxEtag)
         {
             throw new NotSupportedException();
         }
@@ -485,19 +485,20 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 var pageNumber = Bits.SwapBytes(modifiedPage);
                 var numberOfOutputs = result.Count;
 
-                var tvb = new TableValueBuilder
+                TableValueBuilder tvb;
+                using (table.Allocate(out tvb))
                 {
-                    pageNumber,
-                    aggregatedEntries,
-                    numberOfOutputs
-                };
+                    tvb.Add(pageNumber);
+                    tvb.Add(aggregatedEntries);
+                    tvb.Add(numberOfOutputs);
 
-                foreach (var output in result.GetOutputsToStore())
-                {
-                    tvb.Add(output.BasePointer, output.Size);
+                    foreach (var output in result.GetOutputsToStore())
+                    {
+                        tvb.Add(output.BasePointer, output.Size);
+                    }
+
+                    table.Set(tvb);
                 }
-
-                table.Set(tvb);
             }
         }
 

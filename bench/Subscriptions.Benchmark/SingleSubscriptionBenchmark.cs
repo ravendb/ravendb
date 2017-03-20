@@ -1,18 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Json.Linq;
+using Newtonsoft.Json.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Subscriptions;
 
 namespace SubscriptionsBenchmark
 {
-
-    public class CounterObserver : IObserver<RavenJObject>
+    public class CounterObserver : IObserver<object>
     {
         public int MaxCount { get; private set; }
         public int CurCount { get; private set; }
@@ -42,10 +38,10 @@ namespace SubscriptionsBenchmark
         public void OnError(Exception error)
         {
             //if (string.Compare(error.Message, "Stream was not writable.", StringComparison.Ordinal)!= 0)
-                Console.WriteLine(error);
+            Console.WriteLine(error);
         }
 
-        public void OnNext(RavenJObject value)
+        public void OnNext(object value)
         {
             if (Tcs.Task.IsCompleted)
                 return;
@@ -75,20 +71,17 @@ namespace SubscriptionsBenchmark
         private readonly string _collectionName;
         private DocumentStore _store;
 
-        public SingleSubscriptionBenchmark(int batchSize , string url, 
+        public SingleSubscriptionBenchmark(int batchSize, string url,
             string databaseName = "freeDB", string collectionName = "Disks")
         {
             _batchSize = batchSize;
-            
+
             _collectionName = collectionName;
             _store = new DocumentStore()
             {
                 DefaultDatabase = databaseName,
                 Url = url,
-                Conventions = new DocumentConvention()
-                {
-                    FailoverBehavior = FailoverBehavior.FailImmediately
-                }
+                Conventions = new DocumentConventions()
             };
             _store.Initialize();
 
@@ -102,7 +95,7 @@ namespace SubscriptionsBenchmark
         public async Task PerformBenchmark()
         {
             var runResult = await SingleTestRun().ConfigureAwait(false);
-            
+
             Console.WriteLine(runResult.DocsProccessed + " " + runResult.DocsRequested + " " + runResult.ElapsedMs);
         }
 
@@ -112,16 +105,12 @@ namespace SubscriptionsBenchmark
             {
                 if (_subscriptionId.HasValue == false)
                 {
-                    _subscriptionId = await _store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria()
-                    {
-                        Collection = _collectionName
-                    }).ConfigureAwait(false);
+                    _subscriptionId = await _store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria(_collectionName)).ConfigureAwait(false);
                 }
-            
-            
-                using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions()
+
+
+                using (var subscription = _store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions(_subscriptionId.Value)
                 {
-                    SubscriptionId = _subscriptionId.Value,
                     Strategy = SubscriptionOpeningStrategy.WaitForFree
                 }))
                 {

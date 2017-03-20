@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -17,7 +18,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
 
@@ -42,7 +43,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
 
@@ -65,7 +66,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                     builder.StartWriteObjectDocument();
@@ -96,7 +97,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                     builder.StartWriteObjectDocument();
@@ -132,7 +133,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                     builder.StartWriteObjectDocument();
@@ -194,7 +195,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                     builder.StartWriteObjectDocument();
@@ -316,7 +317,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                     builder.StartWriteObjectDocument();
@@ -356,7 +357,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                     builder.StartWriteObjectDocument();
@@ -409,7 +410,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                     builder.StartWriteObjectDocument();
@@ -455,7 +456,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                     builder.StartWriteObjectDocument();
@@ -513,7 +514,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                     builder.StartWriteObjectDocument();
@@ -571,7 +572,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                     builder.StartWriteObjectDocument();
@@ -639,7 +640,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                     builder.StartArrayDocument();
@@ -663,43 +664,6 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Theory]
-        [InlineData(byte.MaxValue)]
-        [InlineData(short.MaxValue)]
-        [InlineData(short.MaxValue + 1)]
-        public void BigAmountOfPreperties(int propertiesAmount)
-        {
-            using (var context = new JsonOperationContext(1024, 1024 * 4))
-            {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
-                {
-                    builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
-
-                    builder.StartWriteObjectDocument();
-                    builder.StartWriteObject();
-                    
-                    for (int i = 0; i < propertiesAmount; i++)
-                    {
-                        builder.WritePropertyName("Age"+i);
-                        builder.WriteValue(i);
-                    }
-                    
-                    builder.WriteObjectEnd();
-                    builder.FinalizeDocument();
-
-                    using (var reader = builder.CreateReader())
-                    {
-                        Assert.Equal(propertiesAmount, reader.Count);
-                        for (var i = 0; i < propertiesAmount; i++)
-                        {
-                            var val = reader["Age" + i];
-                            Assert.Equal(i, int.Parse(val.ToString(), CultureInfo.InvariantCulture));
-                        }
-                    }
-                }
-            }
-        }
-
 
         [Theory]
         [InlineData(byte.MaxValue)]
@@ -709,7 +673,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
 
@@ -751,7 +715,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {
                 BlittableJsonReaderObject embeddedReader;
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                     builder.StartWriteObjectDocument();
@@ -763,7 +727,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     embeddedReader = builder.CreateReader();
                 }
 
-                using (var builder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {
                     var lonEscapedCharsString = string.Join(",", Enumerable.Repeat("\"Cool\"", 200).ToArray());
                     var longEscapedCharsAndNonAsciiString = string.Join(",", Enumerable.Repeat("\"מגניב\"", 200).ToArray());
@@ -824,8 +788,8 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     fixed (byte* b = lsvStringBytes)
                     {
                         var escapePositionsMaxSize = JsonParserState.FindEscapePositionsMaxSize(lsvString);
-                        var lsv = new LazyStringValue(null,b,lsvStringBytes.Length,context);
-                        var escapePositions = new List<int>();
+                        var lsv = context.AllocateStringValue(null,b,lsvStringBytes.Length);
+                        var escapePositions = new FastList<int>();
                         JsonParserState.FindEscapePositionsIn(escapePositions, b, lsvStringBytes.Length, escapePositionsMaxSize);
                         lsv.EscapePositions = escapePositions.ToArray();
 

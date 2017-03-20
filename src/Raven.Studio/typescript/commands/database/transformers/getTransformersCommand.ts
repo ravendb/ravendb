@@ -7,13 +7,13 @@ class getTransformersCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Array<Raven.Abstractions.Indexing.TransformerDefinition>> {
+    execute(): JQueryPromise<Array<Raven.Client.Documents.Transformers.TransformerDefinition>> {
         const args = {
             start: this.skip,
             pageSize: this.take
         };
         const url = endpoints.databases.transformer.transformers + this.urlEncodeArgs(args);
-        const extractor = (response: resultsDto<Raven.Abstractions.Indexing.TransformerDefinition>) => response.Results;
+        const extractor = (response: resultsDto<Raven.Client.Documents.Transformers.TransformerDefinition>) => response.Results;
         return this.query(url, null, this.db, extractor);
     }
 }

@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
 
-namespace Raven.Abstractions.Extensions
+namespace Raven.Client.Extensions
 {
-    public static class ConcurrentDictionaryExtensions
+    internal static class ConcurrentDictionaryExtensions
     {
         public static TVal GetOrDefault<TKey,TVal>(this ConcurrentDictionary<TKey, TVal> self, TKey key, TVal value = default(TVal))
         {
@@ -11,27 +11,5 @@ namespace Raven.Abstractions.Extensions
                 return fromDic;
             return value;
         }
-
-
-        //public static TVal GetOrAddAtomically<TKey,TVal>(this ConcurrentDictionary<TKey, TVal> self, TKey key, Func<TKey, TVal> valueFactory)
-        //{
-        //	TVal val;
-        //	if (self.TryGetValue(key, out val))
-        //		return val;
-
-        //	lock(self)
-        //	{
-        //		Thread.MemoryBarrier();
-        //		if (self.TryGetValue(key, out val))
-        //			return val;
-
-        //		var value = valueFactory(key);
-        //		while (self.TryAdd(key, value) == false)
-        //		{
-        //			Thread.SpinWait(100);
-        //		}
-        //		return value;
-        //	}
-        //}
     }
 }

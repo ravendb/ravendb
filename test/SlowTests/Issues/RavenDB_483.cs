@@ -2,16 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_483 : NoDisposalNeeded
     {
-        public class Driver
+        private class Driver
         {
             public string PersonId { get; set; }
 
@@ -22,7 +21,7 @@ namespace SlowTests.Issues
             public string CarMake { get; set; }
         }
 
-        public class Car
+        private class Car
         {
             public Car(string registration, string make, string model)
             {
@@ -36,7 +35,7 @@ namespace SlowTests.Issues
             public string Model { get; set; }
         }
 
-        public class Person
+        private class Person
         {
             public Person(string name)
             {
@@ -61,7 +60,7 @@ namespace SlowTests.Issues
             var indexDefinition = new IndexDefinitionBuilder<Person>()
             {
                 Map = persons => from p in persons select new {DateTime = (DateTime?) null}
-            }.ToIndexDefinition(new DocumentConvention{PrettifyGeneratedLinqExpressions = false});
+            }.ToIndexDefinition(new DocumentConventions{PrettifyGeneratedLinqExpressions = false});
 
             const string expected = @"docs.People.Select(p => new {
     DateTime = ((DateTime ? ) null)

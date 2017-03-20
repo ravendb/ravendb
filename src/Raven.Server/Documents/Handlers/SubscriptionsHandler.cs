@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var subscriptionId = GetLongQueryString("id").Value;
 
-            if (Database.SubscriptionStorage.DropSubscriptionConnection(subscriptionId) == false)
+            if (Database.SubscriptionStorage.DropSubscriptionConnection(subscriptionId, "Dropped by api request") == false)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return Task.CompletedTask;

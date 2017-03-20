@@ -12,6 +12,9 @@ import messagePublisher = require("common/messagePublisher");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 import eventsCollector = require("common/eventsCollector");
 import renameTransformerCommand = require("commands/database/transformers/renameTransformerCommand");
+import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
+import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
+import popoverUtils = require("common/popoverUtils");
 
 class editTransformer extends viewModelBase {
 
@@ -29,7 +32,11 @@ class editTransformer extends viewModelBase {
     renameInProgress = ko.observable<boolean>(false);
     canEditTransformerName: KnockoutComputed<boolean>;
 
+    private indexesNames = ko.observableArray<string>();
+    private transformersNames = ko.observableArray<string>();
+
     globalValidationGroup: KnockoutValidationGroup;
+    renameValidationGroup: KnockoutValidationGroup;
     
     constructor() {
         super();
@@ -66,6 +73,8 @@ class editTransformer extends viewModelBase {
 
         this.initValidation();
         this.initializeDirtyFlag();
+        this.fetchIndexes();
+        this.fetchTransformers();
     }
 
     attached() {
@@ -91,6 +100,18 @@ class editTransformer extends viewModelBase {
                 {
                     validator: (val: string) => rg1.test(val),
                     message: "Can't use backslash in transformer name"
+                },
+                {
+                    validator: (val: string) => {
+                        return val === this.loadedTransformerName() || !_.includes(this.transformersNames(), val);
+                    },
+                    message: "Already being used by an existing transformer."
+                },
+                {
+                    validator: (val: string) => {
+                        return !_.includes(this.indexesNames(), val);
+                    },
+                    message: "Already being used by an existing index."
                 }]
         });
 
@@ -101,6 +122,10 @@ class editTransformer extends viewModelBase {
         this.globalValidationGroup = ko.validatedObservable({
             userTransformerName: this.editedTransformer().name,
             userTransformerContent: this.editedTransformer().transformResults
+        });
+
+        this.renameValidationGroup = ko.validatedObservable({
+            userTransformerName: this.editedTransformer().name
         });
     }
 
@@ -128,18 +153,21 @@ class editTransformer extends viewModelBase {
     private addTransformerHelpPopover() {
         $("#transform-title small").popover({
             html: true,
+            container: "body",
+            template: popoverUtils.longPopoverTemplate,
             trigger: "hover",
-            content: 'The Transform function allows you to change the shape of individual result documents before the server returns them. It uses C# LINQ query syntax <br/> <br/> Example: <pre> <br/> <span class="code-keyword">from</span> result <span class="code-keyword">in</span> results <br/> <span class="code-keyword">let</span> category = LoadDocument(result.Category) <br/> <span class="code-keyword">select new</span> { <br/>    result.Name, <br/>    result.PricePerUnit, <br/>    Category = category.Name, <br/>    CategoryDescription = category.Description <br/>}</pre>',
+            content: 'The Transform function allows you to change the shape<br /> of individual result documents before the server returns them. <br />It uses C# LINQ query syntax. <br />' +
+                'Example: <pre><span class="token keyword">from</span> result <span class="token keyword">in</span> results <br/> <span class="token keyword">let</span> category = LoadDocument(result.Category) <br/> <span class="token keyword">select new</span> { <br/>    result.Name, <br/>    result.PricePerUnit, <br/>    Category = category.Name, <br/>    CategoryDescription = category.Description <br/>}</pre>',
         });
     }
 
-    private editExistingTransformer(transformerName: string): JQueryPromise<Raven.Abstractions.Indexing.TransformerDefinition> {
+    private editExistingTransformer(transformerName: string): JQueryPromise<Raven.Client.Documents.Transformers.TransformerDefinition> {
         this.loadedTransformerName(transformerName);
         return this.fetchTransformerToEdit(transformerName)
-            .done((trans: Raven.Abstractions.Indexing.TransformerDefinition) => this.editedTransformer().updateUsing(trans)); 
+            .done((trans: Raven.Client.Documents.Transformers.TransformerDefinition) => this.editedTransformer().updateUsing(trans)); 
     }
 
-    private fetchTransformerToEdit(transformerName: string): JQueryPromise<Raven.Abstractions.Indexing.TransformerDefinition> {
+    private fetchTransformerToEdit(transformerName: string): JQueryPromise<Raven.Client.Documents.Transformers.TransformerDefinition> {
         return new getSingleTransformerCommand(transformerName, this.activeDatabase()).execute();
     }
 
@@ -161,6 +189,24 @@ class editTransformer extends viewModelBase {
                 })
                 .always(() => this.isSaving(false));                    
         }
+    }
+
+    private fetchIndexes() {
+        const db = this.activeDatabase()
+        new getIndexNamesCommand(db)
+            .execute()
+            .done((indexesNames) => {
+                this.indexesNames(indexesNames);
+            });
+    }
+
+    private fetchTransformers() {
+        const db = this.activeDatabase();
+        return new getTransformersCommand(db)
+            .execute()
+            .done((transformers: Raven.Client.Documents.Transformers.TransformerDefinition[]) => {
+                this.transformersNames(transformers.map(t => t.Name));
+            });
     }
 
     updateUrl(transformerName: string) {
@@ -205,26 +251,29 @@ class editTransformer extends viewModelBase {
     }
 
     renameTransformer() {
-        const newName = this.editedTransformer().name();
-        const oldName = this.loadedTransformerName();
+        if (this.isValid(this.renameValidationGroup)) {
+            const newName = this.editedTransformer().name();
+            const oldName = this.loadedTransformerName();
 
-        this.renameInProgress(true);
+            this.renameInProgress(true);
 
-        new renameTransformerCommand(oldName, newName, this.activeDatabase())
-            .execute()
-            .always(() => this.renameInProgress(false))
-            .done(() => {
-                this.dirtyFlag().reset();
+            new renameTransformerCommand(oldName, newName, this.activeDatabase())
+                .execute()
+                .always(() => this.renameInProgress(false))
+                .done(() => {
+                    this.dirtyFlag().reset();
 
-                this.loadedTransformerName(newName);
-                this.updateUrl(this.editedTransformer().name());
-                this.renameMode(false);
-            });
+                    this.loadedTransformerName(newName);
+                    this.updateUrl(this.editedTransformer().name());
+                    this.renameMode(false);
+                });
+        }
     }
 
     cancelRename() {
         this.renameMode(false);
         this.editedTransformer().name(this.loadedTransformerName());
+        this.renameValidationGroup.errors.showAllMessages(false);
     }
   
 }

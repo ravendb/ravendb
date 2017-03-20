@@ -1,20 +1,21 @@
 using System.Linq;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class CreateIndexesWithCasting : RavenNewTestBase
+    public class CreateIndexesWithCasting : RavenTestBase
     {
         [Fact]
         public void WillPreserverTheCasts()
         {
             var indexDefinition = new WithCasting
             {
-                Conventions = new DocumentConvention { PrettifyGeneratedLinqExpressions = false }
+                Conventions = new DocumentConventions { PrettifyGeneratedLinqExpressions = false }
             }.CreateIndexDefinition();
 
             var map = indexDefinition.Maps.First();

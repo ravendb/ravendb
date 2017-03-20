@@ -24,7 +24,9 @@ class verifyDocumentsIDsCommand extends commandBase {
                 .done((queryResult: queryResultDto<documentDto>) => {
                     if (queryResult && queryResult.Results) {
                         queryResult.Results.forEach(curVerifiedID => {
-                            verifiedIDs.push(curVerifiedID['@metadata']['@id']);                        
+                            if (curVerifiedID) {
+                                verifiedIDs.push(curVerifiedID['@metadata']['@id']);
+                            }
                         });
 
                     }

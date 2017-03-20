@@ -3,14 +3,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Net.WebSockets;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Extensions;
 using Sparrow.Binary;
+using Sparrow.Extensions;
 
 namespace Sparrow.Logging
 {
@@ -131,15 +129,29 @@ namespace Sparrow.Logging
                 _path = path;
 
                 Directory.CreateDirectory(_path);
-                if (_loggingThread == null)
+                var copyLoggingThread = _loggingThread;
+                if (copyLoggingThread == null)
                 {
                     StartNewLoggingThread();
+                }
+                else if(copyLoggingThread.ManagedThreadId == Thread.CurrentThread.ManagedThreadId)
+                {
+                    // have to do this on a separate thread
+                    Task.Run(() =>
+                    {
+                        _keepLogging = false;
+                        _hasEntries.Set();
+
+                        copyLoggingThread.Join();
+                        StartNewLoggingThread();
+                    });
                 }
                 else
                 {
                     _keepLogging = false;
                     _hasEntries.Set();
-                    _loggingThread.Join();
+                    
+                    copyLoggingThread.Join();
                     StartNewLoggingThread();
                 }
             }
@@ -266,12 +278,12 @@ namespace Sparrow.Logging
 
             foreach (var kvp in _listeners)
             {
-                if (kvp.Value.Filter.Forward(entry))
+                if (kvp.Value.Filter.Forward(ref entry))
                 {
                     item.WebSocketsList.Add(kvp.Key);
                 }
             }
-            WriteEntryToWriter(state.Writer, entry);
+            WriteEntryToWriter(state.Writer, ref entry);
             item.Data = state.ForwardingStream.Destination;
 
             state.Full.Enqueue(item, timeout: 128);
@@ -279,9 +291,8 @@ namespace Sparrow.Logging
             _hasEntries.Set();
         }
 
-        private void WriteEntryToWriter(StreamWriter writer, LogEntry entry)
+        private void WriteEntryToWriter(StreamWriter writer, ref LogEntry entry)
         {
-
             if (_currentThreadId == null)
             {
                 _currentThreadId = ", " + Thread.CurrentThread.ManagedThreadId.ToString(CultureInfo.InvariantCulture) +

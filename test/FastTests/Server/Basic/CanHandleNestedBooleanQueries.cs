@@ -1,16 +1,17 @@
-﻿using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+﻿using Raven.Client.Documents.Queries;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries.Parse;
 using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class CanParseNestedBooleanQueries : RavenNewTestBase
+    public class CanParseNestedBooleanQueries : RavenTestBase
     {
         private static readonly LuceneASTQueryConfiguration Config = new LuceneASTQueryConfiguration
         {
             Analayzer = new RavenPerFieldAnalyzerWrapper(new LowerCaseKeywordAnalyzer()),
-            DefaultOperator = Raven.Client.Data.QueryOperator.Or,
-            FieldName = "foo"
+            DefaultOperator = QueryOperator.Or,
+            FieldName = new FieldName("foo")
         };
 
         [Fact]

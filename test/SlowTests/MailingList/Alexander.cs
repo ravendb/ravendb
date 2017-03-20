@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -18,7 +18,7 @@ namespace SlowTests.MailingList
             {
                 store.Initialize();
                 store.Conventions.AllowQueriesOnId = true;
-                store.DatabaseCommands.PutIndex("CasinosCommentsIndex", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { @"
 docs.Casinos
@@ -32,8 +32,9 @@ docs.Casinos
                         { "DateTime", new IndexFieldOptions { Storage = FieldStorage.Yes } },
                         { "Author", new IndexFieldOptions { Storage = FieldStorage.Yes } },
                         { "Text", new IndexFieldOptions { Storage = FieldStorage.Yes } },
-                    }
-                });
+                    },
+                    Name = "CasinosCommentsIndex" }
+                }));
 
                 var documentSession = store.OpenSession();
 

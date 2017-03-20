@@ -9,12 +9,11 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using FastTests;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
 using SlowTests.Core.Utils.Indexes;
 using Sparrow.Json;
 using Xunit;
@@ -23,7 +22,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Commands
 {
-    public class Indexes : RavenNewTestBase
+    public class Indexes : RavenTestBase
     {
         [Fact]
         public async Task CanPutUpdateAndDeleteMapIndex()
@@ -37,10 +36,11 @@ namespace SlowTests.Core.Commands
                     await commands.PutAsync("users/1", null, new User { Name = "testname" }, null);
                 }
 
-                await store.Admin.SendAsync(new PutIndexOperation(usersByname, new IndexDefinition
+                await store.Admin.SendAsync(new PutIndexesOperation(new[] {new IndexDefinition
                 {
-                    Maps = { "from user in docs.Users select new { user.Name }" }
-                }));
+                    Maps = { "from user in docs.Users select new { user.Name }" },
+                    Name = usersByname
+                }}));
 
                 var index = await store.Admin.SendAsync(new GetIndexOperation(usersByname));
                 Assert.Equal(usersByname, index.Name);
@@ -67,11 +67,12 @@ namespace SlowTests.Core.Commands
                     s.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Maps = { "from doc in docs.Users select new { doc.Name }" }
-                    }));
+                        Maps = { "from doc in docs.Users select new { doc.Name }" },
+                        Name = "test"
+                    }}));
 
                 WaitForIndexing(store);
 
@@ -102,11 +103,12 @@ namespace SlowTests.Core.Commands
                     s.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
-                        Maps = { "from doc in docs.Users select new { doc.Name }" }
-                    }));
+                        Maps = { "from doc in docs.Users select new { doc.Name }" },
+                        Name = "test"
+                    }}));
 
                 WaitForIndexing(store);
 
@@ -137,15 +139,16 @@ namespace SlowTests.Core.Commands
                     s.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexOperation("test",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { "from doc in docs.Users select new { doc.Name }" },
                         Fields = new Dictionary<string, IndexFieldOptions>
                                                                  {
                                                                      { "Name", new IndexFieldOptions { Sort = SortOptions.String } }
-                                                                 }
-                    }));
+                                                                 },
+                        Name = "test"
+                    }}));
 
                 WaitForIndexing(store);
 
@@ -157,7 +160,7 @@ namespace SlowTests.Core.Commands
                     {
                         Assert.Equal(1, item.Count);
                         BlittableJsonReaderObject _;
-                        Assert.True(item.TryGet(Constants.Metadata.Key, out _));
+                        Assert.True(item.TryGet(Constants.Documents.Metadata.Key, out _));
                     }
 
                     var entriesOnly = commands.Query("test", new IndexQuery(store.Conventions)
@@ -176,7 +179,7 @@ namespace SlowTests.Core.Commands
                         Assert.Equal("user" + i, name);
 
                         string id;
-                        Assert.True(item.TryGet(Constants.Indexing.Fields.DocumentIdFieldName, out id));
+                        Assert.True(item.TryGet(Constants.Documents.Indexing.Fields.DocumentIdFieldName, out id));
                         Assert.Equal("users/" + (i + 1), id);
                     }
                 }

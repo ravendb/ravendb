@@ -3,11 +3,12 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Net.Http;
 
-namespace Raven.Abstractions.Util
+namespace Raven.Client.Util
 {
-    public static class HttpMethods
+    internal static class HttpMethods
     {
         public static readonly HttpMethod Reset = new HttpMethod("RESET");
 

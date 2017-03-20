@@ -1,8 +1,9 @@
 ﻿using System.Linq;
 
 using FastTests;
-using FastTests.Server.Basic.Entities;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -78,16 +79,16 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var stats = store.DatabaseCommands.GetIndexStatistics(index1.IndexName);
+                var stats = store.Admin.Send(new GetIndexStatisticsOperation(index1.IndexName));
                 Assert.False(stats.IsStale);
-                stats = store.DatabaseCommands.GetIndexStatistics(index2.IndexName);
+                stats = store.Admin.Send(new GetIndexStatisticsOperation(index2.IndexName));
                 Assert.False(stats.IsStale);
 
-                store.DatabaseCommands.Admin.StopIndexing();
+                store.Admin.Send(new StopIndexingOperation());
 
-                stats = store.DatabaseCommands.GetIndexStatistics(index1.IndexName);
+                stats = store.Admin.Send(new GetIndexStatisticsOperation(index1.IndexName));
                 Assert.False(stats.IsStale);
-                stats = store.DatabaseCommands.GetIndexStatistics(index2.IndexName);
+                stats = store.Admin.Send(new GetIndexStatisticsOperation(index2.IndexName));
                 Assert.False(stats.IsStale);
 
                 using (var session = store.OpenSession())
@@ -98,18 +99,18 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                stats = store.DatabaseCommands.GetIndexStatistics(index1.IndexName);
+                stats = store.Admin.Send(new GetIndexStatisticsOperation(index1.IndexName));
                 Assert.True(stats.IsStale);
-                stats = store.DatabaseCommands.GetIndexStatistics(index2.IndexName);
+                stats = store.Admin.Send(new GetIndexStatisticsOperation(index2.IndexName));
                 Assert.True(stats.IsStale);
 
-                store.DatabaseCommands.Admin.StartIndexing();
+                store.Admin.Send(new StartIndexingOperation());
 
                 WaitForIndexing(store);
 
-                stats = store.DatabaseCommands.GetIndexStatistics(index1.IndexName);
+                stats = store.Admin.Send(new GetIndexStatisticsOperation(index1.IndexName));
                 Assert.False(stats.IsStale);
-                stats = store.DatabaseCommands.GetIndexStatistics(index2.IndexName);
+                stats = store.Admin.Send(new GetIndexStatisticsOperation(index2.IndexName));
                 Assert.False(stats.IsStale);
             }
         }

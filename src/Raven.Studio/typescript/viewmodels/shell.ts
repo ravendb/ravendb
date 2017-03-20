@@ -3,54 +3,38 @@
 import router = require("plugins/router");
 import app = require("durandal/app");
 import sys = require("durandal/system");
-import viewLocator = require("durandal/viewLocator");
-
 import menu = require("common/shell/menu");
 import generateMenuItems = require("common/shell/menu/generateMenuItems");
-import activeResourceTracker = require("common/shell/activeResourceTracker");
-import resourceSwitcher = require("common/shell/resourceSwitcher");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import databaseSwitcher = require("common/shell/databaseSwitcher");
 import searchBox = require("common/shell/searchBox");
-import resource = require("models/resources/resource");
 import database = require("models/resources/database");
-import collection = require("models/database/documents/collection");
-import uploadItem = require("models/filesystem/uploadItem");
 import license = require("models/auth/license");
 import topology = require("models/database/replication/topology");
 import environmentColor = require("models/resources/environmentColor");
 import changesContext = require("common/changesContext");
-import changesApi = require("common/changesApi");
 import allRoutes = require("common/shell/routes");
 import registration = require("viewmodels/shell/registration");
 
 import appUrl = require("common/appUrl");
-import uploadQueueHelper = require("common/uploadQueueHelper");
-import pagedList = require("common/pagedList");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
-import enableResizeBindingHandler = require("common/bindingHelpers/enableResizeBindingHandler");
 import helpBindingHandler = require("common/bindingHelpers/helpBindingHandler");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
 import apiKeyLocalStorage = require("common/storage/apiKeyLocalStorage");
 import extensions = require("common/extensions");
 import notificationCenter = require("common/notifications/notificationCenter");
-import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
 import getSupportCoverageCommand = require("commands/auth/getSupportCoverageCommand");
 import getServerConfigsCommand = require("commands/database/studio/getServerConfigsCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
-import getLatestServerBuildVersionCommand = require("commands/database/studio/getLatestServerBuildVersionCommand");
-
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import licensingStatus = require("viewmodels/common/licensingStatus");
 import enterApiKey = require("viewmodels/common/enterApiKey");
-
-import serverBuildReminder = require("common/storage/serverBuildReminder");
-import latestBuildReminder = require("viewmodels/common/latestBuildReminder")
-
 import eventsCollector = require("common/eventsCollector");
 
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
@@ -85,9 +69,9 @@ class shell extends viewModelBase {
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
 
-    mainMenu = new menu(generateMenuItems(activeResourceTracker.default.resource()));
+    mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     searchBox = new searchBox();
-    resourceSwitcher = new resourceSwitcher();
+    databaseSwitcher = new databaseSwitcher();
 
     displayUsageStatsInfo = ko.observable<boolean>(false);
     trackingTask = $.Deferred();
@@ -115,18 +99,15 @@ class shell extends viewModelBase {
             // (connection will be started after executing this method) - it was just scheduled 2 lines above
             // please notice we don't wait here for connection to be established
             // since this invocation is sync we can't end up with race condition
-            this.resourcesManager.setupGlobalNotifications();
+            this.databasesManager.setupGlobalNotifications();
             this.notificationCenter.setupGlobalNotifications(changesContext.default.serverNotifications());
         });
 
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));
-        ko.postbox.subscribe("UploadFileStatusChanged", (uploadStatus: uploadItem) => this.uploadStatusChanged(uploadStatus));
 
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
-        enableResizeBindingHandler.install();
         helpBindingHandler.install();
-        virtualGrid.install();
 
         this.clientBuildVersion.subscribe(v =>
             viewModelBase.clientVersion(v.Version));
@@ -156,7 +137,7 @@ class shell extends viewModelBase {
             }
         });
 
-        $(window).resize(() => self.activeResource.valueHasMutated());
+        $(window).resize(() => self.activeDatabase.valueHasMutated());
 
         this.fetchClientBuildVersion();
         this.fetchServerBuildVersion();
@@ -185,15 +166,15 @@ class shell extends viewModelBase {
 
     private initializeShellComponents() {
         this.mainMenu.initialize();
-        let updateMenu = (resource: resource) => {
-            let items = generateMenuItems(resource);
+        let updateMenu = (db: database) => {
+            let items = generateMenuItems(db);
             this.mainMenu.update(items);
         };
 
-        updateMenu(activeResourceTracker.default.resource());
-        activeResourceTracker.default.resource.subscribe(updateMenu);
+        updateMenu(activeDatabaseTracker.default.database());
+        activeDatabaseTracker.default.database.subscribe(updateMenu);
 
-        this.resourceSwitcher.initialize();
+        this.databaseSwitcher.initialize();
         this.searchBox.initialize();
     }
 
@@ -244,7 +225,7 @@ class shell extends viewModelBase {
                 apiKeyLocalStorage.setValue(match[1]);
             }
             var splittedHash = hash.split("&#api-key");
-            var url = (splittedHash.length === 1) ? "#resources" : splittedHash[0];
+            var url = (splittedHash.length === 1) ? "#databases" : splittedHash[0];
             window.location.href = url;
         } else {
             var apiKeyFromStorage = apiKeyLocalStorage.get();
@@ -281,11 +262,6 @@ class shell extends viewModelBase {
         return false;
     }
 
-    launchDocEditor(docId?: string, docsList?: pagedList) {
-        var editDocUrl = appUrl.forEditDoc(docId, this.activeDatabase());
-        this.navigate(editDocUrl);
-    }
-
     loadServerConfig(): JQueryPromise<void> {
         const deferred = $.Deferred<void>();
 
@@ -304,8 +280,8 @@ class shell extends viewModelBase {
 
     connectToRavenServer() {
         const serverConfigsLoadTask: JQueryPromise<void> = this.loadServerConfig();
-        const resourcesTask = this.resourcesManager.init();
-        return $.when<any>(serverConfigsLoadTask, resourcesTask);
+        const managerTask = this.databasesManager.init();
+        return $.when<any>(serverConfigsLoadTask, managerTask);
     }
 
     private static activateHotSpareEnvironment(hotSpare: HotSpareDto) {
@@ -327,10 +303,6 @@ class shell extends viewModelBase {
             .done(() => {
                 this.connectToRavenServer();
             });
-    }
-
-    getDocCssClass(doc: documentMetadataDto) {
-        return collection.getCollectionCssClass((<any>doc)["@metadata"]["@collection"], this.activeDatabase());
     }
 
     fetchServerBuildVersion() {
@@ -374,13 +346,7 @@ class shell extends viewModelBase {
 
     showApiKeyDialog() {
         var dialog = new enterApiKey();
-        return app.showBootstrapDialog(dialog).then(() => window.location.href = "#resources");
-    }
-
-    uploadStatusChanged(item: uploadItem) {
-        var queue: uploadItem[] = uploadQueueHelper.parseUploadQueue(window.localStorage[uploadQueueHelper.localStorageUploadQueueKey + item.filesystem.name], item.filesystem);
-        uploadQueueHelper.updateQueueStatus(item.id(), item.status(), queue);
-        uploadQueueHelper.updateLocalStorage(queue, item.filesystem);
+        return app.showBootstrapDialog(dialog).then(() => window.location.href = "#databases");
     }
 
     showLicenseStatusDialog() {

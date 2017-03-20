@@ -10,7 +10,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Utils;
 using Voron.Data;
@@ -62,18 +61,19 @@ namespace Voron
             new LowLevelTransaction.WriteTransactionPool();
         internal ExceptionDispatchInfo CatastrophicFailure;
         private readonly WriteAheadJournal _journal;
-        private readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1,1);
+        private readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1, 1);
         private NativeMemory.ThreadStats _currentTransactionHolder;
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
         internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
         private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
+        private readonly CountdownEvent _envDispose = new CountdownEvent(1);
 
         private long _transactionsCounter;
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         private readonly HeaderAccessor _headerAccessor;
         private readonly DecompressionBuffersPool _decompressionBuffers;
 
-        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly ScratchBufferPool _scratchBufferPool;
         private EndOfDiskSpaceEvent _endOfDiskSpace;
         internal int SizeOfUnflushedTransactionsInJournalFile;
@@ -96,6 +96,8 @@ namespace Voron
 
         public event Action OnLogsApplied;
 
+        private readonly long[] _validPages;
+
         public StorageEnvironment(StorageEnvironmentOptions options)
         {
             try
@@ -105,6 +107,13 @@ namespace Voron
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();
                 _headerAccessor = new HeaderAccessor(this);
+
+                Debug.Assert(_dataPager.NumberOfAllocatedPages != 0);
+
+                var remainingBits = _dataPager.NumberOfAllocatedPages % (8 * sizeof(long));
+
+                _validPages = new long[_dataPager.NumberOfAllocatedPages / (8 * sizeof(long)) + (remainingBits == 0 ? 0 : 1)];
+                _validPages[_validPages.Length - 1] |= unchecked (((long)ulong.MaxValue << (int)remainingBits));
 
                 _decompressionBuffers = new DecompressionBuffersPool(options);
                 var isNew = _headerAccessor.Initialize();
@@ -149,7 +158,15 @@ namespace Voron
                     return true;
                 }
 
-                result = Syscall.posix_fallocate(fd, IntPtr.Zero, (UIntPtr)(64L * 1024));
+                bool usingWrite;
+                result = Syscall.AllocateFileSpace(fd, 64L * 1024, filename, out usingWrite);
+                if (usingWrite)
+                {
+                    if (log.IsInfoEnabled)
+                        log.Info(
+                            $"Failed to fallocate test file at \'{filename}\'. (rc = {result}) but had success with pwrite. New file allocations will take longer time with pwrite");
+                }
+
                 if (result == (int)Errno.EINVAL)
                 {
                     if (log.IsInfoEnabled)
@@ -165,9 +182,9 @@ namespace Voron
                         log.Info(
                             $"Failed to fallocate test file at \'{filename}\'. (rc = {result}). Cannot determine if O_DIRECT supported by the file system. Assuming it is");
                 }
-               
+
             }
-            finally 
+            finally
             {
                 result = Syscall.close(fd);
                 if (result != 0)
@@ -203,11 +220,11 @@ namespace Voron
                 {
                     if (await _writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(Options.IdleFlushTimeout)) == false)
                     {
-                        if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)                                                   
+                        if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)
                             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
 
-                        else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)                        
-                            QueueForSyncDataFile();                            
+                        else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
+                            QueueForSyncDataFile();
                     }
                     else
                     {
@@ -252,10 +269,8 @@ namespace Voron
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             {
-                using (var root = Tree.Open(tx, null, header->TransactionId == 0 ? &entry.Root : &header->Root))
+                using (var root = Tree.Open(tx, null, Constants.RootTreeNameSlice, header->TransactionId == 0 ? &entry.Root : &header->Root))
                 {
-                    root.Name = Constants.RootTreeNameSlice;
-
                     tx.UpdateRootsIfNeeded(root);
 
                     using (var treesTx = new Transaction(tx))
@@ -310,7 +325,7 @@ namespace Voron
 
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
-            using (var root = Tree.Create(tx, null))
+            using (var root = Tree.Create(tx, null, Constants.RootTreeNameSlice))
             {
 
                 // important to first create the root trees, then set them on the env
@@ -347,6 +362,9 @@ namespace Voron
 
         public void Dispose()
         {
+            if (_envDispose.IsSet)
+                return; // already disposed
+
             _cancellationTokenSource.Cancel();
             try
             {
@@ -373,14 +391,20 @@ namespace Voron
 
                                 Disposed = true;
                                 _journal.Applicator.WaitForSyncToCompleteOnDispose();
+                                MoveEnvironmentToDisposeState();
                             }
                         }
                         else
                         {
                             Disposed = true;
                             _journal.Applicator.WaitForSyncToCompleteOnDispose();
+                            MoveEnvironmentToDisposeState();
                         }
                     }
+                }
+                else
+                {
+                    MoveEnvironmentToDisposeState();
                 }
             }
             finally
@@ -408,6 +432,30 @@ namespace Voron
                 if (errors.Count != 0)
                     throw new AggregateException(errors);
             }
+        }
+
+        private void MoveEnvironmentToDisposeState()
+        {
+            _envDispose.Signal(); // release the owner count
+            if (_envDispose.Wait(Options.DisposeWaitTime) == false)
+            {
+                if (_envDispose.TryAddCount(1))
+                // try restore the previous signal, if it failed, the _envDispose is signaled
+                {
+                    var activeTxs = ActiveTransactions.AllTransactions;
+                    ThrowInvalidDisposeDuringActiveTransactions(activeTxs);
+                }
+            }
+        }
+
+        private void ThrowInvalidDisposeDuringActiveTransactions(List<ActiveTransaction> activeTxs)
+        {
+            throw new TimeoutException(
+                $"Could not dispose the environment {Options.BasePath} after {Options.DisposeWaitTime} because there are running transaction.{Environment.NewLine}" +
+                $"Either you have long running transactions or hung transactions. Can\'t disposet the enviorment becasue that would invalid memory regions{Environment.NewLine}" +
+                $"that those transactions are still looking at.{Environment.NewLine}" +
+                $"There are {activeTxs.Count:#,#} transactions ({string.Join(", ", activeTxs)})"
+            );
         }
 
         public Transaction ReadTransaction(TransactionPersistentContext transactionPersistentContext, ByteStringContext context = null)
@@ -438,10 +486,14 @@ namespace Voron
 
         internal LowLevelTransaction NewLowLevelTransaction(TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, ByteStringContext context = null, TimeSpan? timeout = null)
         {
+            _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
             bool txLockTaken = false;
             bool flushInProgressReadLockTaken = false;
             try
             {
+                IncrementUsageOnNewTransaction();
+
                 if (flags == TransactionFlags.ReadWrite)
                 {
                     var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
@@ -450,25 +502,24 @@ namespace Voron
                         flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
 
                     txLockTaken = _transactionWriter.Wait(wait);
-                    if (txLockTaken == false || (flushInProgressReadLockTaken == false && 
+                    if (txLockTaken == false || (flushInProgressReadLockTaken == false &&
                         FlushInProgressLock.IsWriteLockHeld == false))
                     {
                         GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                         ThrowOnTimeoutWaitingForWriteTxLock(wait);
                     }
+                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
                     _currentTransactionHolder = NativeMemory.ThreadAllocations.Value;
                     WriteTransactionStarted();
 
                     if (_endOfDiskSpace != null)
                     {
-                        if (_endOfDiskSpace.CanContinueWriting)
-                        {
-                            CatastrophicFailure = null;
-                            _endOfDiskSpace = null;
-                            _cancellationTokenSource = new CancellationTokenSource();
-                            Task.Run(IdleFlushTimer);
-                            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-                        }
+                        _endOfDiskSpace.AssertCanContinueWriting();
+
+                        _endOfDiskSpace = null;
+                        Task.Run(IdleFlushTimer);
+                        GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                     }
                 }
 
@@ -477,7 +528,9 @@ namespace Voron
                 _txCommit.EnterReadLock();
                 try
                 {
-                    long txId = flags == TransactionFlags.ReadWrite ? _transactionsCounter + 1 : _transactionsCounter;
+                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                    long txId = flags == TransactionFlags.ReadWrite ? NextWriteTransactionId : CurrentReadTransactionId;
                     tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling,
                         context)
                     {
@@ -497,16 +550,40 @@ namespace Voron
             }
             catch (Exception)
             {
-                if (txLockTaken)
+                try
                 {
-                    _transactionWriter.Release();
+                    if (txLockTaken)
+                    {
+                        _transactionWriter.Release();
+                    }
+                    if (flushInProgressReadLockTaken)
+                    {
+                        FlushInProgressLock.ExitReadLock();
+                    }
                 }
-                if (flushInProgressReadLockTaken)
+                finally
                 {
-                    FlushInProgressLock.ExitReadLock();
+                    DecrementUsageOnTransactionCreationFailure();
                 }
                 throw;
             }
+        }
+
+        internal void IncrementUsageOnNewTransaction()
+        {
+            if (_envDispose.TryAddCount(1) == false)
+                ThrowCurrentlyDisposing();
+        }
+
+        internal void DecrementUsageOnTransactionCreationFailure()
+        {
+            if (_envDispose.IsSet == false)
+                _envDispose.Signal();
+        }
+
+        private void ThrowCurrentlyDisposing()
+        {
+            throw new ObjectDisposedException("The environment " + Options.BasePath + " is currently being disposed");
         }
 
         internal void WriteTransactionStarted()
@@ -519,7 +596,7 @@ namespace Voron
         private void ThrowOnTimeoutWaitingForWriteTxLock(TimeSpan wait)
         {
             var copy = _currentTransactionHolder;
-            if(copy == NativeMemory.ThreadAllocations.Value)
+            if (copy == NativeMemory.ThreadAllocations.Value)
             {
                 throw new InvalidOperationException("A write transaction is already opened by this thread");
             }
@@ -580,7 +657,7 @@ namespace Voron
 
                 if (tx.Committed && tx.FlushedToJournal)
                     _transactionsCounter = tx.Id;
-                
+
                 State = tx.State;
             }
         }
@@ -589,34 +666,41 @@ namespace Voron
         {
             if (ActiveTransactions.TryRemove(tx) == false)
                 return;
-
-            if (tx.Flags != (TransactionFlags.ReadWrite))
-                return;
-
-            if (tx.FlushedToJournal)
+            try
             {
-                var totalPages = 0;
-                // ReSharper disable once LoopCanBeConvertedToQuery
-                foreach (var page in tx.GetTransactionPages())
+                if (tx.Flags != (TransactionFlags.ReadWrite))
+                    return;
+
+                if (tx.FlushedToJournal)
                 {
-                    totalPages += page.NumberOfPages;
+                    var totalPages = 0;
+                    // ReSharper disable once LoopCanBeConvertedToQuery
+                    foreach (var page in tx.GetTransactionPages())
+                    {
+                        totalPages += page.NumberOfPages;
+                    }
+
+                    Interlocked.Add(ref SizeOfUnflushedTransactionsInJournalFile, totalPages);
+
+                    if (tx.IsLazyTransaction == false)
+                        GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                 }
 
-                Interlocked.Add(ref SizeOfUnflushedTransactionsInJournalFile, totalPages);
+                if (tx.AsyncCommit != null)
+                    return;
 
-                if (tx.IsLazyTransaction == false)
-                    GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                _currentTransactionHolder = null;
+                _writeTransactionRunning.Reset();
+                _transactionWriter.Release();
+
+                if (tx.FlushInProgressLockTaken)
+                    FlushInProgressLock.ExitReadLock();
             }
-
-            if (tx.AsyncCommit != null)
-                return;
-
-            _currentTransactionHolder = null;
-            _writeTransactionRunning.Reset();
-            _transactionWriter.Release();
-            
-            if (tx.FlushInProgressLockTaken)
-                FlushInProgressLock.ExitReadLock();
+            finally
+            {
+                if (tx.AlreadyAllowedDisposeWithLazyTransactionRunning == false)
+                    _envDispose.Signal();
+            }
         }
 
         public StorageReport GenerateReport(Transaction tx)
@@ -727,7 +811,8 @@ namespace Voron
                 Trees = trees,
                 FixedSizeTrees = fixedSizeTrees,
                 Tables = tables,
-                CalculateExactSizes = calculateExactSizes
+                CalculateExactSizes = calculateExactSizes,
+                ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction)
             });
         }
 
@@ -794,8 +879,90 @@ namespace Voron
             if (_options.ManualFlushing)
                 return;
 
-            _cancellationTokenSource.Cancel();
-            _endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo);
+            _endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo, ExceptionDispatchInfo.Capture(exception));
+        }
+
+        public unsafe void ValidatePageChecksum(long pageNumber, PageHeader* current)
+        {
+            long old;
+            var index = pageNumber / (8 * sizeof(long));
+            var bitIndex = (int)(pageNumber % (8 * sizeof(long)));
+            var bitToSet = 1L << bitIndex;
+
+            // If the page is beyong the initiall size of the file we don't validate it. 
+            // We assume that it is valid since we wrote it in this run.
+            if (index >= _validPages.Length)
+                return;
+
+            old = _validPages[index];
+            if ((old & bitToSet) != 0)
+                return;
+
+            UnlikelyValidatePage(pageNumber, current, index, old, bitToSet);
+        }
+
+        private unsafe void UnlikelyValidatePage(long pageNumber, PageHeader* current, long index, long old, long bitToSet)
+        {
+            var spinner = new SpinWait();
+            while (true)
+            {
+                long modified = Interlocked.CompareExchange(ref _validPages[index], old | bitToSet, old);
+                if (modified == old || (modified & bitToSet) != 0)
+                    break;
+
+                old = modified;
+                spinner.SpinOnce();
+            }
+
+            var dataLength = Constants.Storage.PageSize - (PageHeader.ChecksumOffset + sizeof(ulong));
+            if ((current->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+            {
+                if (pageNumber + _dataPager.GetNumberOfOverflowPages(current->OverflowSize) > _dataPager.NumberOfAllocatedPages)
+                    ThrowInvalidOverflowSize(pageNumber, current);
+
+                dataLength = current->OverflowSize - (PageHeader.ChecksumOffset + sizeof(ulong));
+            }
+
+            // No need to call EnsureMapped here. ValidatePageChecksum is only called for pages in the datafile, 
+            // which we already got using AcquirePagePointerWithOverflowHandling()
+
+            var ctx = Hashing.Streamed.XXHash64.BeginProcess((ulong)pageNumber);
+
+            Hashing.Streamed.XXHash64.Process(ctx, (byte*)current, PageHeader.ChecksumOffset);
+            Hashing.Streamed.XXHash64.Process(ctx, (byte*)current + PageHeader.ChecksumOffset + sizeof(ulong), dataLength);
+
+            ulong checksum = Hashing.Streamed.XXHash64.EndProcess(ctx);
+
+            if (checksum == current->Checksum)
+                return;
+
+            ThrowInvalidChecksum(pageNumber, current, checksum);
+        }
+
+        private unsafe void ThrowInvalidChecksum(long pageNumber, PageHeader* current, ulong checksum)
+        {
+            throw new InvalidDataException(
+                $"Invalid checksum for page {pageNumber}, data file {_options.DataPager} might be corrupted, expected hash to be {current->Checksum} but was {checksum}");
+        }
+
+        private unsafe void ThrowInvalidOverflowSize(long pageNumber, PageHeader* current)
+        {
+            throw new InvalidDataException(
+                $"Invalid overflow size for page {pageNumber}, current offset is {pageNumber * Constants.Storage.PageSize} and overflow size is {current->OverflowSize}. Page length is beyond the file length {_dataPager.TotalAllocationSize}");
+        }
+
+        public unsafe void AddChecksumToPageHeader(PageHeader* current)
+        {
+            var dataLength = Constants.Storage.PageSize - (PageHeader.ChecksumOffset + sizeof(ulong));
+            if ((current->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+                dataLength = current->OverflowSize - (PageHeader.ChecksumOffset + sizeof(ulong));
+
+            var ctx = Hashing.Streamed.XXHash64.BeginProcess((ulong)current->PageNumber);
+
+            Hashing.Streamed.XXHash64.Process(ctx, (byte*)current, PageHeader.ChecksumOffset);
+            Hashing.Streamed.XXHash64.Process(ctx, (byte*)current + PageHeader.ChecksumOffset + sizeof(ulong), dataLength);
+
+            current->Checksum = Hashing.Streamed.XXHash64.EndProcess(ctx);
         }
 
         public IDisposable GetTemporaryPage(LowLevelTransaction tx, out TemporaryPage tmp)
@@ -876,7 +1043,7 @@ namespace Voron
                 if (oldMode == TransactionsMode.Danger)
                 {
                     Journal.TruncateJournal();
-                    _dataPager.Sync();
+                    _dataPager.Sync(Journal.Applicator.TotalWrittenButUnsyncedBytes);
                 }
 
                 switch (mode)
@@ -891,7 +1058,7 @@ namespace Voron
 
                     case TransactionsMode.Danger:
                         {
-                            Options.PosixOpenFlags = 0;
+                            Options.PosixOpenFlags = Options.DefaultPosixFlags;
                             Options.WinOpenFlags = Win32NativeFileAttributes.None;
                             Journal.TruncateJournal();
                         }
@@ -926,6 +1093,13 @@ namespace Voron
         public void ResetLastWorkTime()
         {
             _lastWorkTimeTicks = DateTime.MinValue.Ticks;
+        }
+
+        internal void AllowDisposeWithLazyTransactionRunning(LowLevelTransaction tx)
+        {
+            Debug.Assert(tx.Flags == TransactionFlags.Read);
+            _envDispose.Signal();
+            tx.AlreadyAllowedDisposeWithLazyTransactionRunning = true;
         }
     }
 }

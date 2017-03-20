@@ -1,9 +1,9 @@
 using System.Reflection;
 using FastTests;
-using Raven.Client.Document;
 using Xunit;
-using Raven.Client.Linq;
 using System.Linq;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Linq;
 
 namespace SlowTests.MailingList
 {
@@ -25,7 +25,7 @@ namespace SlowTests.MailingList
             public string ImportantProperty { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6124")]
         public void WithCustomizedTagNameAndIdentityProperty()
         {
             var id = string.Empty;
@@ -38,10 +38,10 @@ namespace SlowTests.MailingList
                       ? property.Name == "Id2"
                       : defaultFindIdentityProperty(property);
 
-                store.Conventions.FindTypeTagName = type =>
+                store.Conventions.FindCollectionName = type =>
                                                     typeof(IDomainObject).IsAssignableFrom(type)
                                                         ? "domainobjects"
-                                                        : DocumentConvention.DefaultTypeTagName(type);
+                                                        : DocumentConventions.DefaultGetCollectionName(type);
 
                 using (var session = store.OpenSession())
                 {

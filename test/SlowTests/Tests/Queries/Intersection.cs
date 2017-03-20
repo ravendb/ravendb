@@ -8,15 +8,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Queries
 {
-    public class IntersectionQuery : RavenNewTestBase
+    public class IntersectionQuery : RavenTestBase
     {
         [Fact]
         public void CanPerformIntersectionQuery_Remotely()
@@ -120,9 +120,10 @@ namespace SlowTests.Tests.Queries
         {
             using (var s = store.OpenSession())
             {
-                store.Admin.Send(new PutIndexOperation("TShirtNested",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
+                                                    Name = "TShirtNested",
                                                     Maps =
                                                     {
                                                         @"from s in docs.TShirts
@@ -131,9 +132,9 @@ namespace SlowTests.Tests.Queries
                                                     },
                                                     Fields = new Dictionary<string, IndexFieldOptions>
                                                     {
-                                                        { "BarcodeNumber", new IndexFieldOptions { Sort = SortOptions.NumericDefault } }
+                                                        { "BarcodeNumber", new IndexFieldOptions { Sort = SortOptions.Numeric } }
                                                     }
-                                                }));
+                                                }}));
 
                 foreach (var sample in GetSampleData())
                 {

@@ -20,13 +20,14 @@ describe(viewUnderTest, () => {
 });
 
 
-function getIndexPerformance(): Raven.Client.Data.Indexes.IndexPerformanceStats[] {
+function getIndexPerformance(): Raven.Client.Documents.Indexes.IndexPerformanceStats[] {
     return [
         {
             "IndexName": "Product/Sales",
             "IndexId": 3,
             "Performance": [
                 {
+                    Id: 1,
                     "Completed": "2016-12-15T08:49:50.6045291Z",
                     "Details": {
                         "CommitDetails": null,
@@ -124,6 +125,7 @@ function getIndexPerformance(): Raven.Client.Data.Indexes.IndexPerformanceStats[
             "IndexId": 4,
             "Performance": [
                 {
+                    Id: 2,
                     "Completed": "2016-12-15T08:49:50.6072565Z",
                     "Details": {
                         "CommitDetails": null,

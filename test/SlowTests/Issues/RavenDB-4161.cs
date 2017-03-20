@@ -9,7 +9,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -45,7 +48,7 @@ namespace SlowTests.Issues
 
                     //WaitForUserToContinueTheTest(store);
 
-                    var fooTokens = session.Advanced.LoadStartingWith<Token_Id, string>("Token/foo").OrderBy(x => x).ToArray();
+                    var fooTokens = session.Advanced.LoadStartingWith<Token_Id, string>("Token/foo").Select(x => x.Value).OrderBy(x => x).ToArray();
 
                     var fromQuery = session.Query<Token>().TransformWith<Token_Id, string>().ToArray().OrderBy(x => x).ToArray();
 
@@ -89,7 +92,7 @@ namespace SlowTests.Issues
 
                     //WaitForUserToContinueTheTest(store);
 
-                    var fooTokens = (await session.Advanced.LoadStartingWithAsync<Token_Id, string>("Token/foo")).OrderBy(x => x).ToArray();
+                    var fooTokens = (await session.Advanced.LoadStartingWithAsync<Token_Id, string>("Token/foo")).Select(x => x.Value).OrderBy(x => x).ToArray();
 
                     var fromQuery = (await session.Query<Token>().TransformWith<Token_Id, string>().ToListAsync()).OrderBy(x => x).ToArray();
 

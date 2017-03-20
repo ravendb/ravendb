@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Replication.Messages;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Operations.Databases.Documents;
+using Raven.Client.Documents.Exceptions;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Replication;
+using Raven.Server.NotificationCenter;
+using Raven.Server.Utils;
 using Xunit;
+using Constants = Raven.Client.Constants;
 
 namespace FastTests.Server.Replication
 {
@@ -21,6 +24,10 @@ namespace FastTests.Server.Replication
             public string Name { get; set; }
             public int Age { get; set; }
         }
+
+        private class New_User: User { }
+
+        private class New_User2: User { }
 
         [Fact]
         public void All_remote_etags_lower_than_local_should_return_AlreadyMerged_at_conflict_status()
@@ -41,7 +48,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 3 },
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.AlreadyMerged, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.AlreadyMerged, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -63,7 +70,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 30 },
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.Update, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.Update, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -85,7 +92,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 2 },
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.Conflict, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.Conflict, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -107,7 +114,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.Conflict, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.Conflict, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -130,7 +137,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 40 }
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.Update, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.Update, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -147,7 +154,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[1], Etag = 10 }
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.Conflict, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.Conflict, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -170,7 +177,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 3 }
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.AlreadyMerged, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.AlreadyMerged, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -193,7 +200,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 300 }
             };
 
-            Assert.Equal(IncomingReplicationHandler.ConflictStatus.Conflict, IncomingReplicationHandler.GetConflictStatus(remote, local));
+            Assert.Equal(ReplicationUtils.ConflictStatus.Conflict, ReplicationUtils.GetConflictStatus(remote, local));
         }
 
 
@@ -254,7 +261,9 @@ namespace FastTests.Server.Replication
                 conflicts = WaitUntilHasConflict(store2, "users/2");
                 Assert.Equal(2, conflicts["users/2"].Count);
                 // conflict between two tombstones, resolved automaticlly to tombstone.
-                Assert.Equal(2, WaitUntilHasTombstones(store2, 2).Count);
+                var tombstones = WaitUntilHasTombstones(store2);
+                Assert.Equal(1, tombstones.Count);
+                Assert.True(tombstones.Contains("Users/1"));
             }
         }
 
@@ -352,7 +361,7 @@ namespace FastTests.Server.Replication
                 var operation = store2.Operations.Send(new PatchByIndexOperation(userIndex.IndexName, new IndexQuery(store1.Conventions)
                 {
                     Query = string.Empty
-                }, new Raven.NewClient.Client.Data.PatchRequest
+                }, new PatchRequest
                 {
                     Script = string.Empty
                 }));
@@ -413,46 +422,12 @@ namespace FastTests.Server.Replication
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
-                var exception = Assert.Throws<DocumentConflictException>(() => store2.Operations.Send(new PatchOperation("foo/bar", null, new Raven.NewClient.Client.Data.PatchRequest
+                var exception = Assert.Throws<DocumentConflictException>(() => store2.Operations.Send(new PatchOperation("foo/bar", null, new PatchRequest
                 {
                     Script = "this.x = 123"
                 })));
 
                 Assert409Response(exception);
-            }
-        }
-
-        [Fact]
-        public void Conflict_then_delete_request_will_return_409_and_conflict_data()
-        {
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
-            {
-                using (var s1 = store1.OpenSession())
-                {
-                    s1.Store(new User { Name = "test" }, "foo/bar");
-                    s1.SaveChanges();
-                }
-
-                using (var s2 = store2.OpenSession())
-                {
-                    s2.Store(new User { Name = "test2" }, "foo/bar");
-                    s2.SaveChanges();
-                }
-
-                SetupReplication(store1, store2);
-
-                WaitUntilHasConflict(store2, "foo/bar");
-
-                using (var session = store2.OpenSession())
-                {
-                    var exception = Assert.Throws<DocumentConflictException>(() =>
-                    {
-                        session.Delete("foo/bar");
-                        session.SaveChanges();
-                    });
-                    Assert409Response(exception);
-                }
             }
         }
 
@@ -497,7 +472,198 @@ namespace FastTests.Server.Replication
             }
         }
 
+        [Fact]
+        public void Conflict_should_be_created_for_document_in_different_collections()
+        {
+            const string dbName1 = "FooBar-1";
+            const string dbName2 = "FooBar-2";
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            {
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User { Name = "test1" }, "foo/bar");
+                    s1.SaveChanges();
+                }
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Store(new New_User { Name = "test1" }, "foo/bar");
+                    s2.SaveChanges();
+                }
 
+                SetupReplication(store1, store2);
+
+                var conflicts = WaitUntilHasConflict(store2, "foo/bar", 2);
+
+                Assert.Equal(2, conflicts["foo/bar"].Count);
+            }
+        }
+
+        [Fact]
+        public void Conflict_should_be_created_and_resolved_for_document_in_different_collections()
+        {
+            const string dbName1 = "FooBar-1";
+            const string dbName2 = "FooBar-2";
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            {
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Store(new User { Name = "test1" }, "foo/bar");
+                    s2.SaveChanges();
+                }
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new New_User { Name = "test1" }, "foo/bar");
+                    s1.SaveChanges();
+                }
+
+                SetReplicationConflictResolution(store2, StraightforwardConflictResolution.ResolveToLatest);
+                SetupReplication(store1, store2);
+
+                var newCollection = WaitForValue(() =>
+                {
+                    using (var s2 = store2.OpenSession())
+                    {
+                        var metadata = s2.Advanced.GetMetadataFor(s2.Load<User>("foo/bar"));
+                        var collection = metadata.GetString(Constants.Documents.Metadata.Collection);
+                        return collection;
+                    }
+                }, "New_Users");
+
+                Assert.Equal("New_Users", newCollection);
+            }
+        }
+
+        [Fact]
+        public void Conflict_should_be_resolved_for_document_in_different_collections_after_setting_new_resolution()
+        {
+            const string dbName1 = "FooBar-1";
+            const string dbName2 = "FooBar-2";
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            {
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Store(new User { Name = "test1" }, "foo/bar");
+                    s2.SaveChanges();
+                }
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new New_User { Name = "test1" }, "foo/bar");
+                    s1.SaveChanges();
+                }
+
+                SetupReplication(store1, store2);
+
+                WaitUntilHasConflict(store2, "foo/bar", 2);
+
+                SetReplicationConflictResolution(store2, StraightforwardConflictResolution.ResolveToLatest);
+
+                var count = WaitForValue(() => GetConflicts(store2, "foo/bar").Results.Length, 0);
+                Assert.Equal(count, 0);
+
+                var newCollection = WaitForValue(() =>
+                {
+                    using (var s2 = store2.OpenSession())
+                    {
+                        var metadata = s2.Advanced.GetMetadataFor(s2.Load<User>("foo/bar"));
+                        var collection = metadata.GetString(Constants.Documents.Metadata.Collection);
+                        return collection;
+                    }
+                }, "New_Users");
+
+                Assert.Equal("New_Users", newCollection);
+            }
+        }
+
+        [Fact]
+        public void Conflict_should_be_resolved_for_document_in_different_collections_after_saving_in_new_collection()
+        {
+            const string dbName1 = "FooBar-1";
+            const string dbName2 = "FooBar-2";
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            {
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Store(new User { Name = "test1" }, "foo/bar");
+                    s2.SaveChanges();
+                }
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new New_User { Name = "test1" }, "foo/bar");
+                    s1.SaveChanges();
+                }
+
+                SetupReplication(store1, store2);
+
+                WaitUntilHasConflict(store2, "foo/bar", 2);
+
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Store(new New_User2 { Name = "test2" }, "foo/bar");
+                    s2.SaveChanges();
+                }
+
+                var count = WaitForValue(() => GetConflicts(store2, "foo/bar").Results.Length, 0);
+                Assert.Equal(count, 0);
+
+                New_User2 newDoc = null;
+                var newCollection = WaitForValue(() =>
+                {
+                    using (var s2 = store2.OpenSession())
+                    {
+                        newDoc = s2.Load<New_User2>("foo/bar");
+                        var metadata = s2.Advanced.GetMetadataFor(newDoc);
+                        var collection = metadata.GetString(Constants.Documents.Metadata.Collection);
+                        return collection;
+                    }
+                }, "New_User2s");
+
+                Assert.Equal("New_User2s", newCollection);
+                Assert.Equal("test2", newDoc.Name);
+            }
+        }
+
+        [Fact]
+        public void Should_not_resolve_conflcit_with_script_when_they_from_different_collection()
+        {
+            var store1 = GetDocumentStore();
+            var store2 = GetDocumentStore();
+
+            using (var session = store1.OpenSession())
+            {
+                session.Store(new User { Name = "Karmel" }, "foo/bar");
+                session.SaveChanges();
+            }
+
+            using (var session = store2.OpenSession())
+            {
+                session.Store(new New_User { Name = "Oren" }, "foo/bar");
+                session.SaveChanges();
+            }
+
+            SetScriptResolution(store2, "return {Name:docs[0].Name + '123'};","Users");
+            SetupReplication(store1, store2);
+
+            var db2 = GetDocumentDatabaseInstanceFor(store2).Result.NotificationCenter;
+           
+            Assert.Equal(1, WaitForValue(() => db2.GetAlertCount(), 1));
+
+            IEnumerable<NotificationTableValue> alerts;
+            using (db2.GetStored(out alerts))
+            {
+                var alertsList = alerts.ToList();
+                string msg;
+                alertsList[0].Json.TryGet("Message", out msg);
+                Assert.True(msg.Contains("All conflicted documents must have same collection name, but we found conflicted document in Users and an other one in New_Users"));
+            }
+            
+        }
 
         private class UserIndex : AbstractIndexCreationTask<User>
         {

@@ -1,12 +1,11 @@
 ﻿using System.Linq;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries
 {
-    public class QueryingStopwordWithPrefixShouldWork : RavenNewTestBase
+    public class QueryingStopwordWithPrefixShouldWork : RavenTestBase
     {
         private class Foo
         {

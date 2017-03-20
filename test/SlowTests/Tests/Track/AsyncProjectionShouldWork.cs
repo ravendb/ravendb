@@ -2,10 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Track
@@ -14,7 +12,7 @@ namespace SlowTests.Tests.Track
     /// Issue RavenDB-191
     /// http://issues.hibernatingrhinos.com/issue/RavenDB-191
     /// </summary>
-    public class AsyncProjectionShouldWork : RavenNewTestBase
+    public class AsyncProjectionShouldWork : RavenTestBase
     {
         private class TestObj
         {

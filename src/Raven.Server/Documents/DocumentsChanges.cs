@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using Raven.Abstractions.Data;
-using Raven.Client.Data;
+using System.Linq;
+using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations;
 
 namespace Raven.Server.Documents
 {
@@ -17,7 +18,7 @@ namespace Raven.Server.Documents
 
         public event Action<TransformerChange> OnTransformerChange;
 
-        public event Action<OperationStatusChanged> OnOperationStatusChange;
+        public event Action<OperationStatusChange> OnOperationStatusChange;
 
         public void RaiseNotifications(IndexChange indexChange)
         {
@@ -37,6 +38,19 @@ namespace Raven.Server.Documents
 
         public void RaiseSystemNotifications(DocumentChange documentChange)
         {
+            var k = OnSystemDocumentChange;
+            if (k != null)
+            {
+                var invocationList = k.GetInvocationList().GroupBy(x => x.Target)
+                    .Where(x => x.Count() > 1)
+                    .ToArray();
+
+                foreach (var grouping in invocationList)
+                {
+                    Console.WriteLine(grouping.Key + " " + grouping.Count());
+                }
+
+            }
             OnSystemDocumentChange?.Invoke(documentChange);
 
             foreach (var connection in Connections)
@@ -55,7 +69,7 @@ namespace Raven.Server.Documents
                 
         }
 
-        public void RaiseNotifications(OperationStatusChanged operationStatusChange)
+        public void RaiseNotifications(OperationStatusChange operationStatusChange)
         {
             OnOperationStatusChange?.Invoke(operationStatusChange);
 

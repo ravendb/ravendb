@@ -1,8 +1,9 @@
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Tests.Bugs.TransformResults
@@ -24,10 +25,10 @@ namespace SlowTests.Tests.Bugs.TransformResults
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
                            .Statistics(out stats)
-                           .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+                           .Customize(x => x.WaitForNonStaleResults())
                            .OrderBy(x => x.Content)
                            .Where(x => x.Content == (content))
                            .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()

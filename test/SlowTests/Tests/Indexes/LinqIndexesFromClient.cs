@@ -12,10 +12,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -30,16 +28,16 @@ namespace SlowTests.Tests.Indexes
         [Fact]
         public void Convert_select_many_will_keep_doc_id()
         {
-            IndexDefinition indexDefinition = new IndexDefinitionBuilder<Order>
+            var indexDefinition = new IndexDefinitionBuilder<Order>
             {
                 Map = orders => from order in orders
                                 from line in order.OrderLines
                                 select new { line.ProductId }
-            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
+            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
 
             indexDefinition.Name = "Index1";
             var index = IndexAndTransformerCompiler.Compile(indexDefinition);
-  
+
             var map = index.Maps.Values.First().First();
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -97,7 +95,7 @@ namespace SlowTests.Tests.Indexes
                                 from role in person.Roles
                                 where role == "Student"
                                 select new { role }
-            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
+            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
 
             indexDefinition.Name = "Index1";
             IndexAndTransformerCompiler.Compile(indexDefinition);
@@ -118,7 +116,7 @@ namespace SlowTests.Tests.Indexes
                                where user.Location == "Tel Aviv"
                                select new { user.Name },
                 Stores = { { user => user.Name, FieldStorage.Yes } }
-            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
+            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
 
             var original = new IndexDefinition
             {
@@ -143,7 +141,7 @@ namespace SlowTests.Tests.Indexes
                                where user.Location == "Tel Aviv"
                                select new { Age = user.Age - (20 - user.Age) },
                 Stores = { { user => user.Name, FieldStorage.Yes } }
-            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
+            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
             var original = new IndexDefinition
             {
                 Fields =
@@ -167,7 +165,7 @@ namespace SlowTests.Tests.Indexes
                                where user.Location == "Tel Aviv"
                                select new { user.Name, user.Id },
                 Stores = { { user => user.Name, FieldStorage.Yes } }
-            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
+            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
             var original = new IndexDefinition
             {
                 Fields =
@@ -193,7 +191,7 @@ namespace SlowTests.Tests.Indexes
                                where !(user.Location == "Te(l) (A)viv")
                                select new { user.Name },
                 Stores = { { user => user.Name, FieldStorage.Yes } }
-            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
+            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
             var original = new IndexDefinition
             {
                 Fields =
@@ -217,7 +215,7 @@ namespace SlowTests.Tests.Indexes
                 Map = users => from user in users
                                where user.Name.Contains('C')
                                select user
-            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
+            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
             var original = new IndexDefinition
             {
                 Maps = { "docs.Users.Where(user => Enumerable.Contains(user.Name, 'C'))" }
@@ -236,7 +234,7 @@ namespace SlowTests.Tests.Indexes
                                    group agg by agg.Location
                                        into g
                                    select new { Location = g.Key, Count = g.Sum(x => x.Count) },
-            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
+            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
             var original = new IndexDefinition
             {
                 Maps = { @"docs.Users.Select(user => new {
@@ -262,7 +260,7 @@ namespace SlowTests.Tests.Indexes
                                    group agg by agg.Location
                                        into g
                                    select new { Location = g.Key, Count = g.Sum(x => x.Count) },
-            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
+            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
             var original = new IndexDefinition
             {
                 Maps = { expectedIndexString },

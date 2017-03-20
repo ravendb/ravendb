@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Client.Replication.Messages;
+using Raven.Client;
+using Raven.Client.Documents.Replication.Messages;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -26,7 +25,9 @@ namespace Raven.Server.Documents
         public ChangeVectorEntry[] ChangeVector;
         public DateTime LastModified;
         public DocumentFlags Flags;
+        public NonPersistentDocumentFlags NonPersistentFlags;
         public short TransactionMarker;
+        public IEnumerable<Attachment> Attachments;
 
         public unsafe ulong DataHash
         {
@@ -48,7 +49,7 @@ namespace Raven.Server.Documents
 
             DynamicJsonValue mutatedMetadata;
             BlittableJsonReaderObject metadata;
-            if (Data.TryGet(Constants.Metadata.Key, out metadata))
+            if (Data.TryGet(Constants.Documents.Metadata.Key, out metadata))
             {
                 if (metadata.Modifications == null)
                     metadata.Modifications = new DynamicJsonValue(metadata);
@@ -59,15 +60,15 @@ namespace Raven.Server.Documents
             {
                 Data.Modifications = new DynamicJsonValue(Data)
                 {
-                    [Constants.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
+                    [Constants.Documents.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
                 };
             }
 
-            mutatedMetadata[Constants.Metadata.Etag] = Etag;
-            mutatedMetadata[Constants.Metadata.Id] = Key;
-
+            mutatedMetadata[Constants.Documents.Metadata.Etag] = Etag;
+            mutatedMetadata[Constants.Documents.Metadata.Id] = Key;
+            //mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;
             if (indexScore.HasValue)
-                mutatedMetadata[Constants.Metadata.IndexScore] = indexScore;
+                mutatedMetadata[Constants.Documents.Metadata.IndexScore] = indexScore;
 
             _hash = null;
         }
@@ -76,7 +77,7 @@ namespace Raven.Server.Documents
         {
             foreach (var property in Data.GetPropertyNames())
             {
-                if (string.Equals(property, Constants.Metadata.Key, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(property, Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 if (Data.Modifications == null)
@@ -92,8 +93,8 @@ namespace Raven.Server.Documents
         {
             string expirationDate;
             BlittableJsonReaderObject metadata;
-            if (Data.TryGet(Constants.Metadata.Key, out metadata) &&
-                metadata.TryGet(Constants.Expiration.RavenExpirationDate, out expirationDate))
+            if (Data.TryGet(Constants.Documents.Metadata.Key, out metadata) &&
+                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out expirationDate))
             {
                 var expirationDateTime = DateTime.ParseExact(expirationDate, new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
                 if (expirationDateTime < currentDate)
@@ -109,8 +110,8 @@ namespace Raven.Server.Documents
 
             BlittableJsonReaderObject myMetadata;
             BlittableJsonReaderObject objMetadata;
-            Data.TryGet(Constants.Metadata.Key, out myMetadata);
-            obj.TryGet(Constants.Metadata.Key, out objMetadata);
+            Data.TryGet(Constants.Documents.Metadata.Key, out myMetadata);
+            obj.TryGet(Constants.Documents.Metadata.Key, out objMetadata);
 
             if (myMetadata == null && objMetadata == null)
                 return true;
@@ -118,7 +119,7 @@ namespace Raven.Server.Documents
             if (myMetadata == null || objMetadata == null)
                 return false;
 
-            return ComparePropertiesExceptionStartingWithAt(myMetadata, objMetadata);
+            return ComparePropertiesExceptionStartingWithAt(myMetadata, objMetadata, isMetadata: true);
         }
 
         public bool IsEqualTo(BlittableJsonReaderObject obj)
@@ -126,11 +127,11 @@ namespace Raven.Server.Documents
             return ComparePropertiesExceptionStartingWithAt(Data, obj);
         }
 
-        private static bool ComparePropertiesExceptionStartingWithAt(BlittableJsonReaderObject myMetadata,
-            BlittableJsonReaderObject objMetadata)
+        private static bool ComparePropertiesExceptionStartingWithAt(BlittableJsonReaderObject myObject,
+            BlittableJsonReaderObject otherObject, bool isMetadata = false)
         {
-            var properties = new HashSet<string>(myMetadata.GetPropertyNames());
-            foreach (var propertyName in objMetadata.GetPropertyNames())
+            var properties = new HashSet<string>(myObject.GetPropertyNames());
+            foreach (var propertyName in otherObject.GetPropertyNames())
             {
                 properties.Add(propertyName);
             }
@@ -138,20 +139,33 @@ namespace Raven.Server.Documents
             foreach (var property in properties)
             {
                 if (property[0] == '@')
-                    continue;
+                {
+                    switch (isMetadata)
+                    {
+                        case true:
+                            if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false)
+                                continue;
+                            break;
+                        default:
+                            if (property.Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
+                                continue;
+                            break;
+                    }
+                }
 
                 object myProperty;
-                object objProperty;
+                object otherPropery;
 
-                if (myMetadata.TryGetMember(property, out myProperty) == false)
+                if (myObject.TryGetMember(property, out myProperty) == false)
                     return false;
 
-                if (objMetadata.TryGetMember(property, out objProperty) == false)
+                if (otherObject.TryGetMember(property, out otherPropery) == false)
                     return false;
 
-                if (Equals(myProperty, objProperty) == false)
+                if (Equals(myProperty, otherPropery) == false)
                     return false;
             }
+
             return true;
         }
     }

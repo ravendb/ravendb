@@ -15,7 +15,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Querying
 {
-    public class Linq : RavenNewTestBase
+    public class Linq : RavenTestBase
     {
         [Fact]
         public void CanQueryUsingLinq()

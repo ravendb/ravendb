@@ -1,12 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -24,43 +21,44 @@ namespace SlowTests.Issues
                 {
 
                     var orgs = from i in Enumerable.Range(1, 10)
-                    select new Organization
-                    {
-                        Id = i,
-                        DateApproved = DateTime.Now,
-                        Name = "org" + i
-                    };
+                               select new Organization
+                               {
+                                   Id = i.ToString(),
+                                   DateApproved = DateTime.Now,
+                                   Name = "org" + i
+                               };
 
                     foreach (var org in orgs)
                         session.Store(org);
                     session.SaveChanges();
 
-                    store.DatabaseCommands.Patch("organizations/1",
-                                                     new PatchRequest
-                                                     {
-                                                         Values =
-                                                         {
-                                                             { "DateApproved" , "2012-09-07T09:41:42.9893269" },
-                                                             { "NewProp", "test" }
-                                                         } ,
-                                                         Script = "this.DateApproved = DateApproved; this['NewProp'] = NewProp;"
-                                                     }
-                                                 );
+                    store.Operations.Send(new PatchOperation("organizations/1", null,
+                        new PatchRequest
+                        {
+                            Values =
+                            {
+                                {"DateApproved", "2012-09-07T09:41:42.9893269"},
+                                {"NewProp", "test"}
+                            },
+                            Script = "this.DateApproved = DateApproved; this['NewProp'] = NewProp;"
+                        }));
+
                     WaitForIndexing(store);
 
-                    //Assert.Empty(store.SystemDatabase.Statistics.Errors);
+
+                    TestHelper.AssertNoIndexErrors(store);
                 }
             }
         }
 
-        class Organization
+        private class Organization
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public DateTime DateApproved { get; set; }
         }
 
-        class OrganizationIndex : AbstractIndexCreationTask<Organization, OrganizationIndex.Result>
+        private class OrganizationIndex : AbstractIndexCreationTask<Organization, OrganizationIndex.Result>
         {
             public class Result
             {

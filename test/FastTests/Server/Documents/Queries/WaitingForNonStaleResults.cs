@@ -4,18 +4,19 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
-    public class WaitingForNonStaleResults : RavenNewTestBase
+    public class WaitingForNonStaleResults : RavenTestBase
     {
         [Fact]
         public async Task Cutoff_etag_usage()
         {
-            long? lastEtagOfUser;
+            long lastEtagOfUser;
 
             using (var store = GetDocumentStore())
             {
@@ -30,7 +31,7 @@ namespace FastTests.Server.Documents.Queries
 
                     await session.SaveChangesAsync();
 
-                    lastEtagOfUser = session.Advanced.GetEtagFor(entity);
+                    lastEtagOfUser = session.Advanced.GetEtagFor(entity).Value;
                 }
 
                 using (var session = store.OpenSession())

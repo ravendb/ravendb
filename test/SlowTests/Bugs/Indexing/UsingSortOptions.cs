@@ -1,27 +1,27 @@
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class UsingSortOptions : RavenNewTestBase
+    public class UsingSortOptions : RavenTestBase
     {
         [Fact]
         public void CanCreateIndexWithSortOptionsOnStringVal()
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from user in docs.Users select new { user.Name }" },
 
                     Fields =
                     {
                         {"Name", new IndexFieldOptions {Sort = SortOptions.StringVal}}
-                    }
-                }));
+                    },
+                    Name = "test"
+                }}));
 
                 var indexDefinition = store.Admin.Send(new GetIndexOperation("test"));
 

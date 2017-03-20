@@ -1,9 +1,8 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Linq;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -16,7 +15,7 @@ namespace SlowTests.MailingList
             {
             }
 
-            public long Id { get; set; }
+            public string Id { get; set; }
             public string Address { get; set; }
             public string Price { get; set; }
             public string Url { get; set; }
@@ -78,7 +77,7 @@ namespace SlowTests.MailingList
                     var dataResult = session.Query<DataResult>().First(r => r.SiteId == "t108137341");
                     Assert.Null(dataResult.State);
                     var results = session.Query<DataResult>().Where(r => r.State == null)
-                        .Customize(o => o.WaitForNonStaleResultsAsOfLastWrite()).ToList();
+                        .Customize(o => o.WaitForNonStaleResults()).ToList();
 
                     Assert.NotEmpty(results);
                 }

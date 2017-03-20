@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Data.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
@@ -415,7 +416,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
             {
                 var query = new IndexQueryServerSide
                 {
-                    Query = $"{Constants.Indexing.Fields.ReduceKeyFieldName}:{reduceKeyHash}"
+                    Query = $"{Constants.Documents.Indexing.Fields.ReduceKeyFieldName}:{reduceKeyHash}"
                 };
 
                 var fieldsToFetch = new FieldsToFetch(query, index.Definition, null);

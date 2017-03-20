@@ -6,8 +6,8 @@
 
 using System;
 using System.Linq;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Utils.Indexes
@@ -28,7 +28,7 @@ namespace SlowTests.Core.Utils.Indexes
                                {
                                    Type = company.Type,
                                    ContactsCount = company.Contacts.Count,
-                                   LastModified = MetadataFor(company).Value<DateTime>(Constants.Metadata.LastModified)
+                                   LastModified = MetadataFor(company).Value<DateTime>(Constants.Documents.Metadata.LastModified)
                                };
 
             Reduce = results => from result in results

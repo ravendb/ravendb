@@ -9,13 +9,13 @@ class getDatabaseStatsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Data.DatabaseStatistics> {
-        var url = this.getQueryUrlFragment();
-        return this.query<Raven.Client.Data.DatabaseStatistics>(url, null, this.db, null, this.getTimeToAlert(this.longWait));
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
+        const url = this.getQueryUrlFragment();
+        return this.query<Raven.Client.Documents.Operations.DatabaseStatistics>(url, null, this.db, null, this.getTimeToAlert(this.longWait));
     }
 
     getQueryUrl(): string {
-        return appUrl.forResourceQuery(this.db) + this.getQueryUrlFragment();
+        return appUrl.forDatabaseQuery(this.db) + this.getQueryUrlFragment();
     }
 
     private getQueryUrlFragment(): string {

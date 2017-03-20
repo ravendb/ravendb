@@ -5,32 +5,31 @@
 //-----------------------------------------------------------------------
 
 using FastTests;
-using Raven.NewClient.Client.Exceptions.Compilation;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Exceptions.Compilation;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class MissingAnalyzer : RavenNewTestBase
+    public class MissingAnalyzer : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: RavenDB-6153")]
+        [Fact]
         public void Should_give_clear_error_when_starting()
         {
             using (var store = GetDocumentStore())
             {
-                var e = Assert.Throws<IndexCompilationException>(() => store.Admin.Send(new PutIndexOperation("foo",
-                    new IndexDefinition
+                var e = Assert.Throws<IndexCompilationException>(() => store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                {
+                    Maps = { "from doc in docs select new { doc.Name }" },
+                    Fields =
                     {
-                        Maps = { "from doc in docs select new { doc.Name }" },
-                        Fields =
-                        {
-                            {"Name", new IndexFieldOptions {Analyzer = "foo bar"}}
-                        }
+                        {"Name", new IndexFieldOptions {Analyzer = "foo bar"}}
+                    },
+                    Name = "foo"
+                })));
 
-                    })));
-
-                Assert.Equal("Cannot find analyzer type 'foo bar' for field: Name", e.Message);
+                Assert.Contains("Cannot find analyzer type 'foo bar' for field: Name", e.Message);
             }
         }
     }

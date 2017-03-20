@@ -8,9 +8,10 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -31,7 +32,7 @@ namespace SlowTests.MailingList
                     session.Store(new TestClient { ClientProfile = { PersonName = new TestPersonName("Joe", "Cain") }, Id = "clients/2" });
                     session.SaveChanges();
 
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var list = session.Query<App_WaiverWaitlistItemSearch.IndexResult, App_WaiverWaitlistItemSearch>()
                         .Statistics(out stats)
                         .Customize(x=>x.WaitForNonStaleResults())

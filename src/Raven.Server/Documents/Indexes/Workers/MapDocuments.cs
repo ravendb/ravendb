@@ -3,8 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
-using Raven.Abstractions.Data;
-using Raven.Client.Data.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             $"Failed to execute mapping function on {current.Key}. Exception: {e}");
                                     }
 
-                                    if (CanContinueBatch(collectionStats, lastEtag, lastCollectionEtag) == false)
+                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, lastEtag, lastCollectionEtag) == false)
                                     {
                                         keepRunning = false;
                                         break;
@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             return false;
         }
 
-        public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
+        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, long currentEtag, long maxEtag)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
             {
@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
                 return false;
            
-            if (_index.CanContinueBatch(stats) == false)
+            if (_index.CanContinueBatch(stats,documentsContext, indexingContext) == false)
                 return false;
 
             return true;
@@ -242,7 +242,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         private IEnumerable<Document> GetDocumentsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
         {
-            if (collection == Constants.Indexing.AllDocumentsCollection)
+            if (collection == Constants.Documents.Indexing.AllDocumentsCollection)
                 return _documentsStorage.GetDocumentsFrom(databaseContext, lastEtag + 1, 0, pageSize);
             return _documentsStorage.GetDocumentsFrom(databaseContext, collection, lastEtag + 1, 0, pageSize);
         }

@@ -6,8 +6,8 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
-using Raven.Json.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -42,18 +42,18 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var docs = session.Advanced.LoadStartingWith<TestDocumentTransformer, TestDocumentTransformer.Output>("test/", start: 0, pageSize: 1024).ToList();
+                    var docs = session.Advanced.LoadStartingWith<TestDocumentTransformer, TestDocumentTransformer.Output>("test/", start: 0, pageSize: 1024).Select(x => x.Value).ToList();
                     Assert.Equal(2, docs.Count);
-                    Assert.True(docs[0].ValueFormatted.StartsWith("Formatted Value is {\"Value\":1,"));
-                    Assert.True(docs[1].ValueFormatted.StartsWith("Formatted Value is {\"Value\":2,"));
+                    Assert.True(docs[0].ValueFormatted.StartsWith("Formatted Value is 1"));
+                    Assert.True(docs[1].ValueFormatted.StartsWith("Formatted Value is 2"));
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var docs = session.Advanced.LoadStartingWith<TestDocumentTransformer2, TestDocumentTransformer2.Output>("test/", start: 0, pageSize: 1024).ToList();
+                    var docs = session.Advanced.LoadStartingWith<TestDocumentTransformer2, TestDocumentTransformer2.Output>("test/", start: 0, pageSize: 1024).Select(x => x.Value).ToList();
                     Assert.Equal(2, docs.Count);
-                    Assert.True(docs[0].ValueFormatted.StartsWith("Formatted Value is {\"Value\":1,"));
-                    Assert.True(docs[1].ValueFormatted.StartsWith("Formatted Value is {\"Value\":2,"));
+                    Assert.True(docs[0].ValueFormatted.StartsWith("Formatted Value is 1"));
+                    Assert.True(docs[1].ValueFormatted.StartsWith("Formatted Value is 2"));
                 }
             }
         }
@@ -86,46 +86,52 @@ namespace SlowTests.Issues
                     Assert.Equal(2, docsWithoutTransformer[1].Value);
                 }
 
-                using (var enumerator = store.DatabaseCommands.StreamDocs(0, transformer: transformer.TransformerName))
+                using (var session = store.OpenSession())
                 {
-                    var count = 0;
-                    while (enumerator.MoveNext())
+                    using (var enumerator = session.Advanced.Stream<TestDocumentTransformer.Output>(0, transformer: transformer.TransformerName))
                     {
-                        var result = (RavenJObject)enumerator.Current.Value<RavenJArray>("$values")[0];
-                        switch (count)
+                        var count = 0;
+                        while (enumerator.MoveNext())
                         {
-                            case 0:
-                                Assert.True(result.Value<string>("ValueFormatted").StartsWith("Formatted Value is {\"Value\":1,"));
-                                break;
-                            case 1:
-                                Assert.True(result.Value<string>("ValueFormatted").StartsWith("Formatted Value is {\"Value\":2,"));
-                                break;
+                            var result = enumerator.Current.Document;
+                            switch (count)
+                            {
+                                case 0:
+                                    Assert.True(result.ValueFormatted.StartsWith("Formatted Value is 1"));
+                                    break;
+                                case 1:
+                                    Assert.True(result.ValueFormatted.StartsWith("Formatted Value is 2"));
+                                    break;
+                            }
+                            count++;
                         }
-                        count++;
-                    }
 
-                    Assert.Equal(2, count);
+                        Assert.Equal(2, count);
+                    }
                 }
 
-                using (var enumerator = store.DatabaseCommands.StreamDocs(0, transformer: transformer2.TransformerName))
+                using (var session = store.OpenSession())
                 {
-                    var count = 0;
-                    while (enumerator.MoveNext())
+                    using (var enumerator = session.Advanced.Stream<TestDocumentTransformer2.Output>(0, transformer: transformer2.TransformerName))
                     {
-                        var result = (RavenJObject)enumerator.Current.Value<RavenJArray>("$values")[0];
-                        switch (count)
+                        var count = 0;
+                        while (enumerator.MoveNext())
                         {
-                            case 0:
-                                Assert.True(result.Value<string>("ValueFormatted").StartsWith("Formatted Value is {\"Value\":1,"));
-                                break;
-                            case 1:
-                                Assert.True(result.Value<string>("ValueFormatted").StartsWith("Formatted Value is {\"Value\":2,"));
-                                break;
+                            var result = enumerator.Current.Document;
+                            switch (count)
+                            {
+                                case 0:
+                                    Assert.True(result.ValueFormatted.StartsWith("Formatted Value is 1"));
+                                    break;
+                                case 1:
+                                    Assert.True(result.ValueFormatted.StartsWith("Formatted Value is 2"));
+                                    break;
+                            }
+                            count++;
                         }
-                        count++;
-                    }
 
-                    Assert.Equal(2, count);
+                        Assert.Equal(2, count);
+                    }
                 }
             }
         }
@@ -155,7 +161,7 @@ namespace SlowTests.Issues
                     let otherDoc = LoadDocument<OtherDocument>("foo")
                     select new Output
                     {
-                        ValueFormatted = string.Format("Formatted Value is {0}", result)
+                        ValueFormatted = string.Format("Formatted Value is {0}", result.Value)
                     };
             }
         }
@@ -173,7 +179,7 @@ namespace SlowTests.Issues
                     from result in results
                     select new Output
                     {
-                        ValueFormatted = string.Format("Formatted Value is {0}", result)
+                        ValueFormatted = string.Format("Formatted Value is {0}", result.Value)
                     };
             }
         }

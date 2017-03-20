@@ -8,7 +8,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
@@ -34,7 +34,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        public class FooIndex : AbstractIndexCreationTask<Foo>
+        private class FooIndex : AbstractIndexCreationTask<Foo>
         {
             public FooIndex()
             {
@@ -48,7 +48,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        public class Foo
+        private class Foo
         {
             public DateTime? NullableDateTime { get; set; }
         }

@@ -9,8 +9,10 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -28,15 +30,16 @@ namespace SlowTests.MailingList
             public string Name { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6305")]
         public void InOnObjects()
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("DevByIDE", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
+                    Name = "DevByIDE",
                     Maps = { @"from dev in docs.Developers select new { dev.PreferredIDE, dev.PreferredIDE.Name }" }
-                });
+                }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -66,7 +69,7 @@ namespace SlowTests.MailingList
                 {
                     var bestIDEsEver = new[] { new IDE { Name = "VisualStudio" }, new IDE { Name = "IntelliJ" } };
 
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     // this query returns with results
                     var querySpecificIDE = session.Query<Developer>().Statistics(out stats)
                                                   .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(5)))

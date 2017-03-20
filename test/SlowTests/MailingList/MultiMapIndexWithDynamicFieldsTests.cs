@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Extensions;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -45,11 +45,11 @@ namespace SlowTests.MailingList
                 {
                     var result = session.Advanced.DocumentQuery<DynamicMultiMapDataSetIndex.Result, DynamicMultiMapDataSetIndex>()
                         .WaitForNonStaleResults()
-                        .AddOrder("N1_Range", true, typeof(double))
+                        .AddOrder("N1_D_Range", true)
                         .Take(128)
                         .ToList();
                     Assert.Equal(50, result.Count); //FAIL(:
-                    Assert.Equal(49.50m, result.First().Attributes.First(x => x.Name == "N1").Value);
+                    Assert.Equal(49.50, result.First().Attributes.First(x => x.Name == "N1").Value);
                 }
             }
         }

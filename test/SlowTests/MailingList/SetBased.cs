@@ -5,13 +5,12 @@
 // //-----------------------------------------------------------------------
 
 using System;
-using System.Linq;
+using System.Collections.Generic;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
-using Raven.Json.Linq;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -36,9 +35,9 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put("patrons/1", null,
-                    RavenJObject.Parse(
-                        @"{
+                using (var commands = store.Commands())
+                {
+                    var json = commands.ParseJson(@"{
    'Privilege':[
       {
          'Level':'Silver',
@@ -55,30 +54,36 @@ namespace SlowTests.MailingList
    ],
    'MiddleName':'asdfasdfasdf',
    'FirstName':'asdfasdfasdf'
-}"),
-                    new RavenJObject
+}");
+
+                    commands.Put("patrons/1", null, json, new Dictionary<string, object>
                     {
-                        { Constants.Metadata.Collection, "patrons" }
+                        {Constants.Documents.Metadata.Collection, "patrons"}
                     });
+                }
 
                 new Index1().Execute(store);
                 WaitForIndexing(store);
 
                 store
-                    .DatabaseCommands
-                    .UpdateByIndex(
+                    .Operations
+                    .Send(new PatchByIndexOperation(
                         new Index1().IndexName,
                         new IndexQuery(store.Conventions) { Query = string.Empty },
                         new PatchRequest
                         {
                             Script = "this.Privilege[0].Level = 'Gold'"
                         },
-                        options: null)
+                        options: null))
                     .WaitForCompletion(TimeSpan.FromSeconds(15));
 
-                var document = store.DatabaseCommands.Get("patrons/1");
+                using (var commands = store.Commands())
+                {
+                    dynamic document = commands.Get("patrons/1");
+                    var level = document.Privilege[0].Level.ToString();
 
-                Assert.Equal("Gold", document.DataAsJson.Value<RavenJArray>("Privilege")[0].Value<string>("Level"));
+                    Assert.Equal("Gold", level);
+                }
             }
         }
     }

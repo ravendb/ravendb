@@ -3,9 +3,10 @@ using System.Threading.Tasks;
 using FastTests;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -54,7 +55,6 @@ namespace SlowTests.MailingList
                 Fill(store);
                 using (IDocumentSession session = store.OpenSession())
                 {
-                    WaitForUserToContinueTheTest(store);
                     // Test 2
                     // Using ".StartsWith("Rogério")" is expected to bring same result from test1, but fails
                     var results2 = session.Query<Customer, CustomerByName>()

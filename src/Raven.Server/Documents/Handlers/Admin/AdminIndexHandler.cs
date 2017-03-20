@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Raven.Abstractions.Exceptions;
+using Raven.Client;
+using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -134,7 +135,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             var name = GetStringQueryString("name");
             var index = Database.IndexStore.GetIndex(name);
             if (index == null)
-                IndexDoesNotExistsException.ThrowFor(name);
+                IndexDoesNotExistException.ThrowFor(name);
 
             index.Enable();
 
@@ -147,7 +148,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             var name = GetStringQueryString("name");
             var index = Database.IndexStore.GetIndex(name);
             if (index == null)
-                IndexDoesNotExistsException.ThrowFor(name);
+                IndexDoesNotExistException.ThrowFor(name);
 
             index.Disable();
 

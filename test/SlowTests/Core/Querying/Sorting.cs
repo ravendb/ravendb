@@ -14,7 +14,7 @@ using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Querying
 {
-    public class Sorting : RavenNewTestBase
+    public class Sorting : RavenTestBase
     {
         [Fact]
         public void BasicSorting()

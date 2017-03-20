@@ -5,14 +5,15 @@
 //-----------------------------------------------------------------------
 
 using FastTests;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Operations.Databases;
+using Raven.Client.Documents;
+using Raven.Client.Extensions;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 using Xunit;
 
 namespace SlowTests.Bugs.Metadata
 {
-    public class EscapeQuotesRemote : RavenNewTestBase
+    public class EscapeQuotesRemote : RavenTestBase
     {
         [Fact]
         public void CanProperlyEscapeQuotesInMetadata_Remote_1()
@@ -23,7 +24,7 @@ namespace SlowTests.Bugs.Metadata
             DoNotReuseServer();
             using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), DefaultDatabase = name }.Initialize())
             {
-                ((DocumentStore)store).Admin.Send(new CreateDatabaseOperation(doc));
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
                 using (var session = store.OpenSession())
                 {
@@ -51,7 +52,7 @@ namespace SlowTests.Bugs.Metadata
             DoNotReuseServer();
             using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), DefaultDatabase = name }.Initialize())
             {
-                ((DocumentStore)store).Admin.Send(new CreateDatabaseOperation(doc));
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
                 using (var session = store.OpenSession())
                 {

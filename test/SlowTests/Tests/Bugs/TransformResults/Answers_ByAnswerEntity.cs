@@ -1,6 +1,6 @@
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 
 namespace SlowTests.Tests.Bugs.TransformResults
 {

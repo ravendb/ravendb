@@ -6,9 +6,6 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import appUrl = require("common/appUrl");
 import getSqlReplicationConnectionsCommand = require("commands/database/sqlReplication/getSqlReplicationConnectionsCommand");
-import messagePublisher = require("common/messagePublisher");
-import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
-import sqlReplication = require("models/database/sqlReplication/sqlReplication");
 import eventsCollector = require("common/eventsCollector");
 
 class sqlReplicationConnectionStringsManagement extends viewModelBase{
@@ -24,7 +21,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
     loadConnections():JQueryPromise<any> {
         return new getSqlReplicationConnectionsCommand(this.activeDatabase())
             .execute()
-            .done((repSetup: Raven.Server.Documents.SqlReplication.SqlConnections) => {
+            .done((repSetup: Raven.Server.Documents.ETL.Providers.SQL.Connections.SqlConnections) => {
 
                 this.connections(new sqlReplicationConnections(repSetup));
                 if (this.connections().predefinedConnections().length > 0) {
@@ -62,7 +59,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
 
     attachReservedMetaProperties(id: string, target: documentMetadata) {
         target.etag(0);
-        target.ravenEntityName = !target.ravenEntityName ? document.getEntityNameFromId(id) : target.ravenEntityName;
+        target.collection = target.collection || document.getCollectionFromId(id);
         target.id = id;
     }
 

@@ -5,18 +5,15 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Lucene.Net.Documents;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
-using Raven.Client.Linq;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
-using Raven.Server.Json;
-using Sparrow.Json;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Json;
 using Raven.Server.Utils;
 using Sparrow.Binary;
+using Sparrow.Extensions;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -33,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private static readonly FieldCacheKeyEqualityComparer Comparer = new FieldCacheKeyEqualityComparer();
 
-        private readonly Field _reduceValueField = new Field(Constants.Indexing.Fields.ReduceValueFieldName, new byte[0], 0, 0, Field.Store.YES);
+        private readonly Field _reduceValueField = new Field(Constants.Documents.Indexing.Fields.ReduceValueFieldName, new byte[0], 0, 0, Field.Store.YES);
 
         protected readonly ConversionScope Scope = new ConversionScope();
 
@@ -138,7 +135,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.Null)
             {
-                yield return GetOrCreateField(path, Constants.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                yield return GetOrCreateField(path, Constants.Documents.Indexing.Fields.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
                 yield break;
             }
 
@@ -155,10 +152,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         //|| sort.Value == SortOptions.Custom // TODO arek
                         )
                     {
-                        yield return GetOrCreateField(path, Constants.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                        yield return GetOrCreateField(path, Constants.Documents.Indexing.Fields.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
                     }
 
-                    foreach (var numericField in GetOrCreateNumericField(field, GetNullValueForSorting(sort), storage))
+                    foreach (var numericField in GetOrCreateNumericField(field, double.MinValue, storage))
                         yield return numericField;
                 }
 
@@ -167,7 +164,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.EmptyString)
             {
-                yield return GetOrCreateField(path, Constants.EmptyString, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                yield return GetOrCreateField(path, Constants.Documents.Indexing.Fields.EmptyString, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
                 yield break;
             }
 
@@ -299,7 +296,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.Double)
             {
-                yield return GetOrCreateField(path, null, ((LazyDoubleValue)value).Inner, null, storage, indexing, termVector);
+                var ldv = value as LazyDoubleValue;
+                if (ldv != null)
+                {
+                    LazyStringValue doubleAsString;
+                    if (TryToTrimTrailingZeros(ldv, indexContext, out doubleAsString) == false)
+                        doubleAsString = ldv.Inner;
+
+                    yield return GetOrCreateField(path, null, doubleAsString, null, storage, indexing, termVector);
+                }
+                else
+                {
+                    double dbl = 0;
+                    if (value is double)
+                        dbl = (double)value;
+                    else if (value is decimal)
+                        dbl = (double)(decimal)value;
+                    else if (value is float)
+                        dbl = (float)value;
+
+                    yield return GetOrCreateField(path, dbl.ToString("G"), null, null, storage, indexing, termVector);
+                }
             }
             else if (valueType == ValueType.Convertible) // we need this to store numbers in invariant format, so JSON could read them
             {
@@ -364,7 +381,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (value is IEnumerable) return ValueType.Enumerable;
 
-            if (value is LazyDoubleValue) return ValueType.Double;
+            if (value is LazyDoubleValue || value is double || value is decimal || value is float) return ValueType.Double;
 
             if (value is AbstractField) return ValueType.Lucene;
 
@@ -380,23 +397,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return ValueType.ConvertToJson;
         }
 
-        private static object GetNullValueForSorting(SortOptions? sortOptions)
-        {
-            switch (sortOptions)
-            {
-                case SortOptions.NumericDouble:
-                    return double.MinValue;
-                default:
-                    return long.MinValue;
-            }
-        }
-
         protected Field GetOrCreateKeyField(LazyStringValue key)
         {
             if (_reduceOutput == false)
-                return GetOrCreateField(Constants.Indexing.Fields.DocumentIdFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                return GetOrCreateField(Constants.Documents.Indexing.Fields.DocumentIdFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 
-            return GetOrCreateField(Constants.Indexing.Fields.ReduceKeyFieldName, null, key, null, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+            return GetOrCreateField(Constants.Documents.Indexing.Fields.ReduceKeyFieldName, null, key, null, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
         }
 
         protected Field GetOrCreateField(string name, string value, LazyStringValue lazyValue, BlittableJsonReaderObject blittableValue, Field.Store store, Field.Index index, Field.TermVector termVector)
@@ -472,25 +478,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private IEnumerable<AbstractField> GetOrCreateNumericField(IndexField field, object value, Field.Store storage, Field.TermVector termVector = Field.TermVector.NO)
         {
-            var fieldName = field.Name + Constants.Indexing.Fields.RangeFieldSuffix;
+            var fieldNameDouble = field.Name + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
+            var fieldNameLong = field.Name + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
 
-            var cacheKey = new FieldCacheKey(field.Name, null, storage, termVector,
-                _multipleItemsSameFieldCount.ToArray());
+            var multipleItemsSameFieldCountArray = _multipleItemsSameFieldCount.ToArray();
+            var cacheKeyDouble = new FieldCacheKey(fieldNameDouble, null, storage, termVector, multipleItemsSameFieldCountArray);
+            var cacheKeyLong = new FieldCacheKey(fieldNameLong, null, storage, termVector, multipleItemsSameFieldCountArray);
 
-            NumericField numericField;
-            CachedFieldItem<NumericField> cached;
-
-            if (_numericFieldsCache.TryGetValue(cacheKey, out cached) == false)
-            {
-                _numericFieldsCache[cacheKey] = cached = new CachedFieldItem<NumericField>
-                {
-                    Field = numericField = new NumericField(CreateFieldName(fieldName), storage, true)
-                };
-            }
-            else
-            {
-                numericField = cached.Field;
-            }
+            var numericFieldDouble = GetNumericFieldFromCache(cacheKeyDouble, storage);
+            var numericFieldLong = GetNumericFieldFromCache(cacheKeyLong, storage);
 
             double doubleValue;
             long longValue;
@@ -498,18 +494,33 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             switch (BlittableNumber.Parse(value, out doubleValue, out longValue))
             {
                 case NumberParseResult.Double:
-                    if (field.SortOption == SortOptions.NumericLong)
-                        yield return numericField.SetLongValue((long) doubleValue);
-                    else
-                        yield return numericField.SetDoubleValue(doubleValue);
+                    yield return numericFieldDouble.SetDoubleValue(doubleValue);
+                    yield return numericFieldLong.SetLongValue((long)doubleValue);
                     break;
                 case NumberParseResult.Long:
-                    if (field.SortOption == SortOptions.NumericDouble)
-                        yield return numericField.SetDoubleValue(longValue);
-                    else
-                        yield return numericField.SetLongValue(longValue);
+                    yield return numericFieldDouble.SetDoubleValue(longValue);
+                    yield return numericFieldLong.SetLongValue(longValue);
                     break;
             }
+        }
+
+        private NumericField GetNumericFieldFromCache(FieldCacheKey cacheKey, Field.Store storage)
+        {
+            CachedFieldItem<NumericField> cached;
+            NumericField numericField;
+            if (_numericFieldsCache.TryGetValue(cacheKey, out cached) == false)
+            {
+                _numericFieldsCache[cacheKey] = new CachedFieldItem<NumericField>
+                {
+                    Field = numericField = new NumericField(CreateFieldName(cacheKey.name), storage, true)
+                };
+            }
+            else
+            {
+                numericField = cached.Field;
+            }
+
+            return numericField;
         }
 
         private string CreateFieldName(string name)
@@ -561,7 +572,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        public static bool IsNumber(object value)
+        private static bool IsNumber(object value)
         {
             return value is long
                     || value is decimal
@@ -574,6 +585,42 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     || value is ulong
                     || value is float
                     || value is double;
+        }
+
+        private static unsafe bool TryToTrimTrailingZeros(LazyDoubleValue ldv, JsonOperationContext context, out LazyStringValue dblAsString)
+        {
+            var dotIndex = ldv.Inner.LastIndexOf(".");
+            if (dotIndex <= 0)
+            {
+                dblAsString = null;
+                return false;
+            }
+
+            var index = ldv.Inner.Length - 1;
+            var anyTrailingZeros = false;
+            while (true)
+            {
+                var lastChar = ldv.Inner[index];
+                if (lastChar != '0')
+                {
+                    if (lastChar == '.')
+                        index = index - 1;
+
+                    break;
+                }
+
+                anyTrailingZeros = true;
+                index = index - 1;
+            }
+
+            if (anyTrailingZeros == false)
+            {
+                dblAsString = null;
+                return false;
+            }
+
+            dblAsString = context.AllocateStringValue(null, ldv.Inner.Buffer, index + 1);
+            return true;
         }
 
         private enum ValueType

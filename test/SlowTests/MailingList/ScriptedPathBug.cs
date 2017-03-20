@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Data.Queries;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -28,7 +28,7 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.JsonRequestFactory.RequestTimeout = TimeSpan.FromHours(1);
+                //store.JsonRequestFactory.RequestTimeout = TimeSpan.FromHours(1);
 
                 new Index1().Execute(store);
 
@@ -49,11 +49,11 @@ namespace SlowTests.MailingList
 
                 const string script = @"if (this.ReferenceNumber == 'a'){ this.ReferenceNumber = 'Aa'; }";
 
-                var operation = store.DatabaseCommands.UpdateByIndex(
+                var operation = store.Operations.Send(new PatchByIndexOperation(
                     new Index1().IndexName,
                     new IndexQuery(store.Conventions) { Query = string.Empty },
                     new PatchRequest { Script = script },
-                    new QueryOperationOptions { AllowStale = false, StaleTimeout = TimeSpan.MaxValue, RetrieveDetails = true });
+                    new QueryOperationOptions { AllowStale = false, StaleTimeout = TimeSpan.MaxValue, RetrieveDetails = true }));
 
                 var patchResult = operation.WaitForCompletion(TimeSpan.FromSeconds(15));
                 Assert.False(patchResult.ToString().Contains("Patched"));

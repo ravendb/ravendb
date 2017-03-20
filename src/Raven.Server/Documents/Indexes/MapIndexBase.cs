@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Runtime.CompilerServices;
-using Raven.Client.Data.Indexes;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes
     {
         private CollectionOfBloomFilters _filter;
         private IndexingStatsScope _statsInstance;
-        private MapStats _stats = new MapStats();
+        private readonly MapStats _stats = new MapStats();
 
         protected MapIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
         {
@@ -32,9 +32,13 @@ namespace Raven.Server.Documents.Indexes
 
         public override IDisposable InitializeIndexingWork(TransactionOperationContext indexContext)
         {
-            _filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.BloomFilter.Capacity, indexContext);
+            var mode = sizeof(int) == IntPtr.Size || DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager
+                ? CollectionOfBloomFilters.Mode.X86
+                : CollectionOfBloomFilters.Mode.X64;
 
-            return null;
+            _filter = CollectionOfBloomFilters.Load(mode, indexContext);
+
+            return _filter;
         }
 
         public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

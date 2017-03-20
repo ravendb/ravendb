@@ -6,7 +6,8 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -29,14 +30,15 @@ namespace SlowTests.MailingList
         {
             using (var ds = GetDocumentStore())
             {
-                ds.DatabaseCommands.PutIndex("TagsCount",
+                ds.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
+                        Name = "TagsCount",
                         Maps = { "from tag in docs.Tags select new { tag.Name, Count = 1 }" },
                         Reduce = "from result in results group " +
                                  "result by result.Name into g " +
                                  "select new { Name = g.Key, Count = g.Sum(x => x.Count) }",
-                    });
+                    }}));
 
                 using (var s = ds.OpenSession())
                 {

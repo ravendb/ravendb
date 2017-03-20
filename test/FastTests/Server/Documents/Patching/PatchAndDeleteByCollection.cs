@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Linq;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Documents;
+using Raven.Client.Documents.Operations;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Patching
 {
-    public class PatchAndDeleteByCollection : RavenNewTestBase
+    public class PatchAndDeleteByCollection : RavenTestBase
     {
         [Fact]
         public void CanDeleteCollection()

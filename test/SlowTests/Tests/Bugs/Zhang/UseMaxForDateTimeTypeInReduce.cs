@@ -1,8 +1,10 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions;
-using Raven.Client.Indexing;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Util;
 using SlowTests.Utils;
 using Xunit;
 
@@ -53,12 +55,13 @@ select new {Name = g.Key, CreatedTime = createdTime}
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.PutIndex("test",
-                                new IndexDefinition
-                                {
-                                    Maps = { Map },
-                                    Reduce = Reduce,
-                                });
+                store.Admin.Send(new PutIndexesOperation(new[] {
+                    new IndexDefinition
+                    {
+                        Name = "test",
+                        Maps = { Map },
+                        Reduce = Reduce,
+                    }}));
 
                 using (var session = store.OpenSession())
                 {

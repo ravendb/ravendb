@@ -8,9 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using FastTests;
-
-using Raven.NewClient.Client.Linq;
-
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -18,7 +16,7 @@ using Contact = SlowTests.Core.Utils.Entities.Contact;
 
 namespace SlowTests.Core.Querying
 {
-    public class Filtering : RavenNewTestBase
+    public class Filtering : RavenTestBase
     {
         [Fact]
         public void BasicFiltering()

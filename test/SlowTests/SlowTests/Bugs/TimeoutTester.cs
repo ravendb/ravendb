@@ -1,12 +1,12 @@
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.SlowTests.Bugs
@@ -110,10 +110,10 @@ namespace SlowTests.SlowTests.Bugs
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     AnswerEntity answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
                         .Statistics(out stats)
-                        .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .OrderBy(x => x.Content)
                         .Where(x => x.Content == (content))
                         .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
@@ -161,7 +161,7 @@ namespace SlowTests.SlowTests.Bugs
             }
         }
 
-        public static string CreateEntities(IDocumentStore documentStore, int index)
+        private static string CreateEntities(IDocumentStore documentStore, int index)
         {
             string questionId = @"question/259" + index;
             string answerId = @"answer/540" + index;

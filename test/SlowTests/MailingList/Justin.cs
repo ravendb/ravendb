@@ -1,12 +1,11 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Exceptions;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Exceptions.Compilation;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions.Compilation;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
 using SlowTests.Utils;
 using Xunit;
 

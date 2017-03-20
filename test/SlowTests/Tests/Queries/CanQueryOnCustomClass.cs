@@ -13,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Queries
 {
-    public class CanQueryOnCustomClass : RavenNewTestBase
+    public class CanQueryOnCustomClass : RavenTestBase
     {
         [Fact(Skip = "RavenDB-6263")]
         public void UsingConverter()

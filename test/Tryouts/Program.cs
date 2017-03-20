@@ -1,34 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.IO;
-using System.Threading.Tasks;
-using FastTests.Voron;
-using Voron;
-using Voron.Global;
-using Voron.Impl.Scratch;
-using Xunit;
-using Sparrow.Platform;
-using System.Linq;
-using System.Text;
-using FastTests.Blittable;
-using FastTests.Issues;
-using FastTests.Server.Basic;
-using FastTests.Server.Documents;
-using FastTests.Server.Documents.Expiration;
-using FastTests.Server.Documents.Queries;
-using FastTests.Server.Replication;
-using FastTests.Voron.FixedSize;
-using FastTests.Voron.RawData;
-using FastTests.Voron.Tables;
-using Raven.Server.Config;
-using Raven.Server.Documents;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
-using SlowTests.Tests;
-using SlowTests.Voron;
-using Sparrow.Json;
-using Sparrow.Logging;
-using Voron.Data.Tables;
 
 namespace Tryouts
 {
@@ -36,20 +7,15 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-//            for (int i = 0; i < 1000; i++)
-//            {
-//                Console.WriteLine(i);
-//                using (var a = new ReplicationIndexesAndTransformers())
-//                {
-//                    a.Can_replicate_multiple_indexes();
-//                }
-//            }
-            for (int i = 0; i < 1000; i++)
+            Console.WriteLine(Process.GetCurrentProcess().Id);
+            Console.WriteLine();
+
+            for (int i = 0; i < 10; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Server.Replication.ReplicationConflictsTests())
+                using (var a = new SlowTests.Blittable.BlittableJsonWriterTests.ManualBuilderTestsSlow())
                 {
-                    a.Conflict_then_patch_request_will_return_409_and_conflict_data();
+                    a.BigAmountOfPreperties(short.MaxValue);
                 }
             }
         }

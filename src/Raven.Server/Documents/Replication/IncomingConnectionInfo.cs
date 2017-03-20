@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.Client.Replication.Messages;
+using Raven.Client.Documents.Replication.Messages;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Replication
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return string.Equals(SourceDatabaseName, other.SourceDatabaseName, StringComparison.CurrentCultureIgnoreCase) && string.Equals(SourceUrl, other.SourceUrl, StringComparison.CurrentCultureIgnoreCase) && string.Equals(SourceMachineName, other.SourceMachineName, StringComparison.CurrentCultureIgnoreCase);
+            return string.Equals(SourceDatabaseName, other.SourceDatabaseName, StringComparison.OrdinalIgnoreCase) && string.Equals(SourceUrl, other.SourceUrl, StringComparison.OrdinalIgnoreCase) && string.Equals(SourceMachineName, other.SourceMachineName, StringComparison.CurrentCultureIgnoreCase);
         }
 
         public override bool Equals(object obj)

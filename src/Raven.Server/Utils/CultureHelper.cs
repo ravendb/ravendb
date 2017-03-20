@@ -6,8 +6,7 @@
 
 using System;
 using System.Globalization;
-
-using Raven.Abstractions.Extensions;
+using Raven.Client.Util;
 
 namespace Raven.Server.Utils
 {

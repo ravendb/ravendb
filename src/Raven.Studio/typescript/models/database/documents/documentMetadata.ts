@@ -1,7 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
 class documentMetadata {
-    ravenEntityName: string;
+    collection: string;
     ravenClrType: string;
     nonAuthoritativeInfo: boolean;
     id: string;
@@ -14,7 +14,7 @@ class documentMetadata {
 
     constructor(dto?: documentMetadataDto) {
         if (dto) {
-            this.ravenEntityName = dto['@collection'];
+            this.collection = dto['@collection'];
             this.ravenClrType = dto['Raven-Clr-Type'];
             this.nonAuthoritativeInfo = dto['Non-Authoritative-Information'];
             this.id = dto['@id'];
@@ -49,7 +49,7 @@ class documentMetadata {
 
     toDto(): documentMetadataDto {
         const dto: documentMetadataDto = {
-            '@collection': this.ravenEntityName,
+            '@collection': this.collection,
             'Raven-Clr-Type': this.ravenClrType,
             'Non-Authoritative-Information': this.nonAuthoritativeInfo,
             '@id': this.id,

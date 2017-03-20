@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Raven.Client;
 
 namespace Raven.Server.Web.System
 {
@@ -34,7 +35,8 @@ namespace Raven.Server.Web.System
             "clock$"
         };
 
-        public const int WindowsMaxPath = 230;
+        // from https://github.com/dotnet/corefx/blob/9c06da6a34fcefa6fb37776ac57b80730e37387c/src/Common/src/System/IO/PathInternal.Windows.cs#L52
+        public static readonly int WindowsMaxPath = short.MaxValue;
 
         public const int LinuxMaxFileNameLength = 230;
 
@@ -42,9 +44,14 @@ namespace Raven.Server.Web.System
 
         public static bool IsValidResourceName(string name, string dataDirectory, out string errorMessage)
         {
-            if (string.IsNullOrEmpty(name))
+            if (string.IsNullOrWhiteSpace(name))
             {
                 errorMessage = "An empty name is forbidden for use!";
+                return false;
+            }
+            if (name.Length > Constants.Documents.MaxDatabaseNameLength)
+            {
+                errorMessage = $"The name '{name}' exceeds '{Constants.Documents.MaxDatabaseNameLength}' characters!";
                 return false;
             }
             if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)

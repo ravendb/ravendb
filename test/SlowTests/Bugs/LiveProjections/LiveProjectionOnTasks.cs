@@ -1,15 +1,16 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
+using Raven.Client.Util;
 using Xunit;
 
 namespace SlowTests.Bugs.LiveProjections
 {
-    public class LiveProjectionOnTasks : RavenNewTestBase
+    public class LiveProjectionOnTasks : RavenTestBase
     {
         [Fact]
         public void TaskLiveProjection()
@@ -68,7 +69,7 @@ namespace SlowTests.Bugs.LiveProjections
 
         private class User
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
 
             public string Name { get; set; }
         }
@@ -134,7 +135,7 @@ namespace SlowTests.Bugs.LiveProjections
 
         private class Task
         {
-            public long Id { get; set; }
+            public string Id { get; set; }
 
             public string Description { get; set; }
 
@@ -151,7 +152,7 @@ namespace SlowTests.Bugs.LiveProjections
 
         private class Place
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
 
             public string Name { get; set; }
         }

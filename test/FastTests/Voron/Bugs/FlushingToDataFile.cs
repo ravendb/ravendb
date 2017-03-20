@@ -197,6 +197,11 @@ namespace FastTests.Voron.Bugs
                             }
                         }
                     }
+
+                    foreach (var transaction in transactions)
+                    {
+                        transaction.Dispose();
+                    }
                 }
             }
         }

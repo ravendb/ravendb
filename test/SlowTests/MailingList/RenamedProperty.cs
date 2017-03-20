@@ -1,6 +1,6 @@
 using System.Linq;
 using FastTests;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using Xunit;
 
 namespace SlowTests.MailingList

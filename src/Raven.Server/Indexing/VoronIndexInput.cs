@@ -1,17 +1,12 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Store;
-using Raven.Abstractions.Extensions;
-using Raven.Server.Utils;
-using Sparrow;
+using Raven.Client.Extensions.Streams;
 using Voron;
 using Voron.Data;
-using Voron.Data.BTrees;
 using Voron.Impl;
-using Voron.Util;
 
 namespace Raven.Server.Indexing
 {
@@ -103,6 +98,7 @@ namespace Raven.Server.Indexing
                 return;
 
             _cts.Cancel();
+            _cts.Dispose();
         }
 
         public override long Length()

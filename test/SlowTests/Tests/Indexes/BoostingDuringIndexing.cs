@@ -1,14 +1,14 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Linq.Indexing;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq.Indexing;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class BoostingDuringIndexing : RavenNewTestBase
+    public class BoostingDuringIndexing : RavenTestBase
     {
         private class User
         {

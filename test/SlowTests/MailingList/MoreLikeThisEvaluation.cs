@@ -4,10 +4,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
 using Lucene.Net.Analysis;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Bundles.MoreLikeThis;
-using Raven.Client.Data.Queries;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.MoreLikeThis;
 using Xunit;
 
 namespace SlowTests.MailingList

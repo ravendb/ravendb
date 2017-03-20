@@ -8,7 +8,8 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -46,10 +47,10 @@ namespace SlowTests.MailingList
             {
                 s.Conventions.PrettifyGeneratedLinqExpressions = false;
                 new Index().Execute(s);
-                var indexDefinition = s.DatabaseCommands.GetIndex("Index");
+                var indexDefinition = s.Admin.Send(new GetIndexOperation("Index"));
                 Assert.Equal(@"docs.Items.Select(item => new {
     Query = new object[] {
-        ((object) item.Age),
+        item.Age,
         item.Name
     }
 })".Replace("\r\n", Environment.NewLine), indexDefinition.Maps.First());

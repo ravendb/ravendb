@@ -1,14 +1,12 @@
 ﻿using System;
 using System.IO;
-using System.IO.Compression;
-using Raven.Abstractions.Data;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
-using Voron;
 using Xunit;
 using Voron.Impl.Backup;
 
@@ -26,11 +24,8 @@ namespace FastTests.Voron.Backups
             {
                 var context = DocumentsOperationContext.ShortTermSingleUse(database);
 
-                var subscriptionCriteria = new SubscriptionCriteria
-                {
-                    Collection = "Users",
-                };
-                var obj = RavenJObject.FromObject(subscriptionCriteria);
+                var subscriptionCriteria = new SubscriptionCriteria("Users");
+                var obj = JObject.FromObject(subscriptionCriteria);
                 var objString = obj.ToString(Formatting.None);
                 var stream = new MemoryStream();
                 var streamWriter = new StreamWriter(stream);
@@ -58,9 +53,9 @@ namespace FastTests.Voron.Backups
                     var doc2 = CreateDocument(context, "users/2", new DynamicJsonValue
                     {
                         ["Name"] = "Edward",
-                        [Constants.Metadata.Key] = new DynamicJsonValue
+                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                         {
-                            [Constants.Metadata.Collection] = "Users"
+                            [Constants.Documents.Metadata.Collection] = "Users"
                         }
                     });
 
@@ -111,11 +106,8 @@ namespace FastTests.Voron.Backups
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
 
-                    var subscriptionCriteria = new SubscriptionCriteria
-                    {
-                        Collection = "Users",
-                    };
-                    var obj = RavenJObject.FromObject(subscriptionCriteria);
+                    var subscriptionCriteria = new SubscriptionCriteria("Users");
+                    var obj = JObject.FromObject(subscriptionCriteria);
                     var objString = obj.ToString(Formatting.None);
                     var stream = new MemoryStream();
                     var streamWriter = new StreamWriter(stream);
@@ -143,9 +135,9 @@ namespace FastTests.Voron.Backups
                         var doc2 = CreateDocument(context, "users/2", new DynamicJsonValue
                         {
                             ["Name"] = "Edward",
-                            [Constants.Metadata.Key] = new DynamicJsonValue
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Metadata.Collection] = "Users"
+                                [Constants.Documents.Metadata.Collection] = "Users"
                             }
                         });
 
@@ -184,9 +176,9 @@ namespace FastTests.Voron.Backups
                         var doc = CreateDocument(context, "users/1", new DynamicJsonValue
                         {
                             ["Name"] = "Edward",
-                            [Constants.Metadata.Key] = new DynamicJsonValue
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Metadata.Collection] = "Users"
+                                [Constants.Documents.Metadata.Collection] = "Users"
                             }
                         });
 
@@ -207,11 +199,12 @@ namespace FastTests.Voron.Backups
                     database.IncrementalBackupTo(Path.Combine(tempFileName,
                         string.Format("voron-test.{0}-incremental-backup.zip", 1)));
 
+                    var forceUsing32BitsPager = database.Configuration.Storage.ForceUsing32BitsPager;
                     BackupMethods.Incremental.Restore(Path.Combine(tempFileName, "backup-test.data"), new[]
                     {
                         Path.Combine(tempFileName, "voron-test.0-incremental-backup.zip"),
                         Path.Combine(tempFileName, "voron-test.1-incremental-backup.zip")
-                    });
+                    }, options => options.ForceUsing32BitsPager = forceUsing32BitsPager);
                 }
             }
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: Path.Combine(tempFileName, "backup-test.data")))

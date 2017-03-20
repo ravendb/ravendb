@@ -10,8 +10,8 @@ describe(viewUnderTest, () => {
 
     it('should bind', () => {
 
-        const collectionStatsDto: collectionsStatsDto = {
-            NumberOfDocuments: 0,
+        const collectionStatsDto: Raven.Client.Documents.Operations.CollectionStatistics = {
+            CountOfDocuments: 0,
             Collections: {
             }
         }

@@ -1,11 +1,11 @@
 using FastTests;
 using Xunit;
 using System.Linq;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class TransactionIndexByMrn : RavenNewTestBase
+    public class TransactionIndexByMrn : RavenTestBase
     {
         private class Transaction
         {

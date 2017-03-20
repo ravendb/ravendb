@@ -1,13 +1,10 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Client.Listeners;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -15,11 +12,6 @@ namespace SlowTests.MailingList
     public class IdComesBackLowerCase : RavenTestBase
     {
         private readonly IDocumentStore _store;
-
-        protected override void ModifyStore(DocumentStore store)
-        {
-            store.RegisterListener(new NoStaleQueriesListener());
-        }
 
         public IdComesBackLowerCase()
         {
@@ -37,7 +29,7 @@ namespace SlowTests.MailingList
 
             using (var docSession = _store.OpenSession())
             {
-                foreach (var productDoc in docSession.Query<Product>())
+                foreach (var productDoc in docSession.Query<Product>().Customize(x => x.WaitForNonStaleResults()))
                 {
                     docSession.Delete(productDoc);
                 }
@@ -62,6 +54,7 @@ namespace SlowTests.MailingList
             using (var session = _store.OpenSession())
             {
                 var products = session.Advanced.DocumentQuery<Product, Product_AvailableForSale3>()
+                    .WaitForNonStaleResults()
                     .SelectFields<Product>()
                     .UsingDefaultField("Any")
                     .Where("MyName1").ToList();
@@ -76,6 +69,7 @@ namespace SlowTests.MailingList
             using (var session = _store.OpenSession())
             {
                 var products = session.Advanced.DocumentQuery<Product, Product_AvailableForSale3>()
+                    .WaitForNonStaleResults()
                     .UsingDefaultField("Any")
                     .Where("MyName1").ToList();
 
@@ -111,14 +105,6 @@ namespace SlowTests.MailingList
                                                   p.Brand
                                               }
                                   };
-            }
-        }
-
-        private class NoStaleQueriesListener : IDocumentQueryListener
-        {
-            public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
-            {
-                queryCustomization.WaitForNonStaleResults(TimeSpan.FromSeconds(30));
             }
         }
     }

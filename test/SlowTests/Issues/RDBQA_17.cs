@@ -5,7 +5,8 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
-using Raven.Abstractions.Indexing;
+using Raven.Client.Documents.Operations.Transformers;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -19,22 +20,22 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutTransformer(Name, new TransformerDefinition
+                store.Admin.Send(new PutTransformerOperation(new TransformerDefinition
                 {
                     Name = Name,
                     TransformResults = "from user in results select new { user.Age, user.Name }"
-                });
+                }));
 
-                var transformers = store.DatabaseCommands.GetTransformers(0, 10);
+                var transformers = store.Admin.Send(new GetTransformersOperation(0, 10));
                 var transformerId = transformers[0].TransfomerId;
 
-                store.DatabaseCommands.PutTransformer(Name, new TransformerDefinition
+                store.Admin.Send(new PutTransformerOperation(new TransformerDefinition
                 {
                     Name = Name,
                     TransformResults = "from user in results select new { Name = user.Name }"
-                });
+                }));
 
-                transformers = store.DatabaseCommands.GetTransformers(0, 10);
+                transformers = store.Admin.Send(new GetTransformersOperation(0, 10));
 
                 Assert.Equal(1, transformers.Length);
                 Assert.Equal("from user in results select new { Name = user.Name }", transformers[0].TransformResults);

@@ -6,12 +6,10 @@
 
 using System.Collections.Generic;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
-using Raven.Json.Linq;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries;
+using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -46,30 +44,38 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put("FOO", null, new RavenJObject { { "Name", "Ayende" } }, new RavenJObject { { Constants.Metadata.Collection, "Foos" } });
-
-                var result = store.DatabaseCommands.Query("dynamic", new IndexQuery(store.Conventions)
+                using (var commands = store.Commands())
                 {
-                    FieldsToFetch = new[] { "Name" },
-                    Query = "Name:Ayende"
-                });
+                    commands.Put("FOO", null, new { Name = "Ayende" }, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "Foos" } });
 
-                // if this is upper case, then we loaded this from the db, because we used Auto-Index that is not storing fields
-                Assert.Equal("FOO", result.Results[0].Value<string>(Constants.Indexing.Fields.DocumentIdFieldName));
-                Assert.True(result.IndexName.StartsWith("Auto"));
+                    var result = commands.Query("dynamic", new IndexQuery(store.Conventions)
+                    {
+                        FieldsToFetch = new[] { "Name" },
+                        Query = "Name:Ayende"
+                    });
 
-                new Index1().Execute(store);
-                WaitForIndexing(store);
+                    // if this is upper case, then we loaded this from the db, because we used Auto-Index that is not storing fields
+                    var json = (BlittableJsonReaderObject)result.Results[0];
+                    string documentId;
+                    Assert.True(json.TryGet(Constants.Documents.Indexing.Fields.DocumentIdFieldName, out documentId));
+                    Assert.Equal("FOO", documentId);
+                    Assert.True(result.IndexName.StartsWith("Auto"));
 
-                result = store.DatabaseCommands.Query("Index1", new IndexQuery(store.Conventions)
-                {
-                    FieldsToFetch = new[] { "Name" },
-                    Query = "Name:Ayende"
-                });
+                    new Index1().Execute(store);
+                    WaitForIndexing(store);
 
-                // if this is lower case, then we loaded this from the index, not from the db, because w used Static-Index with stored field
-                Assert.Equal("foo", result.Results[0].Value<string>(Constants.Indexing.Fields.DocumentIdFieldName));
-                Assert.True(result.IndexName.StartsWith("Index1"));
+                    result = commands.Query("Index1", new IndexQuery(store.Conventions)
+                    {
+                        FieldsToFetch = new[] { "Name" },
+                        Query = "Name:Ayende"
+                    });
+
+                    // if this is lower case, then we loaded this from the index, not from the db, because w used Static-Index with stored field
+                    json = (BlittableJsonReaderObject)result.Results[0];
+                    Assert.True(json.TryGet(Constants.Documents.Indexing.Fields.DocumentIdFieldName, out documentId));
+                    Assert.Equal("foo", documentId);
+                    Assert.True(result.IndexName.StartsWith("Index1"));
+                }
             }
         }
     }

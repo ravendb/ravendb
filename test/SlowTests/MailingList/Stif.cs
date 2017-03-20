@@ -5,7 +5,8 @@ using System.Linq;
 using System.Runtime.Serialization;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -16,7 +17,7 @@ namespace SlowTests.MailingList
         private class MyDoc
         {
             [DataMember]
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             [DataMember]
             public string Message { get; set; }
             [DataMember]
@@ -80,13 +81,13 @@ namespace SlowTests.MailingList
 
                 using (IDocumentSession documentSession = documentStore.OpenSession())
                 {
-                    documentSession.Store(new MyDoc { Id = new Guid(0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0), Message = "some dummy message" });
+                    documentSession.Store(new MyDoc { Id = new Guid(0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0).ToString(), Message = "some dummy message" });
                     documentSession.SaveChanges();
                 }
 
                 using (IDocumentSession documentSession = documentStore.OpenSession())
                 {
-                    MyDoc docFetched = documentSession.Load<MyDoc>(new Guid(0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0)); //returns an object
+                    MyDoc docFetched = documentSession.Load<MyDoc>(new Guid(0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0).ToString()); //returns an object
                     Debug.WriteLine(string.Format("found {0}", docFetched.Id));
 
                     Assert.NotNull(docFetched);

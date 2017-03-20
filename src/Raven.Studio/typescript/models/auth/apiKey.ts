@@ -52,9 +52,9 @@ class apiKey extends document {
         });
 
         this.needToShowSystemDatabaseWarning = ko.computed(() => {
-            var resources = this.databases();
-            var hasAllDatabasesAccess = resources.filter(x => x.tenantId() === "*").length > 0;
-            var hasSystemDatabaseAccess = resources.filter(x => x.tenantId() === "<system>").length > 0;
+            var dbs = this.databases();
+            var hasAllDatabasesAccess = dbs.filter(x => x.tenantId() === "*").length > 0;
+            var hasSystemDatabaseAccess = dbs.filter(x => x.tenantId() === "<system>").length > 0;
             return hasAllDatabasesAccess && !hasSystemDatabaseAccess;
         });
     }

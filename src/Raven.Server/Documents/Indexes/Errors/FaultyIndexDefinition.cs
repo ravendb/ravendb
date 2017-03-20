@@ -1,15 +1,14 @@
 using System;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
-
+using System.Collections.Generic;
+using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {
     public class FaultyIndexDefinition : IndexDefinitionBase
     {
-        public FaultyIndexDefinition(string name, string[] collections, IndexLockMode lockMode, IndexField[] mapFields)
-            : base(name, collections, lockMode, mapFields)
+        public FaultyIndexDefinition(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexField[] mapFields)
+            : base(name, collections, lockMode, priority, mapFields)
         {
         }
 
@@ -18,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }
 
-        protected override IndexDefinition CreateIndexDefinition()
+        protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
             throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }

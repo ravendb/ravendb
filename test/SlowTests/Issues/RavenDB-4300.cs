@@ -6,9 +6,10 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
 using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Util;
 using Xunit;
 
@@ -33,7 +34,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<ExampleIndex.ReduceResult, ExampleIndex>();
-                    query.Customize(c => c.WaitForNonStaleResultsAsOfLastWrite());
+                    query.Customize(c => c.WaitForNonStaleResults());
                     var results =
                         query.Where(x => x.Name == RavenQuery.Escape(SearchText, false, false))
                             .As<Example>()
@@ -56,7 +57,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<ExampleIndex.ReduceResult, ExampleIndex>();
-                    query.Customize(c => c.WaitForNonStaleResultsAsOfLastWrite());
+                    query.Customize(c => c.WaitForNonStaleResults());
                     var results =
                         query.Where(x => x.Name == SearchText)
                             .As<Example>()

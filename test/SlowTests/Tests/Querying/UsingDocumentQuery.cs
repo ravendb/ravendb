@@ -8,13 +8,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
+using Raven.Client;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Tests.Querying
 {
-    public class UsingDocumentQuery : RavenNewTestBase
+    public class UsingDocumentQuery : RavenTestBase
     {
         [Fact]
         public void CanUnderstandSimpleEquality()
@@ -206,8 +206,8 @@ namespace SlowTests.Tests.Querying
         {
             // should DocumentQuery<T> understand how to generate range field names?
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
-                .WhereGreaterThan("Age_Range", 3);
-            Assert.Equal("Age_Range:{Lx3 TO NULL}", q.ToString());
+                .WhereGreaterThan("Age_L_Range", 3);
+            Assert.Equal("Age_L_Range:{3 TO NULL}", q.ToString());
         }
 
         private class IndexedUser

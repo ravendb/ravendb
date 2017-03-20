@@ -6,13 +6,13 @@
 
 using System;
 using FastTests;
-using Raven.NewClient.Abstractions;
-using Raven.NewClient.Abstractions.Data;
+using Raven.Client;
+using Raven.Client.Util;
 using Xunit;
 
 namespace SlowTests.Bugs.Metadata
 {
-    public class LastModifiedLocal : RavenNewTestBase
+    public class LastModifiedLocal : RavenTestBase
     {
         [Fact]
         public void CanAccessLastModifiedAsMetadata()
@@ -34,7 +34,7 @@ namespace SlowTests.Bugs.Metadata
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
-                    var lastModified = Convert.ToDateTime(session.Advanced.GetMetadataFor(user)[Constants.Metadata.LastModified]);
+                    var lastModified = Convert.ToDateTime(session.Advanced.GetMetadataFor(user)[Constants.Documents.Metadata.LastModified]);
 
                     Assert.NotNull(lastModified);
                     Assert.InRange(lastModified, before, after);

@@ -4,9 +4,8 @@ using System.IO;
 
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
-
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
@@ -23,12 +22,12 @@ namespace FastTests.Server.Documents.Indexing
             var operation = new TestOperation("test", null);
 
             var fields = new Dictionary<string, IndexField>();
-            fields.Add(Constants.Indexing.Fields.AllFields, new IndexField());
+            fields.Add(Constants.Documents.Indexing.Fields.AllFields, new IndexField());
 
             Assert.Throws<InvalidOperationException>(() => operation.GetAnalyzer(fields, forQuerying: false));
 
             fields.Clear();
-            fields.Add(Constants.Indexing.Fields.AllFields, new IndexField { Analyzer = "StandardAnalyzer" });
+            fields.Add(Constants.Documents.Indexing.Fields.AllFields, new IndexField { Analyzer = "StandardAnalyzer" });
             Assert.Throws<InvalidOperationException>(() => operation.GetAnalyzer(fields, forQuerying: false));
 
             fields.Clear();

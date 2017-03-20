@@ -1,17 +1,17 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Raven.Client.Replication.Messages;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Extensions;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
 using Raven.Server.ServerWide.Context;
+using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -19,7 +19,9 @@ namespace Raven.Server.Documents.Replication
     {
         private readonly Logger _log;
         private long _lastEtag;
-        private readonly SortedList<long, ReplicationBatchDocumentItem> _orderedReplicaItems;
+
+        private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems = new SortedList<long, ReplicationBatchItem>();
+        private readonly Dictionary<Slice, ReplicationBatchItem> _replicaAttachmentStreams = new Dictionary<Slice, ReplicationBatchItem>();
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
         private readonly OutgoingReplicationHandler _parent;
@@ -27,115 +29,89 @@ namespace Raven.Server.Documents.Replication
         public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log)
         {
             _log = log;
-            _orderedReplicaItems = new SortedList<long, ReplicationBatchDocumentItem>();
             _stream = stream;
             _parent = parent;
         }
 
-        [Flags]
-        private enum CurrentEnumerationState
+        public class MergedReplicationBatchEnumerator : IEnumerator<ReplicationBatchItem>
         {
-            None = 0,
-            HasDocs = 1,
-            HasTombs = 2,
-            HasConflicts = 4,
-            HasDocsAndTombsAndConflicts = HasDocs | HasTombs | HasConflicts,
-            HasDocsAndTombs = HasDocs | HasTombs,
-            HasConflictsAndTombs = HasConflicts | HasTombs,
-            HasDocsAndConflicts = HasConflicts | HasDocs
-        }
+            private readonly List<IEnumerator<ReplicationBatchItem>> _workEnumerators = new List<IEnumerator<ReplicationBatchItem>>();
+            private ReplicationBatchItem _currentItem;
+            public void AddEnumerator(IEnumerator<ReplicationBatchItem> enumerator)
+            {
+                if(enumerator == null)
+                    return;
 
-        private IEnumerable<ReplicationBatchDocumentItem> GetDocsConflictsAndTombstonesAfter(DocumentsOperationContext ctx, long etag)
+                if (enumerator.MoveNext())
+                {
+                    _workEnumerators.Add(enumerator);
+                }              
+            }
+
+            public bool MoveNext()
+            {
+                if (_workEnumerators.Count == 0)
+                    return false;
+
+                var current = _workEnumerators[0];
+                for (var index = 1; index < _workEnumerators.Count; index++)
+                {
+                    if (_workEnumerators[index].Current.Etag < current.Current.Etag)
+                    {
+                        current = _workEnumerators[index];
+                    }
+                }
+                _currentItem = current.Current;
+                if (current.MoveNext() == false)
+                {
+                    _workEnumerators.Remove(current);
+                }
+                return true;
+            }
+
+            public void Reset()
+            {
+                throw new NotImplementedException();
+            }
+
+            public ReplicationBatchItem Current => _currentItem;
+
+            object IEnumerator.Current => Current;
+
+            public void Dispose()
+            {
+                foreach (var workEnumerator in _workEnumerators)
+                {
+                    workEnumerator.Dispose();
+                }
+                _workEnumerators.Clear();
+            }
+        }
+        
+        private IEnumerable<ReplicationBatchItem> GetDocsConflictsTombstonesRevisionsAndAttachmentsAfter(DocumentsOperationContext ctx, long etag)
         {
             var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
-            var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1, 0, int.MaxValue);
+            var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
             var conflicts = _parent._database.DocumentsStorage.GetConflictsFrom(ctx, etag + 1);
+            var revisions = _parent._database.BundleLoader?.VersioningStorage?.GetRevisionsAfter(ctx, etag + 1);
+            var attachments = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
 
             using (var docsIt = docs.GetEnumerator())
             using (var tombsIt = tombs.GetEnumerator())
             using (var conflictsIt = conflicts.GetEnumerator())
+            using (var versionsIt = revisions?.GetEnumerator())
+            using (var attachmentsIt = attachments.GetEnumerator())
+            using (var mergedInEnumerator = new MergedReplicationBatchEnumerator())
             {
-                var state = CurrentEnumerationState.None;
-
-                if (docsIt.MoveNext())
-                    state |= CurrentEnumerationState.HasDocs;
-                if (tombsIt.MoveNext())
-                    state |= CurrentEnumerationState.HasTombs;
-                if (conflictsIt.MoveNext())
-                    state |= CurrentEnumerationState.HasConflicts;
-                while (true)
+                mergedInEnumerator.AddEnumerator(docsIt);
+                mergedInEnumerator.AddEnumerator(tombsIt);
+                mergedInEnumerator.AddEnumerator(conflictsIt);
+                mergedInEnumerator.AddEnumerator(versionsIt);
+                mergedInEnumerator.AddEnumerator(attachmentsIt);
+                
+                while (mergedInEnumerator.MoveNext())
                 {
-                    switch (state)
-                    {
-                        case CurrentEnumerationState.None:
-                            yield break;
-                        case CurrentEnumerationState.HasDocs:
-                            var docsItCurrent = docsIt.Current;
-                            yield return new ReplicationBatchDocumentItem
-                            {
-                                Etag = docsItCurrent.Etag,
-                                ChangeVector = docsItCurrent.ChangeVector,
-                                Data = docsItCurrent.Data,
-                                Key = docsItCurrent.Key,
-                                TransactionMarker = docsItCurrent.TransactionMarker,
-                                LastModifiedTicks = docsItCurrent.LastModified.Ticks,
-                            };
-                            if (docsIt.MoveNext() == false)
-                                state &= ~CurrentEnumerationState.HasDocs;
-                            break;
-                        case CurrentEnumerationState.HasTombs:
-                            var tombsItCurrent = tombsIt.Current;
-                            yield return new ReplicationBatchDocumentItem
-                            {
-                                Etag = tombsItCurrent.Etag,
-                                ChangeVector = tombsItCurrent.ChangeVector,
-                                Collection = tombsItCurrent.Collection,
-                                Key = tombsItCurrent.Key,
-                                TransactionMarker = tombsItCurrent.TransactionMarker,
-                                LastModifiedTicks = tombsItCurrent.LastModified.Ticks,
-                            };
-                            if (tombsIt.MoveNext() == false)
-                                state &= ~CurrentEnumerationState.HasTombs;
-                            break;
-                        case CurrentEnumerationState.HasConflicts:
-                            var conflictCurrent = conflictsIt.Current;
-                            yield return new ReplicationBatchDocumentItem
-                            {
-                                Etag = conflictCurrent.Etag,
-                                ChangeVector = conflictCurrent.ChangeVector,
-                                Collection = conflictCurrent.Collection,
-                                Data = conflictCurrent.Doc,
-                                Key = conflictCurrent.Key,
-                                LastModifiedTicks = conflictCurrent.LastModified.Ticks,
-                                TransactionMarker = -1// not relevant for conflicts since they are already resolved in separate tx
-                            };
-                            if (conflictsIt.MoveNext() == false)
-                                state &= ~CurrentEnumerationState.HasConflicts;
-                            break;
-
-                        case CurrentEnumerationState.HasDocsAndTombs:
-                            if (docsIt.Current.Etag > tombsIt.Current.Etag)
-                                goto case CurrentEnumerationState.HasTombs;
-                            goto case CurrentEnumerationState.HasDocs;
-
-                        case CurrentEnumerationState.HasConflictsAndTombs:
-                            if (conflictsIt.Current.Etag > tombsIt.Current.Etag)
-                                goto case CurrentEnumerationState.HasTombs;
-                            goto case CurrentEnumerationState.HasConflicts;
-
-                        case CurrentEnumerationState.HasDocsAndConflicts:
-                            if (conflictsIt.Current.Etag > docsIt.Current.Etag)
-                                goto case CurrentEnumerationState.HasDocs;
-                            goto case CurrentEnumerationState.HasConflicts;
-
-                        case CurrentEnumerationState.HasDocsAndTombsAndConflicts:
-                            if (docsIt.Current.Etag > tombsIt.Current.Etag)
-                                goto case CurrentEnumerationState.HasDocsAndConflicts;
-                            goto case CurrentEnumerationState.HasConflictsAndTombs;
-
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
+                    yield return mergedInEnumerator.Current;
                 }
             }
         }
@@ -159,32 +135,33 @@ namespace Raven.Server.Documents.Replication
                     long size = 0;
                     int numberOfItemsSent = 0;
                     short lastTransactionMarker = -1;
-                    foreach (var item in GetDocsConflictsAndTombstonesAfter(documentsContext, _lastEtag))
+                    foreach (var item in GetDocsConflictsTombstonesRevisionsAndAttachmentsAfter(documentsContext, _lastEtag))
                     {
-                        if (lastTransactionMarker != item.TransactionMarker)
                         // TODO: add a configuration option to disable this check
+                        if (lastTransactionMarker != item.TransactionMarker)
                         {
-                            // we want to limit batch sizes to reasonable limits
-                            if (size > maxSizeToSend || numberOfItemsSent > batchSize)
-                                break;
-
                             lastTransactionMarker = item.TransactionMarker;
+
+                            // Include the attachment's document which is right after its latest attachment.
+                            if (item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
+                                // We want to limit batch sizes to reasonable limits.
+                                (size > maxSizeToSend || numberOfItemsSent > batchSize))
+                                break;
                         }
 
                         _lastEtag = item.Etag;
 
                         if (item.Data != null)
                             size += item.Data.Size;
+                        else if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
+                            size += item.Stream.Length;
 
-                        AddReplicationItemToBatch(item);
-
-                        numberOfItemsSent++;
+                        if (AddReplicationItemToBatch(item))
+                            numberOfItemsSent++;
                     }
 
                     if (_log.IsInfoEnabled)
-                    {
-                        _log.Info($"Found {_orderedReplicaItems.Count:#,#;;0} documents to replicate to {_parent.Destination.Database} @ {_parent.Destination.Url}");
-                    }
+                        _log.Info($"Found {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count} attachment's streams to replicate to {_parent.Destination.Database} @ {_parent.Destination.Url}.");
 
                     if (_orderedReplicaItems.Count == 0)
                     {
@@ -200,6 +177,7 @@ namespace Raven.Server.Documents.Replication
                     }
 
                     _parent.CancellationToken.ThrowIfCancellationRequested();
+                    
                     try
                     {
                         SendDocumentsBatch(documentsContext);
@@ -215,43 +193,79 @@ namespace Raven.Server.Documents.Replication
                 finally
                 {
                     foreach (var item in _orderedReplicaItems)
-                        item.Value.Data?.Dispose(); //item.Value.Data is null if tombstone
+                    {
+                        var value = item.Value;
+                        if (value.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
+                        {
+                            // TODO: Why are we disposing here?
+                            // Shouldn't the all context be disposed here?
+                            // If not, should we dispose all strings here?
+                            value.Stream.Dispose();
+                        }
+                        else
+                        {
+                            value.Data?.Dispose(); //item.Value.Data is null if tombstone
+                        }
+                    }
                     _orderedReplicaItems.Clear();
+                    _replicaAttachmentStreams.Clear();
                 }
             }
         }
 
 
-        private void AddReplicationItemToBatch(ReplicationBatchDocumentItem item)
+        private unsafe bool AddReplicationItemToBatch(ReplicationBatchItem item)
         {
-            if (ShouldSkipReplication(item.Key))
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
             {
-                if (_log.IsInfoEnabled)
-                {
-                    _log.Info($"Skipping replication of {item.Key} because it is a system document");
-                }
-                return;
+                _replicaAttachmentStreams[item.Base64Hash] = item;
             }
-            // destination already has it
-            if (item.ChangeVector.GreaterThan(_parent._destinationLastKnownDocumentChangeVector) == false)
+            else
             {
-                if (_log.IsInfoEnabled)
+                if ((item.Flags & DocumentFlags.Artificial) == DocumentFlags.Artificial)
                 {
-                    _log.Info(
-                        $"Skipping replication of {item.Key} because destination has a higher change vector. Doc: {item.ChangeVector.Format()} < Dest: {_parent._destinationLastKnownDocumentChangeVectorAsString} ");
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"Skipping replication of {item.Key} because it is an artificial document");
+                    return false;
                 }
-                return;
+
+                bool isHiLo;
+                if (CollectionName.IsSystemDocument(item.Key.Buffer, item.Key.Size, out isHiLo) && isHiLo == false)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"Skipping replication of {item.Key} because it is a system document");
+                    return false;
+                }
+
+                // destination already has it
+                if (item.ChangeVector.GreaterThan(_parent._destinationLastKnownDocumentChangeVector) == false)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"Skipping replication of {item.Key} because destination has a higher change vector. Doc: {item.ChangeVector.Format()} < Dest: {_parent._destinationLastKnownDocumentChangeVectorAsString} ");
+                    return false;
+                }
             }
+
             _orderedReplicaItems.Add(item.Etag, item);
+            return true;
         }
 
 
         private void SendDocumentsBatch(DocumentsOperationContext documentsContext)
         {
             if (_log.IsInfoEnabled)
-                _log.Info(
-                    $"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag}");
+                _log.Info($"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag}");
 
+            var stats = new ReplicationStatistics.OutgoingBatchStats
+            {
+                Status = ReplicationStatus.Sending,
+                ItemsCount = _orderedReplicaItems.Count,
+                AttachmentStreamsCount = _replicaAttachmentStreams.Count,
+                StartSendingTime = DateTime.UtcNow,
+                SentEtagMin = _parent._lastSentDocumentEtag + 1,
+                SentEtagMax = _lastEtag,
+                Destination = _parent.FromToString
+            };
             var sw = Stopwatch.StartNew();
             var defaultResolver = _parent._parent.ReplicationDocument?.DefaultResolver;
             var headerJson = new DynamicJsonValue
@@ -259,7 +273,8 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
                 [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
                 [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _parent._lastSentIndexOrTransformerEtag,
-                [nameof(ReplicationMessageHeader.ItemCount)] = _orderedReplicaItems.Count,
+                [nameof(ReplicationMessageHeader.ItemsCount)] = _orderedReplicaItems.Count,
+                [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = _replicaAttachmentStreams.Count,
                 [nameof(ReplicationMessageHeader.ResolverId)] = defaultResolver?.ResolvingDatabaseId,
                 [nameof(ReplicationMessageHeader.ResolverVersion)] = defaultResolver?.Version
             };
@@ -267,7 +282,13 @@ namespace Raven.Server.Documents.Replication
             _parent.WriteToServer(headerJson);
             foreach (var item in _orderedReplicaItems)
             {
-                WriteDocumentToServer(item.Value);
+                var value = item.Value;
+                WriteItemToServer(value);
+            }
+            foreach (var item in _replicaAttachmentStreams)
+            {
+                var value = item.Value;
+                WriteAttachmentStreamToServer(value);
             }
             // close the transaction as early as possible, and before we wait for reply
             // from other side
@@ -275,25 +296,37 @@ namespace Raven.Server.Documents.Replication
             _stream.Flush();
             sw.Stop();
 
+            stats.EndSendingTime = DateTime.UtcNow;
+            _parent.ReplicationStats.Add(stats);
+
             _parent._lastSentDocumentEtag = _lastEtag;
 
             if (_log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
-                _log.Info(
-                    $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
+                _log.Info($"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count:#,#;;0} attachment streams in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
-            _parent.HandleServerResponse();
+            _parent.HandleServerResponse();            
+            
         }
 
-        private unsafe void WriteDocumentToServer(ReplicationBatchDocumentItem item)
+        private unsafe void WriteItemToServer(ReplicationBatchItem item)
         {
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
+            {
+                WriteAttachmentToServer(item);
+                return;
+            }
+
             var changeVectorSize = item.ChangeVector.Length * sizeof(ChangeVectorEntry);
-            var requiredSize = changeVectorSize +
+            var requiredSize = sizeof(byte) + // type
                                sizeof(int) + // # of change vectors
+                               changeVectorSize +
+                               sizeof(short) + // transaction marker
+                               sizeof(long) + // Last modified ticks
+                               sizeof(DocumentFlags) +
                                sizeof(int) + // size of document key
                                item.Key.Size +
-                               sizeof(int) + // size of document
-                               sizeof(short) // transaction marker
+                               sizeof(int); // size of document
                 ;
             if (requiredSize > _tempBuffer.Length)
                 ThrowTooManyChangeVectorEntries(item.Key, item.ChangeVector);
@@ -301,9 +334,11 @@ namespace Raven.Server.Documents.Replication
             fixed (byte* pTemp = _tempBuffer)
             {
                 int tempBufferPos = 0;
+                pTemp[tempBufferPos++] = (byte)item.Type;
+
                 fixed (ChangeVectorEntry* pChangeVectorEntries = item.ChangeVector)
                 {
-                    *(int*)pTemp = item.ChangeVector.Length;
+                    *(int*)(pTemp + tempBufferPos) = item.ChangeVector.Length;
                     tempBufferPos += sizeof(int);
                     Memory.Copy(pTemp + tempBufferPos, (byte*)pChangeVectorEntries, changeVectorSize);
                     tempBufferPos += changeVectorSize;
@@ -314,6 +349,9 @@ namespace Raven.Server.Documents.Replication
 
                 *(long*)(pTemp + tempBufferPos) = item.LastModifiedTicks;
                 tempBufferPos += sizeof(long);
+
+                *(DocumentFlags*)(pTemp + tempBufferPos) = item.Flags;
+                tempBufferPos += sizeof(DocumentFlags);
 
                 *(int*)(pTemp + tempBufferPos) = item.Key.Size;
                 tempBufferPos += sizeof(int);
@@ -328,7 +366,7 @@ namespace Raven.Server.Documents.Replication
                     tempBufferPos += sizeof(int);
 
                     var docReadPos = 0;
-                    while (docReadPos < item.Data?.Size)
+                    while (docReadPos < item.Data.Size)
                     {
                         var sizeToCopy = Math.Min(item.Data.Size - docReadPos, _tempBuffer.Length - tempBufferPos);
                         if (sizeToCopy == 0) // buffer is full, need to flush it
@@ -363,34 +401,90 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe bool ShouldSkipReplication(LazyStringValue str)
+        private unsafe void WriteAttachmentToServer(ReplicationBatchItem item)
         {
-            if (str.Length < 6)
-                return false;
+            var requiredSize = sizeof(byte) + // type
+                               sizeof(short) + // transaction marker
+                               sizeof(int) + // size of key
+                               item.Key.Size +
+                               sizeof(int) + // size of name
+                               item.Name.Size +
+                               sizeof(int) + // size of ContentType
+                               item.ContentType.Size +
+                               sizeof(byte) + // size of Base64Hash
+                               item.Base64Hash.Size;
 
-            // case insensitive 'Raven/' match without doing allocations
+            if (requiredSize > _tempBuffer.Length)
+                throw new ArgumentOutOfRangeException("item",
+                    $"Attachment name {item.Name} or content type {item.ContentType} or the key ({item.Key.Size} - {item.Key}) " +
+                    $"(which might include the change vector for revisions or conflicts) is too big.");
 
-            if ((str.Buffer[0] != (byte)'R' && str.Buffer[0] != (byte)'r') ||
-                (str.Buffer[1] != (byte)'A' && str.Buffer[1] != (byte)'a') ||
-                (str.Buffer[2] != (byte)'V' && str.Buffer[2] != (byte)'v') ||
-                (str.Buffer[3] != (byte)'E' && str.Buffer[3] != (byte)'e') ||
-                (str.Buffer[4] != (byte)'N' && str.Buffer[4] != (byte)'n') ||
-                str.Buffer[5] != (byte)'/')
-                return false;
+            fixed (byte* pTemp = _tempBuffer)
+            {
+                int tempBufferPos = 0;
+                pTemp[tempBufferPos++] = (byte)item.Type;
 
-            if (str.Length < 11)
-                return true;
+                *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
+                tempBufferPos += sizeof(short);
 
-            // Now need to find if the next bits are 'hilo/'
-            if ((str.Buffer[6] == (byte)'H' || str.Buffer[6] == (byte)'h') &&
-                (str.Buffer[7] == (byte)'I' || str.Buffer[7] == (byte)'i') &&
-                (str.Buffer[8] == (byte)'L' || str.Buffer[8] == (byte)'l') &&
-                (str.Buffer[9] == (byte)'O' || str.Buffer[9] == (byte)'o') &&
-                str.Buffer[10] == (byte)'/')
-                return false;
+                *(int*)(pTemp + tempBufferPos) = item.Key.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, item.Key.Buffer, item.Key.Size);
+                tempBufferPos += item.Key.Size;
 
-            return true;
+                *(int*)(pTemp + tempBufferPos) = item.Name.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, item.Name.Buffer, item.Name.Size);
+                tempBufferPos += item.Name.Size;
+
+                *(int*)(pTemp + tempBufferPos) = item.ContentType.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, item.ContentType.Buffer, item.ContentType.Size);
+                tempBufferPos += item.ContentType.Size;
+
+                pTemp[tempBufferPos++] = (byte)item.Base64Hash.Size;
+                item.Base64Hash.CopyTo(pTemp + tempBufferPos);
+                tempBufferPos += item.Base64Hash.Size;
+
+                _stream.Write(_tempBuffer, 0, tempBufferPos);
+            }
         }
+
+        private unsafe void WriteAttachmentStreamToServer(ReplicationBatchItem item)
+        {
+            fixed (byte* pTemp = _tempBuffer)
+            {
+                int tempBufferPos = 0;
+                pTemp[tempBufferPos++] = (byte)ReplicationBatchItem.ReplicationItemType.AttachmentStream;
+
+                // Hash size is 32, but it might be changed in the future
+                pTemp[tempBufferPos++] = (byte)item.Base64Hash.Size;
+                item.Base64Hash.CopyTo(pTemp + tempBufferPos);
+                tempBufferPos += item.Base64Hash.Size;
+
+                *(long*)(pTemp + tempBufferPos) = item.Stream.Length;
+                tempBufferPos += sizeof(long);
+
+                long readPos = 0;
+                while (readPos < item.Stream.Length)
+                {
+                    var partialStreamLength = (int)Math.Min(item.Stream.Length - readPos, int.MaxValue);
+                    var sizeToCopy = Math.Min(partialStreamLength, _tempBuffer.Length - tempBufferPos);
+                    if (sizeToCopy == 0) // buffer is full, need to flush it
+                    {
+                        _stream.Write(_tempBuffer, 0, tempBufferPos);
+                        tempBufferPos = 0;
+                        continue;
+                    }
+                    item.Stream.Read(_tempBuffer, tempBufferPos, sizeToCopy);
+                    tempBufferPos += sizeToCopy;
+                    readPos += sizeToCopy;
+                }
+
+                _stream.Write(_tempBuffer, 0, tempBufferPos);
+            }
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ThrowTooManyChangeVectorEntries(LazyStringValue key, ChangeVectorEntry[] changeVector)

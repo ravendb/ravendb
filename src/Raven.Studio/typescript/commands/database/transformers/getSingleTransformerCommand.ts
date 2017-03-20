@@ -8,13 +8,13 @@ class getSingleTransformerCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Abstractions.Indexing.TransformerDefinition> {
+    execute(): JQueryPromise<Raven.Client.Documents.Transformers.TransformerDefinition> {
         const args = {
             name: this.transformerName
         };
         const url = endpoints.databases.transformer.transformers + this.urlEncodeArgs(args);
-        return this.query<Raven.Abstractions.Indexing.TransformerDefinition>(url, null, this.db,
-            (r: resultsDto<Raven.Abstractions.Indexing.TransformerDefinition>) => r.Results[0]);
+        return this.query<Raven.Client.Documents.Transformers.TransformerDefinition>(url, null, this.db,
+            (r: resultsDto<Raven.Client.Documents.Transformers.TransformerDefinition>) => r.Results[0]);
     }
 }
 

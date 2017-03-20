@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Extensions;
 using Sparrow.Json;
 using Voron;
 
@@ -13,8 +12,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
     {
         public readonly Dictionary<string, IndexField> GroupByFields;
 
-        public AutoMapReduceIndexDefinition(string[] collections, IndexField[] mapFields, IndexField[] groupByFields)
-            : base(IndexNameFinder.FindMapReduceIndexName(collections, mapFields, groupByFields), collections, IndexLockMode.Unlock, mapFields)
+        public AutoMapReduceIndexDefinition(string collection, IndexField[] mapFields, IndexField[] groupByFields)
+            : base(IndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), new HashSet<string> { collection }, IndexLockMode.Unlock, IndexPriority.Normal, mapFields)
         {
             foreach (var field in mapFields)
             {
@@ -45,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             PersistGroupByFields(context, writer);
         }
 
-        protected override IndexDefinition CreateIndexDefinition()
+        protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
             var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted}>"))}]";
             var reduce = $"{Collections.First()}:[{string.Join(";", GroupByFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted},Operation:{x.Value.MapReduceOperation}>"))}]";
@@ -140,15 +139,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public static AutoMapReduceIndexDefinition LoadFromJson(BlittableJsonReaderObject reader)
         {
-            int lockModeAsInt;
-            reader.TryGet(nameof(LockMode), out lockModeAsInt);
-
+            var lockMode = ReadLockMode(reader);
+            var priority = ReadPriority(reader);
             BlittableJsonReaderArray jsonArray;
-            reader.TryGet(nameof(Collections), out jsonArray);
+
+            if(reader.TryGet(nameof(Collections), out jsonArray) == false)
+                throw new InvalidOperationException("No persisted collections");
 
             var collection = jsonArray.GetStringByIndex(0);
 
-            reader.TryGet(nameof(MapFields), out jsonArray);
+            if (reader.TryGet(nameof(MapFields), out jsonArray) == false)
+                throw new InvalidOperationException("No persisted map fields");
 
             var mapFields = new IndexField[jsonArray.Length];
 
@@ -181,7 +182,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 mapFields[i] = field;
             }
 
-            reader.TryGet(nameof(GroupByFields), out jsonArray);
+            if (reader.TryGet(nameof(GroupByFields), out jsonArray) == false)
+                throw new InvalidOperationException("No persisted group by fields");
 
             var groupByFields = new IndexField[jsonArray.Length];
 
@@ -210,9 +212,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 groupByFields[i] = field;
             }
 
-            return new AutoMapReduceIndexDefinition(new[] { collection }, mapFields, groupByFields)
+            return new AutoMapReduceIndexDefinition(collection, mapFields, groupByFields)
             {
-                LockMode = (IndexLockMode)lockModeAsInt
+                LockMode = lockMode,
+                Priority = priority
             };
         }
     }

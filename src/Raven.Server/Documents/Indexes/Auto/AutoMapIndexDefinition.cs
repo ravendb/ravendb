@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
 using Voron;
 
@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Auto
     public class AutoMapIndexDefinition : IndexDefinitionBase
     {
         public AutoMapIndexDefinition(string collection, IndexField[] fields)
-            : base(IndexNameFinder.FindMapIndexName(new[] { collection }, fields), new[] { collection }, IndexLockMode.Unlock, fields)
+            : base(IndexNameFinder.FindMapIndexName(collection, fields), new HashSet<string> { collection }, IndexLockMode.Unlock, IndexPriority.Normal, fields)
         {
             if (string.IsNullOrEmpty(collection))
                 throw new ArgumentNullException(nameof(collection));
@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             PersistMapFields(context, writer);
         }
 
-        protected override IndexDefinition CreateIndexDefinition()
+        protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
             var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted}>"))}]";
 
@@ -80,12 +80,14 @@ namespace Raven.Server.Documents.Indexes.Auto
         public static AutoMapIndexDefinition LoadFromJson(BlittableJsonReaderObject reader)
         {
             var lockMode = ReadLockMode(reader);
+            var priority = ReadPriority(reader);
             var collections = ReadCollections(reader);
             var fields = ReadMapFields(reader);
 
             return new AutoMapIndexDefinition(collections[0], fields)
             {
-                LockMode = lockMode
+                LockMode = lockMode,
+                Priority = priority
             };
         }
     }

@@ -2,9 +2,8 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Abstractions.Replication;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Replication.Messages;
+using Raven.Client;
+using Raven.Client.Documents.Replication;
 using Xunit;
 
 namespace FastTests.Issues
@@ -49,7 +48,7 @@ namespace FastTests.Issues
                 using (var session = storeA.OpenSession())
                 {
                     var replicationDocument =
-                        session.Load<ReplicationDocument>(Constants.Replication.DocumentReplicationConfiguration);
+                        session.Load<ReplicationDocument>(Constants.Documents.Replication.ReplicationConfigurationDocument);
 
                     //add non-etl destination
                     replicationDocument.Destinations.Add(new ReplicationDestination

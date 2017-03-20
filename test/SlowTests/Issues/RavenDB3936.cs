@@ -1,11 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Client.Shard;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -33,13 +32,13 @@ namespace SlowTests.Issues
 
         private class Result
         {
-#pragma warning disable 649
+#pragma warning disable 169,649
             public string Name;
-#pragma warning restore 649
+#pragma warning restore 169,649
         }
 
-        [Fact]
-        public async Task CanUseAsyncTransformer()
+        [Fact(Skip = "RavenDB-6283")]
+        public void CanUseAsyncTransformer()
         {
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
@@ -49,36 +48,36 @@ namespace SlowTests.Issues
                 {"Shard2", store2}
             };
 
-            var shardStrategy = new ShardStrategy(shards);
-            shardStrategy.ShardingOn<Profile>(x => x.Location);
+            //var shardStrategy = new ShardStrategy(shards);
+            //shardStrategy.ShardingOn<Profile>(x => x.Location);
 
-            using (var shardedDocumentStore = new ShardedDocumentStore(shardStrategy))
-            {
-                shardedDocumentStore.Initialize();
-                new Transformer().Execute(shardedDocumentStore);
+            //using (var shardedDocumentStore = new ShardedDocumentStore(shardStrategy))
+            //{
+            //    shardedDocumentStore.Initialize();
+            //    new Transformer().Execute(shardedDocumentStore);
 
-                using (var session = shardedDocumentStore.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new Profile
-                    {
-                        Name = "Oren",
-                        Location = "Shard1"
-                    });
-                    await session.SaveChangesAsync();
-                }
+            //    using (var session = shardedDocumentStore.OpenAsyncSession())
+            //    {
+            //        await session.StoreAsync(new Profile
+            //        {
+            //            Name = "Oren",
+            //            Location = "Shard1"
+            //        });
+            //        await session.SaveChangesAsync();
+            //    }
 
-                using (var session = shardedDocumentStore.OpenAsyncSession())
-                {
-                    var results = await session.Query<Profile>()
-                        .Customize(x => x.WaitForNonStaleResults())
-                        .Where(x => x.Name == "Oren")
-                        .TransformWith<Transformer, Result>()
-                        .ToListAsync();
+            //    using (var session = shardedDocumentStore.OpenAsyncSession())
+            //    {
+            //        var results = await session.Query<Profile>()
+            //            .Customize(x => x.WaitForNonStaleResults())
+            //            .Where(x => x.Name == "Oren")
+            //            .TransformWith<Transformer, Result>()
+            //            .ToListAsync();
 
-                    Assert.Equal("Oren", results[0].Name);
-                }
+            //        Assert.Equal("Oren", results[0].Name);
+            //    }
 
-            }
+            //}
         }
     }
 }

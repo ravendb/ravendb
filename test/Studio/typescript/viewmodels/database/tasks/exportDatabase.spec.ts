@@ -9,8 +9,8 @@ describe(viewUnderTest, () => {
     utils.initTest();
 
     it('should bind', () => {
-        const collectionStatsDto: collectionsStatsDto = {
-            NumberOfDocuments: 100,
+        const collectionStatsDto: Raven.Client.Documents.Operations.CollectionStatistics = {
+            CountOfDocuments: 100,
             Collections: {
                 Orders: 50,
                 Customers: 50

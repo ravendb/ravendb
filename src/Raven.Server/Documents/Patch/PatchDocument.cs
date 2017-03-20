@@ -6,15 +6,15 @@ using Jint;
 using Jint.Native;
 using Jint.Parser;
 using Jint.Runtime;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Exceptions.Patching;
+using Raven.Client.Documents.Exceptions.Patching;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 using Sparrow.Logging;
-using JavaScriptException = Raven.NewClient.Client.Exceptions.Patching.JavaScriptException;
+using JavaScriptException = Raven.Client.Documents.Exceptions.Patching.JavaScriptException;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -23,12 +23,12 @@ namespace Raven.Server.Documents.Patch
         protected static Logger _logger;
         private const int MaxRecursionDepth = 128;
         private readonly int _maxSteps;
-        private readonly int _additionalStepsPerSize;
+        protected readonly int _additionalStepsPerSize;
         private readonly bool _allowScriptsToAdjustNumberOfSteps;
 
         private static readonly ScriptsCache ScriptsCache = new ScriptsCache();
 
-        private readonly DocumentDatabase _database;
+        protected readonly DocumentDatabase _database;
 
         public PatchDocument(DocumentDatabase database)
         {
@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Patch
             _allowScriptsToAdjustNumberOfSteps = database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps;
         }
 
-        public virtual PatchResult Apply(DocumentsOperationContext context, Document document, PatchRequest patch)
+        public virtual PatchResult Apply(DocumentsOperationContext context, Document document, PatchRequest patch, bool debugMode = false)
         {
             if (document == null)
                 return null;
@@ -47,15 +47,20 @@ namespace Raven.Server.Documents.Patch
             if (string.IsNullOrEmpty(patch.Script))
                 throw new InvalidOperationException("Patch script must be non-null and not empty");
 
-            var scope = ApplySingleScript(context, document, patch, debugMode: false);
+            var scope = ApplySingleScript(context, document, patch, debugMode);
             var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), document.Key); /* TODO: Should not use BlittableJsonDocumentBuilder.UsageMode.ToDisk? */
 
-            return new PatchResult
+            var result = new PatchResult
             {
                 Status = PatchStatus.Patched,
                 OriginalDocument = document.Data,
                 ModifiedDocument = modifiedDocument
             };
+
+            if (debugMode)
+                AddDebug(context, result, scope);
+
+            return result;
         }
 
         public PatchResult Apply(
@@ -122,15 +127,7 @@ namespace Raven.Server.Documents.Patch
             };
 
             if (debugMode)
-            {
-                var djv = new DynamicJsonValue
-                {
-                    ["Info"] = scope.DebugInfo,
-                    ["Actions"] = scope.DebugActions.GetDebugActions()
-                };
-
-                result.Debug = context.ReadObject(djv, "debug/actions");
-            }
+                AddDebug(context, result, scope);
 
             if (modifiedDocument == null)
             {
@@ -166,22 +163,27 @@ namespace Raven.Server.Documents.Patch
             return result;
         }
 
-        public struct SingleScriptRun
+        protected PatcherOperationScope GenerateDefaultOperationScope(DocumentsOperationContext context, bool debugMode)
+        {
+            return new PatcherOperationScope(_database, context, debugMode)
+            {
+                AdditionalStepsPerSize = _additionalStepsPerSize,
+                MaxSteps = _maxSteps
+            };
+        }
+
+        internal struct SingleScriptRun
         {
             private readonly PatchDocument _parent;
             private readonly PatchRequest _patch;
             public Engine JintEngine;
             public PatcherOperationScope Scope;
 
-            public SingleScriptRun(PatchDocument parent, DocumentsOperationContext context, PatchRequest patch, bool debugMode)
+            public SingleScriptRun(PatchDocument parent, DocumentsOperationContext context, PatchRequest patch, bool debugMode, PatcherOperationScope externalScope = null)
             {
                 _parent = parent;
                 _patch = patch;
-                Scope = new PatcherOperationScope(parent._database, context, debugMode)
-                {
-                    AdditionalStepsPerSize = parent._additionalStepsPerSize,
-                    MaxSteps = parent._maxSteps
-                };
+                Scope = externalScope ?? parent.GenerateDefaultOperationScope(context, debugMode);
 
                 try
                 {
@@ -237,7 +239,7 @@ namespace Raven.Server.Documents.Patch
                     errorMsg += Environment.NewLine + "Stacktrace:" + Environment.NewLine + error.CallStack;
 
                 var targetEx = errorEx as TargetInvocationException;
-                if (targetEx != null && targetEx.InnerException != null)
+                if (targetEx?.InnerException != null)
                     throw new JavaScriptException(errorMsg, targetEx.InnerException);
 
                 var recursionEx = errorEx as RecursionDepthOverflowException;
@@ -248,9 +250,9 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, Document document, PatchRequest patch, bool debugMode)
+        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, Document document, PatchRequest patch, bool debugMode, PatcherOperationScope externalScope = null)
         {
-            var run = new SingleScriptRun(this, context, patch, debugMode);
+            var run = new SingleScriptRun(this, context, patch, debugMode, externalScope);
             try
             {
                 run.Prepare(document?.Data?.Size ?? 0);
@@ -268,7 +270,7 @@ namespace Raven.Server.Documents.Patch
         protected void SetupInputs(Document document, PatcherOperationScope scope, Engine jintEngine)
         {
             jintEngine.SetValue("__document_id", document.Key);
-            scope.PatchObject = scope.ToJsObject(jintEngine, document.Data);
+            scope.PatchObject = scope.ToJsObject(jintEngine, document);
         }
 
         private void CleanupEngine(PatchRequest patch, Engine jintEngine, PatcherOperationScope scope)
@@ -324,8 +326,8 @@ namespace Raven.Server.Documents.Patch
             jintEngine.ResetStatementsCount();
         }
 
-        protected string ExecutionString =
-            @"function ExecutePatchScript(docInner){{ return (function(doc){{ {0} }}).apply(docInner); }};";
+        protected string ExecutionString = @"function ExecutePatchScript(docInner){{ return (function(doc){{ {0} }}).apply(docInner); }};";
+
         private Engine CreateEngine(PatchRequest patch)
         {
             var scriptWithProperLines = patch.Script.NormalizeLineEnding();
@@ -431,6 +433,17 @@ namespace Raven.Server.Documents.Patch
                     return reader.ReadToEnd();
                 }
             }
+        }
+
+        private static void AddDebug(JsonOperationContext context, PatchResult result, PatcherOperationScope scope)
+        {
+            var djv = new DynamicJsonValue
+            {
+                ["Info"] = scope.DebugInfo,
+                ["Actions"] = scope.DebugActions.GetDebugActions()
+            };
+
+            result.Debug = context.ReadObject(djv, "debug/actions");
         }
     }
 }

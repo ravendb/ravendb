@@ -2,15 +2,11 @@
 using System.IO;
 using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Linq;
-using Raven.Server.Json;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 using Xunit;
-using Formatting = Raven.Imports.Newtonsoft.Json.Formatting;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
@@ -23,7 +19,9 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly.GetManifestResourceStream(name))
             {
-                var compacted = JObject.Parse(new StreamReader(stream).ReadToEnd()).ToString(Formatting.None);
+                var serializer = DocumentConventions.Default.CreateSerializer();
+
+                var before = ((JObject)serializer.Deserialize(new JsonTextReader(new StreamReader(stream))));
                 stream.Position = 0;
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
@@ -31,12 +29,30 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
                     var memoryStream = new MemoryStream();
                     context.Write(memoryStream, writer);
-                    var s = Encoding.UTF8.GetString(memoryStream.ToArray());
 
-                    JObject.Parse(s); // can parse the output
+                    memoryStream.Position = 0;
+                    var after = ((JObject)serializer.Deserialize(new JsonTextReader(new StreamReader(memoryStream))));
 
-                    Assert.Equal(compacted, s);
+                    if (new JTokenEqualityComparer().Equals(before, after) == false)
+                    {
+                        Assert.Equal(before.ToString(Formatting.None), after.ToString(Formatting.None));
+                    }
                 }
+            }
+        }
+
+        [Fact]
+        public void InvalidJSon()
+        {
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var invalid = @"{
+ 'User': 'ayende',
+ 'Age': 18,{'Error': 'ObjectDisposed'}";
+                var stream = new MemoryStream(Encoding.UTF8.GetBytes(invalid));
+                var invalidDataException = Assert.Throws<InvalidDataException>(() => context.Read(stream, "docs/1"));
+
+                Assert.Contains(invalid, invalidDataException.Message);
             }
         }
 
@@ -49,15 +65,15 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 {
                     var resource = typeof(BlittableFormatTests).Namespace + ".Jsons." + name;
 
-                    using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly
-                        .GetManifestResourceStream(resource))
+                    using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly.GetManifestResourceStream(resource))
                     {
-                        var compacted = JObject.Load(new JsonTextReader(new StreamReader(stream))).ToString(Formatting.None);
+                        var serializer = DocumentConventions.Default.CreateSerializer();
+                        
+                        var compacted = ((JObject)serializer.Deserialize(new JsonTextReader(new StreamReader(stream)))).ToString(Formatting.None);
                         stream.Position = 0;
 
                         using (var writer = context.Read(stream, "docs/1 "))
                         {
-
                             var memoryStream = new MemoryStream();
                             context.Write(memoryStream, writer);
                             var s = Encoding.UTF8.GetString(memoryStream.ToArray());

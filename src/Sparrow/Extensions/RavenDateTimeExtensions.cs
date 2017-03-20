@@ -3,12 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 
-namespace Raven.Abstractions.Extensions
+using System;
+using System.Globalization;
+
+namespace Sparrow.Extensions
 {
     public static class RavenDateTimeExtensions
     {
+        private const long InitialJavaScriptDateTicks = 621355968000000000;
+
         // Number of 100ns ticks per time unit
         private const long TicksPerMillisecond = 10000;
         private const long TicksPerSecond = TicksPerMillisecond * 1000;
@@ -161,6 +165,33 @@ namespace Raven.Abstractions.Extensions
             }
 
             return result;
+        }
+
+        public static DateTime ParseDateMicrosoft(string text)
+        {
+            var value = text.Substring(6, text.Length - 8);
+
+            var index = value.IndexOf('+', 1);
+
+            if (index == -1)
+                index = value.IndexOf('-', 1);
+
+            if (index != -1)
+            {
+                value = value.Substring(0, index);
+            }
+
+            var javaScriptTicks = long.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture);
+
+            var utcDateTime = ConvertJavaScriptTicksToDateTime(javaScriptTicks);
+            return utcDateTime;
+        }
+
+        private static DateTime ConvertJavaScriptTicksToDateTime(long javaScriptTicks)
+        {
+            var dateTime = new DateTime((javaScriptTicks * 10000) + InitialJavaScriptDateTicks, DateTimeKind.Utc);
+
+            return dateTime;
         }
     }
 }

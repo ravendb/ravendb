@@ -1,6 +1,8 @@
+using System.IO;
+using System.Text;
 using FastTests;
-using Raven.Client.Linq;
-using Raven.Json.Linq;
+using Raven.Server.Documents.Indexes.Static;
+using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -10,9 +12,17 @@ namespace SlowTests.MailingList
         [Fact]
         public void ShouldWork()
         {
-            dynamic doc = new DynamicJsonObject(new RavenJObject());
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{}")))
+                {
+                    var json = context.ReadForMemory(stream, "json");
 
-            Assert.True(string.IsNullOrEmpty(doc.Name));
+                    dynamic doc = new DynamicBlittableJson(json);
+
+                    Assert.True(string.IsNullOrEmpty(doc.Name));
+                }
+            }
         }
     }
 }

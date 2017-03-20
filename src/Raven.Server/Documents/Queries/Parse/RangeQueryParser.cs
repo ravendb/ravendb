@@ -9,20 +9,18 @@ using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
-
-using Raven.Abstractions.Indexing;
-
+using Raven.Client.Documents.Indexes;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Server.Documents.Queries.Parse
 {
     public class RangeQueryParser : QueryParser
     {
-        public static readonly Regex NumericRangeValue = new Regex(@"^[\w\d]x[-\w\d.]+$", RegexOptions.Compiled);
+        public static readonly Regex NumericRangeValue = new Regex(@"^[-\w\d.]+$", RegexOptions.Compiled);
         public static readonly Regex DateTimeValue = new Regex(@"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)", RegexOptions.Compiled);
 
-        private readonly Dictionary<string, HashSet<string>> untokenized = new Dictionary<string, HashSet<string>>();
-        private readonly Dictionary<Tuple<string, string>, string> replacedTokens = new Dictionary<Tuple<string, string>, string>();
+        private readonly Dictionary<string, HashSet<string>> _untokenized = new Dictionary<string, HashSet<string>>();
+        private readonly Dictionary<Tuple<string, string>, string> _replacedTokens = new Dictionary<Tuple<string, string>, string>();
 
         public RangeQueryParser(Version matchVersion, string f, Analyzer a)
             : base(matchVersion, f, a)
@@ -33,7 +31,7 @@ namespace Raven.Server.Documents.Queries.Parse
         {
             var tokenReplacement = Guid.NewGuid().ToString("n");
 
-            replacedTokens[Tuple.Create(fieldName, tokenReplacement)] = replacement;
+            _replacedTokens[Tuple.Create(fieldName, tokenReplacement)] = replacement;
 
             return tokenReplacement;
         }
@@ -51,7 +49,7 @@ namespace Raven.Server.Documents.Queries.Parse
             }
             var tokenReplacement = queryStringBuilder.ToString();
             var keyOfTokenReplacment = queryStringBuilder.ToString(1, queryStringBuilder.Length - 2);
-            replacedTokens[Tuple.Create(fieldName, keyOfTokenReplacment)] = collection.Substring(1, collection.Length - 2);
+            _replacedTokens[Tuple.Create(fieldName, keyOfTokenReplacment)] = collection.Substring(1, collection.Length - 2);
             return tokenReplacement;
         }
         protected override Query GetPrefixQuery(string field, string termStr)
@@ -135,11 +133,11 @@ namespace Raven.Server.Documents.Queries.Parse
         protected override Query GetFieldQuery(string field, string queryText)
         {
             string value;
-            if (replacedTokens.TryGetValue(Tuple.Create(field, queryText), out value))
+            if (_replacedTokens.TryGetValue(Tuple.Create(field, queryText), out value))
                 return new TermQuery(new Term(field, value));
 
             HashSet<string> set;
-            if (untokenized.TryGetValue(field, out set))
+            if (_untokenized.TryGetValue(field, out set))
             {
                 if (set.Contains(queryText))
                     return new TermQuery(new Term(field, queryText));
@@ -195,58 +193,30 @@ namespace Raven.Server.Documents.Queries.Parse
                 return NewRangeQuery(field, lower, upper, inclusive);
             }
 
-            var from = NumberUtil.StringToNumber(lower);
-            var to = NumberUtil.StringToNumber(upper);
-
-            TypeCode numericType;
-            
-            if (from != null)
-                numericType = GetTypeCode(from);
-            else if (to != null)
-                numericType = GetTypeCode(to);
-            else
-                numericType = TypeCode.Empty;
-
-            switch (numericType)
+            var rangeType = FieldUtil.GetRangeTypeFromFieldName(field);
+            switch (rangeType)
             {
-                case TypeCode.Int64:
-                    {
-                        return NumericRangeQuery.NewLongRange(field, (long)(from ?? Int64.MinValue), (long)(to ?? Int64.MaxValue), minInclusive, maxInclusive);
-                    }
-                case TypeCode.Double:
-                    {
-                        return NumericRangeQuery.NewDoubleRange(field, (double)(from ?? Double.MinValue), (double)(to ?? Double.MaxValue), minInclusive, maxInclusive);
-                    }
-
-                case TypeCode.Int32:
-                case TypeCode.Single:
-                    {
-                        throw new NotSupportedException($"Unexpected numeric type in a numeric range query. Type: {numericType}, range: {from} - {to}.");
-                    }
+                case RangeType.Long:
+                    var fromLong = NumberUtil.StringToLong(lower) ?? long.MinValue;
+                    var toLong = NumberUtil.StringToLong(upper) ?? long.MaxValue;
+                    return NumericRangeQuery.NewLongRange(field, fromLong, toLong, minInclusive, maxInclusive);
+                case RangeType.Double:
+                    var fromDouble = NumberUtil.StringToDouble(lower) ?? double.MinValue;
+                    var toDouble = NumberUtil.StringToDouble(upper) ?? double.MaxValue;
+                    return NumericRangeQuery.NewDoubleRange(field, fromDouble, toDouble, minInclusive, maxInclusive);
                 default:
-                    {
-                        return NewRangeQuery(field, lower, upper, inclusive);
-                    }
+                    return NewRangeQuery(field, lower, upper, inclusive);
             }
         }
 
         public void SetUntokenized(string field, string value)
         {
             HashSet<string> set;
-            if (untokenized.TryGetValue(field, out set) == false)
+            if (_untokenized.TryGetValue(field, out set) == false)
             {
-                untokenized[field] = set = new HashSet<string>();
+                _untokenized[field] = set = new HashSet<string>();
             }
             set.Add(value);
-        }
-
-        private static TypeCode GetTypeCode(object request)
-        {
-            var convertible = request as IConvertible;
-            if (convertible == null)
-                return TypeCode.Object;
-
-            return convertible.GetTypeCode();
         }
     }
 }

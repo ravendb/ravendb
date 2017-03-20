@@ -6,8 +6,9 @@ using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
-using Raven.Abstractions.Data;
+using Raven.Client;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -73,7 +74,45 @@ namespace Raven.Server.Documents.Patch
             return result;
         }
 
-        public ObjectInstance ToJsObject(Engine engine, BlittableJsonReaderObject json, string propertyName = null)
+        public ObjectInstance ToJsObject(Engine engine, Document document)
+        {
+            var instance = ToJsObject(engine, document.Data);
+            return ApplyMetadataIfNecessary(instance, document.Key, document.Etag, document.LastModified, document.Flags, document.IndexScore);
+        }
+
+        public ObjectInstance ToJsObject(Engine engine, DocumentConflict document, string propertyName)
+        {
+            var instance = ToJsObject(engine, document.Doc, propertyName);
+            return ApplyMetadataIfNecessary(instance, document.Key, document.Etag, document.LastModified, flags: null, indexScore: null);
+        }
+
+        private static ObjectInstance ApplyMetadataIfNecessary(ObjectInstance instance, LazyStringValue key, long etag, DateTime? lastModified, DocumentFlags? flags, double? indexScore)
+        {
+            var metadataValue = instance.Get(Constants.Documents.Metadata.Key);
+            if (metadataValue == null || metadataValue.IsObject() == false)
+                return instance;
+
+            var metadata = metadataValue.AsObject();
+
+            if (etag > 0)
+                metadata.FastAddProperty(Constants.Documents.Metadata.Etag, etag, true, true, true);
+
+            if (lastModified.HasValue && lastModified != default(DateTime))
+                metadata.FastAddProperty(Constants.Documents.Metadata.LastModified, lastModified.Value.GetDefaultRavenFormat(), true, true, true);
+
+            if (flags.HasValue && flags != DocumentFlags.None)
+                metadata.FastAddProperty(Constants.Documents.Metadata.Flags, flags.Value.ToString(), true, true, true);
+
+            if (key != null)
+                metadata.FastAddProperty(Constants.Documents.Metadata.Id, key.ToString(), true, true, true);
+
+            if (indexScore.HasValue)
+                metadata.FastAddProperty(Constants.Documents.Metadata.IndexScore, indexScore, true, true, true);
+
+            return instance;
+        }
+
+        private ObjectInstance ToJsObject(Engine engine, BlittableJsonReaderObject json, string propertyName = null)
         {
             var jsObject = engine.Object.Construct(Arguments.Empty);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
@@ -127,7 +166,7 @@ namespace Raven.Server.Documents.Patch
             return property + "." + key;
         }
 
-        public void ToBlittableJsonReaderObject(ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> writer, ObjectInstance jsObject, string propertyKey = null,
+        public void ToBlittableJsonReaderObject(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, ObjectInstance jsObject, string propertyKey = null,
             bool recursiveCall = false)
         {
             if (jsObject.Class == "Function")
@@ -141,13 +180,13 @@ namespace Raven.Server.Documents.Patch
             writer.WriteObjectEnd();
         }
 
-        public void WriteRawObjectPropertiesToBlittable(ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> writer, ObjectInstance jsObject, string propertyKey = null,
+        public void WriteRawObjectPropertiesToBlittable(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, ObjectInstance jsObject, string propertyKey = null,
             bool recursiveCall = false)
         {
             foreach (var property in jsObject.GetOwnProperties())
             {
-                if (property.Key == Constants.Indexing.Fields.ReduceKeyFieldName ||
-                    property.Key == Constants.Indexing.Fields.DocumentIdFieldName)
+                if (property.Key == Constants.Documents.Indexing.Fields.ReduceKeyFieldName ||
+                    property.Key == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                     continue;
 
                 var value = property.Value.Value;
@@ -168,7 +207,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        private void ToBlittableJsonReaderValue(ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> writer, JsValue v, string propertyKey, bool recursiveCall)
+        private void ToBlittableJsonReaderValue(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, JsValue v, string propertyKey, bool recursiveCall)
         {
             if (v.IsBoolean())
             {
@@ -261,7 +300,7 @@ namespace Raven.Server.Documents.Patch
             }
             if (v.IsDate())
             {
-                writer.WriteValue(v.AsDate().ToDateTime().ToString(Abstractions.Default.DateTimeFormatsToWrite));
+                writer.WriteValue(v.AsDate().ToDateTime().ToString(Default.DateTimeFormatsToWrite));
                 return;
             }
             if (v.IsObject())
@@ -290,7 +329,7 @@ namespace Raven.Server.Documents.Patch
             var obj = new DynamicJsonValue();
             foreach (var property in jsObject.GetOwnProperties())
             {
-                if (property.Key == Constants.Indexing.Fields.ReduceKeyFieldName || property.Key == Constants.Indexing.Fields.DocumentIdFieldName)
+                if (property.Key == Constants.Documents.Indexing.Fields.ReduceKeyFieldName || property.Key == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                     continue;
 
                 var value = property.Value.Value;
@@ -431,7 +470,7 @@ namespace Raven.Server.Documents.Patch
             {
                 if (etagJs.IsNumber())
                 {
-                    etag = (long) etagJs.AsNumber();
+                    etag = (long)etagJs.AsNumber();
                 }
                 else if (etagJs.IsNull() == false && etagJs.IsUndefined() == false && etagJs.ToString() != "None")
                 {

@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.Bugs.LiveProjections
 {
-    public class LiveProjectionOnProducts : RavenNewTestBase
+    public class LiveProjectionOnProducts : RavenTestBase
     {
         [Fact]
         public void SimpleLiveProjection()

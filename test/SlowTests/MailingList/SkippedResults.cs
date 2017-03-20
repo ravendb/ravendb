@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -35,7 +36,7 @@ namespace SlowTests.MailingList
                     var result = (from p in session.Query<Provider, NestedPropertyIndex1>()
                                   .Customize(x => x.WaitForNonStaleResults())
                                   where p.Zip == "97520"
-                                  select p).ToArray();
+                                  select p).Take(1024).ToArray();
                     Assert.Equal(10, result.Count());
                 }
 
@@ -49,7 +50,7 @@ namespace SlowTests.MailingList
 
                     var providers = new List<Provider>();
 
-                    RavenQueryStatistics statistics;
+                    QueryStatistics statistics;
                     while (true)
                     {
                         var result = (from p in session.Query<Provider, NestedPropertyIndex1>()

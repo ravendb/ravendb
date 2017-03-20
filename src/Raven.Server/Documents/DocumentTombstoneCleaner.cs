@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
-using Lucene.Net.Util;
+using Raven.Client;
 using Sparrow.Logging;
-using Raven.Abstractions.Logging;
 
 using Sparrow.Collections;
-using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents
 {
@@ -21,7 +18,7 @@ namespace Raven.Server.Documents
 
         private readonly DocumentDatabase _documentDatabase;
 
-        private readonly ConcurrentSet<IDocumentTombstoneAware> _subscriptions = new ConcurrentSet<IDocumentTombstoneAware>();
+        private readonly HashSet<IDocumentTombstoneAware> _subscriptions = new HashSet<IDocumentTombstoneAware>();
 
         private Timer _timer;
 
@@ -38,12 +35,18 @@ namespace Raven.Server.Documents
 
         public void Subscribe(IDocumentTombstoneAware subscription)
         {
-            _subscriptions.Add(subscription);
+            lock (_locker)
+            {
+                _subscriptions.Add(subscription);
+            }
         }
 
         public void Unsubscribe(IDocumentTombstoneAware subscription)
         {
-            _subscriptions.TryRemove(subscription);
+            lock (_locker)
+            {
+                _subscriptions.Remove(subscription);
+            }
         }
 
         internal void ExecuteCleanup(object state)
@@ -79,7 +82,7 @@ namespace Raven.Server.Documents
                 {
                     foreach (var tombstone in subscription.GetLastProcessedDocumentTombstonesPerCollection())
                     {
-                        if (tombstone.Key == Constants.Replication.AllDocumentsCollection)
+                        if (tombstone.Key == Constants.Documents.Replication.AllDocumentsCollection)
                         {
                             minAllDocsEtag = Math.Min(tombstone.Value, minAllDocsEtag);
                             break;
@@ -123,7 +126,7 @@ namespace Raven.Server.Documents
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Failed to execute tombstone cleanup on {_documentDatabase.Name}",e);
+                    _logger.Info($"Failed to execute tombstone cleanup on {_documentDatabase.Name}", e);
             }
             finally
             {

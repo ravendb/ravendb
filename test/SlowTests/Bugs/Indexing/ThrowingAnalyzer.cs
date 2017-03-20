@@ -10,15 +10,14 @@ using FastTests;
 using Xunit;
 using System.Linq;
 using Lucene.Net.Analysis;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Data.Indexes;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Exceptions;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class ThrowingAnalyzer : RavenNewTestBase
+    public class ThrowingAnalyzer : RavenTestBase
     {
         private class User
         {
@@ -38,12 +37,13 @@ namespace SlowTests.Bugs.Indexing
 
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("foo",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
                                                     Maps = { "from doc in docs select new { doc.Name}" },
-                                                    Fields = { { "Name", fieldOptions } }
-                                                }));
+                                                    Fields = { { "Name", fieldOptions } },
+                                                    Name = "foo"
+                                                }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -75,12 +75,13 @@ namespace SlowTests.Bugs.Indexing
 
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("foo",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { "from doc in docs select new { doc.Name}" },
-                        Fields = { { "Name", fieldOptions } }
-                    }));
+                        Fields = { { "Name", fieldOptions } },
+                        Name = "foo"
+                    }}));
 
                 for (var i = 0; i < 20; i++)
                 {

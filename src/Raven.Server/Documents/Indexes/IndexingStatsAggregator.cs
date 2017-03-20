@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-
-using Raven.Abstractions;
-using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Util;
 using Raven.Server.Exceptions;
 
 namespace Raven.Server.Documents.Indexes
@@ -41,6 +39,8 @@ namespace Raven.Server.Documents.Indexes
             
             _stats = new IndexingRunStats();
         }
+
+        public bool Completed => _completed;
 
         public DateTime StartTime { get; }
 
@@ -112,6 +112,7 @@ namespace Raven.Server.Documents.Indexes
         {
             return new IndexingPerformanceStats(_scope.Duration)
             {
+                Id = Id,
                 Started = StartTime,
                 Completed = completed ? StartTime.Add(_scope.Duration) : (DateTime?)null,
                 Details = _scope.ToIndexingPerformanceOperation("Indexing"),
@@ -313,13 +314,13 @@ namespace Raven.Server.Documents.Indexes
             _stats.MapDetails.CurrentlyAllocated = allocations;
         }
 
-        public void RecordCommitStats(int numberOfModifiedPages, int numberOfPagesWrittenToDisk)
+        public void RecordCommitStats(int numberOfModifiedPages, int numberOf4KbsWrittenToDisk)
         {
             if (_stats.CommitDetails == null)
                 _stats.CommitDetails = new StorageCommitDetails();
 
             _stats.CommitDetails.NumberOfModifiedPages = numberOfModifiedPages;
-            _stats.CommitDetails.NumberOfPagesWrittenToDisk = numberOfPagesWrittenToDisk;
+            _stats.CommitDetails.NumberOf4KbsWrittenToDisk = numberOf4KbsWrittenToDisk;
         }
 
         public void RecordNumberOfProducedOutputs(int numberOfOutputs)

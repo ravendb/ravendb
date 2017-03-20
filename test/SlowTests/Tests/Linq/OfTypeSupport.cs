@@ -8,12 +8,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class OfTypeSupport : RavenNewTestBase
+    public class OfTypeSupport : RavenTestBase
     {
         [Fact]
         public void OfTypeWillBeConvertedToWhere()

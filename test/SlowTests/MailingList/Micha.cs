@@ -1,7 +1,9 @@
 using System.Linq;
 using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -31,7 +33,7 @@ namespace SlowTests.MailingList
 
                 WaitForIndexing(store);
 
-                store.DatabaseCommands.UpdateByIndex("EntityEntityIdPatch",
+                store.Operations.Send(new PatchByIndexOperation("EntityEntityIdPatch",
                     new IndexQuery(store.Conventions),
                     new PatchRequest
                     {
@@ -39,12 +41,12 @@ namespace SlowTests.MailingList
 this.EntityTypeId = this.EntityType;
 delete this.EntityType
 "
-                    });
+                    }));
 
-                var id = store.DatabaseCommands.GetIndex("EntityEntityIdPatch").IndexId;
-                store.DatabaseCommands.DeleteIndex("EntityEntityIdPatch");
+                var id = store.Admin.Send(new GetIndexOperation("EntityEntityIdPatch")).IndexId;
+                store.Admin.Send(new DeleteIndexOperation("EntityEntityIdPatch"));
 
-                Assert.False(store.DatabaseCommands.GetStatistics().Indexes.Any(x => x.IndexId == id));
+                Assert.False(store.Admin.Send(new GetStatisticsOperation()).Indexes.Any(x => x.IndexId == id));
             }
         }
     }

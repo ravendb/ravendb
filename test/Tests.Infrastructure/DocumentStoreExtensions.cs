@@ -1,15 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Commands;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Http;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
+using Raven.Client.Http;
+using Raven.Client.Json;
+using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -18,29 +22,37 @@ namespace FastTests
 {
     public static class DocumentStoreExtensions
     {
-        public static DatabaseCommands Commands(this DocumentStore store, string databaseName = null)
+        public static DatabaseCommands Commands(this IDocumentStore store, string databaseName = null)
         {
             return new DatabaseCommands(store, databaseName);
         }
 
         public class DatabaseCommands : IDisposable
         {
-            private readonly DocumentStore _store;
-            public readonly RequestExecuter RequestExecuter;
+            private readonly IDocumentStore _store;
+            public readonly RequestExecutor RequestExecutor;
 
             public readonly JsonOperationContext Context;
             private readonly IDisposable _returnContext;
 
-            public DatabaseCommands(DocumentStore store, string databaseName)
+            public DatabaseCommands(IDocumentStore store, string databaseName)
             {
                 if (store == null)
                     throw new ArgumentNullException(nameof(store));
 
                 _store = store;
 
-                RequestExecuter = store.GetRequestExecuter(databaseName);
+                RequestExecutor = store.GetRequestExecuter(databaseName);
 
-                _returnContext = RequestExecuter.ContextPool.AllocateOperationContext(out Context);
+                _returnContext = RequestExecutor.ContextPool.AllocateOperationContext(out Context);
+            }
+
+            public BlittableJsonReaderObject ParseJson(string json)
+            {
+                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(json)))
+                {
+                    return Context.ReadForMemory(stream, "json");
+                }
             }
 
             public TEntity Deserialize<TEntity>(BlittableJsonReaderObject json)
@@ -48,12 +60,12 @@ namespace FastTests
                 return (TEntity)_store.Conventions.DeserializeEntityFromBlittable(typeof(TEntity), json);
             }
 
-            public PutResult Put(string id, long? etag, object data, Dictionary<string, string> metadata)
+            public PutResult Put(string id, long? etag, object data, Dictionary<string, object> metadata = null)
             {
                 return AsyncHelpers.RunSync(() => PutAsync(id, etag, data, metadata));
             }
 
-            public async Task<PutResult> PutAsync(string id, long? etag, object data, Dictionary<string, string> metadata, CancellationToken cancellationToken = default(CancellationToken))
+            public async Task<PutResult> PutAsync(string id, long? etag, object data, Dictionary<string, object> metadata, CancellationToken cancellationToken = default(CancellationToken))
             {
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));
@@ -78,7 +90,7 @@ namespace FastTests
                         if (metadataJson != null)
                         {
                             documentInfo.Metadata = metadataJson;
-                            documentInfo.MetadataInstance = metadata;
+                            documentInfo.MetadataInstance = new MetadataAsDictionary(metadata);
                         }
 
                         documentJson = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(data, documentInfo);
@@ -89,13 +101,13 @@ namespace FastTests
                         {
                             documentJson.Modifications = new DynamicJsonValue(documentJson)
                             {
-                                [Constants.Metadata.Key] = metadataJson
+                                [Constants.Documents.Metadata.Key] = metadataJson
                             };
 
                             documentJson = session.Advanced.Context.ReadObject(documentJson, id);
                         }
                     }
-                    
+
 
                     var command = new PutDocumentCommand
                     {
@@ -105,7 +117,7 @@ namespace FastTests
                         Document = documentJson
                     };
 
-                    await RequestExecuter.ExecuteAsync(command, Context, cancellationToken);
+                    await RequestExecutor.ExecuteAsync(command, Context, cancellationToken);
 
                     return command.Result;
                 }
@@ -123,7 +135,7 @@ namespace FastTests
 
                 var command = new DeleteDocumentCommand(id, etag);
 
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecutor.ExecuteAsync(command, Context);
             }
 
             public long? Head(string id)
@@ -138,9 +150,17 @@ namespace FastTests
 
                 var command = new HeadDocumentCommand(id, null);
 
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecutor.ExecuteAsync(command, Context);
 
                 return command.Result;
+            }
+
+            public GetConflictsResult.Conflict[] GetConflictsFor(string id)
+            {
+                var getConflictsCommand = new GetConflictsCommand(id);
+                RequestExecutor.Execute(getConflictsCommand, Context);
+
+                return getConflictsCommand.Result.Results;
             }
 
             public DynamicBlittableJson Get(string id, bool metadataOnly = false)
@@ -159,7 +179,7 @@ namespace FastTests
                     MetadataOnly = metadataOnly
                 };
 
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecutor.ExecuteAsync(command, Context);
 
                 if (command.Result == null || command.Result.Results.Length == 0)
                     return null;
@@ -178,7 +198,7 @@ namespace FastTests
                     Ids = ids
                 };
 
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecutor.ExecuteAsync(command, Context);
 
                 return new DynamicArray(command.Result.Results);
             }
@@ -191,7 +211,7 @@ namespace FastTests
                     PageSize = pageSize
                 };
 
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecutor.ExecuteAsync(command, Context);
 
                 return new DynamicArray(command.Result.Results);
             }
@@ -205,7 +225,7 @@ namespace FastTests
             {
                 var command = new QueryCommand(_store.Conventions, Context, indexName, query, metadataOnly: metadataOnly, indexEntriesOnly: indexEntriesOnly);
 
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecutor.ExecuteAsync(command, Context);
 
                 return command.Result;
             }
@@ -217,14 +237,169 @@ namespace FastTests
 
             public async Task BatchAsync(List<ICommandData> commands)
             {
-                var command = new BatchCommand(Context, commands);
+                var command = new BatchCommand(_store.Conventions, Context, commands);
 
-                await RequestExecuter.ExecuteAsync(command, Context);
+                await RequestExecutor.ExecuteAsync(command, Context);
+            }
+
+            public TResult RawGetJson<TResult>(string url)
+                where TResult : BlittableJsonReaderBase
+            {
+                return AsyncHelpers.RunSync(() => RawGetJsonAsync<TResult>(url));
+            }
+
+            public TResult RawDeleteJson<TResult>(string url, object payload)
+                where TResult : BlittableJsonReaderBase
+            {
+                return AsyncHelpers.RunSync(() => RawDeleteJsonAsync<TResult>(url, payload));
+            }
+
+            public void ExecuteJson(string url, HttpMethod method, object payload)
+            {
+                AsyncHelpers.RunSync(() => ExecuteJsonAsync(url, method, payload));
+            }
+
+            public async Task<TResult> RawGetJsonAsync<TResult>(string url)
+                where TResult : BlittableJsonReaderBase
+            {
+                var command = new GetJsonCommand<TResult>(url);
+
+                await RequestExecutor.ExecuteAsync(command, Context);
+
+                return command.Result;
+            }
+
+            public async Task<TResult> RawDeleteJsonAsync<TResult>(string url, object payload)
+              where TResult : BlittableJsonReaderBase
+            {
+                using (var session = _store.OpenSession())
+                {
+                    var payloadJson = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(payload, session.Advanced.DocumentStore.Conventions, session.Advanced.Context);
+
+                    var command = new JsonCommandWithPayload<TResult>(url, Context, HttpMethod.Delete, payloadJson);
+
+                    await RequestExecutor.ExecuteAsync(command, Context);
+
+                    return command.Result;
+                }
+            }
+
+            public async Task ExecuteJsonAsync(string url, HttpMethod method, object payload)
+            {
+                using (var session = _store.OpenSession())
+                {
+                    BlittableJsonReaderObject payloadJson = null;
+                    if (payload != null)
+                        payloadJson = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(payload, session.Advanced.DocumentStore.Conventions, session.Advanced.Context);
+
+                    var command = new JsonCommandWithPayload<BlittableJsonReaderObject>(url, Context, method, payloadJson);
+
+                    await RequestExecutor.ExecuteAsync(command, Context);
+                }
             }
 
             public void Dispose()
             {
                 _returnContext?.Dispose();
+            }
+
+            private class GetJsonCommand<TResult> : RavenCommand<TResult>
+                where TResult : BlittableJsonReaderBase
+            {
+                private readonly string _url;
+
+                public GetJsonCommand(string url)
+                {
+                    if (url == null)
+                        throw new ArgumentNullException(nameof(url));
+
+                    if (url.StartsWith("/") == false)
+                        url += $"/{url}";
+
+                    _url = url;
+
+                    if (typeof(TResult) == typeof(BlittableJsonReaderArray))
+                        ResponseType = RavenCommandResponseType.Array;
+                }
+
+                public override bool IsReadRequest => true;
+
+                public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/databases/{node.Database}{_url}";
+
+                    var request = new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Get
+                    };
+
+                    return request;
+                }
+
+                public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+                {
+                    Result = (TResult)(object)response;
+                }
+
+                public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
+                {
+                    Result = (TResult)(object)response;
+                }
+            }
+
+            private class JsonCommandWithPayload<TResult> : RavenCommand<TResult>
+               where TResult : BlittableJsonReaderBase
+            {
+                private readonly string _url;
+                private readonly HttpMethod _method;
+                private readonly JsonOperationContext _context;
+                private readonly BlittableJsonReaderObject _payload;
+
+                public JsonCommandWithPayload(string url, JsonOperationContext context, HttpMethod method, BlittableJsonReaderObject payload)
+                {
+                    if (url == null)
+                        throw new ArgumentNullException(nameof(url));
+
+                    if (url.StartsWith("/") == false)
+                        url = $"/{url}";
+
+                    _url = url;
+                    _context = context;
+                    _method = method;
+                    _payload = payload;
+
+                    if (typeof(TResult) == typeof(BlittableJsonReaderArray))
+                        ResponseType = RavenCommandResponseType.Array;
+                }
+
+                public override bool IsReadRequest => false;
+
+                public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/databases/{node.Database}{_url}";
+
+                    var request = new HttpRequestMessage
+                    {
+                        Method = _method,
+                        Content = new BlittableJsonContent(stream =>
+                        {
+                            if (_payload != null)
+                                _context.Write(stream, _payload);
+                        })
+                    };
+
+                    return request;
+                }
+
+                public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+                {
+                    Result = (TResult)(object)response;
+                }
+
+                public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
+                {
+                    Result = (TResult)(object)response;
+                }
             }
         }
     }

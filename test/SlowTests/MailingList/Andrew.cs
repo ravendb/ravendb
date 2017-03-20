@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -14,7 +14,7 @@ namespace SlowTests.MailingList
         {
             var technologySummaryIndex = new TechnologySummary_Index
             {
-                Conventions = new DocumentConvention
+                Conventions = new DocumentConventions
                 {
                     PrettifyGeneratedLinqExpressions = false
                 }

@@ -1,12 +1,11 @@
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.MapRedue
 {
-    public class Chris : RavenNewTestBase
+    public class Chris : RavenTestBase
     {
         [Fact]
         public void CanMakeIndexWork()

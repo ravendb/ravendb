@@ -5,14 +5,13 @@ import trafficWatchClient = require("common/trafficWatchClient");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import moment = require("moment");
 import fileDownloader = require("common/fileDownloader");
-import resource = require("models/resources/resource");
 import enableQueryTimings = require("commands/database/query/enableQueryTimings");
 import database = require("models/resources/database");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import eventsCollector = require("common/eventsCollector");
 
 class trafficWatch extends viewModelBase {
-    logConfig = ko.observable<{ Resource: resource; ResourceName:string; ResourcePath: string; MaxEntries: number; WatchedResourceMode: string; SingleAuthToken: singleAuthToken }>();
+    logConfig = ko.observable<{ Resource: database; ResourceName:string; ResourcePath: string; MaxEntries: number; WatchedResourceMode: string; SingleAuthToken: singleAuthToken }>();
     watchClient: trafficWatchClient;
     isConnected = ko.observable(false);
     recentEntries = ko.observableArray<any>([]);
@@ -177,7 +176,7 @@ class trafficWatch extends viewModelBase {
                     tokenDeferred.resolve();
                 })
                 .fail((e) => {
-                    app.showBootstrapMessage("You are not authorized to trace this resource", "Authorization error");
+                    app.showBootstrapMessage("You are not authorized to trace this database", "Authorization error");
                 });
         } else {
             tokenDeferred.resolve();

@@ -2,8 +2,10 @@ using System;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -33,7 +35,7 @@ namespace SlowTests.MailingList
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var query = session.Query<User>().Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.FirstName == "Ayende");
@@ -71,7 +73,7 @@ namespace SlowTests.MailingList
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var query = session.Query<User>().Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.FirstName == "Ayende");
@@ -105,7 +107,7 @@ namespace SlowTests.MailingList
                     session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Take(15).ToList();
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
 
                     var query = session.Query<User>().Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResults())
@@ -140,7 +142,7 @@ namespace SlowTests.MailingList
                         .Customize(x => x.WaitForNonStaleResults())
                         .Take(15).ToList();
 
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
 
                     var query = session.Query<User, UserByFirstName>().Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResults())
@@ -176,7 +178,7 @@ namespace SlowTests.MailingList
                         .Customize(x => x.WaitForNonStaleResults())
                         .Take(15).ToList();
 
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
 
                     var query = session.Query<User, UserByFirstName>().Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResults())

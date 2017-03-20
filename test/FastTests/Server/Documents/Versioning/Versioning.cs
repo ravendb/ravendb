@@ -7,12 +7,13 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Client.Exceptions.Versioning;
+using Raven.Client.Documents.Exceptions.Versioning;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Versioning
 {
-    public class Versioning : RavenNewTestBase
+    public class Versioning : RavenTestBase
     {
         [Fact]
         public async Task CanGetAllRevisionsFor()
@@ -150,7 +151,43 @@ namespace FastTests.Server.Documents.Versioning
         }
 
         [Fact]
-        public async Task WillCreateRevisionIfExplicitlyRequested()
+        public async Task WillCreateRevision()
+        {
+            var product = new User { Name = "Hibernating" };
+            using (var store = GetDocumentStore())
+            {
+                await VersioningHelper.SetupVersioning(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(product);
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    product.Name += " Rhinos";
+                    await session.StoreAsync(product);
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    product.Name += " - RavenDB";
+                    await session.StoreAsync(product);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var users = await session.Advanced.GetRevisionsForAsync<User>(product.Id);
+                    Assert.Equal(3, users.Count);
+                    Assert.Equal("Hibernating", users[0].Name);
+                    Assert.Equal("Hibernating Rhinos", users[1].Name);
+                    Assert.Equal("Hibernating Rhinos - RavenDB", users[2].Name);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task WillNotCreateRevision()
         {
             var product = new Product { Description = "A fine document db", Quantity = 5 };
             using (var store = GetDocumentStore())
@@ -165,7 +202,6 @@ namespace FastTests.Server.Documents.Versioning
                 {
                     product.Description = "desc 2";
                     await session.StoreAsync(product);
-                    session.Advanced.ExplicitlyVersion(product);
                     await session.SaveChangesAsync();
                 }
                 using (var session = store.OpenAsyncSession())
@@ -178,7 +214,7 @@ namespace FastTests.Server.Documents.Versioning
                 using (var session = store.OpenAsyncSession())
                 {
                     var products = await session.Advanced.GetRevisionsForAsync<Product>(product.Id);
-                    Assert.Equal("desc 2", products.Single().Description);
+                    Assert.Equal(0, products.Count);
                 }
             }
         }

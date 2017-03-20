@@ -44,9 +44,9 @@ namespace Voron.Data.BTrees
                 throw new ObjectDisposedException("TreeIterator " + _tree.Name);
 
             TreeNodeHeader* node;
-            Func<Slice, TreeCursor> constructor;
+            TreeCursorConstructor constructor;
             _currentPage = _tree.FindPageFor(key, node: out node, cursor: out constructor, allowCompressed: false);
-            _cursor = constructor(key);
+            _cursor = constructor.Build(key);
             _cursor.Pop();
 
             if (node != null)

@@ -7,11 +7,10 @@ using System.Threading;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
 using Raven.Server.Documents.Queries;
@@ -23,17 +22,14 @@ using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron.Impl;
-
-using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class IndexReadOperation : IndexOperationBase
     {
-        private static readonly string[] IntersectSeparators = { Constants.IntersectSeparator };
+        private static readonly string[] IntersectSeparators = { Constants.Documents.Querying.IntersectSeparator };
 
         private static readonly CompareInfo InvariantCompare = CultureInfo.InvariantCulture.CompareInfo;
 
@@ -282,10 +278,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 var sortOptions = SortOptions.String;
 
-                if (x.Field == Constants.Indexing.Fields.IndexFieldScoreName)
+                if (x.Field == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
                     return SortField.FIELD_SCORE;
 
-                if (InvariantCompare.IsPrefix(x.Field, Constants.Indexing.Fields.AlphaNumericFieldName, CompareOptions.None))
+                if (InvariantCompare.IsPrefix(x.Field, Constants.Documents.Indexing.Fields.AlphaNumericFieldName, CompareOptions.None))
                 {
                     var customFieldName = SortFieldHelper.ExtractName(x.Field);
                     if (customFieldName.IsNullOrWhiteSpace())
@@ -295,7 +291,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     return new SortField(customFieldName, anSort, x.Descending);
                 }
 
-                if (InvariantCompare.IsPrefix(x.Field, Constants.Indexing.Fields.RandomFieldName, CompareOptions.None))
+                if (InvariantCompare.IsPrefix(x.Field, Constants.Documents.Indexing.Fields.RandomFieldName, CompareOptions.None))
                 {
                     var customFieldName = SortFieldHelper.ExtractName(x.Field);
                     if (customFieldName.IsNullOrWhiteSpace()) // truly random
@@ -304,10 +300,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     return new RandomSortField(customFieldName);
                 }
 
-                if (InvariantCompare.IsSuffix(x.Field, Constants.Indexing.Fields.RangeFieldSuffix, CompareOptions.None))
-                {
-                    sortOptions = SortOptions.NumericDouble; // TODO arek - it seems to be working fine with long values as well however needs to be verified
-                }
+                if (InvariantCompare.IsSuffix(x.Field, Constants.Documents.Indexing.Fields.RangeFieldSuffix, CompareOptions.None))
+                    sortOptions = SortOptions.Numeric;
 
                 return new SortField(IndexField.ReplaceInvalidCharactersInFieldName(x.Field), (int)sortOptions, x.Descending);
             }).ToArray());
@@ -352,7 +346,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var documentQuery = new BooleanQuery();
 
             if (string.IsNullOrWhiteSpace(query.DocumentId) == false)
-                documentQuery.Add(new TermQuery(new Term(Constants.Indexing.Fields.DocumentIdFieldName, query.DocumentId.ToLowerInvariant())), Occur.MUST);
+                documentQuery.Add(new TermQuery(new Term(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query.DocumentId.ToLowerInvariant())), Occur.MUST);
 
             foreach (var key in query.MapGroupFields.Keys)
                 documentQuery.Add(new TermQuery(new Term(key, query.MapGroupFields[key])), Occur.MUST);
@@ -370,7 +364,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 mlt.SetStopWords(stopWords);
 
             var fieldNames = query.Fields ?? ir.GetFieldNames(IndexReader.FieldOption.INDEXED)
-                                    .Where(x => x != Constants.Indexing.Fields.DocumentIdFieldName && x != Constants.Indexing.Fields.ReduceKeyFieldName)
+                                    .Where(x => x != Constants.Documents.Indexing.Fields.DocumentIdFieldName && x != Constants.Documents.Indexing.Fields.ReduceKeyFieldName)
                                     .ToArray();
 
             mlt.SetFieldNames(fieldNames);
@@ -407,7 +401,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     continue;
 
                 var doc = _searcher.Doc(hit.Doc);
-                var id = doc.Get(Constants.Indexing.Fields.DocumentIdFieldName) ?? doc.Get(Constants.Indexing.Fields.ReduceKeyFieldName);
+                var id = doc.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName) ?? doc.Get(Constants.Documents.Indexing.Fields.ReduceKeyFieldName);
                 if (id == null)
                     continue;
 

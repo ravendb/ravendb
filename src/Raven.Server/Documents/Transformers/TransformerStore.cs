@@ -3,15 +3,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Indexing;
+using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Exceptions.Indexes;
+using Raven.Client.Documents.Exceptions.Transformers;
+using Raven.Client.Documents.Transformers;
+using Raven.Server.Config.Settings;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Sparrow;
 using Sparrow.Logging;
-using Sparrow.Platform;
-using Voron.Platform.Posix;
 
 namespace Raven.Server.Documents.Transformers
 {
@@ -23,16 +22,20 @@ namespace Raven.Server.Documents.Transformers
 
         private readonly CollectionOfTransformers _transformers = new CollectionOfTransformers();
 
-        private readonly object _locker = new object();
+        /// <summary>
+        /// The current lock, used to make sure indexes/transformers have a unique names
+        /// </summary>
+        private readonly object _indexAndTransformerLocker;
 
         private bool _initialized;
 
-        private string _path;
+        private PathSetting _path;
 
-        public TransformerStore(DocumentDatabase documentDatabase)
+        public TransformerStore(DocumentDatabase documentDatabase, object indexAndTransformerLocker)
         {
             _documentDatabase = documentDatabase;
             _log = LoggingSource.Instance.GetLogger<TransformerStore>(_documentDatabase.Name);
+            _indexAndTransformerLocker = indexAndTransformerLocker;
         }
 
         public Task InitializeAsync()
@@ -40,20 +43,17 @@ namespace Raven.Server.Documents.Transformers
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(TransformerStore)} was already initialized.");
 
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
                 if (_initialized)
                     throw new InvalidOperationException($"{nameof(TransformerStore)} was already initialized.");
 
                 if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
                 {
-                    _path = Path.Combine(_documentDatabase.Configuration.Indexing.StoragePath, "Transformers");
+                    _path = _documentDatabase.Configuration.Indexing.StoragePath.Combine("Transformers");
 
-                    if (PlatformDetails.RunningOnPosix)
-                        _path = PosixHelper.FixLinuxPath(_path);
-
-                    if (Directory.Exists(_path) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
-                        Directory.CreateDirectory(_path);
+                    if (Directory.Exists(_path.FullPath) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
+                        Directory.CreateDirectory(_path.FullPath);
                 }
 
                 _initialized = true;
@@ -67,9 +67,9 @@ namespace Raven.Server.Documents.Transformers
             if (_documentDatabase.Configuration.Indexing.RunInMemory)
                 return;
 
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
-                foreach (var transformerFile in new DirectoryInfo(_path).GetFiles())
+                foreach (var transformerFile in new DirectoryInfo(_path.FullPath).GetFiles())
                 {
                     if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
                         return;
@@ -122,8 +122,13 @@ namespace Raven.Server.Documents.Transformers
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            lock (_locker)
+            lock (_indexAndTransformerLocker)
             {
+                var index = _documentDatabase.IndexStore.GetIndex(definition.Name);
+                if (index != null)
+                {
+                    throw new IndexOrTransformerAlreadyExistException($"Tried to create a transformer with a name of {definition.Name}, but an index under the same name exist");
+                }
                 Transformer existingTransformer;
                 var lockMode = ValidateTransformerDefinition(definition.Name, out existingTransformer);
                 if (lockMode == TransformerLockMode.LockedIgnore)
@@ -199,18 +204,21 @@ namespace Raven.Server.Documents.Transformers
 
         private void DeleteTransformerInternal(int id)
         {
-            Transformer transformer;
-            if (_transformers.TryRemoveById(id, out transformer) == false)
-                TransformerDoesNotExistException.ThrowFor(id);
-
-            transformer.Delete();
-            var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnTransformerDeleted(transformer);
-            _documentDatabase.Changes.RaiseNotifications(new TransformerChange
+            lock (_indexAndTransformerLocker)
             {
-                Name = transformer.Name,
-                Type = TransformerChangeTypes.TransformerRemoved,
-                Etag = tombstoneEtag
-            });
+                Transformer transformer;
+                if (_transformers.TryRemoveById(id, out transformer) == false)
+                    TransformerDoesNotExistException.ThrowFor(id);
+
+                transformer.Delete();
+                var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnTransformerDeleted(transformer);
+                _documentDatabase.Changes.RaiseNotifications(new TransformerChange
+                {
+                    Name = transformer.Name,
+                    Type = TransformerChangeTypes.TransformerRemoved,
+                    Etag = tombstoneEtag
+                });
+            }
         }
 
         private int CreateTransformerInternal(Transformer transformer, int transformerId)
@@ -218,8 +226,8 @@ namespace Raven.Server.Documents.Transformers
             Debug.Assert(transformer != null);
             Debug.Assert(transformerId > 0);
 
-            _transformers.Add(transformer);
             var etag = _documentDatabase.IndexMetadataPersistence.OnTransformerCreated(transformer);
+            _transformers.Add(transformer);
             _documentDatabase.Changes.RaiseNotifications(new TransformerChange
             {
                 Name = transformer.Name,
@@ -240,6 +248,39 @@ namespace Raven.Server.Documents.Transformers
 
         public void Dispose()
         {
+        }
+
+        public void Rename(string oldTransformerName, string newTransformerName)
+        {
+            Transformer transformer;
+            if (_transformers.TryGetByName(oldTransformerName, out transformer) == false)
+                throw new InvalidOperationException($"Index {oldTransformerName} does not exist");
+
+            lock (_indexAndTransformerLocker)
+            {
+                var index = _documentDatabase.IndexStore.GetIndex(newTransformerName);
+                if (index != null)
+                {
+                    throw new IndexOrTransformerAlreadyExistException(
+                        $"Cannot rename transformer to {newTransformerName} because an index having the same name already exists");
+                }
+
+                Transformer _;
+                if (_transformers.TryGetByName(newTransformerName, out _))
+                {
+                    throw new IndexOrTransformerAlreadyExistException(
+                        $"Cannot rename transformer to {newTransformerName} because a transformer having the same name already exists");
+                }
+
+                transformer.Rename(newTransformerName);
+                _transformers.RenameTransformer(transformer, oldTransformerName, newTransformerName);
+            }
+
+            _documentDatabase.Changes.RaiseNotifications(new TransformerChange
+            {
+                Name = oldTransformerName,
+                Type = TransformerChangeTypes.TransformerRenamed
+            });
         }
     }
 }

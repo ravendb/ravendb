@@ -1,14 +1,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
     public class Pfeffer : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-6305")]
         public void QueryingUsingObjects()
         {
             using (var store = GetDocumentStore())
@@ -43,7 +43,7 @@ namespace SlowTests.MailingList
 
         private class Outer
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public IList<IExample> Examples { get; set; }
         }
 

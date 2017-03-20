@@ -1,12 +1,13 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Listeners;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -22,8 +23,6 @@ namespace SlowTests.MailingList
             //arrange
             using (var store = GetDocumentStore())
             {
-                store.RegisterListener(new NoStaleQueriesListener());
-
                 SetupTestData(store);
 
                 WaitForIndexing(store);
@@ -45,8 +44,6 @@ namespace SlowTests.MailingList
             //arrange
             using (var store = GetDocumentStore())
             {
-                store.RegisterListener(new NoStaleQueriesListener());
-
                 SetupTestData(store);
 
                 WaitForIndexing(store);
@@ -69,15 +66,16 @@ namespace SlowTests.MailingList
 
         private static FacetedQueryResult ExecuteTest(IDocumentStore store)
         {
-            FacetedQueryResult result = store.DatabaseCommands.GetFacets(new FacetQuery(store.Conventions)
+            using (var session = store.OpenSession())
             {
-                IndexName = "Product/AvailableForSale2",
-                Query = "MyName1",
-                DefaultField = "Any",
-                FacetSetupDoc = "facets/ProductFacets"
-
-            });
-            return result;
+                return session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery(store.Conventions)
+                {
+                    IndexName = "Product/AvailableForSale2",
+                    Query = "MyName1",
+                    DefaultField = "Any",
+                    FacetSetupDoc = "facets/ProductFacets"
+                }))[0];
+            }
         }
 
         private static void SetupTestData(IDocumentStore store)
@@ -132,14 +130,6 @@ namespace SlowTests.MailingList
                                                       p.Brand
                                                   }
                                   };
-            }
-        }
-
-        private class NoStaleQueriesListener : IDocumentQueryListener
-        {
-            public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
-            {
-                queryCustomization.WaitForNonStaleResults(TimeSpan.FromSeconds(30));
             }
         }
     }

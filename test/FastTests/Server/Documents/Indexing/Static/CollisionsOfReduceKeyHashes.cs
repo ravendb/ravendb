@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
@@ -18,7 +15,6 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 
@@ -33,7 +29,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
             using (var database = CreateDocumentDatabase())
             {
-                var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(new[] {"Users"}, new[]
+                var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition("Users", new[]
                 {
                     new IndexField
                     {
@@ -80,7 +76,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Fields =
                     {
                         {"Location", new IndexFieldOptions {Storage = FieldStorage.Yes}},
-                        {"Count", new IndexFieldOptions {Storage = FieldStorage.Yes, Sort = SortOptions.NumericDefault}}
+                        {"Count", new IndexFieldOptions {Storage = FieldStorage.Yes, Sort = SortOptions.Numeric}}
                     }
                 }, database);
 
@@ -127,11 +123,15 @@ namespace FastTests.Server.Documents.Indexing.Static
                     var writeOperation =
                         new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction));
 
+                    var stats = new IndexingStatsScope(new IndexingRunStats());
                     reducer.Execute(null, indexContext,
                         writeOperation,
-                        new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+                        stats, CancellationToken.None);
 
-                    writeOperation.Value.Dispose();
+                    using (var indexWriteOperation = writeOperation.Value)
+                    {
+                        indexWriteOperation.Commit(stats);
+                    }
 
                     index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
 
@@ -184,11 +184,15 @@ namespace FastTests.Server.Documents.Indexing.Static
                     var writeOperation =
                         new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction));
 
+                    var stats = new IndexingStatsScope(new IndexingRunStats());
                     reducer.Execute(null, indexContext,
                         writeOperation,
-                        new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+                        stats, CancellationToken.None);
 
-                    writeOperation.Value.Dispose();
+                    using (var indexWriteOperation = writeOperation.Value)
+                    {
+                        indexWriteOperation.Commit(stats);
+                    }
 
                     index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
 
@@ -232,11 +236,15 @@ namespace FastTests.Server.Documents.Indexing.Static
                     var writeOperation =
                         new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction));
 
+                    var stats = new IndexingStatsScope(new IndexingRunStats());
                     reducer.Execute(null, indexContext,
                         writeOperation,
-                        new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
+                        stats, CancellationToken.None);
 
-                    writeOperation.Value.Dispose();
+                    using (var indexWriteOperation = writeOperation.Value)
+                    {
+                        indexWriteOperation.Commit(stats);
+                    }
 
                     index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
 

@@ -6,16 +6,17 @@
 
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Extensions;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiTenancy
 {
-    public class CreatingIndexes : RavenNewTestBase
+    public class CreatingIndexes : RavenTestBase
     {
 
         [Fact]
@@ -26,15 +27,16 @@ namespace SlowTests.Bugs.MultiTenancy
             using (var store = GetDocumentStore())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument("Test");
-                store.Admin.Send(new CreateDatabaseOperation(doc));
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
                 store.DefaultDatabase = "Test";
 
-                store.Admin.ForDatabase("Test").Send(new PutIndexOperation("TestIndex",
-                                                        new IndexDefinitionBuilder<Test, Test>("TestIndex")
+                var indexDefinition = new IndexDefinitionBuilder<Test, Test>("TestIndex")
                                                         {
                                                             Map = movies => from movie in movies
                                                                             select new { movie.Name }
-                                                        }.ToIndexDefinition(new DocumentConvention())));
+                }.ToIndexDefinition(new DocumentConventions());
+                indexDefinition.Name = "TestIndex";
+                store.Admin.ForDatabase("Test").Send(new PutIndexesOperation(new[] {indexDefinition}));
 
                 using (var session = store.OpenSession())
                 {

@@ -8,17 +8,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 using SlowTests.Utils;
 
 namespace SlowTests.Tests.Linq
 {
-    public class GroupByAndDocumentId : RavenNewTestBase
+    public class GroupByAndDocumentId : RavenTestBase
     {
         private class Client
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public IList<ImportStatusMessage> ImportStatuses { get; set; }
         }

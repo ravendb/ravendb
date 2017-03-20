@@ -1,8 +1,7 @@
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
@@ -14,7 +13,7 @@ namespace SlowTests.Tests.Indexes
         {
             var index = new ContactIndex
             {
-                Conventions = new DocumentConvention()
+                Conventions = new DocumentConventions()
             };
             var indexDefinition = index.CreateIndexDefinition();
 
@@ -33,7 +32,7 @@ namespace SlowTests.Tests.Indexes
             Assert.Equal("SnowballAnalyzer", indexDefinition.Fields["String_Analyzer"].Analyzer);
         }
 
-        public class ContactIndex : AbstractIndexCreationTask<Contact>
+        private class ContactIndex : AbstractIndexCreationTask<Contact>
         {
             public ContactIndex()
             {
@@ -53,7 +52,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        public class Contact
+        private class Contact
         {
             public string Id { get; set; }
             public string FirstName { get; set; }
@@ -61,7 +60,7 @@ namespace SlowTests.Tests.Indexes
             public EmailAddress PrimaryEmail { get; set; }
         }
 
-        public class EmailAddress
+        private class EmailAddress
         {
             public string Email { get; set; }
         }

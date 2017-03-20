@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Util;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -16,9 +17,10 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("TagCloud",
+                store.Admin.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
+                                                    Name = "TagCloud", 
                                                     Maps = {
                                                         @"
 from post in docs.Posts 
@@ -41,7 +43,7 @@ select new {
                                                     {
                                                         { "Tag", new IndexFieldOptions {Indexing = FieldIndexing.NotAnalyzed}}
                                                     }
-                                                });
+                                                }}));
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Post

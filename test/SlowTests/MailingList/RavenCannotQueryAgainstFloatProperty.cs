@@ -1,8 +1,7 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -95,7 +94,7 @@ namespace SlowTests.MailingList
                                  op.Quantity
                              };
 
-                Sort(x => x.Quantity, SortOptions.NumericDouble);
+                Sort(x => x.Quantity, SortOptions.Numeric);
             }
         }
     }

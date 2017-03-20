@@ -4,19 +4,19 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
-    public class BasicDynamicMapReduceQueries : RavenNewTestBase
+    public class BasicDynamicMapReduceQueries : RavenTestBase
     {
         [Fact]
         public async Task Group_by_string_calculate_count()
@@ -318,7 +318,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                         WaitForNonStaleResultsAsOfNow = true
                     });
 
-                    commands.RequestExecuter.Execute(command, commands.Context);
+                    commands.RequestExecutor.Execute(command, commands.Context);
 
                     var result = command.Result;
                     var results = new DynamicArray(result.Results);
@@ -330,7 +330,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                         var json = (DynamicBlittableJson)r;
                         Assert.Equal(2, json.BlittableJson.Count);
                         Assert.True(json.ContainsKey("City"));
-                        Assert.True(json.ContainsKey(Constants.Metadata.Key));
+                        Assert.True(json.ContainsKey(Constants.Documents.Metadata.Key));
 
                         var city = r.City;
                         Assert.True(cities.Remove(city));

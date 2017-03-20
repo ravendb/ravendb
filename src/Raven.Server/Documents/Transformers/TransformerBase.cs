@@ -2,11 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Client.Linq;
+using Raven.Client;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Transformers
 {
@@ -111,10 +109,10 @@ namespace Raven.Server.Documents.Transformers
         {
             var json = (DynamicBlittableJson)doc;
             json.EnsureMetadata();
-            return doc[Constants.Metadata.Key];
+            return doc[Constants.Documents.Metadata.Key];
         }
 
-        public dynamic AsDocument(dynamic doc)
+        public dynamic AsJson(dynamic doc)
         {
             var json = (DynamicBlittableJson)doc;
             json.EnsureMetadata();

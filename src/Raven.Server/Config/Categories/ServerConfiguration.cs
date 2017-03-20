@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Config.Categories
 {
@@ -94,6 +94,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/AnonymousAccess")]
         public AnonymousUserAccessModeValues AnonymousUserAccessMode { get; internal set; }
 
+        [Description("When set to true, exposes the database to the world.")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Raven/AllowEverybodyToAccessTheServerAsAdmin")]
+        public bool AllowEverybodyToAccessTheServerAsAdmin { get; internal set; }
+
         public IDisposable SetAccessMode(AnonymousUserAccessModeValues newVal)
         {
             var old = AnonymousUserAccessMode;
@@ -118,9 +123,9 @@ namespace Raven.Server.Config.Categories
             }
         }
 
-        public override void Initialize(IConfigurationRoot settings)
+        public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {
-            base.Initialize(settings);
+            base.Initialize(settings, serverWideSettings, type, resourceName);
 
             AccessControlAllowOrigin = string.IsNullOrEmpty(AccessControlAllowOriginStringValue) ? new HashSet<string>() : new HashSet<string>(AccessControlAllowOriginStringValue.Split());
         }

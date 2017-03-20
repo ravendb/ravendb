@@ -24,7 +24,7 @@ namespace StressTests.Voron
 
         public static Random Rand = new Random(123);
 
-        [Theory]
+        [TheoryAndSkipWhen32BitsEnvironment]
         [InlineData(2)]
         [InlineData(6, Skip = "Too large to run on scratch machines. For manual run only")]
         public void CanWriteBigTransactions(long transactionSizeInGb)
@@ -127,7 +127,7 @@ namespace StressTests.Voron
             Assert.Equal(desired, val);
         }
 
-        [Theory]
+        [TheoryAndSkipWhen32BitsEnvironment]
         [InlineData(3L * 1024 * 1024 * 1024)] // in = 3GB, out ~= 4MB
         [InlineData(2)] // in = 3GB, out ~= 1.5GB
         [InlineData(1)] // in = 3GB, out > 3GB (rare case)

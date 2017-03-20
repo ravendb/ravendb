@@ -2,6 +2,7 @@
 
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 
+//TODO: deprecated - use global settings
 class numberFormattingStorage {
 
     static localStorageName = storageKeyProvider.storageKeyFor("numberFormatting");

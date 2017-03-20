@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Lucene.Net.Documents;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class DynamicFields : RavenNewTestBase
+    public class DynamicFields : RavenTestBase
     {
         private class Product
         {
@@ -45,7 +45,7 @@ namespace SlowTests.Bugs.Indexing
                     from p in products
                     select new
                     {
-                        _ = p.Attributes.Select(attribute => new NumericField(attribute.Name + "_Range", Field.Store.NO, true).SetDoubleValue((double)attribute.NumericValue))
+                        _ = p.Attributes.Select(attribute => new NumericField(attribute.Name + "_D_Range", Field.Store.NO, true).SetDoubleValue((double)attribute.NumericValue))
                     };
             }
         }
@@ -71,7 +71,7 @@ namespace SlowTests.Bugs.Indexing
                     from p in products
                     select new
                     {
-                        _ = p.Attributes.Select(attribute => new NumericField(attribute.Name + "_Range", Field.Store.NO, true).SetLongValue(attribute.IntValue))
+                        _ = p.Attributes.Select(attribute => new NumericField(attribute.Name + "_L_Range", Field.Store.NO, true).SetLongValue(attribute.IntValue))
                     };
             }
         }

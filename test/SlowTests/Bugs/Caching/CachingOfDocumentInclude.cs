@@ -9,13 +9,13 @@ using System.Threading.Tasks;
 using Xunit;
 using System.Collections.Generic;
 using FastTests;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
 
 namespace SlowTests.Bugs.Caching
 {
-    public class CachingOfDocumentInclude : RavenNewTestBase
+    public class CachingOfDocumentInclude : RavenTestBase
     {
         private class User
         {
@@ -52,7 +52,7 @@ namespace SlowTests.Bugs.Caching
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
 
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
             }
         }
@@ -199,7 +199,7 @@ namespace SlowTests.Bugs.Caching
                 {
                     var user = s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems);
                     user.Name = "Foo";
                     s.SaveChanges();
                 }
@@ -209,7 +209,7 @@ namespace SlowTests.Bugs.Caching
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems); // did NOT increase cache
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems); // did NOT increase cache
                 }
             }
         }
@@ -223,11 +223,12 @@ namespace SlowTests.Bugs.Caching
                 {
                     s.Store(new User { Name = "Ayende", Email = "same.email@example.com" });
 
-                    store.Admin.Send(new PutIndexOperation("index",
+                    store.Admin.Send(new PutIndexesOperation(new[] {
                         new IndexDefinition
                         {
-                            Maps = { "from user in docs.Users select new {Email=user.Email}" }
-                        }));
+                            Maps = { "from user in docs.Users select new {Email=user.Email}" },
+                            Name = "index"
+                        }}));
 
                     s.SaveChanges();
                 }
@@ -302,7 +303,7 @@ namespace SlowTests.Bugs.Caching
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems);
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems);
                     s.Load<User>("users/1").Name = "foo";
                     s.SaveChanges();
                 }
@@ -311,7 +312,7 @@ namespace SlowTests.Bugs.Caching
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, s.Advanced.RequestExecuter.Cache.NumberOfItems); // did NOT increase cache
+                    Assert.Equal(1, s.Advanced.RequestExecutor.Cache.NumberOfItems); // did NOT increase cache
                 }
             }
         }

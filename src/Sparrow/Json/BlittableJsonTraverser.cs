@@ -63,23 +63,32 @@ namespace Sparrow.Json
             switch (path[indexOfFirstSeparator])
             {
                 case PropertySeparator:
-                    var subObject = reader as BlittableJsonReaderObject;
-                    if (subObject != null)
-                        return TryRead(subObject, pathSegment, out result, out leftPath);
+                    var propertyInnerObject = reader as BlittableJsonReaderObject;
+                    if (propertyInnerObject != null)
+                    {
+                        if (TryRead(propertyInnerObject, pathSegment, out result, out leftPath))
+                            return true;
+
+                        leftPath = pathSegment;
+                        result = reader;
+                        return false;
+                    }
 
                     leftPath = pathSegment;
                     result = reader;
                     return false;
                 case CollectionSeparator:
-                    var subArray = reader as BlittableJsonReaderArray;
-                    if (subArray != null)
+                    var collectionInnerArray = reader as BlittableJsonReaderArray;
+                    if (collectionInnerArray != null)
                     {
                         leftPath = pathSegment;
-                        result = ReadArray(subArray, pathSegment);
+                        result = ReadArray(collectionInnerArray, pathSegment);
                         return true;
                     }
 
-                    throw new InvalidOperationException($"Invalid path. After the collection separator ('{CollectionSeparator}') {reader?.GetType()?.FullName ?? "null"}  object has been ancountered instead of {nameof(BlittableJsonReaderArray)}.");
+                    leftPath = pathSegment;
+                    result = reader;
+                    return false;
                 default:
                     throw new NotSupportedException($"Unhandled separator character: {path[indexOfFirstSeparator]}");
             }

@@ -8,6 +8,7 @@ using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents;
 using Xunit;
 
 namespace SlowTests.MailingList.ThorTimeRange
@@ -154,8 +155,6 @@ namespace SlowTests.MailingList.ThorTimeRange
                     // These loads will read from the db
                     var loadedPeriod1 = session.Load<Period2>("Period2s/1");
                     var loadedPeriod2 = session.Load<Period2>("Period2s/2");
-
-                    WaitForUserToContinueTheTest(store);
 
                     // So these tests will fail since Period2 objects will not be persisted properly
                     // Both objects will have the same content (possibly because they cover the same time range)

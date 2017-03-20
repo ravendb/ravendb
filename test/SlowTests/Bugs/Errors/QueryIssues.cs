@@ -1,12 +1,12 @@
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 
 namespace SlowTests.Bugs.Errors
 {
-    public class QueryIssues : RavenNewTestBase
+    public class QueryIssues : RavenTestBase
     {
         [Fact]
         public void PrestonThinksLoadStartingWithShouldBeCaseInsensitive()

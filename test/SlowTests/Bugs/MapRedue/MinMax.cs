@@ -1,13 +1,14 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.MapRedue
 {
-    public class MinMax : RavenNewTestBase
+    public class MinMax : RavenTestBase
     {
         private class User
         {

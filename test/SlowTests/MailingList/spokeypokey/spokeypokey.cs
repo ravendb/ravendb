@@ -3,8 +3,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList.spokeypokey
@@ -70,7 +71,7 @@ namespace SlowTests.MailingList.spokeypokey
 
                 using (var session = docStore.OpenSession())
                 {
-                    RavenQueryStatistics statistics;
+                    QueryStatistics statistics;
 
                     // Query using dynamic index
                     var result1 = from b in session.Query<Barn>()

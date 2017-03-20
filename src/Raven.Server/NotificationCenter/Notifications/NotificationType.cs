@@ -5,9 +5,10 @@
         None,
         AlertRaised,
         OperationChanged,
-        ResourceChanged,
+        DatabaseChanged,
         NotificationUpdated,
         RecentError, // used in studio
         PerformanceHint,
+        DatabaseStatsChanged
     }
 }

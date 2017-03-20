@@ -7,7 +7,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using SlowTests.Utils;
 using Xunit;
 
@@ -28,7 +28,6 @@ namespace SlowTests.MailingList
                 }
 
                 new Students_ByEmailDomain().Execute(store);
-                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var results =

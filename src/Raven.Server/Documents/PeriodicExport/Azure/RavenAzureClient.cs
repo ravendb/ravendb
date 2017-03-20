@@ -13,17 +13,14 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Primitives;
-using Raven.Abstractions;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Util;
+using Raven.Client.Util;
+using Raven.Server.Exceptions.PeriodicExport;
 
 namespace Raven.Server.Documents.PeriodicExport.Azure
 {
@@ -74,7 +71,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             if (response.StatusCode == HttpStatusCode.Conflict)
                 return;
 
-            throw ErrorResponseException.FromResponseMessage(response);
+            throw StorageException.FromResponseMessage(response);
         }
 
         public async Task PutBlob(string key, Stream stream, Dictionary<string, string> metadata)
@@ -110,7 +107,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             if (response.IsSuccessStatusCode)
                 return;
 
-            throw ErrorResponseException.FromResponseMessage(response);
+            throw StorageException.FromResponseMessage(response);
         }
 
         private async Task PutBlockApi(string key, Stream stream, Dictionary<string, string> metadata)
@@ -124,36 +121,31 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             //List of block ids; the blocks will be committed in the order in this list
             var blockIds = new List<string>();
 
-            var cts = new CancellationTokenSource();
-            var tasks = new Task[threads];
-            var fillQueueTask = CreateFillQueueTask(stream, blockIds, queue, cts);
-            tasks[0] = fillQueueTask;
+            using (var cts = new CancellationTokenSource())
+            {
+                var tasks = new Task[threads];
+                var fillQueueTask = CreateFillQueueTask(stream, blockIds, queue, cts);
+                tasks[0] = fillQueueTask;
 
-            var baseUrl = _azureServerUrl + "/" + key;
-            for (var i = 1; i < threads; i++)
-            {
-                var baseUrlForUpload = baseUrl + "?comp=block&blockid=";
-                var task = CreateUploadTask(queue, baseUrlForUpload, cts);
-                tasks[i] = task;
-            }
-
-            try
-            {
-                //wait for all tasks to complete
-                await Task.WhenAll(tasks);
-
-                //put block list
-                await PutBlockList(baseUrl, blockIds, metadata);
-            }
-            catch (Exception)
-            {
-                GetExceptionsFromTasks(tasks);
-            }
-            finally
-            {
-                //dispose the cancellation token
-                using (cts)
+                var baseUrl = _azureServerUrl + "/" + key;
+                for (var i = 1; i < threads; i++)
                 {
+                    var baseUrlForUpload = baseUrl + "?comp=block&blockid=";
+                    var task = CreateUploadTask(queue, baseUrlForUpload, cts);
+                    tasks[i] = task;
+                }
+
+                try
+                {
+                    //wait for all tasks to complete
+                    await Task.WhenAll(tasks);
+
+                    //put block list
+                    await PutBlockList(baseUrl, blockIds, metadata);
+                }
+                catch (Exception)
+                {
+                    GetExceptionsFromTasks(tasks);
                 }
             }
         }
@@ -321,7 +313,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
 
             if (retryRequest == false ||
                 (response != null && response.StatusCode == HttpStatusCode.RequestEntityTooLarge))
-                throw ErrorResponseException.FromResponseMessage(response);
+                throw StorageException.FromResponseMessage(response);
 
             //wait for one second before trying again to send the request
             //maybe there was a network issue?
@@ -356,7 +348,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             if (response.IsSuccessStatusCode)
                 return;
 
-            throw ErrorResponseException.FromResponseMessage(response);
+            throw StorageException.FromResponseMessage(response);
         }
 
         private static XmlDocument CreateXmlDocument(List<string> blockIds)
@@ -401,7 +393,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
                 return null;
 
             if (response.IsSuccessStatusCode == false)
-                throw ErrorResponseException.FromResponseMessage(response);
+                throw StorageException.FromResponseMessage(response);
 
             var data = await response.Content.ReadAsStreamAsync();
             var headers = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());

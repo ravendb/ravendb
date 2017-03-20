@@ -1,5 +1,4 @@
 ﻿import commandBase = require("commands/commandBase");
-import database = require("models/resources/database");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import endpoints = require("endpoints");
 import configuration = require("configuration");

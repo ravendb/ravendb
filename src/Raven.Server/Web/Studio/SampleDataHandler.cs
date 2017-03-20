@@ -1,9 +1,7 @@
 ﻿using System;
 using System.IO.Compression;
-using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
-using Raven.Client.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;

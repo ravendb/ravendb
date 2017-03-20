@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Logging;
+using Raven.Client.Documents.Changes;
+using Sparrow.Logging;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -16,16 +14,16 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.TrafficWatch
 {
-    public class TrafficWatchConnection:IDisposable
+    internal class TrafficWatchConnection : IDisposable
     {
-        private static readonly ILog Logger = LogManager.GetLogger(typeof(TrafficWatchConnection));
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TrafficWatchConnection>("Raven/Server");
+
         readonly JsonContextPool _jsonContextPool = new JsonContextPool();
 
         private readonly WebSocket _websocket;
         public string TenantSpecific { get; set; }
         public bool IsAlive => _cancellationTokenSource.IsCancellationRequested == false;
 
-        private static readonly byte[] HeartbeatMessage = {(byte) '\r', (byte) '\n'};
         private readonly AsyncManualResetEvent _manualResetEvent;
         private readonly CancellationTokenSource _cancellationTokenSource;
 
@@ -53,7 +51,7 @@ namespace Raven.Server.TrafficWatch
 
                     if (result == false)
                     {
-                        await SendMessage(HeartbeatMessage).ConfigureAwait(false);
+                        await SendMessage(WebSocketHelper.Heartbeat).ConfigureAwait(false);
                         continue;
                     }
 
@@ -71,7 +69,8 @@ namespace Raven.Server.TrafficWatch
             }
             catch (Exception e)
             {
-                Logger.Info("Error when handling web socket connection", e);
+                if(_logger.IsInfoEnabled)
+                    _logger.Info("Error when handling web socket connection", e);
                 _cancellationTokenSource.Cancel();
             }
             finally
@@ -139,8 +138,8 @@ namespace Raven.Server.TrafficWatch
         public void Dispose()
         {
             _jsonContextPool.Dispose();
-            
             _websocket.Dispose();
+            _cancellationTokenSource.Dispose();
         }
     }
 }

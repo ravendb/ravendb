@@ -1,18 +1,15 @@
 /// <reference path="../../typings/tsd.d.ts" />
-
-import resource = require("models/resources/resource");
 import changeSubscription = require("common/changeSubscription");
 import changesCallback = require("common/changesCallback");
-import EVENTS = require("common/constants/events");
 import endpoints = require("endpoints");
 
 import abstractNotificationCenterClient = require("common/abstractNotificationCenterClient");
 
 class serverNotificationCenterClient extends abstractNotificationCenterClient {
 
-    protected allResourceChangedHandlers = ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>>(); 
-    protected watchedResourceChanged = new Map<string, KnockoutObservableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>>>();
-    protected watchedResourceChangedPrefixes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>>>();
+    protected allDatabaseChangedHandlers = ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>>(); 
+    protected watchedDatabaseChanged = new Map<string, KnockoutObservableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>>>();
+    protected watchedDatabaseChangedPrefixes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>>>();
 
     constructor() {
         super(null);
@@ -27,20 +24,20 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
         return endpoints.global.serverNotificationCenter.notificationCenterWatch + connectionString;
     }
 
-    protected onMessage(actionDto: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) {
+    protected onMessage(actionDto: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {
         const actionType = actionDto.Type;
 
         switch (actionType) {
-            case "ResourceChanged":
-                const resourceDto = actionDto as Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged;
-                this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>(this.allResourceChangedHandlers(), resourceDto, () => true);
+            case "DatabaseChanged":
+                const databaseDto = actionDto as Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged;
+                this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(this.allDatabaseChangedHandlers(), databaseDto, () => true);
 
-                this.watchedResourceChanged.forEach((callbacks, key) => {
-                    this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>(callbacks(), resourceDto, (event) => event.ResourceName != null && event.ResourceName === key);
+                this.watchedDatabaseChanged.forEach((callbacks, key) => {
+                    this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(callbacks(), databaseDto, (event) => event.DatabaseName != null && event.DatabaseName === key);
                 });
 
-                this.watchedResourceChangedPrefixes.forEach((callbacks, key) => {
-                    this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>(callbacks(), resourceDto, (event) => event.ResourceName != null && event.ResourceName.startsWith(key));
+                this.watchedDatabaseChangedPrefixes.forEach((callbacks, key) => {
+                    this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(callbacks(), databaseDto, (event) => event.DatabaseName != null && event.DatabaseName.startsWith(key));
                 });
                 break;
             default:
@@ -49,48 +46,48 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
         }
     }
 
-    watchAllResourceChanges(onChange: (e: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) => void) {
-        const callback = new changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>(onChange);
+    watchAllDatabaseChanges(onChange: (e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => void) {
+        const callback = new changesCallback<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(onChange);
 
-        this.allResourceChangedHandlers.push(callback);
+        this.allDatabaseChangedHandlers.push(callback);
 
         return new changeSubscription(() => {
-            this.allResourceChangedHandlers.remove(callback);
+            this.allDatabaseChangedHandlers.remove(callback);
         });
     }
 
-    watchResourceChange(itemId: string, onChange: (e: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) => void): changeSubscription {
-        const callback = new changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>(onChange);
+    watchDatabaseChange(itemId: string, onChange: (e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => void): changeSubscription {
+        const callback = new changesCallback<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(onChange);
 
-        if (!this.watchedResourceChanged.has(itemId)) {
-            this.watchedResourceChanged.set(itemId, ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>>());
+        if (!this.watchedDatabaseChanged.has(itemId)) {
+            this.watchedDatabaseChanged.set(itemId, ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>>());
         }
 
-        const callbacks = this.watchedResourceChanged.get(itemId);
+        const callbacks = this.watchedDatabaseChanged.get(itemId);
         callbacks.push(callback);
 
         return new changeSubscription(() => {
             callbacks.remove(callback);
             if (callbacks().length === 0) {
-                this.watchedResourceChanged.delete(itemId);
+                this.watchedDatabaseChanged.delete(itemId);
             }
         });
     }
 
-    watchResourceChangeStartingWith(itemIdPrefix: string, onChange: (e: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) => void): changeSubscription {
-        const callback = new changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>(onChange);
+    watchDatabaseChangeStartingWith(itemIdPrefix: string, onChange: (e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => void): changeSubscription {
+        const callback = new changesCallback<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>(onChange);
 
-        if (!this.watchedResourceChangedPrefixes.has(itemIdPrefix)) {
-            this.watchedResourceChangedPrefixes.set(itemIdPrefix, ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>>());
+        if (!this.watchedDatabaseChangedPrefixes.has(itemIdPrefix)) {
+            this.watchedDatabaseChangedPrefixes.set(itemIdPrefix, ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged>>());
         }
 
-        const callbacks = this.watchedResourceChangedPrefixes.get(itemIdPrefix);
+        const callbacks = this.watchedDatabaseChangedPrefixes.get(itemIdPrefix);
         callbacks.push(callback);
 
         return new changeSubscription(() => {
             callbacks.remove(callback);
             if (callbacks().length === 0) {
-                this.watchedResourceChangedPrefixes.delete(itemIdPrefix);
+                this.watchedDatabaseChangedPrefixes.delete(itemIdPrefix);
             }
         });
     }

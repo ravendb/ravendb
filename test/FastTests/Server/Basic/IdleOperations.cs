@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Linq;
-using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Operations.Databases;
+using Raven.Client.Extensions;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class IdleOperations : RavenNewTestBase
+    public class IdleOperations : RavenTestBase
     {
         private class Product
         {
@@ -69,7 +70,7 @@ namespace FastTests.Server.Basic
                     var name = "IdleOperations_CleanupResources_DB_" + i;
                     var doc = MultiDatabase.CreateDatabaseDocument(name);
 
-                    store.Admin.Send(new CreateDatabaseOperation(doc));
+                    store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
                     var documentDatabase = landlord.TryGetOrCreateResourceStore("IdleOperations_CleanupResources_DB_" + i).Result;
 
@@ -97,7 +98,7 @@ namespace FastTests.Server.Basic
                     else
                         Assert.False(landlord.LastRecentlyUsed.TryGetValue(name, out outTime));
 
-                    store.Admin.Send(new DeleteDatabaseOperation(name, true));
+                    store.Admin.Server.Send(new DeleteDatabaseOperation(name, true));
                 }
             }
         }

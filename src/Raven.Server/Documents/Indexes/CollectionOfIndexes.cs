@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 using Sparrow.Collections;
@@ -29,6 +30,36 @@ namespace Raven.Server.Documents.Indexes
                 var indexes = _indexesByCollection.GetOrAdd(collection, s => new ConcurrentSet<Index>());
                 indexes.Add(index);
             }
+        }
+
+        public void ReplaceIndex(string name, Index oldIndex, Index newIndex)
+        {
+            Debug.Assert(oldIndex == null || string.Equals(name, oldIndex.Name, StringComparison.OrdinalIgnoreCase));
+
+            _indexesByName.AddOrUpdate(name, oldIndex, (key, oldValue) => newIndex);
+
+            Index _;
+            _indexesByName.TryRemove(newIndex.Name, out _);
+
+            if (oldIndex == null)
+                return;
+
+            foreach (var collection in oldIndex.Definition.Collections)
+            {
+                ConcurrentSet<Index> indexes;
+                if (_indexesByCollection.TryGetValue(collection, out indexes) == false)
+                    continue;
+
+                indexes.TryRemove(oldIndex);
+            }
+            _indexesById.TryRemove(oldIndex.IndexId, out oldIndex);
+        }
+
+        public void RenameIndex(Index index, string oldName, string newName)
+        {
+            _indexesByName.AddOrUpdate(newName, index, (key, oldValue) => index);
+            Index _;
+            _indexesByName.TryRemove(oldName, out _);
         }
 
         public bool TryGetById(int id, out Index index)

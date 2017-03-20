@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using FastTests.Voron.FixedSize;
+using Voron;
 using Xunit;
 
 namespace FastTests.Voron.Streams
@@ -7,22 +9,25 @@ namespace FastTests.Voron.Streams
     public class CanUseStream : StorageTest
     {
         [Theory]
-        [InlineData(129)]
-        [InlineData(2095)]
-        [InlineData(4096)]
-        [InlineData(12004)]
-        [InlineData(15911)]
-        [InlineData(16897)]
-        [InlineData(31911)]
-        [InlineData(91911)]
-        public void CanWriteAndRead(int size)
+        [InlineData(null, 129)]
+        [InlineData(null, 2095)]
+        [InlineData("AM4#@dF5Tas", 4096)]
+        [InlineData(null, 8120)]
+        [InlineData(null, 12004)]
+        [InlineData("dfgja83mt7s", 15911)]
+        [InlineData(null, 16897)]
+        [InlineData(null, 31911)]
+        [InlineData("fdd93m34nghdsya", 91911)]
+        [InlineDataWithRandomSeed(null)]
+        [InlineDataWithRandomSeed("RavenDB")]
+        public void CanWriteAndRead(string tag, int size)
         {
-            var buffer = new byte[size];
+            var buffer = new byte[size % 100000];
             new Random().NextBytes(buffer);
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("Files");
-                tree.AddStream("test", new MemoryStream(buffer));
+                tree.AddStream("test", new MemoryStream(buffer), tag);
                 tx.Commit();
             }
             using (var tx = Env.ReadTransaction())
@@ -35,20 +40,29 @@ namespace FastTests.Voron.Streams
                     Assert.Equal(buffer[i], readStream.ReadByte());
                 }
                 Assert.Equal(-1, readStream.ReadByte());
+
+                var readTag = tree.GetStreamTag("test");
+
+                if (tag == null)
+                    Assert.Null(readTag);
+                else
+                    Assert.Equal(tag, readTag);
             }
         }
         [Theory]
         [InlineData(129)]
         [InlineData(2095)]
         [InlineData(4096)]
+        [InlineData(8120)]
         [InlineData(12004)]
         [InlineData(15911)]
         [InlineData(16897)]
         [InlineData(31911)]
         [InlineData(91911)]
+        [InlineDataWithRandomSeed]
         public void CanCopyTo(int size)
         {
-            var buffer = new byte[size];
+            var buffer = new byte[size % 100000];
             new Random().NextBytes(buffer);
             using (var tx = Env.WriteTransaction())
             {
@@ -74,10 +88,22 @@ namespace FastTests.Voron.Streams
                 Assert.Equal(buffer, memoryStream.ToArray());
             }
         }
-        [Fact]
-        public void CanUpdate()
+
+        [Theory]
+        [InlineData("AM4#@dF5Tas", 129)]
+        [InlineData(null, 2095)]
+        [InlineData(null, 4096)]
+        [InlineData("AM4#@dF5Tas", 8120)]
+        [InlineData("dfgja83mt7s", 12004)]
+        [InlineData(null, 15911)]
+        [InlineData(null, 16897)]
+        [InlineData("fdd93m34nghdsya", 31911)]
+        [InlineData(null, 91911)]
+        [InlineDataWithRandomSeed(null)]
+        [InlineDataWithRandomSeed("no sql")]
+        public void CanUpdate(string tag, int size)
         {
-            var buffer = new byte[50];
+            var buffer = new byte[size % 100000];
             new Random().NextBytes(buffer);
             using (var tx = Env.WriteTransaction())
             {
@@ -89,7 +115,7 @@ namespace FastTests.Voron.Streams
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("Files");
-                tree.AddStream("test", new MemoryStream(buffer));
+                tree.AddStream("test", new MemoryStream(buffer), tag);
                 tx.Commit();
             }
             using (var tx = Env.ReadTransaction())
@@ -102,18 +128,36 @@ namespace FastTests.Voron.Streams
                     Assert.Equal(buffer[i], readStream.ReadByte());
                 }
                 Assert.Equal(-1, readStream.ReadByte());
+
+                var readTag = tree.GetStreamTag("test");
+
+                if (tag == null)
+                    Assert.Null(readTag);
+                else
+                    Assert.Equal(tag, readTag);
             }
         }
 
-        [Fact]
-        public void CanDelete()
+        [Theory]
+        [InlineData(null, 50)]
+        [InlineData(null, 129)]
+        [InlineData(null, 2095)]
+        [InlineData("debug tag", 4096)]
+        [InlineData(null, 8120)]
+        [InlineData("tag", 12004)]
+        [InlineData(null, 15911)]
+        [InlineData(null, 16897)]
+        [InlineData("Debug debug tag", 31911)]
+        [InlineData(null, 91911)]
+        [InlineDataWithRandomSeed(null)]
+        public void CanDelete(string tag, int size)
         {
-            var buffer = new byte[50];
+            var buffer = new byte[size % 100000];
             new Random().NextBytes(buffer);
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("Files");
-                tree.AddStream("test", new MemoryStream(buffer));
+                tree.AddStream("test", new MemoryStream(buffer), tag);
                 tx.Commit();
             }
             new Random().NextBytes(buffer);

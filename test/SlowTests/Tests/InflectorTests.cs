@@ -5,12 +5,13 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
-using Raven.NewClient.Client.Util;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Util;
 using Xunit;
 
 namespace SlowTests.Tests
 {
-    public class InflectorTests : RavenNewTestBase
+    public class InflectorTests : RavenTestBase
     {
         [Theory]
         [InlineData("User", "Users")]

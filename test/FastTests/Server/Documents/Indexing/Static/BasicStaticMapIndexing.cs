@@ -3,10 +3,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Blittable;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Documents.Indexes;
@@ -43,9 +42,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
                             {
                                 ["Name"] = "John",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -55,9 +54,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/2", new DynamicJsonValue
                             {
                                 ["Name"] = "Edward",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -158,24 +157,24 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(1, indexes[0].IndexId);
                 Assert.Equal(IndexType.Map, indexes[0].Type);
                 Assert.Equal("Users_ByName", indexes[0].Name);
-                Assert.Equal(1, indexes[0].Definition.Collections.Length);
-                Assert.Equal("Users", indexes[0].Definition.Collections[0]);
+                Assert.Equal(1, indexes[0].Definition.Collections.Count);
+                Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
                 Assert.Contains("Name", indexes[0].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
-                Assert.Equal(IndexPriority.Normal, indexes[0].Priority);
+                Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
                 Assert.Equal(IndexDefinitionCompareDifferences.None, indexes[0].Definition.Compare(indexDefinition1));
                 Assert.True(indexDefinition1.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
 
                 Assert.Equal(2, indexes[1].IndexId);
                 Assert.Equal(IndexType.Map, indexes[1].Type);
                 Assert.Equal("Users_ByAge", indexes[1].Name);
-                Assert.Equal(1, indexes[1].Definition.Collections.Length);
-                Assert.Equal("Users", indexes[1].Definition.Collections[0]);
+                Assert.Equal(1, indexes[1].Definition.Collections.Count);
+                Assert.Equal("Users", indexes[1].Definition.Collections.Single());
                 Assert.Equal(1, indexes[1].Definition.MapFields.Count);
                 Assert.Contains("CustomAge", indexes[1].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[1].Definition.LockMode);
-                Assert.Equal(IndexPriority.Normal, indexes[1].Priority);
+                Assert.Equal(IndexPriority.Normal, indexes[1].Definition.Priority);
                 Assert.Equal(IndexDefinitionCompareDifferences.None, indexes[1].Definition.Compare(indexDefinition2));
                 Assert.True(indexDefinition2.Equals(indexes[1].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
             }
@@ -196,7 +195,6 @@ namespace FastTests.Server.Documents.Indexing.Static
             indexDefinition.Reduce = "c";
             indexDefinition.Type = IndexType.MapReduce;
             indexDefinition.IndexId = 3;
-            indexDefinition.IsSideBySideIndex = true;
             indexDefinition.Fields = new Dictionary<string, IndexFieldOptions>
             {
                 {"f1", new IndexFieldOptions
@@ -216,7 +214,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                         Suggestions = true,
                         Storage = FieldStorage.Yes,
                         Analyzer = "a1",
-                        Sort = SortOptions.NumericDouble,
+                        Sort = SortOptions.Numeric,
                         TermVector = FieldTermVector.WithPositionsAndOffsets
                     }
                 },
@@ -237,7 +235,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                         Suggestions = false,
                         Storage = FieldStorage.No,
                         Analyzer = "a2",
-                        Sort = SortOptions.NumericDefault,
+                        Sort = SortOptions.Numeric,
                         TermVector = FieldTermVector.WithPositions
                     }
                 }
@@ -274,9 +272,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
                             {
                                 ["Name"] = "John",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -286,9 +284,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "people/1", new DynamicJsonValue
                             {
                                 ["Name"] = "Edward",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "People"
+                                    [Constants.Documents.Metadata.Collection] = "People"
                                 }
                             }))
                             {
@@ -364,9 +362,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
                             {
                                 ["Name"] = "John",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -376,9 +374,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/2", new DynamicJsonValue
                             {
                                 ["Name"] = "Bob",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -388,9 +386,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "people/1", new DynamicJsonValue
                             {
                                 ["Name"] = "Edward",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "People"
+                                    [Constants.Documents.Metadata.Collection] = "People"
                                 }
                             }))
                             {
@@ -436,9 +434,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "users/3", new DynamicJsonValue
                             {
                                 ["Name"] = "George",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "Users"
+                                    [Constants.Documents.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -448,9 +446,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                             using (var doc = CreateDocument(context, "people/2", new DynamicJsonValue
                             {
                                 ["Name"] = "Edward",
-                                [Constants.Metadata.Key] = new DynamicJsonValue
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Metadata.Collection] = "People"
+                                    [Constants.Documents.Metadata.Collection] = "People"
                                 }
                             }))
                             {

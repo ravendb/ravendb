@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 
@@ -24,7 +23,7 @@ namespace Raven.Server.Routing
 
         public StringSegment GetCapture()
         {
-            return new StringSegment(Url, CaptureStart, CaptureLength);
+            return new StringSegment(Url, CaptureLength, CaptureStart);
         }
     }
 

@@ -17,6 +17,8 @@ import getCollectionsStatsCommand = require("commands/database/documents/getColl
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import eventsCollector = require("common/eventsCollector");
+import popoverUtils = require("common/popoverUtils");
+import generalUtils = require("common/generalUtils");
 
 class exportDatabase extends viewModelBase {
 
@@ -39,6 +41,11 @@ class exportDatabase extends viewModelBase {
         aceEditorBindingHandler.install();
 
         this.setupDefaultExportFilename();
+        this.showTransformScript.subscribe(v => {
+            if (!v) {
+                this.model.transformScript("");
+            }
+        });
     }
 
     activate(args: any): void {
@@ -85,15 +92,26 @@ class exportDatabase extends viewModelBase {
         });
 
         this.exportCommand = ko.pureComputed<string>(() => {
-            //TODO: review this!
-            var targetServer = appUrl.forServer();
-            var model = this.model;
-            var outputFilename = exportDatabase.escapeForShell(model.exportFileName());
-            var commandTokens = ["Raven.Smuggler", "out", targetServer, outputFilename];
+            //TODO: review for smuggler.exe!
+            const db = this.activeDatabase();
+            if (!db) {
+                return "";
+            }
 
-            var types: Array<string> = [];
+            const targetServer = appUrl.forServer();
+            const model = this.model;
+            const outputFilename = generalUtils.escapeForShell(model.exportFileName());
+            const commandTokens = ["Raven.Smuggler", "out", targetServer, outputFilename];
+
+            const databaseName = db.name;
+            commandTokens.push("--database=" + generalUtils.escapeForShell(databaseName));
+
+            const types: Array<string> = [];
             if (model.includeDocuments()) {
                 types.push("Documents");
+            }
+            if (model.includeRevisionDocuments()) {
+                types.push("RevisionDocuments");
             }
             if (model.includeIndexes()) {
                 types.push("Indexes");
@@ -101,26 +119,28 @@ class exportDatabase extends viewModelBase {
             if (model.includeTransformers()) {
                 types.push("Transformers");
             }
+            if (model.includeIdentities()) {
+                types.push("Identities");
+            }
             if (types.length > 0) {
                 commandTokens.push("--operate-on-types=" + types.join(","));
             }
 
-            //TODO: identities, remove analyzers, RevisionDocuments
-
-            var databaseName = this.activeDatabase().name;
-            commandTokens.push("--database=" + exportDatabase.escapeForShell(databaseName));
-
             if (model.includeExpiredDocuments()) {
-                commandTokens.push("--includeexpired");
+                commandTokens.push("--include-expired");
+            }
+
+            if (model.removeAnalyzers()) {
+                commandTokens.push("--remove-analyzers");
             }
 
             if (!model.includeAllCollections()) {
                 const collections = model.includedCollections();
-                commandTokens.push("--metadata-filter=@collection=" + exportDatabase.escapeForShell(collections.toString()));
+                commandTokens.push("--metadata-filter=@collection=" + generalUtils.escapeForShell(collections.toString()));
             }
 
-            if (model.transformScript()) {
-                commandTokens.push("--transform=" + exportDatabase.escapeForShell(model.transformScript()));
+            if (model.transformScript() && this.showTransformScript()) {
+                commandTokens.push("--transform=" + generalUtils.escapeForShell(model.transformScript()));
             }
 
             return commandTokens.join(" ");
@@ -131,17 +151,16 @@ class exportDatabase extends viewModelBase {
         copyToClipboard.copy(this.exportCommand(), "Command was copied to clipboard.");
     }
 
-    static escapeForShell(input: string) {
-        return '"' + input.replace(/[\r\n]/g, "").replace(/(["\\])/g, '\\$1') + '"';
-    }
-
     attached() {
         super.attached();
 
-        $("#transformScriptPopover").popover({
+        $(".use-transform-script small").popover({
             html: true,
             trigger: "hover",
-            content: "Transform scripts are written in JavaScript. <br /><br/>Example:<pre><span class=\"code-keyword\">function</span>(doc) {<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">var</span> id = doc['@metadata']['@id'];<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">if</span> (id === 'orders/999')<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">return null</span>;<br /><br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"code-keyword\">return</span> doc;<br />}</pre>"
+            template: popoverUtils.longPopoverTemplate,
+            container: "body",
+            content: "Transform scripts are written in JavaScript. <br/>" +
+                "Example:<pre><span class=\"token keyword\">function</span>(doc) {<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">var</span> id = doc['@metadata']['@id'];<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">if</span> (id === 'orders/999')<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">return null</span>;<br /><br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">return</span> doc;<br />}</pre>"
         });
     }
 
@@ -150,7 +169,7 @@ class exportDatabase extends viewModelBase {
 
         exportDatabase.isExporting(true);
 
-        var exportArg = this.model.toDto();
+        const exportArg = this.model.toDto();
 
         new validateExportDatabaseOptionsCommand(exportArg, this.activeDatabase())
             .execute()
@@ -177,24 +196,29 @@ class exportDatabase extends viewModelBase {
             });
     }
 
-    private startDownload(args: Raven.Client.Smuggler.DatabaseSmugglerOptions) {
+    private startDownload(args: Raven.Client.Documents.Smuggler.DatabaseSmugglerOptions) {
         const $form = $("#exportDownloadForm");
-        const db = this.activeDatabase();
+        let db = this.activeDatabase();
         const $downloadOptions = $("[name=DownloadOptions]", $form);
 
         $.when<any>(this.getNextOperationId(db), this.getAuthToken(db))
             .then(([operationId]:[number], [token]:[singleAuthToken]) => {
-                var url = endpoints.databases.smuggler.smugglerExport;
-                var authToken = (url.indexOf("?") === -1 ? "?" : "&") + "singleUseAuthToken=" + token.Token;
+                const url = endpoints.databases.smuggler.smugglerExport;
+                const authToken = (url.indexOf("?") === -1 ? "?" : "&") + "singleUseAuthToken=" + token.Token;
                 const operationPart = "&operationId=" + operationId;
-                $form.attr("action", appUrl.forResourceQuery(db) + url + authToken + operationPart);
-                $downloadOptions.val(JSON.stringify(args));
+                $form.attr("action", appUrl.forDatabaseQuery(db) + url + authToken + operationPart);
+                $downloadOptions.val(JSON.stringify(args, (key, value) => {
+                    if (key === "TransformScript" && value === "") {
+                        return undefined;
+                    }
+                    return value;
+                }));
                 $form.submit();
 
                 notificationCenter.instance.openDetailsForOperationById(db, operationId);
 
                 notificationCenter.instance.monitorOperation(db, operationId)
-                    .fail((exception: Raven.Client.Data.OperationExceptionResult) => {
+                    .fail((exception: Raven.Client.Documents.Operations.OperationExceptionResult) => {
                         messagePublisher.reportError("Could not export database: " + exception.Message, exception.Error, null, false);
                     }).always(() => exportDatabase.isExporting(false));
 

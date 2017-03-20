@@ -1,14 +1,12 @@
 using FastTests;
-using Raven.Abstractions.Connection;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Exceptions.Patching;
-using Raven.NewClient.Operations.Databases.Documents;
+using Raven.Client.Documents.Exceptions.Patching;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
 using Xunit;
 
 namespace SlowTests.Core.ScriptedPatching
 {
-    public class ScriptedPatchTests : RavenNewTestBase
+    public class ScriptedPatchTests : RavenTestBase
     {
         public class Foo
         {

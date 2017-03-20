@@ -7,14 +7,14 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class FlagsEnum : RavenNewTestBase
+    public class FlagsEnum : RavenTestBase
     {
         [Flags]
         private enum CustomEnum

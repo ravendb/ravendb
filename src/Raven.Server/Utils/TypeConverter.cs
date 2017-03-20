@@ -6,15 +6,13 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using Lucene.Net.Documents;
-using Raven.Abstractions;
-using Raven.Abstractions.Json;
-using Raven.Client.Linq;
+using Raven.Client;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Transformers;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Raven.Abstractions.Data;
+using Sparrow.Extensions;
 
 namespace Raven.Server.Utils
 {
@@ -66,7 +64,7 @@ namespace Raven.Server.Utils
                 return value.ToString();
 
             if (value is IEnumerable<IFieldable> || value is IFieldable)
-                return Constants.Indexing.Fields.IgnoredDynamicField;
+                return Constants.Documents.Indexing.Fields.IgnoredDynamicField;
 
             var dictionary = value as IDictionary;
             if (dictionary != null)
@@ -147,11 +145,17 @@ namespace Raven.Server.Utils
             if (value == null)
                 return DynamicNullObject.Null;
 
+            BlittableJsonReaderArray jsonArray;
             var jsonObject = value as BlittableJsonReaderObject;
             if (jsonObject != null)
-                return new DynamicBlittableJson(jsonObject);
+            {
+                if(jsonObject.TryGetWithoutThrowingOnError("$values",out jsonArray))
+                    return new DynamicArray(jsonArray);
 
-            var jsonArray = value as BlittableJsonReaderArray;
+                return new DynamicBlittableJson(jsonObject);
+            }
+
+            jsonArray = value as BlittableJsonReaderArray;
             if (jsonArray != null)
                 return new DynamicArray(jsonArray);
 
@@ -267,7 +271,7 @@ namespace Raven.Server.Utils
                         DateTimeStyles.RoundtripKind, out dateTime))
                         return (T)(object)dateTime;
 
-                    dateTime = RavenJsonTextReader.ParseDateMicrosoft(s);
+                    dateTime = RavenDateTimeExtensions.ParseDateMicrosoft(s);
                     return (T)(object)dateTime;
                 }
             }

@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -18,12 +18,12 @@ namespace SlowTests.MailingList
                 new Users_ByRoles().Execute(store);
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Id = 1, Roles = new List<Role> { new Role { Type = UserType.Contract }, new Role { Type = UserType.Developer } } });
-                    session.Store(new User { Id = 2, Roles = new List<Role> { new Role { Type = UserType.Permanent }, new Role { Type = UserType.Developer } } });
-                    session.Store(new User { Id = 3, Roles = new List<Role> { new Role { Type = UserType.SeniorDeveloper }, new Role { Type = UserType.Manager } } });
-                    session.Store(new User { Id = 4, Roles = new List<Role> { new Role { Type = UserType.Contract }, new Role { Type = UserType.SeniorDeveloper } } });
-                    session.Store(new User { Id = 5, Roles = new List<Role> { new Role { Type = UserType.Permanent }, new Role { Type = UserType.Manager } } });
-                    session.Store(new User { Id = 6, Roles = new List<Role> { new Role { Type = UserType.Contract }, new Role { Type = UserType.Developer } } });
+                    session.Store(new User { Id = 1.ToString(), Roles = new List<Role> { new Role { Type = UserType.Contract }, new Role { Type = UserType.Developer } } });
+                    session.Store(new User { Id = 2.ToString(), Roles = new List<Role> { new Role { Type = UserType.Permanent }, new Role { Type = UserType.Developer } } });
+                    session.Store(new User { Id = 3.ToString(), Roles = new List<Role> { new Role { Type = UserType.SeniorDeveloper }, new Role { Type = UserType.Manager } } });
+                    session.Store(new User { Id = 4.ToString(), Roles = new List<Role> { new Role { Type = UserType.Contract }, new Role { Type = UserType.SeniorDeveloper } } });
+                    session.Store(new User { Id = 5.ToString(), Roles = new List<Role> { new Role { Type = UserType.Permanent }, new Role { Type = UserType.Manager } } });
+                    session.Store(new User { Id = 6.ToString(), Roles = new List<Role> { new Role { Type = UserType.Contract }, new Role { Type = UserType.Developer } } });
                     session.SaveChanges();
 
                     var nonContractEmployees =
@@ -58,7 +58,7 @@ namespace SlowTests.MailingList
 
         private class User
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public List<Role> Roles { get; set; }
         }
 

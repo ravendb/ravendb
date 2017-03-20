@@ -1,24 +1,27 @@
-﻿using System.Linq;
-using System.Reflection;
+﻿using Raven.Client.Properties;
+using Raven.Server.Smuggler.Documents.Processors;
 
 namespace Raven.Server.ServerWide
 {
     public class ServerVersion
     {
         private static int? _buildVersion;
+        private static BuildVersionType? _buildType;
         private static string _commitHash;
         private static string _version;
         private static string _fullVersion;
 
         public static string Version => 
-            _version ?? (_version = Client.RavenVersionAttribute.Instance.Version);
+            _version ?? (_version = RavenVersionAttribute.Instance.Version);
 
         public static int Build =>  
-            _buildVersion ?? (_buildVersion = Client.RavenVersionAttribute.Instance.BuildVersion).Value;
+            _buildVersion ?? (_buildVersion = RavenVersionAttribute.Instance.BuildVersion).Value;
+        public static BuildVersionType BuildType =>
+            _buildType ?? (_buildType = BuildVersion.Type(Build)).Value;
         public static string CommitHash => 
-            _commitHash ?? (_commitHash = Client.RavenVersionAttribute.Instance.CommitHash);
+            _commitHash ?? (_commitHash = RavenVersionAttribute.Instance.CommitHash);
         public static string FullVersion => 
-            _fullVersion ?? (_fullVersion = Client.RavenVersionAttribute.Instance.FullVersion);
+            _fullVersion ?? (_fullVersion = RavenVersionAttribute.Instance.FullVersion);
 
         public const int DevBuildNumber = 40;
 

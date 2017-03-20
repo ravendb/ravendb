@@ -7,7 +7,7 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -16,12 +16,12 @@ namespace SlowTests.MailingList
     {
         private class Foo
         {
-            public Guid Id { get; private set; }
+            public string Id { get; private set; }
             public DateTime? ExpirationTime { get; set; }
 
             public Foo()
             {
-                Id = Guid.NewGuid();
+                Id = Guid.NewGuid().ToString();
                 ExpirationTime = null;
             }
         }

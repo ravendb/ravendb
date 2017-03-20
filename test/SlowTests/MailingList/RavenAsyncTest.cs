@@ -1,8 +1,8 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -87,12 +87,12 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.LoadAsync<Dummy>("dummies/1");
-                    Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, store.GetRequestExecuter().Cache.NumberOfItems);
                 }
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.LoadAsync<Dummy>("dummies/1");
-                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, store.GetRequestExecuter().Cache.NumberOfItems);
                 }
             }
         }

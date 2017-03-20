@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Transformers;
@@ -25,11 +24,14 @@ namespace Raven.Server.Documents
 
         public ConfigurationStorage(DocumentDatabase db)
         {
+            var path = db.Configuration.Core.DataDirectory.Combine("Configuration");
+
             var options = db.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(Path.Combine(db.Configuration.Core.DataDirectory, "Configuration"))
-                : StorageEnvironmentOptions.ForPath(Path.Combine(db.Configuration.Core.DataDirectory, "Configuration"));
+                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath, null, db.IoChanges)
+                : StorageEnvironmentOptions.ForPath(path.FullPath, null, null, db.IoChanges);
 
             options.SchemaVersion = 1;
+            options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
 
             Environment = new StorageEnvironment(options);
             

@@ -9,8 +9,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.Client.Indexing;
-using Raven.Server.Config;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
@@ -61,10 +62,11 @@ namespace SlowTests.Tests.Indexes
                     Assert.Equal(1024 * 6, usersCount);
                 }
 
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
+                    Name= "test",
                     Maps = { "from user in docs.Users select new { user.Name }" }
-                });
+                }}));
 
                 using (var session = store.OpenSession())
                 {

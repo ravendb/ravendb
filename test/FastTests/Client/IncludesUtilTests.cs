@@ -2,14 +2,14 @@
 using System.Threading.Tasks;
 using Xunit;
 using System;
-using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Document;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace FastTests.Client
 {
-    public class IncludesUtilTests : RavenNewTestBase
+    public class IncludesUtilTests : RavenTestBase
     {
         [Fact]
         public void include_with_prefix()
@@ -21,7 +21,7 @@ namespace FastTests.Client
                 {
                     CustomerId = "1",
                     Number = "abc"
-                }, new DocumentConvention(), context);
+                }, new DocumentConventions(), context);
 
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 IncludesUtil.Include(json, "CustomerId(customer/)", customerId =>
@@ -46,7 +46,7 @@ namespace FastTests.Client
                 {
                     CustomerId = "1",
                     Number = "abc"
-                }, new DocumentConvention(), context);
+                }, new DocumentConventions(), context);
 
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 IncludesUtil.Include(json, "CustomerId[{0}/customer]", customerId =>

@@ -4,11 +4,13 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Data;
-using Raven.Client.Data.Queries;
+using Raven.Client;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Exceptions.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Faceted;
@@ -91,7 +93,7 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task FacetedQuery(DocumentsOperationContext context, string indexName, OperationCancelToken token)
         {
-            var query = FacetQuery.Parse(HttpContext.Request.Query, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), null);
+            var query = FacetQuery.Parse(HttpContext.Request.Query, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), DocumentConventions.Default);
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
             long? facetsEtag = null;
@@ -132,7 +134,7 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+            HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -155,7 +157,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 result = await runner.ExecuteQuery(indexName, indexQuery, includes, existingResultEtag, token).ConfigureAwait(false);
             }
-            catch (IndexDoesNotExistsException)
+            catch (IndexDoesNotExistException)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return;
@@ -167,7 +169,7 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+            HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -205,7 +207,7 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+            HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -312,7 +314,7 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            HttpContext.Response.Headers[Constants.MetadataEtagField] = result.ResultEtag.ToInvariantString();
+            HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {

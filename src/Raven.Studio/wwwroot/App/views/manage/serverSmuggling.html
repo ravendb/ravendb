@@ -73,7 +73,7 @@
                             <tr>
                                 <th class="text-center">
                                     <div class="checkbox">
-                                        <input id="resources_all" class="styled" type="checkbox" data-bind="checkboxTriple: resourcesSelection, event: { change: toggleSelectAll }, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
+                                        <input id="resources_all" class="styled" type="checkbox" data-bind="checkboxTriple: databasesSelection, event: { change: toggleSelectAll }, visible: hasResources, disable: $root.inProgress()" title="Select all or none">
                                         <label for="resources_all">&nbsp;</label>
                                     </div>
                                 </th>
@@ -82,18 +82,6 @@
                                     <div class="checkbox">
                                         <input id="incr_all" class="styled" type="checkbox" data-bind="checkboxTriple: incrementalSelection, event: { change: toggleSelectAllIncremental }, visible: hasResources, disable: $root.inProgress() || noIncremental()" title="Select all or none">
                                         <label for="incr_all">Incremental</label>
-                                    </div>
-                                </th>
-                                <th class="text-center">
-                                    <div class="checkbox">
-                                        <input id="rep_all" class="styled" type="checkbox" data-bind="checkboxTriple: stripReplicationSelection, event: { change: toggleSelectAllStripReplication }, visible: hasResources, disable: $root.inProgress() || noStripReplication()" title="Select all or none">
-                                        <label for="rep_all">Strip replication information</label>
-                                    </div>
-                                </th>
-                                <th class="text-center">
-                                    <div class="checkbox">
-                                        <input id="versioning_all" class="styled" type="checkbox" data-bind="checkboxTriple: disableVersioningSelection, event: { change: toggleSelectAllDisableVersioning }, visible: hasResources, disable: $root.inProgress() || noDisableVersioning()" title="Select all or none">
-                                        <label for="versioning_all">Disable versioning bundle</label>
                                     </div>
                                 </th>
                             </tr>
@@ -114,20 +102,6 @@
                                         <input type="checkbox" class="styled" aria-label="Incremental"
                                                 data-bind="disable: $root.inProgress() || !$root.isSelected($data), checked: incremental, attr: { id: 'incr_' + $index() }">
                                         <label data-bind="attr: { for: 'incr_' + $index() }">&nbsp;</label>
-                                    </div>
-                                </td>
-                                <td class="text-center">
-                                    <div class="checkbox" data-bind="visible: hasReplicationBundle">
-                                        <input type="checkbox" class="styled" aria-label="Strip replication information" 
-                                               data-bind="disable: $root.inProgress() || !$root.isSelected($data), checked: stripReplicationInformation, attr: { id : 'strip_rep_' + $index() }">
-                                        <label data-bind="attr: { for: 'strip_rep_' + $index() }">&nbsp;</label>
-                                    </div>
-                                </td>
-                                <td class="text-center">
-                                    <div class="checkbox" data-bind="visible: hasVersioningBundle">
-                                        <input type="checkbox" class="styled" aria-label="Should disable versioning bundle" 
-                                               data-bind="disable: $root.inProgress() || !$root.isSelected($data), checked: shouldDisableVersioningBundle, attr: { id: 'versioning_' + $index() }">
-                                        <label data-bind="attr: { for: 'versioning_' + $index() }">&nbsp;</label>
                                     </div>
                                 </td>
                             </tr>

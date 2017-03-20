@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
-using Raven.Abstractions.Extensions;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Xunit;
+using ListExtensions = Raven.Client.Extensions.ListExtensions;
 
 namespace SlowTests.Issues
 {
@@ -53,7 +55,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void TheIssueQuery(Raven.Client.IDocumentSession session)
+        private static void TheIssueQuery(IDocumentSession session)
         {
             var expressions = new List<Tuple<Expression<Func<Entity3973, bool>>,
                 Func<List<Entity3973>, bool>, // Expected results from DB - true if problem
@@ -61,35 +63,35 @@ namespace SlowTests.Issues
 
             // && != &&
             expressions.Add(new Tuple<Expression<Func<Entity3973, bool>>, Func<List<Entity3973>, bool>, string>(e => e.OrganizationId == 1 && e.HistoryCode == 2 && e.CaseId != 5,
-                r => r.Count != 3 || r.Select(x => x.CaseId).ToHashSet().SetEquals(new[] { 3, 4, 6 }) == false,
+                r => r.Count != 3 || ListExtensions.ToHashSet(r.Select(x => x.CaseId)).SetEquals(new[] { 3, 4, 6 }) == false,
                 "((OrganizationId:1 AND HistoryCode:2) AND -CaseId:5)"));
             expressions.Add(new Tuple<Expression<Func<Entity3973, bool>>, Func<List<Entity3973>, bool>, string>(e => e.OrganizationId == 1 && e.CaseId != 5 && e.HistoryCode == 2,
-                r => r.Count != 3 || r.Select(x => x.CaseId).ToHashSet().SetEquals(new[] { 3, 4, 6 }) == false,
+                r => r.Count != 3 || ListExtensions.ToHashSet(r.Select(x => x.CaseId)).SetEquals(new[] { 3, 4, 6 }) == false,
                 "((OrganizationId:1 AND -CaseId:5)) AND HistoryCode:2"));
             expressions.Add(new Tuple<Expression<Func<Entity3973, bool>>, Func<List<Entity3973>, bool>, string>(e => e.CaseId != 5 && e.OrganizationId == 1 && e.HistoryCode == 2,
-                r => r.Count != 3 || r.Select(x => x.CaseId).ToHashSet().SetEquals(new[] { 3, 4, 6 }) == false,
+                r => r.Count != 3 || ListExtensions.ToHashSet(r.Select(x => x.CaseId)).SetEquals(new[] { 3, 4, 6 }) == false,
                 "((-CaseId:5 AND OrganizationId:1)) AND HistoryCode:2"));
 
             // || != &&
             expressions.Add(new Tuple<Expression<Func<Entity3973, bool>>, Func<List<Entity3973>, bool>, string>(e => e.OrganizationId == 1 || e.HistoryCode == 2 && e.CaseId != 5,
-                r => r.Count != 4 || r.Select(x => x.CaseId).ToHashSet().SetEquals(new[] { 3, 4, 5, 6 }) == false,
+                r => r.Count != 4 || ListExtensions.ToHashSet(r.Select(x => x.CaseId)).SetEquals(new[] { 3, 4, 5, 6 }) == false,
                 "OrganizationId:1 OR ((HistoryCode:2 AND -CaseId:5))"));
             expressions.Add(new Tuple<Expression<Func<Entity3973, bool>>, Func<List<Entity3973>, bool>, string>(e => e.OrganizationId == 1 || e.CaseId != 5 && e.HistoryCode == 2,
-                r => r.Count != 4 || r.Select(x => x.CaseId).ToHashSet().SetEquals(new[] { 3, 4, 5, 6 }) == false,
+                r => r.Count != 4 || ListExtensions.ToHashSet(r.Select(x => x.CaseId)).SetEquals(new[] { 3, 4, 5, 6 }) == false,
                 "OrganizationId:1 OR ((-CaseId:5 AND HistoryCode:2))"));
             expressions.Add(new Tuple<Expression<Func<Entity3973, bool>>, Func<List<Entity3973>, bool>, string>(e => e.CaseId != 5 || e.OrganizationId == 1 && e.HistoryCode == 2,
-                r => r.Count != 4 || r.Select(x => x.CaseId).ToHashSet().SetEquals(new[] { 3, 4, 5, 6 }) == false,
+                r => r.Count != 4 || ListExtensions.ToHashSet(r.Select(x => x.CaseId)).SetEquals(new[] { 3, 4, 5, 6 }) == false,
                 "(-CaseId:5 AND CaseId:*) OR (OrganizationId:1 AND HistoryCode:2)"));
 
             // && != ||
             expressions.Add(new Tuple<Expression<Func<Entity3973, bool>>, Func<List<Entity3973>, bool>, string>(e => e.OrganizationId == 1 && e.HistoryCode == 2 || e.CaseId != 5,
-                r => r.Count != 4 || r.Select(x => x.CaseId).ToHashSet().SetEquals(new[] { 3, 4, 5, 6 }) == false,
+                r => r.Count != 4 || ListExtensions.ToHashSet(r.Select(x => x.CaseId)).SetEquals(new[] { 3, 4, 5, 6 }) == false,
                 "(OrganizationId:1 AND HistoryCode:2) OR (-CaseId:5 AND CaseId:*)"));
             expressions.Add(new Tuple<Expression<Func<Entity3973, bool>>, Func<List<Entity3973>, bool>, string>(e => e.OrganizationId == 1 && e.CaseId != 5 || e.HistoryCode == 2,
-                r => r.Count != 4 || r.Select(x => x.CaseId).ToHashSet().SetEquals(new[] { 3, 4, 5, 6 }) == false,
+                r => r.Count != 4 || ListExtensions.ToHashSet(r.Select(x => x.CaseId)).SetEquals(new[] { 3, 4, 5, 6 }) == false,
                 "((OrganizationId:1 AND -CaseId:5)) OR HistoryCode:2"));
             expressions.Add(new Tuple<Expression<Func<Entity3973, bool>>, Func<List<Entity3973>, bool>, string>(e => e.CaseId != 5 && e.OrganizationId == 1 || e.HistoryCode == 2,
-                r => r.Count != 4 || r.Select(x => x.CaseId).ToHashSet().SetEquals(new[] { 3, 4, 5, 6 }) == false,
+                r => r.Count != 4 || ListExtensions.ToHashSet(r.Select(x => x.CaseId)).SetEquals(new[] { 3, 4, 5, 6 }) == false,
                 "((-CaseId:5 AND OrganizationId:1)) OR HistoryCode:2"));
 
             // Other variations:
@@ -97,13 +99,13 @@ namespace SlowTests.Issues
                 r => r.Count != 1 || r[0].CaseId != 3,
                 "(OrganizationId:1 AND CaseId:3) AND ((-CaseId:5 AND CaseId:*) OR HistoryCode:2)"));
             expressions.Add(new Tuple<Expression<Func<Entity3973, bool>>, Func<List<Entity3973>, bool>, string>(e => (e.OrganizationId == 1 || e.CaseId == 3) && (e.CaseId != 5 && e.HistoryCode == 2),
-                r => r.Count != 3 || r.Select(x => x.CaseId).ToHashSet().SetEquals(new[] { 3, 4, 6 }) == false,
+                r => r.Count != 3 || ListExtensions.ToHashSet(r.Select(x => x.CaseId)).SetEquals(new[] { 3, 4, 6 }) == false,
                 "(OrganizationId:1 OR CaseId:3) AND ((-CaseId:5 AND HistoryCode:2))"));
             expressions.Add(new Tuple<Expression<Func<Entity3973, bool>>, Func<List<Entity3973>, bool>, string>(e => e.CaseId != 3 && e.CaseId != 5,
-                r => r.Count != 2 || r.Select(x => x.CaseId).ToHashSet().SetEquals(new[] { 4, 6 }) == false,
+                r => r.Count != 2 || ListExtensions.ToHashSet(r.Select(x => x.CaseId)).SetEquals(new[] { 4, 6 }) == false,
                 "((-CaseId:3 AND CaseId:*) AND -CaseId:5)"));
             expressions.Add(new Tuple<Expression<Func<Entity3973, bool>>, Func<List<Entity3973>, bool>, string>(e => e.CaseId != 3 || e.CaseId != 5,
-                r => r.Count != 4 || r.Select(x => x.CaseId).ToHashSet().SetEquals(new[] { 3, 4, 5, 6 }) == false,
+                r => r.Count != 4 || ListExtensions.ToHashSet(r.Select(x => x.CaseId)).SetEquals(new[] { 3, 4, 5, 6 }) == false,
                 "(-CaseId:3 AND CaseId:*) OR (-CaseId:5 AND CaseId:*)"));
             expressions.Add(new Tuple<Expression<Func<Entity3973, bool>>, Func<List<Entity3973>, bool>, string>(e => e.CaseId != 3 && e.CaseId != 5 && e.CaseId != 6,
                 r => r.Count != 1 || r[0].CaseId != 4,

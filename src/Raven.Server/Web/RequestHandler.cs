@@ -7,9 +7,8 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
-
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
+using Raven.Client;
+using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 
@@ -298,6 +297,15 @@ namespace Raven.Server.Web
             if (string.IsNullOrWhiteSpace(values[0]))
                 InvalidEmptyValue(name);
 
+            return values[0];
+        }
+
+        //TODO - Temporary for old client test. need to be deleted .
+        protected string GetQueryStringValue(string name)
+        {
+            var values = HttpContext.Request.Query[name];
+            if (values.Count != 1)
+                return null;
             return values[0];
         }
 

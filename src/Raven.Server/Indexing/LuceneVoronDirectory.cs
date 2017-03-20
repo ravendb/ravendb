@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using Lucene.Net.Store;
-using Raven.Abstractions.Extensions;
+using Raven.Client.Util;
 using Voron;
-using Voron.Data;
 using Voron.Impl;
-using Sparrow;
+using Voron.Data.Fixed;
 
 namespace Raven.Server.Indexing
 {
@@ -57,12 +56,10 @@ namespace Raven.Server.Indexing
             Slice str;
             using (Slice.From(_currentTransaction.Value.Allocator, name, out str))
             {
-                long length;
-                int version;
-                filesTree.GetStreamLengthAndVersion(str, out length, out version);
-                if (length == -1)
+                var info = filesTree.GetStreamInfo(str, writeable: false);
+                if (info == null)
                     throw new FileNotFoundException(name);
-                return version;
+                return info->Version;
             }
         }
 
@@ -87,25 +84,21 @@ namespace Raven.Server.Indexing
             Slice str;
             using (Slice.From(_currentTransaction.Value.Allocator, name, out str))
             {
-                long length;
-                int version;
-                filesTree.GetStreamLengthAndVersion(str, out length, out version);
-                if(length == -1)
+                var info = filesTree.GetStreamInfo(str, writeable: false);
+                if (info == null)
                     throw new FileNotFoundException(name);
-                return length;
+                return info->TotalSize;
             }
         }
 
         public override void DeleteFile(string name)
         {
             var filesTree = _currentTransaction.Value.ReadTree("Files");
-            var readResult = filesTree.Read(name);
+            var readResult = filesTree.ReadStream(name);
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
 
-            Slice str;
-            using (Slice.From(_currentTransaction.Value.Allocator, name, out str))
-                filesTree.Delete(str);
+            filesTree.DeleteStream(name);
         }
 
         public override IndexInput OpenInput(string name)

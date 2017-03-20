@@ -1,4 +1,3 @@
-import pagedResultSet = require("common/pagedResultSet");
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 
@@ -12,7 +11,7 @@ class getIdentitiesCommand extends commandBase {
         }
     }
 
-    execute(): JQueryPromise<pagedResultSet<statusDebugIdentitiesDto>> {
+    execute(): JQueryPromise<pagedResult<statusDebugIdentitiesDto>> {
         
         var args = {
             start: this.skip,
@@ -20,21 +19,20 @@ class getIdentitiesCommand extends commandBase {
         };
 
         var url = "/debug/identities";//TODO: use endpoints
-        var identitiesTask = $.Deferred();
+        var identitiesTask = $.Deferred<pagedResult<any>>();
         this.query<statusDebugIdentitiesDto>(url, args, this.ownerDb).
             fail(response => identitiesTask.reject(response)).
             done((identities: statusDebugIdentitiesDto) => {
-                var items = $.map(identities.Identities, r => { 
+                var items = identities.Identities.map(r => { 
                     return {
                         getId: () => r.Key,
                         getUrl: () => r.Key,
                         'Value': r.Value,
                         'Key': r.Key,
                         getDocumentPropertyNames: () => <Array<string>>["Key", "Value"]
-                    }
+                    };
                 });
-                var resultsSet = new pagedResultSet(items, identities.TotalCount);
-                identitiesTask.resolve(resultsSet);
+                identitiesTask.resolve({ items: items, totalResultCount: identities.TotalCount });
             });
 
         return identitiesTask;

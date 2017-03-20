@@ -6,10 +6,9 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Exceptions;
-using Raven.Client.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Exceptions.Session;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -110,8 +109,8 @@ namespace SlowTests.MailingList
                         session.Advanced.DocumentQuery<Book, BooksSearch>().Where("Text: wire each time").WaitForNonStaleResultsAsOfNow().
                             ToList();
                     var scores = from result in results
-                                 select session.Advanced.GetMetadataFor(result).Value<string>(Constants.Metadata.IndexScore);
-                    Assert.False(string.IsNullOrWhiteSpace(scores.First()));
+                                 select session.Advanced.GetMetadataFor(result).GetNumber(Constants.Documents.Metadata.IndexScore);
+                    Assert.Equal(0, scores.Single());
                 }
             }
         }

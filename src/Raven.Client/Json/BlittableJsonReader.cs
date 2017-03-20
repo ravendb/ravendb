@@ -2,12 +2,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
 using Sparrow.Json;
 
 namespace Raven.Client.Json
 {
-    public class BlittableJsonReader : JsonReader
+    internal class BlittableJsonReader : JsonReader
     {
         private readonly Stack<CurrentItem> _items = new Stack<CurrentItem>();
         private readonly Stack<BlittableJsonReaderObject.PropertiesInsertionBuffer> _buffers = new Stack<BlittableJsonReaderObject.PropertiesInsertionBuffer>();
@@ -21,11 +21,16 @@ namespace Raven.Client.Json
             public BlittableJsonReaderObject.PropertyDetails PropertyDetails;
         }
 
+        private readonly Action<JsonReader, State> _setState = ExpressionHelper.CreateFieldSetter<JsonReader, State>("_currentState");
+        private readonly Action<JsonReader, JsonToken> _setToken = ExpressionHelper.CreateFieldSetter<JsonReader, JsonToken>("_tokenType");
+
         public void Init(BlittableJsonReaderObject root)
         {
             _items.Clear();
-            _currentState = State.Start;
-            _tokenType =JsonToken.None;
+
+            _setState(this, State.Start);
+            _setToken(this, JsonToken.None);
+
             _items.Push(new CurrentItem
             {
                 Object = root,
@@ -100,17 +105,19 @@ namespace Raven.Client.Json
             throw new InvalidOperationException("Shouldn't happen");
         }
 
-        private BlittableJsonToken GetTokenFromType(object val)
+        private static BlittableJsonToken GetTokenFromType(object val)
         {
-            if (val is string)
+            if (val is string || val is LazyStringValue)
                 return BlittableJsonToken.String;
+            if (val is LazyCompressedStringValue)
+                return BlittableJsonToken.CompressedString;
             if (val is bool)
                 return BlittableJsonToken.Boolean;
             if (val == null)
                 return BlittableJsonToken.Null;
             if (val is int || val is long)
                 return BlittableJsonToken.Integer;
-            if (val is float || val is double || val is decimal)
+            if (val is float || val is double || val is decimal || val is LazyDoubleValue)
                 return BlittableJsonToken.Float;
             if (val is IEnumerable)
                 return BlittableJsonToken.StartArray;
@@ -167,8 +174,17 @@ namespace Raven.Client.Json
                 SetToken(JsonToken.None);
                 return null;
             }
+
             if (Value is int)
                 return (int)Value;
+
+            //This method will return null at the end of an array.
+            if (TokenType == JsonToken.EndArray)
+                return new int?();
+
+            if (TokenType == JsonToken.Null)
+                return new int?();
+
             return (int)Convert.ChangeType(Value, typeof(int));
         }
 
@@ -201,6 +217,8 @@ namespace Raven.Client.Json
                 return (decimal)(double)Value;
             if (Value is decimal)
                 return (decimal)Value;
+            if (Value == null)
+                return null;
             return (decimal)Convert.ChangeType(Value, typeof(decimal));
         }
 
@@ -217,7 +235,7 @@ namespace Raven.Client.Json
             var str = ReadAsString();
             if (str == null)
                 return null;
-            return DateTime.ParseExact(str, "o", CultureInfo.InvariantCulture);
+            return DateTimeOffset.ParseExact(str, "o", CultureInfo.InvariantCulture);
         }
     }
 

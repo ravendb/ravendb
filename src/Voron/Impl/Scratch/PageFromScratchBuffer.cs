@@ -55,7 +55,8 @@ namespace Voron.Impl.Scratch
 
         public override string ToString()
         {
-            return string.Format("PositionInScratchBuffer: {0}, ScratchFileNumber: {1},  Size: {2}, NumberOfPages: {3}", PositionInScratchBuffer, ScratchFileNumber, Size, NumberOfPages);
+            return
+                $"PositionInScratchBuffer: {PositionInScratchBuffer}, ScratchFileNumber: {ScratchFileNumber},  Size: {Size}, NumberOfPages: {NumberOfPages}";
         }
     }
 }

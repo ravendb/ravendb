@@ -8,11 +8,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -32,7 +33,7 @@ namespace SlowTests.MailingList
             {
                 using (var session = store.OpenSession())
                 {
-                    var model = new SearchingViewModel() { Id = Guid.NewGuid(), UserFriendlyId = "p001", Feature = "Pool" };
+                    var model = new SearchingViewModel() { Id = Guid.NewGuid().ToString(), UserFriendlyId = "p001", Feature = "Pool" };
                     model.BookingRequests.Add(new BookingRequest() { StartDay = startDate1, EndDay = endDate1 });
                     model.BookingRequests.Add(new BookingRequest() { StartDay = startDate2, EndDay = endDate2 });
 
@@ -56,7 +57,7 @@ namespace SlowTests.MailingList
                     session.Store(new FacetSetup { Id = "facets/PropertySearchingFacets", Facets = facets });
                     session.SaveChanges();
 
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var query = session.Query<SearchingViewModel, PropertiesSearchIndex>()
                         .Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResults())
@@ -64,14 +65,14 @@ namespace SlowTests.MailingList
 
                     var result = query.ToList();
 
-                    var facetResults = store.DatabaseCommands.GetFacets(new FacetQuery(store.Conventions)
+                    var facetResults = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery(store.Conventions)
                     {
                         IndexName = "PropertiesSearchIndex",
                         Query = query.ToString(),
                         FacetSetupDoc = "facets/PropertySearchingFacets"
-                    });
-                    var facetedCount = facetResults.Results["Feature"];
+                    }))[0];
 
+                    var facetedCount = facetResults.Results["Feature"];
 
                     Assert.Equal(1, result.Count());
                     Assert.Equal(1, facetResults.Results["Feature"].Values.First(x => x.Range == "pool").Hits);
@@ -82,7 +83,7 @@ namespace SlowTests.MailingList
         private class SearchingViewModel
         {
 
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string UserFriendlyId { get; set; }
             public string Feature { get; set; }
 

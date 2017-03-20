@@ -1,9 +1,7 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import simulateSqlReplicationCommand = require("commands/database/sqlReplication/simulateSqlReplicationCommand");
 import database = require("models/resources/database");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import dialog = require("plugins/dialog");
-import collection = require("models/database/documents/collection");
 import sqlReplication = require("models/database/sqlReplication/sqlReplication");
 import sqlReplicationSimulatedCommand = require ("models/database/sqlReplication/sqlReplicationSimulatedCommand");
 
@@ -69,17 +67,18 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
 
     fetchDocumentIdAutocompletes(query: string) {
         if (query.length >= 2) {
+            /* TODO
             new getDocumentsMetadataByIDPrefixCommand(query, 10, this.db)
                 .execute()
-                .done((results: queryResultDto<string>) => {
+                .done((results: documentsMetadataOnlyResponse[]) => {
                     if (this.documentId() === query) {
-                        if (results.Results.length == 1 && this.documentId() == results.Results[0]) {
+                        if (results.length === 1 && this.documentId() == results[0]) {
                             this.documentAutocompletes.removeAll();
                             return;
                         }
-                        this.documentAutocompletes(results.Results);
+                        this.documentAutocompletes(results);
                     }
-                });
+                });*/
         } else if (query.length == 0) {
             this.documentAutocompletes.removeAll();
         }
@@ -91,9 +90,10 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
         this.getResults(false);
     }
 
+    /* TODO
     getDocCssClass(doc: documentMetadataDto) {
         return collection.getCollectionCssClass((<any>doc)['@metadata']['@collection'], this.db);
-    }
+    }*/
 
     keyPressedOnDocumentAutocomplete(doc: documentMetadataDto, event: JQueryKeyEventObject) {
         if (event.keyCode == 13 && !!doc) {

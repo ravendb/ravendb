@@ -1,7 +1,6 @@
 using System;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Json.Linq;
+using Raven.Client;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -41,7 +40,7 @@ namespace SlowTests.MailingList
                 {
                     var book = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(book);
-                    metadata.Add("DateTime-ToCheck", RavenJToken.FromObject(expectedDateTime));
+                    metadata.Add("DateTime-ToCheck", expectedDateTime.ToString(Default.DateTimeOffsetFormatsToWrite));
                     session.SaveChanges();
                 }
 
@@ -50,7 +49,9 @@ namespace SlowTests.MailingList
                 {
                     var entity = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(entity);
-                    var result = metadata.Value<DateTimeOffset>("DateTime-ToCheck"); // No exception is thrown here
+
+                    string offset = metadata.GetString("DateTime-ToCheck");
+                    var result = DateTimeOffset.Parse(offset); // No exception is thrown here
                     Assert.IsType<DateTimeOffset>(result);
                     Assert.Equal(expectedDateTime, result);
                 }
@@ -70,8 +71,8 @@ namespace SlowTests.MailingList
                     var entity = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(entity);
 
-                    var result = metadata.Value<DateTimeOffset>("DateTime-ToCheck"); // An exception should not be thrown here, after changing the entity
-
+                    string offset = metadata.GetString("DateTime-ToCheck");
+                    var result = DateTimeOffset.Parse(offset); // An exception should not be thrown here, after changing the entity
                     Assert.Equal(expectedDateTime, result);
                 }
             }
@@ -104,7 +105,7 @@ namespace SlowTests.MailingList
                 {
                     var book = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(book);
-                    metadata.Add("DateTime-ToCheck", RavenJToken.FromObject(expectedDateTime));
+                    metadata.Add("DateTime-ToCheck", expectedDateTime.ToString(Default.DateTimeOffsetFormatsToWrite));
                     session.SaveChanges();
                 }
 
@@ -113,7 +114,8 @@ namespace SlowTests.MailingList
                 {
                     var entity = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(entity);
-                    var result = metadata.Value<DateTime>("DateTime-ToCheck"); // No exception is thrown here
+                    string offset = metadata.GetString("DateTime-ToCheck");
+                    var result = DateTime.Parse(offset); // No exception is thrown here
                     Assert.IsType<DateTime>(result);
                     Assert.Equal(expectedDateTime, result);
                 }
@@ -133,8 +135,8 @@ namespace SlowTests.MailingList
                     var entity = session.Load<Book>(bookId);
                     var metadata = session.Advanced.GetMetadataFor(entity);
 
-                    var result = metadata.Value<DateTime>("DateTime-ToCheck"); // An exception should not be thrown here, after changing the entity
-
+                    string offset = metadata.GetString("DateTime-ToCheck");
+                    var result = DateTime.Parse(offset); // An exception should not be thrown here, after changing the entity
                     Assert.Equal(expectedDateTime, result);
                 }
             }

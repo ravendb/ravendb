@@ -5,9 +5,10 @@ using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Raven.Abstractions.Data;
-using Raven.Client.Data.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
@@ -114,7 +115,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             CheckDisposed();
             CheckInitialized();
 
-            return new IndexWriteOperation(_index.Definition.Name, _index.Definition.MapFields, _directory, _converter, writeTransaction, this, _index._indexStorage.DocumentDatabase); // TODO arek - 'this' :/
+            if (_index.Type == IndexType.MapReduce)
+            {
+                var mapReduceIndex = (MapReduceIndex) _index;
+                if (string.IsNullOrWhiteSpace(mapReduceIndex.Definition.OutputReduceToCollection) == false)
+                    return new OutputReduceIndexWriteOperation(mapReduceIndex, _directory, _converter, writeTransaction, this);
+            }
+
+            return new IndexWriteOperation(
+                _index,
+                _directory,
+                _converter,
+                writeTransaction,
+                this // TODO arek - 'this' :/
+                );
         }
 
         public IndexReadOperation OpenIndexReader(Transaction readTransaction)
@@ -158,12 +172,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public bool ContainsField(string field)
         {
-            if (field == Constants.Indexing.Fields.DocumentIdFieldName)
+            if (field == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 return _index.Type.IsMap();
 
-            if (field.EndsWith(Constants.Indexing.Fields.RangeFieldSuffix))
-                field = field.Substring(0, field.Length - 6);
-
+            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
             field = IndexField.ReplaceInvalidCharactersInFieldName(field);
 
             return _fields.ContainsKey(field);

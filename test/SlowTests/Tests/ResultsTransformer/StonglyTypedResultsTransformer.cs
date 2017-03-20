@@ -1,14 +1,16 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Linq;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.Tests.ResultsTransformer
 {
-    public class StronglyTypedResultsTransformer : RavenNewTestBase
+    public class StronglyTypedResultsTransformer : RavenTestBase
     {
         private class Product
         {

@@ -1,43 +1,12 @@
 ﻿using FastTests.Server.Basic.Entities;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Replication
 {
     public class ReplicationTombstoneTests : ReplicationTestsBase
     {
-        [Fact]
-        public void Tombstones_replication_should_delete_document_at_destination()
-        {
-            var dbName1 = "FooBar-1";
-            var dbName2 = "FooBar-2";
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
-            {
-                using (var s1 = store1.OpenSession())
-                {
-                    s1.Store(new User(), "foo/bar");
-                    s1.SaveChanges();
-                }
-
-                SetupReplication(store1, store2);
-
-                Assert.True(WaitForDocument(store2, "foo/bar"));
-
-                using (var s1 = store1.OpenSession())
-                {
-                    s1.Delete("foo/bar");
-                    s1.SaveChanges();
-                }
-
-                var tombstoneIDs =  WaitUntilHasTombstones(store2);
-                Assert.Equal(1, tombstoneIDs.Count);
-                Assert.Contains("foo/bar", tombstoneIDs);
-
-                Assert.False(WaitForDocument(store2, "foo/bar", 1000));
-            }
-        }
-
-        [Fact]
+         [Fact]
         public void Tombstones_replication_should_delete_document_at_multiple_destinations_fan()
         {
             var dbName1 = "FooBar-1";
@@ -47,14 +16,14 @@ namespace FastTests.Server.Replication
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             using (var store3 = GetDocumentStore(dbSuffixIdentifier: dbName3))
             {
+                SetupReplication(store1, store2, store3);
+
                 using (var s1 = store1.OpenSession())
                 {
                     s1.Store(new User(), "foo/bar");
                     s1.SaveChanges();
                 }
-
-                SetupReplication(store1, store2, store3);
-
+                
                 Assert.True(WaitForDocument(store2, "foo/bar"),store2.Identifier);
                 Assert.True(WaitForDocument(store3, "foo/bar"),store3.Identifier);
 
@@ -117,81 +86,6 @@ namespace FastTests.Server.Replication
                 Assert.Contains("foo/bar", tombstoneIDs);
 
                 Assert.True(WaitForDocumentDeletion(store3, "foo/bar", 1000));
-            }
-        }
-
-        [Fact]
-        public void Tombstone_should_replicate_in_master_master()
-        {
-            var dbName1 = "FooBar-1";
-            var dbName2 = "FooBar-2";
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
-            {
-                using (var s1 = store1.OpenSession())
-                {
-                    s1.Store(new User(), "foo/bar");
-                    s1.SaveChanges();
-                }
-
-                SetupReplication(store1, store2);
-                SetupReplication(store2, store1);
-
-                Assert.True(WaitForDocument(store2, "foo/bar"));
-
-                using (var s2 = store1.OpenSession())
-                {
-                    s2.Delete("foo/bar");
-                    s2.SaveChanges();
-                }
-
-                var tombstoneIDs =  WaitUntilHasTombstones(store1);
-                Assert.Equal(1, tombstoneIDs.Count);
-                Assert.Contains("foo/bar", tombstoneIDs);
-
-                var timeout = 1000 * Server.ServerStore.DatabasesLandlord.LastRecentlyUsed.Count;
-                Assert.False(WaitForDocument(store1, "foo/bar", timeout));
-            }
-        }
-
-        [Fact]
-        public void Two_tombstones_should_replicate_in_master_master()
-        {
-            var dbName1 = "FooBar-1";
-            var dbName2 = "FooBar-2";
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
-            {
-                using (var s1 = store1.OpenSession())
-                {
-                    s1.Store(new User(), "foo/bar");
-                    s1.SaveChanges();
-                }
-                using (var s1 = store1.OpenSession())
-                {
-                    s1.Store(new User(), "foo/bar2");
-                    s1.SaveChanges();
-                }
-
-                SetupReplication(store1, store2);
-                SetupReplication(store2, store1);
-
-                var timeout = 1000 * Server.ServerStore.DatabasesLandlord.LastRecentlyUsed.Count;
-                Assert.True(WaitForDocument(store2, "foo/bar",timeout));
-                Assert.True(WaitForDocument(store2, "foo/bar2", timeout));
-
-                using (var s2 = store1.OpenSession())
-                {
-                    s2.Delete("foo/bar");
-                    s2.Delete("foo/bar2");
-                    s2.SaveChanges();
-                }
-
-                var tombstoneIDs =  WaitUntilHasTombstones(store1);
-                Assert.Equal(2, tombstoneIDs.Count);
-                Assert.Contains("foo/bar", tombstoneIDs);
-
-                Assert.False(WaitForDocument(store1, "foo/bar", timeout));
             }
         }
 
@@ -300,6 +194,40 @@ namespace FastTests.Server.Replication
                 var tombstonesAtStore2 =  GetTombstones(store2);
                 Assert.Empty(tombstonesAtStore2);
             }
+        }
+
+        [Fact]
+        public void CreateConflictAndResolveItWithTombstone()
+        {
+            var store1 = GetDocumentStore();
+            var store2 = GetDocumentStore();
+
+            using (var sessoin = store1.OpenSession())
+            {
+                sessoin.Store(new User {Name = "foo"},"foo/bar");
+                sessoin.SaveChanges();
+            }
+
+            using (var sessoin = store2.OpenSession())
+            {
+                sessoin.Store(new User { Name = "bar" }, "foo/bar");
+                sessoin.SaveChanges();
+            }
+
+            SetupReplication(store1,store2);
+            SetupReplication(store2,store1);
+
+            Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar")["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar")["foo/bar"].Count);
+
+            using (var sessoin = store1.OpenSession())
+            {
+                sessoin.Delete("foo/bar");
+                sessoin.SaveChanges();
+            }
+
+            Assert.Equal(1,WaitUntilHasTombstones(store1).Count);
+            Assert.Equal(1,WaitUntilHasTombstones(store2).Count);
         }
     }
 }

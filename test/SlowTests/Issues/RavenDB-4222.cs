@@ -6,7 +6,9 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -19,14 +21,14 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var indexName = "test";
-                store.DatabaseCommands.PutIndex(indexName, new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Name = indexName,
                     Maps = { @"from doc in docs.Orders
 select new{
 doc.Name
 }" }
-                });
+                }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -43,10 +45,10 @@ doc.Name
                     var result = session.Query<Order>(indexName).ToList();
                     Assert.Equal(1, result.Count);
                 }
-                var stats = store.DatabaseCommands.GetStatistics();
+                var stats = store.Admin.Send(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments);
 
-                store.DatabaseCommands.Admin.DisableIndex(indexName);
+                store.Admin.Send(new DisableIndexOperation(indexName));
 
                 using (var session = store.OpenSession())
                 {
@@ -55,10 +57,10 @@ doc.Name
                 }
 
                 WaitForIndexing(store);
-                stats = store.DatabaseCommands.GetStatistics();
+                stats = store.Admin.Send(new GetStatisticsOperation());
                 Assert.Equal(0, stats.CountOfDocuments);
 
-                var testIndex = store.DatabaseCommands.GetIndexStatistics(indexName);
+                var testIndex = store.Admin.Send(new GetIndexStatisticsOperation(indexName));
                 Assert.Equal(1, testIndex.EntriesCount);
             }
         }

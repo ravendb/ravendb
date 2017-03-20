@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Linq;
-using Raven.NewClient.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.MapReduce
 {
-    public class RavenDB_6019 : RavenNewTestBase
+    public class RavenDB_6019 : RavenTestBase
     {
         [Theory]
         [InlineData(1)]

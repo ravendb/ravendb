@@ -8,8 +8,8 @@ using Xunit;
 using FastTests.Blittable.BlittableJsonWriterTests;
 using System.Reflection;
 using System.Linq;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace FastTests.Blittable
 {
@@ -17,7 +17,7 @@ namespace FastTests.Blittable
     {
         private BlittableJsonReaderObject InitSimpleBlittable(JsonOperationContext context, out int size)
         {
-            var obj = RavenJObject.FromObject(new Employee
+            var obj = JObject.FromObject(new Employee
             {
                 Id = "1",
                 FirstName = "Hibernating",
@@ -40,7 +40,7 @@ namespace FastTests.Blittable
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var obj = RavenJObject.FromObject(new Employee
+                var obj = JObject.FromObject(new Employee
                 {
                     Id = "1",
                     FirstName = "Hibernating\nRhinos",
@@ -190,7 +190,7 @@ namespace FastTests.Blittable
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var company = InitCompany();
-                var obj = RavenJObject.FromObject(company);
+                var obj = JObject.FromObject(company);
                 var objString = obj.ToString(Formatting.None);
                 var stream = new MemoryStream();
                 var streamWriter = new StreamWriter(stream);
@@ -207,7 +207,7 @@ namespace FastTests.Blittable
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var obj = RavenJObject.FromObject(new Empty());
+                var obj = JObject.FromObject(new Empty());
                 var objString = obj.ToString(Formatting.None);
                 var stream = new MemoryStream();
                 var streamWriter = new StreamWriter(stream);
@@ -471,7 +471,7 @@ namespace FastTests.Blittable
                     Object = new Empty(),
                     String = "qwertyuio"
                 };
-                var obj = RavenJObject.FromObject(allTokens);
+                var obj = JObject.FromObject(allTokens);
                 var objString = obj.ToString(Formatting.None);
                 var stream = new MemoryStream();
                 var streamWriter = new StreamWriter(stream);
@@ -508,7 +508,7 @@ namespace FastTests.Blittable
                               "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
                               "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                     };
-                    var obj = RavenJObject.FromObject(temp);
+                    var obj = JObject.FromObject(temp);
                     var objString = obj.ToString(Formatting.None);
                     var buffer = Encoding.UTF8.GetBytes(objString);
                     fixed (byte* pBuffer = buffer)
@@ -551,7 +551,7 @@ namespace FastTests.Blittable
                         Object = new Empty(),
                         String = "qwertyuio"
                     };
-                    var obj = RavenJObject.FromObject(allTokens);
+                    var obj = JObject.FromObject(allTokens);
                     var objString = obj.ToString(Formatting.None);
 
                     var data = Encoding.UTF8.GetBytes(objString);
@@ -611,7 +611,7 @@ namespace FastTests.Blittable
                               "abcdefghijklmnopqrstuvwxyz" +
                               "abcdefghijklmnopqrstuvwxyz\n"
                     };
-                    var obj = RavenJObject.FromObject(temp);
+                    var obj = JObject.FromObject(temp);
                     var objString = obj.ToString(Formatting.None);
                     var buffer = Encoding.UTF8.GetBytes(objString);
                     fixed (byte* pBuffer = buffer)
@@ -652,7 +652,7 @@ namespace FastTests.Blittable
                     {
                         str = createRandomEscString(260)
                     };
-                    var obj = RavenJObject.FromObject(temp);
+                    var obj = JObject.FromObject(temp);
                     var objString = obj.ToString(Formatting.None);
                     var buffer = Encoding.UTF8.GetBytes(objString);
                     fixed (byte* pBuffer = buffer)
@@ -686,7 +686,7 @@ namespace FastTests.Blittable
                         str = createRandomEscString(66 * 1024)
                     };
 
-                    var obj = RavenJObject.FromObject(temp);
+                    var obj = JObject.FromObject(temp);
                     var objString = obj.ToString(Formatting.None);
                     var buffer = Encoding.UTF8.GetBytes(objString);
                     fixed (byte* pBuffer = buffer)

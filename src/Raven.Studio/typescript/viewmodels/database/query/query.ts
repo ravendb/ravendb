@@ -1,12 +1,8 @@
 import app = require("durandal/app");
-import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import pagedList = require("common/pagedList");
-import pagedResultSet = require("common/pagedResultSet");
 import messagePublisher = require("common/messagePublisher");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collectionsStats = require("models/database/documents/collectionsStats"); 
@@ -17,24 +13,22 @@ import database = require("models/resources/database");
 import querySort = require("models/database/query/querySort");
 import collection = require("models/database/documents/collection");
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
-import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
-import deleteDocumentsMatchingQueryConfirm = require("viewmodels/database/query/deleteDocumentsMatchingQueryConfirm");
 import document = require("models/database/documents/document");
-import customColumnParams = require("models/database/documents/customColumnParams");
-import customColumns = require("models/database/documents/customColumns");
-import selectColumns = require("viewmodels/common/selectColumns");
-import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
 import queryStatsDialog = require("viewmodels/database/query/queryStatsDialog");
-import customFunctions = require("models/database/documents/customFunctions");
 import transformerType = require("models/database/index/transformer");
-import getIndexSuggestionsCommand = require("commands/database/index/getIndexSuggestionsCommand");
 import recentQueriesStorage = require("common/storage/recentQueriesStorage");
-import virtualTable = require("widgets/virtualTable/viewModel");
 import queryUtil = require("common/queryUtil");
 import eventsCollector = require("common/eventsCollector");
-import showDataDialog = require("viewmodels/common/showDataDialog");
 import queryCriteria = require("models/database/query/queryCriteria");
 import queryTransformerParameter = require("models/database/query/queryTransformerParameter");
+
+import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
+import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import columnsSelector = require("viewmodels/partial/columnsSelector");
+import popoverUtils = require("common/popoverUtils");
 
 type indexItem = {
     name: string;
@@ -45,20 +39,23 @@ type filterType = "in" | "string" | "range";
 
 type stringSearchType = "Starts With" | "Ends With" | "Contains" | "Exact";
 
-type rangeSearchType = "Numeric Double" | "Numeric Int" | "Numeric Long" | "Alphabetical" | "Datetime";
+type rangeSearchType = "Numeric Double" | "Numeric Long" | "Alphabetical" | "Datetime";
+
+type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<document>>;
 
 class query extends viewModelBase {
 
     static readonly ContainerSelector = "#queryContainer";
-    static readonly DynamicPrefix = "dynamic/";
     static readonly $body = $("body");
 
     static readonly SearchTypes: stringSearchType[] = ["Starts With", "Ends With", "Contains", "Exact"];
-    static readonly RangeSearchTypes: rangeSearchType[] = ["Numeric Double", "Numeric Int", "Numeric Long", "Alphabetical", "Datetime"];
+    static readonly RangeSearchTypes: rangeSearchType[] = ["Numeric Double", "Numeric Long", "Alphabetical", "Datetime"];
     static readonly SortTypes: querySortType[] = ["Ascending", "Descending", "Range Ascending", "Range Descending"];
 
+    private gridController = ko.observable<virtualGridController<any>>();
+
     recentQueries = ko.observableArray<storedQueryDto>();
-    allTransformers = ko.observableArray<Raven.Abstractions.Indexing.TransformerDefinition>();
+    allTransformers = ko.observableArray<Raven.Client.Documents.Transformers.TransformerDefinition>();
 
     collections = ko.observableArray<collection>([]);
     indexes = ko.observableArray<indexItem>();
@@ -70,14 +67,14 @@ class query extends viewModelBase {
 
     filterSettings = {
         searchField: ko.observable<string>(),
-        type: ko.observable<filterType>("string"),
+        type: ko.observable<filterType>(),
         value: ko.observable<string>(),
-        searchType: ko.observable<stringSearchType>("Starts With"),
+        searchType: ko.observable<stringSearchType>(),
         rangeFrom: ko.observable<string>(),
         rangeTo: ko.observable<string>(),
         rangeDateFrom: ko.observable<moment.Moment>(),
         rangeDateTo: ko.observable<moment.Moment>(),
-        rangeSearchType: ko.observable<rangeSearchType>("Numeric Double"),
+        rangeSearchType: ko.observable<rangeSearchType>(),
         inValues: ko.observable<string>(),
         validationGroup: null as KnockoutValidationGroup,
     }
@@ -87,18 +84,24 @@ class query extends viewModelBase {
     isInFilter: KnockoutComputed<boolean>;
     isStringFilter: KnockoutComputed<boolean>;
 
+    columnsSelector = new columnsSelector<document>();
+
     uiTransformer = ko.observable<string>(); // represents UI value, which might not be yet applied to criteria 
     uiTransformerParameters = ko.observableArray<queryTransformerParameter>(); // represents UI value, which might not be yet applied to criteria 
 
-    queryResults = ko.observable<pagedList>();
-    queryStats = ko.observable<Raven.Client.Data.Queries.QueryResult<any>>();
+    fetcher = ko.observable<fetcherType>();
+    queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any>>();
     requestedIndexForQuery = ko.observable<string>();
     staleResult: KnockoutComputed<boolean>;
+    dirtyResult = ko.observable<boolean>();
+
+    private columnPreview = new columnPreviewPlugin<document>();
 
     selectedIndexLabel: KnockoutComputed<string>;
     hasEditableIndex: KnockoutComputed<boolean>;
     queryTextHasFocus = ko.observable<boolean>(false);
     addFilterVisible = ko.observable<boolean>(false);
+    addFilterEnabled: KnockoutComputed<boolean>;
 
     editIndexUrl: KnockoutComputed<string>;
     indexPerformanceUrl: KnockoutComputed<string>;
@@ -127,7 +130,6 @@ class query extends viewModelBase {
     contextName = ko.observable<string>();
 
     currentColumnsParams = ko.observable<customColumns>(customColumns.empty());
-    currentCustomFunctions = ko.observable<customFunctions>(customFunctions.empty());
 
     indexSuggestions = ko.observableArray<indexSuggestion>([]);
     showSuggestions: KnockoutComputed<boolean>;
@@ -144,6 +146,7 @@ class query extends viewModelBase {
 
         this.initObservables();
         this.initValidation();
+        this.resetFilterSettings();
 
         this.bindToCurrentInstance("runRecentQuery", "selectTransformer", "addFilter", "removeSortBy");
     }
@@ -156,6 +159,8 @@ class query extends viewModelBase {
         });
 
         this.hasEditableIndex = ko.pureComputed(() => this.criteria().selectedIndex() ? !this.criteria().selectedIndex().startsWith("dynamic") : false);
+
+        this.addFilterEnabled = ko.pureComputed(() => this.indexFields().length > 0);
 
         this.editIndexUrl = ko.pureComputed(() => this.criteria().selectedIndex() ? appUrl.forEditIndex(this.criteria().selectedIndex(), this.activeDatabase()) : null);
         this.indexPerformanceUrl = ko.pureComputed(() => this.criteria().selectedIndex() ? appUrl.forIndexPerformance(this.activeDatabase(), this.criteria().selectedIndex()) : null);
@@ -297,6 +302,7 @@ class query extends viewModelBase {
         this.updateHelpLink('KCIMJK');
         
         const db = this.activeDatabase();
+
         return $.when<any>(this.fetchAllCollections(db), this.fetchAllIndexes(db))
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
     }
@@ -322,11 +328,43 @@ class query extends viewModelBase {
         $(".query-title small").popover({
             html: true,
             trigger: "hover",
-            container: "#queryContainer",
-            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="code-keyword">Name</span>: Hi?berna*<br/><span class="code-keyword">Count</span>: [0 TO 10]<br/><span class="code-keyword">Title</span>: "RavenDb Queries 1010" AND <span class="code-keyword">Price</span>: [10.99 TO *]</pre>',
+            template: popoverUtils.longPopoverTemplate,
+            container: "body",
+            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="token keyword">Name</span>: Hi?berna*<br/><span class="token keyword">Count</span>: [0 TO 10]<br/><span class="token keyword">Title</span>: "RavenDb Queries 1010" <span class="token keyword">AND Price</span>: [10.99 TO *]</pre>'
         });
 
         this.registerDisposableHandler($(window), "storage", () => this.loadRecentQueries());
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+
+        this.setupDisableReasons();
+
+        const grid = this.gridController();
+
+        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.collections().map(x => x.name), {
+            enableInlinePreview: true
+        });
+
+        this.columnsSelector.init(grid,
+            (s, t, c) => this.fetcher()(s, t),
+            (w, r) => documentsProvider.findColumns(w, r), (results: pagedResult<document>) => documentBasedColumnsProvider.extractUniquePropertyNames(results));
+
+        grid.headerVisible(true);
+
+        grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
+
+        this.fetcher.subscribe(() => grid.reset());
+
+        this.columnPreview.install("virtual-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
+            if (column instanceof textColumn) {
+                const value = column.getCellValue(doc);
+                const json = JSON.stringify(value, null, 4);
+                const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                onValue(html);
+            }
+        });
     }
 
     private loadRecentQueries() {
@@ -334,7 +372,7 @@ class query extends viewModelBase {
             .done(queries => this.recentQueries(queries));
     }
 
-    private fetchAllTransformers(db: database): JQueryPromise<Array<Raven.Abstractions.Indexing.TransformerDefinition>> {
+    private fetchAllTransformers(db: database): JQueryPromise<Array<Raven.Client.Documents.Transformers.TransformerDefinition>> {
         return new getTransformersCommand(db)
             .execute()
             .done(transformers => this.allTransformers(transformers));
@@ -351,7 +389,7 @@ class query extends viewModelBase {
     private fetchAllIndexes(db: database): JQueryPromise<any> {
         return new getDatabaseStatsCommand(db)
             .execute()
-            .done((results: Raven.Client.Data.DatabaseStatistics) => {
+            .done((results: Raven.Client.Documents.Operations.DatabaseStatistics) => {
                 this.indexes(results.Indexes.map(indexDto => {
                     return {
                         name: indexDto.Name,
@@ -385,15 +423,33 @@ class query extends viewModelBase {
 
     setSelectedIndex(indexName: string) {
         this.criteria().setSelectedIndex(indexName);
+        this.resetFilterSettings();
         this.uiTransformer(null);
         this.uiTransformerParameters([]);
+
+        this.columnsSelector.reset();    
+        
         this.runQuery();
 
         const indexQuery = query.getIndexUrlPartFromIndexName(indexName);
         const url = appUrl.forQuery(this.activeDatabase(), indexQuery);
         this.updateUrl(url);
 
-        this.fetchIndexFields(indexName);
+        queryUtil.fetchIndexFields(this.activeDatabase(), indexName, this.indexFields);
+    }
+
+    private resetFilterSettings() {
+        this.filterSettings.searchField(undefined);
+        this.filterSettings.type("string");
+        this.filterSettings.value(undefined);
+        this.filterSettings.searchType("Starts With");
+        this.filterSettings.rangeFrom(undefined);
+        this.filterSettings.rangeTo(undefined);
+        this.filterSettings.rangeDateFrom(undefined);
+        this.filterSettings.rangeDateTo(undefined);
+        this.filterSettings.rangeSearchType("Numeric Double");
+        this.filterSettings.inValues(undefined);
+        this.filterSettings.validationGroup.errors.showAllMessages(false);
     }
 
     static getIndexUrlPartFromIndexName(indexNameOrCollectionName: string) {
@@ -415,8 +471,7 @@ class query extends viewModelBase {
         return sortPart + (sortPart && transformerPart ? " and " : "") + transformerPart;
     }
 
-    runQuery(): pagedList {
-        //TODO: spinner
+    runQuery() {
         eventsCollector.default.reportEvent("query", "run");
         this.queryTextHasFocus(false);
         this.closeAddFilter();
@@ -434,7 +489,7 @@ class query extends viewModelBase {
 
             const queryCommand = new queryIndexCommand(database, 0, 25, this.criteria(), this.disableCache());
 
-            this.rawJsonUrl(appUrl.forResourceQuery(database) + queryCommand.getUrl());
+            this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCommand.getUrl());
             this.csvUrl(queryCommand.getCsvUrl());
 
             const resultsFetcher = (skip: number, take: number) => {
@@ -443,7 +498,7 @@ class query extends viewModelBase {
                     .always(() => {
                         this.isLoading(false);
                     })
-                    .done((queryResults: pagedResultSet<any>) => {
+                    .done((queryResults: pagedResult<any>) => {
                         this.queryStats(queryResults.additionalResultInfo);
                         //TODO: this.indexSuggestions([]);
                         /* TODO
@@ -471,21 +526,22 @@ class query extends viewModelBase {
                             }
                         }*/
                     })
-                    .fail(() => {
-                        //TODO: remove only if index not found?
-                        recentQueriesStorage.removeIndexFromRecentQueries(database, selectedIndex);
+                    .fail((request: JQueryXHR) => {
+                        if (request.status === 404) {
+                            recentQueriesStorage.removeIndexFromRecentQueries(database, selectedIndex);
+                        }
                     });
             };
-            const resultsList = new pagedList(resultsFetcher);
-            this.queryResults(resultsList);
+
+            this.fetcher(resultsFetcher);
             this.recordQueryRun(this.criteria());
-
-            return resultsList;
         }
-
-        return null;
     }
 
+    refresh() {
+        this.gridController().reset(true);
+    }
+    
     editSelectedIndex() {
         eventsCollector.default.reportEvent("query", "edit-selected-index");
         this.navigate(this.editIndexUrl());
@@ -499,59 +555,11 @@ class query extends viewModelBase {
         this.addFilterVisible(true);
     }
 
-    fetchIndexFields(indexName: string) {
-        this.indexFields([]);
-
-        //TODO: can we simplify this method?
-
-        // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
-        // Fields don't show for All Documents.
-        var isAllDocumentsDynamicQuery = indexName === "All Documents";
-        if (!isAllDocumentsDynamicQuery) {
-            //if index is dynamic, get columns using index definition, else get it using first index result
-            if (indexName.startsWith(query.DynamicPrefix)) {
-                /* TODO - handle auto indexes as well!
-                var collectionName = indexName.substring(8);
-                new collection(collectionName, this.activeDatabase())
-                    .fetchDocuments(0, 1)
-                    .done((result: pagedResultSet<any>) => {
-                        if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
-                            var dynamicIndexPattern: document = new document(result.items[0]);
-                            if (!!dynamicIndexPattern) {
-                                this.indexFields(dynamicIndexPattern.getDocumentPropertyNames());
-                            }
-                        }
-                    });*/
-            } else {
-                new getIndexEntriesFieldsCommand(indexName, this.activeDatabase())
-                    .execute()
-                    .done((fields) => {
-                        //TODO: self.isTestIndex(result.IsTestIndex);
-                        this.indexFields(fields);
-                    });
-            }
-        }
-    }
-
     openQueryStats() {
         //TODO: work on explain in dialog + on index name
         eventsCollector.default.reportEvent("query", "show-stats");
         const viewModel = new queryStatsDialog(this.queryStats(), this.requestedIndexForQuery());
         app.showBootstrapDialog(viewModel);
-    }
-
-    //TODO: deprecated?
-    createPostboxSubscriptions(): Array<KnockoutSubscription> {
-        return [
-            ko.postbox.subscribe("ViewItem", (itemNumber: number) => {
-                this.queryResults().getNthItem(itemNumber)
-                    .done((item: document) => {
-                        const dto = item.toDto(true);
-
-                        app.showBootstrapDialog(new showDataDialog(item.getId(), JSON.stringify(dto, null, 2)));
-                    });
-            })
-        ];
     }
 
     private recordQueryRun(criteria: queryCriteria) {
@@ -593,7 +601,7 @@ class query extends viewModelBase {
         });
     }
 
-    selectTransformer(transformer: Raven.Abstractions.Indexing.TransformerDefinition) {
+    selectTransformer(transformer: Raven.Client.Documents.Transformers.TransformerDefinition) {
         if (transformer) {
             this.uiTransformer(transformer.Name);
             const inputs = transformerType.extractInputs(transformer.TransformResults);
@@ -729,12 +737,9 @@ class query extends viewModelBase {
             newQueryPart += " AND ";
         }
 
-        const fromPrefix = filter.rangeFrom() ? this.getRangePrefix(filter.rangeSearchType()) : "";
-        const toPrefix = filter.rangeTo() ? this.getRangePrefix(filter.rangeSearchType()) : "";
+        const rangePrefix = this.getRangePrefix(filter.rangeSearchType());
 
-        const rangePrefix = filter.rangeSearchType().startsWith("Numeric") ? "_Range" : "";
-
-        newQueryPart += filter.searchField() + rangePrefix + ":[" + fromPrefix + from + " TO " + toPrefix + to + "]";
+        newQueryPart += filter.searchField() + rangePrefix + ":[" + from + " TO " + to + "]";
 
         this.criteria().queryText(this.criteria().queryText() + newQueryPart);
 
@@ -742,11 +747,9 @@ class query extends viewModelBase {
 
     private getRangePrefix(type: rangeSearchType): string {
         if (type === "Numeric Double") {
-            return "Dx";
+            return "_D_Range";
         } else if (type === "Numeric Long") {
-            return "Lx";
-        } else if (type === "Numeric Int") {
-            return "Ix";
+            return "_L_Range";
         }
         return "";
     }
@@ -777,6 +780,10 @@ class query extends viewModelBase {
         return "";
     }
 
+    queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
+        queryUtil.queryCompleter(this.indexFields, this.criteria().selectedIndex, this.activeDatabase, editor, session, pos, prefix, callback);
+    }
+
 
     /* TODO
 
@@ -786,7 +793,7 @@ class query extends viewModelBase {
         var queryResult = this.runQuery();
         queryResult
             .fetch(0, 1)
-            .done((results: pagedResultSet<any>) => {
+            .done((results: pagedResult<any>) => {
                 if (results.totalResultCount === 0) {
                     app.showBootstrapMessage("There are no documents matching your query.", "Nothing to do");
                 } else {
@@ -800,15 +807,6 @@ class query extends viewModelBase {
         app
             .showBootstrapDialog(viewModel)
             .done(() => this.runQuery());
-    }
-
-    private getQueryGrid(): virtualTable {
-        var gridContents = $(query.queryGridSelector).children()[0];
-        if (gridContents) {
-            return ko.dataFor(gridContents);
-        }
-
-        return null;
     }
 
     extractQueryFields(): Array<queryFieldInfo> {
@@ -827,8 +825,12 @@ class query extends viewModelBase {
         }
         return queryFields;
     }
+   
+*/
 
-    getIndexSuggestions(indexName: string, info: queryFieldInfo) {
+    /* TODO future:
+
+     getIndexSuggestions(indexName: string, info: queryFieldInfo) {
         if (_.includes(this.indexFields(), info.FieldName)) {
             var task = new getIndexSuggestionsCommand(this.activeDatabase(), indexName, info.FieldName, info.FieldValue).execute();
             task.done((result: suggestionsDto) => {
@@ -853,54 +855,12 @@ class query extends viewModelBase {
         this.runQuery();
     }
 
-   
-*/
-
-
-
-
-    /* TODO future:
-
       exportCsv() {
         eventsCollector.default.reportEvent("query", "export-csv");
 
         var db = this.activeDatabase();
-        var url = appUrl.forResourceQuery(db) + this.csvUrl();
+        var url = appUrl.forDatabaseQuery(db) + this.csvUrl();
         this.downloader.download(db, url);
-    }
-
-     selectColumns() {
-        eventsCollector.default.reportEvent("query", "select-columns");
-
-        var selectColumnsViewModel: selectColumns = new selectColumns(
-            this.currentColumnsParams().clone(),
-            this.currentCustomFunctions().clone(),
-            this.contextName(),
-            this.activeDatabase(),
-            this.getQueryGrid().getColumnsNames());
-
-        app.showBootstrapDialog(selectColumnsViewModel);
-        selectColumnsViewModel.onExit().done((cols: customColumns) => {
-            this.currentColumnsParams(cols);
-
-            this.runQuery();
-        });
-    }
-
-     queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-        queryUtil.queryCompleter(this.indexFields, this.selectedIndex, this.dynamicPrefix, this.activeDatabase, editor, session, pos, prefix, callback);
-    }
-
-     private fetchCustomFunctions(db: database): JQueryPromise<any> {
-        var deferred = $.Deferred();
-
-        var customFunctionsCommand = new getEffectiveCustomFunctionsCommand(db).execute();
-        customFunctionsCommand.done((cf: configurationDocumentDto<customFunctionsDto>) => {
-            this.currentCustomFunctions(new customFunctions(cf.MergedDocument));
-        })
-            .always(() => deferred.resolve());
-
-        return deferred;
     }
 
      onIndexChanged(newIndexName: string) {

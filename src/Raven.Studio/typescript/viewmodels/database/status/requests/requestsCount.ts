@@ -1,6 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getDebugMetricsCommand = require("commands/database/debug/getDebugMetricsCommand");
-import d3 = require("d3");
 
 class requestsCount extends viewModelBase {
     /*

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -18,8 +18,8 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.TransformTypeTagNameToDocumentKeyPrefix = tag => tag;
-                store.Conventions.FindTypeTagName = type => type.Name;
+                store.Conventions.TransformTypeCollectionNameToDocumentIdPrefix = tag => tag;
+                store.Conventions.FindCollectionName = type => type.Name;
 
                 new LogEntryCountByDate().Execute(store);
                 using (var session = store.OpenSession())

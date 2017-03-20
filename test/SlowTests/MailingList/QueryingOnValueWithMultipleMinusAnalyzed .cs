@@ -1,7 +1,7 @@
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Xunit;
 
@@ -38,8 +38,8 @@ namespace SlowTests.MailingList
                     }
 
                 }.ToIndexDefinition(store.Conventions);
-
-                store.DatabaseCommands.PutIndex("someIndex", indexDefinition);
+                indexDefinition.Name = "someIndex";
+                store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
 
 
                 var prodOne = new Product

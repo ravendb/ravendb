@@ -2,7 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexing;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -39,8 +40,9 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("Foos/TestIndex", new IndexDefinition()
+                store.Admin.Send(new PutIndexesOperation(new[] {  new IndexDefinition()
                 {
+                    Name = "Foos/TestIndex",
                     Maps =
                     {
                         @"from doc in docs.LaboratoryTrials
@@ -49,7 +51,7 @@ namespace SlowTests.MailingList
                 _ = doc.Patient.IdCards.Select((Func<dynamic,dynamic>)(x => new Field(x.Key, x.Value, Field.Store.NO, Field.Index.ANALYZED_NO_NORMS)))
             }"
                     }
-                }, true);
+                }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -75,7 +77,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var laboratoryTrials = session.Advanced.DocumentQuery<LaboratoryTrial>("Foos/TestIndex")
-                        .WaitForNonStaleResultsAsOfLastWrite(TimeSpan.FromHours(1))
+                        .WaitForNonStaleResultsAsOfNow(TimeSpan.FromHours(1))
                         .WhereEquals("Read", "Yes")
                         .ToList();
                     Assert.NotEmpty(laboratoryTrials);

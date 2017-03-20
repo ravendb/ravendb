@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Json.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Transformers;
+using Raven.Client.Json;
+using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -77,24 +77,33 @@ namespace SlowTests.MailingList
                     var deserializer = session.Advanced.DocumentStore.Conventions.CreateSerializer();
                     var indexQuery = new IndexQuery(documentStore.Conventions) { Query = query.ToString(), PageSize = 1024, };
 
-                    var queryResult = session.Advanced.DocumentStore.DatabaseCommands.Query(typeof(CarIndex).Name, indexQuery);
-
-                    var carLots = queryResult
-                        .Results
-                        .Select(x => deserializer.Deserialize<CarLot>(new RavenJTokenReader(x)))
-                        .ToArray()
-                        ;
-
-                    foreach (var carLot in carLots)
+                    using (var commands = documentStore.Commands())
                     {
-                        Assert.NotNull(carLot.Cars);
-                        Assert.NotEmpty(carLot.Cars);
-                    }
+                        var queryResult = commands.Query(typeof(CarIndex).Name, indexQuery);
 
-                    cars = carLots
-                        .SelectMany(x => x.Cars)
-                        .Where(car => car.LeaseHistory.Any(leasee => leasee.Id == targetLeasee))
-                        .ToList();
+                        var carLots = queryResult
+                            .Results
+                            .Select(x =>
+                            {
+                                using (var reader = new BlittableJsonReader())
+                                {
+                                    reader.Init((BlittableJsonReaderObject)x);
+                                    return deserializer.Deserialize<CarLot>(reader);
+                                }
+                            })
+                            .ToArray();
+
+                        foreach (var carLot in carLots)
+                        {
+                            Assert.NotNull(carLot.Cars);
+                            Assert.NotEmpty(carLot.Cars);
+                        }
+
+                        cars = carLots
+                            .SelectMany(x => x.Cars)
+                            .Where(car => car.LeaseHistory.Any(leasee => leasee.Id == targetLeasee))
+                            .ToList();
+                    }
                 }
             }
 

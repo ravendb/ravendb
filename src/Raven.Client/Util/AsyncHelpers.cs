@@ -10,10 +10,9 @@ using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 
-using Raven.Abstractions.Extensions;
-
-namespace Raven.Abstractions.Util
+namespace Raven.Client.Util
 {
     public static class AsyncHelpers
     {
@@ -99,11 +98,11 @@ namespace Raven.Abstractions.Util
 
         private class ExclusiveSynchronizationContext : SynchronizationContext
         {
-            private readonly AutoResetEvent workItemsWaiting = new AutoResetEvent(false);
-            private readonly Queue<Tuple<SendOrPostCallback, object>> items = new Queue<Tuple<SendOrPostCallback, object>>();
+            private readonly AutoResetEvent _workItemsWaiting = new AutoResetEvent(false);
+            private readonly Queue<Tuple<SendOrPostCallback, object>> _items = new Queue<Tuple<SendOrPostCallback, object>>();
 
-            private bool done;
-            public Exception InnerException { get; set; }
+            private bool _done;
+            public Exception InnerException { private get; set; }
 
             public override void Send(SendOrPostCallback d, object state)
             {
@@ -112,28 +111,28 @@ namespace Raven.Abstractions.Util
 
             public override void Post(SendOrPostCallback d, object state)
             {
-                lock (items)
+                lock (_items)
                 {
-                    items.Enqueue(Tuple.Create(d, state));
+                    _items.Enqueue(Tuple.Create(d, state));
                 }
-                workItemsWaiting.Set();
+                _workItemsWaiting.Set();
             }
 
             public void EndMessageLoop()
             {
-                Post(_ => done = true, null);
+                Post(_ => _done = true, null);
             }
 
             public void BeginMessageLoop()
             {
-                while (!done)
+                while (!_done)
                 {
                     Tuple<SendOrPostCallback, object> task = null;
-                    lock (items)
+                    lock (_items)
                     {
-                        if (items.Count > 0)
+                        if (_items.Count > 0)
                         {
-                            task = items.Dequeue();
+                            task = _items.Dequeue();
                         }
                     }
                     if (task != null)
@@ -146,7 +145,7 @@ namespace Raven.Abstractions.Util
                     }
                     else
                     {
-                        workItemsWaiting.WaitOne();
+                        _workItemsWaiting.WaitOne();
                     }
                 }
             }

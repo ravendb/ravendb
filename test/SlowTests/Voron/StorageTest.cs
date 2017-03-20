@@ -10,6 +10,7 @@ using Voron.Impl;
 using Voron.Global;
 using Sparrow;
 using Sparrow.Logging;
+using Xunit;
 
 namespace SlowTests.Voron
 {
@@ -190,6 +191,20 @@ namespace SlowTests.Voron
             Slice item2;
             Slice.External(txh.Allocator, (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize, (ushort) node->DataSize, ByteStringType.Immutable, out item2);
             return Tuple.Create(item1, item2);
+        }
+
+        public class TheoryAndSkipWhen32BitsEnvironment : TheoryAttribute
+        {
+            public TheoryAndSkipWhen32BitsEnvironment()
+            {
+                var shouldForceEnvVar = Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager");
+
+                bool result;
+                if (bool.TryParse(shouldForceEnvVar, out result))
+                    if (result || IntPtr.Size == sizeof(int))
+                        Skip = "Not supported for 32 bits";
+                    
+            }
         }
     }
 }

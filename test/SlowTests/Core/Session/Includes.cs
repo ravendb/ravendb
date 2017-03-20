@@ -13,7 +13,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Session
 {
-    public class Includes : RavenNewTestBase
+    public class Includes : RavenTestBase
     {
         [Fact]
         public void BasicInclude()

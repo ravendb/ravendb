@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.Linq;
 using System.Linq;
 
 namespace Raven.Server.Documents.Indexes.Static.Extensions

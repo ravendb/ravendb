@@ -8,9 +8,9 @@ using System.Collections.Generic;
 using System.Linq;
 
 using FastTests;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using SlowTests.Core.Utils.Transformers;
@@ -24,7 +24,7 @@ using PostContent = SlowTests.Core.Utils.Entities.PostContent;
 
 namespace SlowTests.Core.Indexing
 {
-    public class ReferencedDocuments : RavenNewTestBase
+    public class ReferencedDocuments : RavenTestBase
     {
         [Fact]
         public void CanUseLoadDocumentToIndexReferencedDocs()
@@ -74,7 +74,7 @@ namespace SlowTests.Core.Indexing
 
 
                     var companies = session.Advanced.DocumentQuery<Companies_WithReferencedEmployees.CompanyEmployees>(companiesWithEmployees.IndexName)
-                        .SetResultTransformer(companiesWithEmployeesTransformer.TransformerName)
+                        .SetTransformer(companiesWithEmployeesTransformer.TransformerName)
                         .ToArray();
 
                     Assert.Equal(1, companies.Length);
@@ -266,7 +266,7 @@ namespace SlowTests.Core.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexOperation("Users/ByCity", new IndexDefinition
+                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps =
                     {
@@ -277,8 +277,9 @@ namespace SlowTests.Core.Indexing
                                {
                                    City = address1.City
                                }"
-                    }
-                }));
+                    },
+                    Name = "Users/ByCity"
+                }}));
 
                 using (var session = store.OpenSession())
                 {
@@ -288,7 +289,7 @@ namespace SlowTests.Core.Indexing
                     session.Store(address1);
                     session.Store(address2);
 
-                    session.Advanced.GetMetadataFor(address2)[Constants.Metadata.Collection] = "addresses";
+                    session.Advanced.GetMetadataFor(address2)[Constants.Documents.Metadata.Collection] = "addresses";
 
                     var user1 = new User
                     {

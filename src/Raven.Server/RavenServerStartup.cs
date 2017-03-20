@@ -9,19 +9,19 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Raven.Abstractions.Data;
-using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Exceptions.Compilation;
-using Raven.NewClient.Client.Exceptions.Database;
+using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Exceptions;
+using Raven.Client.Documents.Exceptions.Compilation;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
+using Raven.Server.Config.Attributes;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
-using IndexCompilationException = Raven.Client.Exceptions.Compilation.IndexCompilationException;
-using ConflictException = Raven.Client.Exceptions.ConflictException;
-using DocumentConflictException = Raven.Client.Exceptions.DocumentConflictException;
 
 namespace Raven.Server
 {
@@ -45,15 +45,68 @@ namespace Raven.Server
 
             _router = app.ApplicationServices.GetService<RequestRouter>();
             _server = app.ApplicationServices.GetService<RavenServer>();
+            if (IsServerRuningInASafeManner() == false)
+            {
+                app.Run(UnsafeRequestHandler);
+                return;
+            }            
             app.Run(RequestHandler);
+        }
+
+        private bool IsServerRuningInASafeManner()
+        {
+            if (_server.Configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.None)
+                return true;
+            if (_server.Configuration.Server.AllowEverybodyToAccessTheServerAsAdmin == true)
+                return true;
+            var url = _server.Configuration.Core.ServerUrl.ToLowerInvariant();
+            var uri = new Uri(url);
+            //url isn't set to localhost 
+            return uri.IsLoopback;
         }
 
         public static bool SkipHttpLogging;
 
+        private Task UnsafeRequestHandler(HttpContext context)
+        {
+            context.Response.StatusCode = (int) HttpStatusCode.ServiceUnavailable;
+            context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+            JsonOperationContext ctx;
+            using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
+            using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Message");
+                writer.WriteString(String.Join(" ",UnsafeWarning));
+                writer.WriteComma();
+                writer.WritePropertyName("MessageAsArray");
+                writer.WriteStartArray();
+                var first = true;
+                foreach (var val in UnsafeWarning)
+                {
+                    if(first == false)
+                        writer.WriteComma();
+                    first = false;
+                    writer.WriteString(val);
+                }
+                writer.WriteEndArray();
+                writer.WriteEndObject();
+            }
+            return Task.CompletedTask;
+        }
+
+        private static readonly string[] UnsafeWarning = {
+            "The server is running in a potentially unsafe mode.",
+            "This means that Raven/AnonymousUserAccessMode is set to Admin and expose to the world.",
+            "Prevent unsafe access to the server by setting Raven/AnonymousUserAccessMode to None.",
+            "If you intended to give everybody admin access to the server than set Raven/AllowEverybodyToAccessTheServerAsAdmin to true.",
+            "In order to gain access to the server please run in on localhost."
+        };
+
         private async Task RequestHandler(HttpContext context)
         {
             try
-            {
+            {                
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
                 context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
 
@@ -102,13 +155,13 @@ namespace Raven.Server
                 var response = context.Response;
 
                 MaybeSetExceptionStatusCode(response, e);
-
+            
                 JsonOperationContext ctx;
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
                 {
                     var djv = new DynamicJsonValue
                     {
-                        [nameof(ExceptionDispatcher.ExceptionSchema.Url)] = $"{context.Request.Path}?{context.Request.QueryString}",
+                        [nameof(ExceptionDispatcher.ExceptionSchema.Url)] = $"{context.Request.Path}{context.Request.QueryString}",
                         [nameof(ExceptionDispatcher.ExceptionSchema.Type)] = e.GetType().FullName,
                         [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message
                     };
@@ -124,6 +177,11 @@ namespace Raven.Server
                         errorString = e.ToString();
                     }
 
+#if EXCEPTION_ERROR_HUNT
+                    var f = Guid.NewGuid() + ".error";
+                    File.WriteAllText(f,
+                        $"{context.Request.Path}{context.Request.QueryString}" + Environment.NewLine + errorString);
+#endif
                     djv[nameof(ExceptionDispatcher.ExceptionSchema.Error)] = errorString;
 
                     MaybeAddAdditionalExceptionData(djv, e);
@@ -133,6 +191,11 @@ namespace Raven.Server
                         var json = ctx.ReadObject(djv, "exception");
                         writer.WriteObject(json);
                     }
+
+#if EXCEPTION_ERROR_HUNT
+                    File.Delete(f);
+#endif
+
                 }
             }
         }
@@ -159,8 +222,7 @@ namespace Raven.Server
             if (documentConflictException != null)
             {
                 djv[nameof(DocumentConflictException.DocId)] = documentConflictException.DocId;
-                djv[nameof(DocumentConflictException.Conflicts)] = documentConflictException.GetConflicts();
-                return;
+                djv[nameof(DocumentConflictException.LargestEtag)] = documentConflictException.LargestEtag;
             }
         }
 
@@ -190,6 +252,12 @@ namespace Raven.Server
             if (exception is DatabaseNotFoundException || exception is DatabaseDisabledException)
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                return;
+            }
+
+            if (exception is BadRequestException)
+            {
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return;
             }
 

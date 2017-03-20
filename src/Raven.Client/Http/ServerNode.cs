@@ -1,4 +1,4 @@
-﻿using Raven.Client.Metrics;
+﻿using Raven.Client.Util.Metrics;
 
 namespace Raven.Client.Http
 {
@@ -43,8 +43,8 @@ namespace Raven.Client.Http
 
         private bool Equals(ServerNode other)
         {
-            return string.Equals(Url, other.Url) && 
-                string.Equals(Database, other.Database) && 
+            return string.Equals(Url, other.Url) &&
+                string.Equals(Database, other.Database) &&
                 string.Equals(ApiKey, other.ApiKey);
         }
 
@@ -53,7 +53,7 @@ namespace Raven.Client.Http
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != GetType()) return false;
-            return Equals((ServerNode) obj);
+            return Equals((ServerNode)obj);
         }
 
         public override int GetHashCode()
@@ -61,8 +61,8 @@ namespace Raven.Client.Http
             unchecked
             {
                 var hashCode = Url?.GetHashCode() ?? 0;
-                hashCode = (hashCode*397) ^ (Database?.GetHashCode() ?? 0);
-                hashCode = (hashCode*397) ^ (ApiKey?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (Database?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (ApiKey?.GetHashCode() ?? 0);
                 return hashCode;
             }
         }

@@ -1,10 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
-import shell = require("viewmodels/shell");
-import changesContext = require("common/changesContext");
-import changeSubscription = require('common/changeSubscription');
-import optional = require("common/optional");
 import appUrl = require("common/appUrl");
 
 import statsModel = require("models/database/stats/statistics");
@@ -31,7 +27,7 @@ class statistics extends viewModelBase {
         }
     }
    
-    fetchStats(): JQueryPromise<Raven.Client.Data.DatabaseStatistics> {
+    fetchStats(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
         var db = this.activeDatabase();
 
         const dbStatsTask = new getDatabaseStatsCommand(db)
@@ -41,18 +37,18 @@ class statistics extends viewModelBase {
             .execute();
 
         return $.when<any>(dbStatsTask, indexesStatsTask)
-            .done(([dbStats]: [Raven.Client.Data.DatabaseStatistics], [indexesStats]: [Raven.Client.Data.Indexes.IndexStats[]]) => {
+            .done(([dbStats]: [Raven.Client.Documents.Operations.DatabaseStatistics], [indexesStats]: [Raven.Client.Documents.Indexes.IndexStats[]]) => {
                 this.processStatsResults(dbStats, indexesStats);
                 });
     }
 
     afterClientApiConnected(): void {
-        const changesApi = this.changesContext.resourceChangesApi();
+        const changesApi = this.changesContext.databaseChangesApi();
         this.addNotification(changesApi.watchAllDocs(e => this.refreshStatsObservable(new Date().getTime())));
-        //TODO: this.addNotification(changesApi.watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime())))
+        this.addNotification(changesApi.watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime())))
     }
 
-    processStatsResults(dbStats: Raven.Client.Data.DatabaseStatistics, indexesStats: Raven.Client.Data.Indexes.IndexStats[]) {
+    processStatsResults(dbStats: Raven.Client.Documents.Operations.DatabaseStatistics, indexesStats: Raven.Client.Documents.Indexes.IndexStats[]) {
         this.stats(new statsModel(dbStats, indexesStats));
     }
     

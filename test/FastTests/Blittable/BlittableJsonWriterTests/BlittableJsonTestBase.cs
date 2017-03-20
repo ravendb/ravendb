@@ -1,13 +1,8 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text;
-using Raven.Abstractions.Linq;
-using Raven.Client.Linq;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
+using Newtonsoft.Json;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Json;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Xunit;
 
@@ -125,6 +120,9 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         protected static unsafe void AssertComplexEmployee(string str, BlittableJsonReaderObject doc,
          JsonOperationContext blittableContext)
         {
+            throw new NotImplementedException();
+
+            /*
             dynamic dynamicRavenJObject = new DynamicJsonObject(RavenJObject.Parse(str));
             dynamic dynamicBlittableJObject = new DynamicBlittableJson(doc);
 
@@ -153,6 +151,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             blittableContext.Write(ms, doc);
 
             Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
+            */
         }
     }
 }
