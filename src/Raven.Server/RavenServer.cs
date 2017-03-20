@@ -471,9 +471,7 @@ namespace Raven.Server
 
             switch (header.Operation)
             {
-                case TcpConnectionHeaderMessage.OperationTypes.BulkInsert:
-                    BulkInsertConnection.Run(tcp);
-                    break;
+             
                 case TcpConnectionHeaderMessage.OperationTypes.Subscription:
                     SubscriptionConnection.SendSubscriptionDocuments(tcp);
                     break;
@@ -495,7 +493,7 @@ namespace Raven.Server
             tcp = null;
             return false;
         }
-
+                   
         private async Task<Stream> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
             if (Configuration.Encryption.UseSsl)
