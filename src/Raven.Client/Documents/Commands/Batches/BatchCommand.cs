@@ -35,6 +35,8 @@ namespace Raven.Client.Documents.Commands.Batches
             }
 
             _options = options;
+
+            Timeout = options?.RequestTimeout;
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

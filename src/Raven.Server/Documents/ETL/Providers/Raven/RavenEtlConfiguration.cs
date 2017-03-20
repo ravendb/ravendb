@@ -19,6 +19,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public string ApiKey { get; set; }
 
+        public int? LoadRequestTimeoutInSec { get; set; } 
+
         public override bool Validate(out List<string> errors)
         {
             base.Validate(out errors);
