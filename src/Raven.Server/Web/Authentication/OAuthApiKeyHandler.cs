@@ -32,21 +32,6 @@ namespace Raven.Server.Web.Authentication
             JsonOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                try
-                {
-                    accessToken = BuildAccessTokenAndGetApiKeySecret(apiKeyName, out secret);
-                }
-                catch (AuthenticationException ex)
-                {
-                    GenerateError(ex.Message, context, (int)HttpStatusCode.Forbidden);
-                    return Task.CompletedTask;
-                }
-                catch (Exception ex)
-                {
-                    GenerateError(ex.Message, context, (int)HttpStatusCode.InternalServerError);
-                    return Task.CompletedTask;
-                }
-
                 JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
                 using (context.GetManagedBuffer(out pinnedBuffer))
                 using (var hashJson = context.ParseToMemory(RequestBodyStream(), "apikey", BlittableJsonDocumentBuilder.UsageMode.None, pinnedBuffer))
@@ -63,6 +48,21 @@ namespace Raven.Server.Web.Authentication
 
                     hash = Convert.FromBase64String(((LazyStringValue)hashString).ToString());
                     publicKey = Convert.FromBase64String(((LazyStringValue)pkString).ToString());
+                }
+
+                try
+                {
+                    accessToken = BuildAccessTokenAndGetApiKeySecret(apiKeyName, out secret);
+                }
+                catch (AuthenticationException ex)
+                {
+                    GenerateError(ex.Message, context, (int)HttpStatusCode.Forbidden);
+                    return Task.CompletedTask;
+                }
+                catch (Exception ex)
+                {
+                    GenerateError(ex.Message, context, (int)HttpStatusCode.InternalServerError);
+                    return Task.CompletedTask;
                 }
             }
 
