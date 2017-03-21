@@ -303,24 +303,19 @@ namespace Raven.Server.Documents.Handlers
                             }
                             else
                             {
-                                // TODO arek - temporary solution
-                                var idsToDelete = new List<string>();
+                                var deleteResults = Database.DocumentsStorage.DeleteDocumentsStartingWith(context, cmd.Key);
 
-                                foreach (var doc in Database.DocumentsStorage.GetDocumentsStartingWith(context, cmd.Key, null, null, null, 0, int.MaxValue))
+                                for (var j = 0; j < deleteResults.Count; j++)
                                 {
-                                    idsToDelete.Add(doc.Key);
-                                }
-
-                                foreach (var toDelete in idsToDelete)
-                                {
-                                    Database.DocumentsStorage.Delete(context, toDelete, null);
+                                    LastEtag = deleteResults[j].Etag;
+                                    ModifiedCollections?.Add(deleteResults[j].Collection.Name);
                                 }
 
                                 Reply.Add(new DynamicJsonValue
                                 {
                                     ["Key"] = cmd.Key,
                                     ["Method"] = "DELETE",
-                                    ["Deleted"] = idsToDelete.Count > 0
+                                    ["Deleted"] = deleteResults.Count > 0
                                 });
                             }
                             
