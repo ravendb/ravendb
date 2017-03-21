@@ -24,21 +24,16 @@ namespace SlowTests.Issues
         {
             using (IDocumentStore store = GetDocumentStore())
             {
-                Console.WriteLine("Fill Database");
                 FillDatabase(store);
 
-                Console.WriteLine("Create Index");
                 new TestObject_Index().Execute(store);
 
-                Console.WriteLine("Create Transformer");
                 new TestObject_Transformer().Execute(store);
 
                 WaitForIndexing(store);
 
-                Console.WriteLine("Sync Session –> Transform");
                 TransformResult(store);
 
-                Console.WriteLine("Async Session –> Transform");
                 //Fails
                 await TransformResultAsync(store);
             }
@@ -76,8 +71,6 @@ namespace SlowTests.Issues
                     .AddTransformerParameter("lang", "de")
                     .TransformWith<TestObject_Transformer, TestObjectReduced>()
                     .ToList();
-
-                Console.WriteLine(result.Count + " objekcs found & Transformed");
             }
         }
 
@@ -92,8 +85,6 @@ namespace SlowTests.Issues
                     .AddTransformerParameter("lang", "de")
                     .TransformWith<TestObject_Transformer, TestObjectReduced>()
                     .ToListAsync();
-
-                Console.WriteLine(result.Count + " objects found & Transformed");
             }
         }
 

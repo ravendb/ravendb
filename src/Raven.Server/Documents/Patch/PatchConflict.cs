@@ -10,14 +10,14 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class PatchConflict : PatchDocument
+    public class PatchConflict : DocumentPatcherBase
     {
         private readonly List<DocumentConflict> _docs = new List<DocumentConflict>();
         private readonly bool _hasTombstone;
         private static readonly string TombstoneResolverValue = Guid.NewGuid().ToString();
         private readonly int _docsSize;
 
-        public PatchConflict(DocumentDatabase database, IReadOnlyCollection<DocumentConflict> docs):base(database)
+        public PatchConflict(DocumentDatabase database, IReadOnlyCollection<DocumentConflict> docs) : base(database)
         {
             foreach (var doc in docs)
             {
@@ -37,19 +37,22 @@ namespace Raven.Server.Documents.Patch
 
         public bool TryResolveConflict(DocumentsOperationContext context, PatchRequest patch, out BlittableJsonReaderObject resolved)
         {
-            var run = new SingleScriptRun(this, context, patch, false);
-            try
+            using (var scope = CreateOperationScope(context, debugMode: false))
             {
-                run.Prepare(_docsSize);
-                SetupInputs(run.Scope, run.JintEngine);
-                run.Execute();
+                var run = new SingleScriptRun(this, patch, scope);
+                try
+                {
+                    run.Prepare(_docsSize);
+                    SetupInputs(scope, run.JintEngine);
+                    run.Execute();
 
-                return TryParse(context, run.Scope, out resolved);
-            }
-            catch (Exception errorEx)
-            {
-                run.HandleError(errorEx);
-                throw;
+                    return TryParse(context, scope, out resolved);
+                }
+                catch (Exception errorEx)
+                {
+                    run.HandleError(errorEx);
+                    throw;
+                }
             }
         }
 
@@ -81,7 +84,7 @@ namespace Raven.Server.Documents.Patch
 
             engine.Global.Delete("ResolveToTombstone", false);
             engine.Global.Delete(TombstoneResolverValue, false);
-            engine.SetValue("ResolveToTombstone", new Func<string>(()=> TombstoneResolverValue));
+            engine.SetValue("ResolveToTombstone", new Func<string>(() => TombstoneResolverValue));
 
             engine.Global.Delete("HasTombstone", false);
             engine.SetValue("HasTombstone", _hasTombstone);
@@ -142,7 +145,7 @@ namespace Raven.Server.Documents.Patch
                                     break;
 
                                 case BlittableJsonToken.Integer:
-                                    writer.WriteValue((long) prop.Value);
+                                    writer.WriteValue((long)prop.Value);
                                     break;
                                 case BlittableJsonToken.Float:
                                     writer.WriteValue((double)prop.Value);
@@ -159,7 +162,7 @@ namespace Raven.Server.Documents.Patch
                                     break;
                             }
                         }
-                        
+
                         writer.WriteObjectEnd();
 
                         break;

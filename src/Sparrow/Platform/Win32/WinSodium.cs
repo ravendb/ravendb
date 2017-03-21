@@ -5,7 +5,7 @@ namespace Sparrow.Platform.Win32
 {
     public static unsafe class WinSodium
     {
-        private const string LIB_SODIUM = "libsodium.dll";
+        private const string LIB_SODIUM = "libs/libsodium.dll";
 
         static WinSodium()
         {

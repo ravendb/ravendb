@@ -57,16 +57,7 @@ namespace SlowTests.SlowTests.Bugs
                             missing.Add(i);
                     }
 
-                    try
-                    {
-                        Assert.Equal(expectedCount, items.Count);
-                    }
-                    catch (Exception)
-                    {
-                        Console.WriteLine("Missing {0} documents", missing.Count);
-                        Console.WriteLine(string.Join(" , ", missing));
-                        throw;
-                    }
+                    Assert.Equal(expectedCount, items.Count);
                 }
             }
         }

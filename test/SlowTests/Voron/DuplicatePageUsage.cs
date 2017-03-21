@@ -53,7 +53,6 @@ namespace SlowTests.Voron
                                     {(byte*) &id, sizeof (int)},
                                     {buffer, size}
                                 });
-                                //Console.WriteLine($"{id} {readLine.Length + 55}");
 
                             }
                         }

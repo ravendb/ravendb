@@ -15,7 +15,7 @@
     ],
     "define": [ "DEBUG" ],
     "copyToOutput": {
-      "include": [ "../xunit.runner.json" ]
+      "include": [ "../../libs/libsodium.dll", "../../libs/libsodium.so", "../xunit.runner.json" ]
     }
   },
 

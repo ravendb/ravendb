@@ -11,8 +11,9 @@ namespace Sparrow
 {
     public static unsafe class Sodium
     {
-        private static int crypto_kdf_keybytes()
+            private static int crypto_kdf_keybytes()
         {
+          
             if (kdfbytes == null)
             {
                 if (Platform.PlatformDetails.RunningOnPosix)
@@ -22,7 +23,6 @@ namespace Sparrow
             }
             return kdfbytes.Value;
         }
-
         public static int randombytes_buf(
             byte* buffer,
             int size)

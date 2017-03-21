@@ -3,14 +3,14 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Tests.Bundles.MoreLikeThis;
-using Raven.Tests.Common;
 
+using FastTests;
+using FastTests.Client.MoreLikeThis;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_2495 : RavenTest
+    public class RavenDB_2495 : RavenTestBase
     {
         [Fact]
         public void IncludesShouldWorkWithMoreLikeThis()

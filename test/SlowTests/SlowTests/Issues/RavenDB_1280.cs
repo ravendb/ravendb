@@ -46,19 +46,7 @@ namespace SlowTests.SlowTests.Issues
                 using (var session = documentStore.OpenSession())
                 {
                     var results = session.Query<EmailIndexDoc, EmailIndex>().Count(e => e.Body.StartsWith("MessageBody"));
-                    try
-                    {
-                        Assert.Equal(iterations, results);
-                    }
-                    catch (Exception ex)
-                    {
-                        var missingDocs = session.Query<EmailIndexDoc, EmailIndex>().ProjectFromIndexFieldsInto<EmailIndexDoc>()
-                                                                                    .Where(e => !e.Body.StartsWith("MessageBody"))
-                                                                                    .ToList();
-                        Console.WriteLine(string.Join(", ", missingDocs.Select(doc => doc.Id).ToArray()));
-                        Console.WriteLine(ex.Message);
-                        throw;
-                    }
+                    Assert.Equal(iterations, results);
                 }
             }
         }

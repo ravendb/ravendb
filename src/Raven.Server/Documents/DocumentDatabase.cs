@@ -71,7 +71,7 @@ namespace Raven.Server.Documents
             SubscriptionStorage = new SubscriptionStorage(this);
             Operations = new DatabaseOperations(this);
             Metrics = new MetricsCountersManager();
-            Patch = new PatchDocument(this);
+            Patcher = new DocumentPatcher(this);
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
             HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
                 configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
@@ -86,7 +86,7 @@ namespace Raven.Server.Documents
 
         public SystemTime Time = new SystemTime();
 
-        public readonly PatchDocument Patch;
+        public DocumentPatcher Patcher { get; private set; }
 
         public readonly TransactionOperationsMerger TxMerger;
 
@@ -213,6 +213,7 @@ namespace Raven.Server.Documents
 
             _indexStoreTask = IndexStore.InitializeAsync();
             _transformerStoreTask = TransformerStore.InitializeAsync();
+            Patcher.Initialize();
             EtlLoader.Initialize();
 
             DocumentTombstoneCleaner.Initialize();
@@ -350,6 +351,12 @@ namespace Raven.Server.Documents
                 {
                     NotificationCenter?.Dispose();
                     NotificationCenter = null;
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    Patcher?.Dispose();
+                    Patcher = null;
                 });
 
                 exceptionAggregator.Execute(() =>

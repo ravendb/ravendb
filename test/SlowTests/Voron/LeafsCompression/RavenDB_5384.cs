@@ -194,7 +194,6 @@ namespace SlowTests.Voron.LeafsCompression
         {
             var tree = tx.ReadTree("tree");
 
-            int i = 0;
             foreach (var id in deleted)
             {
                 Slice key;
@@ -202,8 +201,6 @@ namespace SlowTests.Voron.LeafsCompression
                 {
                     using (var readResult = tree.ReadDecompressed(key))
                     {
-                        if (readResult != null)
-                            Console.WriteLine(i);
                         Assert.Null(readResult);
                     }
                 }

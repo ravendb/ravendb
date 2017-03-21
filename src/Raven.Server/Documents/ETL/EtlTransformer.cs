@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL
 {
-    public abstract class EtlTransformer<TExtracted, TTransformed> : PatchDocument
+    public abstract class EtlTransformer<TExtracted, TTransformed> : DocumentPatcherBase
     {
         protected readonly DocumentsOperationContext Context;
 

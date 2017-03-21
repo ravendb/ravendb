@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.Handlers
                             // TODO: We should have an object that handles this externally, 
                             // TODO: and apply it there
 
-                            var patchResult = Database.Patch.Apply(context, cmd.Key, cmd.Etag, cmd.Patch, cmd.PatchIfMissing, skipPatchIfEtagMismatch: false, debugMode: false);
+                            var patchResult = Database.Patcher.Apply(context, cmd.Key, cmd.Etag, cmd.Patch, cmd.PatchIfMissing, skipPatchIfEtagMismatch: false, debugMode: false);
                             if (patchResult.ModifiedDocument != null)
                                 context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, patchResult.ModifiedDocument.Size);
                             if (patchResult.Etag != null)

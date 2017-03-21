@@ -10,7 +10,7 @@
     },
     "embed": [ "Data/*.txt", "MailingList/Everett/*.txt", "Smuggler/Northwind_3.5.35168.ravendbdump", "Smuggler/Indexes_And_Transformers_3.5.ravendbdump", "Smuggler/test.ravendbdump" ],
     "copyToOutput": {
-      "include": [ "../xunit.runner.json" ]
+      "include": [ "../../libs/libsodium.dll", "../../libs/libsodium.so", "../xunit.runner.json" ]
     }
   },
 
