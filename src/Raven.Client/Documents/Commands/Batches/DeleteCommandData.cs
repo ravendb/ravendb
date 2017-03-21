@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public long? Etag { get; }
         public HttpMethod Method => HttpMethod.Delete;
 
-        public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
+        public virtual DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
             return new DynamicJsonValue
             {

@@ -14,5 +14,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public TimeSpan WaitForIndexesTimeout { get; set; }
         public bool ThrowOnTimeoutInWaitForIndexes { get; set; }
         public string[] WaitForSpecificIndexes { get; set; }
+
+        public TimeSpan? RequestTimeout { get; set; }
     }
 }
