@@ -274,16 +274,16 @@ loadToAddresses(LoadDocument(this.AddressId));
                 {
                     for (var i = 1; i <= count; i++)
                     {
-                        var user = session.Load<User>("users/1");
+                        var user = session.Load<User>($"users/{i}");
                         Assert.NotNull(user);
                         Assert.Equal("James", user.Name);
                         Assert.Equal("Smith", user.LastName);
 
-                        var person = session.Load<Person>($"users/{i}/people/1");
+                        var person = session.Advanced.LoadStartingWith<Person>($"users/{i}/people/")[0];
                         Assert.NotNull(person);
                         Assert.Equal("James Smith", person.Name);
 
-                        var address = session.Load<Address>($"users/{i}/addresses/1");
+                        var address = session.Advanced.LoadStartingWith<Address>($"users/{i}/addresses/")[0];
                         Assert.NotNull(address);
                         Assert.Equal("New York", address.City);
                     }
@@ -309,11 +309,11 @@ loadToAddresses(LoadDocument(this.AddressId));
                     var user = session.Load<User>("users/3");
                     Assert.Null(user);
 
-                    var person = session.Load<Person>("users/3/people/1");
-                    Assert.Null(person);
+                    var persons = session.Advanced.LoadStartingWith<Person>("users/3/people/");
+                    Assert.Equal(0, persons.Length);
 
-                    var address = session.Load<Address>("users/3/addresses/1");
-                    Assert.Null(address);
+                    var addresses = session.Advanced.LoadStartingWith<Address>("users/3/addresses/");
+                    Assert.Equal(0, addresses.Length);
                 }
 
                 stats = dest.Admin.Send(new GetStatisticsOperation());
