@@ -258,6 +258,21 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public bool HasChanged(IndexDefinition definition)
+        {
+            if (definition == null)
+                throw new ArgumentNullException(nameof(definition));
+
+            ValidateIndexName(definition.Name);
+
+            var existingIndex = GetIndex(definition.Name);
+            if (existingIndex == null)
+                return true;
+
+            var creationOptions = GetIndexCreationOptions(definition, existingIndex);
+            return creationOptions != IndexCreationOptions.Noop;
+        }
+
         private int CreateIndexInternal(Index index, int indexId)
         {
             Debug.Assert(index != null);
@@ -365,6 +380,9 @@ namespace Raven.Server.Documents.Indexes
 
         private void ValidateIndexName(string name)
         {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Index name cannot be empty!");
+
             if (name.StartsWith(DynamicQueryRunner.DynamicIndexPrefix, StringComparison.OrdinalIgnoreCase))
             {
                 throw new ArgumentException($"Index name '{name.Replace("//", "__")}' not permitted. Index names starting with dynamic_ or dynamic/ are reserved!", nameof(name));
