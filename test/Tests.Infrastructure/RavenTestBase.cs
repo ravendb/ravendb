@@ -15,6 +15,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
+using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
@@ -46,10 +47,14 @@ namespace FastTests
             Action<DatabaseDocument> modifyDatabaseDocument = null,
             Func<string, string> modifyName = null,
             string apiKey = null,
-            bool ignoreDisabledDatabase = false)
+            bool ignoreDisabledDatabase = false,
+            int replicationFacotr = 1,
+            RavenServer defaultServer = null,
+            bool waitForDatabasesToBeCreated= false)
         {
             lock (_getDocumentStoreSync)
             {
+                defaultServer = defaultServer??Server;
                 var name = caller != null
                     ? $"{caller}_{Interlocked.Increment(ref _counter)}"
                     : Guid.NewGuid().ToString("N");
@@ -84,36 +89,38 @@ namespace FastTests
                 modifyDatabaseDocument?.Invoke(doc);
 
                 TransactionOperationContext context;
-                using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+                using (defaultServer.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
                     context.OpenReadTransaction();
-                    if (Server.ServerStore.Cluster.Read(context, Constants.Documents.Prefix + name) != null)
+                    if (defaultServer.ServerStore.Cluster.Read(context, Constants.Documents.Prefix + name) != null)
                         throw new InvalidOperationException($"Database '{name}' already exists");
                 }
 
                 var store = new DocumentStore
                 {
-                    Url = UseFiddler(Server.WebUrls[0]),
+                    Url = UseFiddler(defaultServer.WebUrls[0]),
                     DefaultDatabase = name,
                     ApiKey = apiKey
                 };
                 ModifyStore(store);
                 store.Initialize();
 
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFacotr));
+                
+
                 store.AfterDispose += (sender, args) =>
                 {
                     if (CreatedStores.TryRemove(store) == false)
                         return; // can happen if we are wrapping the store inside sharded one
 
-                    if (Server.Disposed == false)
+                    if (defaultServer.Disposed == false)
                     {
-                        var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name, ignoreDisabledDatabase);
+                        var databaseTask = defaultServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name, ignoreDisabledDatabase);
                         if (databaseTask != null && databaseTask.IsCompleted == false)
                             databaseTask.Wait();
                         // if we are disposing store before database had chance to load then we need to wait
 
-                        Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
+                        defaultServer.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
                         store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
                     }
                 };

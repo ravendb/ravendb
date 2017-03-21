@@ -708,10 +708,7 @@ namespace Raven.Server.ServerWide
         public Dictionary<string, string> Settings;
 
         public VersioningConfiguration VersioningConfiguration;
-
-        // todo: see how we can protect this
-        public int LastTransformerId;
-
+        
         public void AddTransformer(TransformerDefinition definition)
         {
             if (Indexes != null && Indexes.Values.Any(x => x.Name == definition.Name))
@@ -723,16 +720,14 @@ namespace Raven.Server.ServerWide
             var lockMode = TransformerLockMode.Unlock;
             if (Transformers.TryGetValue(definition.Name, out existingTransformer))
             {
-                if (existingTransformer.TransfomerId == definition.TransfomerId)
-                    throw new IndexOrTransformerAlreadyExistException($"Transformer with the same name {definition.Name} and id {existingTransformer.TransfomerId} already exists");
+                if (existingTransformer.Equals(definition))
+                    throw new IndexOrTransformerAlreadyExistException($"Transformer with the same name {definition.Name} and same definition already exists");
                 lockMode = existingTransformer.LockMode;
             }
 
             if (lockMode == TransformerLockMode.LockedIgnore)
                 throw new IndexOrTransformerAlreadyExistException($"Cannot edit existing transformer {definition.Name} with lock mode {lockMode}");
-
-            LastTransformerId++;
-            definition.TransfomerId = LastTransformerId;
+            
             Transformers[definition.Name] = definition;
         }
     }

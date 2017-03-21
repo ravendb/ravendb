@@ -124,7 +124,7 @@ namespace SlowTests.Issues
 
                 var database = await GetDatabase(documentStore.DefaultDatabase);
 
-                var transformer = database.TransformerStore.GetTransformer(1);
+                var transformer = database.TransformerStore.GetTransformer(newTransformerName);
 
                 Assert.Equal(newTransformerName, transformer.Name);
                 Assert.Equal(1, database.TransformerStore.GetTransformers().Count());
@@ -134,7 +134,7 @@ namespace SlowTests.Issues
             {
                 var database = await GetDatabase(documentStore.DefaultDatabase);
 
-                var transformer = database.TransformerStore.GetTransformer(1);
+                var transformer = database.TransformerStore.GetTransformer(newTransformerName);
 
                 Assert.Equal(newTransformerName, transformer.Name);
                 Assert.Equal(1, database.TransformerStore.GetTransformers().Count());

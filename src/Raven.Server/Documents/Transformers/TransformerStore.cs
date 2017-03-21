@@ -9,6 +9,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Collections.LockFree;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Transformers
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents.Transformers
         private readonly DocumentDatabase _documentDatabase;
         private readonly ServerStore _serverStore;
 
-        private readonly CollectionOfTransformers _transformers = new CollectionOfTransformers();
+        private readonly ConcurrentDictionary<string, Transformer> _transformers = new ConcurrentDictionary<string, Transformer>();
 
         /// <summary>
         /// The current lock, used to make sure indexes/transformers have a unique names
@@ -80,7 +81,7 @@ namespace Raven.Server.Documents.Transformers
                 {
                     lock (_indexAndTransformerLocker)
                     {
-                        foreach (var existingTransformer in _transformers)
+                        foreach (var existingTransformer in _transformers.Values)
                         {
                             if (databaseRecord.Transformers.ContainsKey(existingTransformer.Name) == false)
                             {
@@ -91,17 +92,16 @@ namespace Raven.Server.Documents.Transformers
                         foreach (var transformerInRecord in databaseRecord.Transformers)
                         {
                             Transformer existingTransformer;
-                            _transformers.TryGetByName(transformerInRecord.Key, out existingTransformer);
+                            _transformers.TryGetValue(transformerInRecord.Key, out existingTransformer);
 
                             if (existingTransformer != null &&
-                                transformerInRecord.Value.TransfomerId == existingTransformer.TransformerId &&
                                 transformerInRecord.Value.Equals(existingTransformer.Definition))
                             {
                                 continue;
                             }
 
                             if (existingTransformer != null)
-                                DeleteTransformer(existingTransformer.TransformerId);
+                                DeleteTransformer(existingTransformer.Name);
 
                             CreateTransformer(transformerInRecord.Value);
                         }
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Transformers
                     if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
                         return;
                     
-                    var transformerId = transformerDefinition.TransfomerId;
+                    var transformerName = transformerDefinition.Name;
                     
 
                     List<Exception> exceptions = null;
@@ -148,16 +148,16 @@ namespace Raven.Server.Documents.Transformers
 
                     try
                     {
-                        var transformer = Transformer.Open(transformerId, LoggingSource.Instance.GetLogger<Transformer>(_documentDatabase.Name), record);
-                        _transformers.Add(transformer);
+                        var transformer = Transformer.Open(transformerName, LoggingSource.Instance.GetLogger<Transformer>(_documentDatabase.Name), record);
+                        _transformers.Add(transformer.Name,transformer);
                     }
                     catch (Exception e)
                     {
                         exceptions?.Add(e);
 
-                        var fakeTransformer = new FaultyInMemoryTransformer(transformerId, transformerDefinition.Name);
+                        var fakeTransformer = new FaultyInMemoryTransformer(transformerDefinition.Name);
 
-                        var message = $"Could not open transformer with id {transformerId}. Created in-memory, fake instance: {fakeTransformer.Name}";
+                        var message = $"Could not open transformer with name {transformerName}. Created in-memory, fake instance: {fakeTransformer.Name}";
 
                         if (_log.IsOperationsEnabled)
                             _log.Operations(message, e);
@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Transformers
                             key: fakeTransformer.Name,
                             details: new ExceptionDetails(e)));
 
-                        _transformers.Add(fakeTransformer);
+                        _transformers.Add(fakeTransformer.Name,fakeTransformer);
                     }
 
                     if (exceptions != null && exceptions.Count > 0)
@@ -194,19 +194,10 @@ namespace Raven.Server.Documents.Transformers
             
         }
 
-        public Transformer GetTransformer(int id)
-        {
-            Transformer transformer;
-            if (_transformers.TryGetById(id, out transformer) == false)
-                return null;
-
-            return transformer;
-        }
-
         public Transformer GetTransformer(string name)
         {
             Transformer transformer;
-            if (_transformers.TryGetByName(name, out transformer) == false)
+            if (_transformers.TryGetValue(name, out transformer) == false)
                 return null;
 
             return transformer;
@@ -218,7 +209,7 @@ namespace Raven.Server.Documents.Transformers
             if (transformer == null)
                 return false;
 
-            DeleteTransformerInternal(transformer.TransformerId);
+            DeleteTransformerInternal(transformer.Name);
             return true;
         }
 
@@ -229,17 +220,12 @@ namespace Raven.Server.Documents.Transformers
             if (transformer == null)
                 TransformerDoesNotExistException.ThrowFor(name);
 
-            DeleteTransformerInternal(transformer.TransformerId);
-        }
-
-        public void DeleteTransformer(int id)
-        {
-            DeleteTransformerInternal(id);
+            DeleteTransformerInternal(transformer.Name);
         }
 
         public IEnumerable<Transformer> GetTransformers()
         {
-            return _transformers;
+            return _transformers.Values;
         }
 
         public int GetTransformersCount()
@@ -247,13 +233,13 @@ namespace Raven.Server.Documents.Transformers
             return _transformers.Count;
         }
 
-        private void DeleteTransformerInternal(int id)
+        private void DeleteTransformerInternal(string name)
         {
             lock (_indexAndTransformerLocker)
             {
                 Transformer transformer;
-                if (_transformers.TryRemoveById(id, out transformer) == false)
-                    TransformerDoesNotExistException.ThrowFor(id);
+                if (_transformers.TryRemove(name, out transformer) == false)
+                    TransformerDoesNotExistException.ThrowFor(name);
                 
                 //var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnTransformerDeleted(transformer);
                 _documentDatabase.Changes.RaiseNotifications(new TransformerChange
@@ -268,15 +254,13 @@ namespace Raven.Server.Documents.Transformers
         private void CreateTransformerInternal(Transformer transformer)
         {
             Debug.Assert(transformer != null);
-            Debug.Assert(transformer.TransformerId > 0);
-
-            //var etag = _documentDatabase.IndexMetadataPersistence.OnTransformerCreated(transformer);
-            _transformers.Add(transformer);
+            Debug.Assert(string.IsNullOrWhiteSpace(transformer.Name?.Trim())==false);
+            
+            _transformers.Add(transformer.Name,transformer);
             _documentDatabase.Changes.RaiseNotifications(new TransformerChange
             {
                 Name = transformer.Name,
-                Type = TransformerChangeTypes.TransformerAdded,
-                //Etag = etag
+                Type = TransformerChangeTypes.TransformerAdded
             });
         }
  

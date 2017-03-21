@@ -55,8 +55,8 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
 
                     // todo: we probably won't need that
-                    writer.WritePropertyName("TransformerId");
-                    writer.WriteInteger(createdTransformer.TransformerId);
+                    writer.WritePropertyName("Etag");
+                    writer.WriteInteger(index);
                     writer.WriteEndObject();
                 }
             }

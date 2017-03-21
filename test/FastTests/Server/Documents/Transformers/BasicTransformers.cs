@@ -38,7 +38,7 @@ namespace FastTests.Server.Documents.Transformers
                 var transformers = database
                     .TransformerStore
                     .GetTransformers()
-                    .OrderBy(x => x.TransformerId)
+                    .OrderBy(x => x.Name)
                     .ToList();
 
                 Assert.Equal(2, transformers.Count);
@@ -46,8 +46,6 @@ namespace FastTests.Server.Documents.Transformers
                 var transformer = transformers[0];
                 Assert.Equal("Transformer1", transformer.Name);
                 Assert.Equal("Transformer1", transformer.Definition.Name);
-                Assert.Equal(1, transformer.TransformerId);
-                Assert.Equal(1, transformer.Definition.TransfomerId);
                 Assert.Equal("results.Select(x => new { Name = x.Name })", transformer.Definition.TransformResults);
                 Assert.Equal(TransformerLockMode.LockedIgnore, transformer.Definition.LockMode);
                 Assert.True(transformer.Definition.Temporary);
@@ -55,8 +53,6 @@ namespace FastTests.Server.Documents.Transformers
                 transformer = transformers[1];
                 Assert.Equal("Transformer2", transformer.Name);
                 Assert.Equal("Transformer2", transformer.Definition.Name);
-                Assert.Equal(2, transformer.TransformerId);
-                Assert.Equal(2, transformer.Definition.TransfomerId);
                 Assert.Equal("results.Select(x => new { Name = x.Email })", transformer.Definition.TransformResults);
                 Assert.Equal(TransformerLockMode.Unlock, transformer.Definition.LockMode);
                 Assert.False(transformer.Definition.Temporary);
@@ -83,14 +79,13 @@ namespace FastTests.Server.Documents.Transformers
                 var transformers = database
                     .TransformerStore
                     .GetTransformers()
-                    .OrderBy(x => x.TransformerId)
+                    .OrderBy(x => x.Name)
                     .ToList();
 
                 Assert.Equal(1, transformers.Count);
 
                 var transformer = transformers[0];
                 Assert.Equal("Transformer1", transformer.Name);
-                Assert.Equal(1, transformer.TransformerId);
 
                 var e = Assert.Throws<NotSupportedException>(() => transformer.SetLock(TransformerLockMode.LockedIgnore));
                 Assert.Equal("Transformer with id 1 is in-memory implementation of a faulty transformer", e.Message);

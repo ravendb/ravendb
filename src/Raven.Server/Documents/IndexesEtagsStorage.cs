@@ -642,7 +642,7 @@ namespace Raven.Server.Documents
                 }
 
                 if (metadata.Type == IndexEntryType.Transformer &&
-                    transformerStore.GetTransformer(metadata.Id) == null)
+                    transformerStore.GetTransformer(metadata.Name) == null)
                 {
                     toRemove.Add(metadata);
                 }

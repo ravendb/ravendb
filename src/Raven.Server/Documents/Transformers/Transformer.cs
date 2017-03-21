@@ -23,11 +23,9 @@ namespace Raven.Server.Documents.Transformers
             _log = log;
         }
 
-        public virtual int TransformerId => Definition.TransfomerId;
-
         public virtual string Name => Definition?.Name;
 
-        public virtual int Hash => Definition?.GetHashCode() ?? TransformerId;
+        public virtual long Hash => Definition?.GetHashCode()??Name.GetHashCode();
 
         public virtual bool HasLoadDocument => _transformer.HasLoadDocument;
 
@@ -57,7 +55,7 @@ namespace Raven.Server.Documents.Transformers
 
                 if (_log.IsInfoEnabled)
                     _log.Info(
-                        $"Changing lock mode for '{Name} ({TransformerId})' from '{Definition.LockMode}' to '{mode}'.");
+                        $"Changing lock mode for '{Name} from '{Definition.LockMode}' to '{mode}'.");
 
                 var oldMode = Definition.LockMode;
                 try
@@ -79,12 +77,12 @@ namespace Raven.Server.Documents.Transformers
             return transformer;
         }
 
-        public static Transformer Open(int transformerId, Logger log, DatabaseRecord record)
+        public static Transformer Open(string transformerName, Logger log, DatabaseRecord record)
         {
-            var transformerDefinitions = record.Transformers.Values.Where(x=>x.TransfomerId == transformerId).ToList();
+            var transformerDefinitions = record.Transformers.Values.Where(x=>x.Name== transformerName).ToList();
             
             if (transformerDefinitions.Count == 0)
-                throw new InvalidOperationException($"Could not read transformer definition for id {transformerId}");
+                throw new InvalidOperationException($"Could not read transformer definition for name {transformerName}");
 
             var transformerDefinition = transformerDefinitions.First();
             var compiledTransformer = IndexAndTransformerCompilationCache.GetTransformerInstance(transformerDefinition);
