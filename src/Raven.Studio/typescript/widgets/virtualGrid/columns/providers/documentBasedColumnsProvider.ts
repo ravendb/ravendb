@@ -8,8 +8,8 @@ import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import document = require("models/database/documents/document");
 import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
-import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
 import app = require("durandal/app");
+import showDataDialog = require("viewmodels/common/showDataDialog");
 
 type documentBasedColumnsProviderOpts = {
     showRowSelectionCheckbox?: boolean;
@@ -66,9 +66,9 @@ class documentBasedColumnsProvider {
         }));
     }
 
-    //TODO: is this class right place for this?
     private showPreview(doc: document) {
-        app.showBootstrapDialog(new tempStatDialog(doc));
+        const text = JSON.stringify(doc, null, 4);
+        app.showBootstrapDialog(new showDataDialog("Document: " + doc.getId(), text, "javascript"));
     }
 
     static extractUniquePropertyNames(results: pagedResult<document>) {
