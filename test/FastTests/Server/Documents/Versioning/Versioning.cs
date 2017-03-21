@@ -136,10 +136,10 @@ namespace FastTests.Server.Documents.Versioning
                     company3.Name = "Hibernating Rhinos";
                     await session.SaveChangesAsync();
                 }
-            }
 
-            using (var store = GetDocumentStore(path: path))
-            {
+                var old = GetDocumentDatabaseInstanceFor(store).Result;
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.DefaultDatabase, null, db => false);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>(company.Id);
@@ -147,6 +147,9 @@ namespace FastTests.Server.Documents.Versioning
                     Assert.Equal("Company Name", companiesRevisions[0].Name);
                     Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
                 }
+                var newInstance = GetDocumentDatabaseInstanceFor(store).Result;
+
+                Assert.NotSame(old, newInstance);
             }
         }
 
