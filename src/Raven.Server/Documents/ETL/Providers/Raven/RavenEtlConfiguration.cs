@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 var collections = GetCollectionsFromScript();
 
-                if (collections.Length == 0)
+                if (collections == null || collections.Length == 0)
                     errors.Add("No `loadTo[CollectionName]` method call found in the script");
             }
 
