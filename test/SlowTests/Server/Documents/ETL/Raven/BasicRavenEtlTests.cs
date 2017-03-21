@@ -448,6 +448,51 @@ loadToOrders(orderData);
             }
         }
 
+        [Fact]
+        public void Can_get_document_id()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                SetupEtl(src, new EtlConfiguration
+                {
+                    RavenTargets =
+                    {
+                        new RavenEtlConfiguration
+                        {
+                            Name = "basic test",
+                            Url = dest.Url,
+                            Database = dest.DefaultDatabase,
+                            Collection = "Users",
+                            Script = "this.Name = __document_id; loadToUsers(this);"
+                        }
+                    }
+                });
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Joe Doe"
+                    });
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    Assert.NotNull(user);
+                    Assert.Equal("users/1", user.Name);
+                }
+            }
+        }
+
         private class UserWithAddress : User
         {
             public Address Address { get; set; }
