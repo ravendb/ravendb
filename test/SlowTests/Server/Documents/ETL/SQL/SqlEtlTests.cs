@@ -85,7 +85,7 @@ namespace SlowTests.Server.Documents.ETL.SQL
 
         protected const string defaultScript = @"
 var orderData = {
-    Id: documentId,
+    Id: __document_id,
     OrderLinesCount: this.OrderLines.length,
     TotalCost: 0
 };
@@ -95,7 +95,7 @@ for (var i = 0; i < this.OrderLines.length; i++) {
     var line = this.OrderLines[i];
     orderData.TotalCost += line.Cost;
     loadToOrderLines({
-        OrderId: documentId,
+        OrderId: __document_id,
         Qty: line.Quantity,
         Product: line.Product,
         Cost: line.Cost
@@ -278,7 +278,7 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 SetupSqlEtl(store, @"var orderData = {
-    Id: documentId,
+    Id: __document_id,
     OrderLinesCount: this.OrderLines_Missing.length,
     TotalCost: 0
 };
@@ -327,7 +327,7 @@ loadToOrders(orderData);");
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 SetupSqlEtl(store, @"var orderData = {
-    Id: documentId,
+    Id: __document_id,
     City: this.Address.City,
     TotalCost: 0
 };
