@@ -190,7 +190,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/status/subscriptions',
             title: 'Subscriptions',
             nav: true,
-            css: 'icon-plus',
+            css: 'icon-subscriptions',
             dynamicHash: appUrls.subscriptions
         }),
         /* TODO: 

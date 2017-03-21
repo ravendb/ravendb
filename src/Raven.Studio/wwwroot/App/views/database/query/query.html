@@ -33,7 +33,7 @@
                 </div>
                 <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }"><i class="icon-edit"></i><span>Edit index</span></a>
                 <a class="btn btn-default" data-bind="attr: { href: indexPerformanceUrl }" title="Navigate to index performance"><i class="icon-traffic-watch"></i><span>Index performance</span></a>
-                <a class="btn btn-default" data-bind="attr: { href: termsUrl }" title="Navigate to index terms"><i class="icon-indexing"></i><span>Index terms</span></a>
+                <a class="btn btn-default" data-bind="attr: { href: termsUrl }" title="Navigate to index terms"><i class="icon-terms"></i><span>Index terms</span></a>
                 <div class="btn-group has-disable-reason"  data-bind="attr: { 'data-original-title': isIndexMapReduce() ? '' : 'Available only for map/reduce indexes' }">
                     <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, css: { 'disabled' : !isIndexMapReduce() }" title="Map/Reduce Visualizer"><i class="icon-map-reduce-visualizer"></i> <span>Map/Reduce Visualizer</span></a>
                 </div>
@@ -189,7 +189,7 @@
                         <div class="dropdown-menu settings-menu padding padding-sm" role="menu" data-bind="dropdownPanel: true">
                             <div class="row row-sm margin-bottom">
                                 <div class="col-xs-12">
-                                    <div class="dropdown btn btn-block">
+                                    <div class="dropdown btn-block">
                                         <button class="btn btn-block text-left dropdown-toggle" type="button" data-toggle="dropdown">
                                             <span data-bind="text: uiTransformer() || 'None'"></span>
                                             <span class="caret"></span>
@@ -340,7 +340,7 @@
                         <div class="col-sm-8 col-md-9 input-group date" id="rangeFromInputDate" data-bind="datePicker: rangeDateFrom, datepickerOptions: { endDateElement: 'rangeToInputDate'}" >
                             <input type="text" class="form-control" data-bind="textInput: rangeFrom" />
                             <span class="input-group-addon">
-                                <span class="icon-check"></span>
+                                <span class="icon-calendar"></span>
                             </span>
                         </div>
                     </div>
@@ -349,7 +349,7 @@
                         <div class="col-sm-8 col-md-9 input-group date" id="rangeToInputDate" data-bind="datePicker: rangeDateTo, datepickerOptions: { startDateElement: 'rangeFromInputDate'}">
                             <input type="text" class="form-control" data-bind="textInput: rangeTo" />
                             <span class="input-group-addon">
-                                <span class="icon-check"></span>
+                                <span class="icon-calendar"></span>
                             </span>
                         </div>
                     </div>
