@@ -3,25 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
-
+using FastTests;
+using Raven.Client.Documents.Transformers;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_2325 : RavenTest
+    public class RavenDB_2325 : RavenTestBase
     {
         private class UserAge : AbstractTransformerCreationTask<User>
         {
-            internal class Result
-            {
-                public int Value { get; set; }
-            }
-
             public UserAge()
             {
                 TransformResults = users => from user in users
@@ -41,7 +35,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void IfTransformerReturnsNullItShouldNotThrow()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new UserAge().Execute(store);
                 new PersonAddress().Execute(store);
@@ -51,13 +45,13 @@ namespace Raven.Tests.Issues
                     session.Store(new User { Age = 10 });
                     session.Store(new Company { Name = "Name1" });
                     session.Store(new PersonWithAddress
-                                  {
-                                      Name = "Person1", 
-                                      Address = new Address
-                                                {
-                                                    Street = "Street1"
-                                                }
-                                  });
+                    {
+                        Name = "Person1",
+                        Address = new Address
+                        {
+                            Street = "Street1"
+                        }
+                    });
 
                     session.SaveChanges();
                 }
@@ -67,7 +61,7 @@ namespace Raven.Tests.Issues
                     var results1 = session
                         .Query<Company>()
                         .Customize(x => x.WaitForNonStaleResults())
-                        .TransformWith<UserAge, UserAge.Result>()
+                        .TransformWith<UserAge, long?>()
                         .ToList();
 
                     Assert.Equal(1, results1.Count);
@@ -76,11 +70,11 @@ namespace Raven.Tests.Issues
                     results1 = session
                         .Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
-                        .TransformWith<UserAge, UserAge.Result>()
+                        .TransformWith<UserAge, long?>()
                         .ToList();
 
                     Assert.Equal(1, results1.Count);
-                    Assert.Equal(10, results1[0].Value);
+                    Assert.Equal(10, results1[0]);
 
                     var results2 = session
                         .Query<Company>()
