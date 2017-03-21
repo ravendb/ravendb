@@ -1,51 +1,27 @@
-using Sparrow.Binary;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Sparrow
 {
     public static unsafe class Sodium
     {
-        static Sodium()
+            private static int crypto_kdf_keybytes()
         {
-            var rc = sodium_init();
-            if (rc == -1)
-                throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
-            // TODO : we get here "+1".  need to investigate is it an error or not.
-        }
-
-
-        private static int crypto_kdf_keybytes()
-        {
-            if (kdfbytes == null)
+          
+            if (_kdfbytes == null)
             {
-                if (Platform.PlatformDetails.RunningOnPosix)
-                    kdfbytes = Platform.Posix.PosixSodium.crypto_kdf_keybytes();
-                else
-                    kdfbytes = Platform.Win32.WinSodium.crypto_kdf_keybytes();
+                _kdfbytes = 
+                    Platform.PlatformDetails.RunningOnPosix ? 
+                    Platform.Posix.PosixSodium.crypto_kdf_keybytes() : Platform.Win32.WinSodium.crypto_kdf_keybytes();
             }
-            return kdfbytes.Value;
+            return _kdfbytes.Value;
         }
-
-        private static int sodium_init()
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.sodium_init();
-            return Platform.Win32.WinSodium.sodium_init();
-        }
-
         public static int randombytes_buf(
             byte* buffer,
             int size)
         {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.randombytes_buf(buffer, size);
-            return Platform.Win32.WinSodium.randombytes_buf(buffer, size);
+            return Platform.PlatformDetails.RunningOnPosix ? 
+                Platform.Posix.PosixSodium.randombytes_buf(buffer, size) : Platform.Win32.WinSodium.randombytes_buf(buffer, size);
         }
 
         private static void crypto_kdf_keygen(
@@ -75,6 +51,7 @@ namespace Sparrow
         public static int crypto_aead_chacha20poly1305_encrypt_detached(
             byte* c,
             byte* mac,
+            // ReSharper disable once InconsistentNaming
             ulong* maclen_p,
             byte* m,
             ulong mlen,
@@ -123,50 +100,50 @@ namespace Sparrow
 
         public static int crypto_box_sealbytes()
         {
-            if (sealbytes == null)
+            if (_sealbytes == null)
             {
                 if (Platform.PlatformDetails.RunningOnPosix)
-                    sealbytes = Platform.Posix.PosixSodium.crypto_box_sealbytes();
+                    _sealbytes = Platform.Posix.PosixSodium.crypto_box_sealbytes();
                 else
-                    sealbytes = Platform.Win32.WinSodium.crypto_box_sealbytes();
+                    _sealbytes = Platform.Win32.WinSodium.crypto_box_sealbytes();
             }
-            return sealbytes.Value;
+            return _sealbytes.Value;
         }
 
         public static int crypto_box_secretkeybytes()
         {
-            if (secretkeybytes == null)
+            if (_secretkeybytes == null)
             {
                 if (Platform.PlatformDetails.RunningOnPosix)
-                    secretkeybytes = Platform.Posix.PosixSodium.crypto_box_secretkeybytes();
+                    _secretkeybytes = Platform.Posix.PosixSodium.crypto_box_secretkeybytes();
                 else
-                    secretkeybytes = Platform.Win32.WinSodium.crypto_box_secretkeybytes();
+                    _secretkeybytes = Platform.Win32.WinSodium.crypto_box_secretkeybytes();
             }
-            return secretkeybytes.Value;
+            return _secretkeybytes.Value;
         }
 
         public static int crypto_box_publickeybytes()
         {
-            if (publickeybytes == null)
+            if (_publickeybytes == null)
             {
                 if (Platform.PlatformDetails.RunningOnPosix)
-                    publickeybytes = Platform.Posix.PosixSodium.crypto_box_publickeybytes();
+                    _publickeybytes = Platform.Posix.PosixSodium.crypto_box_publickeybytes();
                 else
-                    publickeybytes = Platform.Win32.WinSodium.crypto_box_publickeybytes();
+                    _publickeybytes = Platform.Win32.WinSodium.crypto_box_publickeybytes();
             }
-            return publickeybytes.Value;
+            return _publickeybytes.Value;
         }
 
         public static int crypto_generichash_bytes_max()
         {
-            if (generichashBytesMax == null)
+            if (_generichashBytesMax == null)
             {
                 if (Platform.PlatformDetails.RunningOnPosix)
-                    generichashBytesMax = Platform.Posix.PosixSodium.crypto_generichash_bytes_max();
+                    _generichashBytesMax = Platform.Posix.PosixSodium.crypto_generichash_bytes_max();
                 else
-                    generichashBytesMax = Platform.Win32.WinSodium.crypto_generichash_bytes_max();
+                    _generichashBytesMax = Platform.Win32.WinSodium.crypto_generichash_bytes_max();
             }
-            return generichashBytesMax.Value;
+            return _generichashBytesMax.Value;
         }
 
         public static byte[] GenerateMasterKey()
@@ -181,11 +158,11 @@ namespace Sparrow
 
         public static readonly byte[] Context = Encoding.UTF8.GetBytes("Raven DB");
 
-        private static int? sealbytes;
-        private static int? kdfbytes;
-        private static int? generichashBytesMax;
-        private static int? secretkeybytes;
-        private static int? publickeybytes;
+        private static int? _sealbytes;
+        private static int? _kdfbytes;
+        private static int? _generichashBytesMax;
+        private static int? _secretkeybytes;
+        private static int? _publickeybytes;
 
         public static byte[] DeriveKey(byte[] masterKey, long num)
         {
