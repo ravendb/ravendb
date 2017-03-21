@@ -11,15 +11,6 @@ namespace Sparrow
 {
     public static unsafe class Sodium
     {
-        static Sodium()
-        {
-            var rc = sodium_init();
-            if (rc == -1)
-                throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
-            // TODO : we get here "+1".  need to investigate is it an error or not.
-        }
-
-
         private static int crypto_kdf_keybytes()
         {
             if (kdfbytes == null)
@@ -30,13 +21,6 @@ namespace Sparrow
                     kdfbytes = Platform.Win32.WinSodium.crypto_kdf_keybytes();
             }
             return kdfbytes.Value;
-        }
-
-        private static int sodium_init()
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.sodium_init();
-            return Platform.Win32.WinSodium.sodium_init();
         }
 
         public static int randombytes_buf(
