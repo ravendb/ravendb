@@ -284,7 +284,7 @@ namespace Raven.Server.Documents.Handlers
                             break;
                         case BatchRequestParser.CommandType.DELETE:
                             
-                            if (cmd.Key[cmd.Key.Length - 1] != '/')
+                            if (cmd.KeyPrefixed == false)
                             {
                                 var deleted = Database.DocumentsStorage.Delete(context, cmd.Key, cmd.Etag);
 
