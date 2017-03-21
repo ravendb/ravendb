@@ -77,13 +77,16 @@
             </div>
             <div class="scroll-stretch">
                 <div class="panel-body">
-                    <virtual-grid class="resizable documents-grid" params="controller: gridController"></virtual-grid>
+                    <virtual-grid class="resizable documents-grid" params="controller: gridController, emptyTemplate: 'empty-collection-template'"></virtual-grid>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<script type="text/html" id="empty-collection-template">
+    Collection is empty
+</script>
 <div class="tooltip json-preview" style="opacity: 0">
     <pre><code></code></pre>
 </div>

@@ -24,6 +24,8 @@ class virtualGrid<T> {
     private virtualWidth = ko.observable<number>();
     private scrollAnimationFrameHandle = 0;
     private isLoading = ko.observable(false);
+    private emptyResult = ko.observable(false);
+    private emptyTemplate: string = null;
     private queuedFetch: itemFetch | null = null;
     private columns = ko.observableArray<virtualColumn>();
     private isGridVisible = false;
@@ -47,7 +49,7 @@ class virtualGrid<T> {
     private static readonly viewportScrollerSelector = ".viewport-scroller";
     private static readonly minColumnWidth = 20;
 
-    constructor(params: { controller: KnockoutObservable<virtualGridController<T>> }) {
+    constructor(params: { controller: KnockoutObservable<virtualGridController<T>>, emptyTemplate: string }) {
         this.gridId = _.uniqueId("vg_");
 
         this.refreshSelection();
@@ -56,6 +58,10 @@ class virtualGrid<T> {
 
         if (params.controller) {
             params.controller(this.controller);
+        }
+
+        if (params.emptyTemplate) {
+            this.emptyTemplate = params.emptyTemplate;
         }
     }
 
@@ -282,8 +288,8 @@ class virtualGrid<T> {
     }
 
     private checkForUpdatedGridHeight(): number {
-        var oldHeight = this.gridElementHeight;
-        var newHeight = this.$gridElement.height();
+        const oldHeight = this.gridElementHeight;
+        const newHeight = this.$gridElement.height();
         this.gridElementHeight = newHeight;
 
         // If the grid grew taller, we may need more virtual rows.
@@ -438,6 +444,8 @@ class virtualGrid<T> {
 
             this.syncVirtualWidth();
         }
+
+        this.emptyResult(results.totalResultCount === 0);
 
         this.updateResultEtag(results.resultEtag);
 
@@ -726,6 +734,9 @@ class virtualGrid<T> {
     <div class="viewport flex-window-scroll" data-bind="css: { 'header-visible': settings.showHeader }">
         <div class="viewport-scroller" data-bind="style: { height: virtualHeight() + 'px', width: virtualWidth() + 'px' }, template: { afterRender: afterRender.bind($data) }">
         </div>
+    </div>
+    <div class="absolute-center" data-bind="visible: emptyTemplate && emptyResult(), if: emptyTemplate">
+        <div data-bind="template: emptyTemplate"></div>
     </div>
 </div>
 `
