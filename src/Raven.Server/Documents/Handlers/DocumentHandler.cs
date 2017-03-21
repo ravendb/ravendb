@@ -576,9 +576,12 @@ namespace Raven.Server.Documents.Handlers
                         }
                         else
                         {
-                            // origin document is only accessible from the transaction, and we are closing it
-                            // so we have hold on to a copy of it
-                            origin = patchResult.OriginalDocument.Clone(context);
+                            if (patchResult.OriginalDocument != null)
+                            {
+                                // origin document is only accessible from the transaction, and we are closing it
+                                // so we have hold on to a copy of it
+                                origin = patchResult.OriginalDocument.Clone(context);
+                            }
                         }
                     }
 
@@ -622,12 +625,13 @@ namespace Raven.Server.Documents.Handlers
                             else
                                 writer.WriteNull();
 
+                            writer.WriteComma();
+
                             writer.WritePropertyName(nameof(patchResult.Debug));
                             if (patchResult.Debug != null)
                                 writer.WriteObject(patchResult.Debug);
                             else
                                 writer.WriteNull();
-                            writer.WriteComma();
                         }
 
                         writer.WriteEndObject();
