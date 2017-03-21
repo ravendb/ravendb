@@ -116,18 +116,7 @@ namespace SlowTests.Voron.Bugs
                         metadataReader.Read(etagFromMetadata, 0, 16);
 
                         var readEtag = new Guid(etagFromMetadata);
-                        if (etag != readEtag)
-                        {
-                            string existingDocKey;
-                            if (inMemoryKeysByEtag.TryGetValue(readEtag, out existingDocKey))
-                            {
-                                Console.WriteLine("Etag " + readEtag + " belongs to " + existingDocKey + " document");
-                            }
-                            else
-                            {
-                                Console.WriteLine("There is no document with etag " + readEtag);
-                            }
-                        }
+                        
 
                         Assert.Equal(etag, readEtag);
 

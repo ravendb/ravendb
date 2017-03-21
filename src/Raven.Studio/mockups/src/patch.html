@@ -27,15 +27,16 @@
                         <div class="clearfix">
                             <h2 class="pull-left-sm">Patch target</h2>
                             <div class="pull-right-sm form-inline">
-                                <div class="input-group patch-save" >
+                                <div class="input-group patch-save has-error">
                                     <input class="form-control" placeholder="Patch name">
+                                    <!--<span class="help-block">This field is required.</span>-->
                                     <span class="input-group-btn">
                                         <button class="btn btn-success btn-toggle" data-target=".patch-save" data-class="active" type="button"><i class="icon-save"></i> <span>Save...</span></button>
                                     </span>
                                 </div>
                                 <div class="dropdown dropdown-right loadpatch">
                                     <button class="btn btn-default dropdown-toggle" type="button" id="dropdownLoadPatch" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                                        <i class="icon-folder"></i> <span>Load patch</span>
+                                        <i class="icon-patch"></i> <span>Load patch</span>
                                         <span class="caret"></span>
                                     </button>
                                     <div class="dropdown-menu slidein-style" aria-labelledby="dropdownLoadPatch">
@@ -406,77 +407,210 @@ foreach (XmlNode xn in xnList)
                             </div>
                         </div>
                     </div>
-                    <div id="patch-script">
-                        <h2 class="patch-title">Patch script</h2>
-
-                        <div class="patch-container">
-                            <div class="patch-main">
-                                <textarea class="form-control patch-source" rows="6"></textarea>
-
-                            </div>
-                            <div class="patch-controls">
-                                <button class="btn btn-primary btn-block btn-lg text-center">
-                                    <i class="icon-play2 icon-lg"></i><br />
-                                    <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
-                                </button>
-                                <button class="btn btn-default btn-block text-center btn-toggle btn-test" data-target="body" data-class="show-test">
-                                    <i class="icon-rocket"></i><span>Test</span>
-                                </button>
-                                <div class="flex-separator"></div>
-                                <button class="btn btn-default statistics btn-block text-center">
-                                    <i class="icon-stats"></i><span>Statistics</span>
-                                </button>
-                            </div>
-                            <div class="test-controls">
-                                <button class="btn btn-primary btn-block text-center btn-test">
-                                    <i class="icon-rocket"></i><span>Test</span>
-                                </button>
-                                <div class="flex-separator"></div>
-                                <button class="btn btn-success btn-block text-center btn-toggle test-close" data-target="body" data-class="show-test">
-                                    <i class="icon-check"></i><span>apply</span>
-                                </button>
-                                <button class="btn btn-default btn-block text-center btn-toggle test-close" data-target="body" data-class="show-test">
-                                    <i class="icon-cancel"></i><span>Close</span>
-                                </button>
+                    <div class="row form-horizontal" id="patch-script">
+                        <label class="control-label col-sm-3 col-lg-2 patch-title">Patch script</label>
+                        <div class="col-sm-9 col-lg-10">
+                            <div class="patch-container">
+                                <div class="patch-main">
+                                    <textarea class="form-control patch-source" rows="6"></textarea>
+                                </div>
+                                <div class="patch-controls">
+                                    <button class="btn btn-primary btn-block btn-lg text-center">
+                                        <i class="icon-play2 icon-lg"></i><br />
+                                        <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
+                                    </button>
+                                    <button class="btn btn-default btn-block text-center btn-toggle btn-test" data-target="body" data-class="show-test">
+                                        <i class="icon-rocket"></i><span>Test</span>
+                                    </button>
+                                    <div class="flex-separator"></div>
+                                    <button class="btn btn-default statistics btn-block text-center">
+                                        <i class="icon-stats"></i><span>Statistics</span>
+                                    </button>
+                                </div>
+                                <div class="test-controls">
+                                    <button class="btn btn-primary btn-block text-center btn-test">
+                                        <i class="icon-rocket"></i><span>Test</span>
+                                    </button>
+                                    <div class="flex-separator"></div>
+                                    <button class="btn btn-success btn-block text-center btn-toggle test-close" data-target="body" data-class="show-test">
+                                        <i class="icon-check"></i><span>apply</span>
+                                    </button>
+                                    <button class="btn btn-default btn-block text-center btn-toggle test-close" data-target="body" data-class="show-test">
+                                        <i class="icon-cancel"></i><span>Close</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <div id="test-container" class="collapse">
-                            <div class="panel">
-                                <div class="padding">
-                                    <div class="row margin-bottom">
-                                        <label class="control-label col-xs-12 col-sm-4 col-lg-3 col-xl-2">Document ID</label>
-                                        <div class="col-sm-8 col-lg-6 col-xl-4 col-lg-offset-3  col-xl-offset-0">
-                                            <div class="input-group">
-                                                <input class="form-control" placeholder="Search for...">
-                                                <span class="input-group-btn">
-                                                    <button class="btn btn-default" type="button"><i class="icon-import"></i> <span>Load</span></button>
-                                                </span>
+                    </div>
+                    <div id="test-container" class="collapse">
+                        <div class="row margin-bottom form-horizontal">
+                            <label class="control-label col-sm-3 col-lg-2">Document ID</label>
+                            <div class="col-sm-9 col-lg-10">
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <div class="input-group">
+                                            <input class="form-control" placeholder="...">
+                                            <span class="input-group-btn">
+                                                <button class="btn btn-default" type="button"><i class="icon-import"></i> <span>Load</span></button>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <small class="text-info"><i class="icon-info"></i> You can also paste your own document JSON to test</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row tabs-left form-horizontal">
+                            <div class="col-sm-3 col-lg-2">
+
+                                <ul class="nav nav-tabs nav-stacked">
+                                    <li class="active">
+                                        <a href="#preview" data-toggle="tab">
+                                            <i class="icon-preview"></i> <span>Preview</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#puts" data-toggle="tab">
+                                            <i class="icon-export"></i> <span>Puts</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#loads" data-toggle="tab">
+                                            <i class="icon-import"></i> <span>Loads</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#output" data-toggle="tab">
+                                            <i class="icon-rocket"></i> <span>Output</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-sm-9 col-lg-10">
+                                <div class="panel ">
+                                    <div class="padding">
+                                        <div class="tab-content">
+                                            <div class="tab-pane active" id="preview">
+                                                <div class="row">
+                                                    <div class="col-sm-6">
+                                                        <h3>Before</h3>
+                                                        <textarea rows="10" class="form-control"></textarea>
+                                                    </div>
+                                                    <div class="col-sm-6">
+                                                        <h3>After</h3>
+                                                        <textarea rows="10" class="form-control"></textarea>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="tab-pane" id="puts">
+                                                <h3>Puts</h3>
+                                                <p>Cras pretium, mi in finibus gravida, nunc velit finibus erat, sodales pellentesque augue ipsum sed orci. Integer quis ex ornare lacus luctus luctus et non arcu. Fusce aliquet turpis at leo dictum, non lobortis erat sagittis. Aliquam pharetra malesuada eros, eget mattis sem viverra eu. Sed eget rhoncus metus, a venenatis turpis. Pellentesque id libero porttitor, tincidunt lacus non, interdum turpis. Phasellus ornare dui ut erat viverra vehicula. Ut in eros vitae eros molestie bibendum. Suspendisse laoreet bibendum justo ornare mattis. Praesent non eros varius, hendrerit sapien et, vestibulum orci. Sed vel sem vel dolor gravida suscipit eget at lorem. Aliquam diam lectus, sollicitudin at ligula quis, venenatis condimentum enim. Vivamus sit amet arcu id urna accumsan iaculis vitae auctor nisl. Duis id faucibus mauris, nec varius tellus.</p>
+                                            </div>
+                                            <div class="tab-pane" id="loads">
+                                                <h3>Loads</h3>
+                                                <p>Proin magna orci, blandit nec efficitur sed, sollicitudin nec augue. Aliquam semper risus tempor, faucibus erat et, lobortis odio. In eu euismod odio. Praesent facilisis ante quis nibh facilisis, at efficitur sapien semper. Cras condimentum turpis et scelerisque tempus. Duis efficitur, nunc nec rhoncus sodales, nibh dolor ullamcorper tellus, eu blandit lectus augue vel diam. Praesent quis ligula in eros lacinia cursus vitae et magna. Vivamus lectus est, mattis ut erat semper, accumsan convallis massa. Fusce hendrerit odio in urna maximus consequat. Aliquam sit amet dolor accumsan, auctor sapien vel, congue nulla.</p>
+                                            </div>
+                                            <div class="tab-pane" id="output">
+                                                <h3>Output</h3>
+                                                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus mollis lectus erat, in malesuada orci egestas non. Duis bibendum consectetur neque et posuere. Suspendisse elementum neque vel justo sagittis facilisis. Suspendisse pellentesque nulla ipsum, ac finibus ante placerat non. In vitae eleifend augue. Cras pellentesque magna nisi, vitae sollicitudin urna malesuada in. Nullam quis condimentum mi. Sed vulputate est at purus lacinia sodales. Donec at posuere sem. Pellentesque lacinia nisl eget tortor tincidunt, quis egestas ante iaculis. Vivamus mi sem, sollicitudin at augue at, faucibus congue nunc. Donec id congue nibh. Donec non porttitor dolor. Quisque cursus nisl sit amet ornare interdum. Morbi tempor massa ut egestas vulputate.</p>
                                             </div>
                                         </div>
-                                        <div class="col-xs-12 col-xl-5"><small class="text-info"><i class="icon-info"></i> You can also paste your own document JSON to test</small></div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-sm-6">
-                                            <h3>Before</h3>
-                                            <textarea rows="10" class="form-control"></textarea>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <h3>After</h3>
-                                            <textarea rows="10" class="form-control"></textarea>
-                                        </div>
+                                        <div class="clearfix"></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <!--<h2 class="patch-title">Patch script</h2>-->
+                    <!--
+                    <div class="patch-container">
+                        <div class="patch-main">
+                            <textarea class="form-control patch-source" rows="6"></textarea>
+                        </div>
+                        <div class="patch-controls">
+                            <button class="btn btn-primary btn-block btn-lg text-center">
+                                <i class="icon-play2 icon-lg"></i><br />
+                                <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
+                            </button>
+                            <button class="btn btn-default btn-block text-center btn-toggle btn-test" data-target="body" data-class="show-test">
+                                <i class="icon-rocket"></i><span>Test</span>
+                            </button>
+                            <div class="flex-separator"></div>
+                            <button class="btn btn-default statistics btn-block text-center">
+                                <i class="icon-stats"></i><span>Statistics</span>
+                            </button>
+                        </div>
+                        <div class="test-controls">
+                            <button class="btn btn-primary btn-block text-center btn-test">
+                                <i class="icon-rocket"></i><span>Test</span>
+                            </button>
+                            <div class="flex-separator"></div>
+                            <button class="btn btn-success btn-block text-center btn-toggle test-close" data-target="body" data-class="show-test">
+                                <i class="icon-check"></i><span>apply</span>
+                            </button>
+                            <button class="btn btn-default btn-block text-center btn-toggle test-close" data-target="body" data-class="show-test">
+                                <i class="icon-cancel"></i><span>Close</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="test-container" class="collapse">
+                        <div class="panel">
+                            <div class="padding">
+                                <div class="row margin-bottom">
+                                    <label class="control-label col-xs-12 col-sm-4 col-lg-3 col-xl-2">Document ID</label>
+                                    <div class="col-sm-8 col-lg-6 col-xl-4 col-lg-offset-3  col-xl-offset-0">
+                                        <div class="input-group">
+                                            <input class="form-control" placeholder="Search for...">
+                                            <span class="input-group-btn">
+                                                <button class="btn btn-default" type="button"><i class="icon-import"></i> <span>Load</span></button>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-xs-12 col-xl-5"><small class="text-info"><i class="icon-info"></i> You can also paste your own document JSON to test</small></div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <h3>Before</h3>
+                                        <textarea rows="10" class="form-control"></textarea>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <h3>After</h3>
+                                        <textarea rows="10" class="form-control"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    -->
                 </div>
             </div>
-        </div>    
+        </div>
+    </div>
     </div>
     <div class="backdrop btn-toggle" data-target="body" data-class="show-test"></div>
 
     <script>
         $(function () {
+
+            /*var tabsFn = (function () {
+
+                function init() {
+                    setHeight();
+                }
+
+                function setHeight() {
+                    var $tabPane = $('.tab-pane'),
+                        tabsHeight = $('.nav-tabs').height();
+
+                    $tabPane.css({
+                        height: tabsHeight
+                    });
+                }
+
+                $(init);
+            })();*/
 
             $('.btn-test').click(function () {
                 $('.enable-right-options-panel').toggleClass('panel-hide');

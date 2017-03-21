@@ -5,7 +5,7 @@
                 <h2 class="pull-left-sm">Patch target</h2>
                 <div class="pull-right-sm form-inline">
                     <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationElement: patchSaveName">
-                        <input class="form-control"  style="display: none" placeholder="Patch name" data-bind="textInput: patchSaveName">
+                        <input class="form-control" style="display: none" placeholder="Patch name" data-bind="textInput: patchSaveName">
                         <span class="input-group-btn">
                             <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch, css: { 'btn-spinner': spinners.save }">
                                 <i class="icon-save"></i> <span data-bind="text: inSaveMode() ? 'Save' : 'Save...'"></span>
@@ -33,12 +33,18 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="row" data-bind="visible: isDocumentMode, with: patchDocument">
                     <label class="control-label col-sm-3 col-lg-2">Document ID</label>
 
                     <div class="col-sm-9 col-lg-4 margin-bottom" data-bind="validationElement: selectedItem">
-                        <input type="text" id="selectedItem" data-bind="textInput: selectedItem" class="form-control" />
+                        <div class="input-group">
+                            <input type="text" id="selectedItem" data-bind="textInput: selectedItem" class="form-control" />
+                            <span class="input-group-btn">
+                                <button class="btn" type="button" title="Show preview"><i class="icon-preview"></i></button>
+                            </span>
+                        </div>
+
                         <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#selectedItem', foreach: $root.documentIdSearchResults">
                             <li role="presentation" data-bind="click: $parent.selectedItem.bind($parent, $data)">
                                 <a role="menuitem" tabindex="-1" href="#">
@@ -48,7 +54,7 @@
                         </ul>
                     </div>
                 </div>
-                
+
                 <div class="row" data-bind="visible: isIndexMode()">
                     <label class="control-label col-sm-3 col-lg-2">Index</label>
 
@@ -58,14 +64,19 @@
                                 <span data-bind="text: patchDocument().selectedItem() || 'Select index...'"></span>
                                 <span class="caret"></span>
                             </button>
-                            <ul class="dropdown-menu" data-bind="foreach: indexNames">
-                                <li><a href="#" data-bind="text: $data, click: _.partial($parent.useIndex, $data)"></a></li>
-                            </ul>
+                            <div class="dropdown-menu has-info">
+                                <ul class="menu max-height" data-bind="foreach: indexNames">
+                                    <li><a href="#" data-bind="text: $data, click: _.partial($parent.useIndex, $data)"></a></li>
+                                </ul>
+                                <div class="bg-info">
+                                    <i class="icon-info"></i> <span>Map-Reduce indexes are not available for patching</span>
+                                </div>
+                            </div>
                         </div>
                         <span class="help-block" data-bind="validationMessage: patchDocument().selectedItem"></span>
                     </div>
                 </div>
-                
+
                 <div class="row" data-bind="visible: isCollectionMode()">
                     <label class="control-label col-sm-3 col-lg-2">Collection</label>
 
@@ -127,7 +138,7 @@
                     </div>
                     <label class="control-label col-sm-3 col-lg-2">Matching documents</label>
                     <div class="col-sm-9 col-lg-10" style="height: 300px">
-                        <virtual-grid class="resizable patch-grid" params="controller: $root.gridController"></virtual-grid>
+                        <virtual-grid class="resizable patch-grid" params="controller: $root.gridController" style="position:absolute; top:0; bottom:0; left:15px; right: 15px;"></virtual-grid>
                     </div>
                 </div>
             </div>
@@ -138,7 +149,7 @@
             <div class="patch-container">
                 <div class="patch-main">
                     <pre class="form-control patch-source" data-bind="aceEditor: { code: patchDocument().script, lang:'ace/mode/javascript' }" style="height: 160px;"></pre>
-                    
+
                     <div data-bind="validationElement: patchDocument().script">
                         <div class="help-block" data-bind="validationMessage: patchDocument().script"></div>
                     </div>
@@ -208,7 +219,7 @@
 
 <script type="text/html" id="saved-patches-dialog">
     <button class="btn btn-default dropdown-toggle" type="button" id="dropdownLoadPatch" data-toggle="dropdown" data-bind="enable: savedPatches.hasAnySavedPatch">
-        <i class="icon-folder"></i> <span>Load patch</span>
+        <i class="icon-patch"></i> <span>Load patch</span>
         <span class="caret"></span>
     </button>
     <div class="dropdown-menu slidein-style" aria-labelledby="dropdownLoadPatch" data-bind="dropdownPanel: true, with: savedPatches">
@@ -217,7 +228,7 @@
                 <h3>
                     Patch preview <span data-bind="visible: previewItem()">-</span> <strong data-bind="text: previewItem() ? previewItem().name() : ''"></strong>
                 </h3>
-                
+
                 <div class="pre-container">
                     <pre>
 <code data-bind="html: previewCode"></code>
@@ -250,7 +261,7 @@
     </div>
 </script>
 
-<!-- TODO  
+<!-- TODO
 
 
     <div class="btn-toolbar" role="toolbar">
@@ -260,7 +271,7 @@
     </div>
     <br />
     <div class="form-horizontal">
-      
+
         <div class="form-group patch-preview-flag" data-bind="with: $root" id="beforeAfterContainer">
             <div class="col-md-6">
                 <div>

@@ -1,57 +1,54 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
+using FastTests;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_2502 : RavenTestBase
     {
-        public class Foo
+        private class Foo
         {
             public string Name { get; set; }
         }
 
-        public class Bar
+        private class Bar
         {
             public string Name { get; set; }
 
             public string ParameterValue { get; set; }
         }
 
-        public class FooTransformer : AbstractTransformerCreationTask<Foo>
+        private class FooTransformer : AbstractTransformerCreationTask<Foo>
         {
             public FooTransformer()
             {
                 TransformResults = results => from result in results
-                                                   select new
-                                                   {
-                                                       result.Name,
-                                                       ParameterValue = Query("param").Value<string>()
-                                                   };
+                                              select new
+                                              {
+                                                  result.Name,
+                                                  ParameterValue = Parameter("param").Value<string>()
+                                              };
             }
         }
 
-        public class FooIndex : AbstractIndexCreationTask<Foo>
+        private class FooIndex : AbstractIndexCreationTask<Foo>
         {
             public FooIndex()
             {
                 Map = foos => from foo in foos
-                    select new
-                    {
-                        foo.Name
-                    };
+                              select new
+                              {
+                                  foo.Name
+                              };
             }
         }
 
         [Fact]
         public void TransformerWithParameters_in_streaming_query_should_work()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new FooIndex().Execute(store);
                 new FooTransformer().Execute(store);
@@ -78,27 +75,23 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Query<Foo,FooIndex>()
+                    var query = session.Query<Foo, FooIndex>()
                         .TransformWith<FooTransformer, Bar>()
-                        .AddQueryInput("param","foobar");
+                        .AddTransformerParameter("param", "foobar");
 
-                    Assert.DoesNotThrow(() =>
+                    using (var stream = session.Advanced.Stream(query))
                     {
-                        using (var stream = session.Advanced.Stream(query))
+                        int count = 0;
+                        while (stream.MoveNext())
                         {
-                            int count = 0;
-                            while (stream.MoveNext())
-                            {
-                                Assert.Equal(stream.Current.Document.ParameterValue, "foobar");
-                                count++;
-                            } 
-
-                            Assert.Equal(3,count);
+                            Assert.Equal(stream.Current.Document.ParameterValue, "foobar");
+                            count++;
                         }
-                    });
+
+                        Assert.Equal(3, count);
+                    }
                 }
             }
-
         }
     }
 }

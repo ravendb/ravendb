@@ -286,22 +286,6 @@ namespace SlowTests.Tests.Faceted
             InsertCameraData(store, _data);
         }
 
-        private void PrintFacetResults(FacetedQueryResult facetResults)
-        {
-            foreach (var kvp in facetResults.Results)
-            {
-                if (kvp.Value.Values.Count() > 0)
-                {
-                    Console.WriteLine(kvp.Key + ":");
-                    foreach (var facet in kvp.Value.Values)
-                    {
-                        Console.WriteLine("    {0}: {1}", facet.Range, facet.Hits);
-                    }
-                    Console.WriteLine();
-                }
-            }
-        }
-
         private void CheckFacetResultsMatchInMemoryData(
                     FacetedQueryResult facetResults,
                     List<Camera> filteredData)

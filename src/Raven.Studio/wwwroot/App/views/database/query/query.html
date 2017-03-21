@@ -133,7 +133,9 @@
                     <small data-bind="html: querySummary"></small>
                 </div>
                 <div class="btn-group btn-group-sm pull-right" role="group">
-                    <button type="button" class="btn btn-danger btn-prerelease" disabled="disabled"><i class="icon-trash"></i> <span>Delete documents</span></button>
+                    <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': isIndexMapReduce() ? 'Available only for map indexes' : '' }">
+                        <button type="button" class="btn btn-danger btn-sm" data-bind="enable: !isIndexMapReduce(), click: deleteDocsMatchingQuery"><i class="icon-trash"></i> <span>Delete documents</span></button>
+                    </div>
                     <div class="btn-group dropdown-right">
                         <button class="btn btn-default btn-sm dropdown-toggle btn-checkable" type="button" data-toggle="dropdown" 
                                 data-bind="css: { 'btn-info active': criteria().hasSorts }, enable: !criteria().allDocumentsIndexSelected()">
@@ -237,7 +239,7 @@
         <div class="panel flex-window-scroll">
             <div class="has-error results-error" data-bind="visible: staleResult()">
                 <div class="help-block">
-                    <i class="icon-danger"></i><span>Index is stale, possibly not all results are displayed.</span>
+                    <i class="icon-danger"></i><span>Index is stale, possibly not all results are displayed. <a href="#" data-bind="click: refresh">Refresh.</a></span>
                 </div>
             </div>
             <div class="has-error results-error" data-bind="visible: dirtyResult() && !staleResult()">

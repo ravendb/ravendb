@@ -29,7 +29,7 @@ namespace Raven.Server.Web.Operations
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/operation/kill", "POST")]
+        [RavenAction("/databases/*/operations/kill", "POST")]
         public Task Kill()
         {
             var id = GetLongQueryString("id");

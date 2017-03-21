@@ -3,21 +3,20 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
-
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq.Indexing;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq.Indexing;
+using Raven.Client.Documents.Transformers;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_2435 : RavenTest
+    public class RavenDB_2435 : RavenTestBase
     {
         private class Index1 : AbstractIndexCreationTask<Person>
         {
@@ -25,9 +24,9 @@ namespace Raven.Tests.Issues
             {
                 Map = people => from person in people
                                 select new
-                                       {
-                                           Name = person.Name.StripHtml()
-                                       };
+                                {
+                                    Name = person.Name.StripHtml()
+                                };
 
                 StoreAllFields(FieldStorage.Yes);
             }
@@ -39,16 +38,16 @@ namespace Raven.Tests.Issues
             {
                 TransformResults = results => from result in results
                                               select new
-                                                     {
-                                                         Name = result.Name.StripHtml()
-                                                     };
+                                              {
+                                                  Name = result.Name.StripHtml()
+                                              };
             }
         }
 
         [Fact]
         public void StripHtmlShouldWorkForIndexesAndTransformers()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Index1().Execute(store);
                 new Transformer1().Execute(store);
@@ -89,8 +88,6 @@ namespace Raven.Tests.Issues
                 }
 
                 WaitForIndexing(store, timeout: TimeSpan.FromSeconds(60));
-
-                var errors = store.DatabaseCommands.GetStatistics();
 
                 using (var session = store.OpenSession())
                 {
