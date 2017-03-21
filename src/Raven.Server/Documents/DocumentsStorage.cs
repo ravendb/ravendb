@@ -1216,12 +1216,12 @@ namespace Raven.Server.Documents
 
         public void AddConflict(
             DocumentsOperationContext context,
-            IncomingReplicationHandler.ReplicationItem docPositions,
+            string key,
+            long lastModifiedTicks,
             BlittableJsonReaderObject incomingDoc,
             ChangeVectorEntry[] incomingChangeVector,
             string incomingTombstoneCollection)
         {
-            var key = docPositions.Id;
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Adding conflict to {key} (Incoming change vector {incomingChangeVector.Format()})");
             var tx = context.Transaction.InnerTransaction;
@@ -1356,7 +1356,7 @@ namespace Raven.Server.Documents
                         tvb.Add(doc, docSize);
                         tvb.Add(Bits.SwapBytes(GenerateNextEtag()));
                         tvb.Add(lazyCollectionName.Buffer, lazyCollectionName.Size);
-                        tvb.Add(docPositions.LastModifiedTicks);
+                        tvb.Add(lastModifiedTicks);
 
                         Interlocked.Increment(ref ConflictsStorage.ConflictsCount);
                         conflictsTable.Set(tvb);

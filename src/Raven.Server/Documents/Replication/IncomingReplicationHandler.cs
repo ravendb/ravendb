@@ -724,13 +724,6 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ThrowInvalidSize(int totalSize, ReplicationItem doc)
-        {
-            throw new ArgumentOutOfRangeException(
-                $"Reading past the size of buffer! TotalSize {totalSize} but position is {doc.Position} & size is {doc.DocumentSize}!");
-        }
-
         private void ReadChangeVector(ReplicationIndexOrTransformerPositions index, Dictionary<Guid, long> maxReceivedChangeVectorByDatabase)
         {
             for (int i = 0; i < index.ChangeVector.Length; i++)
@@ -1118,12 +1111,13 @@ namespace Raven.Server.Documents.Replication
                             BlittableJsonReaderObject document = null;
                             try
                             {
-                                ReadChangeVector(item, _buffer, maxReceivedChangeVectorByDatabase);
+                                ReadChangeVector(item.ChangeVectorCount, item.Position, _buffer, maxReceivedChangeVectorByDatabase);
                                 if (item.DocumentSize >= 0) //no need to load document data for tombstones
                                     // document size == -1 --> doc is a tombstone
                                 {
                                     if (item.Position + item.DocumentSize > _totalSize)
-                                        ThrowInvalidSize(_totalSize, item);
+                                        throw new ArgumentOutOfRangeException($"Reading past the size of buffer! TotalSize {_totalSize} " +
+                                                                              $"but position is {item.Position} & size is {item.DocumentSize}!");
 
                                     //if something throws at this point, this means something is really wrong and we should stop receiving documents.
                                     //the other side will receive negative ack and will retry sending again.
@@ -1180,7 +1174,7 @@ namespace Raven.Server.Documents.Replication
                                         if (_incoming._log.IsInfoEnabled)
                                             _incoming._log.Info(
                                                 $"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {_changeVector.Format()}");
-                                        _incoming._conflictManager.HandleConflictForDocument(context, item, document, _changeVector, conflictingVector);
+                                        _incoming._conflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks, document, _changeVector, conflictingVector);
                                         break;
                                     case ReplicationUtils.ConflictStatus.AlreadyMerged:
                                         if (_incoming._log.IsInfoEnabled)
@@ -1207,15 +1201,15 @@ namespace Raven.Server.Documents.Replication
                 database.DocumentsStorage.SetLastReplicateEtagFrom(context, _incoming.ConnectionInfo.SourceDatabaseId, _lastEtag);
             }
 
-            private void ReadChangeVector(ReplicationItem doc,
+            private void ReadChangeVector(int changeVectorCount, int position,
                 byte* buffer, Dictionary<Guid, long> maxReceivedChangeVectorByDatabase)
             {
-                if (_changeVector.Length != doc.ChangeVectorCount)
-                    _changeVector = new ChangeVectorEntry[doc.ChangeVectorCount];
+                if (_changeVector.Length != changeVectorCount)
+                    _changeVector = new ChangeVectorEntry[changeVectorCount];
 
-                for (int i = 0; i < doc.ChangeVectorCount; i++)
+                for (int i = 0; i < changeVectorCount; i++)
                 {
-                    _changeVector[i] = ((ChangeVectorEntry*)(buffer + doc.Position))[i];
+                    _changeVector[i] = ((ChangeVectorEntry*)(buffer + position))[i];
 
                     long etag;
                     if (maxReceivedChangeVectorByDatabase.TryGetValue(_changeVector[i].DbId, out etag) == false ||
