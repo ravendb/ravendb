@@ -214,7 +214,10 @@ namespace FastTests.Smuggler
 
                     var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
-                    Assert.Equal(7, stats.CountOfRevisionDocuments);
+
+                    // the import of documents generate new revisions for the two non sys docs
+
+                    Assert.Equal(9, stats.CountOfRevisionDocuments);
                 }
             }
             finally

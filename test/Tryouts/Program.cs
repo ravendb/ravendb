@@ -12,9 +12,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Smuggler.SmugglerApiTests())
+                using (var a = new FastTests.Server.Documents.PeriodicExport.PeriodicExportTests())
                 {
-                    a.CanExportAndImportWithVersioingRevisionDocuments().Wait();
+                    a.CanExportToDirectory().Wait();
                 }
                 
             }
