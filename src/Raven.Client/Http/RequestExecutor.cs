@@ -245,7 +245,7 @@ namespace Raven.Client.Http
                 catch (HttpRequestException e) // server down, network down
                 {
                     sp.Stop();
-                    if (await HandleServerDown(choosenNode, context, command, e) == false)
+                    if (await HandleServerDown(choosenNode, context, command, request, e) == false)
                         throw;
                     return;
                 }
@@ -272,7 +272,7 @@ namespace Raven.Client.Http
                 }
                 if (response.IsSuccessStatusCode == false)
                 {
-                    if (await HandleUnsuccessfulResponse(choosenNode, context, command, response, url).ConfigureAwait(false))
+                    if (await HandleUnsuccessfulResponse(choosenNode, context, command, request, response, url).ConfigureAwait(false))
                         return;
                 }
 
@@ -310,8 +310,7 @@ namespace Raven.Client.Http
             return request;
         }
 
-        private async Task<bool> HandleUnsuccessfulResponse<TResult>(ChoosenNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command,
-            HttpResponseMessage response, string url)
+        private async Task<bool> HandleUnsuccessfulResponse<TResult>(ChoosenNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, string url)
         {
             switch (response.StatusCode)
             {
@@ -350,7 +349,7 @@ namespace Raven.Client.Http
                 case HttpStatusCode.RequestTimeout:
                 case HttpStatusCode.BadGateway:
                 case HttpStatusCode.ServiceUnavailable:
-                    await HandleServerDown(choosenNode, context, command, null).ConfigureAwait(false);
+                    await HandleServerDown(choosenNode, context, command, request, null).ConfigureAwait(false);
                     break;
                 case HttpStatusCode.Conflict:
                     await HandleConflict(context, response).ConfigureAwait(false);
@@ -394,8 +393,7 @@ namespace Raven.Client.Http
             }
         }
 
-        private async Task<bool> HandleServerDown<TResult>(ChoosenNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command,
-            HttpRequestException e)
+        private async Task<bool> HandleServerDown<TResult>(ChoosenNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpRequestException e)
         {
             if (command.AvoidFailover)
                 return false;
@@ -406,7 +404,7 @@ namespace Raven.Client.Http
             choosenNode.Node.IsFailed = true;
             command.FailedNodes.Add(choosenNode.Node);
 
-            var failoverNode = ChooseNodeForRequest(command, e);
+            var failoverNode = ChooseNodeForRequest(command, request, e);
             await ExecuteAsync(failoverNode, context, command);
 
             return true;
@@ -424,7 +422,7 @@ namespace Raven.Client.Http
             public List<ServerNode> SkippedNodes;
         }
 
-        private ChoosenNode ChooseNodeForRequest<T>(RavenCommand<T> command, HttpRequestException exception = null)
+        private ChoosenNode ChooseNodeForRequest<T>(RavenCommand<T> command, HttpRequestMessage request = null, HttpRequestException exception = null)
         {
             var topology = _topology;
 
@@ -437,7 +435,7 @@ namespace Raven.Client.Http
                 {
                     if (command.IsFailedWithNode(leaderNode) == false)
                         return new ChoosenNode { Node = leaderNode };
-                    throw new HttpRequestException("Leader node was failed to make this request. The current ReadBehavior is set to Leader Only failover to a different node is not authorized.", exception);
+                    ThrowNoFailoverPossible(command, request, exception);
                 }
 
                 if (topology.ReadBehavior == ReadBehavior.RoundRobin)
@@ -492,7 +490,7 @@ namespace Raven.Client.Http
             {
                 if (command.IsFailedWithNode(leaderNode) == false)
                     return new ChoosenNode { Node = leaderNode };
-                throw new HttpRequestException("Leader node was failed to make this request. The current WriteBehavior is set to Leader Only failover to a different node is not authorized", exception);
+                ThrowNoFailoverPossible(command, request, exception);
             }
 
             if (topology.WriteBehavior == WriteBehavior.LeaderWithFailover)
@@ -511,6 +509,13 @@ namespace Raven.Client.Http
             }
 
             throw new InvalidOperationException($"Invalid WriteBehavior value: {topology.WriteBehavior}");
+        }
+
+        private static void ThrowNoFailoverPossible<T>(RavenCommand<T> command, HttpRequestMessage request, HttpRequestException exception)
+        {
+            throw new HttpRequestException(
+                $"Leader node has failed to make the request {command.GetType().Name} - {request?.Method} {request?.RequestUri}. The current ReadBehavior is set to Leader Only failover to a different node is not authorized.",
+                exception);
         }
 
         public async Task<string> GetAuthenticationToken(JsonOperationContext context, ServerNode node)
