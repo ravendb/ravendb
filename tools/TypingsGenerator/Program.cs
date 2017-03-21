@@ -20,6 +20,7 @@ using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Subscriptions;
@@ -28,6 +29,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using TypeScripter;
 using TypeScripter.TypeScript;
 using Voron.Data.BTrees;
@@ -58,6 +60,7 @@ namespace TypingsGenerator
                 .WithTypeMapping(TsPrimitive.Any, typeof(TreePage))
                 .WithTypeMapping(TsPrimitive.String, typeof(DateTime))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(BlittableJsonReaderArray))
+                .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(DynamicJsonArray))
                 .WithTypeMapping(TsPrimitive.Any, typeof(BlittableJsonReaderObject));
 
             scripter = ConfigureTypes(scripter);
@@ -123,6 +126,8 @@ namespace TypingsGenerator
 
             // patch
             scripter.AddType(typeof(PatchRequest));
+            scripter.AddType(typeof(PatchResult));
+            scripter.AddType(typeof(PatchDebugActions));
 
             scripter.AddType(typeof(DatabasesInfo));
 
