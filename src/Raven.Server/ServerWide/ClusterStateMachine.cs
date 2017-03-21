@@ -224,16 +224,14 @@ namespace Raven.Server.ServerWide
                         .Concat(databaseRecord.Topology.Promotables)
                         .Concat(databaseRecord.Topology.Watchers);
 
-                    foreach (var allNode in allNodes)
+                    foreach (var node in allNodes)
                     {
-                        databaseRecord.DeletionInProgress[allNode] = deletionInProgressStatus;
+                        databaseRecord.DeletionInProgress[node] = deletionInProgressStatus;
                     }
 
                     databaseRecord.Topology = new DatabaseTopology();
                 }
 
-                
-                
                 TableValueBuilder builder;
                 using(var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
                 using (items.Allocate(out builder))
