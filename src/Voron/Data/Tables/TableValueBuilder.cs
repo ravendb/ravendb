@@ -135,7 +135,7 @@ namespace Voron.Data.Tables
                     srcPtr = p.Ptr;                    
                 }
 
-                Memory.CopyInline(dataStart, srcPtr, p.Size);
+                Memory.Copy(dataStart, srcPtr, p.Size);
 
                 dataStart += p.Size;
                 value = 0; // This ensures there cannot be any JIT optimization that could reuse the memory location.          

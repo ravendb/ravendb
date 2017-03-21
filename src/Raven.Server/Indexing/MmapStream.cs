@@ -62,7 +62,7 @@ namespace Raven.Server.Indexing
             }
             fixed (byte* dst = buffer)
             {
-                Memory.CopyInline(dst + offset, ptr + pos, count);
+                Memory.Copy(dst + offset, ptr + pos, count);
             }
             pos += count;
             return count;

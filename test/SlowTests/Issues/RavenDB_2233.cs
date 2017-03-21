@@ -3,22 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System.Collections.Generic;
-using System.Linq;
 
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
-
+using FastTests;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_2233 : RavenTest
+    public class RavenDB_2233 : RavenTestBase
     {
         [Fact]
         public void CanMultipleQuery()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -37,13 +34,16 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                var result = store.DatabaseCommands.Get(new[] { "users/3", "users/2", "users/1", "users/999", "users/2" }, new string[] { });
-                Assert.Equal(5, result.Results.Count);
-                Assert.Equal("users/3", result.Results[0]["@metadata"].Value<string>("@id"));
-                Assert.Equal("users/2", result.Results[1]["@metadata"].Value<string>("@id"));
-                Assert.Equal("users/1", result.Results[2]["@metadata"].Value<string>("@id"));
-                Assert.Equal(null, result.Results[3]);
-                Assert.Equal("users/2", result.Results[4]["@metadata"].Value<string>("@id"));
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Load<User>(new[] { "users/3", "users/2", "users/1", "users/999", "users/2" });
+                    Assert.Equal(4, results.Count);
+                    Assert.Equal("users/3", session.Advanced.GetMetadataFor(results["users/3"])["@id"]);
+                    Assert.Equal("users/2", session.Advanced.GetMetadataFor(results["users/2"])["@id"]);
+                    Assert.Equal("users/1", session.Advanced.GetMetadataFor(results["users/1"])["@id"]);
+                    Assert.Equal(null, results["users/999"]);
+                    Assert.Equal("users/2", session.Advanced.GetMetadataFor(results["users/2"])["@id"]);
+                }
             }
         }
     }

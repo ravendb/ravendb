@@ -6,7 +6,7 @@ using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
 namespace Sparrow.Json
 {
-    public class ManualBlittableJsonDocumentBuilder<TWriter> : IDisposable
+    public sealed class ManualBlittableJsonDocumentBuilder<TWriter> : IDisposable
         where TWriter : struct, IUnmanagedWriteBuffer
     {
         private readonly JsonOperationContext _context;
@@ -34,7 +34,7 @@ namespace Sparrow.Json
             _writer = writer ?? new BlittableWriter<TWriter>(_context);
         }
 
-        public virtual void StartWriteObjectDocument()
+        public void StartWriteObjectDocument()
         {
             _continuationState.Push(new BuildingState
             {

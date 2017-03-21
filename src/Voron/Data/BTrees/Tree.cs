@@ -248,7 +248,7 @@ namespace Voron.Data.BTrees
                     if (read == 0)
                         break;
 
-                    Memory.CopyInline(pos, tempPagePointer, read);
+                    Memory.Copy(pos, tempPagePointer, read);
                     pos += read;
 
                     if (read != tempPageBuffer.Length)

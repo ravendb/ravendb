@@ -29,9 +29,13 @@ namespace Sparrow
             {
                 _buffer[i] = char.ToUpperInvariant(str.String[str.Start + i]);
             }
+
             fixed (char* p = _buffer)
             {
-                return (int)Hashing.XXHash32.CalculateInline((byte*)p, str.Length * sizeof(char));
+                //PERF: JIT will remove the corresponding line based on the target architecture using dead code removal.                                 
+                if (IntPtr.Size == 4)
+                    return (int)Hashing.XXHash32.CalculateInline((byte*)p, str.Length * sizeof(char));
+                return (int)Hashing.XXHash64.CalculateInline((byte*)p, (ulong)str.Length * sizeof(char));
             }
         }
     }
@@ -57,7 +61,10 @@ namespace Sparrow
         {
             fixed (char* p = str.String)
             {
-                return (int)Hashing.XXHash32.CalculateInline(((byte*)p + str.Start * sizeof(char)), str.Length * sizeof(char));
+                //PERF: JIT will remove the corresponding line based on the target architecture using dead code removal.                                 
+                if (IntPtr.Size == 4)
+                    return (int)Hashing.XXHash32.CalculateInline(((byte*)p + str.Start * sizeof(char)), str.Length * sizeof(char));
+                return (int)Hashing.XXHash64.CalculateInline(((byte*)p + str.Start * sizeof(char)), (ulong)str.Length * sizeof(char));
             }
         }
     }
@@ -84,7 +91,10 @@ namespace Sparrow
         {
             fixed (char* p = str.String)
             {
-                return (int)Hashing.XXHash32.CalculateInline(((byte*)p + str.Start * sizeof(char)), str.Length * sizeof(char));
+                //PERF: JIT will remove the corresponding line based on the target architecture using dead code removal.                                 
+                if (IntPtr.Size == 4)
+                    return (int)Hashing.XXHash32.CalculateInline(((byte*)p + str.Start * sizeof(char)), str.Length * sizeof(char));
+                return (int)Hashing.XXHash64.CalculateInline(((byte*)p + str.Start * sizeof(char)), (ulong)str.Length * sizeof(char));
             }
         }
     }
@@ -229,7 +239,10 @@ namespace Sparrow
         {
             fixed (char* p = String)
             {
-                return (int)Hashing.XXHash32.CalculateInline((byte*)p + Start * sizeof(char), Length * sizeof(char));
+                //PERF: JIT will remove the corresponding line based on the target architecture using dead code removal.                                 
+                if (IntPtr.Size == 4)
+                    return (int)Hashing.XXHash32.CalculateInline((byte*)p + Start * sizeof(char), Length * sizeof(char));
+                return (int)Hashing.XXHash64.CalculateInline((byte*)p + Start * sizeof(char), (ulong)Length * sizeof(char));
             }
         }
 

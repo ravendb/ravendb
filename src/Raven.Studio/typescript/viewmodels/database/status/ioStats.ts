@@ -327,7 +327,7 @@ class ioStats extends viewModelBase {
 
         this.tooltip = d3.select(".tooltip");
         [this.totalWidth, this.totalHeight] = this.getPageHostDimenensions();
-        this.totalHeight -= 50; // substract toolbar height
+        this.totalHeight -= 120; // substract toolbar height
               
         this.initCanvas();     
 
@@ -439,8 +439,6 @@ class ioStats extends viewModelBase {
     }
 
     private setupEvents(selection: d3.Selection<any>) {
-        let mousePressed = false;
-
         const onMove = () => {
             this.hitTest.onMouseMove();
         }
@@ -604,7 +602,7 @@ class ioStats extends viewModelBase {
     }
 
     private draw(resetFilteredIndexNames: boolean) {
-        if (this.hasAnyData()) {           
+        if (this.hasAnyData()) {
 
             // 0. Prepare
             this.prepareBrushSection();

@@ -362,7 +362,7 @@ namespace Voron.Impl.Paging
 
             _abstractPager.UnprotectPageRange(destination, (ulong)toWrite);
 
-            Memory.BulkCopy(destination, source, toWrite);
+            Memory.Copy(destination, source, toWrite);
 
             _abstractPager.ProtectPageRange(destination, (ulong)toWrite);
         }

@@ -352,7 +352,7 @@ namespace Voron.Impl
                 _numberOfModifiedPages += 1;
             }
 
-            Memory.BulkCopy(newPage.Pointer, currentPage.Pointer, pageSize);
+            Memory.Copy(newPage.Pointer, currentPage.Pointer, pageSize);
 
             TrackWritablePage(newPage);
 

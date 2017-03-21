@@ -274,16 +274,16 @@ loadToAddresses(LoadDocument(this.AddressId));
                 {
                     for (var i = 1; i <= count; i++)
                     {
-                        var user = session.Load<User>("users/1");
+                        var user = session.Load<User>($"users/{i}");
                         Assert.NotNull(user);
                         Assert.Equal("James", user.Name);
                         Assert.Equal("Smith", user.LastName);
 
-                        var person = session.Load<Person>($"users/{i}/people/1");
+                        var person = session.Advanced.LoadStartingWith<Person>($"users/{i}/people/")[0];
                         Assert.NotNull(person);
                         Assert.Equal("James Smith", person.Name);
 
-                        var address = session.Load<Address>($"users/{i}/addresses/1");
+                        var address = session.Advanced.LoadStartingWith<Address>($"users/{i}/addresses/")[0];
                         Assert.NotNull(address);
                         Assert.Equal("New York", address.City);
                     }
@@ -309,11 +309,11 @@ loadToAddresses(LoadDocument(this.AddressId));
                     var user = session.Load<User>("users/3");
                     Assert.Null(user);
 
-                    var person = session.Load<Person>("users/3/people/1");
-                    Assert.Null(person);
+                    var persons = session.Advanced.LoadStartingWith<Person>("users/3/people/");
+                    Assert.Equal(0, persons.Length);
 
-                    var address = session.Load<Address>("users/3/addresses/1");
-                    Assert.Null(address);
+                    var addresses = session.Advanced.LoadStartingWith<Address>("users/3/addresses/");
+                    Assert.Equal(0, addresses.Length);
                 }
 
                 stats = dest.Admin.Send(new GetStatisticsOperation());
@@ -491,6 +491,29 @@ loadToOrders(orderData);
                     Assert.Equal("users/1", user.Name);
                 }
             }
+        }
+
+        [Fact]
+        public void Can_put_space_after_loadTo_method_in_script()
+        {
+            var config = new RavenEtlConfiguration
+            {
+                Name = "test",
+                Url = "http://localhost:8080",
+                Database = "Northwind",
+                Collection = "Users",
+                Script = @"loadToUsers (this);"
+            };
+
+            List<string> errors;
+            config.Validate(out errors);
+
+            Assert.Equal(0, errors.Count);
+
+            var collections = config.GetCollectionsFromScript();
+
+            Assert.Equal(1, collections.Length);
+            Assert.Equal("Users", collections[0]);
         }
 
         private class UserWithAddress : User

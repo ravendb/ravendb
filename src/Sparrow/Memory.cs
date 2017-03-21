@@ -1,11 +1,13 @@
 using System;
 using System.Runtime.CompilerServices;
+using DotNetCross.Memory;
+using Sparrow.Global;
 
 namespace Sparrow
 {
     public static unsafe class Memory
     {
-        public static readonly int CompareInlineVsCallThreshold = 128;
+        public const int CompareInlineVsCallThreshold = 256;
 
         public static int Compare(byte* p1, byte* p2, int size)
         {
@@ -23,11 +25,8 @@ namespace Sparrow
             // If we use an unmanaged bulk version with an inline compare the caller site does not get optimized properly.
             // If you know you will be comparing big memory chunks do not use the inline version. 
             int l = size;
-            if ( l > CompareInlineVsCallThreshold)
-            {
-                if (size >= 256)
-                    return UnmanagedMemory.Compare((byte*)p1, (byte*)p2, l);
-            }
+            if (l > CompareInlineVsCallThreshold)
+                goto UnmanagedCompare;
 
             byte* bpx = (byte*)p1, bpy = (byte*)p2;
             int last;
@@ -36,7 +35,7 @@ namespace Sparrow
                 if (*((long*)bpx) != *((long*)bpy))
                 {
                     last = 8;
-                    goto TAIL;
+                    goto Tail;
                 }
             }
 
@@ -45,7 +44,7 @@ namespace Sparrow
                 if (*((int*)bpx) != *((int*)bpy))
                 {
                     last = 4;
-                    goto TAIL;
+                    goto Tail;
                 }
                 bpx += 4;
                 bpy += 4;
@@ -56,7 +55,7 @@ namespace Sparrow
                 if (*((short*)bpx) != *((short*)bpy))
                 {
                     last = 2;
-                    goto TAIL;
+                    goto Tail;
                 }
 
                 bpx += 2;
@@ -70,7 +69,7 @@ namespace Sparrow
 
             return 0;
 
-            TAIL:
+            Tail:
             while (last > 0)
             {
                 if (*((byte*)bpx) != *((byte*)bpy))
@@ -82,6 +81,9 @@ namespace Sparrow
             }
 
             return 0;
+
+            UnmanagedCompare:
+            return UnmanagedMemory.Compare((byte*)p1, (byte*)p2, l);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -154,123 +156,39 @@ namespace Sparrow
         /// small amounts of memory, when you have smaller than 2048 bytes calls (depending on the target CPU) it will always be
         /// faster to call .Copy() directly.
         /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void BulkCopy(byte* dest, byte* src, long n)
+        
+        private static void BulkCopy(byte* dest, byte* src, long n)
         {
             UnmanagedMemory.Copy(dest, src, n);            
         }
 
-        public static void Copy(byte* dest, byte* src, long n)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Copy(byte* dest, byte* src, uint n)
         {
-            CopyInline(dest, src, n);
+            Unsafe.CopyBlock(dest, src, n);
         }
 
-        /// <summary>
-        /// Copy is optimized to handle copy operations where n is statistically small. 
-        /// This method is optimized at the IL level to be extremely efficient for copies smaller than
-        /// 4096 bytes or heterogeneous workloads with occasional big copies.         
-        /// </summary>
-        /// <remarks>This is a forced inline version, use with care.</remarks>
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void CopyInline(byte* dest, byte* src, long n)
+        public static void Copy(byte* dest, byte* src, int n)
         {
-            if (n < 0)
-                throw new ArgumentOutOfRangeException(nameof(n), "Cannot be less than zero");
+            Unsafe.CopyBlock(dest, src, (uint)n);
+        }
 
-            SMALLTABLE:
-            switch (n)
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Copy(byte* dest, byte* src, long n)
+        {
+            if (n < uint.MaxValue)
             {
-                case 16:
-                    *(long*)dest = *(long*)src;
-                    *(long*)(dest + 8) = *(long*)(src + 8);
-                    return;
-                case 15:
-                    *(short*)(dest + 12) = *(short*)(src + 12);
-                    *(dest + 14) = *(src + 14);
-                    goto case 12;
-                case 14:
-                    *(short*)(dest + 12) = *(short*)(src + 12);
-                    goto case 12;
-                case 13:
-                    *(dest + 12) = *(src + 12);
-                    goto case 12;
-                case 12:
-                    *(long*)dest = *(long*)src;
-                    *(int*)(dest + 8) = *(int*)(src + 8);
-                    return;
-                case 11:
-                    *(short*)(dest + 8) = *(short*)(src + 8);
-                    *(dest + 10) = *(src + 10);
-                    goto case 8;
-                case 10:
-                    *(short*)(dest + 8) = *(short*)(src + 8);
-                    goto case 8;
-                case 9:
-                    *(dest + 8) = *(src + 8);
-                    goto case 8;
-                case 8:
-                    *(long*)dest = *(long*)src;
-                    return;
-                case 7:
-                    *(short*)(dest + 4) = *(short*)(src + 4);
-                    *(dest + 6) = *(src + 6);
-                    goto case 4;
-                case 6:
-                    *(short*)(dest + 4) = *(short*)(src + 4);
-                    goto case 4;
-                case 5:
-                    *(dest + 4) = *(src + 4);
-                    goto case 4;
-                case 4:
-                    *(int*)dest = *(int*)src;
-                    return;
-                case 3:
-                    *(dest + 2) = *(src + 2);
-                    goto case 2;
-                case 2:
-                    *(short*)dest = *(short*)src;
-                    return;
-                case 1:
-                    *dest = *src;
-                    return;
-                case 0:
-                    return;
-            }
-
-            if (n <= 512)
-            {
-                long count = n / 32;
-                n -= (n / 32) * 32;
-
-                while (count > 0)
-                {
-                    ((long*)dest)[0] = ((long*)src)[0];
-                    ((long*)dest)[1] = ((long*)src)[1];
-                    ((long*)dest)[2] = ((long*)src)[2];
-                    ((long*)dest)[3] = ((long*)src)[3];
-
-                    dest += 32;
-                    src += 32;
-                    count--;
-                }
-
-                if (n > 16)
-                {
-                    ((long*)dest)[0] = ((long*)src)[0];
-                    ((long*)dest)[1] = ((long*)src)[1];
-
-                    src += 16;
-                    dest += 16;
-                    n -= 16;
-                }
-
-                goto SMALLTABLE;
+                Unsafe.CopyBlock(dest, src, (uint)n); // Common code-path
+                return;
             }
 
             BulkCopy(dest, src, n);
         }
 
-        public unsafe static void Set(byte* dest, byte value, long n)
+        public static void Set(byte* dest, byte value, long n)
         {
             SetInline(dest, value, n);
         }
@@ -280,14 +198,13 @@ namespace Sparrow
         /// </summary>
         /// <remarks>This is a forced inline version, use with care.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void SetInline(byte* dest, byte value, long n)
+        public static void SetInline(byte* dest, byte value, long n)
         {
             if (n == 0) 
-                return;
+                goto Finish;
 
-            if (n < 512)
+            if (n < 16 * Constants.Size.Kilobyte)
             {
-
                 long block = 32, index = 0;
                 long length = Math.Min(block, n);
 
@@ -298,12 +215,16 @@ namespace Sparrow
                 length = n;
                 while (index < length)
                 {
-                    CopyInline(dest + index, dest, Math.Min(block, length - index));
+                    long size = Math.Min(block, length - index);
+                    Unsafe.CopyBlock(dest + index, dest, (uint)size);
                     index += block;
                     block *= 2;
                 }
             }
             else UnmanagedMemory.Set(dest, value, n);
+
+            Finish:
+            return;
         }
     }
 }
