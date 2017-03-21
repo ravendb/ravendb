@@ -66,11 +66,13 @@ namespace SlowTests.Issues
 
         [CultureTheory]
         [MemberData(nameof(Cultures))]
-        public void Run(string c)
+        public async Task Run(string c)
         {
             var culture = new CultureInfo(c);
             var originalCulture = CultureInfo.CurrentCulture;
             var originalUICulture = CultureInfo.CurrentUICulture;
+            var originalDefaultCulture = CultureInfo.DefaultThreadCurrentCulture;
+            var originalDefaultUICulture = CultureInfo.DefaultThreadCurrentUICulture;
 
             var builder = new StringBuilder();
             foreach (var test in _syncTests)
@@ -79,6 +81,8 @@ namespace SlowTests.Issues
                 {
                     CultureInfo.CurrentCulture = culture;
                     CultureInfo.CurrentUICulture = culture;
+                    CultureInfo.DefaultThreadCurrentCulture = culture;
+                    CultureInfo.DefaultThreadCurrentUICulture = culture;
 
                     try
                     {
@@ -97,28 +101,19 @@ namespace SlowTests.Issues
                 {
                     CultureInfo.CurrentCulture = originalCulture;
                     CultureInfo.CurrentUICulture = originalUICulture;
+                    CultureInfo.DefaultThreadCurrentCulture = originalDefaultCulture;
+                    CultureInfo.DefaultThreadCurrentUICulture = originalDefaultUICulture;
                 }
             }
 
-            if (builder.Length != 0)
-                throw new InvalidOperationException(builder.ToString());
-        }
-
-        [CultureTheory]
-        [MemberData(nameof(Cultures))]
-        public async Task RunAsync(string c)
-        {
-            var culture = new CultureInfo(c);
-            var originalCulture = CultureInfo.CurrentCulture;
-            var originalUICulture = CultureInfo.CurrentUICulture;
-
-            var builder = new StringBuilder();
             foreach (var test in _asyncTests)
             {
                 try
                 {
                     CultureInfo.CurrentCulture = culture;
                     CultureInfo.CurrentUICulture = culture;
+                    CultureInfo.DefaultThreadCurrentCulture = culture;
+                    CultureInfo.DefaultThreadCurrentUICulture = culture;
 
                     try
                     {
@@ -137,6 +132,8 @@ namespace SlowTests.Issues
                 {
                     CultureInfo.CurrentCulture = originalCulture;
                     CultureInfo.CurrentUICulture = originalUICulture;
+                    CultureInfo.DefaultThreadCurrentCulture = originalDefaultCulture;
+                    CultureInfo.DefaultThreadCurrentUICulture = originalDefaultUICulture;
                 }
             }
 

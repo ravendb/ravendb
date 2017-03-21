@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 else
                     transformed[Constants.Documents.Metadata.Key] = metadata = new DynamicJsonValue();
 
-                prefixedId = GetPrefixedId(_currentlyTransformed.DocumentKey, collectionName);
+                prefixedId = GetPrefixedId(_currentlyTransformed.DocumentKey, collectionName, putUsage: true);
 
                 metadata[Constants.Documents.Metadata.Collection] = collectionName;
                 metadata[Constants.Documents.Metadata.Id] = prefixedId;
@@ -63,9 +63,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _commands.Add(new PutCommandDataWithBlittableJson(id, null, transformResult));
         }
 
-        private string GetPrefixedId(string documentId, string loadCollectionName)
+        private string GetPrefixedId(string documentId, string loadCollectionName, bool putUsage)
         {
-            return $"{documentId}/{_script.IdPrefixForCollection[loadCollectionName]}/";
+            return $"{documentId}/{_script.IdPrefixForCollection[loadCollectionName]}{(putUsage ? "|" : "/")}";
         }
 
         public override IEnumerable<ICommandData> GetTransformedResults()
@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                 for (var i = 0; i < _script.NonDefaultCollections.Length; i++)
                 {
-                    _commands.Add(new DeletePrefixedCommandData(GetPrefixedId(item.DocumentKey, _script.NonDefaultCollections[i])));
+                    _commands.Add(new DeletePrefixedCommandData(GetPrefixedId(item.DocumentKey, _script.NonDefaultCollections[i], putUsage: false)));
                 }
             }
 

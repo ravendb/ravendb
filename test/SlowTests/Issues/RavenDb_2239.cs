@@ -1,31 +1,27 @@
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Database.Client;
-using Raven.Tests.Helpers;
-using Raven.Client.Linq;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Transformers;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDb_2239 : RavenTestBase
     {
-        public class Document
+        private class Document
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public string Description { get; set; }
-           public int Num { get; set; }
+            public int Num { get; set; }
 
         }
 
-        public class DocumentName
+        private class DocumentName
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -33,7 +29,7 @@ namespace Raven.Tests.Issues
 
         }
 
-        public class Document_Index : AbstractIndexCreationTask<Document>
+        private class Document_Index : AbstractIndexCreationTask<Document>
         {
             public Document_Index()
             {
@@ -42,11 +38,12 @@ namespace Raven.Tests.Issues
                               {
                                   doc.Id,
                                   doc.Name,
-                               
+
                               };
             }
         }
-         public class TestDocument_Index : AbstractIndexCreationTask<Document>
+
+        private class TestDocument_Index : AbstractIndexCreationTask<Document>
         {
             public TestDocument_Index()
             {
@@ -59,7 +56,8 @@ namespace Raven.Tests.Issues
                               };
             }
         }
-        public class DocumentNameTransformer : AbstractTransformerCreationTask<Document>
+
+        private class DocumentNameTransformer : AbstractTransformerCreationTask<Document>
         {
             public DocumentNameTransformer()
             {
@@ -68,42 +66,42 @@ namespace Raven.Tests.Issues
             }
         }
 
-       public class TestDocumentNameTransformer : AbstractTransformerCreationTask<Document>
+        private class TestDocumentNameTransformer : AbstractTransformerCreationTask<Document>
         {
             public TestDocumentNameTransformer()
             {
                 TransformResults = docs => from doc in docs
-                                           select new { a=100/doc.Num};
+                                           select new { a = 100 / doc.Num };
             }
         }
 
-         public void TestSetupData(IDocumentStore store)
+        private void TestSetupData(IDocumentStore store)
         {
             new TestDocument_Index().Execute(store);
             new TestDocumentNameTransformer().Execute(store);
 
-   
-                using (var session = store.OpenSession())
+
+            using (var session = store.OpenSession())
+            {
+
+                for (int docId = 10, i = 0; docId >= 0; docId--, i++)
                 {
-                   
-                    for (int docId = 10,i=0; docId >= 0; docId--,i++)
+                    session.Store(new Document
                     {
-                        session.Store(new Document
-                        {
-                            Id = "documents/" + i,
-                            Name = "Doc" +i,
-                            Description = "Test document description for " + docId,
-                            Num = docId
-                        });
-                    }
-                    session.SaveChanges();
-               }
-              
- 
+                        Id = "documents/" + i,
+                        Name = "Doc" + i,
+                        Description = "Test document description for " + docId,
+                        Num = docId
+                    });
+                }
+                session.SaveChanges();
+            }
+
+
             WaitForIndexing(store);
         }
 
-        public void SetupData(IDocumentStore store)
+        private void SetupData(IDocumentStore store)
         {
             new Document_Index().Execute(store);
             new DocumentNameTransformer().Execute(store);
@@ -139,7 +137,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void SmallLogTransformerTest()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var sw = new Stopwatch();
                 sw.Restart();
@@ -176,21 +174,21 @@ namespace Raven.Tests.Issues
             }
         }
 
-       
+
 
         [Fact]
         public void FullLogTransformerDelay()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-            var withTransformer = new Stopwatch();
-                var withoutTransformer =new  Stopwatch(); 
+                var withTransformer = new Stopwatch();
+                var withoutTransformer = new Stopwatch();
 
                 var sw = new Stopwatch();
                 sw.Restart();
                 SetupData(store);
                 Trace.WriteLine(" fill db finished " + sw.Elapsed);
-                 for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     using (var session = store.OpenSession())
                     {
@@ -229,10 +227,10 @@ namespace Raven.Tests.Issues
                         withoutTransformer = sw;
                     }
                 }
-                Assert.True(withTransformer.Elapsed.TotalMilliseconds <= withoutTransformer.Elapsed.TotalMilliseconds*1.3);
+                Assert.True(withTransformer.Elapsed.TotalMilliseconds <= withoutTransformer.Elapsed.TotalMilliseconds * 1.3);
             }
         }
-        
+
     }
 }
 

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -71,12 +70,18 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 if (CancellationToken.IsCancellationRequested == false)
                 {
-                    throw new TimeoutException($"Load request applying the following {commands.Count} commands timed out: " +
-                                               $"{string.Join(", ", commands.Select(x => $"{x.Key} ({x.Method})"))}", e);
+                    ThrowTimeoutException(commands.Count, e);
                 }
 
                 throw;
             }
+        }
+
+        private static void ThrowTimeoutException(int numberOfCommands, Exception e)
+        {
+            var message = $"Load request applying {numberOfCommands} commands timed out.";
+
+            throw new TimeoutException(message, e);
         }
 
         public override bool CanContinueBatch()
