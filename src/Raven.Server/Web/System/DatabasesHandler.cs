@@ -89,7 +89,6 @@ namespace Raven.Server.Web.System
                         return Task.CompletedTask;
                     }
 
-                    UnprotectSecuredSettingsOfDatabaseDocument(dbBlit);
                     var clusterTopology = ServerStore.GetClusterTopology(context);
                     var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbBlit);
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -108,8 +107,7 @@ namespace Raven.Server.Web.System
             {
                 [nameof(Topology.LeaderNode)] = new DynamicJsonValue
                 {
-                    //TODO:this should return the senator but for now so it will work I'm returning the "primary" node
-                    [nameof(ServerNode.Url)] = url??Server.Configuration.Core.ServerUrl,
+                    [nameof(ServerNode.Url)] = url??Server.WebUrls[0],
                     [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
                 },
                 [nameof(Topology.Nodes)] = new DynamicJsonArray(dbRecord.Topology.AllNodes.Select(x => new DynamicJsonValue
@@ -126,16 +124,6 @@ namespace Raven.Server.Web.System
                 },
                 [nameof(Topology.Etag)] = etag,
             });
-        }
-
-        private void UnprotectSecuredSettingsOfDatabaseDocument(BlittableJsonReaderObject obj)
-        {
-            //TODO: implement this
-            object securedSettings;
-            if (obj.TryGetMember("SecuredSettings", out securedSettings) == false)
-            {
-
-            }
         }
 
         private Task DbInfo(string dbName)
