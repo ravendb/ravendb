@@ -493,6 +493,29 @@ loadToOrders(orderData);
             }
         }
 
+        [Fact]
+        public void Can_put_space_after_loadTo_method_in_script()
+        {
+            var config = new RavenEtlConfiguration
+            {
+                Name = "test",
+                Url = "http://localhost:8080",
+                Database = "Northwind",
+                Collection = "Users",
+                Script = @"loadToUsers (this);"
+            };
+
+            List<string> errors;
+            config.Validate(out errors);
+
+            Assert.Equal(0, errors.Count);
+
+            var collections = config.GetCollectionsFromScript();
+
+            Assert.Equal(1, collections.Length);
+            Assert.Equal("Users", collections[0]);
+        }
+
         private class UserWithAddress : User
         {
             public Address Address { get; set; }
