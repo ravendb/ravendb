@@ -50,10 +50,12 @@ namespace FastTests.Client.Attachments
                     "background-photo.jpg",
                     "fileNAME_#$1^%_בעברית.txt"
                 };
+                long lastEtag = 0;
                 using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
                 {
                     var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
-                    Assert.Equal(4, result.Etag);
+                    Assert.True(lastEtag < result.Etag);
+                    lastEtag = result.Etag;
                     Assert.Equal(names[0], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("image/png", result.ContentType);
@@ -62,7 +64,8 @@ namespace FastTests.Client.Attachments
                 using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
                 {
                     var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
-                    Assert.Equal(8, result.Etag);
+                    Assert.True(lastEtag < result.Etag);
+                    lastEtag = result.Etag;
                     Assert.Equal(names[1], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("ImGgE/jPeG", result.ContentType);
@@ -71,7 +74,8 @@ namespace FastTests.Client.Attachments
                 using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
                 {
                     var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
-                    Assert.Equal(13, result.Etag);
+                    Assert.True(lastEtag < result.Etag);
+                    lastEtag = result.Etag;
                     Assert.Equal(names[2], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("", result.ContentType);
