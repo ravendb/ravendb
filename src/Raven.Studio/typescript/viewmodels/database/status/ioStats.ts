@@ -130,6 +130,65 @@ class hitTest {
     }
 }
 
+class legend {
+    imageStr = ko.observable<string>();
+    maxSize = ko.observable<number>(0);   
+
+    sizeScale: d3.scale.Linear<number, number>;  // domain: legend pixels, range: item size
+    colorScale: d3.scale.Linear<string, string>; // domain: item size,     range: item color    
+
+    private lowSizeColor: string;
+    private highSizeColor: string;
+        
+    static readonly imageWidth = 150;
+    static readonly imageHeight = 20;   
+    static readonly legendArrowBorderSize = 6;
+
+    constructor(lowSizeColor: string, highSizeColor: string) {        
+        this.lowSizeColor = lowSizeColor;
+        this.highSizeColor = highSizeColor;        
+    }  
+
+    setLegendScales() {
+        this.sizeScale = d3.scale.linear<number>()
+            .domain([0, legend.imageWidth - legend.legendArrowBorderSize])
+            .range([0, this.maxSize()]);
+
+        this.colorScale = d3.scale.linear<string>()
+            .domain([0, this.maxSize()])
+            .range([this.lowSizeColor, this.highSizeColor])
+            .interpolate(d3.interpolateHsl); 
+    }   
+
+    createLegendImage() {
+        // Create legend image on a virtual canvas,
+        // Will be used as an image in the dom 
+
+        const legendCanvas = document.createElement("canvas");
+        legendCanvas.width = legend.imageWidth;
+        legendCanvas.height = legend.imageHeight;
+        const legendContext = legendCanvas.getContext("2d");
+
+        const widthToColorScale = d3.scale.linear<string, string>()
+            .domain([0, legend.imageWidth])
+            .range([this.lowSizeColor, this.highSizeColor])
+            .interpolate(d3.interpolateHsl);
+
+        legendContext.fillStyle = this.lowSizeColor;
+        legendContext.fillRect(0, 0, 1, 25);
+
+        for (let i = 0; i < legend.imageWidth; i++) {
+            legendContext.fillStyle = widthToColorScale(i);
+            legendContext.fillRect(i, 7, 1, legend.imageHeight);
+        }
+
+        legendContext.fillStyle = this.highSizeColor;
+        legendContext.fillRect(legend.imageWidth - 1, 0, 1, 25);
+
+        this.imageStr(legendCanvas.toDataURL());
+    }
+}
+
 class ioStats extends viewModelBase {
 
     /* static */
@@ -176,13 +235,6 @@ class ioStats extends viewModelBase {
     private static readonly dataFlushString = "DataFlush";      
     private static readonly dataSyncString = "DataSync"; 
 
-    private static readonly legendImageWidth = 150;
-    private static readonly legendImageHeight = 20;
-
-    static legendImageStrJW = ko.observable<string>();
-    static legendImageStrDF = ko.observable<string>();
-    static legendImageStrDS = ko.observable<string>();
-
     /* private observables */
 
     private autoScroll = ko.observable<boolean>(false);
@@ -198,13 +250,14 @@ class ioStats extends viewModelBase {
     private allIndexesAreFiltered = ko.observable<boolean>(false);
     private indexesVisible: KnockoutComputed<boolean>; 
 
-    private maxSizeJW = ko.observable<number>(0);
-    private maxSizeDF = ko.observable<number>(0);
-    private maxSizeDS = ko.observable<number>(0);     
+    private legendJW = ko.observable<legend>();
+    private legendDF = ko.observable<legend>();
+    private legendDS = ko.observable<legend>(); 
 
     private itemSizePositionJW = ko.observable<string>(); 
     private itemSizePositionDF = ko.observable<string>(); 
     private itemSizePositionDS = ko.observable<string>(); 
+
     private itemHoveredJW = ko.observable<boolean>(false); 
     private itemHoveredDF = ko.observable<boolean>(false); 
     private itemHoveredDS = ko.observable<boolean>(false); 
@@ -225,13 +278,6 @@ class ioStats extends viewModelBase {
     private brushAndZoomCallbacksDisabled = false;    
 
     /* d3 */
-
-    private legendSizeScaleJW: d3.scale.Linear<number, number>; // domain: legend pixels, range: item size
-    private legendSizeScaleDF: d3.scale.Linear<number, number>;
-    private legendSizeScaleDS: d3.scale.Linear<number, number>;
-    private legendColorScaleJW: d3.scale.Linear<string, string>; // domain: item size, range: item color
-    private legendColorScaleDF: d3.scale.Linear<string, string>;
-    private legendColorScaleDS: d3.scale.Linear<string, string>;
 
     private xTickFormat = d3.time.format("%H:%M:%S");
     private canvas: d3.Selection<any>;
@@ -262,6 +308,10 @@ class ioStats extends viewModelBase {
     activate(args: { indexName: string, database: string }): void {
         super.activate(args);        
         this.indexesVisible = ko.pureComputed(() => this.hasIndexes() && !this.allIndexesAreFiltered());    
+
+        this.legendJW(new legend(ioStats.eventsColors.LowSizeColorJW, ioStats.eventsColors.HighSizeColorJW));
+        this.legendDF(new legend(ioStats.eventsColors.LowSizeColorDF, ioStats.eventsColors.HighSizeColorDF));
+        this.legendDS(new legend(ioStats.eventsColors.LowSizeColorDS, ioStats.eventsColors.HighSizeColorDS));
     }
 
     deactivate() {
@@ -290,75 +340,16 @@ class ioStats extends viewModelBase {
         this.enableLiveView();
     }
 
-    private initLegendImages() {
-        // Create legend image on a virtual canvas,
-        // Will be used as an image in the dom 
-
-        const legendCanvas = document.createElement("canvas");       
-        const legendContext = legendCanvas.getContext("2d");
-        legendCanvas.width = ioStats.legendImageWidth;
-        legendCanvas.height = ioStats.legendImageHeight;
-
-        // JW (Journal Write)
-        this.createLegendImage(legendCanvas, legendContext, ioStats.legendImageStrJW,ioStats.eventsColors.LowSizeColorJW, ioStats.eventsColors.HighSizeColorJW);
-        // DF (Data Flush)
-        this.createLegendImage(legendCanvas, legendContext, ioStats.legendImageStrDF, ioStats.eventsColors.LowSizeColorDF, ioStats.eventsColors.HighSizeColorDF);
-        // DS (Data Sync)
-        this.createLegendImage(legendCanvas, legendContext, ioStats.legendImageStrDS, ioStats.eventsColors.LowSizeColorDS, ioStats.eventsColors.HighSizeColorDS);      
-    }
-
-    private createLegendImage(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, imageStr: KnockoutObservable<string>,
-                              lowColor: string, highColor: string) {
-
-        const widthToColorScale = d3.scale.linear<string, string>()
-            .domain([0, ioStats.legendImageWidth])
-            .range([lowColor, highColor])
-            .interpolate(d3.interpolateHsl);
-
-        context.fillStyle = lowColor;
-        context.fillRect(0, 0, 1, 25);
-
-        for (let i = 0; i < ioStats.legendImageWidth; i++) {
-            context.fillStyle = widthToColorScale(i);
-            context.fillRect(i, 7, 1, ioStats.legendImageHeight);
-        }
-
-        context.fillStyle = highColor;
-        context.fillRect(ioStats.legendImageWidth - 1, 0, 1, 25);
-
-        imageStr(canvas.toDataURL());    
-    }
+    private initLegendImages() {     
+        this.legendJW().createLegendImage();
+        this.legendDF().createLegendImage();
+        this.legendDS().createLegendImage();
+    }  
   
     private setLegendScales() {
-        // JW
-        this.legendSizeScaleJW = d3.scale.linear<number>()
-            .domain([0, ioStats.legendImageWidth])                     
-            .range([0, this.maxSizeJW()]);
-
-        this.legendColorScaleJW = d3.scale.linear<string>()
-            .domain([0, this.maxSizeJW()])
-            .range([ioStats.eventsColors.LowSizeColorJW, ioStats.eventsColors.HighSizeColorJW])
-            .interpolate(d3.interpolateHsl);  
-
-        // DF
-        this.legendSizeScaleDF = d3.scale.linear<number>()
-            .domain([0, ioStats.legendImageWidth])
-            .range([0, this.maxSizeDF()]);
-
-        this.legendColorScaleDF = d3.scale.linear<string>()
-            .domain([0, this.maxSizeDF()])
-            .range([ioStats.eventsColors.LowSizeColorDF, ioStats.eventsColors.HighSizeColorDF])
-            .interpolate(d3.interpolateHsl);
-
-        // DS
-        this.legendSizeScaleDS = d3.scale.linear<number>()
-            .domain([0, ioStats.legendImageWidth])
-            .range([0, this.maxSizeDS()]);
-
-        this.legendColorScaleDS = d3.scale.linear<string>()
-            .domain([0, this.maxSizeDS()])
-            .range([ioStats.eventsColors.LowSizeColorDS, ioStats.eventsColors.HighSizeColorDS])
-            .interpolate(d3.interpolateHsl);           
+        this.legendJW().setLegendScales();
+        this.legendDF().setLegendScales();
+        this.legendDS().setLegendScales();               
     }
 
     private initViewData() {        
@@ -367,10 +358,10 @@ class ioStats extends viewModelBase {
         // 1. Find common paths prefix
         this.commonPathsPrefix = this.findPrefix(this.data.Environments.map(env => env.Path));
 
-        // 1.1 Init max size (for legend scale)
-        this.maxSizeJW(0);
-        this.maxSizeDF(0);
-        this.maxSizeDS(0);
+        // 1.1 Init max size (for legend scale)       
+        this.legendJW().maxSize(0);
+        this.legendDF().maxSize(0);
+        this.legendDS().maxSize(0);
 
         // 2. Loop on info from EndPoint        
         this.data.Environments.forEach(env => {           
@@ -389,23 +380,24 @@ class ioStats extends viewModelBase {
                    
                     // 2.3 Calc highest batch size for each type
                     if (recentItem.Type === ioStats.journalWriteString) {
-                        this.maxSizeJW(recentItem.Size > this.maxSizeJW() ? recentItem.Size : this.maxSizeJW());
+                        this.legendJW().maxSize(recentItem.Size > this.legendJW().maxSize() ? recentItem.Size : this.legendJW().maxSize());
                     }
                     if (recentItem.Type === ioStats.dataFlushString) {
-                        this.maxSizeDF(recentItem.Size > this.maxSizeDF() ? recentItem.Size : this.maxSizeDF());
+                        this.legendDF().maxSize(recentItem.Size > this.legendDF().maxSize() ? recentItem.Size : this.legendDF().maxSize());
+
                     }
                     if (recentItem.Type === ioStats.dataSyncString) {
-                        this.maxSizeDS(recentItem.Size > this.maxSizeDS() ? recentItem.Size : this.maxSizeDS());
+                        this.legendDS().maxSize(recentItem.Size > this.legendDS().maxSize() ? recentItem.Size : this.legendDS().maxSize());
                     }
 
                     this.hasAnyData(true);
                 });
             });
         });
-
-        this.maxSizeJW(this.maxSizeJW() === 0 ? 1 : this.maxSizeJW());
-        this.maxSizeDF(this.maxSizeDF() === 0 ? 1 : this.maxSizeDF());
-        this.maxSizeDS(this.maxSizeDS() === 0 ? 1 : this.maxSizeDS());     
+   
+        this.legendJW().maxSize(this.legendJW().maxSize() === 0 ? 1 : this.legendJW().maxSize());
+        this.legendDF().maxSize(this.legendDF().maxSize() === 0 ? 1 : this.legendDF().maxSize());
+        this.legendDS().maxSize(this.legendDS().maxSize() === 0 ? 1 : this.legendDS().maxSize());         
     }
 
     private initCanvas() {
@@ -1265,16 +1257,16 @@ class ioStats extends viewModelBase {
 
         switch (recentItem.Type) {
             case ioStats.journalWriteString: {
-                if (calcColorBasedOnSize) {
-                    color = this.legendColorScaleJW(recentItem.Size);                    
+                if (calcColorBasedOnSize) {                
+                    color = this.legendJW().colorScale(recentItem.Size);
                 }
                 else {
                     color = ioStats.eventsColors.HighSizeColorJW;
                 }
             } break;
             case ioStats.dataFlushString: {
-                if (calcColorBasedOnSize) {                  
-                    color = this.legendColorScaleDF(recentItem.Size);
+                if (calcColorBasedOnSize) {   
+                    color = this.legendDF().colorScale(recentItem.Size);
                 }
                 else {
                     color = ioStats.eventsColors.HighSizeColorDF;
@@ -1282,7 +1274,7 @@ class ioStats extends viewModelBase {
             } break;
             case ioStats.dataSyncString: {
                 if (calcColorBasedOnSize) {
-                    color = this.legendColorScaleDS(recentItem.Size);                  
+                    color = this.legendDS().colorScale(recentItem.Size);            
                 }
                 else {
                     color = ioStats.eventsColors.HighSizeColorDS;
@@ -1338,15 +1330,15 @@ class ioStats extends viewModelBase {
         switch (element.Type) {           
             case ioStats.journalWriteString: {
                 this.itemHoveredJW(true);
-                this.itemSizePositionJW((this.legendSizeScaleJW.invert(element.Size)-6).toString() + "px");
+                this.itemSizePositionJW(this.legendJW().sizeScale.invert(element.Size).toString() + "px");
             } break;
             case ioStats.dataFlushString: {
                 this.itemHoveredDF(true);
-                this.itemSizePositionDF((this.legendSizeScaleDF.invert(element.Size)-6).toString() + "px");
+                this.itemSizePositionDF(this.legendDF().sizeScale.invert(element.Size).toString() + "px");
             } break;
             case ioStats.dataSyncString: {
-                this.itemHoveredDS(true);
-                this.itemSizePositionDS((this.legendSizeScaleDS.invert(element.Size)-6).toString() + "px");
+                this.itemHoveredDS(true);               
+                this.itemSizePositionDS(this.legendDS().sizeScale.invert(element.Size).toString() + "px");
             } break;
         }
 
