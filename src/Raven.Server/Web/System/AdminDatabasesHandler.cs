@@ -73,6 +73,67 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
+        [RavenAction("/admin/add-database", "POST", "/admin/add-database?name={databaseName:string}&node={nodeName:string|optional}")]
+        public async Task Add()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var node = GetStringQueryString("node", false);
+            string errorMessage;
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            ServerStore.EnsureNotPassive();
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenReadTransaction();
+
+                var dbId = Constants.Documents.Prefix + name;
+
+                long etag;
+                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
+                //The case where an explicit node was requested 
+                if (string.IsNullOrEmpty(node) == false)
+                {
+                    if(databaseRecord.Topology.RelevantFor(node))
+                        throw new InvalidOperationException($"Can't add node {node} to {name} topology because it is already part of it");
+                    //TODO:add as promotable 
+                    databaseRecord.Topology.Members.Add(node);
+                }
+                //The case were we don't care where the database will be added to
+                else
+                {
+                    var clusterTopology = ServerStore.GetClusterTopology(context);
+                    var allNodes = clusterTopology.Members.Keys
+                        .Concat(clusterTopology.Promotables.Keys)
+                        .Concat(clusterTopology.Watchers.Keys)
+                        .ToList();
+                    allNodes.RemoveAll(n => databaseRecord.Topology.AllNodes.Contains(n));
+                    var rand = new Random().Next();
+                    var newNode = allNodes[rand % allNodes.Count];
+                    //TODO:add as promotable 
+                    databaseRecord.Topology.Members.Add(newNode);
+                }
+                var topologyJson = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
+
+                var newEtag = await ServerStore.TEMP_WriteDbAsync(context, dbId, topologyJson, etag);
+
+                ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["ETag"] = newEtag,
+                        ["Key"] = dbId,
+                        [nameof(DatabaseRecord.Topology)] = databaseRecord.Topology.ToJson()
+                    });
+                    writer.Flush();
+                }
+            }
+        }
 
         [RavenAction("/admin/databases", "PUT", "/admin/databases/{databaseName:string}")]
         public async Task Put()

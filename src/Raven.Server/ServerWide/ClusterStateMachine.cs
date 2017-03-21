@@ -161,6 +161,7 @@ namespace Raven.Server.ServerWide
                     databaseRecord.Topology.Watchers.Count == 0)
                 {
                     items.DeleteByKey(loweredKey);
+                    NotifyDatabaseChanged(context, databaseName, index);
                     return;
                 }
 
@@ -245,7 +246,7 @@ namespace Raven.Server.ServerWide
                     items.Set(builder);
                 }
 
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction => { Task.Run(() => { DatabaseChanged?.Invoke(this, databaseName); }); };
+                NotifyDatabaseChanged(context, databaseName, index);
             }
         }
 
@@ -525,12 +526,16 @@ namespace Raven.Server.ServerWide
         public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name)
         {
             long etag;
+            return ReadDatabase(context, name, out etag);
+        }
+
+        public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name,out long etag)
+        {
             var doc = Read(context, "db/" + name.ToLowerInvariant(), out etag);
             if (doc == null)
                 return null;
             return JsonDeserializationCluster.DatabaseRecord(doc);
         }
-
         public BlittableJsonReaderObject Read(TransactionOperationContext context, string name)
         {
             long etag;

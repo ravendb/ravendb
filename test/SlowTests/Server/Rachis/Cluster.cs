@@ -8,6 +8,8 @@ using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -17,9 +19,11 @@ namespace SlowTests.Server.Rachis
     public class Cluster: ClusterTestBase
     {
         [Fact]
-        public async Task CanCreateDatabaseWithReplicationFactorLowerThanTheClusterSize()
+        public async Task CanCreateAddAndDeleteDatabaseFromNodes()
         {
-            var leader = await CreateRaftClusterAndGetLeader(3);            
+            NoTimeouts();
+            var clusterSize = 3;
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
             CreateDatabaseResult databaseResult;
             var replicationFactor = 2;
             var databaseName = "test";
@@ -31,11 +35,36 @@ namespace SlowTests.Server.Rachis
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
                 databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+
+                int numberOfInstances = 0;
+                await AssertNumberOfNodesContainingDatabase(databaseResult.ETag??0, databaseName, numberOfInstances, replicationFactor);
+                databaseResult = store.Admin.Server.Send(new AddDatabaseOperation(databaseName));
+                Assert.Equal(databaseResult.Topology.AllNodes.Count(), ++replicationFactor);
+                numberOfInstances = 0;
+                await AssertNumberOfNodesContainingDatabase(databaseResult.ETag ?? 0, databaseName, numberOfInstances, replicationFactor);
+                DeleteDatabaseResult deleteResult;
+                var startReplicationFactor = replicationFactor;
+                while (replicationFactor>0)
+                {
+                    var serverTagToBeDeleted = databaseResult.Topology.Members[startReplicationFactor-replicationFactor];
+                    replicationFactor--;
+                    deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted));
+                    await AssertNumberOfNodesContainingDatabase(deleteResult.ETag, databaseName, numberOfInstances, replicationFactor);
+                }
+                TransactionOperationContext context;
+                using (leader.ServerStore.ContextPool.AllocateOperationContext(out context))
+                using(context.OpenReadTransaction())
+                {
+                    Assert.Null(leader.ServerStore.Cluster.ReadDatabase(context, databaseName));
+                }
             }
-            int numberOfInstances = 0;
-            foreach (var server in Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)))
-            {                
-                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag ?? 0);
+        }
+
+        private async Task AssertNumberOfNodesContainingDatabase(long eTag, string databaseName, int numberOfInstances, int replicationFactor)
+        {
+            foreach (var server in Servers)
+            {
+                await server.ServerStore.Cluster.WaitForIndexNotification(eTag);
                 try
                 {
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
@@ -43,50 +72,10 @@ namespace SlowTests.Server.Rachis
                 }
                 catch
                 {
-
                 }
             }
             Assert.True(numberOfInstances == replicationFactor, $"Expected replicationFactor={replicationFactor} but got {numberOfInstances}");
         }
 
-        [Fact]
-        public async Task CanDeleteDatabaseFromASpecificNodeInTheCluster()
-        {
-            NoTimeouts();
-            var leader = await CreateRaftClusterAndGetLeader(3);
-            DeleteDatabaseResult deleteResult;
-            var databaseName = "test";
-            var replicationFactor = 2;
-            using (var store = new DocumentStore()
-            {
-                Url = leader.WebUrls[0],
-                DefaultDatabase = databaseName
-            }.Initialize())
-            {
-                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
-                var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
-                foreach (var server in Servers)
-                {
-                    await server.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, databaseResult.ETag??0);
-                }
-                var serverTagToBeDeleted = databaseResult.Topology.Members.First();
-                deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(databaseName, hardDelete:true,fromNode: serverTagToBeDeleted));
-            }
-            int numberOfInstances = 0;
-            foreach (var server in Servers)
-            {
-                await server.ServerStore.Cluster.WaitForIndexNotification(deleteResult.ETag);
-                try
-                {
-                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-                    numberOfInstances++;
-                }
-                catch
-                {
-                    
-                }
-            }
-            Assert.True(numberOfInstances == replicationFactor - 1, $"Expected replicationFactor={replicationFactor - 1} but got {numberOfInstances}");
-        }
     }
 }
