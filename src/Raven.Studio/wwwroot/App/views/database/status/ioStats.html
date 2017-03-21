@@ -7,8 +7,8 @@
                 <input type="text" accesskey="/" class="form-control" placeholder="Filter indexes" title="Filter Indexes (Alt+/)" data-bind="textInput: searchText, enable: hasIndexes" />
             </div>
 
-            <button class="btn btn-default" data-bind="click: expandIndexes, enable: indexesVisible, visible: !isIndexesExpanded()" title="Expand indexes IO stats details"><span>Expand</span></button>
-            <button class="btn btn-default" data-bind="click: collapseIndexes, enable: indexesVisible, visible: isIndexesExpanded" title="Collapse indexes IO stats details"><span>Collapse</span></button>
+            <button class="btn btn-default" data-bind="click: expandIndexes, enable: indexesVisible, visible: !isIndexesExpanded()" title="Expand indexes IO stats details"><i class="icon-expand"></i> <span>Expand</span></button>
+            <button class="btn btn-default" data-bind="click: collapseIndexes, enable: indexesVisible, visible: isIndexesExpanded" title="Collapse indexes IO stats details"><i class="icon-collapse"></i> <span>Collapse</span></button>
 
             <button class="btn btn-default" data-bind="click: exportAsJson, enable: hasAnyData" title="Export current IO stats graph to a file">
                 <i class="icon-export"></i><span>Export</span>
