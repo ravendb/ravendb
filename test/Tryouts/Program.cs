@@ -12,9 +12,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Server.Documents.Versioning.Versioning())
+                using (var a = new FastTests.Client.Attachments.AttachmentsVersioning())
                 {
-                    a.ServerSaveBundlesAfterRestart().Wait();
+                    a.PutAttachments().Wait();
                 }
                 
             }

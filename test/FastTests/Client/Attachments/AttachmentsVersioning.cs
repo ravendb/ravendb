@@ -2,28 +2,37 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests.Server.Documents.Versioning;
 using Raven.Client.Documents.Operations;
 using Xunit;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace FastTests.Client.Attachments
 {
     public class AttachmentsVersioning : RavenTestBase
     {
         [Fact]
-        public void PutAttachments()
+        public async Task PutAttachments()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    session.Store(new VersioningConfiguration
+                    var versioningDoc = new VersioningConfiguration
                     {
+                        Default = new VersioningConfigurationCollection
+                        {
+                            Active = true,
+                            MaxRevisions = 5,
+                        },
                         Collections = new Dictionary<string, VersioningConfigurationCollection>
                         {
                             ["Users"] = new VersioningConfigurationCollection
@@ -33,11 +42,11 @@ namespace FastTests.Client.Attachments
                                 MaxRevisions = 4
                             }
                         }
-                    }, Constants.Documents.Versioning.ConfigurationKey);
+                    };
 
-                    session.SaveChanges();
+                    await Server.ServerStore.PutEditVersioningCommandAsync(context, store.DefaultDatabase, 
+                        EntityToBlittable.ConvertEntityToBlittable(versioningDoc, DocumentConventions.Default, context));
                 }
-
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User {Name = "Fitzchak"}, "users/1");
@@ -97,7 +106,7 @@ namespace FastTests.Client.Attachments
                     AssertRevisionAttachments(names, 1, revisions[1], session);
                     AssertRevisionAttachments(names, 2, revisions[2], session);
                     AssertRevisionAttachments(names, 3, revisions[3], session);
-                }, expectedCountOfDocuments: 1);
+                }, expectedCountOfDocuments: 0);
 
                 // Create another revision which should delete old revision
                 using (var session = store.OpenSession()) // This will delete the revision #1 which is without attachment
@@ -161,7 +170,7 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        private void AssertRevisions(DocumentStore store, string[] names, Action<IDocumentSession, List<User>> assertAction, long expectedCountOfDocuments = 2, long expectedCountOfAttachments = 3)
+        private void AssertRevisions(DocumentStore store, string[] names, Action<IDocumentSession, List<User>> assertAction, long expectedCountOfDocuments = 1, long expectedCountOfAttachments = 3)
         {
             var statistics = store.Admin.Send(new GetStatisticsOperation());
             Assert.Equal(expectedCountOfAttachments, statistics.CountOfAttachments);
@@ -230,11 +239,11 @@ namespace FastTests.Client.Attachments
                     if (name == names[0])
                     {
                         if (expectedCount == 1)
-                            Assert.Equal(7, attachment.Etag);
+                            Assert.Equal(6, attachment.Etag);
                         else if (expectedCount == 2)
-                            Assert.Equal(12, attachment.Etag);
+                            Assert.Equal(11, attachment.Etag);
                         else if (expectedCount == 3)
-                            Assert.Equal(18, attachment.Etag);
+                            Assert.Equal(17, attachment.Etag);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] {1, 2, 3}, readBuffer.Take(3));
@@ -245,9 +254,9 @@ namespace FastTests.Client.Attachments
                     else if (name == names[1])
                     {
                         if (expectedCount == 2)
-                            Assert.Equal(11, attachment.Etag);
+                            Assert.Equal(10, attachment.Etag);
                         else if (expectedCount == 3)
-                            Assert.Equal(16, attachment.Etag);
+                            Assert.Equal(15, attachment.Etag);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] {10, 20, 30, 40, 50}, readBuffer.Take(5));
@@ -258,7 +267,7 @@ namespace FastTests.Client.Attachments
                     else if (name == names[2])
                     {
                         if (expectedCount == 3)
-                            Assert.Equal(17, attachment.Etag);
+                            Assert.Equal(16, attachment.Etag);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer.Take(5));
