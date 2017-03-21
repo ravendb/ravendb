@@ -2415,7 +2415,7 @@ namespace Raven.Server.Documents
             _keyBuilder.Length = 0;
             _keyBuilder.Append(key);
             _keyBuilder[_keyBuilder.Length - 1] = '/';
-            _keyBuilder.AppendFormat(CultureInfo.InvariantCulture, "D19", val);
+            _keyBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0:D19}", val);
             return _keyBuilder.ToString();
         }
 
