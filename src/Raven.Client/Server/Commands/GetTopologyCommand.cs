@@ -30,6 +30,9 @@ namespace Raven.Client.Server.Commands
 
         public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
+            if (response == null)
+                return;
+
             Result = JsonDeserializationClient.ClusterTopology(response);
         }
 

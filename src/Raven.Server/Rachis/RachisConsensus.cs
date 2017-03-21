@@ -209,7 +209,15 @@ namespace Raven.Server.Rachis
 
                 CurrentState = State.Follower;
                 if (topology.Members.Count == 1)
-                    SwitchToSingleLeader();
+                {
+                    TransactionOperationContext ctx;
+                    using (ContextPool.AllocateOperationContext(out ctx))
+                    using (ctx.OpenWriteTransaction())
+                    {
+                        SwitchToSingleLeader(ctx);
+                        ctx.Transaction.Commit();
+                    }
+                }
                 else
                     Timeout.Start(SwitchToCandidateStateOnTimeout);
             }
@@ -220,18 +228,22 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void SwitchToSingleLeader()
+        private void SwitchToSingleLeader(TransactionOperationContext context)
         {
-            TransactionOperationContext context;
             var electionTerm = CurrentTerm + 1;
-            using (ContextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                CastVoteInTerm(context, electionTerm, Tag);
+            CastVoteInTerm(context, electionTerm, Tag);
 
-                tx.Commit();
+            if (Log.IsInfoEnabled)
+            {
+                Log.Info("Switching to leader state");
             }
-            SwitchToLeaderState(electionTerm, "I'm the only one in the cluster, so I'm the leader");
+            var leader = new Leader(this);
+            SetNewStateInTx(context, State.LeaderElect, leader, electionTerm, "I'm the only one in the cluster, so I'm the leader");
+            _currentLeader = leader;
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += tx =>
+            {
+                leader.Start();
+            };
         }
 
         protected abstract void InitializeState(TransactionOperationContext context);
@@ -297,43 +309,53 @@ namespace Raven.Server.Rachis
 
         public void SetNewState(State state, IDisposable disposable, long expectedTerm, string stateChangedReason)
         {
-            List<IDisposable> toDispose;
 
             TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenWriteTransaction()) // we use the write transaction lock here
             {
-                if (expectedTerm != CurrentTerm && expectedTerm != -1)
-                    throw new ConcurrencyException(
-                        $"Attempted to switch state to {state} on expected term {expectedTerm} but the real term is {CurrentTerm}");
+                SetNewStateInTx(context, state, disposable, expectedTerm, stateChangedReason);
 
-                _currentLeader = null;
-                _lastStateChangeReason = stateChangedReason;
-                toDispose = new List<IDisposable>(_disposables);
-
-                _disposables.Clear();
-
-                if (disposable != null)
-                    _disposables.Add(disposable);
-                else if (state != State.Passive)// if we are back to null state, wait to become candidate if no one talks to us
-                    Timeout.Start(SwitchToCandidateStateOnTimeout);
-
-                if (state == State.Passive)
-                {
-                    DeleteTopology(context);
-                }
                 context.Transaction.Commit();
             }
+        }
 
-            UpdateState(state);
+        private void SetNewStateInTx(TransactionOperationContext context, State state, IDisposable disposable, long expectedTerm, string stateChangedReason)
+        {
+            if (expectedTerm != CurrentTerm && expectedTerm != -1)
+                throw new ConcurrencyException(
+                    $"Attempted to switch state to {state} on expected term {expectedTerm} but the real term is {CurrentTerm}");
 
-            Task.Run(() =>
+            _currentLeader = null;
+            _lastStateChangeReason = stateChangedReason;
+            var toDispose = new List<IDisposable>(_disposables);
+
+            _disposables.Clear();
+
+            if (disposable != null)
+                _disposables.Add(disposable);
+            else if (state != State.Passive) // if we are back to null state, wait to become candidate if no one talks to us
+                Timeout.Start(SwitchToCandidateStateOnTimeout);
+
+            if (state == State.Passive)
             {
-                foreach (var t in toDispose)
+                DeleteTopology(context);
+            }
+
+            CurrentState = state;
+
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += tx =>
+            {
+                Task.Run(() =>
                 {
-                    t.Dispose();
-                }
-            });
+                    Interlocked.Exchange(ref _stateChanged, new TaskCompletionSource<object>()).TrySetResult(null);
+                    foreach (var t in toDispose)
+                    {
+                        t.Dispose();
+                    }
+                });
+            };
+
         }
 
         public void TakeOffice()
@@ -341,13 +363,7 @@ namespace Raven.Server.Rachis
             if (CurrentState != State.LeaderElect)
                 return;
 
-            UpdateState(State.Leader);
-        }
-
-
-        private void UpdateState(State state)
-        {
-            CurrentState = state;
+            CurrentState = State.Leader;
             ThreadPool.QueueUserWorkItem(
                 _ => { Interlocked.Exchange(ref _stateChanged, new TaskCompletionSource<object>()).TrySetResult(null); });
         }
@@ -564,7 +580,7 @@ namespace Raven.Server.Rachis
                             $"Rejecting connection from outside our cluster, this is likely an old server trying to connect to us.");
                     }
 
-                    if(_tag == "?")
+                    if (_tag == "?")
                         _tag = initialMessage.DebugDestinationIdentifier;
 
                     switch (initialMessage.InitialMessageType)
@@ -1051,7 +1067,7 @@ namespace Raven.Server.Rachis
         {
             Debug.Assert(context.Transaction != null);
             if (term <= CurrentTerm)
-                throw new ConcurrencyException($"The current term {CurrentTerm} is larger than {term}, aborting change");
+                throw new ConcurrencyException($"The current term {CurrentTerm} is larger than {term}, aborting change " + Environment.StackTrace);
 
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
             byte* ptr;
@@ -1108,19 +1124,19 @@ namespace Raven.Server.Rachis
             if (selfUrl == null)
                 throw new ArgumentNullException(nameof(selfUrl));
 
-            using (var tx = _persistentState.WriteTransaction())
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            TransactionOperationContext ctx;
+            using (ContextPool.AllocateOperationContext(out ctx))
+            using (var tx = ctx.OpenWriteTransaction())
             {
                 if (CurrentState != State.Passive)
                     return;
 
                 _tag = "A";
 
-
                 Slice str;
-                using (Slice.From(tx.Allocator, _tag, out str))
+                using (Slice.From(tx.InnerTransaction.Allocator, _tag, out str))
                 {
-                    var state = tx.CreateTree(GlobalStateSlice);
+                    var state = tx.InnerTransaction.CreateTree(GlobalStateSlice);
                     state.Add(TagSlice, str);
                 }
 
@@ -1136,12 +1152,12 @@ namespace Raven.Server.Rachis
                     "A"
                 );
 
-                SetTopology(null, tx, ctx, topology);
+                SetTopology(null, tx.InnerTransaction, ctx, topology);
+
+                SwitchToSingleLeader(ctx);
 
                 tx.Commit();
             }
-
-            SwitchToSingleLeader();
         }
 
         public Task AddToClusterAsync(string url)
