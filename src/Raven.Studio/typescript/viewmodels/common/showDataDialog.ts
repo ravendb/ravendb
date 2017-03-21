@@ -1,41 +1,29 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import copyToClipboard = require("common/copyToClipboard");
-import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+
+type supportedLangs = "javascript" | "csharp";
 
 class showDataDialog extends dialogViewModelBase {
 
     width = ko.observable<string>("");
     inputData = ko.observable<string>();
 
-    constructor(private title: string, inputData: string, elementToFocusOnDismissal?: string) {
+    inputDataFormatted = ko.pureComputed(() => {
+        const input = this.inputData();
+        if (_.isUndefined(input)) {
+            return "";
+        }
+        return Prism.highlight(input, (Prism.languages as any)[this.lang]);
+    });
+
+    constructor(private title: string, inputData: string, private lang: supportedLangs, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
 
         this.inputData(inputData);
     }
 
-    attached() {
-        super.attached();
-        aceEditorBindingHandler.install();
-        //this.selectText();
-
-        //TODO: create createKeyboardShortcut in dialog view model base and use it
-        /*jwerty.key("CTRL+C, enter", e => {
-            e.preventDefault();
-            this.close();
-        }, this, "#documentsText");*/
-    }
-
-    /*deactivate() {
-        //TODO: call super?
-        $("#inputData").unbind('keydown.jwerty');
-    }
-
-    selectText() {
-        $("#inputData").select();
-    }*/
-
-    close() { //TODO: move to base class?
+    close() {
         dialog.close(this);
     }
 

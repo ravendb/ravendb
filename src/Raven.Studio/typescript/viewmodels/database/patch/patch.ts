@@ -31,7 +31,7 @@ import documentPropertyProvider = require("common/helpers/database/documentPrope
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import patchDocumentCommand = require("commands/database/documents/patchDocumentCommand");
-import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
+import showDataDialog = require("viewmodels/common/showDataDialog");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -702,7 +702,8 @@ class patch extends viewModelBase {
         new getDocumentWithMetadataCommand(this.patchDocument().selectedItem(), this.activeDatabase())
             .execute()
             .done((doc: document) => {
-                app.showBootstrapDialog(new tempStatDialog(doc));
+                const text = JSON.stringify(doc, null, 4);
+                app.showBootstrapDialog(new showDataDialog("Document: " + doc.getId(), text, "javascript"));
             });
     }
 

@@ -54,6 +54,7 @@ var paths = {
         'prism/prism.js',
         'Sortable/Sortable.js',
         'prism/components/prism-javascript.js',
+        'prism/components/prism-csharp.js',
         "blockUI/jquery.blockUI.js",
         "knockout/dist/knockout.debug.js",
         "knockout-validation/dist/knockout.validation.js",
