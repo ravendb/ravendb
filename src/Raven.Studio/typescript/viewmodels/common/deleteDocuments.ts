@@ -24,7 +24,7 @@ class deleteDocuments extends dialogViewModelBase {
         const deletedDocIds = this.documents().map(i => i.getId());
 
         const docCount = deletedDocIds.length;
-        const docsDescription = docCount === 1 ? this.documents()[0].Key : docCount + " docs";
+        const docsDescription = docCount === 1 ? this.documents()[0].getId() : docCount + " docs";
 
         new deleteDocumentsCommand(deletedDocIds, this.db)
             .execute()
