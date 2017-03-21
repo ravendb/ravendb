@@ -283,18 +283,47 @@ namespace Raven.Server.Documents.Handlers
                             });
                             break;
                         case BatchRequestParser.CommandType.DELETE:
-                            var deleted = Database.DocumentsStorage.Delete(context, cmd.Key, cmd.Etag);
-                            if (deleted != null)
+                            
+                            if (cmd.Key[cmd.Key.Length - 1] != '/')
                             {
-                                LastEtag = deleted.Value.Etag;
-                                ModifiedCollections?.Add(deleted.Value.Collection.Name);
+                                var deleted = Database.DocumentsStorage.Delete(context, cmd.Key, cmd.Etag);
+
+                                if (deleted != null)
+                                {
+                                    LastEtag = deleted.Value.Etag;
+                                    ModifiedCollections?.Add(deleted.Value.Collection.Name);
+                                }
+
+                                Reply.Add(new DynamicJsonValue
+                                {
+                                    ["Key"] = cmd.Key,
+                                    ["Method"] = "DELETE",
+                                    ["Deleted"] = deleted != null
+                                });
                             }
-                            Reply.Add(new DynamicJsonValue
+                            else
                             {
-                                ["Key"] = cmd.Key,
-                                ["Method"] = "DELETE",
-                                ["Deleted"] = deleted != null
-                            });
+                                // TODO arek - temporary solution
+                                var idsToDelete = new List<string>();
+
+                                foreach (var doc in Database.DocumentsStorage.GetDocumentsStartingWith(context, cmd.Key, null, null, null, 0, int.MaxValue))
+                                {
+                                    idsToDelete.Add(doc.Key);
+                                }
+
+                                foreach (var toDelete in idsToDelete)
+                                {
+                                    Database.DocumentsStorage.Delete(context, toDelete, null);
+                                }
+
+                                Reply.Add(new DynamicJsonValue
+                                {
+                                    ["Key"] = cmd.Key,
+                                    ["Method"] = "DELETE",
+                                    ["Deleted"] = idsToDelete.Count > 0
+                                });
+                            }
+                            
                             break;
                     }
                 }

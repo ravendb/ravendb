@@ -55,5 +55,10 @@ namespace Raven.Server.Documents.ETL
         public abstract IEnumerable<TTransformed> GetTransformedResults();
 
         public abstract void Transform(TExtracted item);
+
+        public static void ThrowLoadParameterIsMandatory(string parameterName)
+        {
+            throw new ArgumentException($"{parameterName} parameter is mandatory");
+        }
     }
 }

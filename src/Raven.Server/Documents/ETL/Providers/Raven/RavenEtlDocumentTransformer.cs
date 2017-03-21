@@ -1,78 +1,47 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using Jint;
 using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Conventions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
+// ReSharper disable ForCanBeConvertedToForeach
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
     public class RavenEtlDocumentTransformer : EtlTransformer<RavenEtlItem, ICommandData>
     {
-        private readonly RavenEtlConfiguration _configuration;
-        
-
+        private readonly ScriptInput _script;
         private readonly List<ICommandData> _commands = new List<ICommandData>();
-        private readonly PatchRequest _transformationScript;
 
         private RavenEtlItem _currentlyTransformed;
 
-        public RavenEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, RavenEtlConfiguration configuration) : base(database, context)
+        public RavenEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, ScriptInput script) : base(database, context)
         {
-            _configuration = configuration;
+            _script = script;
 
-            if (string.IsNullOrEmpty(configuration.Script))
-            {
-                LoadToDestinations = new string[0];
-                return;
-            }
-
-            _transformationScript = new PatchRequest { Script = configuration.Script };
-
-            var collections = configuration.GetCollectionsFromScript();
-
-            if (collections.Length > 1)
-            {
-                IsLoadingToMultipleCollections = true;
-
-                IsLoadingToDefaultCollection = false;
-                // ReSharper disable once ForCanBeConvertedToForeach
-                for (var i = 0; i < collections.Length; i++)
-                {
-                    if (collections[i].Equals(configuration.Collection, StringComparison.OrdinalIgnoreCase))
-                    {
-                        IsLoadingToDefaultCollection = true;
-                        break;
-                    }
-                }
-            }
-            else if (collections.Length == 1 && collections[0].Equals(configuration.Script, StringComparison.OrdinalIgnoreCase) == false)
-                IsLoadingToDefaultCollection = false;
-
-            LoadToDestinations = collections;
+            LoadToDestinations = _script.Transformation == null ? new string[0] : _script.AllCollections;
         }
-
-        private bool IsLoadingToDefaultCollection { get; } = true;
-
-        private bool IsLoadingToMultipleCollections { get; }
 
         protected override string[] LoadToDestinations { get; }
 
         protected override void LoadToFunction(string collectionName, JsValue document, PatcherOperationScope scope)
         {
             if (collectionName == null)
-                throw new ArgumentException("collectionName parameter is mandatory");
+                ThrowLoadParameterIsMandatory(nameof(collectionName));
             if (document == null)
-                throw new ArgumentException("document parameter is mandatory");
+                ThrowLoadParameterIsMandatory(nameof(document));
 
             var transformed = scope.ToBlittable(document.AsObject());
 
-            string customId = null;
-            if (IsLoadingToDefaultCollection == false || collectionName.Equals(_configuration.Collection, StringComparison.OrdinalIgnoreCase) == false)
+            string prefixedId = null;
+
+            if (_script.IsLoadingToDefaultCollection == false ||
+                _script.NonDefaultCollections.Length > 0 && 
+                _script.DefaultCollection.Equals(collectionName, StringComparison.OrdinalIgnoreCase) == false)
             {
                 DynamicJsonValue metadata;
 
@@ -81,17 +50,22 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 else
                     transformed[Constants.Documents.Metadata.Key] = metadata = new DynamicJsonValue();
 
-                customId = $"{_currentlyTransformed.DocumentKey}/{collectionName.ToLowerInvariant()}/";
+                prefixedId = GetPrefixedId(_currentlyTransformed.DocumentKey, collectionName);
 
                 metadata[Constants.Documents.Metadata.Collection] = collectionName;
-                metadata[Constants.Documents.Metadata.Id] = customId;
+                metadata[Constants.Documents.Metadata.Id] = prefixedId;
             }
 
-            var id = customId ?? _currentlyTransformed.DocumentKey;
+            var id = prefixedId ?? _currentlyTransformed.DocumentKey;
 
             var transformResult = Context.ReadObject(transformed, id);
 
             _commands.Add(new PutCommandDataWithBlittableJson(id, null, transformResult));
+        }
+
+        private string GetPrefixedId(string documentId, string loadCollectionName)
+        {
+            return $"{documentId}/{_script.IdPrefixForCollection[loadCollectionName]}/";
         }
 
         public override IEnumerable<ICommandData> GetTransformedResults()
@@ -103,24 +77,94 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             if (item.IsDelete)
             {
-                if (IsLoadingToDefaultCollection)
+                if (_script.IsLoadingToDefaultCollection)
                     _commands.Add(new DeleteCommandData(item.DocumentKey, null));
 
-                if (IsLoadingToMultipleCollections)
+                if (_script.NonDefaultCollections.Length > 0)
                 {
-                    // TODO arek
+                    for (var i = 0; i < _script.NonDefaultCollections.Length; i++)
+                    {
+                        _commands.Add(new DeleteCommandData(GetPrefixedId(item.DocumentKey, _script.NonDefaultCollections[i]), null));
+                    }
                 }
             }
             else
             {
-                if (_transformationScript != null)
+                if (_script.Transformation != null)
                 {
+                    if (_script.NonDefaultCollections.Length > 0 && item.Document.ChangeVector.Length > 1)
+                    {
+                        // we need to delete all docs prefixed by modified document key to properly handle updates
+
+                        for (var i = 0; i < _script.NonDefaultCollections.Length; i++)
+                        {
+                            _commands.Add(new DeleteCommandData(GetPrefixedId(item.DocumentKey, _script.NonDefaultCollections[i]), null));
+                        }
+                    }
+
                     _currentlyTransformed = item;
 
-                    Apply(Context, _currentlyTransformed.Document, _transformationScript);
+                    Apply(Context, _currentlyTransformed.Document, _script.Transformation);
                 }
                 else
                     _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentKey, null, item.Document.Data));
+            }
+        }
+
+        public class ScriptInput
+        {
+            public readonly string[] AllCollections = new string[0];
+
+            public readonly string[] NonDefaultCollections = new string[0];
+
+            public readonly bool IsLoadingToDefaultCollection = true;
+
+            public readonly PatchRequest Transformation;
+
+            public readonly string DefaultCollection;
+
+            public readonly Dictionary<string, string> IdPrefixForCollection = new Dictionary<string, string>();
+
+            public ScriptInput(RavenEtlConfiguration configuration)
+            {
+                DefaultCollection = configuration.Collection;
+
+                if (string.IsNullOrEmpty(configuration.Script))
+                {
+                    return;
+                }
+
+                Transformation = new PatchRequest { Script = configuration.Script };
+
+                AllCollections = configuration.GetCollectionsFromScript();
+
+                if (AllCollections.Length > 1)
+                {
+                    IsLoadingToDefaultCollection = false;
+
+                    var nonDefault = new List<string>();
+
+                    for (var i = 0; i < AllCollections.Length; i++)
+                    {
+                        if (AllCollections[i].Equals(DefaultCollection, StringComparison.OrdinalIgnoreCase))
+                        {
+                            IsLoadingToDefaultCollection = true;
+                        }
+                        else
+                        {
+                            nonDefault.Add(AllCollections[i]);
+                        }
+                    }
+
+                    NonDefaultCollections = nonDefault.ToArray();
+                }
+                else if (AllCollections.Length == 1 && AllCollections[0].Equals(DefaultCollection, StringComparison.OrdinalIgnoreCase) == false)
+                    IsLoadingToDefaultCollection = false;
+
+                foreach (var collection in NonDefaultCollections)
+                {
+                    IdPrefixForCollection[collection] = DocumentConventions.DefaultTransformCollectionNameToDocumentIdPrefix(collection);
+                }
             }
         }
     }
