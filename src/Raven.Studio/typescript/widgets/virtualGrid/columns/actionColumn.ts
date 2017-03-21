@@ -30,7 +30,7 @@ class actionColumn<T> implements virtualColumn {
 
     renderCell(item: document, isSelected: boolean): string {
         return `<div class="cell action-cell" style="width: ${this.width}">
-            <button data-action="${this.actionUniqueId}" class="btn btn-default btn-small">${this.buttonText}</button>
+            <button data-action="${this.actionUniqueId}" class="btn btn-sm btn-block">${this.buttonText}</button>
         </div>`;
     }
 
