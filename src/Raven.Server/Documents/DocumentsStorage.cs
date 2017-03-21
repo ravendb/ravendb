@@ -1281,6 +1281,7 @@ namespace Raven.Server.Documents
                     using (conflictsTable.Allocate(out tableValueBuilder))
                     {
                         tableValueBuilder.Add(lowerKey, lowerSize);
+                        tableValueBuilder.Add(VersioningStorage.RecordSeperator);
                         tableValueBuilder.Add((byte*)pChangeVector, existingTombstone.ChangeVector.Length * sizeof(ChangeVectorEntry));
                         tableValueBuilder.Add(keyPtr, keySize);
                         tableValueBuilder.Add(null, 0);
@@ -1349,6 +1350,7 @@ namespace Raven.Server.Documents
                     using (conflictsTable.Allocate(out tvb))
                     {
                         tvb.Add(lowerKey, lowerSize);
+                        tvb.Add(VersioningStorage.RecordSeperator);
                         tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * incomingChangeVector.Length);
                         tvb.Add(keyPtr, keySize);
                         tvb.Add(doc, docSize);
