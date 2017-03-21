@@ -186,10 +186,10 @@
                             <span>Transform results</span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu settings-menu padding padding-sm" role="menu" data-bind="dropdownPanel: true">
+                        <div class="dropdown-menu settings-menu padding padding-sm" role="menu" data-bind="dropdownPanel: true">
                             <div class="row row-sm margin-bottom">
                                 <div class="col-xs-12">
-                                    <div class="dropdown btn-block">
+                                    <div class="dropdown btn btn-block">
                                         <button class="btn btn-block text-left dropdown-toggle" type="button" data-toggle="dropdown">
                                             <span data-bind="text: uiTransformer() || 'None'"></span>
                                             <span class="caret"></span>
@@ -215,8 +215,8 @@
                                 </div>
                             </div>
 
-                            <button class="btn btn-success pull-right close-panel" data-bind="click: applyTransformer"><i class="icon-check"></i> <span>Apply</span></button>
-                        </ul>
+                            <button class="btn btn-success btn-sm pull-right close-panel" data-bind="click: applyTransformer"><i class="icon-check"></i> <span>Apply</span></button>
+                        </div>
                     </div>
                     <!-- TODO: csv enabled for: isStaticIndexSelected -->
                     <button type="button" class="btn btn-default btn-prerelease" disabled="disabled"><i class="icon-csv-export"></i> <span>Export CSV</span></button>
