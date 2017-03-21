@@ -4,8 +4,10 @@ using System.IO;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -15,13 +17,12 @@ namespace Raven.Server.Documents.Replication
 
         private readonly Logger _log;
         private readonly ReplicationDocument _replicationDocument;
-        private readonly Dictionary<string, ScriptResolver> _scriptConflictResolversCache;
+        private readonly ResolveConflictOnReplicationConfigurationChange _conflictResolver;
 
-        public ConflictManager(DocumentDatabase database, ReplicationDocument replicationDocument,
-            Dictionary<string, ScriptResolver> scriptConflictResolversCache)
+        public ConflictManager(DocumentDatabase database, ReplicationDocument replicationDocument, ResolveConflictOnReplicationConfigurationChange conflictResolver)
         {
             _replicationDocument = replicationDocument;
-            _scriptConflictResolversCache = scriptConflictResolversCache;
+            _conflictResolver = conflictResolver;
             _database = database;
             _log = LoggingSource.Instance.GetLogger<ConflictManager>(_database.Name);
         }
@@ -39,7 +40,7 @@ namespace Raven.Server.Documents.Replication
                 HandleHiloConflict(documentsContext, docPosition, doc);
                 return;
             }
-            if (_database.DocumentsStorage.TryResolveIdenticalDocument(
+            if (TryResolveIdenticalDocument(
                 documentsContext,
                 docPosition.Id,
                 doc,
@@ -82,7 +83,7 @@ namespace Raven.Server.Documents.Replication
                             ChangeVector = changeVector
                         }
                     };
-                    conflicts.AddRange(documentsContext.DocumentDatabase.DocumentsStorage.GetConflictsFor(
+                    conflicts.AddRange(documentsContext.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(
                         documentsContext, docPosition.Id));
                     var localDocumentTuple =
                         documentsContext.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(documentsContext,
@@ -91,7 +92,7 @@ namespace Raven.Server.Documents.Replication
                     if (local != null)
                         conflicts.Add(local);
 
-                    _database.DocumentsStorage.ResolveToLatest(documentsContext, conflicts, local != null && local.Doc == null);
+                    _conflictResolver.ResolveToLatest(documentsContext, conflicts, local != null && local.Doc == null);
                     break;
                 default:
                     _database.DocumentsStorage.AddConflict(documentsContext, docPosition, doc, changeVector, docPosition.Collection);
@@ -105,7 +106,7 @@ namespace Raven.Server.Documents.Replication
             ChangeVectorEntry[] incomingChangeVector,
             BlittableJsonReaderObject doc)
         {
-            var conflictedDocs = new List<DocumentConflict>(documentsContext.DocumentDatabase.DocumentsStorage.GetConflictsFor(documentsContext, docPosition.Id));
+            var conflictedDocs = new List<DocumentConflict>(documentsContext.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(documentsContext, docPosition.Id));
             var isTomstone = false;
 
             if (conflictedDocs.Count == 0)
@@ -140,7 +141,7 @@ namespace Raven.Server.Documents.Replication
             });
 
             ScriptResolver scriptResolver;
-            var hasScript = _scriptConflictResolversCache.TryGetValue(collection, out scriptResolver);
+            var hasScript = _conflictResolver.ScriptConflictResolversCache.TryGetValue(collection, out scriptResolver);
             if (!hasScript || scriptResolver == null)
             {
                 if (_log.IsInfoEnabled)
@@ -148,7 +149,7 @@ namespace Raven.Server.Documents.Replication
                 return false;
             }
 
-            return _database.DocumentsStorage.TryResolveConflictByScriptInternal(
+            return _conflictResolver.TryResolveConflictByScriptInternal(
                 documentsContext,
                 scriptResolver,
                 conflictedDocs,
@@ -162,7 +163,7 @@ namespace Raven.Server.Documents.Replication
             ChangeVectorEntry[] incomingChangeVector,
             BlittableJsonReaderObject doc)
         {
-            var conflicts = new List<DocumentConflict>(_database.DocumentsStorage.GetConflictsFor(context, docPosition.Id));
+            var conflicts = new List<DocumentConflict>(_database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docPosition.Id));
             var localDocumentTuple = _database.DocumentsStorage.GetDocumentOrTombstone(context, docPosition.Id, false);
             var localDoc = DocumentConflict.From(context, localDocumentTuple.Item1) ??
                            DocumentConflict.From(localDocumentTuple.Item2);
@@ -178,7 +179,7 @@ namespace Raven.Server.Documents.Replication
                 LoweredKey = context.GetLazyString(docPosition.Id)
             });
 
-            return _database.DocumentsStorage.TryResolveUsingDefaultResolverInternal(
+            return _conflictResolver.TryResolveUsingDefaultResolverInternal(
                 context,
                 _replicationDocument?.DefaultResolver,
                 conflicts,
@@ -192,7 +193,7 @@ namespace Raven.Server.Documents.Replication
             if (!doc.TryGet("Max", out highestMax))
                 throw new InvalidDataException("Tried to resolve HiLo document conflict but failed. Missing property name'Max'");
 
-            var conflicts = _database.DocumentsStorage.GetConflictsFor(context, docPosition.Id);
+            var conflicts = _database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docPosition.Id);
 
             var resolvedHiLoDoc = doc;
             if (conflicts.Count == 0)
@@ -222,6 +223,42 @@ namespace Raven.Server.Documents.Replication
         {
             throw new InvalidDataException(
                 $"Conflict detected on {docPosition.Id} but there are no conflicts / docs / tombstones for this document");
+        }
+
+        public bool TryResolveIdenticalDocument(DocumentsOperationContext context, string key,
+            BlittableJsonReaderObject incomingDoc,
+            long lastModifiedTicks,
+            ChangeVectorEntry[] incomingChangeVector)
+        {
+            var existing = _database.DocumentsStorage.GetDocumentOrTombstone(context, key, throwOnConflict: false);
+            var existingDoc = existing.Item1;
+            var existingTombstone = existing.Item2;
+
+            if (existingDoc != null && existingDoc.IsMetadataEqualTo(incomingDoc) &&
+                    existingDoc.IsEqualTo(incomingDoc))
+            {
+                // no real conflict here, both documents have identical content
+                var mergedChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
+                _database.DocumentsStorage.Put(context, key, null, incomingDoc, lastModifiedTicks, mergedChangeVector);
+                return true;
+            }
+
+            if (existingTombstone != null && incomingDoc == null)
+            {
+                // Conflict between two tombstones resolves to the local tombstone
+                existingTombstone.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
+                Slice keySlice;
+                using (DocumentKeyWorker.GetSliceFromKey(context, existingTombstone.Key, out keySlice))
+                {
+                    _database.DocumentsStorage.Delete(context, keySlice, existingTombstone.Key, null,
+                    lastModifiedTicks,
+                    existingTombstone.ChangeVector,
+                    existingTombstone.Collection);
+                }
+                return true;
+            }
+
+            return false;
         }
     }
 }

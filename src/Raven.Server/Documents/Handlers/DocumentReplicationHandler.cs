@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var array = new DynamicJsonArray();
-                var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, docId);
+                var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
                 foreach (var conflict in conflicts)
                 {
                     if (maxEtag < conflict.Etag)
@@ -280,7 +280,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
-                var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, docId);
+                var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
                 var advisor = new ConflictResovlerAdvisor(conflicts.Select(c=>c.Doc),context);
                 var resovled = advisor.Resolve();
 

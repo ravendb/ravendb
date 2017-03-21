@@ -1,9 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Replication;
+using Raven.Server.Documents.Patch;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
 
@@ -17,6 +23,8 @@ namespace Raven.Server.Documents.Replication
 
         public Task ResolveConflictsTask = Task.CompletedTask;
 
+        internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
+
         public ResolveConflictOnReplicationConfigurationChange(DocumentReplicationLoader documentReplicationLoader, Logger log)
         {
             _documentReplicationLoader = documentReplicationLoader;
@@ -24,13 +32,13 @@ namespace Raven.Server.Documents.Replication
             _log = log;
         }
 
-        public long ConflictsCount => _database.DocumentsStorage.ConflictsCount;
+        public long ConflictsCount => _database.DocumentsStorage.ConflictsStorage.ConflictsCount;
 
         public void RunConflictResolversOnce()
         {
             UpdateScriptResolvers();
 
-            if (_database.DocumentsStorage.ConflictsCount > 0)
+            if (ConflictsCount > 0)
             {
                 try
                 {
@@ -99,7 +107,7 @@ namespace Raven.Server.Documents.Replication
                                         break;
                                     }
 
-                                    var conflicts = _database.DocumentsStorage.GetAllConflictsBySameKeyAfter(context, ref lastKey);
+                                    var conflicts = _database.DocumentsStorage.ConflictsStorage.GetAllConflictsBySameKeyAfter(context, ref lastKey);
                                     if (conflicts.Count == 0)
                                         break;
                                     if (TryResolveConflict(context, conflicts, resolverStats) == false)
@@ -135,9 +143,6 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache =
-            new Dictionary<string, ScriptResolver>();
-
         private bool TryResolveConflict(DocumentsOperationContext context, List<DocumentConflict> conflictList, ReplicationStatistics.ResolverIterationStats stats)
         {
             var collection = conflictList[0].Collection;
@@ -146,7 +151,7 @@ namespace Raven.Server.Documents.Replication
             if (ScriptConflictResolversCache.TryGetValue(collection, out scriptResovler) &&
                 scriptResovler != null)
             {
-                if (_database.DocumentsStorage.TryResolveConflictByScriptInternal(
+                if (TryResolveConflictByScriptInternal(
                     context,
                     scriptResovler,
                     conflictList,
@@ -159,7 +164,7 @@ namespace Raven.Server.Documents.Replication
 
             }
 
-            if (_database.DocumentsStorage.TryResolveUsingDefaultResolverInternal(
+            if (TryResolveUsingDefaultResolverInternal(
                 context,
                 _documentReplicationLoader.ReplicationDocument?.DefaultResolver,
                 conflictList,
@@ -171,14 +176,13 @@ namespace Raven.Server.Documents.Replication
 
             if (_documentReplicationLoader.ReplicationDocument?.DocumentConflictResolution == StraightforwardConflictResolution.ResolveToLatest)
             {
-                _database.DocumentsStorage.ResolveToLatest(context, conflictList, false);
+                ResolveToLatest(context, conflictList, false);
                 stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
                 return true;
             }
 
             return false;
         }
-
 
         private void UpdateScriptResolvers()
         {
@@ -203,6 +207,189 @@ namespace Raven.Server.Documents.Replication
                 };
             }
             ScriptConflictResolversCache = copy;
+        }
+
+        public bool TryResolveUsingDefaultResolverInternal(
+            DocumentsOperationContext context,
+            DatabaseResolver resolver,
+            IReadOnlyList<DocumentConflict> conflicts,
+            bool hasTombstoneInStorage)
+        {
+            if (resolver?.ResolvingDatabaseId == null)
+            {
+                return false;
+            }
+
+            DocumentConflict resolved = null;
+            long maxEtag = -1;
+            foreach (var documentConflict in conflicts)
+            {
+                foreach (var changeVectorEntry in documentConflict.ChangeVector)
+                {
+                    if (changeVectorEntry.DbId.Equals(new Guid(resolver.ResolvingDatabaseId)))
+                    {
+                        if (changeVectorEntry.Etag == maxEtag)
+                        {
+                            // we have two documents with same etag of the leader
+                            return false;
+                        }
+
+                        if (changeVectorEntry.Etag < maxEtag)
+                            continue;
+
+                        maxEtag = changeVectorEntry.Etag;
+                        resolved = documentConflict;
+                        break;
+                    }
+                }
+            }
+
+            if (resolved == null)
+                return false;
+
+            resolved.ChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+            PutResolvedDocumentBackToStorage(context, resolved, hasTombstoneInStorage);
+            return true;
+        }
+
+        private bool ValidatedResolveByScriptInput(ScriptResolver scriptResolver,
+            IReadOnlyList<DocumentConflict> conflicts,
+            LazyStringValue collection)
+        {
+            if (scriptResolver == null)
+                return false;
+            if (collection == null)
+                return false;
+            if (conflicts.Count < 2)
+                return false;
+
+            foreach (var documentConflict in conflicts)
+            {
+                if (collection != documentConflict.Collection)
+                {
+                    var msg = $"All conflicted documents must have same collection name, but we found conflicted document in {collection} and an other one in {documentConflict.Collection}";
+                    if (_log.IsInfoEnabled)
+                        _log.Info(msg);
+
+                    var differentCollectionNameAlert = AlertRaised.Create(
+                        $"Script unable to resolve conflicted documents with the key {documentConflict.Key}",
+                        msg,
+                        AlertType.Replication,
+                        NotificationSeverity.Error,
+                        "Mismatched Collections On Replication Resolve"
+                        );
+                    _database.NotificationCenter.Add(differentCollectionNameAlert);
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public void PutResolvedDocumentBackToStorage(
+           DocumentsOperationContext ctx,
+           DocumentConflict conflict,
+           bool hasLocalTombstone)
+        {
+            if (conflict.Doc == null)
+            {
+                Slice keySlice;
+                using (DocumentKeyWorker.GetSliceFromKey(ctx, conflict.LoweredKey, out keySlice))
+                {
+                    _database.DocumentsStorage.Delete(ctx, keySlice, conflict.LoweredKey, null,
+                        _database.Time.GetUtcNow().Ticks, conflict.ChangeVector, conflict.Collection);
+                    return;
+                }
+            }
+
+            // because we are resolving to a conflict, and putting a document will
+            // delete all the conflicts, we have to create a copy of the document
+            // in order to avoid the data we are saving from being removed while
+            // we are saving it
+
+            // the resolved document could be an update of the existing document, so it's a good idea to clone it also before updating.
+            using (var clone = conflict.Doc.Clone(ctx))
+            {
+                // handle the case where we resolve a conflict for a document from a different collection
+                DeleteDocumentFromDifferentCollectionIfNeeded(ctx, conflict);
+
+                ReplicationUtils.EnsureCollectionTag(clone, conflict.Collection);
+                _database.DocumentsStorage.Put(ctx, conflict.LoweredKey, null, clone, null, conflict.ChangeVector);
+            }
+        }
+
+        private void DeleteDocumentFromDifferentCollectionIfNeeded(DocumentsOperationContext ctx, DocumentConflict conflict)
+        {
+            Document oldVersion;
+            try
+            {
+                oldVersion = _database.DocumentsStorage.Get(ctx, conflict.LoweredKey);
+            }
+            catch (DocumentConflictException)
+            {
+                return; // if already conflicted, don't need to do anything
+            }
+
+            if (oldVersion == null)
+                return;
+
+            var oldVersionCollectionName = CollectionName.GetCollectionName(oldVersion.Data);
+            if (oldVersionCollectionName.Equals(conflict.Collection, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            _database.DocumentsStorage.DeleteWithoutCreatingTombstone(ctx, oldVersionCollectionName, oldVersion.StorageId, isTombstone: false);
+        }
+
+        public bool TryResolveConflictByScriptInternal(
+            DocumentsOperationContext context,
+            ScriptResolver scriptResolver,
+            IReadOnlyList<DocumentConflict> conflicts,
+            LazyStringValue collection,
+            bool hasLocalTombstone)
+        {
+            if (ValidatedResolveByScriptInput(scriptResolver, conflicts, collection) == false)
+            {
+                return false;
+            }
+
+            var patch = new PatchConflict(_database, conflicts);
+            var updatedConflict = conflicts[0];
+            var patchRequest = new PatchRequest
+            {
+                Script = scriptResolver.Script
+            };
+            BlittableJsonReaderObject resolved;
+            if (patch.TryResolveConflict(context, patchRequest, out resolved) == false)
+            {
+                return false;
+            }
+
+            updatedConflict.Doc = resolved;
+            updatedConflict.Collection = collection;
+            updatedConflict.ChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+            PutResolvedDocumentBackToStorage(context, updatedConflict, hasLocalTombstone);
+            return true;
+        }
+
+        public void ResolveToLatest(
+            DocumentsOperationContext context,
+            IReadOnlyList<DocumentConflict> conflicts,
+            bool hasLocalTombstone)
+        {
+            var latestDoc = conflicts[0];
+            var latestTime = latestDoc.LastModified.Ticks;
+
+            foreach (var documentConflict in conflicts)
+            {
+                if (documentConflict.LastModified.Ticks > latestTime)
+                {
+                    latestDoc = documentConflict;
+                    latestTime = documentConflict.LastModified.Ticks;
+                }
+            }
+
+            latestDoc.ChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+            PutResolvedDocumentBackToStorage(context, latestDoc, hasLocalTombstone);
         }
     }
 }

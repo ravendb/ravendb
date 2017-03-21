@@ -28,7 +28,7 @@ namespace Raven.Server.Utils
         {
             //tombstones also can be a conflict entry
             conflictingVector = null;
-            var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, key);
+            var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, key);
             if (conflicts.Count > 0)
             {
                 foreach (var existingConflict in conflicts)
