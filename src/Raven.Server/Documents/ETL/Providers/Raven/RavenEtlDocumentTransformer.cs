@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                 for (var i = 0; i < _script.NonDefaultCollections.Length; i++)
                 {
-                    _commands.Add(new DeleteCommandData(GetPrefixedId(item.DocumentKey, _script.NonDefaultCollections[i]), null));
+                    _commands.Add(new DeletePrefixedCommandData(GetPrefixedId(item.DocumentKey, _script.NonDefaultCollections[i])));
                 }
             }
 
