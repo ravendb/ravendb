@@ -75,33 +75,25 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public override void Transform(RavenEtlItem item)
         {
+            if (_script.NonDefaultCollections.Length > 0)
+            {
+                // we _always_ need to delete all docs prefixed by modified document key to properly handle updates
+
+                for (var i = 0; i < _script.NonDefaultCollections.Length; i++)
+                {
+                    _commands.Add(new DeleteCommandData(GetPrefixedId(item.DocumentKey, _script.NonDefaultCollections[i]), null));
+                }
+            }
+
             if (item.IsDelete)
             {
                 if (_script.IsLoadingToDefaultCollection)
                     _commands.Add(new DeleteCommandData(item.DocumentKey, null));
-
-                if (_script.NonDefaultCollections.Length > 0)
-                {
-                    for (var i = 0; i < _script.NonDefaultCollections.Length; i++)
-                    {
-                        _commands.Add(new DeleteCommandData(GetPrefixedId(item.DocumentKey, _script.NonDefaultCollections[i]), null));
-                    }
-                }
             }
             else
             {
                 if (_script.Transformation != null)
                 {
-                    if (_script.NonDefaultCollections.Length > 0 && item.Document.ChangeVector.Length > 1)
-                    {
-                        // we need to delete all docs prefixed by modified document key to properly handle updates
-
-                        for (var i = 0; i < _script.NonDefaultCollections.Length; i++)
-                        {
-                            _commands.Add(new DeleteCommandData(GetPrefixedId(item.DocumentKey, _script.NonDefaultCollections[i]), null));
-                        }
-                    }
-
                     _currentlyTransformed = item;
 
                     Apply(Context, _currentlyTransformed.Document, _script.Transformation);

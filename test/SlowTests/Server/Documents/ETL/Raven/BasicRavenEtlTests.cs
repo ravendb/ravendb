@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations;
@@ -321,9 +322,149 @@ loadToAddresses(LoadDocument(this.AddressId));
             }
         }
 
+        [Fact]
+        public void Update_of_disassembled_document()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                SetupEtl(src, dest, "Orders", @"
+var orderData = {
+    OrderLinesCount: this.Lines.length,
+    TotalCost: 0
+};
+
+for (var i = 0; i < this.Lines.length; i++) {
+    var line = this.Lines[i];
+    var cost = (line.Quantity * line.PricePerUnit) *  ( 1 - line.Discount);
+
+    orderData.TotalCost += cost;
+
+    loadToOrderLines({
+        Quantity: line.Quantity,
+        ProductName: line.ProductName,
+        Cost: cost
+    });
+}
+
+loadToOrders(orderData);
+");
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine
+                            {
+                                ProductName = "a",
+                                PricePerUnit = 10,
+                                Quantity = 1
+                            },
+                            new OrderLine
+                            {
+                                ProductName = "b",
+                                PricePerUnit = 10,
+                                Quantity = 2
+                            }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromSeconds(30));
+
+                using (var session = dest.OpenSession())
+                {
+                    var order = session.Load<OrderWithLinesCount>("orders/1");
+
+                    Assert.Equal(2, order.OrderLinesCount);
+                    Assert.Equal(30, order.TotalCost);
+
+                    var lines = session.Advanced.LoadStartingWith<LineItemWithTotalCost>("orders/1/OrderLines/").OrderBy(x => x.ProductName).ToList();
+
+                    Assert.Equal(2, lines.Count);
+
+                    Assert.Equal(10, lines[0].Cost);
+                    Assert.Equal("a", lines[0].ProductName);
+                    Assert.Equal(1, lines[0].Quantity);
+
+                    Assert.Equal(20, lines[1].Cost);
+                    Assert.Equal("b", lines[1].ProductName);
+                    Assert.Equal(2, lines[1].Quantity);
+                }
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine
+                            {
+                                ProductName = "a",
+                                PricePerUnit = 10,
+                                Quantity = 1
+                            },
+                            new OrderLine
+                            {
+                                ProductName = "b",
+                                PricePerUnit = 10,
+                                Quantity = 1
+                            }
+                        }
+                    }, "orders/1");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromSeconds(30));
+
+                using (var session = dest.OpenSession())
+                {
+                    var order = session.Load<OrderWithLinesCount>("orders/1");
+
+                    Assert.Equal(2, order.OrderLinesCount);
+                    Assert.Equal(20, order.TotalCost);
+
+                    var lines = session.Advanced.LoadStartingWith<LineItemWithTotalCost>("orders/1/OrderLines/").OrderBy(x => x.ProductName).ToList();
+
+                    Assert.Equal(2, lines.Count);
+
+                    Assert.Equal(10, lines[0].Cost);
+                    Assert.Equal("a", lines[0].ProductName);
+                    Assert.Equal(1, lines[0].Quantity);
+
+                    Assert.Equal(10, lines[1].Cost);
+                    Assert.Equal("b", lines[1].ProductName);
+                    Assert.Equal(1, lines[1].Quantity);
+                }
+            }
+        }
+
         private class UserWithAddress : User
         {
             public Address Address { get; set; }
+        }
+
+        private class OrderWithLinesCount
+        {
+            public int OrderLinesCount { get; set; }
+
+            public decimal TotalCost { get; set; }
+        }
+
+        private class LineItemWithTotalCost
+        {
+            public string ProductName { get; set; }
+            public decimal Cost { get; set; }
+            public int Quantity { get; set; }
         }
     }
 }
