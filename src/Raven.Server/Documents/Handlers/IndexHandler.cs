@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -69,9 +70,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
             }
-
         }
-
 
         [RavenAction("/databases/*/indexes/replace", "POST")]
         public Task Replace()
@@ -140,6 +139,32 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/indexes/has-changed", "POST")]
+        public Task HasChanged()
+        {
+            JsonOperationContext context;
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (var json = context.ReadForMemory(RequestBodyStream(), "index/definition"))
+            {
+                var indexDefinition = JsonDeserializationServer.IndexDefinition(json);
+
+                if (indexDefinition?.Name == null || indexDefinition.Maps.Count == 0)
+                    throw new BadRequestException("Index definition must contain name and at least one map.");
+
+                var changed = Database.IndexStore.HasChanged(indexDefinition);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Changed");
+                    writer.WriteBool(changed);
+                    writer.WriteEndObject();
+                }
+            }
+
+            return NoContent();
         }
 
         [RavenAction("/databases/*/indexes/rename", "POST")]
