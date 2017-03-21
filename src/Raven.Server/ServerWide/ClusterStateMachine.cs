@@ -458,7 +458,7 @@ namespace Raven.Server.ServerWide
                 }
                 catch (Exception e)
                 {
-                    NotifyLeaderAboutError(index,leader,$"Cannot execute command of type {type} for database {databaseName} for reason: {e}");
+                    NotifyLeaderAboutError(index,leader, new InvalidOperationException($"Cannot execute command of type {type} for database {databaseName} for reason: {e}"));
                 }
                 
                 var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);

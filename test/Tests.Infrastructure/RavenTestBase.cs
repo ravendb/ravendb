@@ -50,7 +50,9 @@ namespace FastTests
             bool ignoreDisabledDatabase = false,
             int replicationFacotr = 1,
             RavenServer defaultServer = null,
-            bool waitForDatabasesToBeCreated= false)
+            bool waitForDatabasesToBeCreated= false,
+            bool deleteDatabaseWhenDisposed = true,
+            bool createDatabase = true)
         {
             lock (_getDocumentStoreSync)
             {
@@ -88,12 +90,15 @@ namespace FastTests
                     int.MaxValue.ToString();
                 modifyDatabaseDocument?.Invoke(doc);
 
-                TransactionOperationContext context;
-                using (defaultServer.ServerStore.ContextPool.AllocateOperationContext(out context))
+                if (createDatabase)
                 {
-                    context.OpenReadTransaction();
-                    if (defaultServer.ServerStore.Cluster.Read(context, Constants.Documents.Prefix + name) != null)
-                        throw new InvalidOperationException($"Database '{name}' already exists");
+                    TransactionOperationContext context;
+                    using (defaultServer.ServerStore.ContextPool.AllocateOperationContext(out context))
+                    {
+                        context.OpenReadTransaction();
+                        if (defaultServer.ServerStore.Cluster.Read(context, Constants.Documents.Prefix + name) != null)
+                            throw new InvalidOperationException($"Database '{name}' already exists");
+                    }
                 }
 
                 var store = new DocumentStore
@@ -105,7 +110,8 @@ namespace FastTests
                 ModifyStore(store);
                 store.Initialize();
 
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFacotr));
+                if (createDatabase)
+                    store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFacotr));
                 
 
                 store.AfterDispose += (sender, args) =>
@@ -121,7 +127,8 @@ namespace FastTests
                         // if we are disposing store before database had chance to load then we need to wait
 
                         defaultServer.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-                        store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
+                        if(deleteDatabaseWhenDisposed)
+                            store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
                     }
                 };
                 CreatedStores.Add(store);

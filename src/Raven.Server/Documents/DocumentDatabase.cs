@@ -215,17 +215,22 @@ namespace Raven.Server.Documents
 
             _indexStoreTask = IndexStore.InitializeAsync();
             TransactionOperationContext context;
-            using (_serverStore.ContextPool.AllocateOperationContext(out context))
+            if (_serverStore != null)
             {
-                context.OpenReadTransaction();
-                var record = _serverStore.Cluster.ReadDatabase(context, Name);
-                TransformerStore.Initialize(record);
+                using (_serverStore.ContextPool.AllocateOperationContext(out context))
+                {
+                    context.OpenReadTransaction();
+                    var record = _serverStore.Cluster.ReadDatabase(context, Name);
+                    TransformerStore.Initialize(record);
+                }
             }
+
+            BundleLoader = new BundleLoader(this, _serverStore);
             Patcher.Initialize();
             EtlLoader.Initialize();
 
             DocumentTombstoneCleaner.Initialize();
-            BundleLoader = new BundleLoader(this,_serverStore);
+            
 
             try
             {
@@ -385,7 +390,7 @@ namespace Raven.Server.Documents
             Size size = new Size(envs.Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));
             var databaseInfo = new DynamicJsonValue
             {
-                [nameof(DatabaseInfo.Bundles)] = new DynamicJsonArray(BundleLoader.GetActiveBundles()),
+                [nameof(DatabaseInfo.Bundles)] = BundleLoader!= null? new DynamicJsonArray(BundleLoader.GetActiveBundles()):null,
                 [nameof(DatabaseInfo.IsAdmin)] = true, //TODO: implement me!
                 [nameof(DatabaseInfo.Name)] = Name,
                 [nameof(DatabaseInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
@@ -397,7 +402,7 @@ namespace Raven.Server.Documents
                 [nameof(DatabaseInfo.Errors)] = IndexStore.GetIndexes().Sum(index => index.GetErrors().Count),
                 [nameof(DatabaseInfo.Alerts)] = NotificationCenter.GetAlertCount(),
                 [nameof(DatabaseInfo.UpTime)] = null, //it is shutting down
-                [nameof(DatabaseInfo.BackupInfo)] = BundleLoader.GetBackupInfo(),
+                [nameof(DatabaseInfo.BackupInfo)] = BundleLoader?.GetBackupInfo(),
                 [nameof(DatabaseInfo.DocumentsCount)] = DocumentsStorage.GetNumberOfDocuments(),
                 [nameof(DatabaseInfo.IndexesCount)] = IndexStore.GetIndexes().Count(),
                 [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!

@@ -178,7 +178,8 @@ namespace Raven.Server.Documents.Handlers
                     {
                         ["Type"] = nameof(SetTransformerLockModeCommand),
                         [nameof(SetTransformerLockModeCommand.LockMode)] = mode,
-                        [nameof(PutTransformerCommand.DatabaseName)] = Database.Name,
+                        [nameof(SetTransformerLockModeCommand.DatabaseName)] = Database.Name,
+                        [nameof(SetTransformerLockModeCommand.TransformerName)] = name,
                     }, "set-transformer_lock_mode-cmd"))
                     {
                         index = await ServerStore.SendToLeaderAsync(setTranformerLockModeCommand);
