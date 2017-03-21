@@ -54,14 +54,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             engine.SetValue("nVarchar", (Func<string, double?, ValueTypeLengthTriple>)(ToNVarchar));
         }
 
-        protected override void LoadToFunction(string tableName, JsValue colsAsObject, PatcherOperationScope scope)
+        protected override void LoadToFunction(string tableName, JsValue cols, PatcherOperationScope scope)
         {
             if (tableName == null)
-                throw new ArgumentException("tableName parameter is mandatory");
-            if (colsAsObject == null)
-                throw new ArgumentException("cols parameter is mandatory");
+                ThrowLoadParameterIsMandatory(nameof(tableName));
+            if (cols == null)
+                ThrowLoadParameterIsMandatory(nameof(cols));
 
-            var dynamicJsonValue = scope.ToBlittable(colsAsObject.AsObject());
+            var dynamicJsonValue = scope.ToBlittable(cols.AsObject());
             var blittableJsonReaderObject = Context.ReadObject(dynamicJsonValue, tableName);
             var columns = new List<SqlColumn>(blittableJsonReaderObject.Count);
             var prop = new BlittableJsonReaderObject.PropertyDetails();

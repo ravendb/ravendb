@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
+using FastTests.Server.Basic.Entities;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;
@@ -31,7 +34,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     }
                 });
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses == 1);
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -51,6 +54,24 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     Assert.NotNull(user);
                     Assert.Equal("James Doe", user.Name);
+                }
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.Delete("users/1");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    Assert.Null(user);
                 }
             }
         }
@@ -75,7 +96,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                         }
                 });
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses == 1);
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
@@ -95,6 +116,24 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     Assert.NotNull(user);
                     Assert.Equal("Joe Doe", user.Name);
+                }
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.Delete("users/1");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    Assert.Null(user);
                 }
             }
         }
@@ -151,7 +190,7 @@ loadToUsers(
                     for (int i = 0; i < count; i++)
                     {
                         var user = session.Load<UserWithAddress>("users/" + i);
-                        
+
                         if (i % 2 == 0)
                         {
                             Assert.Null(user);
@@ -164,6 +203,30 @@ loadToUsers(
                     }
 
                     Assert.Equal(15, loaded);
+                }
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    for (var i = 0; i < count; i++)
+                    {
+                        session.Delete($"users/{i}");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        var user = session.Load<UserWithAddress>("users/" + i);
+
+                        Assert.Null(user);
+                    }
                 }
             }
         }
@@ -204,7 +267,7 @@ loadToAddresses(LoadDocument(this.AddressId));
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(60));
+                etlDone.Wait(TimeSpan.FromSeconds(30));
 
                 using (var session = dest.OpenSession())
                 {
@@ -224,6 +287,37 @@ loadToAddresses(LoadDocument(this.AddressId));
                         Assert.Equal("New York", address.City);
                     }
                 }
+
+                var stats = dest.Admin.Send(new GetStatisticsOperation());
+
+                Assert.Equal(15, stats.CountOfDocuments);
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.Delete("users/3");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromSeconds(30));
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/3");
+                    Assert.Null(user);
+
+                    var person = session.Load<Person>("users/3/people/1");
+                    Assert.Null(person);
+
+                    var address = session.Load<Address>("users/3/addresses/1");
+                    Assert.Null(address);
+                }
+
+                stats = dest.Admin.Send(new GetStatisticsOperation());
+
+                Assert.Equal(12, stats.CountOfDocuments);
             }
         }
 

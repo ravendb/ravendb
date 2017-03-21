@@ -17,10 +17,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private readonly RequestExecutor _requestExecutor;
 
+        private readonly RavenEtlDocumentTransformer.ScriptInput _script;
+
         public RavenEtl(DocumentDatabase database, RavenEtlConfiguration configuration) : base(database, configuration, RavenEtlTag)
         {
             EtlConfiguration = configuration;
             _requestExecutor = RequestExecutor.CreateForSingleNode(EtlConfiguration.Url, EtlConfiguration.Database, EtlConfiguration.ApiKey);
+            _script = new RavenEtlDocumentTransformer.ScriptInput(configuration);
         }
 
         public RavenEtlConfiguration EtlConfiguration { get; }
@@ -37,7 +40,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         protected override EtlTransformer<RavenEtlItem, ICommandData> GetTransformer(DocumentsOperationContext context)
         {
-            return new RavenEtlDocumentTransformer(Database, context, EtlConfiguration);
+            return new RavenEtlDocumentTransformer(Database, context, _script);
         }
 
         protected override void LoadInternal(IEnumerable<ICommandData> items, JsonOperationContext context)
