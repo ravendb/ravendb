@@ -211,7 +211,7 @@ namespace Sparrow
                 throw new ArgumentOutOfRangeException(nameof(from), "Cannot copy data after the end of the slice");
 
             EnsureIsNotBadPointer();
-            Memory.CopyInline(dest + offset, _pointer->Ptr + from, count);
+            Memory.Copy(dest + offset, _pointer->Ptr + from, count);
         }
 
         public void CopyTo(byte* dest)
@@ -219,7 +219,7 @@ namespace Sparrow
             Debug.Assert(HasValue);
 
             EnsureIsNotBadPointer();
-            Memory.CopyInline(dest, _pointer->Ptr, _pointer->Length);
+            Memory.Copy(dest, _pointer->Ptr, _pointer->Length);
         }
 
         public void CopyTo(byte[] dest)
@@ -229,7 +229,7 @@ namespace Sparrow
             EnsureIsNotBadPointer();
             fixed (byte* p = dest)
             {
-                Memory.CopyInline(p, _pointer->Ptr, _pointer->Length);
+                Memory.Copy(p, _pointer->Ptr, _pointer->Length);
             }
         }
 
@@ -271,7 +271,7 @@ namespace Sparrow
             EnsureIsNotBadPointer();
             fixed (byte* p = dest)
             {
-                Memory.CopyInline(p + offset, _pointer->Ptr + from, count);
+                Memory.Copy(p + offset, _pointer->Ptr + from, count);
             }
         }
 
@@ -974,7 +974,7 @@ namespace Sparrow
 
             int size = value.Length - bytesToSkip;
             var result = AllocateInternal(size, type);
-            Memory.CopyInline(result._pointer->Ptr, value._pointer->Ptr + bytesToSkip, size);
+            Memory.Copy(result._pointer->Ptr, value._pointer->Ptr + bytesToSkip, size);
 
             RegisterForValidation(result);
             return result;
@@ -987,7 +987,7 @@ namespace Sparrow
             // TODO: If origin and destination are immutable, we can create external references.
 
             var result = AllocateInternal(value.Length, type);
-            Memory.CopyInline(result._pointer->Ptr, value._pointer->Ptr, value._pointer->Length);
+            Memory.Copy(result._pointer->Ptr, value._pointer->Ptr, value._pointer->Length);
 
             RegisterForValidation(result);
             return result;

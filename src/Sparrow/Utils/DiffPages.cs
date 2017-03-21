@@ -211,7 +211,7 @@ namespace Sparrow.Utils
         {
             // too big, no saving, just use the full modification
             OutputSize = size;
-            Memory.BulkCopy(Output, modified, size);
+            Memory.Copy(Output, modified, size);
             IsDiff = false;
         }
     }

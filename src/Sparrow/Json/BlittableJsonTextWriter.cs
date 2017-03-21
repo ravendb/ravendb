@@ -280,7 +280,7 @@ namespace Sparrow.Json
             if (size < _bufferLen)
             {
                 EnsureBuffer(size);
-                Memory.CopyInline(_buffer + _pos, buffer, size);
+                Memory.Copy(_buffer + _pos, buffer, size);
                 _pos += size;
                 return;
             }
