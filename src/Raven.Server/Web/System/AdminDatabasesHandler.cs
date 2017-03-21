@@ -39,8 +39,6 @@ namespace Raven.Server.Web.System
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                context.OpenReadTransaction();
-
                 var dbId = Constants.Documents.Prefix + name;
                 long etag;
                 using (context.OpenReadTransaction())
@@ -61,8 +59,6 @@ namespace Raven.Server.Web.System
                         return Task.CompletedTask;
                     }
 
-                    UnprotectSecuredSettingsOfDatabaseDocument(dbDoc);
-
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteDocument(context, new Document
@@ -77,15 +73,6 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        private void UnprotectSecuredSettingsOfDatabaseDocument(BlittableJsonReaderObject obj)
-        {
-            //TODO: implement this
-            object securedSettings;
-            if (obj.TryGetMember("SecuredSettings", out securedSettings) == false)
-            {
-
-            }
-        }
 
         [RavenAction("/admin/databases", "PUT", "/admin/databases/{databaseName:string}")]
         public async Task Put()
@@ -220,13 +207,9 @@ namespace Raven.Server.Web.System
             await ToggleDisableDatabases(disableRequested: false);
         }
 
-        private Task ToggleDisableDatabases(bool disableRequested)
+        private async Task ToggleDisableDatabases(bool disableRequested)
         {
-            throw new NotSupportedException();
-            /*
-             var names = GetStringValuesQueryString("name");
-
-            var databasesToUnload = new List<string>();
+            var names = GetStringValuesQueryString("name");
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -240,8 +223,9 @@ namespace Raven.Server.Web.System
                         writer.WriteComma();
                     first = false;
 
-                    var dbId = Constants.Documents.Prefix + name;
-                    var dbDoc = ServerStore.Cluster.Read(context, dbId);
+                    DatabaseRecord dbDoc;
+                    using (context.OpenReadTransaction())
+                        dbDoc = ServerStore.Cluster.ReadDatabase(context, name);
 
                     if (dbDoc == null)
                     {
@@ -254,34 +238,27 @@ namespace Raven.Server.Web.System
                         continue;
                     }
 
-                    object disabledValue;
-                    if (dbDoc.TryGetMember("Disabled", out disabledValue))
+                    if (dbDoc.Disabled == disableRequested)
                     {
-                        if ((bool)disabledValue == disableRequested)
+                        var state = disableRequested ? "disabled" : "enabled";
+                        context.Write(writer, new DynamicJsonValue
                         {
-                            var state = disableRequested ? "disabled" : "enabled";
-                            context.Write(writer, new DynamicJsonValue
-                            {
-                                ["Name"] = name,
-                                ["Success"] = false,
-                                ["Disabled"] = disableRequested,
-                                ["Reason"] = $"Database already {state}",
-                            });
-                            continue;
-                        }
+                            ["Name"] = name,
+                            ["Success"] = false,
+                            ["Disabled"] = disableRequested,
+                            ["Reason"] = $"Database already {state}",
+                        });
+                        continue;
                     }
 
-                    dbDoc.Modifications = new DynamicJsonValue(dbDoc)
-                    {
-                        ["Disabled"] = disableRequested
-                    };
 
-                    var newDoc2 = context.ReadObject(dbDoc, dbId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    dbDoc.Disabled = disableRequested;
 
-                    await ServerStore.TEMP_WriteDbAsync(context, dbId, newDoc2);
+                    var json = EntityToBlittable.ConvertEntityToBlittable(dbDoc, DocumentConventions.Default, context);
+
+                    await ServerStore.TEMP_WriteDbAsync(context, name, json, null);
+
                     ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
-
-                    databasesToUnload.Add(name);
 
                     context.Write(writer, new DynamicJsonValue
                     {
@@ -293,15 +270,6 @@ namespace Raven.Server.Web.System
 
                 writer.WriteEndArray();
             }
-
-            foreach (var name in databasesToUnload)
-            {
-              
-            ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
-            {
-                // empty by design
-            });
-        }*/
         }
     }
 

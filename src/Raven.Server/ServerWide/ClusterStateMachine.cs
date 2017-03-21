@@ -30,6 +30,7 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
+using Voron.Exceptions;
 using Voron.Util;
 
 namespace Raven.Server.ServerWide
@@ -134,7 +135,7 @@ namespace Raven.Server.ServerWide
                 TableValueReader reader;
                 if (items.ReadByKey(loweredKey, out reader) == false)
                 {
-                    NotifyLeaderAboutError(index, leader, $"The database {databaseName} does not exists");
+                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"The database {databaseName} does not exists"));
                     return;
                 }
                 int size;
@@ -193,7 +194,7 @@ namespace Raven.Server.ServerWide
                 TableValueReader reader;
                 if (items.ReadByKey(loweredKey, out reader) == false)
                 {
-                    NotifyLeaderAboutError(index, leader, $"The database {databaseName} does not exists");
+                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"The database {databaseName} does not exists"));
                     return;
                 }
 
@@ -211,7 +212,7 @@ namespace Raven.Server.ServerWide
                 {
                     if (databaseRecord.Topology.RelevantFor(delDb.FromNode) == false)
                     {
-                        NotifyLeaderAboutError(index, leader, $"The database {databaseName} does not exists on node {delDb.FromNode}");
+                        NotifyLeaderAboutError(index, leader, new InvalidOperationException($"The database {databaseName} does not exists on node {delDb.FromNode}"));
                         return;
                     }
                     databaseRecord.Topology.RemoveFromTopology(delDb.FromNode);
@@ -285,7 +286,7 @@ namespace Raven.Server.ServerWide
                     TableValueReader reader;
                     if (items.ReadByKey(valueNameLowered, out reader) == false && setDb.Etag != 0)
                     {
-                        NotifyLeaderAboutError(index, leader, "Concurrency violation, the database " + setDb.Name + " does not exists, but had a non zero etag");
+                        NotifyLeaderAboutError(index, leader, new ConcurrencyException("Concurrency violation, the database " + setDb.Name + " does not exists, but had a non zero etag"));
                         return;
                     }
 
@@ -296,7 +297,7 @@ namespace Raven.Server.ServerWide
                     if (actualEtag != setDb.Etag.Value)
                     {
                         NotifyLeaderAboutError(index, leader,
-                            "Concurrency violation, the database " + setDb.Name + " has etag " + actualEtag + " but was expecting " + setDb.Etag);
+                            new ConcurrencyException("Concurrency violation, the database " + setDb.Name + " has etag " + actualEtag + " but was expecting " + setDb.Etag));
                         return;
                     }
                 }
@@ -317,7 +318,7 @@ namespace Raven.Server.ServerWide
             var delCmd = JsonDeserializationCluster.DeleteValueCommand(cmd);
             if (delCmd.Name.StartsWith("db/"))
             {
-                NotifyLeaderAboutError(index, leader, "Cannot set " + delCmd.Name + " using DeleteValueCommand, only via dedicated Database calls");
+                NotifyLeaderAboutError(index, leader, new InvalidOperationException("Cannot set " + delCmd.Name + " using DeleteValueCommand, only via dedicated Database calls"));
                 return;
             }
             Slice str;
@@ -333,7 +334,7 @@ namespace Raven.Server.ServerWide
             var putVal = JsonDeserializationCluster.PutValueCommand(cmd);
             if (putVal.Name.StartsWith("db/"))
             {
-                NotifyLeaderAboutError(index, leader, "Cannot set " + putVal.Name + " using PutValueCommand, only via dedicated Database calls");
+                NotifyLeaderAboutError(index, leader, new InvalidOperationException("Cannot set " + putVal.Name + " using PutValueCommand, only via dedicated Database calls"));
                 return;
             }
 
@@ -366,7 +367,7 @@ namespace Raven.Server.ServerWide
                 TableValueReader reader;
                 if (items.ReadByKey(key, out reader))
                 {
-                    NotifyLeaderAboutError(index, leader, $"Cannot create database {databaseName} because it already exists");
+                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"Cannot create database {databaseName} because it already exists"));
                     return;
                 }
 
@@ -445,7 +446,7 @@ namespace Raven.Server.ServerWide
 
                 if (doc == null)
                 {
-                    NotifyLeaderAboutError(index, leader, $"Cannot execute update command of type {type} for {databaseName} because it does not exists");
+                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
                     return;
                 }
 
@@ -469,7 +470,7 @@ namespace Raven.Server.ServerWide
             NotifyDatabaseChanged(context, databaseName, index);
         }
 
-        private static void NotifyLeaderAboutError(long index, Leader leader, string msg)
+        private static void NotifyLeaderAboutError(long index, Leader leader, Exception e)
         {
             // ReSharper disable once UseNullPropagation
             if (leader == null)
@@ -477,7 +478,7 @@ namespace Raven.Server.ServerWide
 
             leader.SetStateOf(index, tcs =>
             {
-                tcs.TrySetException(new InvalidOperationException(msg));
+                tcs.TrySetException(e);
             });
         }
 

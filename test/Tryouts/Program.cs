@@ -12,9 +12,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Server.Replication.ReplicationBasicTests())
+                using (var a = new FastTests.Server.Documents.Versioning.Versioning())
                 {
-                    a.Master_slave_replication_with_exceptions_should_work();
+                    a.ServerSaveBundlesAfterRestart().Wait();
                 }
                 
             }
