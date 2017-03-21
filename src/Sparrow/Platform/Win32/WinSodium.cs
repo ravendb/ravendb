@@ -5,6 +5,7 @@ namespace Sparrow.Platform.Win32
 {
     public static unsafe class WinSodium
     {
+        // ReSharper disable once InconsistentNaming
         private const string LIB_SODIUM = "libs/libsodium.dll";
 
         static WinSodium()
@@ -42,6 +43,7 @@ namespace Sparrow.Platform.Win32
         public static extern int crypto_aead_chacha20poly1305_encrypt_detached(
             byte* c,
             byte* mac,
+            // ReSharper disable once InconsistentNaming
             ulong* maclen_p,
             byte* m,
             ulong mlen,

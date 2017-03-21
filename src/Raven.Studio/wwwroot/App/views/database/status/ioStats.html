@@ -39,53 +39,26 @@
 
     <div class="col-xl-7 col-xs-12" data-bind="visible: hasAnyData">
         <div id="IOMetricsLegend">
-            <div class="row">
-                <span class="col-md-1 hidden-sm hidden-xs"><strong class="legendText">Legend:</strong></span>
-                <span class="col-md-2 col-xs-3"><strong class="legendHeading legendText" data-bind="style: {color: 'black', 'background-color': $data.constructor.eventsColors.JournalWriteHighSizeColor}">Journal Write</></strong></span>
-                <span class="col-md-2 col-xs-3 legendHeading"><strong class="legendHeading legendText" data-bind="style: {color: 'black', 'background-color': $data.constructor.eventsColors.DataFlushHighSizeColor}">Voron Data Flush</></strong></span>
-                <span class="col-md-2 col-xs-3 legendHeading"><strong class="legendHeading legendText" data-bind="style: {color: 'black', 'background-color': $data.constructor.eventsColors.DataSyncHighSizeColor}">Voron Data Sync</></strong></span>
+            <div class="legend-container">
+                <div class="legend-start-range">0</div>
+                <div class="arrow-down" data-bind="style: {left: itemSizePositionJW()}, visible: itemHoveredJW"></div>
+                <div class="legend-end-range" data-bind="text: $root.computedHumanSize(legendJW().maxSize)"></div>
+                <img data-bind="attr: { src: legendJW().imageStr }" />
+                <div class="legend-title">Journal Write</div>
             </div>
-            <div class="row">
-                <span class="col-md-offset-1 col-md-2 col-xs-3">
-                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.JournalWriteHighSizeColor}"></span>
-                    &nbsp;&gt;&nbsp;<span class="legendText" data-bind="text: $root.computedHumanSize(journalWriteHighSizeLevel)"></span>
-                </span>
-                <span class="col-md-2 col-xs-3">
-                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.DataFlushHighSizeColor}"></span>
-                    &nbsp;&gt;&nbsp;<span class="legendText" data-bind="text: $root.computedHumanSize(dataFlushHighSizeLevel)"></span>
-                </span>
-                <span class="col-md-2 col-xs-3">
-                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.DataSyncHighSizeColor}"></span>
-                    &nbsp;&gt;&nbsp;<span class="legendText" data-bind="text: $root.computedHumanSize(dataSyncHighSizeLevel)"></span>
-                </span>
+            <div class="legend-container">
+                <div class="legend-start-range">0</div>
+                <div class="arrow-down" data-bind="style: {left: itemSizePositionDF()}, visible: itemHoveredDF"></div>
+                <div class="legend-end-range" data-bind="text: $root.computedHumanSize(legendDF().maxSize)"></div>
+                <img data-bind="attr: { src: legendDF().imageStr }" />
+                <div class="legend-title">Data Flush</div>
             </div>
-            <div class="row">
-                <span class="col-md-offset-1 col-md-2 col-xs-3">
-                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.JournalWriteMedSizeColor}"></span>
-                    <span class="legendText">&nbsp;<span data-bind="text: $root.computedHumanSize(journalWriteLowSizeLevel)"></span>&nbsp;&mdash;&nbsp;<span data-bind="text: $root.computedHumanSize(journalWriteHighSizeLevel)"></span></span>
-                </span>
-                <span class="col-md-2 col-xs-3">
-                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.DataFlushMedSizeColor}"></span>
-                    <span class="legendText">&nbsp;<span data-bind="text: $root.computedHumanSize(dataFlushLowSizeLevel)"></span>&nbsp;&mdash;&nbsp;<span data-bind="text: $root.computedHumanSize(dataFlushHighSizeLevel)"></span></span>
-                </span>
-                <span class="col-md-2 col-xs-3">
-                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.DataSyncMedSizeColor}"></span>
-                    <span class="legendText">&nbsp;<span data-bind="text: $root.computedHumanSize(dataSyncLowSizeLevel)"></span>&nbsp;&mdash;&nbsp;<span data-bind="text: $root.computedHumanSize(dataSyncHighSizeLevel)"></span></span>
-                </span>
-            </div>
-            <div class="row">
-                <span class="col-md-offset-1 col-md-2 col-xs-3">
-                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.JournalWriteLowSizeColor}"></span>
-                    <span class="legendText">&nbsp;0&nbsp;&mdash;&nbsp;<span data-bind="text: $root.computedHumanSize(journalWriteLowSizeLevel)"></span></span>
-                </span>
-                <span class="col-md-2 col-xs-3">
-                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.DataFlushLowSizeColor}"></span>
-                    <span class="legendText">&nbsp;0&nbsp;&mdash;&nbsp;<span data-bind="text: $root.computedHumanSize(dataFlushLowSizeLevel)"></span></span>
-                </span>
-                <span class="col-md-2 col-xs-3">
-                    <span class="legendColor" data-bind="style: {'background-color': $data.constructor.eventsColors.DataSyncLowSizeColor}"></span>
-                    <span class="legendText">&nbsp;0&nbsp;&mdash;&nbsp;<span data-bind="text: $root.computedHumanSize(dataSyncLowSizeLevel)"></span></span>
-                </span>
+            <div class="legend-container">
+                <div class="legend-start-range">0</div>
+                <div class="arrow-down" data-bind="style: {left: itemSizePositionDS()}, visible: itemHoveredDS"></div>
+                <div class="legend-end-range" data-bind="text: $root.computedHumanSize(legendDS().maxSize)"></div>
+                <img data-bind="attr: { src: legendDS().imageStr }" />
+                <div class="legend-title">Data Sync</div>
             </div>
         </div>
     </div>
@@ -98,6 +71,7 @@
             <h2 class="text-center">No data.</h2>
         </div>
 </div>
+
 <div id="ioStats" style="position: relative" data-bind="visible: hasAnyData">
     <section class="metricsContainer" id="IOMetricsContainer">
         <div class="tooltip" style="opacity: 0">
