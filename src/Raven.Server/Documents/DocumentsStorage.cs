@@ -2088,7 +2088,7 @@ namespace Raven.Server.Documents
                         if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(
                             collectionName, 
                             nonPersistentFlags,
-                            () => oldValue.Pointer != null ? TableValueToDocument(context, ref oldValue) : null,
+                            oldValue.Pointer != null ? TableValueToDocument(context, ref oldValue) : null,
                             document,
                             ref flags,
                             out configuration))

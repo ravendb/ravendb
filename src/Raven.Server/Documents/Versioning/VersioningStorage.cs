@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Versioning
 
         public bool ShouldVersionDocument(CollectionName collectionName,
             NonPersistentDocumentFlags nonPersistentFlags,
-            Func<Document> getExistingDocument,
+            Document existingDocument,
             BlittableJsonReaderObject document,
             ref DocumentFlags documentFlags,
             out VersioningConfigurationCollection configuration)
@@ -170,7 +170,6 @@ namespace Raven.Server.Documents.Versioning
                 if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler)
                     return true;
 
-                var existingDocument = getExistingDocument();
                 if (existingDocument == null)
                 {
                     // we are not going to create a revision if it's an import from v3

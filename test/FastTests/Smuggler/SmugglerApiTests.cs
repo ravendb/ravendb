@@ -208,6 +208,8 @@ namespace FastTests.Smuggler
 
                 using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
                 {
+                    await VersioningHelper.SetupVersioning(Server.ServerStore, store2.DefaultDatabase);
+
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
 
                     var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());

@@ -12,9 +12,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Client.Attachments.AttachmentsVersioning())
+                using (var a = new FastTests.Smuggler.SmugglerApiTests())
                 {
-                    a.PutAttachments().Wait();
+                    a.CanExportAndImportWithVersioingRevisionDocuments().Wait();
                 }
                 
             }
