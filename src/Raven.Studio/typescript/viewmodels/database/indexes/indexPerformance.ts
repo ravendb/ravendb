@@ -304,7 +304,7 @@ class indexPerformance extends viewModelBase {
         [this.totalWidth, this.totalHeight] = this.getPageHostDimenensions();
         this.totalWidth -= 1;
 
-        this.totalHeight -= 50; // substract toolbar height
+        this.totalHeight -= 58; // substract toolbar height
 
         this.initCanvases();
 
