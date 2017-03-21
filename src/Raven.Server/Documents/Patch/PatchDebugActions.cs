@@ -12,9 +12,9 @@ namespace Raven.Server.Documents.Patch
         {
             return new DynamicJsonValue
             {
-                ["DeleteDocument"] = DeleteDocument,
-                ["PutDocument"] = PutDocument,
-                ["LoadDocument"] = LoadDocument,
+                [nameof(DeleteDocument)] = DeleteDocument,
+                [nameof(PutDocument)] = PutDocument,
+                [nameof(LoadDocument)] = LoadDocument,
             };
         }
     }

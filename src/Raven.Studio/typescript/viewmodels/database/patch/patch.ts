@@ -7,23 +7,18 @@ import collectionsStats = require("models/database/documents/collectionsStats");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
-import jsonUtil = require("common/jsonUtil");
 import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
-import appUrl = require("common/appUrl");
 import queryIndexCommand = require("commands/database/query/queryIndexCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import savePatchCommand = require('commands/database/patch/savePatchCommand');
 import patchByQueryCommand = require("commands/database/patch/patchByQueryCommand");
 import patchByCollectionCommand = require("commands/database/patch/patchByCollectionCommand");
-import documentMetadata = require("models/database/documents/documentMetadata");
-import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import queryUtil = require("common/queryUtil");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
 import eventsCollector = require("common/eventsCollector");
 import notificationCenter = require("common/notifications/notificationCenter");
-import genUtils = require("common/generalUtils");
 import queryCriteria = require("models/database/query/queryCriteria");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
@@ -35,7 +30,8 @@ import columnsSelector = require("viewmodels/partial/columnsSelector");
 import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
-
+import patchDocumentCommand = require("commands/database/documents/patchDocumentCommand");
+import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -109,8 +105,151 @@ class patchList {
     }
 }
 
+class patchTester extends viewModelBase {
+
+    testMode = ko.observable<boolean>(false);
+    script: KnockoutObservable<string>;
+    private scriptCopy: string;
+    documentId = ko.observable<string>();
+    private db: KnockoutObservable<database>;
+
+    beforeDoc = ko.observable<any>();
+    afterDoc = ko.observable<any>();
+
+    actions = {
+        loadDocument: ko.observableArray<string>(),
+        putDocument: ko.observableArray<any>(),
+        info: ko.observableArray<string>()
+    }
+
+    documentIdSearchResults = ko.observableArray<string>([]);
+
+    validationGroup: KnockoutValidationGroup = ko.validatedObservable({
+        script: this.script,
+        documentId: this.documentId
+    });
+
+    constructor(script: KnockoutObservable<string>, db: KnockoutObservable<database>) {
+        super();
+        this.script = script;
+        this.db = db;
+        this.initObservables();
+
+        this.bindToCurrentInstance("closeTestMode", "enterTestMode", "applyTestScript", "runTest", "onAutocompleteOptionSelected");
+    }
+
+    formatAsJson(input: KnockoutObservable<any> | any) {
+        return ko.pureComputed(() => {
+            const value = ko.unwrap(input);
+            if (_.isUndefined(value)) {
+                return "";
+            } else {
+                const json = JSON.stringify(value, null, 4);
+                return Prism.highlight(json, (Prism.languages as any).javascript);
+            }
+        });
+    }
+
+    private initObservables() {
+        this.testMode.subscribe(testMode => {
+            patch.$body.toggleClass('show-test', testMode);
+        });
+
+        this.documentId.extend({
+            required: true
+        });
+
+        this.documentId.throttle(250).subscribe(item => {
+            patch.fetchDocumentIdAutocomplete(item, this.db(), this.documentIdSearchResults);
+        });
+    }
+
+    closeTestMode() {
+        this.script(this.scriptCopy);
+        this.testMode(false);
+    }
+
+    enterTestMode(documentIdToUse: string) {
+        this.scriptCopy = this.script();
+        this.testMode(true);
+        this.documentId(documentIdToUse);
+
+        this.validationGroup.errors.showAllMessages(false);
+        //TODO: load document
+    }
+
+    resetForm() {
+        this.actions.loadDocument([]);
+        this.actions.putDocument([]);
+        this.actions.info([]);
+        this.afterDoc(undefined);
+        this.beforeDoc(undefined);
+    }
+
+    loadDocument() {
+        this.resetForm();
+
+        new getDocumentWithMetadataCommand(this.documentId(), this.db())
+            .execute()
+            .done((doc: document) => {
+                if (doc) {
+                    this.beforeDoc(doc.toDto(true));
+                }
+            })
+            .fail((xhr: JQueryXHR) => {
+                if (xhr.status === 404) {
+                    messagePublisher.reportWarning("Document doesn't exist.");
+                } else {
+                    messagePublisher.reportError("Failed to load document.", xhr.responseText, xhr.statusText);
+                }
+            });
+    }
+
+    applyTestScript() {
+        this.testMode(false);
+    }
+
+    onAutocompleteOptionSelected(item: string) {
+        this.documentId(item);
+        this.loadDocument();
+    }
+
+    runTest() {
+        eventsCollector.default.reportEvent("patch", "test");
+
+        if (this.isValid(this.validationGroup)) {
+            this.resetForm();
+
+            new patchDocumentCommand(this.documentId(), this.script(), true, this.db())
+                .execute()
+                .done((result) => {
+                    this.beforeDoc(result.OriginalDocument);
+                    this.afterDoc(result.ModifiedDocument);
+                    const debug = result.Debug;
+                    const actions = debug.Actions as Raven.Server.Documents.Patch.PatchDebugActions;
+                    this.actions.loadDocument(actions.LoadDocument);
+                    this.actions.putDocument(actions.PutDocument);
+                    this.actions.info(debug.Info);
+
+                    if (result.Status === "Patched") {
+                        messagePublisher.reportSuccess("Test completed");
+                    }
+                })
+                .fail((xhr: JQueryXHR) => {
+                    if (xhr.status === 404) {
+                        messagePublisher.reportWarning("Test failed: Document doesn't exist.");
+                    } else {
+                        messagePublisher.reportError("Failed to test patch.", xhr.responseText, xhr.statusText);
+                    }
+                });
+        }
+    }
+}
+
 
 class patch extends viewModelBase {
+
+    static readonly $body = $("body");
 
     inSaveMode = ko.observable<boolean>();
     patchSaveName = ko.observable<string>();
@@ -119,7 +258,7 @@ class patch extends viewModelBase {
         save: ko.observable<boolean>(false)
     }
 
-    gridController = ko.observable<virtualGridController<document>>(); //TODO: column preview, custom columns?
+    gridController = ko.observable<virtualGridController<document>>();
     private documentsProvider: documentBasedColumnsProvider;
     private columnPreview = new columnPreviewPlugin<document>();
     columnsSelector = new columnsSelector<document>(); //TODO: refesh on selected item changed
@@ -144,6 +283,8 @@ class patch extends viewModelBase {
 
     savedPatches = new patchList(item => this.usePatch(item), item => this.removePatch(item));
 
+    test = new patchTester(this.patchDocument().script, this.activeDatabase);
+
     private hideSavePatchHandler = (e: Event) => {
         if ($(e.target).closest(".patch-save").length === 0) {
             this.inSaveMode(false);
@@ -158,7 +299,7 @@ class patch extends viewModelBase {
 
         this.initValidation();
 
-        this.bindToCurrentInstance("usePatchOption", "useIndex", "useCollection");
+        this.bindToCurrentInstance("usePatchOption", "useIndex", "useCollection", "previewDocument");
         this.initObservables();
     }
 
@@ -197,7 +338,7 @@ class patch extends viewModelBase {
 
         this.patchDocument().selectedItem.throttle(250).subscribe(item => {
             if (this.patchDocument().patchOnOption() === "Document") {
-                this.fetchDocumentIdAutocomplete(item);
+                patch.fetchDocumentIdAutocomplete(item, this.activeDatabase(), this.documentIdSearchResults);
             }
         });
 
@@ -288,7 +429,7 @@ class patch extends viewModelBase {
                 case "Collection":
                     return results.availableColumns;
             }
-        }
+        };
 
         this.columnsSelector.init(grid, (s, t, previewCols, fullCols) => this.fetcher() ? this.fetcher()(s, t, previewCols, fullCols) : fakeFetcher(s, t, [], []),
             (w, r) => this.documentsProvider.findColumns(w, r),
@@ -529,15 +670,15 @@ class patch extends viewModelBase {
             });
     }
 
-    private fetchDocumentIdAutocomplete(prefix: string) {
+    static fetchDocumentIdAutocomplete(prefix: string, db: database, output: KnockoutObservableArray<string>) {
         if (prefix && prefix.length > 1) {
-            new getDocumentsMetadataByIDPrefixCommand(prefix, 10, this.activeDatabase())
+            new getDocumentsMetadataByIDPrefixCommand(prefix, 10, db)
                 .execute()
                 .done(result => {
-                    this.documentIdSearchResults(result.map(x => x["@metadata"]["@id"]));
+                    output(result.map(x => x["@metadata"]["@id"]));
                 });
         } else {
-            this.documentIdSearchResults([]);
+            output([]);
         }
     }
 
@@ -557,181 +698,22 @@ class patch extends viewModelBase {
             });
     }
 
-    /* TODO:
-    
-    savedPatches = ko.observableArray<patchDocument>();
-
-    showDocumentsPreview: KnockoutObservable<boolean>;
-
-    beforePatch: KnockoutComputed<string>;
-    beforePatchDoc = ko.observable<string>();
-    beforePatchEditor: AceAjax.Editor;
-
-    afterPatch = ko.observable<string>();
-    afterPatchDoc = ko.observable<string>();
-    afterPatchEditor: AceAjax.Editor;
-
-    loadedDocuments = ko.observableArray<string>();
-    putDocuments = ko.observableArray<any>();
-    outputLog = ko.observableArray<string>();
-
-    documentKey = ko.observable<string>();
-    keyOfTestedDocument: KnockoutComputed<string>;
-
-    constructor() {
-        super();
-
-        // When we programmatically change the document text or meta text, push it into the editor.
-        this.beforePatchDocMode.subscribe(() => {
-            if (this.beforePatchEditor) {
-                var text = this.beforePatchDocMode() ? this.beforePatchDoc() : this.beforePatchMeta();
-                this.beforePatchEditor.getSession().setValue(text);
-            }
-        });
-        this.beforePatch = ko.computed({
-            read: () => {
-                return this.beforePatchDocMode() ? this.beforePatchDoc() : this.beforePatchMeta();
-            },
-            write: (text: string) => {
-                var currentObservable = this.beforePatchDocMode() ? this.beforePatchDoc : this.beforePatchMeta;
-                currentObservable(text);
-            },
-            owner: this
-        });
-
-        this.afterPatchDocMode.subscribe(() => {
-            if (this.afterPatchEditor) {
-                var text = this.afterPatchDocMode() ? this.afterPatchDoc() : this.afterPatchMeta();
-                this.afterPatchEditor.getSession().setValue(text);
-            }
-        });
-        this.afterPatch = ko.computed({
-            read: () => {
-                return this.afterPatchDocMode() ? this.afterPatchDoc() : this.afterPatchMeta();
-            },
-            write: (text: string) => {
-                var currentObservable = this.afterPatchDocMode() ? this.afterPatchDoc : this.afterPatchMeta;
-                currentObservable(text);
-            },
-            owner: this
-        });
-    }
-
-    compositionComplete() {
-        super.compositionComplete();
-
-        var beforePatchEditorElement = $("#beforePatchEditor");
-        if (beforePatchEditorElement.length > 0) {
-            this.beforePatchEditor = ko.utils.domData.get(beforePatchEditorElement[0], "aceEditor");
-        }
-
-        var afterPatchEditorElement = $("#afterPatchEditor");
-        if (afterPatchEditorElement.length > 0) {
-            this.afterPatchEditor = ko.utils.domData.get(afterPatchEditorElement[0], "aceEditor");
-        }
-       
-        grid.selection.subscribe(selection => {
-            if (selection.count === 1) {
-                var document = selection.included[0];
-                // load document directly from server as documents on list are loaded using doc-preview endpoint, which doesn't display entire document
-                this.loadDocumentToTest(document.__metadata.id);
-                this.documentKey(document.__metadata.id);
-            } else {
-                this.clearDocumentPreview();
-            }
-        });
-
-        //TODO: install doc preview tooltip
-    }
-
-    activate(recentPatchHash?: string) {
-        this.isExecuteAllowed = ko.computed(() => !!this.patchDocument().script() && !!this.beforePatchDoc());
-        this.keyOfTestedDocument = ko.computed(() => {
-            switch (this.patchDocument().patchOnOption()) {
-                case "Collection":
-                case "Index":
-                    return this.documentKey();
-                case "Document":
-                    return this.patchDocument().selectedItem();
-            }
-        });
-
-        if (recentPatchHash) {
-            this.selectInitialPatch(recentPatchHash);
-        }
-    }
-
-    detached() {
-        super.detached();
-        aceEditorBindingHandler.detached();
-    }
-
-    loadDocumentToTest(selectedItem: string) {
-        if (selectedItem) {
-            var loadDocTask = new getDocumentWithMetadataCommand(selectedItem, this.activeDatabase()).execute();
-            loadDocTask.done(document => {
-                this.beforePatchDoc(JSON.stringify(document.toDto(), null, 4));
-                this.beforePatchMeta(JSON.stringify(documentMetadata.filterMetadata(document.__metadata.toDto()), null, 4));
-            }).fail(() => this.clearDocumentPreview());
-        } else {
-            this.clearDocumentPreview();
-        }
-    }
-
-    private clearDocumentPreview() {
-        this.beforePatchDoc("");
-        this.beforePatchMeta("");
-        this.afterPatchDoc("");
-        this.afterPatchMeta("");
-        this.putDocuments([]);
-        this.loadedDocuments([]);
-        this.outputLog([]);
-    }
-
-    testPatch() {
-        eventsCollector.default.reportEvent("patch", "test");
-
-        var values: dictionary<string> = {};
-        this.patchDocument().parameters().map(param => {
-            var dto = param.toDto();
-            values[dto.Key] = dto.Value;
-        });
-        var bulkDocs: Array<Raven.Server.Documents.Handlers.CommandData> = [];
-        bulkDocs.push({
-            Key: this.keyOfTestedDocument(),
-            Method: 'PATCH',
-            DebugMode: true,
-            Patch: {
-                Script: this.patchDocument().script(),
-                Values: values
-            }
-        });
-        new executePatchCommand(bulkDocs, this.activeDatabase(), true)
+    previewDocument() {
+        new getDocumentWithMetadataCommand(this.patchDocument().selectedItem(), this.activeDatabase())
             .execute()
-            .done((result: Raven.Server.Documents.Handlers.CommandData[]) => {
-                var testResult = new document((<any>result).Results[0].AdditionalData['Document']);
-                this.afterPatchDoc(JSON.stringify(testResult.toDto(), null, 4));
-                this.afterPatchMeta(JSON.stringify(documentMetadata.filterMetadata(testResult.__metadata.toDto()), null, 4));
-                this.updateActions((<any>result).Results[0].AdditionalData['Actions']);
-                this.outputLog((<any>result).Results[0].AdditionalData["Debug"]);
-            })
-            .fail((result: JQueryXHR) => console.log(result.responseText));
-        this.recordPatchRun();
+            .done((doc: document) => {
+                app.showBootstrapDialog(new tempStatDialog(doc));
+            });
     }
 
-    private updatePageUrl(hash: number) {
-        // Put the patch into the URL, so that if the user refreshes the page, he's still got this patch loaded.
-        var queryUrl = appUrl.forPatch(this.activeDatabase(), hash);
-        this.updateUrl(queryUrl);
-    }
+    enterTestMode() {
+        const patchDoc = this.patchDocument();
+        const documentIdToUse = patchDoc.patchOnOption() === "Document" ? patchDoc.selectedItem() : null;
 
-    private updateActions(actions: { PutDocument: any[]; LoadDocument: any }) {
-        this.loadedDocuments(actions.LoadDocument || []);
-        this.putDocuments((actions.PutDocument || []).map(doc => jsonUtil.syntaxHighlight(doc)));
-    }
+        //TODO: if in index/collection mode - preload with first document
 
-    isTestIndex = ko.observable<boolean>(false);
-    }*/
+        this.test.enterTestMode(documentIdToUse);
+    }
 }
 
 export = patch;

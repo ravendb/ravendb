@@ -34,9 +34,9 @@
                 <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }"><i class="icon-edit"></i><span>Edit index</span></a>
                 <a class="btn btn-default" data-bind="attr: { href: indexPerformanceUrl }" title="Navigate to index performance"><i class="icon-traffic-watch"></i><span>Index performance</span></a>
                 <a class="btn btn-default" data-bind="attr: { href: termsUrl }" title="Navigate to index terms"><i class="icon-indexing"></i><span>Index terms</span></a>
-                <span class="has-disable-reason" data-bind="attr: { 'data-original-title': isIndexMapReduce() ? '' : 'Available only for map/reduce indexes' }">
+                <div class="btn-group has-disable-reason"  data-bind="attr: { 'data-original-title': isIndexMapReduce() ? '' : 'Available only for map/reduce indexes' }">
                     <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, css: { 'disabled' : !isIndexMapReduce() }" title="Map/Reduce Visualizer"><i class="icon-map-reduce-visualizer"></i> <span>Map/Reduce Visualizer</span></a>
-                </span>
+                </div>
                 <div class="pull-right-sm">
                     <div class="dropdown dropdown-right">
                         <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" data-bind="enable: recentQueries().length">
@@ -186,10 +186,10 @@
                             <span>Transform results</span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu settings-menu padding padding-sm" role="menu" data-bind="dropdownPanel: true">
+                        <div class="dropdown-menu settings-menu padding padding-sm" role="menu" data-bind="dropdownPanel: true">
                             <div class="row row-sm margin-bottom">
                                 <div class="col-xs-12">
-                                    <div class="dropdown btn-block">
+                                    <div class="dropdown btn btn-block">
                                         <button class="btn btn-block text-left dropdown-toggle" type="button" data-toggle="dropdown">
                                             <span data-bind="text: uiTransformer() || 'None'"></span>
                                             <span class="caret"></span>
@@ -215,8 +215,8 @@
                                 </div>
                             </div>
 
-                            <button class="btn btn-success pull-right close-panel" data-bind="click: applyTransformer"><i class="icon-check"></i> <span>Apply</span></button>
-                        </ul>
+                            <button class="btn btn-success btn-sm pull-right close-panel" data-bind="click: applyTransformer"><i class="icon-check"></i> <span>Apply</span></button>
+                        </div>
                     </div>
                     <!-- TODO: csv enabled for: isStaticIndexSelected -->
                     <button type="button" class="btn btn-default btn-prerelease" disabled="disabled"><i class="icon-csv-export"></i> <span>Export CSV</span></button>

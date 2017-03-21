@@ -188,9 +188,9 @@ namespace Raven.Client.Http
             } while (true);
         }
 
-        public void Execute<TResult>(RavenCommand<TResult> command, JsonOperationContext context)
+        public void Execute<TResult>(RavenCommand<TResult> command, JsonOperationContext context, CancellationToken token = default(CancellationToken))
         {
-            AsyncHelpers.RunSync(() => ExecuteAsync(command, context));
+            AsyncHelpers.RunSync(() => ExecuteAsync(command, context, token));
         }
 
         public async Task ExecuteAsync<TResult>(RavenCommand<TResult> command, JsonOperationContext context, CancellationToken token = default(CancellationToken))

@@ -85,22 +85,24 @@ namespace SlowTests.Server.Documents.ETL.SQL
 
         protected const string defaultScript = @"
 var orderData = {
-    Id: documentId,
+    Id: __document_id,
     OrderLinesCount: this.OrderLines.length,
     TotalCost: 0
 };
-replicateToOrders(orderData);
 
 for (var i = 0; i < this.OrderLines.length; i++) {
     var line = this.OrderLines[i];
     orderData.TotalCost += line.Cost;
-    replicateToOrderLines({
-        OrderId: documentId,
+    loadToOrderLines({
+        OrderId: __document_id,
         Qty: line.Quantity,
         Product: line.Product,
         Cost: line.Cost
     });
-}";
+}
+
+loadToOrders(orderData);
+";
 
         [NonLinuxFact]
         public async Task ReplicateMultipleBatches()
@@ -278,11 +280,11 @@ CREATE DATABASE [SqlReplication-{store.DefaultDatabase}]
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 SetupSqlEtl(store, @"var orderData = {
-    Id: documentId,
+    Id: __document_id,
     OrderLinesCount: this.OrderLines_Missing.length,
     TotalCost: 0
 };
-replicateToOrders(orderData);");
+loadToOrders(orderData);");
 
                 etlDone.Wait(TimeSpan.FromMinutes(5));
 
@@ -327,11 +329,11 @@ replicateToOrders(orderData);");
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 SetupSqlEtl(store, @"var orderData = {
-    Id: documentId,
+    Id: __document_id,
     City: this.Address.City,
     TotalCost: 0
 };
-replicateToOrders(orderData);");
+loadToOrders(orderData);");
 
                 etlDone.Wait(TimeSpan.FromMinutes(5));
 

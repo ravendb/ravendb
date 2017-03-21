@@ -25,53 +25,43 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             _config = config;
             _patchRequest = new PatchRequest { Script = _config.Script };
             _tables = new Dictionary<string, SqlTableWithRecords>(_config.SqlTables.Count);
+            
+            var tables = new string[config.SqlTables.Count];
+
+            for (var i = 0; i < config.SqlTables.Count; i++)
+            {
+                tables[i] = config.SqlTables[i].TableName;
+            }
+
+            LoadToDestinations = tables;
         }
+
+        protected override string[] LoadToDestinations { get; }
 
         protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
         {
             base.RemoveEngineCustomizations(engine, scope);
-
-            engine.Global.Delete("documentId", true);
-            engine.Global.Delete("replicateTo", true);
+            
             engine.Global.Delete("varchar", true);
             engine.Global.Delete("nVarchar", true);
-            foreach (var table in _config.SqlTables)
-            {
-                engine.Global.Delete("replicateTo" + table.TableName, true);
-            }
         }
 
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
             base.CustomizeEngine(engine, scope);
 
-            Debug.Assert(_current != null);
-
-            engine.SetValue("documentId", _current);
-            engine.SetValue("replicateTo", new Action<string, JsValue>((tableName, colsAsObject) => ReplicateToFunction(tableName, colsAsObject, scope)));
-
-            foreach (var table in _config.SqlTables)
-            {
-                var current = table;
-                engine.SetValue("replicateTo" + table.TableName, (Action<JsValue>)(cols =>
-                {
-                    var tableName = current.TableName;
-                    ReplicateToFunction(tableName, cols, scope);
-                }));
-            }
-
             engine.SetValue("varchar", (Func<string, double?, ValueTypeLengthTriple>)(ToVarchar));
             engine.SetValue("nVarchar", (Func<string, double?, ValueTypeLengthTriple>)(ToNVarchar));
         }
 
-        private void ReplicateToFunction(string tableName, JsValue colsAsObject, PatcherOperationScope scope)
+        protected override void LoadToFunction(string tableName, JsValue cols, PatcherOperationScope scope)
         {
             if (tableName == null)
-                throw new ArgumentException("tableName parameter is mandatory");
-            if (colsAsObject == null)
-                throw new ArgumentException("cols parameter is mandatory");
+                ThrowLoadParameterIsMandatory(nameof(tableName));
+            if (cols == null)
+                ThrowLoadParameterIsMandatory(nameof(cols));
 
-            var dynamicJsonValue = scope.ToBlittable(colsAsObject.AsObject());
+            var dynamicJsonValue = scope.ToBlittable(cols.AsObject());
             var blittableJsonReaderObject = Context.ReadObject(dynamicJsonValue, tableName);
             var columns = new List<SqlColumn>(blittableJsonReaderObject.Count);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
