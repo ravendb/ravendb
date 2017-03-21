@@ -99,9 +99,10 @@ for (var i = 0; i < this.OrderLines.length; i++) {
         Product: line.Product,
         Cost: line.Cost
     });
+}
 
 loadToOrders(orderData);
-}";
+";
 
         [NonLinuxFact]
         public async Task ReplicateMultipleBatches()
