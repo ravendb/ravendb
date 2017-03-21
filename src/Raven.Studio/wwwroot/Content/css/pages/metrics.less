@@ -34,46 +34,47 @@ rect.pane {
     }
 }
 
-.arrow_down {
+@legend-container-width: 200px;
+@legend-arrow-border: 6px;
+@legend-arrow-color: #f00;
+
+.arrow-down {
   position: absolute;
   top: 20px; 
   width: 0; 
   height: 0; 
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 6px solid #f00;
+  border-left: @legend-arrow-border solid transparent;
+  border-right: @legend-arrow-border solid transparent;
+  border-top: @legend-arrow-border solid @legend-arrow-color;
 }
 
-.legend_container {
+.legend-container {
   position: relative;
-  width: 200px;
+  width: @legend-container-width;
   float: left;
 }
 
-.legend_start_range {
+.legend-start-range {
   position: absolute;
   top: 0;
-  left: -20px;
-  right: 180px;
+  left: -3px; /* Position inside containing element, the distance from left edge of legend-container */
 }
 
-.legend_end_range {
+.legend-end-range {
   position: absolute;
   top: 0;
-  left: 50px;
-  right: -50px;
+  right: 33px; /* Position inside containing element, the distance from right edge of legend-container */
 }
 
-.legend_container img {
+.legend-container img {
   margin-top: 20px;
 }
 
-.legend_container div {
+.legend-container div {
   font-size: 12px;
   text-align: center;
 
-  &.legend_title {
-      width: 150px;
+  &.legend-title {     
+      width: @legend-container-width - 50px;
   }
-}            
-
+}
