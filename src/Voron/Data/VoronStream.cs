@@ -135,7 +135,7 @@ namespace Voron.Data
 
             fixed (byte* dst = buffer)
             {
-                Memory.CopyInline(dst + offset, page.DataPointer + pos, count);
+                Memory.Copy(dst + offset, page.DataPointer + pos, count);
             }
 
             _positions[_index] += count;

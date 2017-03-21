@@ -104,7 +104,7 @@ namespace Raven.Server.Utils
 
             fixed (byte* dst = buffer)
             {
-                Memory.CopyInline(dst + offset, _ptrsSizes[_index].Ptr + pos, count);
+                Memory.Copy(dst + offset, _ptrsSizes[_index].Ptr + pos, count);
             }
 
             _positions[_index] += count;

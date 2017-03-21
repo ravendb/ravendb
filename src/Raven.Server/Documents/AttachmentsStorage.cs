@@ -467,7 +467,7 @@ namespace Raven.Server.Documents
 
             var keyMem = context.Allocator.Allocate(size);
 
-            Memory.CopyInline(keyMem.Ptr, lowerKey, lowerKeySize);
+            Memory.Copy(keyMem.Ptr, lowerKey, lowerKeySize);
             var pos = lowerKeySize;
             keyMem.Ptr[pos++] = VersioningStorage.RecordSeperator;
 
@@ -491,14 +491,14 @@ namespace Raven.Server.Documents
             {
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
-                    Memory.CopyInline(keyMem.Ptr + pos, (byte*)pChangeVector, changeVectorSize);
+                    Memory.Copy(keyMem.Ptr + pos, (byte*)pChangeVector, changeVectorSize);
                 }
                 pos += changeVectorSize;
                 keyMem.Ptr[pos++] = VersioningStorage.RecordSeperator;
             }
 
             if (isPrefix == false)
-                Memory.CopyInline(keyMem.Ptr + pos, lowerName, lowerNameSize);
+                Memory.Copy(keyMem.Ptr + pos, lowerName, lowerNameSize);
 
             keySlice = new Slice(SliceOptions.Key, keyMem);
             return new ReleaseMemory(keyMem, context);
