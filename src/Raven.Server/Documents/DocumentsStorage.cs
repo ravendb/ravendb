@@ -1153,6 +1153,45 @@ namespace Raven.Server.Documents
 
         }
 
+        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string idPrefix)
+        {
+            var deleteResults = new List<DeleteOperationResult>();
+
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+
+            Slice prefixSlice;
+            using (DocumentKeyWorker.GetSliceFromKey(context, idPrefix, out prefixSlice))
+            {
+                while (true)
+                {
+                    var didWork = false;
+                    
+                    foreach (var result in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
+                    {
+                        var key = TableValueToKey(context, (int)DocumentsTable.Key, ref result.Reader);
+                        string documentKey = key;
+
+                        if (documentKey.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
+                            break;
+                        
+                        var deleteResult = Delete(context, key, null);
+
+                        Debug.Assert(deleteResult != null);
+
+                        deleteResults.Add(deleteResult.Value);
+
+                        didWork = true;
+                        break;
+                    }
+
+                    if (didWork == false)
+                        break;
+                }
+            }
+
+            return deleteResults;
+        }
+
         private static void ThrowInvalidConflictWithTombstone(Slice loweredKey)
         {
             throw new InvalidDataException($"we can't have conflicts and local document/tombstone with the key {loweredKey}");
