@@ -89,7 +89,6 @@ var orderData = {
     OrderLinesCount: this.OrderLines.length,
     TotalCost: 0
 };
-loadToOrders(orderData);
 
 for (var i = 0; i < this.OrderLines.length; i++) {
     var line = this.OrderLines[i];
@@ -100,6 +99,8 @@ for (var i = 0; i < this.OrderLines.length; i++) {
         Product: line.Product,
         Cost: line.Cost
     });
+
+loadToOrders(orderData);
 }";
 
         [NonLinuxFact]
