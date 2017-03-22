@@ -287,6 +287,7 @@ namespace Sparrow.Json
             _disposed = true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue GetLazyStringForFieldWithCaching(StringSegment key)
         {
             LazyStringValue value;
@@ -299,12 +300,7 @@ namespace Sparrow.Json
                 return value;
             }
 
-            value = GetLazyString(key, longLived: true);
-            _fieldNames[field] = value;
-
-            //sanity check, in case the 'value' is manually disposed outside of this function
-            Debug.Assert(value.IsDisposed == false);
-            return value;
+            return GetLazyStringForFieldWithCachingUnlikely(field);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -319,9 +315,13 @@ namespace Sparrow.Json
                 return value;
             }
 
-            var key = new StringSegment(field, field.Length);
-            value = GetLazyString(key, longLived: true);
-            _fieldNames[field] = value;
+            return GetLazyStringForFieldWithCachingUnlikely(field);
+        }
+
+        private LazyStringValue GetLazyStringForFieldWithCachingUnlikely(StringSegment key)
+        {
+            LazyStringValue value = GetLazyString(key, longLived: true);
+            _fieldNames[key] = value;
 
             //sanity check, in case the 'value' is manually disposed outside of this function
             Debug.Assert(value.IsDisposed == false);

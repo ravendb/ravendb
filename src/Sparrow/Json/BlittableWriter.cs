@@ -229,7 +229,8 @@ namespace Sparrow.Json
 
         [ThreadStatic] private static int[] _propertyArrayOffset;
 
-        public int WritePropertyNames(int rootOffset)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int WritePropertyNames(int rootOffset)
         {
             var cachedProperties = _context.CachedProperties;
             int propertiesDiscovered = cachedProperties.PropertiesDiscovered;
