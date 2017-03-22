@@ -1,19 +1,15 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
-using FastTests;
-using FastTests.Subscriptions;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Exceptions.Subscriptions;
+using FastTests.Server.Documents.Notifications;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace NewClientTests.NewClient.Subscriptions
+namespace FastTests.Client.Subscriptions
 {
-    public class SubscriptionOperationsSignaling : RavenNewTestBase
+    public class SubscriptionOperationsSignaling : RavenTestBase
     {
         private readonly TimeSpan _reasonableWaitTime = TimeSpan.FromSeconds(20);// todo: reduce to 20
 
@@ -25,9 +21,9 @@ namespace NewClientTests.NewClient.Subscriptions
                 var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
 
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
-                
+
                 var users = new BlockingCollection<User>();
-                
+
                 subscription.Subscribe(users.Add);
                 subscription.Start();
 
@@ -41,11 +37,13 @@ namespace NewClientTests.NewClient.Subscriptions
                 Assert.True(users.TryTake(out user, _reasonableWaitTime));
 
                 var concurrentSubscription = store.Subscriptions.Open<User>(
-                    new SubscriptionConnectionOptions(subscriptionId) { 
-                    Strategy = SubscriptionOpeningStrategy.TakeOver
-                });
+                    new SubscriptionConnectionOptions(subscriptionId)
+                    {
+                        Strategy = SubscriptionOpeningStrategy.TakeOver
+                    });
 
-                var thread = new Thread(() => {
+                var thread = new Thread(() =>
+                {
                     Thread.Sleep(300);
                     concurrentSubscription.Subscribe(users.Add);
                     concurrentSubscription.Start();
@@ -68,7 +66,7 @@ namespace NewClientTests.NewClient.Subscriptions
                 var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var users = new BlockingCollection<User>();
-                
+
                 var mre = new ManualResetEvent(false);
                 subscription.SubscriptionConnectionInterrupted += (exception, reconnect) =>
                 {
@@ -90,9 +88,10 @@ namespace NewClientTests.NewClient.Subscriptions
                 Assert.True(users.TryTake(out User, _reasonableWaitTime));
 
                 var concurrentSubscription = store.Subscriptions.Open<User>(
-                    new SubscriptionConnectionOptions(subscriptionId) { 
-                    Strategy = SubscriptionOpeningStrategy.TakeOver
-                });
+                    new SubscriptionConnectionOptions(subscriptionId)
+                    {
+                        Strategy = SubscriptionOpeningStrategy.TakeOver
+                    });
 
                 concurrentSubscription.Subscribe(users.Add);
                 concurrentSubscription.Start();
@@ -107,7 +106,7 @@ namespace NewClientTests.NewClient.Subscriptions
             {
                 var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
-                
+
                 var beforeAckMre = new ManualResetEvent(false);
                 var users = new BlockingCollection<User>();
                 subscription.Subscribe(users.Add);
@@ -168,7 +167,7 @@ namespace NewClientTests.NewClient.Subscriptions
                     store.Subscriptions.Delete(subscriptionId);
                 });
                 thread.Start();
-                
+
                 Assert.True(mre.WaitOne(_reasonableWaitTime));
             }
         }
@@ -202,7 +201,7 @@ namespace NewClientTests.NewClient.Subscriptions
 
             }
         }
-        
+
         [Fact]
         public void WaitOnSubscriptionStopDueToSubscriberError()
         {
@@ -211,7 +210,7 @@ namespace NewClientTests.NewClient.Subscriptions
                 var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var exceptions = new BlockingCollection<Exception>();
-                
+
                 subscription.Subscribe(_ =>
                 {
                     throw new InvalidCastException();

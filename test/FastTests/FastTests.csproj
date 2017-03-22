@@ -20,8 +20,10 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="**\*.json;Voron\Bugs\Data\*.txt;**\*.ravendump" />
-    <Content Include="..\xunit.runner.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\xunit.runner.json" Link="xunit.runner.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <ItemGroup>

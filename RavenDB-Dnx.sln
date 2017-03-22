@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26228.4
+VisualStudioVersion = 15.0.26228.9
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02838C57-DE0E-465D-9FBB-248DA87BEAAE}"
 EndProject
@@ -57,8 +57,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LuceneParser", "tools\LuceneParser\LuceneParser.csproj", "{C4A3BAC1-93CE-4723-8D13-D0BD5DBDE6A4}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Micro.Benchmark", "bench\Micro.Benchmark\Micro.Benchmark.csproj", "{85BFD6E1-1098-49DB-8B07-F0FDD5F5FE83}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rachis", "src\Rachis\Rachis.csproj", "{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -580,30 +578,6 @@ Global
 		{85BFD6E1-1098-49DB-8B07-F0FDD5F5FE83}.Validate|x64.Build.0 = Release|Any CPU
 		{85BFD6E1-1098-49DB-8B07-F0FDD5F5FE83}.Validate|x86.ActiveCfg = Release|Any CPU
 		{85BFD6E1-1098-49DB-8B07-F0FDD5F5FE83}.Validate|x86.Build.0 = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Debug|x64.Build.0 = Debug|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Debug|x86.Build.0 = Debug|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.MemGuard|Any CPU.ActiveCfg = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.MemGuard|Any CPU.Build.0 = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.MemGuard|x64.ActiveCfg = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.MemGuard|x64.Build.0 = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.MemGuard|x86.ActiveCfg = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.MemGuard|x86.Build.0 = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Release|x64.ActiveCfg = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Release|x64.Build.0 = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Release|x86.ActiveCfg = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Release|x86.Build.0 = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Validate|Any CPU.ActiveCfg = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Validate|Any CPU.Build.0 = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Validate|x64.ActiveCfg = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Validate|x64.Build.0 = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Validate|x86.ActiveCfg = Release|Any CPU
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8}.Validate|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -630,7 +604,6 @@ Global
 		{D8AB200A-6DF6-442E-85E0-9A906E0F7521} = {764C36EA-83A0-4BA3-BA36-53A6808C13A9}
 		{C4A3BAC1-93CE-4723-8D13-D0BD5DBDE6A4} = {FAAED88A-1C25-4853-9A1B-C41BCF9BED1F}
 		{85BFD6E1-1098-49DB-8B07-F0FDD5F5FE83} = {C3388268-F662-4D76-A25D-FC4F31CE6AA1}
-		{A54EDF9C-CE3D-4C0C-9DBC-F124618520E8} = {02838C57-DE0E-465D-9FBB-248DA87BEAAE}
 	EndGlobalSection
 	GlobalSection(CodealikeProperties) = postSolution
 		SolutionGuid = 6944aade-3195-477c-8aed-9ebe2902fc57

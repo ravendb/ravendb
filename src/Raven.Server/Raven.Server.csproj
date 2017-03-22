@@ -30,12 +30,21 @@
     <EmbeddedResource Include="Documents\Patch\*.js;Web\Studio\EmbeddedData\*.ravendbdump;Web\Studio\EmbeddedData\*.cs;Commercial\RavenDB.public.json" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\libs\libsodium.dll" Link="libsodium.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\libs\libsodium.so" Link="libsodium.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" />
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj" />
     <ProjectReference Include="..\Voron\Voron.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AsyncFriendlyStackTrace" Version="1.4.1" />
+    <PackageReference Include="HtmlAgilityPack.NetCore" Version="1.5.0.1" />
     <PackageReference Include="Jint" Version="2.10.99" />
     <PackageReference Include="Lucene.Net" Version="3.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="1.1.1" />

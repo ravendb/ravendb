@@ -16,19 +16,11 @@
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="Data\non-leaf-page-seq-id-large-values-2.txt" />
-    <None Remove="Data\non-leaf-page-seq-id-large-values.txt" />
-    <None Remove="Data\places.txt" />
-    <None Remove="MailingList\Everett\DocumentWithBytes.txt" />
-    <None Remove="Smuggler\Indexes_And_Transformers_3.5.ravendbdump" />
-    <None Remove="Smuggler\Northwind_3.5.35168.ravendbdump" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\xunit.runner.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <Content Include="..\xunit.runner.json" Link="xunit.runner.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <ItemGroup>
