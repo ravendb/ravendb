@@ -116,7 +116,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public LazyStringValue Id;
 
-            public NonPersistentDocumentFlags NonPersistentFlags;
+            public DocumentFlags Flags;
 
             private JsonOperationContext _ctx;
             private LazyStringValue _metadataCollections;
@@ -227,10 +227,10 @@ namespace Raven.Server.Smuggler.Documents
                         switch (CreateLazyStringValueFromParserState(state))
                         {
                             case VersionedDocumentState:
-                                NonPersistentFlags |= NonPersistentDocumentFlags.LegacyVersioned;
+                                Flags |= DocumentFlags.LegacyVersioned;
                                 break;
                             case HistoricalRevisionState:
-                                NonPersistentFlags |= NonPersistentDocumentFlags.LegacyRevision;
+                                Flags |= DocumentFlags.LegacyRevision;
                                 break;
                         }
                         break;
@@ -416,10 +416,10 @@ namespace Raven.Server.Smuggler.Documents
                                 switch (CreateLazyStringValueFromParserState(state))
                                 {
                                     case VersionedDocumentState:
-                                        NonPersistentFlags |= NonPersistentDocumentFlags.LegacyVersioned;
+                                        Flags |= DocumentFlags.LegacyVersioned;
                                         break;
                                     case HistoricalRevisionState:
-                                        NonPersistentFlags |= NonPersistentDocumentFlags.LegacyRevision;
+                                        Flags |= DocumentFlags.LegacyRevision;
                                         break;
                                 }
                             }
@@ -496,7 +496,7 @@ namespace Raven.Server.Smuggler.Documents
                     return;
                 }
                 Id = null;
-                NonPersistentFlags = NonPersistentDocumentFlags.None;
+                Flags = DocumentFlags.None;
                 _depth = 0;
                 _state = State.None;
                 _readingMetadataObject = false;
@@ -738,7 +738,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         Data = blittableJsonReaderObject,
                         Key = modifier.Id,
-                        NonPersistentFlags = modifier.NonPersistentFlags
+                        Flags = modifier.Flags
                     };
                 }
             }

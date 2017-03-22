@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using FastTests.Client.Attachments;
+using FastTests.Server.Replication;
 
 namespace Tryouts
 {
@@ -10,12 +12,12 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new SlowTests.Blittable.BlittableJsonWriterTests.ManualBuilderTestsSlow())
+                using (var a = new AttachmentsReplication())
                 {
-                    a.BigAmountOfProperties(short.MaxValue);
+                    a.PutAttachments(false);
                 }
             }
         }

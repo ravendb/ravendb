@@ -763,6 +763,23 @@ namespace Voron.Data.Tables
             }
         }
 
+        public TableValueHolder SeekOneForwardFrom(TableSchema.SchemaIndexDef index, Slice value)
+        {
+            var tree = GetTree(index);
+            using (var it = tree.Iterate(false))
+            {
+                if (it.Seek(value) == false)
+                    return null;
+
+                foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
+                {
+                    return result;
+                }
+
+                return null;
+            }
+        }
+
         public long GetCountOfMatchesFor(TableSchema.SchemaIndexDef index, Slice value)
         {
             var tree = GetTree(index);
@@ -1030,7 +1047,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, long numberOfEntriesToDelete,
+        public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, bool startsWith, long numberOfEntriesToDelete,
             Action<TableValueHolder> beforeDelete = null)
         {
             if (numberOfEntriesToDelete < 0)
@@ -1045,8 +1062,11 @@ namespace Voron.Data.Tables
                 // them one at a time
                 using (var it = tree.Iterate(false))
                 {
+                    if (startsWith)
+                        it.RequiredPrefix = value.Clone(_tx.Allocator);
                     if (it.Seek(value) == false)
                         return deleted;
+
                     var fst = GetFixedSizeTree(tree, it.CurrentKey.Clone(_tx.Allocator), 0);
                     using (var fstIt = fst.Iterate())
                     {

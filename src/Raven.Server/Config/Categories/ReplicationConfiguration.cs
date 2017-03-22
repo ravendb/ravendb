@@ -54,5 +54,15 @@ namespace Raven.Server.Config.Categories
         [MinValue(512)]
         [ConfigurationEntry("Raven/Replication/MaxNumberOfItemsToReceiveInSingleBatch")]
         public int? MaxNumberOfItemsToReceiveInSingleBatch { get; set; }
+
+        [Description("Maximum number of items replication will send in single batch, null means we will not cut the batch by number of items")]
+        [DefaultValue(1024)]
+        [ConfigurationEntry("Raven/Replication/MaxItemsCount")]
+        public int? MaxItemsCount { get; set; }
+
+        [Description("Maximum number of data size replication will send in single batch, null means we will not cut the batch by the size")]
+        [DefaultValue(16 * 1024 * 1024)]
+        [ConfigurationEntry("Raven/Replication/MaxSizeToSend")]
+        public int? MaxSizeToSend { get; set; }
     }
 }

@@ -176,14 +176,14 @@ namespace FastTests.Client.Attachments
         private void AssertNoRevisionAttachment(User revision, IDocumentSession session)
         {
             var metadata = session.Advanced.GetMetadataFor(revision);
-            Assert.Equal((DocumentFlags.Versioned | DocumentFlags.FromVersionStorage).ToString(), metadata[Constants.Documents.Metadata.Flags]);
+            Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision).ToString(), metadata[Constants.Documents.Metadata.Flags]);
             Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
         }
 
         private void AssertRevisionAttachments(string[] names, int expectedCount, User revision, IDocumentSession session)
         {
             var metadata = session.Advanced.GetMetadataFor(revision);
-            Assert.Equal((DocumentFlags.Versioned | DocumentFlags.FromVersionStorage | DocumentFlags.HasAttachments).ToString(), metadata[Constants.Documents.Metadata.Flags]);
+            Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision | DocumentFlags.HasAttachments).ToString(), metadata[Constants.Documents.Metadata.Flags]);
             var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
             Assert.Equal(expectedCount, attachments.Length);
 

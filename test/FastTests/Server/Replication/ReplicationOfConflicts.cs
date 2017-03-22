@@ -61,15 +61,13 @@ namespace FastTests.Server.Replication
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "Karmel"
                     }, "users/1");
                     session.SaveChanges();
                 }
-
-                var updated = WaitForDocument(slave, "users/1");
-                Assert.True(updated);
+                Assert.True(WaitForDocument(slave, "users/1"));
 
                 using (var session = slave.OpenSession())
                 {
@@ -78,21 +76,17 @@ namespace FastTests.Server.Replication
                 }
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "Karmeli"
                     }, "users/1");
-
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "Karmeli-2"
                     }, "final-marker");
-
                     session.SaveChanges();
                 }
-
-                var updated2 = WaitForDocument(slave, "final-marker");
-                Assert.True(updated2);
+                Assert.True(WaitForDocument(slave, "final-marker"));
 
                 using (var session = slave.OpenSession())
                 {
@@ -102,17 +96,13 @@ namespace FastTests.Server.Replication
                     }
                     catch (DocumentConflictException e)
                     {
-                        Assert.Equal(e.DocId,"users/1");
+                        Assert.Equal(e.DocId, "users/1");
                         Assert.NotEqual(e.LargestEtag, 0);
-                        slave.Commands().Delete("users/1",null);//resolve conflict to the one with tombstone
+                        slave.Commands().Delete("users/1", null); //resolve conflict to the one with tombstone
                     }
-                }
 
-                using (var session = slave.OpenSession())
-                {
                     //after resolving the conflict, should not throw
-                    var doc = session.Load<User>("users/1");
-                    Assert.Null(doc);
+                    Assert.Null(session.Load<User>("users/1"));
                 }
             }
         }

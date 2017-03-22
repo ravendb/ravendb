@@ -378,7 +378,7 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
 
-                    document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+                    document.Flags |= DocumentFlags.FromSmuggler;
 
                     actions.WriteDocument(document);
 

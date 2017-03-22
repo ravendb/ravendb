@@ -91,7 +91,6 @@ namespace FastTests.Server.Replication
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-
                 SetReplicationConflictResolution(slave, StraightforwardConflictResolution.None);
                 SetupReplication(master, slave);
 

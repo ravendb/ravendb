@@ -18,9 +18,7 @@ namespace Raven.Server.Documents
         public static DocumentConflict From(JsonOperationContext ctx,Document doc)
         {
             if (doc == null)
-            {
                 return null;
-            }
 
             return new DocumentConflict
             {
@@ -37,9 +35,7 @@ namespace Raven.Server.Documents
         public static DocumentConflict From(DocumentTombstone tombstone)
         {
             if (tombstone == null)
-            {
                 return null;
-            }
 
             return new DocumentConflict
             {

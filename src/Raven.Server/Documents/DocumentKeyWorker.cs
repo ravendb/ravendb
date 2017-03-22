@@ -200,7 +200,7 @@ namespace Raven.Server.Documents
                 nameof(str));
         }
 
-        public static IDisposable GetStringPreserveCase(DocumentsOperationContext context, string str, out Slice strSlice)
+        public static ByteStringContext.InternalScope GetStringPreserveCase(DocumentsOperationContext context, string str, out Slice strSlice)
         {
             byte* lowerKey;
             int lowerKeySize;

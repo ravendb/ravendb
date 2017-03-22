@@ -460,7 +460,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
 
             var numberOfEntriesToDelete = table.NumberOfEntries - MaxNumberOfKeptErrors;
-            table.DeleteForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys, numberOfEntriesToDelete);
+            table.DeleteForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys, false, numberOfEntriesToDelete);
         }
 
         public static IndexType ReadIndexType(int indexId, StorageEnvironment environment)

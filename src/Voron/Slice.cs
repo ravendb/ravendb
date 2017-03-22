@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Sparrow.Json;
 
 namespace Voron
 {
@@ -149,6 +150,12 @@ namespace Voron
         public static ByteStringContext.ExternalScope External(ByteStringContext context, byte* value, int size, out Slice slice)
         {
             return External(context, value, size,  ByteStringType.Mutable | ByteStringType.External, out slice);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext.ExternalScope External(ByteStringContext context, LazyStringValue value, out Slice slice)
+        {
+            return External(context, value.Buffer, value.Size,  ByteStringType.Mutable | ByteStringType.External, out slice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
