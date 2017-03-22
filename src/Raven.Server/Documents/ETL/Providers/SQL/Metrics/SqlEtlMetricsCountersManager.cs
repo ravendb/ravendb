@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Metrics
 
         public SqlEtlMetricsCountersManager()
         {
-            PerformanceStats = new ConcurrentQueue<EtlPerformanceStats>();
+            TablesMetrics = new ConcurrentDictionary<string, SqlEtlTableMetrics>();
         }
 
         public SqlEtlTableMetrics GetTableMetrics(string tableName)
