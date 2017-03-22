@@ -85,23 +85,7 @@ namespace Raven.Server.Documents.Replication
                                                 }
                                                 break;
                                             case IndexEntryType.Transformer:
-                                                var transformer = _parent._database.TransformerStore.GetTransformer(item.Id);
-                                                if (transformer == null) //precaution
-                                                    throw new InvalidDataException(
-                                                        $"Transformer with name {item.Name} has metadata, but is not at the transformer store. This is not supposed to happen and is likely a bug.");
-
-                                                try
-                                                {
-                                                    TransformerProcessor.Export(writer, transformer,
-                                                        configurationContext);
-                                                }
-                                                catch (InvalidOperationException e)
-                                                {
-                                                    if (_log.IsInfoEnabled)
-                                                        _log.Info(
-                                                            $"Failed to export transformer definition for replication. Transformer name = {item.Name}",
-                                                            e);
-                                                }
+                                               // noop
                                                 break;
                                             default:
                                                 throw new ArgumentOutOfRangeException(nameof(item),

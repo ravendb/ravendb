@@ -445,8 +445,10 @@ namespace Raven.Server.Documents.Replication
         {
             switch (item.Type)
             {
-                case IndexEntryType.Index:
                 case IndexEntryType.Transformer:
+                    //noop
+                    break;
+                case IndexEntryType.Index:
                     var replicationSource = $"{ConnectionInfo.SourceUrl} --> {ConnectionInfo.SourceDatabaseId}";
                     var msg = $"Received {item.Type} via replication from {replicationSource} ( {item.Type} name = {item.Name}), with change vector {conflictingVector.Format()}, and it is conflicting";
                     if (_log.IsInfoEnabled)
@@ -479,7 +481,7 @@ namespace Raven.Server.Documents.Replication
                     PutIndexReplicationItem(configurationContext, item, definition);
                     break;
                 case IndexEntryType.Transformer:
-                    PutTransformerReplicationItem(item, definition);
+                    //noop
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
