@@ -5,6 +5,8 @@ using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.ETL.Metrics;
+using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -22,6 +24,10 @@ namespace Raven.Server.Documents.ETL
     public abstract class EtlProcess : IDisposable
     {
         public string Tag { get; protected set; }
+
+        public EtlStatistics Statistics { get; protected set; }
+
+        public EtlMetricsCountersManager Metrics { get; protected set; }
 
         public abstract string Name { get; }
 
@@ -46,7 +52,6 @@ namespace Raven.Server.Documents.ETL
         protected readonly Logger Logger;
         protected readonly DocumentDatabase Database;
         protected TimeSpan? FallbackTime;
-        public readonly EtlStatistics Statistics;
 
         protected EtlProcess(DocumentDatabase database, EtlProcessConfiguration configuration, string tag)
         {
@@ -223,7 +228,17 @@ namespace Raven.Server.Documents.ETL
             Database.DocumentsStorage.Put(context, key, null, document);
         }
 
-        protected abstract void UpdateMetrics(DateTime startTime, Stopwatch duration, int batchSize);
+        protected void UpdateMetrics(DateTime startTime)
+        {
+            Metrics.BatchSizeMeter.Mark(CurrentBatch.NumberOfExtractedItems);
+
+            Metrics.UpdatePerformanceStats(new EtlPerformanceStats
+            {
+                BatchSize = CurrentBatch.NumberOfExtractedItems,
+                Duration = CurrentBatch.Duration.Elapsed,
+                Started = startTime
+            });
+        }
 
         public override void NotifyAboutWork()
         {
@@ -345,7 +360,7 @@ namespace Raven.Server.Documents.ETL
 
                     if (didWork)
                     {
-                        UpdateMetrics(startTime, CurrentBatch.Duration, CurrentBatch.NumberOfExtractedItems);
+                        UpdateMetrics(startTime);
 
                         if (CancellationToken.IsCancellationRequested == false)
                         {
