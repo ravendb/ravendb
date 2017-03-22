@@ -1,11 +1,19 @@
 using System;
 using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Net.WebSockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.BulkInsert;
 using Raven.Client.Documents.Identity;
+using Raven.Client.Documents.Session;
+using Raven.Client.Extensions;
+using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Client.Util;
 using Sparrow.Json;
@@ -18,71 +26,119 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly IDocumentStore _store;
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
-        private readonly ClientWebSocket _client;
-        private readonly JsonOperationContext _context;
-        private Task _previousOperation;
-        private readonly MemoryStream _stream = new MemoryStream();
-        private readonly BlittableJsonTextWriter _jsonWriter;
-        private readonly StreamWriter _entityWriter;
-        private readonly DocumentConventions _documentConventions = new DocumentConventions();
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-        private readonly Task<WebSocketReceiveResult> _answerFromServer;
-        private readonly JsonOperationContext.ManagedPinnedBuffer _recieveBuffer;
-        private JsonOperationContext.ReturnBuffer _returnReceiveBuffer;
-        private readonly IDisposable _releaseOperationContext;
+        private class StreamExposerContent : HttpContent
+        {
+            public readonly Task<Stream> OutputStream;
+            private readonly TaskCompletionSource<Stream> _outputStreamTcs;
+            private readonly TaskCompletionSource<object> _done;
 
-        public BulkInsertOperation(string database, IDocumentStore store, bool isSecure = false)
+            public StreamExposerContent()
+            {
+                _outputStreamTcs = new TaskCompletionSource<Stream>();
+                OutputStream = _outputStreamTcs.Task;
+                _done = new TaskCompletionSource<object>();
+            }
+
+            public void Done()
+            {
+                _done.TrySetResult(null);
+            }
+
+            protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
+            {
+                _outputStreamTcs.SetResult(stream);
+                return _done.Task;
+            }
+
+            protected override bool TryComputeLength(out long length)
+            {
+                length = -1;
+                return false;
+            }
+        }
+
+        private class BulkInsertCommand : RavenCommand<HttpResponseMessage>
+        {
+            public override bool IsReadRequest => false;
+            private readonly StreamExposerContent _stream;
+            public Task<HttpResponseMessage> ExecutionTask { get; private set; }
+
+            public BulkInsertCommand(StreamExposerContent stream)
+            {
+                _stream = stream;
+                Timeout = TimeSpan.FromHours(12); // global max timeout
+            }
+
+            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/bulk_insert";
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post
+                };
+            }
+
+            public override Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationToken token)
+            {
+                ExecutionTask = client.PostAsync(request.RequestUri, _stream, token);
+                return ExecutionTask;
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        private readonly JsonOperationContext _context;
+        private readonly Task _bulkInsertExecuteTask;
+        private readonly EntityToBlittable _convertor = new EntityToBlittable(null);
+        private readonly IDisposable _dispose;
+
+        private BlittableJsonTextWriter _jsonWriter;
+        private Stream _stream;
+        private readonly StreamExposerContent _streamExposerContent;
+        private bool _first = true;
+        private bool _justDispose;
+        private readonly BulkInsertCommand _bulkCommand;
+
+        public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default(CancellationToken))
         {
             _store = store;
             database = database ?? MultiDatabase.GetDatabaseName(store.Url);
-            _client = new ClientWebSocket();
-            
-            var replaceTerm = isSecure ? "wss" : "ws";
-            Init($"{store.Url.Replace("http", replaceTerm)}/databases/{database}/bulk_insert");
 
-            _releaseOperationContext = store.GetRequestExecuter(database).ContextPool.AllocateOperationContext(out _context);
-            _returnReceiveBuffer = _context.GetManagedBuffer(out _recieveBuffer);
-            _answerFromServer = _client.ReceiveAsync(_recieveBuffer.Buffer, _cts.Token);
-         
-            _entityWriter = new StreamWriter(_stream);
-            _jsonWriter = new BlittableJsonTextWriter(_context,_stream);
+            var requestExecuter = _store.GetRequestExecuter(database);
+            _dispose = requestExecuter.ContextPool.AllocateOperationContext(out _context);
+            _streamExposerContent = new StreamExposerContent();
+            _bulkCommand = new BulkInsertCommand(_streamExposerContent);
+            _bulkInsertExecuteTask = requestExecuter.ExecuteAsync(_bulkCommand, _context, token);
+
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(store.Conventions, entity =>
                 AsyncHelpers.RunSync(() => store.Conventions.GenerateDocumentIdAsync(database, entity)));
-        }
-
-        public void Init(string url)
-        {
-            AsyncHelpers.RunSync(async () =>
-            {
-                _previousOperation = _client.ConnectAsync(new Uri(url), _cts.Token);
-                // wait for the establishment of the connection, so we have the correct state.
-                await _previousOperation;
-            });
         }
 
         public async Task DisposeAsync()
         {
             try
             {
-                if (_cts.IsCancellationRequested == false)
+                if (_justDispose == false)
                 {
-                    await _previousOperation.ConfigureAwait(false);
-                    await _client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Bulk-Insert", _cts.Token).ConfigureAwait(false);
-                    ThrowIfServerStatusFaulted();
-                    var ans = await _answerFromServer; // wait for operation to complete.
-                    if (ans.CloseStatus == null)
+                    if (_stream != null)
                     {
-                        await ThrowAnswerFromServer();
+                        _jsonWriter.WriteEndArray();
+                        _jsonWriter.Flush();
+                        await _stream.FlushAsync().ConfigureAwait(false);
                     }
+
+                    _streamExposerContent.Done();
+
+                    await _bulkInsertExecuteTask.ConfigureAwait(false);
                 }
             }
             finally
             {
-                _client.Dispose();
-                _jsonWriter?.Dispose();
-                _entityWriter?.Dispose();
-                _stream?.Dispose();
-                _releaseOperationContext?.Dispose();
+                _streamExposerContent?.Dispose();
+                _dispose.Dispose();
             }
         }
 
@@ -91,9 +147,9 @@ namespace Raven.Client.Documents.BulkInsert
             AsyncHelpers.RunSync(DisposeAsync);
         }
 
-        public string Store(object entity, string id)
+        public void Store(object entity, string id)
         {
-            return Store(entity);
+            AsyncHelpers.RunSync(() => StoreAsync(entity, id));
         }
 
         public string Store(object entity)
@@ -110,69 +166,55 @@ namespace Raven.Client.Documents.BulkInsert
 
         public async Task StoreAsync(object entity, string id)
         {
-            if (_answerFromServer.IsCompleted)
+            if (_stream == null)
             {
-                await ThrowAnswerFromServer();
+                // either the server is down or we get the stream. 
+                var completed = Task.WaitAny(_streamExposerContent.OutputStream, _bulkCommand.ExecutionTask);
+                if (completed == 1 && _bulkCommand.ExecutionTask.Status == TaskStatus.Faulted)
+                {
+                    ThrowOnUnavailableStream(id);
+                }
+                _stream = await _streamExposerContent.OutputStream.ConfigureAwait(false);
+                _jsonWriter = new BlittableJsonTextWriter(_context, _stream);
+                _jsonWriter.WriteStartArray();
             }
-            await _previousOperation.ConfigureAwait(false);
 
-            var tag = _store.Conventions.GetCollectionName(entity);
-            var clrType = _store.Conventions.GetClrTypeName(entity.GetType());
-        
-            _stream.SetLength(0);
-            _jsonWriter.WriteStartObject();
-            _jsonWriter.WritePropertyName(Constants.Documents.BulkInsert.Content);
-            _jsonWriter.Flush();
-            _documentConventions.SerializeEntityToJsonStream(entity, _entityWriter);            
-            _entityWriter.Flush();
-            _jsonWriter.WriteComma();
-            _jsonWriter.WritePropertyName(Constants.Documents.Metadata.Key);
-            _jsonWriter.WriteStartObject();
-            _jsonWriter.WritePropertyName(Constants.Documents.Metadata.Id);
-            _jsonWriter.WriteString(id);
-            if (tag != null)
+            using (var doc = _convertor.ConvertEntityToBlittable(entity, _store.Conventions, _context, new DocumentInfo
             {
-                _jsonWriter.WritePropertyName(Constants.Documents.Metadata.Collection);
-                _jsonWriter.WriteString(tag);
-            }
-            if (clrType != null)
+                Collection = _store.Conventions.GetCollectionName(entity)
+            }))
             {
-                _jsonWriter.WritePropertyName(Constants.Documents.Metadata.RavenClrType);
-                _jsonWriter.WriteString(clrType);
-            }
-            _jsonWriter.WriteEndObject();
-            _jsonWriter.WriteEndObject();
-            _jsonWriter.Flush();
+                if (_first == false)
+                {
+                    _jsonWriter.WriteComma();
+                }
+                _first = false;
 
-            ArraySegment<byte> bytes;
-            _stream.TryGetBuffer(out bytes);
-            _previousOperation = _client.SendAsync(bytes, WebSocketMessageType.Text, false, _cts.Token);
+                var cmd = new DynamicJsonValue
+                {
+                    [nameof(PutCommandDataWithBlittableJson.Method)] = "PUT",
+                    [nameof(PutCommandDataWithBlittableJson.Key)] = id,
+                    [nameof(PutCommandDataWithBlittableJson.Document)] = doc,
+                };
+
+                try
+                {
+                    _context.Write(_jsonWriter, cmd);
+                }
+                catch (Exception e)
+                {
+                    ThrowOnUnavailableStream(id,e);
+                }
+            }
         }
 
-        private async Task ThrowAnswerFromServer()
+        private void ThrowOnUnavailableStream(string id, Exception innerEx = null)
         {
-            ThrowIfServerStatusFaulted();
-
-            var result = _answerFromServer.Result;
-            _recieveBuffer.Valid = result.Count;
-            var msg = await _context.ParseToMemoryAsync(
-                _client,
-                "bulk insert error",
-                BlittableJsonDocumentBuilder.UsageMode.None,
-                _recieveBuffer);
-            string str;
-            msg.TryGet("Exception", out str);
-            throw new BulkInsertAbortedException(str);
+            _stream = null;
+            _justDispose = true;            
+            throw new BulkInsertAbortedException($"Write to stream faild at {id}", innerEx);
         }
 
-        private void ThrowIfServerStatusFaulted()
-        {
-            if (_answerFromServer.IsFaulted)
-            {
-                _cts.Cancel();
-                throw new BulkInsertProtocolViolationException("Could not read from server, it status is faulted");
-            }
-        }
 
         private string GetId(object entity)
         {

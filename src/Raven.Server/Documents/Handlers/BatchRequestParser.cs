@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Handlers
             public BlittableJsonReaderObject Document;
             public PatchRequest Patch;
             public PatchRequest PatchIfMissing;
-            public long? Etag;
+            public long? Etag { get; set; } //TODO: revert to field once https://github.com/cjlpowers/TypeScripter/pull/12 will be merged
             public bool KeyPrefixed;
         }
 
@@ -78,131 +78,189 @@ namespace Raven.Server.Documents.Handlers
                     if (state.CurrentTokenType == JsonParserToken.EndArray)
                         break;
 
-                    if (state.CurrentTokenType != JsonParserToken.StartObject)
-                    {
-                        ThrowUnexpectedToken(JsonParserToken.StartObject, state);
-                    }
-
                     index++;
                     if (index >= cmds.Length)
                     {
                         cmds = IncreaseSizeOfCommandsBuffer(index, cmds);
                     }
 
-                    while (true)
-                    {
+                    cmds[index] = await ReadSingleCommand(ctx, stream, state, parser, buffer);
+                }
+            }
+            return new ArraySegment<CommandData>(cmds, 0, index + 1);
+        }
+
+
+        public class ReadMany : IDisposable
+        {
+            private readonly Stream _stream;
+            private UnmanagedJsonParser _parser;
+            private JsonOperationContext.ManagedPinnedBuffer _buffer;
+            private JsonParserState _state;
+
+            public ReadMany(JsonOperationContext ctx, Stream stream, JsonOperationContext.ManagedPinnedBuffer buffer)
+            {
+                _stream = stream;
+                _buffer = buffer;
+
+                _state = new JsonParserState();
+                _parser = new UnmanagedJsonParser(ctx, _state, "bulk_docs");
+            }
+
+            public async Task Init()
+            {
+                while (_parser.Read() == false)
+                    await RefillParserBuffer(_stream, _buffer, _parser);
+                if (_state.CurrentTokenType != JsonParserToken.StartArray)
+                {
+                    ThrowUnexpectedToken(JsonParserToken.StartArray, _state);
+                }
+            }
+
+            public void Dispose()
+            {
+                _parser.Dispose();
+            }
+
+            public Task<CommandData> MoveNext(JsonOperationContext ctx)
+            {
+                while (_parser.Read() == false)
+                    RefillParserBuffer(_stream, _buffer, _parser).Wait();
+
+                if (_state.CurrentTokenType == JsonParserToken.EndArray)
+                    return null;
+
+                return ReadSingleCommand(ctx, _stream, _state, _parser, _buffer);
+            }
+        }
+
+
+        private static async Task<CommandData> ReadSingleCommand(
+            JsonOperationContext ctx, 
+            Stream stream, 
+            JsonParserState state, 
+            UnmanagedJsonParser parser, 
+            JsonOperationContext.ManagedPinnedBuffer buffer)
+        {
+            var commandData = new CommandData();
+            if (state.CurrentTokenType != JsonParserToken.StartObject)
+            {
+                ThrowUnexpectedToken(JsonParserToken.StartObject, state);
+            }
+
+            while (true)
+            {
+                while (parser.Read() == false)
+                    await RefillParserBuffer(stream, buffer, parser);
+
+                if (state.CurrentTokenType == JsonParserToken.EndObject)
+                    break;
+
+                if (state.CurrentTokenType != JsonParserToken.String)
+                {
+                    ThrowUnexpectedToken(JsonParserToken.String, state);
+                }
+                switch (GetPropertyType(state))
+                {
+                    case CommandPropertyName.Method:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser);
-
-                        if (state.CurrentTokenType == JsonParserToken.EndObject)
-                            break;
-
                         if (state.CurrentTokenType != JsonParserToken.String)
                         {
                             ThrowUnexpectedToken(JsonParserToken.String, state);
                         }
-                        switch (GetPropertyType(state))
+                        commandData.Method = GetMethodType(state, ctx);
+                        break;
+                    case CommandPropertyName.Key:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser);
+                        switch (state.CurrentTokenType)
                         {
-                            case CommandPropertyName.Method:
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-                                if (state.CurrentTokenType != JsonParserToken.String)
-                                {
-                                    ThrowUnexpectedToken(JsonParserToken.String, state);
-                                }
-                                cmds[index].Method = GetMethodType(state, ctx);
+                            case JsonParserToken.Null:
+                                commandData.Key = null;
                                 break;
-                            case CommandPropertyName.Key:
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-                                switch (state.CurrentTokenType)
-                                {
-                                    case JsonParserToken.Null:
-                                        cmds[index].Key = null;
-                                        break;
-                                    case JsonParserToken.String:
-                                        cmds[index].Key = GetDocumentKey(state);
-                                        break;
-                                    default:
-                                        ThrowUnexpectedToken(JsonParserToken.String, state);
-                                        break;
-                                }
+                            case JsonParserToken.String:
+                                commandData.Key = GetDocumentKey(state);
                                 break;
-                            case CommandPropertyName.Document:
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-                                cmds[index].Document = await ReadJsonObject(ctx, stream, cmds[index].Key, parser, state, buffer);
-                                break;
-                            case CommandPropertyName.Patch:
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-                                var patch = await ReadJsonObject(ctx, stream, cmds[index].Key, parser, state, buffer);
-                                cmds[index].Patch = PatchRequest.Parse(patch);
-                                break;
-                            case CommandPropertyName.PatchIfMissing:
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-                                var patchIfMissing = await ReadJsonObject(ctx, stream, cmds[index].Key, parser, state, buffer);
-                                cmds[index].PatchIfMissing = PatchRequest.Parse(patchIfMissing);
-                                break;
-                            case CommandPropertyName.Etag:
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-                                if (state.CurrentTokenType == JsonParserToken.Null)
-                                {
-                                    cmds[index].Etag = null;
-                                }
-                                else
-                                {
-                                    if (state.CurrentTokenType != JsonParserToken.Integer)
-                                    {
-                                        ThrowUnexpectedToken(JsonParserToken.Integer, state);
-                                    }
-
-                                    cmds[index].Etag = state.Long;
-                                }
-                                break;
-                            case CommandPropertyName.KeyPrefixed:
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-
-                                if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
-                                {
-                                    ThrowUnexpectedToken(JsonParserToken.True, state);
-                                }
-
-                                cmds[index].KeyPrefixed = state.CurrentTokenType == JsonParserToken.True;
-                                break;
-                            case CommandPropertyName.NoSuchProperty:
-                                // unknown command - ignore it
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-                                if (state.CurrentTokenType == JsonParserToken.StartObject ||
-                                    state.CurrentTokenType == JsonParserToken.StartArray)
-                                {
-                                    await ReadJsonObject(ctx, stream, cmds[index].Key, parser, state, buffer);
-                                }
+                            default:
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
                                 break;
                         }
-                    }
+                        break;
+                    case CommandPropertyName.Document:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser);
+                        commandData.Document = await ReadJsonObject(ctx, stream, commandData.Key, parser, state, buffer);
+                        break;
+                    case CommandPropertyName.Patch:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser);
+                        var patch = await ReadJsonObject(ctx, stream, commandData.Key, parser, state, buffer);
+                        commandData.Patch = PatchRequest.Parse(patch);
+                        break;
+                    case CommandPropertyName.PatchIfMissing:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser);
+                        var patchIfMissing = await ReadJsonObject(ctx, stream, commandData.Key, parser, state, buffer);
+                        commandData.PatchIfMissing = PatchRequest.Parse(patchIfMissing);
+                        break;
+                    case CommandPropertyName.Etag:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser);
+                        if (state.CurrentTokenType == JsonParserToken.Null)
+                        {
+                            commandData.Etag = null;
+                        }
+                        else
+                        {
+                            if (state.CurrentTokenType != JsonParserToken.Integer)
+                            {
+                                ThrowUnexpectedToken(JsonParserToken.Integer, state);
+                            }
 
-                    switch (cmds[index].Method)
-                    {
-                        case CommandType.None:
-                            ThrowInvalidMethod();
-                            break;
-                        case CommandType.PUT:
-                            if (cmds[index].Document == null)
-                                ThrowMissingDocumentProperty();
-                            break;
-                        case CommandType.PATCH:
-                            if (cmds[index].Patch == null)
-                                ThrowMissingPatchProperty();
-                            break;
-                    }
+                            commandData.Etag = state.Long;
+                        }
+                        break;
+                    case CommandPropertyName.KeyPrefixed:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser);
+
+                        if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.True, state);
+                        }
+
+                        commandData.KeyPrefixed = state.CurrentTokenType == JsonParserToken.True;
+                        break;
+                    case CommandPropertyName.NoSuchProperty:
+                        // unknown command - ignore it
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser);
+                        if (state.CurrentTokenType == JsonParserToken.StartObject ||
+                            state.CurrentTokenType == JsonParserToken.StartArray)
+                        {
+                            await ReadJsonObject(ctx, stream, commandData.Key, parser, state, buffer);
+                        }
+                        break;
                 }
             }
-            return new ArraySegment<CommandData>(cmds, 0, index + 1);
+
+            switch (commandData.Method)
+            {
+                case CommandType.None:
+                    ThrowInvalidMethod();
+                    break;
+                case CommandType.PUT:
+                    if (commandData.Document == null)
+                        ThrowMissingDocumentProperty();
+                    break;
+                case CommandType.PATCH:
+                    if (commandData.Patch == null)
+                        ThrowMissingPatchProperty();
+                    break;
+            }
+
+            return commandData;
         }
 
         private static CommandData[] IncreaseSizeOfCommandsBuffer(int index, CommandData[] cmds)
@@ -333,6 +391,7 @@ namespace Raven.Server.Documents.Handlers
                         return CommandPropertyName.NoSuchProperty;
 
                     return CommandPropertyName.KeyPrefixed;
+
                 default:
                     return CommandPropertyName.NoSuchProperty;
             }

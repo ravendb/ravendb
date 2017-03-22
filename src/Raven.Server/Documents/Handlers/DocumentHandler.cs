@@ -13,6 +13,7 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Runtime.ExceptionServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
@@ -21,6 +22,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
+using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
@@ -29,6 +31,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Voron.Exceptions;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
@@ -113,118 +116,102 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
         }
-
-        [RavenAction("/databases/*/bulk_insert", "GET", "/databases/*/bulk_insert")]
+        
+        [RavenAction("/databases/*/bulk_insert", "POST")]
         public async Task BulkInsert()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            using (var socket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            var logger = LoggingSource.Instance.GetLogger<MergedInsertBulkCommand>(Database.Name);
+            IDisposable currentCtxReset = null, previousCtxReset = null;
+            try
             {
-                var list = new List<Document>();
-                try
+                JsonOperationContext context;
+                using (ContextPool.AllocateOperationContext(out context))
+                using (var buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                 {
-                    var totalSize = 0;
-                    while (true)
+                    JsonOperationContext docsCtx;
+                    currentCtxReset = ContextPool.AllocateOperationContext(out docsCtx);
+                    var requestBodyStream = RequestBodyStream();
+
+                    using (var parser = new BatchRequestParser.ReadMany(context, requestBodyStream, buffer))
                     {
-                        var task = context.ReadFromWebSocket(socket, "bulk-insert", Server.ServerStore.ServerShutdown);
-                        if (task.IsCompleted == false || totalSize > 16*Voron.Global.Constants.Size.Megabyte)
+                        try
                         {
-                            await FlushBatchAsync(list);
-                            totalSize = 0;
+                            await parser.Init();
+                        }
+                        catch (EndOfStreamException)
+                        {
+                            currentCtxReset?.Dispose();
+                            return; // we closed the stream before we wrote anything to it.     
                         }
 
-                        var obj = await task;
-                        if (obj == null)
-                            break;
-                        totalSize += obj.Size;
-
-                        LazyStringValue id;
-                        var data = BuildObjectFromBulkInsertOp(context,obj,out id);
-                        
-                        var doc = new Document
+                        var list = new List<BatchRequestParser.CommandData>();
+                        long totalSize = 0;
+                        while (true)
                         {
-                            Key = id,
-                            Data = data
-                        };
-                        list.Add(doc);
+                            var task = parser.MoveNext(docsCtx);
+                            if (task == null)
+                                break;
+
+                            if (task.IsCompleted == false && list.Count > 0 ||
+                                totalSize > 16 * Voron.Global.Constants.Size.Megabyte)
+                            {
+                                await Database.TxMerger.Enqueue(new MergedInsertBulkCommand
+                                {
+                                    Commands = list,
+                                    Database = Database,
+                                    Logger = logger,
+                                    TotalSize = totalSize
+                                });
+
+                                previousCtxReset?.Dispose();
+                                previousCtxReset = currentCtxReset;
+                                currentCtxReset = ContextPool.AllocateOperationContext(out docsCtx);
+
+                                list.Clear();
+                                totalSize = 0;
+                            }
+
+                            var commandData = await task;
+                            totalSize += commandData.Document.Size;
+                            list.Add(commandData);
+                        }
+                        if (list.Count > 0)
+                        {
+                            await Database.TxMerger.Enqueue(new MergedInsertBulkCommand
+                            {
+                                Commands = list,
+                                Database = Database,
+                                Logger = logger,
+                                TotalSize = totalSize
+                            });
+                        }
                     }
-                    await FlushBatchAsync(list);
                 }
-                catch (Exception e)
-                {
-                    using (var ms = new MemoryStream())
-                    using (var writer = new BlittableJsonTextWriter(context, ms))
-                    {
-                        writer.WriteStartObject();
-                        writer.WritePropertyName("Exception");
-                        writer.WriteString(e.ToString());
-                        writer.WriteEndObject();
-                        writer.Flush();
-                        ArraySegment<byte> bytes;
-                        ms.TryGetBuffer(out bytes);
-                        await socket.SendAsync(bytes, WebSocketMessageType.Text, true, Server.ServerStore.ServerShutdown);
-                    }
-                }
-                finally
-                {
-                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Bulk-insert", Server.ServerStore.ServerShutdown);
-                }
+            }
+            finally
+            {
+                currentCtxReset?.Dispose();
+                previousCtxReset?.Dispose();
             }
         }
 
-        private static BlittableJsonReaderObject BuildObjectFromBulkInsertOp(JsonOperationContext ctx, BlittableJsonReaderObject obj,out LazyStringValue id)
-        {
-            BlittableJsonReaderObject content;
-            BlittableJsonReaderObject metadata;
-
-            obj.TryGet(Constants.Documents.BulkInsert.Content, out content);
-            obj.TryGet(Constants.Documents.Metadata.Key, out metadata);
-
-            string collection;
-            string clrType;
-
-            metadata.TryGet(Constants.Documents.Metadata.Id, out id);
-            metadata.TryGet(Constants.Documents.Metadata.Collection, out collection);
-            metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out clrType);
-            content.Modifications = new DynamicJsonValue(content)
-            {
-                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                {
-                    [Constants.Documents.Metadata.Id] = id
-                }
-            };
-            var modifiedMetadata = (DynamicJsonValue)content.Modifications[Constants.Documents.Metadata.Key];
-            if (collection != null)
-                modifiedMetadata[Constants.Documents.Metadata.Collection] = collection;
-            if(clrType != null)
-                modifiedMetadata[Constants.Documents.Metadata.RavenClrType] = clrType;
-
-            return ctx.ReadObject(content,id);
-        }
-
-        private async Task FlushBatchAsync(List<Document> list)
-        {
-            if (list.Count == 0)
-                return;
-            
-            await Database.TxMerger.Enqueue(new MergedInsertBulkCommand
-            {
-                Database = Database,
-                Docs = list
-            });
-        }
 
         private class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
+            public Logger Logger;
             public DocumentDatabase Database;
-            public List<Document> Docs;
-
+            public List<BatchRequestParser.CommandData> Commands;
+            public long TotalSize;
             public override void Execute(DocumentsOperationContext context)
             {
-                foreach (var doc in Docs)
+                foreach (var cmd in Commands)
                 {
-                    Database.DocumentsStorage.Put(context, doc.Key, null, doc.Data);
+                    Debug.Assert(cmd.Method == BatchRequestParser.CommandType.PUT);
+                    Database.DocumentsStorage.Put(context, cmd.Key, null, cmd.Document);
+                }
+                if (Logger.IsInfoEnabled)
+                {
+                    Logger.Info($"Merged {Commands.Count:#,#;;0} operations and {Math.Round(TotalSize / 1024d, 1):#,#.#;;0} kb");
                 }
             }
         }
