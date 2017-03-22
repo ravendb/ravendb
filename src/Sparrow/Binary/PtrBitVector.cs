@@ -35,6 +35,25 @@ namespace Sparrow.Binary
             return (byte)(0x80 >> (idx % (int)BitsPerByte));
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool GetBitInPointer(void* ptr, int idx)
+        {
+            uint word = ByteForBit(idx);
+            byte mask = BitInByte(idx);
+            return (*((byte*)ptr + word) & mask) != 0 ;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SetBitInPointer(void* ptr, int idx, bool value)
+        {
+            uint word = ByteForBit(idx);
+            byte mask = BitInByte(idx);
+
+            byte* bytePtr = (byte*)ptr;
+            bool currentValue = (bytePtr[word] & mask) != 0;
+            if (currentValue != value)
+                bytePtr[word] ^= mask;
+        }
 
         public bool this[int idx]
         {
