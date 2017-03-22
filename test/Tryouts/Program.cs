@@ -15,9 +15,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new AttachmentsReplication())
+                using (var a = new SlowTests.Server.Documents.ETL.Raven.BasicRavenEtlTests())
                 {
-                    a.PutAttachments(false);
+                    a.Loading_to_different_collections();
                 }
             }
         }

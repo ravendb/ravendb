@@ -1036,17 +1036,23 @@ namespace Raven.Server.Documents
             Slice prefixSlice;
             using (DocumentKeyWorker.GetSliceFromKey(context, prefix, out prefixSlice))
             {
-                table.DeleteByPrimaryKeyPrefix(prefixSlice, before =>
+                bool hasMore = true;
+                while (hasMore)
                 {
-                    var key = TableValueToKey(context, (int)DocumentsTable.Key, ref before.Reader);
-                    int size;
-                    var document = new BlittableJsonReaderObject(before.Reader.Read((int)DocumentsTable.Data, out size), size, context);
-                    deleteResults.Add(new DeleteOperationResult
+                    hasMore = false;
+
+                    foreach (var holder in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
                     {
-                        Etag = TableValueToEtag((int)DocumentsTable.Etag, ref before.Reader),
-                        Collection = ExtractCollectionName(context, key, document)
-                    });
-                });
+                        hasMore = true;
+                        var key = TableValueToKey(context, (int)DocumentsTable.Key, ref holder.Reader);
+
+                        var deleteOperationResult = Delete(context, key, null);
+                        if (deleteOperationResult != null)
+                            deleteResults.Add(deleteOperationResult.Value);
+                    }
+                    
+                }
+
             }
 
             return deleteResults;
