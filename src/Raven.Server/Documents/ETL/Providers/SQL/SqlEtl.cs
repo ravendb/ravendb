@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Diagnostics;
 using System.Linq;
 using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Raven.Server.Documents.ETL.Providers.SQL.Enumerators;
@@ -21,15 +20,16 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public SqlEtlConfiguration SqlConfiguration { get; }
 
-        private PredefinedSqlConnection _predefinedSqlConnection;
+        private readonly PredefinedSqlConnection _predefinedSqlConnection;
 
-        public readonly SqlEtlMetricsCountersManager Metrics = new SqlEtlMetricsCountersManager();
+        public readonly SqlEtlMetricsCountersManager SqlMetrics = new SqlEtlMetricsCountersManager();
 
         public SqlEtl(DocumentDatabase database, SqlEtlConfiguration configuration, PredefinedSqlConnection predefinedConnection)
             : base(database, configuration, SqlEtlTag)
         {
-            SqlConfiguration = configuration;
             _predefinedSqlConnection = predefinedConnection;
+            SqlConfiguration = configuration;
+            Metrics = SqlMetrics;
         }
 
         protected override IEnumerator<ToSqlItem> ConvertDocsEnumerator(IEnumerator<Document> docs)
@@ -94,11 +94,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
                 FallbackTime = TimeSpan.FromSeconds(Math.Min(60 * 15, Math.Max(5, secondsSinceLastError * 2)));
             }
-        }
-
-        public override bool CanContinueBatch()
-        {
-            return true; // TODO
         }
 
         public DynamicJsonValue Simulate(SimulateSqlEtl simulateSqlEtl, DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite)
@@ -185,18 +180,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                         details: new ExceptionDetails(e)).ToJson()
                 };
             }
-        }
-
-        protected override void UpdateMetrics(DateTime startTime, Stopwatch duration, int batchSize)
-        {
-            Metrics.BatchSizeMeter.Mark(batchSize);
-
-            Metrics.UpdateReplicationPerformance(new SqlEtlPerformanceStats
-            {
-                BatchSize = batchSize,
-                Duration = duration.Elapsed,
-                Started = startTime
-            });
         }
     }
 }

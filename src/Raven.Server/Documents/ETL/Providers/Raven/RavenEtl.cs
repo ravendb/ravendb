@@ -4,6 +4,7 @@ using System.Diagnostics;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
+using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.Raven.Enumerators;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -21,6 +22,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         public RavenEtl(DocumentDatabase database, RavenEtlConfiguration configuration) : base(database, configuration, RavenEtlTag)
         {
             EtlConfiguration = configuration;
+            Metrics = new EtlMetricsCountersManager();
             _requestExecutor = RequestExecutor.CreateForSingleNode(EtlConfiguration.Url, EtlConfiguration.Database, EtlConfiguration.ApiKey);
             _script = new RavenEtlDocumentTransformer.ScriptInput(configuration);
         }
@@ -82,16 +84,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             var message = $"Load request applying {numberOfCommands} commands timed out.";
 
             throw new TimeoutException(message, e);
-        }
-
-        public override bool CanContinueBatch()
-        {
-            return true; // TODO 
-        }
-
-        protected override void UpdateMetrics(DateTime startTime, Stopwatch duration, int batchSize)
-        {
-            // TODO arek
         }
 
         public override void Dispose()
