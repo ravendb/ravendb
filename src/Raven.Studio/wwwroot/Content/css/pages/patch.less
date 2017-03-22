@@ -164,6 +164,9 @@
 
     .patch-main {
         width: 100%;
+        .help-block {
+            margin-bottom:0 !important;
+        }
     }
 
 
@@ -222,23 +225,93 @@
     }
 
     .patch-source {
-        border-color: @brand-primary;
-        background-color: @gray-base;
+        background-color: @gray-base;        
+        .shadow-style;
+    }
+
+    .patch-main {
         position: relative;
         z-index: 1051;
-        .shadow-style;
+
+        .help-block {
+            position:relative;
+            z-index:1052;
+        }
     }
 
     #test-container {
         z-index: 1052;
-        position: relative;
-        //display: block;        
+        position: relative;    
         margin-top: @grid-gutter-width/2;
         margin-bottom: @grid-gutter-width;
 
         .panel {
             .shadow-style;
         }
+    }
+
+    #preview {
+        pre {
+            min-height:200px;
+            //max-height:60vh;
+        }
+    }
+
+    #puts {
+        .put-item {
+            display:flex;
+
+            .put-heading {
+                background-color:transparent;
+                padding: 0 @grid-gutter-width/4;
+                width:25%;
+                flex-shrink:0;
+            }
+
+            pre {
+                padding: 0 @grid-gutter-width/4;
+                border:none;
+                flex-grow: 1;
+                display:none;
+            }
+
+            &+.put-item {
+                margin-top:@grid-gutter-width/4;
+                border-top:1px solid @gray-dark;
+            }
+        }
+
+        &.show-objects {
+            .put-placeholder {
+                display:none;
+            }
+
+            pre {
+                display:block;
+            }
+        }
+        
+    }
+
+    #loads, #output {
+        ul {
+            list-style:none;
+            padding:0;
+            margin:0;
+
+            li {
+                padding:@grid-gutter-width/4;
+
+                &+ li {
+                    border-top:1px solid @gray-dark;
+                }                
+            }
+        }
+    }
+
+    .flex-content.scroll {
+        max-height:50vh;
+        overflow-y:auto;
     }
 }
 

@@ -1435,6 +1435,19 @@ pre {
     cursor: not-allowed;
 }
 
+.ace_editor {
+    &.has-error {
+        border-color:@brand-danger;
+    }
+
+    .fullScreenModeLabel {
+        z-index:950;
+    }
+}
+
+.autocomplete-list {
+    top: 37px !important; 
+}
 
 @import "pages/tasks-sampleData";
 @import "pages/tasks-csvImport";
