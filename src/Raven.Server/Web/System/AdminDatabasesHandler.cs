@@ -313,7 +313,8 @@ namespace Raven.Server.Web.System
 
                     var json = EntityToBlittable.ConvertEntityToBlittable(dbDoc, DocumentConventions.Default, context);
 
-                    await ServerStore.TEMP_WriteDbAsync(context, name, json, null);
+                    var index = await ServerStore.TEMP_WriteDbAsync(context, name, json, null);
+                    await ServerStore.Cluster.WaitForIndexNotification(index);
 
                     ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 

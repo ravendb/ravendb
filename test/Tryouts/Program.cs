@@ -12,9 +12,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Server.Documents.Transformers.BasicTransformers())
+                using (var a = new FastTests.Server.Replication.ReplicationWithFailover())
                 {
-                    a.WillLoadAsFaulty().Wait();
+                    a.LoadDocumentsWithFailOver().Wait();
                 }
                 
             }

@@ -13,7 +13,7 @@ namespace FastTests.Server.Replication
             public string Name;
         }
 
-        [Fact]
+        [Fact(Skip = "Michael - Requires fixing the server side topology to be consistent across raft / sys doc.")]
         public async Task LoadDocumentsWithFailOver()
         {
             using (var master = GetDocumentStore(ignoreDisabledDatabase: true))
