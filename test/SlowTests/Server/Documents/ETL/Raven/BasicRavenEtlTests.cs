@@ -516,6 +516,27 @@ loadToOrders(orderData);
             Assert.Equal("Users", collections[0]);
         }
 
+
+        [Fact]
+        public void Error_if_script_does_not_contain_any_loadTo_method()
+        {
+            var config = new RavenEtlConfiguration
+            {
+                Name = "test",
+                Url = "http://localhost:8080",
+                Database = "Northwind",
+                Collection = "Users",
+                Script = @"this.Name = 'aaa';"
+            };
+
+            List<string> errors;
+            config.Validate(out errors);
+
+            Assert.Equal(1, errors.Count);
+
+            Assert.Equal("No `loadTo[CollectionName]` method call found in the script", errors[0]);
+        }
+
         private class UserWithAddress : User
         {
             public Address Address { get; set; }
