@@ -25,6 +25,7 @@ namespace Raven.Server.Documents
         public ChangeVectorEntry[] ChangeVector;
         public DateTime LastModified;
         public DocumentFlags Flags;
+        public NonPersistentDocumentFlags NonPersistentFlags;
         public short TransactionMarker;
         public IEnumerable<Attachment> Attachments;
 

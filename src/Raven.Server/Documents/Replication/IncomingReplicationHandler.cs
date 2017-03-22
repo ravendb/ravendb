@@ -1127,7 +1127,7 @@ namespace Raven.Server.Documents.Replication
                                     document.BlittableValidation();
                                 }
 
-                                if ((item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision)
+                                if ((item.Flags & DocumentFlags.FromVersionStorage) == DocumentFlags.FromVersionStorage)
                                 {
                                     if (database.BundleLoader.VersioningStorage == null)
                                     {

@@ -298,7 +298,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    _database.DocumentsStorage.Put(context, key, null, document.Data, flags: document.Flags);
+                    _database.DocumentsStorage.Put(context, key, null, document.Data, nonPersistentFlags: document.NonPersistentFlags);
                 }
             }
 
@@ -308,7 +308,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_buildType == BuildVersionType.V3 == false)
                     return false;
 
-                if ((document.Flags & DocumentFlags.LegacyRevision) != DocumentFlags.LegacyRevision)
+                if ((document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyRevision) != NonPersistentDocumentFlags.LegacyRevision)
                     return false;
 
                 return key.Contains(PreV4RevisionsDocumentKey);
