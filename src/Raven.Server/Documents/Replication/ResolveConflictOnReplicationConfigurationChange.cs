@@ -167,8 +167,7 @@ namespace Raven.Server.Documents.Replication
             if (TryResolveUsingDefaultResolverInternal(
                 context,
                 _documentReplicationLoader.ReplicationDocument?.DefaultResolver,
-                conflictList,
-                hasTombstoneInStorage: false))
+                conflictList))
             {
                 stats.AddResolvedBy("DatabaseResolver", conflictList.Count);
                 return true;
@@ -176,7 +175,7 @@ namespace Raven.Server.Documents.Replication
 
             if (_documentReplicationLoader.ReplicationDocument?.DocumentConflictResolution == StraightforwardConflictResolution.ResolveToLatest)
             {
-                ResolveToLatest(context, conflictList, false);
+                ResolveToLatest(context, conflictList);
                 stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
                 return true;
             }
@@ -212,8 +211,7 @@ namespace Raven.Server.Documents.Replication
         public bool TryResolveUsingDefaultResolverInternal(
             DocumentsOperationContext context,
             DatabaseResolver resolver,
-            IReadOnlyList<DocumentConflict> conflicts,
-            bool hasTombstoneInStorage)
+            IReadOnlyList<DocumentConflict> conflicts)
         {
             if (resolver?.ResolvingDatabaseId == null)
             {
@@ -248,7 +246,7 @@ namespace Raven.Server.Documents.Replication
                 return false;
 
             resolved.ChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-            PutResolvedDocumentBackToStorage(context, resolved, hasTombstoneInStorage);
+            PutResolvedDocumentBackToStorage(context, resolved);
             return true;
         }
 
@@ -287,16 +285,15 @@ namespace Raven.Server.Documents.Replication
         }
 
         public void PutResolvedDocumentBackToStorage(
-           DocumentsOperationContext ctx,
-           DocumentConflict conflict,
-           bool hasLocalTombstone)
+           DocumentsOperationContext context,
+           DocumentConflict conflict)
         {
             if (conflict.Doc == null)
             {
-                Slice keySlice;
-                using (DocumentKeyWorker.GetSliceFromKey(ctx, conflict.LoweredKey, out keySlice))
+                Slice loweredKey;
+                using (Slice.External(context.Allocator, conflict.LoweredKey, out loweredKey))
                 {
-                    _database.DocumentsStorage.Delete(ctx, keySlice, conflict.LoweredKey, null,
+                    _database.DocumentsStorage.Delete(context, loweredKey, conflict.Key, null,
                         _database.Time.GetUtcNow().Ticks, conflict.ChangeVector, conflict.Collection);
                     return;
                 }
@@ -308,13 +305,13 @@ namespace Raven.Server.Documents.Replication
             // we are saving it
 
             // the resolved document could be an update of the existing document, so it's a good idea to clone it also before updating.
-            using (var clone = conflict.Doc.Clone(ctx))
+            using (var clone = conflict.Doc.Clone(context))
             {
                 // handle the case where we resolve a conflict for a document from a different collection
-                DeleteDocumentFromDifferentCollectionIfNeeded(ctx, conflict);
+                DeleteDocumentFromDifferentCollectionIfNeeded(context, conflict);
 
                 ReplicationUtils.EnsureCollectionTag(clone, conflict.Collection);
-                _database.DocumentsStorage.Put(ctx, conflict.LoweredKey, null, clone, null, conflict.ChangeVector);
+                _database.DocumentsStorage.Put(context, conflict.LoweredKey, null, clone, null, conflict.ChangeVector);
             }
         }
 
@@ -367,14 +364,13 @@ namespace Raven.Server.Documents.Replication
             updatedConflict.Doc = resolved;
             updatedConflict.Collection = collection;
             updatedConflict.ChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-            PutResolvedDocumentBackToStorage(context, updatedConflict, hasLocalTombstone);
+            PutResolvedDocumentBackToStorage(context, updatedConflict);
             return true;
         }
 
         public void ResolveToLatest(
             DocumentsOperationContext context,
-            IReadOnlyList<DocumentConflict> conflicts,
-            bool hasLocalTombstone)
+            IReadOnlyList<DocumentConflict> conflicts)
         {
             var latestDoc = conflicts[0];
             var latestTime = latestDoc.LastModified.Ticks;
@@ -389,7 +385,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             latestDoc.ChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-            PutResolvedDocumentBackToStorage(context, latestDoc, hasLocalTombstone);
+            PutResolvedDocumentBackToStorage(context, latestDoc);
         }
     }
 }

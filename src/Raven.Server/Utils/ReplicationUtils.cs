@@ -46,10 +46,10 @@ namespace Raven.Server.Utils
             var result = context.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, key);
             ChangeVectorEntry[] local;
 
-            if (result.Item1 != null)
-                local = result.Item1.ChangeVector;
-            else if (result.Item2 != null)
-                local = result.Item2.ChangeVector;
+            if (result.Document != null)
+                local = result.Document.ChangeVector;
+            else if (result.Tombstone != null)
+                local = result.Tombstone.ChangeVector;
             else
                 return ConflictStatus.Update; //document with 'key' doesnt exist locally, so just do PUT
 

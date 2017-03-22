@@ -15,9 +15,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new ReplicationWithVersioning())
+                using (var a = new ReplicationConflictsTests())
                 {
-                    a.ReplicateVersionsIgnoringConflicts().Wait();
+                    a.Conflict_insensitive_check();
                 }
             }
             for (int i = 0; i < 100; i++)

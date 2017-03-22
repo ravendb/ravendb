@@ -91,11 +91,11 @@ namespace Raven.Server.Documents.Replication
                     var localDocumentTuple =
                         documentsContext.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(documentsContext,
                             id, false);
-                    var local = DocumentConflict.From(documentsContext, localDocumentTuple.Item1) ?? DocumentConflict.From(localDocumentTuple.Item2);
+                    var local = DocumentConflict.From(documentsContext, localDocumentTuple.Document) ?? DocumentConflict.From(localDocumentTuple.Tombstone);
                     if (local != null)
                         conflicts.Add(local);
 
-                    _conflictResolver.ResolveToLatest(documentsContext, conflicts, local != null && local.Doc == null);
+                    _conflictResolver.ResolveToLatest(documentsContext, conflicts);
                     break;
                 default:
                     _database.DocumentsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection);
@@ -118,13 +118,13 @@ namespace Raven.Server.Documents.Replication
                     .GetDocumentOrTombstone(
                         documentsContext,
                         id);
-                if (relevantLocalDoc.Item1 != null)
+                if (relevantLocalDoc.Document != null)
                 {
-                    conflictedDocs.Add(DocumentConflict.From(documentsContext, relevantLocalDoc.Item1));
+                    conflictedDocs.Add(DocumentConflict.From(documentsContext, relevantLocalDoc.Document));
                 }
-                else if (relevantLocalDoc.Item2 != null)
+                else if (relevantLocalDoc.Tombstone != null)
                 {
-                    conflictedDocs.Add(DocumentConflict.From(relevantLocalDoc.Item2));
+                    conflictedDocs.Add(DocumentConflict.From(relevantLocalDoc.Tombstone));
                     isTomstone = true;
                 }
             }
@@ -169,8 +169,8 @@ namespace Raven.Server.Documents.Replication
         {
             var conflicts = new List<DocumentConflict>(_database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id));
             var localDocumentTuple = _database.DocumentsStorage.GetDocumentOrTombstone(context, id, false);
-            var localDoc = DocumentConflict.From(context, localDocumentTuple.Item1) ??
-                           DocumentConflict.From(localDocumentTuple.Item2);
+            var localDoc = DocumentConflict.From(context, localDocumentTuple.Document) ??
+                           DocumentConflict.From(localDocumentTuple.Tombstone);
             if (localDoc != null)
                 conflicts.Add(localDoc);
             conflicts.Add(new DocumentConflict
@@ -186,8 +186,7 @@ namespace Raven.Server.Documents.Replication
             return _conflictResolver.TryResolveUsingDefaultResolverInternal(
                 context,
                 _replicationDocument?.DefaultResolver,
-                conflicts,
-                localDocumentTuple.Item2 != null);
+                conflicts);
         }
 
         private void HandleHiloConflict(DocumentsOperationContext context, string id, BlittableJsonReaderObject doc)
@@ -234,8 +233,8 @@ namespace Raven.Server.Documents.Replication
             ChangeVectorEntry[] incomingChangeVector)
         {
             var existing = _database.DocumentsStorage.GetDocumentOrTombstone(context, key, throwOnConflict: false);
-            var existingDoc = existing.Item1;
-            var existingTombstone = existing.Item2;
+            var existingDoc = existing.Document;
+            var existingTombstone = existing.Tombstone;
 
             if (existingDoc != null && existingDoc.IsMetadataEqualTo(incomingDoc) &&
                     existingDoc.IsEqualTo(incomingDoc))
@@ -250,13 +249,11 @@ namespace Raven.Server.Documents.Replication
             {
                 // Conflict between two tombstones resolves to the local tombstone
                 existingTombstone.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
-                Slice keySlice;
-                using (DocumentKeyWorker.GetSliceFromKey(context, existingTombstone.Key, out keySlice))
+                Slice loweredKey;
+                using (Slice.External(context.Allocator, existingTombstone.LoweredKey, out loweredKey))
                 {
-                    _database.DocumentsStorage.Delete(context, keySlice, existingTombstone.Key, null,
-                    lastModifiedTicks,
-                    existingTombstone.ChangeVector,
-                    existingTombstone.Collection);
+                    _database.DocumentsStorage.Delete(context, loweredKey, existingTombstone.Key, null, 
+                        lastModifiedTicks, existingTombstone.ChangeVector, existingTombstone.Collection);
                 }
                 return true;
             }
