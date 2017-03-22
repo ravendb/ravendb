@@ -58,7 +58,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 SetupEtl(master, slave, "users", @"
 if (this.Age % 2 == 0) 
-    return null; 
+    return;
 else 
     this.Name = 'transformed'; 
 loadToUsers(this);");
