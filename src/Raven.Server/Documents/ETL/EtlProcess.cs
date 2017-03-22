@@ -4,10 +4,12 @@ using System.Diagnostics;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
+using Raven.Server.Config.Settings;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -37,6 +39,8 @@ namespace Raven.Server.Documents.ETL
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim();
         private readonly EtlProcessConfiguration _configuration;
         private readonly CancellationTokenSource _cts;
+        private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
+        private NativeMemory.ThreadStats _threadAllocations;
         private Thread _thread;
         protected readonly CurrentEtlRun CurrentBatch = new CurrentEtlRun();
         protected readonly Logger Logger;
@@ -165,7 +169,36 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract void LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
 
-        public abstract bool CanContinueBatch();
+        public bool CanContinueBatch()
+        {
+            if (CurrentBatch.NumberOfExtractedItems >= Database.Configuration.Etl.MaxNumberOfExtractedDocuments)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Stopping the batch because it has already processed {CurrentBatch.NumberOfExtractedItems} items");
+
+                return false;
+            }
+
+            if (CurrentBatch.Duration.Elapsed >= Database.Configuration.Etl.ExtractAndTransformTimeout.AsTimeSpan)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Stopping the batch after {CurrentBatch.Duration.Elapsed} due to extract and transform processing timeout");
+
+                return false;
+            }
+
+            if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
+            {
+                ProcessMemoryUsage memoryUsage;
+                if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
+                        Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out memoryUsage) == false)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         protected void LoadLastProcessedEtag(DocumentsOperationContext context)
         {
@@ -250,7 +283,6 @@ namespace Raven.Server.Documents.ETL
                 CurrentBatch.Reset();
 
                 var startTime = Database.Time.GetUtcNow();
-                var duration = Stopwatch.StartNew();
 
                 if (FallbackTime != null)
                 {
@@ -262,6 +294,8 @@ namespace Raven.Server.Documents.ETL
 
                 try
                 {
+                    _threadAllocations = NativeMemory.ThreadAllocations.Value;
+
                     DocumentsOperationContext context;
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                     {
@@ -307,11 +341,11 @@ namespace Raven.Server.Documents.ETL
                 }
                 finally
                 {
-                    duration.Stop();
+                    CurrentBatch.Stop();
 
                     if (didWork)
                     {
-                        UpdateMetrics(startTime, duration, CurrentBatch.NumberOfExtractedItems);
+                        UpdateMetrics(startTime, CurrentBatch.Duration, CurrentBatch.NumberOfExtractedItems);
 
                         if (CancellationToken.IsCancellationRequested == false)
                         {
