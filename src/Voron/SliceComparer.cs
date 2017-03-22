@@ -102,6 +102,58 @@ namespace Voron
             byte* valuePtr = value.Content.Ptr;
 
             return Memory.CompareInline(prefixPtr, valuePtr, prefix.Size) == 0;
-        }  
+        }
+    }
+
+    public struct SliceStructComparer : IEqualityComparer<Slice>, IComparer<Slice>
+    {
+        public static readonly SliceStructComparer Instance = new SliceStructComparer();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Compare(Slice x, Slice y)
+        {
+            Debug.Assert(x.HasValue && y.HasValue);
+            Debug.Assert(x.Options == SliceOptions.Key);
+            Debug.Assert(y.Options == SliceOptions.Key);
+
+            var x1 = x.Content;
+            var y1 = y.Content;
+            if (x1 == y1) // Reference equality (specially useful on searching on collections)
+                return 0;
+
+            int r, keyDiff;
+            unsafe
+            {
+                var size = Math.Min(x1.Length, y1.Length);
+                keyDiff = x1.Length - y1.Length;
+
+                r = Memory.CompareInline(x1.Ptr, y1.Ptr, size);
+            }
+
+            if (r != 0)
+                return r;
+
+            return keyDiff;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(Slice x, Slice y)
+        {
+            Debug.Assert(x.Options == SliceOptions.Key);
+            Debug.Assert(y.Options == SliceOptions.Key);
+
+            var srcKey = x.Content.Length;
+            var otherKey = y.Content.Length;
+            if (srcKey != otherKey)
+                return false;
+
+            return Compare(x, y) == 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(Slice obj)
+        {
+            return obj.GetHashCode();
+        }
     }
 }
