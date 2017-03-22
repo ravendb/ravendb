@@ -13,7 +13,7 @@ type rTreeLeaf = {
     minY: number;
     maxX: number;
     maxY: number;
-    actionType: "toggleIndexes" | "trackItem" | "gapItem";
+    actionType: "toggleIndexes" | "trackItem" | "closedTrackItem" | "gapItem";
     arg: any;
 }
 
@@ -22,7 +22,8 @@ class hitTest {
     private rTree = rbush<rTreeLeaf>();
     private container: d3.Selection<any>;    
     private onToggleIndexes: () => void;
-    private handleTrackTooltip: (item: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) => void;
+    private handleTrackTooltip: (item: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) => void;   
+    private handleClosedTrackTooltip: (item: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) => void;
     private handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void;
     private removeTooltip: () => void;
 
@@ -33,13 +34,15 @@ class hitTest {
     init(container: d3.Selection<any>,
         onToggleIndexes: () => void,
         handleTrackTooltip: (item: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) => void,
+        handleClosedTrackTooltip: (item: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) => void,
         handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void,
         removeTooltip: () => void) {
-        this.container = container;
-        this.onToggleIndexes = onToggleIndexes;
-        this.handleTrackTooltip = handleTrackTooltip;
-        this.handleGapTooltip = handleGapTooltip;
-        this.removeTooltip = removeTooltip;
+            this.container = container;
+            this.onToggleIndexes = onToggleIndexes;
+            this.handleTrackTooltip = handleTrackTooltip;
+            this.handleClosedTrackTooltip = handleClosedTrackTooltip;
+            this.handleGapTooltip = handleGapTooltip;
+            this.removeTooltip = removeTooltip;
     }
 
     registerTrackItem(x: number, y: number, width: number, height: number, element: Raven.Server.Documents.Handlers.IOMetricsRecentStats) {
@@ -49,6 +52,18 @@ class hitTest {
             maxX: x + width,
             maxY: y + height,
             actionType: "trackItem",
+            arg: element
+        } as rTreeLeaf;
+        this.rTree.insert(data);
+    }
+
+    registerClosedTrackItem(x: number, y: number, width: number, height: number, element: Raven.Server.Documents.Handlers.IOMetricsRecentStats) {
+        const data = {
+            minX: x,
+            minY: y,
+            maxX: x + width,
+            maxY: y + height,
+            actionType: "closedTrackItem",
             arg: element
         } as rTreeLeaf;
         this.rTree.insert(data);
@@ -110,13 +125,19 @@ class hitTest {
             this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);          
         }
         else {
-            const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
-            if (currentGapItem) {
-                this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
+            const currentItem = items.filter(x => x.actionType === "closedTrackItem").map(x => x.arg as Raven.Server.Documents.Handlers.IOMetricsRecentStats)[0];
+            if (currentItem) {
+                this.handleClosedTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
             }
             else {
-                this.removeTooltip();
-            }
+                const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
+                if (currentGapItem) {
+                    this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
+                }
+                else {
+                    this.removeTooltip();
+                }
+            }           
         }
     }
 
@@ -277,6 +298,10 @@ class ioStats extends viewModelBase {
     private brushSection: HTMLCanvasElement; // a virtual canvas for brush section
     private brushAndZoomCallbacksDisabled = false;    
 
+    private indexesItemsStartEndJW: Array<[number, number]>; // Start & End times for joined duration times for closed index track items
+    private indexesItemsStartEndDF: Array<[number, number]>; 
+    private indexesItemsStartEndDS: Array<[number, number]>; 
+
     /* d3 */
 
     private xTickFormat = d3.time.format("%H:%M:%S");
@@ -327,13 +352,14 @@ class ioStats extends viewModelBase {
 
         this.tooltip = d3.select(".tooltip");
         [this.totalWidth, this.totalHeight] = this.getPageHostDimenensions();
-        this.totalHeight -= 120; // substract toolbar height
+        this.totalHeight -= 50; // substract toolbar height
               
         this.initCanvas();     
 
         this.hitTest.init(this.svg,
             () => this.onToggleIndexes(),
-            (item, x, y) => this.handleTrackTooltip(item, x, y),
+            (trackItem, x, y) => this.handleTrackTooltip(trackItem, x, y),
+            (closedTrackItem, x, y) => this.handleClosedTrackTooltip(closedTrackItem, x, y),
             (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
             () => this.hideTooltip());                    
          
@@ -893,9 +919,12 @@ class ioStats extends viewModelBase {
         let yStartItem: number;
         let firstIndexTrack = true;
 
+        this.indexesItemsStartEndJW = []; 
+        this.indexesItemsStartEndDF = [];
+        this.indexesItemsStartEndDS = []; 
+
         try {
             context.save();
-
 
             context.translate(0, ioStats.brushSectionHeight); 
             context.clearRect(0, 0, this.totalWidth, this.totalHeight - ioStats.brushSectionHeight);
@@ -982,8 +1011,19 @@ class ioStats extends viewModelBase {
                                     this.hitTest.registerTrackItem(x1 - 2, yStartItem, dx + 2, ioStats.itemHeight, recentItem);
                                 }
                                 else {
-                                    // 3.8 If on the closed index track, might as well register toggle, so that indexes details will open, can be nice 
+                                    // 3.8 On the closed index track: 
+                                    // Register toggle, so that indexes details will open
                                     this.hitTest.registerIndexToggle(x1 - 5, yStartItem, dx + 5, ioStats.itemHeight);
+
+                                    // Register closed index track item for toolip
+                                    this.hitTest.registerClosedTrackItem(x1 - 2, yStartItem, dx + 2, ioStats.itemHeight, recentItem);
+
+                                    // Update closed index track StartEnd array (durations array), used in the tooltip on closed index track items
+                                    switch (recentItem.Type) {
+                                        case ioStats.journalWriteString: this.indexesItemsStartEndJW.push([itemStartDateAsInt, itemEndDateAsInt]); break;
+                                        case ioStats.dataFlushString: this.indexesItemsStartEndDF.push([itemStartDateAsInt, itemEndDateAsInt]); break;
+                                        case ioStats.dataSyncString: this.indexesItemsStartEndDS.push([itemStartDateAsInt, itemEndDateAsInt]); break;
+                                    }
                                 }
                             }
                         }
@@ -991,12 +1031,46 @@ class ioStats extends viewModelBase {
                 };
             };
 
-            // 4. Draw gaps   
+            // 4. Comact closed index track StartEnd durations array
+            this.indexesItemsStartEndJW = this.compactDurationsInfo(this.indexesItemsStartEndJW);
+            this.indexesItemsStartEndDF = this.compactDurationsInfo(this.indexesItemsStartEndDF);
+            this.indexesItemsStartEndDS = this.compactDurationsInfo(this.indexesItemsStartEndDS);
+
+            // 5. Draw gaps   
             this.drawGaps(context, xScale);
         }
         finally {
             context.restore();
         }
+    }
+
+    private compactDurationsInfo(durationsInfo: Array<[number, number]>): Array<[number, number]>{
+
+        let joinedDurations: Array<[number, number]> = [];
+        let joinedIndex = 0;
+
+        // 1. Sort array (by start time, a[0] is start time, a[1] is end time)
+        durationsInfo.sort((a, b) => a[0] === b[0] ? a[1] - b[1] : a[0] - b[0]);
+
+        // 2. Join the overlapping array durations
+        joinedDurations.push(durationsInfo[0]);
+
+        for (let i = 1; i < durationsInfo.length; i++) {            
+            const currentStart = durationsInfo[i][0];
+            const currentEnd = durationsInfo[i][1];
+
+            if (currentStart <= joinedDurations[joinedIndex][1]) {
+                if (currentEnd > joinedDurations[joinedIndex][1]) {
+                    joinedDurations[joinedIndex][1] = currentEnd;
+                }
+            }
+            else {
+                joinedIndex++;
+                joinedDurations.push(durationsInfo[i]);
+            }
+        }
+
+        return joinedDurations;
     }
 
     private filtered(envPath: string): boolean {             
@@ -1315,6 +1389,46 @@ class ioStats extends viewModelBase {
                 "<br/>Gap duration: " + generalUtils.formatMillis((element).durationInMillis);
             this.handleTooltip(element, x, y, tooltipHtml);
         }
+    }
+
+    private handleClosedTrackTooltip(element: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) {
+        const currentDatum = this.tooltip.datum();
+
+        if (currentDatum !== element) {
+            let typeString;
+            let duration;
+
+            switch (element.Type) {
+                case ioStats.journalWriteString:
+                    typeString = "Journal Write";
+                    duration = this.getJoinedDuration(this.indexesItemsStartEndJW, element);
+                    break;
+                case ioStats.dataFlushString:
+                    typeString = "Voron Data Flush";
+                    duration = this.getJoinedDuration(this.indexesItemsStartEndDF, element);
+                    break;
+                case ioStats.dataSyncString:
+                    typeString = "Voron Data Sync";
+                    duration = this.getJoinedDuration(this.indexesItemsStartEndDS, element);
+                    break;
+            }
+            let tooltipHtml = `*** ${typeString} ***<br/>`;       
+            duration = (duration === 0) ? "0" : generalUtils.formatMillis(duration);                                      
+            tooltipHtml += `Duration: ${duration}<br/>`;
+            tooltipHtml += `Click for details`;           
+
+            this.handleTooltip(element, x, y, tooltipHtml);
+        }
+    }
+
+    private getJoinedDuration(joinedDurationInfo: Array<[number, number]>, element: Raven.Server.Documents.Handlers.IOMetricsRecentStats): number {      
+        const elementStart = new Date(element.Start).getTime();
+        const elementEnd = new Date(elementStart + element.Duration).getTime();
+       
+        // Find containing part from the joined durations array
+        let joinedDuration = joinedDurationInfo.find(duration => (duration[0] <= elementStart) && (elementEnd <= duration[1]));
+        let duration = joinedDuration[1] - joinedDuration[0];       
+        return duration;
     }
 
     private handleTrackTooltip(element: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) {     
