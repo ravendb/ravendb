@@ -232,7 +232,7 @@ namespace Raven.Server.Documents
 
         public void Initialize(StorageEnvironmentOptions options)
         {
-            options.SchemaVersion = 4;
+            options.SchemaVersion = 5;
             try
             {
                 Environment = new StorageEnvironment(options);
@@ -1398,8 +1398,7 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject document,
             long? lastModifiedTicks = null,
             ChangeVectorEntry[] changeVector = null,
-            DocumentFlags flags = DocumentFlags.None,
-            NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
+            DocumentFlags flags = DocumentFlags.None)
         {
             if (context.Transaction == null)
             {
@@ -1496,14 +1495,29 @@ namespace Raven.Server.Documents
                     if (_documentDatabase.BundleLoader.VersioningStorage != null)
                     {
                         VersioningConfigurationCollection configuration;
-                        if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(
-                            collectionName, 
-                            nonPersistentFlags,
-                            () => oldValue.Pointer != null ? TableValueToDocument(context, ref oldValue) : null,
-                            document,
-                            ref flags,
-                            out configuration))
+                        var version = _documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, document, out configuration);
+                        if (version)
                         {
+                            if ((flags & DocumentFlags.FromSmuggler) == DocumentFlags.FromSmuggler)
+                            {
+                                // Do not create a revision if we import for smuggler and we have no change with the previous document
+                                var oldDocument = oldValue.Pointer != null ? TableValueToDocument(context, ref oldValue) : null;
+                                if (oldDocument == null)
+                                {
+                                    // we are not going to create a revision if it's an import from v3
+                                    // (since this import is going to import revisions as well)
+                                    version = (flags & DocumentFlags.LegacyVersioned) != DocumentFlags.LegacyVersioned;
+                                }
+                                else if (oldDocument.IsMetadataEqualTo(document) && oldDocument.IsEqualTo(document))
+                                {
+                                    // no need to create a new revision, both documents have identical content
+                                    version = false;
+                                }
+                            }
+                        }
+                        if (version)
+                        {
+                            flags |= DocumentFlags.Versioned;
                             _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, configuration);
                         }
                     }

@@ -144,43 +144,38 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-        public bool ShouldVersionDocument(CollectionName collectionName,
-            NonPersistentDocumentFlags nonPersistentFlags,
-            Func<Document> getExistingDocument,
-            BlittableJsonReaderObject document,
-            ref DocumentFlags documentFlags,
-            out VersioningConfigurationCollection configuration)
+        public bool ShouldVersionDocument(CollectionName collectionName, BlittableJsonReaderObject document, out VersioningConfigurationCollection configuration)
         {
+            BlittableJsonReaderObject metadata;
+            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata))
+            {
+                configuration = null;
+                bool disableVersioning;
+                if (metadata.TryGet(Constants.Documents.Versioning.DisableVersioning, out disableVersioning))
+                {
+                    DynamicJsonValue mutatedMetadata;
+                    Debug.Assert(metadata.Modifications == null);
+
+                    metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
+                    mutatedMetadata.Remove(Constants.Documents.Versioning.DisableVersioning);
+                    if (disableVersioning)
+                        return false;
+                }
+
+                bool enableVersioning;
+                if (metadata.TryGet(Constants.Documents.Versioning.EnableVersioning, out enableVersioning))
+                {
+                    DynamicJsonValue mutatedMetadata = metadata.Modifications;
+                    if (mutatedMetadata == null)
+                        metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
+                    mutatedMetadata.Remove(Constants.Documents.Versioning.EnableVersioning);
+                    if (enableVersioning)
+                        return true;
+                }
+            }
+
             configuration = GetVersioningConfiguration(collectionName);
-            if (configuration.Active == false)
-                return false;
-
-            try
-            {
-                if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler)
-                    return true;
-
-                var existingDocument = getExistingDocument();
-                if (existingDocument == null)
-                {
-                    // we are not going to create a revision if it's an import from v3
-                    // (since this import is going to import revisions as well)
-                    return (nonPersistentFlags & NonPersistentDocumentFlags.LegacyVersioned) != NonPersistentDocumentFlags.LegacyVersioned;
-                }
-
-                // compare the contents of the existing and the new document
-                if (existingDocument.IsMetadataEqualTo(document) && existingDocument.IsEqualTo(document))
-                {
-                    // no need to create a new revision, both documents have identical content
-                    return false;
-                }
-
-                return true;
-            }
-            finally
-            {
-                documentFlags |= DocumentFlags.Versioned;
-            }
+            return configuration.Active;
         }
 
         public void PutFromDocument(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, 
@@ -228,7 +223,7 @@ namespace Raven.Server.Documents.Versioning
         {
             BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
 
-            flags |= DocumentFlags.FromVersionStorage;
+            flags |= DocumentFlags.Revision;
 
             byte* keyPtr;
             int keySize;
