@@ -252,8 +252,7 @@ namespace Raven.Server.Documents.Replication
                 Slice loweredKey;
                 using (Slice.External(context.Allocator, existingTombstone.LoweredKey, out loweredKey))
                 {
-                    _database.DocumentsStorage.Delete(context, loweredKey, existingTombstone.Key, null, 
-                        lastModifiedTicks, existingTombstone.ChangeVector, existingTombstone.Collection);
+                    _database.DocumentsStorage.DeleteConflicts(context, loweredKey, null, existingTombstone.ChangeVector);
                 }
                 return true;
             }

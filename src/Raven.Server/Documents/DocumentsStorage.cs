@@ -871,25 +871,9 @@ namespace Raven.Server.Documents
 
             if (ConflictsStorage.ConflictsCount != 0)
             {
-                Slice prefixSlice;
-                using (ConflictsStorage.GetConflictsKeyPrefix(context, loweredKey, out prefixSlice))
-                {
-                    var conflicts = ConflictsStorage.GetConflictsFor(context, prefixSlice);
-                    if (conflicts.Count > 0)
-                    {
-                        // We do have a conflict for our deletion candidate
-                        // Since this document resolve the conflict we dont need to alter the change vector.
-                        // This way we avoid another replication back to the source
-                        if (expectedEtag.HasValue)
-                        {
-                            ConflictsStorage.ThrowConcurrencyExceptionOnConflict(context, loweredKey.Content.Ptr, loweredKey.Size, expectedEtag);
-                        }
-
-                        long etag;
-                        collectionName = ResolveConflictAndAddTombstone(context, changeVector, conflicts, out key, out etag);
-                        return FinishDelete(context, etag, key, collectionName);
-                    }
-                }
+                var result = DeleteConflicts(context, loweredKey, expectedEtag, changeVector);
+                if (result != null)
+                    return result;
             }
             
             var local = GetDocumentOrTombstone(context, loweredKey, throwOnConflict: false);
@@ -992,6 +976,34 @@ namespace Raven.Server.Documents
                     DocumentFlags.None);
                 return FinishDelete(context, etag, key ?? loweredKey.ToString(), collectionName);
             }
+        }
+
+        public DeleteOperationResult? DeleteConflicts(DocumentsOperationContext context,
+            Slice loweredKey,
+            long? expectedEtag,
+            ChangeVectorEntry[] changeVector)
+        {
+            Slice prefixSlice;
+            using (ConflictsStorage.GetConflictsKeyPrefix(context, loweredKey, out prefixSlice))
+            {
+                var conflicts = ConflictsStorage.GetConflictsFor(context, prefixSlice);
+                if (conflicts.Count > 0)
+                {
+                    // We do have a conflict for our deletion candidate
+                    // Since this document resolve the conflict we dont need to alter the change vector.
+                    // This way we avoid another replication back to the source
+                    if (expectedEtag.HasValue)
+                    {
+                        ConflictsStorage.ThrowConcurrencyExceptionOnConflict(context, loweredKey.Content.Ptr, loweredKey.Size, expectedEtag);
+                    }
+
+                    long etag;
+                    string key;
+                    var collectionName = ResolveConflictAndAddTombstone(context, changeVector, conflicts, out key, out etag);
+                    return FinishDelete(context, etag, key, collectionName);
+                }
+            }
+            return null;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

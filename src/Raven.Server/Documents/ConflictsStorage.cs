@@ -362,13 +362,9 @@ namespace Raven.Server.Documents
             if (ConflictsCount == 0)
                 return ImmutableAppendOnlyList<DocumentConflict>.Empty;
 
-            byte* lowerKey;
-            int lowerSize;
-            byte* keyPtr;
-            int keySize;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
-            Slice prefixSlice;
-            using (GetConflictsKeyPrefix(context, lowerKey, lowerSize, out prefixSlice))
+            Slice lowerKey, prefixSlice;
+            using (DocumentKeyWorker.GetSliceFromKey(context, key, out lowerKey))
+            using (GetConflictsKeyPrefix(context, lowerKey, out prefixSlice))
             {
                 return GetConflictsFor(context, prefixSlice);
             }

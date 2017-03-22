@@ -96,7 +96,7 @@ namespace FastTests.Server.Replication
             int timeout = 5000;
 
             if (Debugger.IsAttached)
-                timeout *= 10;
+                timeout *= 100;
             GetConflictsResult conflicts;
             var sw = Stopwatch.StartNew();
             do
