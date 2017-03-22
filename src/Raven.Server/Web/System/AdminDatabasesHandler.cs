@@ -88,8 +88,6 @@ namespace Raven.Server.Web.System
             {
                 context.OpenReadTransaction();
 
-                var dbId = Constants.Documents.Prefix + name;
-
                 long etag;
                 var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
                 //The case where an explicit node was requested 
@@ -116,7 +114,7 @@ namespace Raven.Server.Web.System
                 }
                 var topologyJson = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                var newEtag = await ServerStore.TEMP_WriteDbAsync(context, dbId, topologyJson, etag);
+                var newEtag = await ServerStore.TEMP_WriteDbAsync(context, name, topologyJson, etag);
 
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
@@ -127,7 +125,7 @@ namespace Raven.Server.Web.System
                     context.Write(writer, new DynamicJsonValue
                     {
                         ["ETag"] = newEtag,
-                        ["Key"] = dbId,
+                        ["Key"] = name,
                         [nameof(DatabaseRecord.Topology)] = databaseRecord.Topology.ToJson()
                     });
                     writer.Flush();
@@ -151,11 +149,9 @@ namespace Raven.Server.Web.System
             {
                 context.OpenReadTransaction();
 
-                var dbId = Constants.Documents.Prefix + name;
-
                 var etag = GetLongFromHeaders("ETag");
 
-                var json = context.ReadForDisk(RequestBodyStream(), dbId);
+                var json = context.ReadForDisk(RequestBodyStream(), name);
                 var document = JsonDeserializationServer.DatabaseDocument(json);
 
                 try
@@ -192,7 +188,7 @@ namespace Raven.Server.Web.System
                     [nameof(DatabaseRecord.Topology)] = topologyJson
                 };
 
-                var newEtag = await ServerStore.TEMP_WriteDbAsync(context, dbId, json, etag);
+                var newEtag = await ServerStore.TEMP_WriteDbAsync(context, name, json, etag);
 
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
@@ -203,7 +199,7 @@ namespace Raven.Server.Web.System
                     context.Write(writer, new DynamicJsonValue
                     {
                         ["ETag"] = newEtag,
-                        ["Key"] = dbId,
+                        ["Key"] = name,
                         [nameof(DatabaseRecord.Topology)] = topology.ToJson()
                     });
                     writer.Flush();

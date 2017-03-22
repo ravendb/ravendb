@@ -12,9 +12,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Server.Documents.PeriodicExport.PeriodicExportTests())
+                using (var a = new FastTests.Server.Documents.Transformers.BasicTransformers())
                 {
-                    a.CanExportToDirectory().Wait();
+                    a.WillLoadAsFaulty().Wait();
                 }
                 
             }

@@ -6,6 +6,8 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
+using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -29,8 +31,12 @@ namespace Raven.Server.Documents.Handlers
 
                 // validating transformer definition
                 var transformerDefinition = JsonDeserializationServer.TransformerDefinition(json);
+
+                // validate that this transformer compiles
+                IndexAndTransformerCompilationCache.GetTransformerInstance(transformerDefinition);
+
                 transformerDefinition.Name = name;
-                long index = 0;
+                long index;
                 using (var putTransfomerCommand = context.ReadObject(new DynamicJsonValue
                 {
                     ["Type"] = nameof(PutTransformerCommand),
@@ -43,7 +49,6 @@ namespace Raven.Server.Documents.Handlers
 
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
-                var createdTransformer = Database.TransformerStore.GetTransformer(name);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -173,6 +178,9 @@ namespace Raven.Server.Documents.Handlers
                     var transformer = Database.TransformerStore.GetTransformer(name);
                     if (transformer == null)
                         TransformerDoesNotExistException.ThrowFor(name);
+                    var faultyInMemoryTransformer = transformer as FaultyInMemoryTransformer;
+                    if(faultyInMemoryTransformer != null)
+                        throw new NotSupportedException("Cannot change lock mode on faulty index", faultyInMemoryTransformer.Error);
 
                     using (var setTranformerLockModeCommand = context.ReadObject(new DynamicJsonValue
                     {

@@ -4,12 +4,16 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Transformers;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Exceptions;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Server;
 using Raven.Server.Documents.Transformers;
+using Raven.Server.ServerWide.Context;
 using Xunit;
 
 namespace FastTests.Server.Documents.Transformers
@@ -19,10 +23,10 @@ namespace FastTests.Server.Documents.Transformers
         [Fact]
         public async Task CanPersist()
         {
-            using (var server = GetNewServer(runInMemory:false, partialPath:"CanPersist"))
-            using (var store = GetDocumentStore(modifyName:x=> "CanPersistDB",defaultServer: server, deleteDatabaseWhenDisposed:false, modifyDatabaseDocument:x=>x.Settings["Raven/RunInMemory"] = "False"))
+            using (var server = GetNewServer(runInMemory: false, partialPath: "CanPersist"))
+            using (var store = GetDocumentStore(modifyName: x => "CanPersistDB", defaultServer: server, deleteDatabaseWhenDisposed: false, modifyDatabaseDocument: x => x.Settings["Raven/RunInMemory"] = "False"))
             {
-                var task1 =store.Admin.SendAsync(new PutTransformerOperation(new TransformerDefinition
+                var task1 = store.Admin.SendAsync(new PutTransformerOperation(new TransformerDefinition
                 {
                     TransformResults = "results.Select(x => new { Name = x.Name })",
                     LockMode = TransformerLockMode.LockedIgnore,
@@ -41,7 +45,7 @@ namespace FastTests.Server.Documents.Transformers
                 await Task.WhenAll(task1, task2);
             }
 
-            using (var server = GetNewServer(runInMemory: false, deletePrevious:false, partialPath: "CanPersist"))
+            using (var server = GetNewServer(runInMemory: false, deletePrevious: false, partialPath: "CanPersist"))
             {
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("CanPersistDB");
 
@@ -73,9 +77,7 @@ namespace FastTests.Server.Documents.Transformers
         [Fact]
         public async Task WillLoadAsFaulty()
         {
-
-            using (var server = GetNewServer(runInMemory: false, partialPath: "WillLoadAsFaulty"))
-            using (var store = GetDocumentStore(modifyName: x => "WillLoadAsFaulty", defaultServer: server, deleteDatabaseWhenDisposed: false, modifyDatabaseDocument: x => x.Settings["Raven/RunInMemory"] = "False"))
+            using (var store = GetDocumentStore())
             {
                 await store.Admin.SendAsync(new PutTransformerOperation(new TransformerDefinition
                 {
@@ -84,16 +86,24 @@ namespace FastTests.Server.Documents.Transformers
                     Temporary = true,
                     Name = "Transformer1"
                 }));
-                
-            }
 
-            using (var server = GetNewServer(customSettings: new Dictionary<string, string>()
-            {
-                ["Raven/ThrowIfAnyIndexOrTransformerCouldNotBeOpened"] = "true"
-            }, runInMemory: false, deletePrevious: false, partialPath: "WillLoadAsFaulty"))
-            using (var store = GetDocumentStore(modifyName: x => "WillLoadAsFaulty", defaultServer: server, deleteDatabaseWhenDisposed: false, modifyDatabaseDocument: x => x.Settings["Raven/RunInMemory"] = "False", createDatabase:false))
-            {
-                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("WillLoadAsFaulty");
+                TransactionOperationContext context;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+                {
+                    context.OpenReadTransaction();
+
+                    var databaseRecord = Server.ServerStore.Cluster.ReadDatabase(context, store.DefaultDatabase);
+                    databaseRecord.Transformers["Transformer1"].TransformResults = "yellow world";
+
+                    var blittableJsonReaderObject = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
+
+                    var index = await Server.ServerStore.TEMP_WriteDbAsync(context, store.DefaultDatabase, blittableJsonReaderObject, null);
+                    await Server.ServerStore.Cluster.WaitForIndexNotification(index);
+
+                }
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
                 var transformers = database
                     .TransformerStore
                     .GetTransformers()
@@ -113,20 +123,16 @@ namespace FastTests.Server.Documents.Transformers
                     transformer.Name
                 );
 
-                var e = Assert.Throws<NotSupportedException>(() => store.Admin.Send(new SetTransformerLockOperation("Transformer1", TransformerLockMode.LockedIgnore)));
-                Assert.Equal
-                (
-                    "Transformer with id 1 is in-memory implementation of a faulty transformer",
-                    e.Message
-                );
+                Assert.Throws<RavenException>(() => store.Admin.Send(new SetTransformerLockOperation("Transformer1", TransformerLockMode.LockedIgnore)));
+               
             }
         }
 
-        [Fact(Skip="Maxim:Investigate")]
+        [Fact(Skip = "Maxim:Investigate")]
         public async Task CanDelete()
         {
             using (var server = GetNewServer(deletePrevious: true))
-            using (GetDocumentStore(modifyName:x=> "CanDelete",defaultServer: server))
+            using (GetDocumentStore(modifyName: x => "CanDelete", defaultServer: server))
             {
 
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("CanDelete");

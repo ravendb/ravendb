@@ -39,40 +39,17 @@ namespace Raven.Server.Documents.Transformers
 
         public readonly TransformerDefinition Definition;
 
-        /// <summary>
-        /// Do not use this function, for testing only
-        /// </summary>
-        /// <param name="mode"></param>
-        public virtual void SetLock(TransformerLockMode mode)
-        {
-            if (Definition.LockMode == mode)
-                return;
-
-            lock (_locker)
-            {
-                if (Definition.LockMode == mode)
-                    return;
-
-                if (_log.IsInfoEnabled)
-                    _log.Info(
-                        $"Changing lock mode for '{Name} from '{Definition.LockMode}' to '{mode}'.");
-
-                var oldMode = Definition.LockMode;
-                try
-                {
-                    Definition.LockMode = mode;
-                }
-                catch (Exception)
-                {
-                    Definition.LockMode = oldMode;
-                    throw;
-                }
-            }
-        }
-
         public static Transformer CreateNew(TransformerDefinition definition, Logger log)
         {
-            var compiledTransformer = IndexAndTransformerCompilationCache.GetTransformerInstance(definition);
+            TransformerBase compiledTransformer;
+            try
+            {
+                compiledTransformer = IndexAndTransformerCompilationCache.GetTransformerInstance(definition);
+            }
+            catch (Exception e)
+            {
+                return new FaultyInMemoryTransformer(definition.Name, e);
+            }
             var transformer = new Transformer(definition, compiledTransformer, log);
             return transformer;
         }

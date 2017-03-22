@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.Transformers
                     {
                         exceptions?.Add(e);
 
-                        var fakeTransformer = new FaultyInMemoryTransformer(transformerDefinition.Name);
+                        var fakeTransformer = new FaultyInMemoryTransformer(transformerDefinition.Name, e);
 
                         var message = $"Could not open transformer with name {transformerName}. Created in-memory, fake instance: {fakeTransformer.Name}";
 

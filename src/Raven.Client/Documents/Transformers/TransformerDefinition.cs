@@ -21,6 +21,9 @@ namespace Raven.Client.Documents.Transformers
 
         public bool Equals(TransformerDefinition other)
         {
+            if (other == null)
+                return false;
+
             return LockMode == other.LockMode && string.Equals(TransformResults, other.TransformResults);
         }
 

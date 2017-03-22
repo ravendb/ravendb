@@ -195,7 +195,7 @@ namespace Raven.Server.ServerWide
                 TableValueReader reader;
                 if (items.ReadByKey(loweredKey, out reader) == false)
                 {
-                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"The database {databaseName} does not exists"));
+                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"The database {databaseName} does not exists, cannot delete it"));
                     return;
                 }
 
@@ -235,7 +235,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 TableValueBuilder builder;
-                using(var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
+                using (var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
                 using (items.Allocate(out builder))
                 {
                     builder.Add(loweredKey);
@@ -278,8 +278,8 @@ namespace Raven.Server.ServerWide
             TableValueBuilder builder;
             Slice valueName, valueNameLowered;
             using (items.Allocate(out builder))
-            using (Slice.From(context.Allocator, setDb.Name, out valueName))
-            using (Slice.From(context.Allocator, setDb.Name.ToLowerInvariant(), out valueNameLowered))
+            using (Slice.From(context.Allocator, "db/"+ setDb.Name, out valueName))
+            using (Slice.From(context.Allocator, "db/" + setDb.Name.ToLowerInvariant(), out valueNameLowered))
             using (var rec = context.ReadObject(setDb.Value, "inner-val"))
             {
                 if (setDb.Etag != null)
@@ -433,7 +433,7 @@ namespace Raven.Server.ServerWide
             string databaseName;
             if (cmd.TryGet(_databaseName, out databaseName) == false)
                 throw new ArgumentException("Update database command must contain a DatabaseName property");
-            
+
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             var dbKey = "db/" + databaseName;
 
@@ -459,9 +459,9 @@ namespace Raven.Server.ServerWide
                 }
                 catch (Exception e)
                 {
-                    NotifyLeaderAboutError(index,leader, new InvalidOperationException($"Cannot execute command of type {type} for database {databaseName} for reason: {e}"));
+                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"Cannot execute command of type {type} for database {databaseName} for reason: {e}"));
                 }
-                
+
                 var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
                 TableValueBuilder builder;
@@ -469,7 +469,7 @@ namespace Raven.Server.ServerWide
                 {
                     builder.Add(valueNameLowered);
                     builder.Add(valueName);
-                    
+
                     builder.Add(updatedDatabaseBlittable.BasePointer, updatedDatabaseBlittable.Size);
                     builder.Add(index);
                     items.Set(builder);
@@ -536,7 +536,7 @@ namespace Raven.Server.ServerWide
             return ReadDatabase(context, name, out etag);
         }
 
-        public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name,out long etag)
+        public DatabaseRecord ReadDatabase(TransactionOperationContext context, string name, out long etag)
         {
             var doc = Read(context, "db/" + name.ToLowerInvariant(), out etag);
             if (doc == null)
@@ -645,7 +645,7 @@ namespace Raven.Server.ServerWide
         public string Name;
     }
 
-    public class EditVersioningCommand:IUpdateDatabaseCommand
+    public class EditVersioningCommand : IUpdateDatabaseCommand
     {
         public string DatabaseName;
         public VersioningConfiguration Configuration;
@@ -699,7 +699,7 @@ namespace Raven.Server.ServerWide
 
         public bool Disabled;
 
-        public Dictionary<string,DeletionInProgressStatus> DeletionInProgress;
+        public Dictionary<string, DeletionInProgressStatus> DeletionInProgress;
 
         public string DataDirectory;
 
@@ -708,12 +708,12 @@ namespace Raven.Server.ServerWide
         public Dictionary<string, IndexDefinition> Indexes;
 
         //todo: see how we can protect this
-        public Dictionary<string,TransformerDefinition> Transformers;
+        public Dictionary<string, TransformerDefinition> Transformers;
 
         public Dictionary<string, string> Settings;
 
         public VersioningConfiguration VersioningConfiguration;
-        
+
         public void AddTransformer(TransformerDefinition definition)
         {
             if (Indexes != null && Indexes.Values.Any(x => x.Name == definition.Name))
@@ -732,7 +732,7 @@ namespace Raven.Server.ServerWide
 
             if (lockMode == TransformerLockMode.LockedIgnore)
                 throw new IndexOrTransformerAlreadyExistException($"Cannot edit existing transformer {definition.Name} with lock mode {lockMode}");
-            
+
             Transformers[definition.Name] = definition;
         }
     }
@@ -793,7 +793,7 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, AddDatabaseCommand> AddDatabaseCommand = GenerateJsonDeserializationRoutine<AddDatabaseCommand>();
         public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecord = GenerateJsonDeserializationRoutine<DatabaseRecord>();
         public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromDatabaseCommand> RemoveNodeFromDatabaseCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>();
-        
+
         public static Dictionary<string, Func<BlittableJsonReaderObject, IUpdateDatabaseCommand>> UpdateDatabaseCommands = new Dictionary<string, Func<BlittableJsonReaderObject, IUpdateDatabaseCommand>>()
         {
             [nameof(EditVersioningCommand)] = GenerateJsonDeserializationRoutine<EditVersioningCommand>(),
