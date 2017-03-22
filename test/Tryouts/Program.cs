@@ -15,9 +15,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new SlowTests.Server.Documents.ETL.Raven.BasicRavenEtlTests())
+                using (var a = new FastTests.Issues.RavenDB_6064())
                 {
-                    a.Loading_to_different_collections();
+                    a.MapReduceOnSeveralCompressedStrings();
                 }
             }
         }

@@ -10,6 +10,9 @@
     "emitEntryPoint": true,
     "compile": {
       "include": [ "**/*.cs" ]
+    },
+    "copyToOutput": {
+      "include": [ "../../libs/libsodium.dll", "../../libs/libsodium.so" ]
     }
   },
 
