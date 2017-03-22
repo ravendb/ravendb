@@ -96,11 +96,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
         }
 
-        public override bool CanContinueBatch()
-        {
-            return true; // TODO
-        }
-
         public DynamicJsonValue Simulate(SimulateSqlEtl simulateSqlEtl, DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite)
         {
             if (simulateSqlEtl.PerformRolledBackTransaction)

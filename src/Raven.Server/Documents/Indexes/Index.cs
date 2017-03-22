@@ -39,6 +39,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
+using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow;
@@ -2127,16 +2128,28 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
+            var currentBudget = _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes);
+            if (_threadAllocations.Allocations > currentBudget)
             {
-                if (TryIncreasingMemoryUsageForIndex(new Size(_threadAllocations.Allocations, SizeUnit.Bytes), stats) == false)
-                {
-                    if (stats.MapAttempts < Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
-                        return true;
+                var canContinue = true;
+                ProcessMemoryUsage memoryUsage;
 
-                    stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
-                    return false;
+                if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
+                        _environment.Options.RunningOn32Bits, _logger, out memoryUsage) == false)
+                {
+                    _allocationCleanupNeeded = true;
+
+                    if (stats.MapAttempts >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
+                    {
+                        stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
+                        canContinue = false;
+                    }
                 }
+
+                if (memoryUsage != null)
+                    stats.RecordMapMemoryStats(memoryUsage.WorkingSet, memoryUsage.PrivateMemory, currentBudget);
+
+                return canContinue;
             }
 
             return true;

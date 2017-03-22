@@ -84,11 +84,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             throw new TimeoutException(message, e);
         }
 
-        public override bool CanContinueBatch()
-        {
-            return true; // TODO 
-        }
-
         protected override void UpdateMetrics(DateTime startTime, Stopwatch duration, int batchSize)
         {
             // TODO arek
