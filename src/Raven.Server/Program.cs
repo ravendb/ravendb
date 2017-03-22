@@ -121,8 +121,6 @@ namespace Raven.Server
             LoggingSource.Instance.SetupLogMode(LogMode.None,
                 Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
 
-            WriteServerStatsAndWaitForEsc(server);
-
             while (true)
             {
                 var lower = Console.ReadLine()?.ToLower();
