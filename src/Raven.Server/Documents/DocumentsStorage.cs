@@ -1026,6 +1026,32 @@ namespace Raven.Server.Documents
             };
         }
 
+        // Note: Make sure to call this with a seprator, to you won't delete "users/11" for "users/1"
+        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix)
+        {
+            var deleteResults = new List<DeleteOperationResult>();
+
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+
+            Slice prefixSlice;
+            using (DocumentKeyWorker.GetSliceFromKey(context, prefix, out prefixSlice))
+            {
+                table.DeleteByPrimaryKeyPrefix(prefixSlice, before =>
+                {
+                    var key = TableValueToKey(context, (int)DocumentsTable.Key, ref before.Reader);
+                    int size;
+                    var document = new BlittableJsonReaderObject(before.Reader.Read((int)DocumentsTable.Data, out size), size, context);
+                    deleteResults.Add(new DeleteOperationResult
+                    {
+                        Etag = TableValueToEtag((int)DocumentsTable.Etag, ref before.Reader),
+                        Collection = ExtractCollectionName(context, key, document)
+                    });
+                });
+            }
+
+            return deleteResults;
+        }
+
         public struct DeleteOperationResult
         {
             public long Etag;
@@ -1703,7 +1729,7 @@ namespace Raven.Server.Documents
             _keyBuilder.Length = 0;
             _keyBuilder.Append(key);
             _keyBuilder[_keyBuilder.Length - 1] = '/';
-            _keyBuilder.AppendFormat(CultureInfo.InvariantCulture, "D19", val);
+            _keyBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0:D19}", val);
             return _keyBuilder.ToString();
         }
 

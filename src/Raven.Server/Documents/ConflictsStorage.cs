@@ -121,7 +121,7 @@ namespace Raven.Server.Documents
         {
             var keyMem = context.Allocator.Allocate(lowerKeySize + 1);
 
-            Memory.CopyInline(keyMem.Ptr, lowerKey, lowerKeySize);
+            Memory.Copy(keyMem.Ptr, lowerKey, lowerKeySize);
             keyMem.Ptr[lowerKeySize] = VersioningStorage.RecordSeperator;
 
             prefixSlice = new Slice(SliceOptions.Key, keyMem);
