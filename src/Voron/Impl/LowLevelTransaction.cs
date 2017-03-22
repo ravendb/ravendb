@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Sparrow;
+using Sparrow.Collections;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Data.BTrees;
@@ -55,8 +56,8 @@ namespace Voron.Impl
 #endif
             public TableValueBuilder TableValueBuilder = new TableValueBuilder();
 
-            public Dictionary<long, PageFromScratchBuffer> ScratchPagesTablePool = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
-            public Dictionary<long, long> DirtyOverflowPagesPool = new Dictionary<long, long>(NumericEqualityComparer.Instance);
+            public FastDictionary<long, PageFromScratchBuffer, NumericEqualityStructComparer> ScratchPagesTablePool = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityStructComparer>(new NumericEqualityStructComparer());
+            public FastDictionary<long, long, NumericEqualityStructComparer> DirtyOverflowPagesPool = new FastDictionary<long, long, NumericEqualityStructComparer>(new NumericEqualityStructComparer());
             public HashSet<long> DirtyPagesPool = new HashSet<long>(NumericEqualityComparer.Instance);
 
             public void Reset()
@@ -71,9 +72,9 @@ namespace Voron.Impl
 
         // BEGIN: Structures that are safe to pool.
         private readonly HashSet<long> _dirtyPages;
-        private readonly Dictionary<long, long> _dirtyOverflowPages;
+        private readonly FastDictionary<long, long, NumericEqualityStructComparer> _dirtyOverflowPages;
         private readonly Stack<long> _pagesToFreeOnCommit;
-        private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable;
+        private readonly FastDictionary<long, PageFromScratchBuffer, NumericEqualityStructComparer> _scratchPagesTable;
         private readonly HashSet<PagerState> _pagerStates;
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
         // END: Structures that are safe to pool.
