@@ -460,6 +460,7 @@ input[type="checkbox"] {
     margin-bottom: 10px;
     letter-spacing: .5pt;
     color: lighten(@text-color, 25%); // lighten the text some for contrast
+    clear:both; //check if no errors occur
 
     strong {
         color: @gray-lighter;
@@ -565,7 +566,8 @@ input[type="checkbox"] {
   .checkbox-inline {
     margin-top: 0;
     margin-bottom: 0;
-    padding-top: (@padding-base-vertical + 1); // Default padding plus a border
+    padding-top: 0;
+    //padding-top: (@padding-base-vertical + 1); // Default padding plus a border
   }
   // Account for padding we're adding to ensure the alignment and of help text
   // and other content below items
