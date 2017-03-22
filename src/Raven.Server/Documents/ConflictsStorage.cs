@@ -266,31 +266,14 @@ namespace Raven.Server.Documents
             Slice prefixSlice;
             using (GetConflictsKeyPrefix(context, lowerKey, lowerSize, out prefixSlice))
             {
-                while (true)
+                conflictsTable.DeleteForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], prefixSlice, true, long.MaxValue, before =>
                 {
-                    var more = false;
-                    foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], prefixSlice, 0, true))
-                    {
-                        more = true;
+                    var etag = DocumentsStorage.TableValueToEtag((int)ConflictsTable.Etag, ref before.Reader);
+                    _documentsStorage.EnsureLastEtagIsPersisted(context, etag);
 
-                        int size;
-                        var etag = *(long*)tvr.Result.Reader.Read((int)ConflictsTable.Etag, out size);
-                        var cve = tvr.Result.Reader.Read((int)ConflictsTable.ChangeVector, out size);
-                        var vector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
-                        fixed (ChangeVectorEntry* pVector = vector)
-                        {
-                            Memory.Copy((byte*)pVector, cve, size);
-                        }
-                        list.Add(vector);
-                        _documentsStorage.EnsureLastEtagIsPersisted(context, etag);
-
-                        conflictsTable.Delete(tvr.Result.Reader.Id);
-                        break;
-                    }
-
-                    if (more == false)
-                        break;
-                }
+                    var changeVector = DocumentsStorage.GetChangeVectorEntriesFromTableValueReader(ref before.Reader, (int)ConflictsTable.ChangeVector);
+                    list.Add(changeVector);
+                });
             }
 
             // once this value has been set, we can't set it to false

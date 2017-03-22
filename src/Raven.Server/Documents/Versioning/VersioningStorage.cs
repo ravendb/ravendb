@@ -286,7 +286,7 @@ namespace Raven.Server.Documents.Versioning
         {
             long maxEtagDeleted = 0;
 
-            var deletedRevisionsCount = table.DeleteForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice,
+            var deletedRevisionsCount = table.DeleteForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, true,
                 numberOfRevisionsToDelete,
                 deleted =>
                 {
