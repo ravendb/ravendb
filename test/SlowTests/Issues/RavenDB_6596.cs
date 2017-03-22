@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client;
+using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -44,6 +45,12 @@ namespace SlowTests.Issues
                     {
                         var factAttribute = method.GetCustomAttribute<FactAttribute>();
                         if (factAttribute == null)
+                            continue;
+
+                        if (factAttribute is TheoryAttribute)
+                            continue;
+
+                        if (PlatformDetails.RunningOnPosix && factAttribute is NonLinuxFactAttribute)
                             continue;
 
                         if (string.IsNullOrWhiteSpace(factAttribute.Skip) == false)

@@ -15,7 +15,7 @@ namespace Tryouts
                 Console.WriteLine(i);
                 using (var a = new SlowTests.Blittable.BlittableJsonWriterTests.ManualBuilderTestsSlow())
                 {
-                    a.BigAmountOfPreperties(short.MaxValue);
+                    a.BigAmountOfProperties(short.MaxValue);
                 }
             }
         }
