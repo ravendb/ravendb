@@ -17,7 +17,7 @@ namespace Tryouts
                 Console.WriteLine(i);
                 using (var a = new AttachmentsReplication())
                 {
-                    a.PutAttachments();
+                    a.PutAttachments(false);
                 }
             }
         }

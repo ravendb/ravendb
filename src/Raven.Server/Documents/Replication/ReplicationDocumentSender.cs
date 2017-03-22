@@ -130,14 +130,13 @@ namespace Raven.Server.Documents.Replication
                     _lastEtag = _parent._lastSentDocumentEtag;
                     _parent.CancellationToken.ThrowIfCancellationRequested();
 
-                    const int batchSize = 1024;//TODO: Make batchSize & maxSizeToSend configurable
-                    const int maxSizeToSend = 16 * 1024 * 1024;
+                    var batchSize = _parent._database.Configuration.Replication.MaxItemsCount;
+                    var maxSizeToSend = _parent._database.Configuration.Replication.MaxSizeToSend;
                     long size = 0;
                     int numberOfItemsSent = 0;
                     short lastTransactionMarker = -1;
                     foreach (var item in GetDocsConflictsTombstonesRevisionsAndAttachmentsAfter(documentsContext, _lastEtag))
                     {
-                        // TODO: add a configuration option to disable this check
                         if (lastTransactionMarker != item.TransactionMarker)
                         {
                             lastTransactionMarker = item.TransactionMarker;
@@ -145,8 +144,9 @@ namespace Raven.Server.Documents.Replication
                             // Include the attachment's document which is right after its latest attachment.
                             if (item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
                                 // We want to limit batch sizes to reasonable limits.
-                                (size > maxSizeToSend || numberOfItemsSent > batchSize))
-                                break;
+                                ((maxSizeToSend.HasValue && size > maxSizeToSend.Value) ||
+                                 (batchSize.HasValue && numberOfItemsSent > batchSize.Value)))
+                            break;
                         }
 
                         _lastEtag = item.Etag;

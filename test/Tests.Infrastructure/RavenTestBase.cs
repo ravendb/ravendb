@@ -87,7 +87,7 @@ namespace FastTests
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
                     context.OpenReadTransaction();
-                if (Server.ServerStore.Read(context, Constants.Documents.Prefix + name) != null)
+                    if (Server.ServerStore.Read(context, Constants.Documents.Prefix + name) != null)
                         throw new InvalidOperationException($"Database '{name}' already exists");
                 }
 
