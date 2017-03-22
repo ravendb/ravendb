@@ -42,7 +42,11 @@ namespace SlowTests.Issues
                 {
                     foreach (var method in type.GetMethods())
                     {
-                        if (method.GetCustomAttribute<FactAttribute>() == null)
+                        var factAttribute = method.GetCustomAttribute<FactAttribute>();
+                        if (factAttribute == null)
+                            continue;
+
+                        if (string.IsNullOrWhiteSpace(factAttribute.Skip) == false)
                             continue;
 
                         if (method.DeclaringType == typeof(RavenDB_6596))
