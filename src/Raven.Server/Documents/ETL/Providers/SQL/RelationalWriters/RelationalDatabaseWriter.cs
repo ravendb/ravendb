@@ -233,8 +233,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
                 if (_etl.SqlConfiguration.CommandTimeout.HasValue)
                     cmd.CommandTimeout = _etl.SqlConfiguration.CommandTimeout.Value;
-                else if (_database.Configuration.SqlReplication.CommandTimeout.HasValue)
-                    cmd.CommandTimeout = (int)_database.Configuration.SqlReplication.CommandTimeout.Value.AsTimeSpan.TotalSeconds;
+                else if (_database.Configuration.Etl.SqlCommandTimeout.HasValue)
+                    cmd.CommandTimeout = (int)_database.Configuration.Etl.SqlCommandTimeout.Value.AsTimeSpan.TotalSeconds;
 
                 return cmd;
             }

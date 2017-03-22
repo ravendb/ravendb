@@ -26,7 +26,7 @@ namespace Raven.Server.Config
 
         public CoreConfiguration Core { get; }
 
-        public SqlReplicationConfiguration SqlReplication { get; }
+        public EtlConfiguration Etl { get; }
 
         public ReplicationConfiguration Replication { get; }
 
@@ -81,7 +81,7 @@ namespace Raven.Server.Config
             Core = new CoreConfiguration();
 
             Replication = new ReplicationConfiguration();
-            SqlReplication = new SqlReplicationConfiguration();
+            Etl = new EtlConfiguration();
             Storage = new StorageConfiguration();
             Encryption = new EncryptionConfiguration();
             PerformanceHints = new PerformanceHintsConfiguration();
@@ -135,7 +135,7 @@ namespace Raven.Server.Config
         {
             Core.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Replication.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            SqlReplication.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Etl.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Queries.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Patching.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             DebugLog.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
