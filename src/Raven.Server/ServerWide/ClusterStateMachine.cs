@@ -451,28 +451,33 @@ namespace Raven.Server.ServerWide
                     return;
                 }
 
+                bool doUpdate;
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
                 var updateCommand = JsonDeserializationCluster.UpdateDatabaseCommands[type](cmd);
                 try
                 {
                     updateCommand.UpdateDatabaseRecord(databaseRecord);
+                    doUpdate = true;
                 }
                 catch (Exception e)
                 {
-                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"Cannot execute command of type {type} for database {databaseName} for reason: {e}"));
+                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"Cannot execute command of type {type} for database {databaseName}", e));
+                    doUpdate = false;
                 }
-
-                var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
-
-                TableValueBuilder builder;
-                using (items.Allocate(out builder))
+                if (doUpdate)
                 {
-                    builder.Add(valueNameLowered);
-                    builder.Add(valueName);
+                    var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                    builder.Add(updatedDatabaseBlittable.BasePointer, updatedDatabaseBlittable.Size);
-                    builder.Add(index);
-                    items.Set(builder);
+                    TableValueBuilder builder;
+                    using (items.Allocate(out builder))
+                    {
+                        builder.Add(valueNameLowered);
+                        builder.Add(valueName);
+
+                        builder.Add(updatedDatabaseBlittable.BasePointer, updatedDatabaseBlittable.Size);
+                        builder.Add(index);
+                        items.Set(builder);
+                    }
                 }
             }
             NotifyDatabaseChanged(context, databaseName, index);
@@ -716,7 +721,7 @@ namespace Raven.Server.ServerWide
 
         public void AddTransformer(TransformerDefinition definition)
         {
-            if (Indexes != null && Indexes.Values.Any(x => x.Name == definition.Name))
+            if (Indexes != null && Indexes.ContainsKey(definition.Name))
             {
                 throw new IndexOrTransformerAlreadyExistException($"Tried to create a transformer with a name of {definition.Name}, but an index under the same name exist");
             }
@@ -726,7 +731,8 @@ namespace Raven.Server.ServerWide
             if (Transformers.TryGetValue(definition.Name, out existingTransformer))
             {
                 if (existingTransformer.Equals(definition))
-                    throw new IndexOrTransformerAlreadyExistException($"Transformer with the same name {definition.Name} and same definition already exists");
+                    return;
+
                 lockMode = existingTransformer.LockMode;
             }
 
