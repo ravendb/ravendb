@@ -107,8 +107,15 @@ namespace Raven.Server.Documents
                         result.Exception = e;
                         NotifyOnThreadPool(result);
                     }
-                    _waitHandle.Wait(50, _shutdown);
-                    _waitHandle.Reset();
+                    try
+                    {
+                        _waitHandle.Wait(50, _shutdown);
+                        _waitHandle.Reset();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;   
+                    }
                 }
             }
         }
