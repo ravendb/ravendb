@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.ETL
             LoadSuccesses += items;
         }
 
-        public DynamicJsonValue ToBlittable()
+        public DynamicJsonValue ToJson()
         {
             var json = new DynamicJsonValue
             {
@@ -126,11 +126,11 @@ namespace Raven.Server.Documents.ETL
 
         public override string ToString()
         {
-            return $"{nameof(LastProcessedEtag)}: {LastProcessedEtag}" +
-                   $"{nameof(LastErrorTime)}: {LastErrorTime}" +
-                   $"{nameof(TransformationSuccesses)}: {TransformationSuccesses}" +
-                   $"{nameof(TransformationErrors)}: {TransformationErrors}" +
-                   $"{nameof(LoadSuccesses)}: {LoadSuccesses}" +
+            return $"{nameof(LastProcessedEtag)}: {LastProcessedEtag} " +
+                   $"{nameof(LastErrorTime)}: {LastErrorTime} " +
+                   $"{nameof(TransformationSuccesses)}: {TransformationSuccesses} " +
+                   $"{nameof(TransformationErrors)}: {TransformationErrors} " +
+                   $"{nameof(LoadSuccesses)}: {LoadSuccesses} " +
                    $"{nameof(LoadErrors)}: {LoadErrors}";
         }
     }

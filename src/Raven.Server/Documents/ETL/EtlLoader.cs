@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.ETL
             _database.Changes.OnSystemDocumentChange += HandleSystemDocumentChange;
         }
 
-        public IEnumerable<SqlEtl> SqlTargets => _processes.OfType<SqlEtl>();
+        public EtlProcess[] Processes => _processes;
 
         public EtlConfiguration CurrentConfiguration { get; private set; }
 
