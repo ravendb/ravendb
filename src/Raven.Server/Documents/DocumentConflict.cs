@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 
@@ -36,6 +37,8 @@ namespace Raven.Server.Documents
         {
             if (tombstone == null)
                 return null;
+
+            Debug.Assert(tombstone.Type == DocumentTombstone.TombstoneType.Document);
 
             return new DocumentConflict
             {

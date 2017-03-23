@@ -851,6 +851,10 @@ namespace Raven.Server.Documents.Replication
                     ContentTypeDispose.Dispose();
                     Base64HashDispose.Dispose();
                 }
+                else if (Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
+                {
+                    KeyDispose.Dispose();
+                }
             }
         }
 
@@ -909,6 +913,13 @@ namespace Raven.Server.Documents.Replication
 
                     var base64HashSize = *ReadExactly(sizeof(byte));
                     item.Base64HashDispose = Slice.From(context.Allocator, ReadExactly(base64HashSize), base64HashSize, out item.Base64Hash);
+                }
+                else if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
+                {
+                    item.TransactionMarker = *(short*)ReadExactly(sizeof(short));
+
+                    var keySize = *(int*)ReadExactly(sizeof(int));
+                    item.KeyDispose = Slice.From(context.Allocator, ReadExactly(keySize), keySize, out item.Key);
                 }
                 else
                 {
@@ -1104,6 +1115,13 @@ namespace Raven.Server.Documents.Replication
                                 }
                                 _incoming._replicatedAttachmentStreams.Remove(item.Base64Hash);
                             }
+                        }
+                        else if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
+                        {
+                            if (_incoming._log.IsInfoEnabled)
+                                _incoming._log.Info($"Got incoming attachment tombstone, doing DELETE on attachment {item.Key}");
+
+                            database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, "$fromReplication", null);
                         }
                         else
                         {

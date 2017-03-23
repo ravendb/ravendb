@@ -29,16 +29,8 @@ namespace Raven.Server.Documents.Handlers
                 var tombstones = context.DocumentDatabase.DocumentsStorage.GetTombstonesFrom(context, 0, start, pageSize);
                 foreach (var tombstone in tombstones)
                 {
-                    array.Add(new DynamicJsonValue
-                    {
-                        ["Key"] = tombstone.LoweredKey.ToString(),
-                        ["Collection"] = tombstone.Collection.ToString(),
-                        ["Etag"] = tombstone.Etag,
-                        ["DeletedEtag"] = tombstone.DeletedEtag,
-                        ["ChangeVector"] = tombstone.ChangeVector.ToJson()
-                    });
+                    array.Add(tombstone.ToJson());
                 }
-
                 context.Write(writer, new DynamicJsonValue
                 {
                     ["Results"] = array
