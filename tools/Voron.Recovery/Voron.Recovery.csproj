@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Voron Recovery Tool</Description>
+    <VersionPrefix>4.0.0</VersionPrefix>
+    <Authors>Hibernating Rhinos</Authors>
+    <TargetFramework>netcoreapp1.1</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Voron.Recovery</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <PackageId>Voron.Recovery</PackageId>
+    <RuntimeIdentifiers>win7-x64;win8-x64;win10-x64;ubuntu.14.04-x64</RuntimeIdentifiers>
+    <PackageTargetFallback>$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
+    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
+    <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
+  </ItemGroup>
+</Project>

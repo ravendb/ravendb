@@ -6,7 +6,7 @@ namespace Sparrow.Platform.Posix
     public static unsafe class PosixSodium
     {
         // ReSharper disable once InconsistentNaming
-        private const string LIB_SODIUM = "libs/libsodium.so";
+        private const string LIB_SODIUM = "libsodium.so";
 
         static PosixSodium()
         {
