@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using FastTests.Client.Attachments;
-using FastTests.Server.Replication;
 
 namespace Tryouts
 {
@@ -15,9 +14,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Issues.RavenDB_6064())
+                using (var a = new AttachmentsReplication())
                 {
-                    a.MapReduceOnSeveralCompressedStrings();
+                    a.PutAndDeleteAttachmentsWithTheSameStream_AlsoTestBigStreams();
                 }
             }
         }
