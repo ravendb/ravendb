@@ -1,9 +1,19 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
 class genUtils {
-    
+
+    static debounceAndFunnel<T>(func: (val: T, params: any, callback: (currentValue: T, result: boolean) => void) => void) {
+        return _.debounce((val: T, params: any, callback: (result: boolean) => void) => {
+            func(val, params, (currentValue, result) => {
+                if (currentValue === val) {
+                    callback(result);
+                }
+            });
+        }, 500);
+    }
+
     static formatAsCommaSeperatedString(input: number, digitsAfterDecimalPoint: number) {
-        var parts = input.toString().split(".");
+        const parts = input.toString().split(".");
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
         if (parts.length == 2 && parts[1].length > digitsAfterDecimalPoint) {

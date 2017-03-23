@@ -4,7 +4,7 @@
             <div class="clearfix">
                 <h2 class="pull-left-sm">Patch</h2>
                 <div class="pull-right-sm form-inline">
-                    <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationElement: patchSaveName">
+                    <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationElement: patchSaveName, validationOptions: { insertMessages: false }">
                         <input class="form-control" style="display: none" placeholder="Patch name" data-bind="textInput: patchSaveName">
                         <span class="input-group-btn">
                             <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch, css: { 'btn-spinner': spinners.save }">
@@ -48,12 +48,9 @@
                                 </li>
                             </ul>
                             <span class="input-group-btn">
-                                <button class="btn" type="button" data-bind="click: $root.previewDocument" title="Show preview"><i class="icon-preview"></i></button>
+                                <button class="btn" type="button" data-bind="click: $root.previewDocument, css: { 'btn-spinner': $root.spinners.preview }, disable: $root.spinners.preview" title="Show preview"><i class="icon-preview"></i></button>
                             </span>
-
                         </div>
-
-
                     </div>
                 </div>
 
@@ -170,7 +167,7 @@
                         </button>
                     </div>
                     <div class="test-controls">
-                        <button class="btn btn-primary btn-block text-center" data-bind="click: test.runTest">
+                        <button class="btn btn-primary btn-block text-center" data-bind="click: test.runTest, css: { 'btn-spinner' : test.spinners.testing }, disable: test.spinners.testing">
                             <i class="icon-rocket"></i><span>Test</span>
                         </button>
                         <div class="flex-separator"></div>
@@ -208,7 +205,8 @@
                             </li>
                         </ul>
                         <span class="input-group-btn">
-                            <button class="btn btn-default" type="button" data-bind="click: loadDocument"><i class="icon-import"></i> <span>Load</span></button>
+                            <button class="btn btn-default" type="button" data-bind="click: loadDocument, css: { 'btn-spinner': spinners.loadingDocument }, disable: spinners.loadingDocument">
+                            <i class="icon-import"></i> <span>Load</span></button>
                         </span>
 
 
@@ -269,13 +267,13 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="tab-pane fade flex-vertical" id="puts">
+                        <div class="tab-pane fade flex-vertical" id="puts" data-bind="css: { 'show-objects': showObjectsInPutSection }">
                             <div class="flex-header">
                                 <div class="clearfix">
                                     <h3 class="pull-left">Puts</h3>
                                     <div class="pull-right">
                                         <div class="toggle toggle-inline">
-                                            <input type="checkbox" class="styled" id="showObjects">
+                                            <input type="checkbox" class="styled" id="showObjects" data-bind="checked: showObjectsInPutSection">
                                             <label for="showObjects"> Show objects </label>
                                         </div>
                                     </div>
