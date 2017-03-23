@@ -762,7 +762,7 @@ namespace Raven.Server.Documents
             return table.CountBackwardFrom(TombstonesSchema.FixedSizeIndexes[DeletedEtagsSlice], etag);
         }
 
-        private Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
+        public Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var document = ParseDocument(context, ref tvr);
             DebugDisposeReaderAfterTransction(context.Transaction, document.Data);
