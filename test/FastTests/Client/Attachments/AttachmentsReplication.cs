@@ -383,16 +383,22 @@ namespace FastTests.Client.Attachments
                     }
                 }
 
-                AssertDelete(store1, store2, "users/1", "file1", 2);
-                AssertDelete(store1, store2, "users/2", "file2", 2);
-                AssertDelete(store1, store2, "users/3", "file3", 1);
-                AssertDelete(store1, store2, "users/1", "big-file", 0);
+                store1.Operations.Send(new DeleteAttachmentOperation("users/1", "file1"));
+                AssertDelete(store1, store2, "file1", 2);
+
+                store1.Operations.Send(new DeleteAttachmentOperation("users/2", "file2"));
+                AssertDelete(store1, store2, "file2", 2);
+
+                store1.Operations.Send(new DeleteAttachmentOperation("users/3", "file3"));
+                AssertDelete(store1, store2, "file3", 1);
+
+                store1.Operations.Send(new DeleteAttachmentOperation("users/1", "big-file"));
+                AssertDelete(store1, store2, "big-file", 0);
             }
         }
 
-        private void AssertDelete(DocumentStore store1, DocumentStore store2, string documentId, string name, int expectedAttachments)
+        private void AssertDelete(DocumentStore store1, DocumentStore store2, string name, int expectedAttachments)
         {
-            store1.Operations.Send(new DeleteAttachmentOperation(documentId, name));
             using (var session = store1.OpenSession())
             {
                 session.Store(new User {Name = "Marker " + name}, "marker-" + name);
@@ -400,6 +406,51 @@ namespace FastTests.Client.Attachments
             }
             Assert.True(WaitForDocument(store2, "marker-" + name));
             Assert.Equal(expectedAttachments, store2.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+        }
+
+        [Fact]
+        public void DeleteDocumentWithAttachmentsThatHaveTheSameStream()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                for (int i = 1; i <= 3; i++)
+                {
+                    using (var session = store1.OpenSession())
+                    {
+                        session.Store(new User { Name = "Fitzchak " + i }, "users/" + i);
+                        session.SaveChanges();
+                    }
+
+                    using (var profileStream = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
+                        store1.Operations.Send(new PutAttachmentOperation("users/" + i, "file" + i, profileStream, "image/png"));
+                }
+                using (var profileStream = new MemoryStream(Enumerable.Range(1, 17).Select(x => (byte)x).ToArray()))
+                    store1.Operations.Send(new PutAttachmentOperation("users/1", "second-file", profileStream, "image/png"));
+
+                var database1 = GetDocumentDatabaseInstanceFor(store1).Result;
+                database1.Configuration.Replication.MaxItemsCount = null;
+                database1.Configuration.Replication.MaxSizeToSend = null;
+                SetupReplication(store1, store2);
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User { Name = "Marker" }, "marker");
+                    session.SaveChanges();
+                }
+                Assert.True(WaitForDocument(store2, "marker"));
+                Assert.Equal(2, store2.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+
+
+
+                store1.Commands().Delete("users/2", null);
+                AssertDelete(store1, store2, "#1", 2);
+
+                store1.Commands().Delete("users/1", null);
+                AssertDelete(store1, store2, "#2", 1);
+
+                store1.Commands().Delete("users/3", null);
+                AssertDelete(store1, store2, "#3", 0);
+            }
         }
 
         private class User
