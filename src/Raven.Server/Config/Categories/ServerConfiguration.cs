@@ -89,11 +89,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/OAuthTokenCertificateExponent")]
         public string OAuthTokenCertificateExponent { get; set; }
 
-        [Description("AnonymousUserAccessMode")]
+        [Description("Prevent unsafe access to the server")]
         [DefaultValue(AnonymousUserAccessModeValues.Admin)]
-        [ConfigurationEntry("Raven/AnonymousAccess")]
+        [ConfigurationEntry("Raven/AnonymousUserAccessMode")]
         public AnonymousUserAccessModeValues AnonymousUserAccessMode { get; internal set; }
-
         [Description("When set to true, exposes the database to the world.")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/AllowEverybodyToAccessTheServerAsAdmin")]
