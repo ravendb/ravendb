@@ -33,24 +33,24 @@
         </div>
     </div>
     <div class="flex-window-scroll">
-        <div class="row">
+        <div class="row absolute-fill flex-row">
             <div class="col-sm-2">
                 <h2 id="transform-title">Transform <small><i class="icon-info"></i></small></h2>
             </div>
-            <div class="col-sm-10">
+            <div class="col-sm-10 flex-vertical">
                 <div class="clearfix">
                     <div class="btn-group btn-group-sm pull-right" role="group">
                         <button type="button" class="btn btn-default" title="Format transformer" data-bind="formatTransformer"><i class="icon-indent"></i> <span>Format</span></button>
                     </div>
                 </div>
-                <p>
-                    <pre class="form-control" 
+                <div class="flex-content flex-vertical">
+                    <pre class="form-control flex-content" 
                          data-bind="aceEditor: { code: editedTransformer().transformResults, hasFocus: editorHasFocus, allowResize: true }"></pre>
 
                     <div data-bind="validationElement: editedTransformer().transformResults">
                         <div class="help-block" data-bind="validationMessage: editedTransformer().transformResults"></div>
                     </div>
-                </p>
+                </div>
             </div>
         </div>
     </div>
