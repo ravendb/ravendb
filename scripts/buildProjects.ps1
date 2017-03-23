@@ -20,33 +20,12 @@ function BuildServerRegular ( $srcDir, $outDir, $runtime, $specName ) {
 
 function BuildServerArm ( $srcDir, $outDir, $runtime, $specName ) {
     write-host "Building Server for $specName"
-    $ORIGINAL_NETCOREAPP_DEP = "`"Microsoft.NETCore.App`": `"1.1.0`"";
-    $NORUNTIME_NETCOREAPP_DEP = "`"Microsoft.NETCore.App`": { `"version`": `"1.1.0`", `"type`": `"platform`" }";
-    $serverProjectJsonPath = [io.path]::combine($srcDir, "project.json")
-
-    $content = (Get-Content $serverProjectJsonPath) |
-        Foreach-Object { $_ -replace $ORIGINAL_NETCOREAPP_DEP, $NORUNTIME_NETCOREAPP_DEP }
-
-        try
-        {
-            Set-Content -Path $serverProjectJsonPath -Value $content -Encoding UTF8
-
-            & dotnet restore
-            CheckLastExitCode
-
-            $output = [io.path]::combine($outDir, "Server");
-            & dotnet publish --output $output --configuration "Release" $srcDir;
-            CheckLastExitCode
-        }
-        finally
-        {
-            $content = (Get-Content $serverProjectJsonPath) |
-            Foreach-Object { $_ -replace $NORUNTIME_NETCOREAPP_DEP, $ORIGINAL_NETCOREAPP_DEP }
-            Set-Content -Path $serverProjectJsonPath -Value $content -Encoding UTF8
-
-            & dotnet restore
-            CheckLastExitCode
-        }
+    #build server
+    $output = [io.path]::combine($outDir, "Server");
+    $build = [io.path]::combine($buildDir, $runtime)
+    & dotnet publish --output $output `
+                 --configuration "Release" $srcDir;
+    CheckLastExitCode
 }
 
 function BuildClient ( $srcDir, $specName ) {

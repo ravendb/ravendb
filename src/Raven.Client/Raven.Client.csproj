@@ -32,20 +32,16 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Sparrow\Sparrow.csproj" />
+    <ProjectReference Include="..\Sparrow\Sparrow.csproj" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="DotNetCross.Memory.Unsafe" Version="0.2.3.4" />
     <PackageReference Include="Lambda2Js" Version="2.1.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="10.0.1" />
-    <PackageReference Include="System.Net.Security" Version="4.3.0" />
-    <PackageReference Include="System.Runtime.InteropServices.RuntimeInformation" Version="4.3.0" />
-    <PackageReference Include="System.ServiceModel.Primitives" Version="4.3.0" />
-  </ItemGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
     <PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="1.1.1" />
     <PackageReference Include="Microsoft.CSharp" Version="4.3.0" />
     <PackageReference Include="Microsoft.Extensions.Primitives" Version="1.1.0" />
     <PackageReference Include="Microsoft.Win32.Primitives" Version="4.3.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="10.0.1" />
     <PackageReference Include="System.Collections" Version="4.3.0" />
     <PackageReference Include="System.Collections.Concurrent" Version="4.3.0" />
     <PackageReference Include="System.Collections.Specialized" Version="4.3.0" />
@@ -61,6 +57,7 @@
     <PackageReference Include="System.Net.Http" Version="4.3.1" />
     <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
     <PackageReference Include="System.Net.Requests" Version="4.3.0" />
+    <PackageReference Include="System.Net.Security" Version="4.3.0" />
     <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
     <PackageReference Include="System.Net.WebSockets" Version="4.3.0" />
     <PackageReference Include="System.Net.WebSockets.Client" Version="4.3.0" />
@@ -69,7 +66,9 @@
     <PackageReference Include="System.Resources.ResourceManager" Version="4.3.0" />
     <PackageReference Include="System.Runtime.Extensions" Version="4.3.0" />
     <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
+    <PackageReference Include="System.Runtime.InteropServices.RuntimeInformation" Version="4.3.0" />
     <PackageReference Include="System.Security.Cryptography.Cng" Version="4.3.0" />
+    <PackageReference Include="System.ServiceModel.Primitives" Version="4.3.0" />
     <PackageReference Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageReference Include="System.Threading" Version="4.3.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />

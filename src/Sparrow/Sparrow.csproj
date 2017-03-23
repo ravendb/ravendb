@@ -16,17 +16,14 @@
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="DotNetCross.Memory.Unsafe" Version="0.2.3.4" />
-    <PackageReference Include="System.Runtime.InteropServices.RuntimeInformation" Version="4.3.0" />
-  </ItemGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'MemGuard' ">
     <DefineConstants>$(DefineConstants);MEM_GUARD</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Validate' ">
     <DefineConstants>$(DefineConstants);MEM_GUARD_STACK</DefineConstants>
   </PropertyGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
+  <ItemGroup>
+    <PackageReference Include="DotNetCross.Memory.Unsafe" Version="0.2.3.4" />
     <PackageReference Include="Microsoft.CSharp" Version="4.3.0" />
     <PackageReference Include="Microsoft.Win32.Primitives" Version="4.3.0" />
     <PackageReference Include="System.Collections" Version="4.3.0" />
@@ -42,6 +39,7 @@
     <PackageReference Include="System.Resources.ResourceManager" Version="4.3.0" />
     <PackageReference Include="System.Runtime.Extensions" Version="4.3.0" />
     <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
+    <PackageReference Include="System.Runtime.InteropServices.RuntimeInformation" Version="4.3.0" />
     <PackageReference Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageReference Include="System.Threading" Version="4.3.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
