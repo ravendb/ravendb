@@ -11,6 +11,7 @@ using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -66,7 +67,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    context.Write(writer, result);
+                    var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(result);
+                    writer.WriteObject(context.ReadObject(djv, "et/sql/simulate"));
                 }
             }
 

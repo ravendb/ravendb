@@ -2,7 +2,7 @@
 using System.Data.Common;
 using System.Linq;
 
-namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
+namespace Raven.Server.Documents.ETL.Providers.SQL.Simulation
 {
     public class TableQuerySummary
     {

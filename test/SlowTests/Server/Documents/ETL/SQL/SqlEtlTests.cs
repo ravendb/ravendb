@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -18,6 +19,8 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.Connections;
+using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Platform;
 using Xunit;
 
@@ -579,6 +582,80 @@ var nameArr = this.StepName.split('.');");
                     var tempFileName = Path.GetTempFileName();
                     File.WriteAllText(tempFileName, sb.ToString());
                     throw new InvalidOperationException($"{msg}. Full log is: \r\n{tempFileName}");
+                }
+            }
+        }
+
+        [NonLinuxFact]
+        public async Task SimulationTest()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateRdbmsSchema(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order
+                    {
+                        OrderLines = new List<OrderLine>
+                        {
+                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+                        }
+                    });
+                    await session.SaveChangesAsync();
+                }
+
+                SetupEtl(store, new EtlConfiguration
+                {
+                    SqlConnections =
+                    {
+                        ["Ci1"] = new PredefinedSqlConnection
+                        {
+                            ConnectionString = GetConnectionString(store),
+                            FactoryName = "System.Data.SqlClient",
+                        }
+                    }
+                });
+
+                var database = GetDatabase(store.DefaultDatabase).Result;
+
+                DocumentsOperationContext context;
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (context.OpenReadTransaction())
+                {
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var result = SqlEtl.SimulateSqlEtl(new SimulateSqlEtl
+                        {
+                            PerformRolledBackTransaction = i % 2 != 0,
+                            DocumentId = "orders/1",
+                            Configuration = new SqlEtlConfiguration
+                            {
+                                Name = "OrdersAndLines",
+                                ConnectionStringName = "Ci1",
+                                Collection = "Orders",
+                                SqlTables =
+                            {
+                                new SqlEtlTable {TableName = "Orders", DocumentKeyColumn = "Id"},
+                                new SqlEtlTable {TableName = "OrderLines", DocumentKeyColumn = "OrderId"},
+                            },
+                                Script = defaultScript
+                            }
+                        }, database, context);
+
+                        Assert.Null(result.LastAlert);
+                        Assert.Equal(2, result.Summary.Count);
+
+                        var orderLines = result.Summary.First(x => x.TableName == "OrderLines");
+
+                        Assert.Equal(3, orderLines.Commands.Length); // delete and two inserts
+
+                        var orders = result.Summary.First(x => x.TableName == "Orders");
+
+                        Assert.Equal(2, orders.Commands.Length); // delete and insert
+                    }
+                    
                 }
             }
         }

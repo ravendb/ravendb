@@ -309,7 +309,7 @@ namespace Raven.Server.Documents.ETL
 
                 try
                 {
-                    _threadAllocations = NativeMemory.ThreadAllocations.Value;
+                    EnsureThreadAllocationStats();
 
                     DocumentsOperationContext context;
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
@@ -379,6 +379,11 @@ namespace Raven.Server.Documents.ETL
                     return;
                 }
             }
+        }
+
+        protected void EnsureThreadAllocationStats()
+        {
+            _threadAllocations = NativeMemory.ThreadAllocations.Value;
         }
 
         public override void Dispose()
