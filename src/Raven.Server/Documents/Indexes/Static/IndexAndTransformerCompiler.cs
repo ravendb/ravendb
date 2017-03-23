@@ -290,10 +290,17 @@ namespace Raven.Server.Documents.Indexes.Static
                 fieldNamesValidator.Validate(map, expression);
                 methodsDetector.Visit(expression);
 
+                var optExpression = new RavenLinqPrettifier().Visit(expression).NormalizeWhitespace();
+                optExpression = new RavenLinqOptimizer().Visit(optExpression).NormalizeWhitespace();
+
+                //TODO: aviv RavenDB-5295 
+                //var foreachExpression = optExpression as ForEachStatementSyntax;
+                //if (foreachExpression != null)
+                //    return HandleSyntaxInMap(new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), (CSharpSyntaxNode)optExpression);
+
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
                     return HandleSyntaxInMap(new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression);
-
                 var invocationExpression = expression as InvocationExpressionSyntax;
                 if (invocationExpression != null)
                     return HandleSyntaxInMap(new MapFunctionProcessor(CollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression);
