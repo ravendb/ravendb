@@ -25,6 +25,7 @@ namespace Raven.Server.Documents.Handlers
                 throw new VersioningDisabledException();
 
             var key = GetQueryStringValueAndAssertIfSingleAndNotEmpty("key");
+            var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -47,7 +48,12 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
-                    writer.WriteDocuments(context, revisions, false);
+                    writer.WriteDocuments(context, revisions, metadataOnly);
+
+                    writer.WriteComma();
+
+                    writer.WritePropertyName("TotalResults");
+                    writer.WriteInteger(versioningStorage.CountOfRevisions(context, key));
                     writer.WriteEndObject();
                 }
             }
