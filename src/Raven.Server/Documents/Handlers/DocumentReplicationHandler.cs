@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     array.Add(new DynamicJsonValue
                     {
-                        ["Key"] = tombstone.Key.ToString(),
+                        ["Key"] = tombstone.LoweredKey.ToString(),
                         ["Collection"] = tombstone.Collection.ToString(),
                         ["Etag"] = tombstone.Etag,
                         ["DeletedEtag"] = tombstone.DeletedEtag,

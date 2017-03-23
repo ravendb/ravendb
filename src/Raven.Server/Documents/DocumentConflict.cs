@@ -40,7 +40,7 @@ namespace Raven.Server.Documents
             return new DocumentConflict
             {
                 LoweredKey = tombstone.LoweredKey,
-                Key = tombstone.Key,
+                Key = tombstone.LoweredKey,
                 Doc = null,
                 StorageId = tombstone.StorageId,
                 ChangeVector = tombstone.ChangeVector,

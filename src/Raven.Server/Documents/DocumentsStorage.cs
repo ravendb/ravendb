@@ -58,12 +58,11 @@ namespace Raven.Server.Documents
             LoweredKey = 0,
             Etag = 1,
             DeletedEtag = 2,
-            Key = 3,
-            ChangeVector = 4,
-            Collection = 5,
-            Flags = 6,
-            TransactionMarker = 7,
-            LastModified = 8,
+            ChangeVector = 3,
+            Collection = 4,
+            Flags = 5,
+            TransactionMarker = 6,
+            LastModified = 7,
         }
 
         private enum DocumentsTable
@@ -639,8 +638,7 @@ namespace Raven.Server.Documents
             var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (
-                var _ in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
+            foreach (var _ in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
             {
                 if (maxAllowed-- < 0)
                     return true;
@@ -836,7 +834,6 @@ namespace Raven.Server.Documents
                 StorageId = tvr.Id
             };
             result.LoweredKey = TableValueToString(context, (int)TombstoneTable.LoweredKey, ref tvr);
-            result.Key = TableValueToKey(context, (int)TombstoneTable.Key, ref tvr);
             result.Etag = TableValueToEtag((int)TombstoneTable.Etag, ref tvr);
             result.DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, ref tvr);
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)TombstoneTable.ChangeVector);
@@ -881,7 +878,7 @@ namespace Raven.Server.Documents
             if (local.Tombstone != null)
             {
                 if (expectedEtag != null)
-                    throw new ConcurrencyException($"Document {local.Tombstone.Key} does not exist, but delete was called with etag {expectedEtag}. " +
+                    throw new ConcurrencyException($"Document {local.Tombstone.LoweredKey} does not exist, but delete was called with etag {expectedEtag}. " +
                                                    $"Optimistic concurrency violation, transaction will be aborted.");
 
                 collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
@@ -890,15 +887,18 @@ namespace Raven.Server.Documents
                 var etag = CreateTombstone(context,
                     loweredKey.Content.Ptr,
                     loweredKey.Size,
-                    local.Tombstone.Key.Buffer,
-                    local.Tombstone.Key.Size,
                     local.Tombstone.Etag,
                     collectionName,
                     local.Tombstone.ChangeVector,
                     lastModifiedTicks,
                     changeVector,
                     DocumentFlags.None);
-                return FinishDelete(context, etag, key ?? local.Tombstone.Key, collectionName);
+
+                return new DeleteOperationResult
+                {
+                    Collection = collectionName,
+                    Etag = etag
+                };
             }
 
             if (local.Document != null)
@@ -929,8 +929,6 @@ namespace Raven.Server.Documents
                 var etag = CreateTombstone(context,
                     tvr.Read((int)DocumentsTable.LoweredKey, out size),
                     size,
-                    tvr.Read((int)DocumentsTable.Key, out size),
-                    size,
                     doc.Etag,
                     collectionName,
                     doc.ChangeVector,
@@ -947,7 +945,21 @@ namespace Raven.Server.Documents
                 if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                     AttachmentsStorage.DeleteAttachmentsOfDocument(context, loweredKey);
 
-                return FinishDelete(context, etag, key ?? loweredKey.ToString(), collectionName);
+                // TODO: Do not send here strings. Use lazy strings instead.
+                context.Transaction.AddAfterCommitNotification(new DocumentChange
+                {
+                    Type = DocumentChangeTypes.Delete,
+                    Etag = etag,
+                    Key = key,
+                    CollectionName = collectionName.Name,
+                    IsSystemDocument = collectionName.IsSystem,
+                });
+
+                return new DeleteOperationResult
+                {
+                    Collection = collectionName,
+                    Etag = etag
+                };
             }
             else
             {
@@ -966,15 +978,18 @@ namespace Raven.Server.Documents
                 var etag = CreateTombstone(context,
                     loweredKey.Content.Ptr,
                     loweredKey.Size,
-                    loweredKey.Content.Ptr,
-                    loweredKey.Size,
                     -1, // delete etag is not relevant
                     collectionName,
                     changeVector,
                     DateTime.UtcNow.Ticks,
                     null,
                     DocumentFlags.None);
-                return FinishDelete(context, etag, key ?? loweredKey.ToString(), collectionName);
+
+                return new DeleteOperationResult
+                {
+                    Collection = collectionName,
+                    Etag = etag
+                };
             }
         }
 
@@ -998,32 +1013,15 @@ namespace Raven.Server.Documents
                     }
 
                     long etag;
-                    string key;
-                    var collectionName = ResolveConflictAndAddTombstone(context, changeVector, conflicts, out key, out etag);
-                    return FinishDelete(context, etag, key, collectionName);
+                    var collectionName = ResolveConflictAndAddTombstone(context, changeVector, conflicts, out etag);
+                    return new DeleteOperationResult
+                    {
+                        Collection = collectionName,
+                        Etag = etag
+                    };
                 }
             }
             return null;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private DeleteOperationResult? FinishDelete(DocumentsOperationContext context, long etag, string key, CollectionName collectionName)
-        {
-            // TODO: Do not send here strings. Use lazy strings instead.
-            context.Transaction.AddAfterCommitNotification(new DocumentChange
-            {
-                Type = DocumentChangeTypes.Delete,
-                Etag = etag,
-                Key = key,
-                CollectionName = collectionName.Name,
-                IsSystemDocument = collectionName.IsSystem,
-            });
-
-            return new DeleteOperationResult
-            {
-                Collection = collectionName,
-                Etag = etag
-            };
         }
 
         // Note: Make sure to call this with a seprator, to you won't delete "users/11" for "users/1"
@@ -1065,45 +1063,27 @@ namespace Raven.Server.Documents
         }
 
         private CollectionName ResolveConflictAndAddTombstone(DocumentsOperationContext context,
-            ChangeVectorEntry[] changeVector, IReadOnlyList<DocumentConflict> conflicts, out string key, out long etag)
+            ChangeVectorEntry[] changeVector, IReadOnlyList<DocumentConflict> conflicts, out long etag)
         {
             ChangeVectorEntry[] mergedChangeVector;
             var indexOfLargestEtag = FindIndexOfLargestEtagAndMergeChangeVectors(conflicts, out mergedChangeVector);
             var latestConflict = conflicts[indexOfLargestEtag];
             var collectionName = new CollectionName(latestConflict.Collection);
 
-            key = latestConflict.Key;
-            byte* lowerKeyPtr;
-            byte* keyPtr;
-            int lowerKeySize;
-            int keySize;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key,
-                out lowerKeyPtr,
-                out lowerKeySize,
-                out keyPtr,
-                out keySize);
-
-            //note that CreateTombstone is also deleting conflicts
-            etag = CreateTombstone(context,
-                lowerKeyPtr,
-                lowerKeySize,
-                keyPtr,
-                keySize,
-                latestConflict.Etag,
-                collectionName,
-                mergedChangeVector,
-                latestConflict.LastModified.Ticks,
-                changeVector,
-                DocumentFlags.None);
-
-            context.Transaction.AddAfterCommitNotification(new DocumentChange
+            Slice lowerKey;
+            using (DocumentKeyWorker.GetSliceFromKey(context, latestConflict.Key, out lowerKey))
             {
-                Type = DocumentChangeTypes.Delete,
-                Etag = etag,
-                Key = latestConflict.Key,
-                CollectionName = collectionName.Name,
-                IsSystemDocument = collectionName.IsSystem,
-            });
+                //note that CreateTombstone is also deleting conflicts
+                etag = CreateTombstone(context,
+                    lowerKey.Content.Ptr,
+                    lowerKey.Size,
+                    latestConflict.Etag,
+                    collectionName,
+                    mergedChangeVector,
+                    latestConflict.LastModified.Ticks,
+                    changeVector,
+                    DocumentFlags.None);
+            }
 
             return collectionName;
         }
@@ -1155,7 +1135,6 @@ namespace Raven.Server.Documents
         private long CreateTombstone(
             DocumentsOperationContext context,
             byte* lowerKey, int lowerSize,
-            byte* keyPtr, int keySize,
             long etag,
             CollectionName collectionName,
             ChangeVectorEntry[] docChangeVector,
@@ -1197,7 +1176,6 @@ namespace Raven.Server.Documents
                         tbv.Add(lowerKey, lowerSize);
                         tbv.Add((byte*)&newEtagBigEndian, sizeof(long));
                         tbv.Add((byte*)&documentEtagBigEndian, sizeof(long));
-                        tbv.Add(keyPtr, keySize);
                         tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
                         tbv.Add(collectionSlice);
                         tbv.Add((int)flags);

@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             .GetTombstonesFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
                                             .Select(tombstone =>
                                             {
-                                                _reference.Key = tombstone.Key;
+                                                _reference.Key = tombstone.LoweredKey;
                                                 _reference.Etag = tombstone.Etag;
 
                                                 return _reference;

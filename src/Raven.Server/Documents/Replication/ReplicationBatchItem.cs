@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Replication
                 Etag = doc.Etag,
                 ChangeVector = doc.ChangeVector,
                 Collection = doc.Collection,
-                Key = doc.Key,
+                Key = doc.LoweredKey,
                 Flags = doc.Flags,
                 TransactionMarker = doc.TransactionMarker,
                 LastModifiedTicks = doc.LastModified.Ticks,

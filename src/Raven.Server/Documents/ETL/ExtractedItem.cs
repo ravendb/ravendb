@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.ETL
         protected ExtractedItem(DocumentTombstone tombstone)
         {
             Etag = tombstone.Etag;
-            DocumentKey = tombstone.Key;
+            DocumentKey = tombstone.LoweredKey;
             IsDelete = true;
         }
 
