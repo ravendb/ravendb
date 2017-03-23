@@ -87,7 +87,7 @@ namespace Raven.Server.Config.Categories
                             {
                                 property.SetValue(this, Enum.Parse(property.PropertyType, value, true));
                             }
-                            if (property.PropertyType == typeof(string[]))
+                            else if (property.PropertyType == typeof(string[]))
                             {
                                 var values = value.Split(';');
                                 property.SetValue(this, values);
