@@ -6,8 +6,6 @@ namespace Raven.Server.Documents
 {
     public class DocumentTombstone
     {
-        public LazyStringValue Key;
-
         public DocumentFlags Flags;
 
         public LazyStringValue LoweredKey;

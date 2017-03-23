@@ -262,7 +262,7 @@ namespace FastTests.Server.Replication
                 Assert.Equal(2, conflicts["users/2"].Count);
                 // conflict between two tombstones, resolved automaticlly to tombstone.
                 var tombstones = WaitUntilHasTombstones(store2);
-                Assert.Equal("Users/1", tombstones.Single());
+                Assert.Equal("users/1", tombstones.Single());
             }
         }
 
