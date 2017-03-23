@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.ETL.Handlers
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            EtlStatistics[] etlStats;
+            EtlProcessStatistics[] etlStats;
             if (string.IsNullOrEmpty(name))
             {
                 etlStats = Database.EtlLoader.Processes.Select(x => x.Statistics).ToArray();
