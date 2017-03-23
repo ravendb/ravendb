@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
+using Raven.Server.Documents.ETL.Stats;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL
@@ -11,7 +12,7 @@ namespace SlowTests.Server.Documents.ETL
         [Fact]
         public void Returns_items_in_order()
         {
-            using (var merged = new MergedEnumerator<Item>())
+            using (var merged = new ExtractedItemsEnumerator<Item>(new EtlStatsScope(new EtlRunStats())))
             {
                 var items1 = new List<Item>
                 {

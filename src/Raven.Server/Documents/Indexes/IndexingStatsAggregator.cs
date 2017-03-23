@@ -1,60 +1,25 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Util;
 using Raven.Server.Exceptions;
+using Raven.Server.Utils.Stats;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class IndexingStatsAggregator
+    public class IndexingStatsAggregator : StatsAggregator<IndexingRunStats, IndexingStatsScope>
     {
-        public readonly int Id;
-
-        private readonly IndexingRunStats _stats;
-
-        private IndexingStatsScope _scope;
-
         private volatile IndexingPerformanceStats _performanceStats;
-        private bool _completed;
 
-        public IndexingStatsAggregator(int id, IndexingStatsAggregator lastStats)
+        public IndexingStatsAggregator(int id, IndexingStatsAggregator lastStats) : base(id, lastStats)
         {
-            Id = id;
-
-            var now = SystemTime.UtcNow;
-            if (lastStats == null)
-                StartTime = now;
-            else
-            {
-                var lastCompleted = lastStats.StartTime.Add(lastStats._scope.Duration);
-
-                // due to different precision of DateTimes and Stopwatches we might have current date 
-                // smaller than completed one of the latest batch
-                // let us adjust current start to avoid overlapping on the performance graph
-
-                StartTime = lastCompleted > now ? lastCompleted : now;
-            }
-            
-            _stats = new IndexingRunStats();
         }
 
-        public bool Completed => _completed;
-
-        public DateTime StartTime { get; }
-
-        public IndexingRunStats ToIndexingBatchStats()
+        public override IndexingStatsScope CreateScope()
         {
-            return _stats;
-        }
+            Debug.Assert(Scope == null);
 
-        public IndexingStatsScope CreateScope()
-        {
-            if (_scope != null)
-                throw new InvalidOperationException();
-
-            return _scope = new IndexingStatsScope(_stats);
+            return Scope = new IndexingStatsScope(Stats);
         }
 
         public IndexingPerformanceBasicStats ToIndexingPerformanceLiveStats()
@@ -62,16 +27,16 @@ namespace Raven.Server.Documents.Indexes
             if (_performanceStats != null)
                 return _performanceStats;
 
-            if (_scope == null || _stats == null)
+            if (Scope == null || Stats == null)
                 return null;
 
-            return new IndexingPerformanceBasicStats(_scope.Duration)
+            return new IndexingPerformanceBasicStats(Scope.Duration)
             {
                 Started = StartTime,
-                InputCount = _stats.MapAttempts,
-                SuccessCount = _stats.MapSuccesses,
-                FailedCount = _stats.MapErrors,
-                OutputCount = _stats.IndexingOutputs
+                InputCount = Stats.MapAttempts,
+                SuccessCount = Stats.MapSuccesses,
+                FailedCount = Stats.MapErrors,
+                OutputCount = Stats.IndexingOutputs
             };
         }
 
@@ -80,10 +45,10 @@ namespace Raven.Server.Documents.Indexes
             if (_performanceStats != null)
                 return _performanceStats;
 
-            if (_scope == null || _stats == null)
+            if (Scope == null || Stats == null)
                 return null;
 
-            if (_completed)
+            if (Completed)
                 return ToIndexingPerformanceStats();
 
             return CreateIndexingPerformanceStats(completed: false);
@@ -94,7 +59,7 @@ namespace Raven.Server.Documents.Indexes
             if (_performanceStats != null)
                 return _performanceStats;
 
-            lock (_stats)
+            lock (Stats)
             {
                 if (_performanceStats != null)
                     return _performanceStats;
@@ -103,75 +68,39 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void Complete()
-        {
-            _completed = true;
-        }
-
         private IndexingPerformanceStats CreateIndexingPerformanceStats(bool completed)
         {
-            return new IndexingPerformanceStats(_scope.Duration)
+            return new IndexingPerformanceStats(Scope.Duration)
             {
                 Id = Id,
                 Started = StartTime,
-                Completed = completed ? StartTime.Add(_scope.Duration) : (DateTime?)null,
-                Details = _scope.ToIndexingPerformanceOperation("Indexing"),
-                InputCount = _stats.MapAttempts,
-                SuccessCount = _stats.MapSuccesses,
-                FailedCount = _stats.MapErrors,
-                OutputCount = _stats.IndexingOutputs
+                Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
+                Details = Scope.ToIndexingPerformanceOperation("Indexing"),
+                InputCount = Stats.MapAttempts,
+                SuccessCount = Stats.MapSuccesses,
+                FailedCount = Stats.MapErrors,
+                OutputCount = Stats.IndexingOutputs
             };
         }
     }
 
-    public class IndexingStatsScope : IDisposable
+    public class IndexingStatsScope : StatsScope<IndexingRunStats, IndexingStatsScope>
     {
         private readonly IndexingRunStats _stats;
-
-        private Dictionary<string, IndexingStatsScope> _scopes;
-
-        private readonly Stopwatch _sw;
-
-        public IndexingStatsScope(IndexingRunStats stats, bool start = true)
+        
+        public IndexingStatsScope(IndexingRunStats stats, bool start = true) : base(stats, start)
         {
             _stats = stats;
-            _sw = new Stopwatch();
-
-            if (start)
-                Start();
         }
 
-        public TimeSpan Duration => _sw.Elapsed;
+        protected override IndexingStatsScope OpenNewScope(IndexingRunStats stats, bool start)
+        {
+            return new IndexingStatsScope(stats, start);
+        }
 
         public int MapAttempts => _stats.MapAttempts;
 
         public int ErrorsCount => _stats.Errors?.Count ?? 0;
-
-        public IndexingStatsScope For(string name, bool start = true)
-        {
-            if (_scopes == null)
-                _scopes = new Dictionary<string, IndexingStatsScope>(StringComparer.OrdinalIgnoreCase);
-
-            IndexingStatsScope scope;
-            if (_scopes.TryGetValue(name, out scope) == false)
-                return _scopes[name] = new IndexingStatsScope(_stats, start);
-
-            if (start)
-                scope.Start();
-
-            return scope;
-        }
-
-        public IndexingStatsScope Start()
-        {
-            _sw.Start();
-            return this;
-        }
-
-        public void Dispose()
-        {
-            _sw?.Stop();
-        }
 
         public void AddCorruptionError(Exception e)
         {
@@ -272,7 +201,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexingPerformanceOperation ToIndexingPerformanceOperation(string name)
         {
-            var operation = new IndexingPerformanceOperation(_sw.Elapsed)
+            var operation = new IndexingPerformanceOperation(Duration)
             {
                 Name = name
             };
@@ -286,9 +215,9 @@ namespace Raven.Server.Documents.Indexes
             if (_stats.CommitDetails != null && name == IndexingOperation.Storage.Commit)
                 operation.CommitDetails = _stats.CommitDetails;
 
-            if (_scopes != null)
+            if (Scopes != null)
             {
-                operation.Operations = _scopes
+                operation.Operations = Scopes
                     .Select(x => x.Value.ToIndexingPerformanceOperation(x.Key))
                     .ToArray();
             }

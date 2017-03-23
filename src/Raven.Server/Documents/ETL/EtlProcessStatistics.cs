@@ -6,13 +6,13 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL
 {
-    public class EtlStatistics
+    public class EtlProcessStatistics
     {
         private readonly string _processType;
         private readonly string _name;
         private readonly NotificationCenter.NotificationCenter _notificationCenter;
 
-        public EtlStatistics(string processType, string name, NotificationCenter.NotificationCenter notificationCenter)
+        public EtlProcessStatistics(string processType, string name, NotificationCenter.NotificationCenter notificationCenter)
         {
             _processType = processType;
             _name = name;

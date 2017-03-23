@@ -43,7 +43,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        protected ManualResetEventSlim WaitForEtl(DocumentStore store, Func<string, EtlStatistics, bool> predicate)
+        protected ManualResetEventSlim WaitForEtl(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
         {
             var database = GetDatabase(store.DefaultDatabase).Result;
 

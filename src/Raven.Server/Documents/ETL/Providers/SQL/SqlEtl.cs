@@ -7,6 +7,7 @@ using Raven.Server.Documents.ETL.Providers.SQL.Enumerators;
 using Raven.Server.Documents.ETL.Providers.SQL.Metrics;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.Simulation;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -171,7 +172,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 etl.EnsureThreadAllocationStats();
 
-                var transformed = etl.Transform(new[] {new ToSqlItem(document)}, context);
+                var transformed = etl.Transform(new[] {new ToSqlItem(document)}, context, new EtlStatsScope(new EtlRunStats()));
 
                 return etl.Simulate(simulateSqlEtl, context, transformed);
             }
