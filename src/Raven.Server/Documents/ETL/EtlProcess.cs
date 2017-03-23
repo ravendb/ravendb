@@ -1,12 +1,12 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.ETL.Metrics;
-using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -46,6 +46,8 @@ namespace Raven.Server.Documents.ETL
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim();
         private readonly EtlProcessConfiguration _configuration;
         private readonly CancellationTokenSource _cts;
+        private readonly ConcurrentQueue<EtlStatsAggregator> _lastEtlStats =
+            new ConcurrentQueue<EtlStatsAggregator>();
         private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
         private NativeMemory.ThreadStats _threadAllocations;
         private Thread _thread;
@@ -238,13 +240,6 @@ namespace Raven.Server.Documents.ETL
         protected void UpdateMetrics(DateTime startTime, EtlStatsScope stats)
         {
             Metrics.BatchSizeMeter.Mark(stats.NumberOfExtractedItems);
-
-            Metrics.UpdatePerformanceStats(new EtlPerformanceStats
-            {
-                BatchSize = stats.NumberOfExtractedItems,
-                Duration = stats.Duration,
-                Started = startTime
-            });
         }
 
         public override void NotifyAboutWork()
@@ -316,6 +311,8 @@ namespace Raven.Server.Documents.ETL
                     var didWork = false;
 
                     var statsAggregator = _lastStats = new EtlStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
+
+                    AddPerformanceStats(statsAggregator);
 
                     using (var stats = statsAggregator.CreateScope())
                     {
@@ -390,6 +387,24 @@ namespace Raven.Server.Documents.ETL
         protected void EnsureThreadAllocationStats()
         {
             _threadAllocations = NativeMemory.ThreadAllocations.Value;
+        }
+
+        private void AddPerformanceStats(EtlStatsAggregator stats)
+        {
+            _lastEtlStats.Enqueue(stats);
+
+            while (_lastEtlStats.Count > 25)
+                _lastEtlStats.TryDequeue(out stats);
+        }
+
+        public EtlPerformanceStats[] GetIndexingPerformance()
+        {
+            //var lastStats = _lastStats;
+
+            return _lastEtlStats
+                // .Select(x => x == lastStats ? x.ToEtlPerformanceStats().ToIndexingPerformanceLiveStatsWithDetails() : x.ToIndexingPerformanceStats())
+                .Select(x => x.ToPerformanceStats())
+                .ToArray();
         }
 
         public override void Dispose()
