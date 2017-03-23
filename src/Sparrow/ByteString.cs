@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Collections;
 using Sparrow.Global;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -138,10 +139,18 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetUserDefinedFlags(ByteStringType flags)
         {
-            if ((flags & ByteStringType.ByteStringMask) != 0)
-                throw new ArgumentException("The flags passed contains reserved bits.");
+            if ((flags & ByteStringType.ByteStringMask) == 0)
+            {
+                _pointer->Flags |= flags;
+                return;
+            }
 
-            _pointer->Flags |= flags;
+            ThrowFlagsWithReservedBits();
+        }
+
+        private void ThrowFlagsWithReservedBits()
+        {
+            throw new ArgumentException("The flags passed contains reserved bits.");
         }
 
         public bool IsMutable
@@ -533,7 +542,7 @@ namespace Sparrow
         /// </summary>
         private readonly List<SegmentInformation> _internalReadyToUseMemorySegments;
         private readonly int[] _internalReusableStringPoolCount;
-        private readonly Stack<IntPtr>[] _internalReusableStringPool;
+        private readonly FastStack<IntPtr>[] _internalReusableStringPool;
         private SegmentInformation _internalCurrent;
 
 
@@ -542,7 +551,7 @@ namespace Sparrow
         private int _externalCurrentLeft = 0;
         private int _externalFastPoolCount = 0;
         private readonly IntPtr[] _externalFastPool = new IntPtr[ExternalFastPoolSize];
-        private readonly Stack<IntPtr> _externalStringPool;
+        private readonly FastStack<IntPtr> _externalStringPool;
         private SegmentInformation _externalCurrent;
 
         public ByteStringContext(int allocationBlockSize = ByteStringContext.DefaultAllocationBlockSizeInBytes)
@@ -555,13 +564,13 @@ namespace Sparrow
             this._wholeSegments = new List<SegmentInformation>();
             this._internalReadyToUseMemorySegments = new List<SegmentInformation>();
 
-            this._internalReusableStringPool = new Stack<IntPtr>[LogMinBlockSize];
+            this._internalReusableStringPool = new FastStack<IntPtr>[LogMinBlockSize];
             this._internalReusableStringPoolCount = new int[LogMinBlockSize];
 
             this._internalCurrent = AllocateSegment(allocationBlockSize);
             AllocateExternalSegment(allocationBlockSize);
 
-            this._externalStringPool = new Stack<IntPtr>(64);
+            this._externalStringPool = new FastStack<IntPtr>(64);
 
             PrepareForValidation();
         }
@@ -621,6 +630,7 @@ namespace Sparrow
             return $"Allocated {Sizes.Humane(_currentlyAllocated)} / {Sizes.Humane(_totalAllocated)}";
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ByteString AllocateExternal(byte* valuePtr, int size, ByteStringType type)
         {
             Debug.Assert((type & ByteStringType.External) != 0, "This allocation routine is only for use with external storage byte strings.");
@@ -689,7 +699,7 @@ namespace Sparrow
             if (allocationSize <= ByteStringContext.MinBlockSizeInBytes && _internalReusableStringPoolCount[reusablePoolIndex] != 0)
             {
                 // This is a stack because hotter memory will be on top. 
-                Stack<IntPtr> pool = _internalReusableStringPool[reusablePoolIndex];
+                FastStack<IntPtr> pool = _internalReusableStringPool[reusablePoolIndex];
 
                 _internalReusableStringPoolCount[reusablePoolIndex]--;
                 void* ptr = pool.Pop().ToPointer();
@@ -732,10 +742,10 @@ namespace Sparrow
                         // The memory chunk left is big enough to make sense to reuse it.
                         reusablePoolIndex = GetPoolIndexForReservation(currentSizeLeft);
 
-                        Stack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
+                        FastStack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
                         if (pool == null)
                         {
-                            pool = new Stack<IntPtr>();
+                            pool = new FastStack<IntPtr>();
                             this._internalReusableStringPool[reusablePoolIndex] = pool;
                         }
 
@@ -887,10 +897,10 @@ namespace Sparrow
 
             if (value._pointer->Size <= ByteStringContext.MinBlockSizeInBytes)
             {
-                Stack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
+                FastStack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
                 if (pool == null)
                 {
-                    pool = new Stack<IntPtr>();
+                    pool = new FastStack<IntPtr>();
                     this._internalReusableStringPool[reusablePoolIndex] = pool;
                 }
 

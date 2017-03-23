@@ -65,8 +65,7 @@ namespace Voron.Data.BTrees
         public static ByteStringContext.ExternalScope ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, ByteStringType type, out Slice slice)
         {
             ByteString str;
-            var scope = context.FromPtr((byte*)node + Constants.Tree.NodeHeaderSize, node->KeySize,
-                type, out str);
+            var scope = context.FromPtr((byte*)node + Constants.Tree.NodeHeaderSize, node->KeySize, type, out str);
             slice = new Slice(str);
             return scope;
         }
