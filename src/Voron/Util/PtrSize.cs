@@ -128,6 +128,12 @@ namespace Voron.Util
                 return new PtrSize(s.Ptr, (uint)s.Length);
             }
 
+            ThrowNotSupportedException();
+            return default(PtrSize);
+        }
+
+        private static void ThrowNotSupportedException()
+        {
             throw new NotSupportedException();
         }
 

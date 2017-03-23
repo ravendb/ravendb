@@ -27,8 +27,8 @@ namespace Sparrow.Json
 
         public int SizeInBytes => _unmanagedWriteBuffer.SizeInBytes;
 
-        private static readonly Encoding Utf8Encoding = Encoding.UTF8;
-
+        private static readonly UTF8Encoding Encoding = new UTF8Encoding();
+        
         public unsafe BlittableJsonReaderObject CreateReader()
         {
             byte* ptr;
@@ -414,8 +414,7 @@ namespace Sparrow.Json
                 _intBuffer = new FastList<int>();
 
             var escapePositionsMaxSize = JsonParserState.FindEscapePositionsMaxSize(str);
-            int size = Encoding.UTF8.GetMaxByteCount(str.Length)
-                       + escapePositionsMaxSize;
+            int size = Encoding.GetMaxByteCount(str.Length) + escapePositionsMaxSize;
 
             AllocatedMemoryData buffer = null;
             try
@@ -423,7 +422,7 @@ namespace Sparrow.Json
                 buffer = _context.GetMemory(size);
                 fixed (char* pChars = str)
                 {
-                    var stringSize = Utf8Encoding.GetBytes(pChars, str.Length, buffer.Address, size);
+                    var stringSize = Encoding.GetBytes(pChars, str.Length, buffer.Address, size);
                     JsonParserState.FindEscapePositionsIn(_intBuffer, buffer.Address, stringSize, escapePositionsMaxSize);
                     return WriteValue(buffer.Address, stringSize, _intBuffer, out token, mode, null);
                 }

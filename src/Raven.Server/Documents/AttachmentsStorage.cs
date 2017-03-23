@@ -162,7 +162,7 @@ namespace Raven.Server.Documents
                     if (table.ReadByKey(keySlice, out oldValue))
                     {
                         // TODO: Support overwrite
-                        throw new NotImplementedException("Cannot overwrite an exisitng attachment.");
+                        throw new NotImplementedException("Cannot overwrite an existing attachment.");
 
                         /*
                         var oldEtag = TableValueToEtag(context, 1, ref oldValue);
