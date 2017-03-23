@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using FastTests.Client.Attachments;
+using FastTests.Smuggler;
 
 namespace Tryouts
 {
@@ -14,9 +15,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new AttachmentsReplication())
+                using (var a = new SmugglerApiTests())
                 {
-                    a.PutAndDeleteAttachmentsWithTheSameStream_AlsoTestBigStreams();
+                    a.WillNotCreateMoreRevisionsAfterImport().Wait();
                 }
             }
         }
