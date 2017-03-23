@@ -29,6 +29,7 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 class editIndex extends viewModelBase { 
 
     static readonly DefaultIndexStoragePath = "~/{Database Name}/Indexes";
+    static readonly $body = $("body");
 
     isEditingExistingIndex = ko.observable<boolean>(false);
     editedIndex = ko.observable<indexDefinition>();
@@ -97,6 +98,10 @@ class editIndex extends viewModelBase {
             const renameMode = this.renameMode();
             const editMode = this.isEditingExistingIndex();
             return !editMode || renameMode;
+        });
+
+        this.renameMode.subscribe(renameMode => {
+            editIndex.$body.toggleClass('show-rename', renameMode);
         });
     }
 

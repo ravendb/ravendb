@@ -257,7 +257,7 @@
             <div class="panel ">
                 <div class="" data-bind="with: test">
                     <div class="tab-content">
-                        <div class="tab-pane active" id="preview">
+                        <div class="tab-pane fade in active" id="preview">
                             <div class="row flex-row">
                                 <div class="col-sm-6 flex-vertical">
                                     <h3 class="flex-header">Before</h3>
@@ -269,7 +269,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="tab-pane flex-vertical" id="puts">
+                        <div class="tab-pane fade flex-vertical" id="puts">
                             <div class="flex-header">
                                 <div class="clearfix">
                                     <h3 class="pull-left">Puts</h3>
@@ -291,7 +291,7 @@
 
                             <p data-bind="visible: actions.putDocument().length === 0">No data available.</p>
                         </div>
-                        <div class="tab-pane flex-vertical" id="loads">
+                        <div class="tab-pane fade flex-vertical" id="loads">
                             <h3 class="flex-header">Loads</h3>
                             <ul class="flex-content scroll" data-bind="foreach: actions.loadDocument">
                                 <li data-bind="text: $data"></li>
@@ -299,7 +299,7 @@
 
                             <p data-bind="visible: actions.loadDocument().length === 0">No data available.</p>
                         </div>
-                        <div class="tab-pane flex-vertical" id="output">
+                        <div class="tab-pane fade flex-vertical" id="output">
                             <h3 class="flex-header">Output</h3>
                             <ul class="flex-content scroll" data-bind="foreach: actions.info">
                                 <li data-bind="text: $data"></li>
