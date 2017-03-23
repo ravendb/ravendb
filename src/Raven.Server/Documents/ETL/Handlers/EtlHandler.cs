@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.ETL.Handlers
         }
 
         [RavenAction("/databases/*/etl/performance", "GET")]
-        public Task GetDebugPref()
+        public Task Performance()
         {
             // TODO arek
 

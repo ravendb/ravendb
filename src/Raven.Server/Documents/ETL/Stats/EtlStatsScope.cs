@@ -1,4 +1,5 @@
-﻿using Raven.Server.Utils.Stats;
+﻿using System.Linq;
+using Raven.Server.Utils.Stats;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
@@ -35,6 +36,23 @@ namespace Raven.Server.Documents.ETL.Stats
         public void RecordLastLoadedEtag(long etag)
         {
             _stats.LastLoadedEtag = etag;
+        }
+
+        public EtlPerformanceOperation ToPerformanceOperation(string name)
+        {
+            var operation = new EtlPerformanceOperation
+            {
+                Name = name
+            };
+
+            if (Scopes != null)
+            {
+                operation.Operations = Scopes
+                    .Select(x => x.Value.ToPerformanceOperation(x.Key))
+                    .ToArray();
+            }
+
+            return operation;
         }
     }
 }
