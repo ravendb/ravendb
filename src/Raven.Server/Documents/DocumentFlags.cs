@@ -13,7 +13,7 @@ namespace Raven.Server.Documents
         Reserved2 = 0x8,
 
         FromIndex = 0x10,
-        FromVersionStorage = 0x20,
+        Revision = 0x20,
         FromReplication = 0x40,
         Reserved3 = 0x80,
 
