@@ -325,7 +325,7 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        [Fact(Skip = "Implement attachment tombstone")]
+        [Fact]
         public void PutAndDeleteAttachmentsWithTheSameStream_AlsoTestBigStreams()
         {
             using (var store1 = GetDocumentStore())
@@ -385,9 +385,8 @@ namespace FastTests.Client.Attachments
 
                 AssertDelete(store1, store2, "users/1", "file1", 2);
                 AssertDelete(store1, store2, "users/2", "file2", 2);
-                // TODO: Replicate delete
-                // AssertDelete(store1, store2, "users/3", "file3", 1);
-                // AssertDelete(store1, store2, "users/1", "big-file", 0);
+                AssertDelete(store1, store2, "users/3", "file3", 1);
+                AssertDelete(store1, store2, "users/1", "big-file", 0);
             }
         }
 

@@ -63,14 +63,15 @@ namespace Raven.Server.Documents
                 var storageEnvironment = _documentDatabase.DocumentsStorage.Environment;
                 if (storageEnvironment == null) // doc storage was disposed before us?
                     return;
+
                 using (var tx = storageEnvironment.ReadTransaction())
                 {
-                    foreach (var tombstoneCollection in _documentDatabase
-                        .DocumentsStorage
-                        .GetTombstoneCollections(tx))
+                    foreach (var tombstoneCollection in _documentDatabase.DocumentsStorage.GetTombstoneCollections(tx))
                     {
                         tombstones[tombstoneCollection] = long.MaxValue;
                     }
+
+                    tombstones[AttachmentsStorage.AttachmentsTombstones] = long.MaxValue;
                 }
 
                 if (tombstones.Count == 0)

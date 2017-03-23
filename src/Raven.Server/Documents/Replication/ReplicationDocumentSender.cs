@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Replication
             {
                 _replicaAttachmentStreams[item.Base64Hash] = item;
             }
-            else
+            else if (item.Type == ReplicationBatchItem.ReplicationItemType.Document)
             {
                 if ((item.Flags & DocumentFlags.Artificial) == DocumentFlags.Artificial)
                 {
@@ -314,6 +314,11 @@ namespace Raven.Server.Documents.Replication
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
             {
                 WriteAttachmentToServer(item);
+                return;
+            }
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
+            {
+                WriteAttachmentTombstoneToServer(item);
                 return;
             }
 
@@ -445,6 +450,34 @@ namespace Raven.Server.Documents.Replication
                 pTemp[tempBufferPos++] = (byte)item.Base64Hash.Size;
                 item.Base64Hash.CopyTo(pTemp + tempBufferPos);
                 tempBufferPos += item.Base64Hash.Size;
+
+                _stream.Write(_tempBuffer, 0, tempBufferPos);
+            }
+        }
+
+        private unsafe void WriteAttachmentTombstoneToServer(ReplicationBatchItem item)
+        {
+            var requiredSize = sizeof(byte) + // type
+                               sizeof(short) + // transaction marker
+                               sizeof(int) + // size of key
+                               item.Key.Size;
+
+            if (requiredSize > _tempBuffer.Length)
+                throw new ArgumentOutOfRangeException("item", $"Attachment key ({item.Key.Size} - {item.Key}) " +
+                                                              "(which might include the change vector for revisions or conflicts) is too big.");
+
+            fixed (byte* pTemp = _tempBuffer)
+            {
+                int tempBufferPos = 0;
+                pTemp[tempBufferPos++] = (byte)item.Type;
+
+                *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
+                tempBufferPos += sizeof(short);
+
+                *(int*)(pTemp + tempBufferPos) = item.Key.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, item.Key.Buffer, item.Key.Size);
+                tempBufferPos += item.Key.Size;
 
                 _stream.Write(_tempBuffer, 0, tempBufferPos);
             }
