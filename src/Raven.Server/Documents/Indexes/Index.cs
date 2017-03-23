@@ -126,8 +126,6 @@ namespace Raven.Server.Documents.Indexes
         private readonly ConcurrentQueue<IndexingStatsAggregator> _lastIndexingStats =
             new ConcurrentQueue<IndexingStatsAggregator>();
 
-        private IndexingStatsAggregator _lastIndexingStat;
-
         private int _numberOfQueries;
 
         protected readonly bool HandleAllDocs;
@@ -2031,7 +2029,6 @@ namespace Raven.Server.Documents.Indexes
 
         private void AddIndexingPerformance(IndexingStatsAggregator stats)
         {
-            _lastIndexingStat = stats;
             _lastIndexingStats.Enqueue(stats);
 
             while (_lastIndexingStats.Count > 25)
@@ -2049,7 +2046,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexingStatsAggregator GetLatestIndexingStat()
         {
-            return _lastIndexingStat;
+            return _lastStats;
         }
 
         public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch);
