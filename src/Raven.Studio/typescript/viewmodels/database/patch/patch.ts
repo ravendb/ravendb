@@ -32,6 +32,8 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import patchDocumentCommand = require("commands/database/documents/patchDocumentCommand");
 import showDataDialog = require("viewmodels/common/showDataDialog");
+import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDocumentsIDsCommand");
+import generalUtils = require("common/generalUtils");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -122,12 +124,16 @@ class patchTester extends viewModelBase {
         info: ko.observableArray<string>()
     }
 
+    showObjectsInPutSection = ko.observable<boolean>(false);
+
+    spinners = {
+        testing: ko.observable<boolean>(false),
+        loadingDocument: ko.observable<boolean>(false)
+    }
+
     documentIdSearchResults = ko.observableArray<string>([]);
 
-    validationGroup: KnockoutValidationGroup = ko.validatedObservable({
-        script: this.script,
-        documentId: this.documentId
-    });
+    validationGroup: KnockoutValidationGroup;
 
     constructor(script: KnockoutObservable<string>, db: KnockoutObservable<database>) {
         super();
@@ -136,6 +142,11 @@ class patchTester extends viewModelBase {
         this.initObservables();
 
         this.bindToCurrentInstance("closeTestMode", "enterTestMode", "applyTestScript", "runTest", "onAutocompleteOptionSelected");
+
+        this.validationGroup = ko.validatedObservable({
+            script: this.script,
+            documentId: this.documentId
+        });
     }
 
     formatAsJson(input: KnockoutObservable<any> | any) {
@@ -162,6 +173,8 @@ class patchTester extends viewModelBase {
         this.documentId.throttle(250).subscribe(item => {
             patch.fetchDocumentIdAutocomplete(item, this.db(), this.documentIdSearchResults);
         });
+
+        patch.setupDocumentIdValidation(this.documentId, this.db, () => true);
     }
 
     closeTestMode() {
@@ -175,7 +188,10 @@ class patchTester extends viewModelBase {
         this.documentId(documentIdToUse);
 
         this.validationGroup.errors.showAllMessages(false);
-        //TODO: load document
+
+        if (documentIdToUse) {
+            this.loadDocument();
+        }
     }
 
     resetForm() {
@@ -188,6 +204,8 @@ class patchTester extends viewModelBase {
 
     loadDocument() {
         this.resetForm();
+
+        this.spinners.loadingDocument(true);
 
         new getDocumentWithMetadataCommand(this.documentId(), this.db())
             .execute()
@@ -202,7 +220,8 @@ class patchTester extends viewModelBase {
                 } else {
                     messagePublisher.reportError("Failed to load document.", xhr.responseText, xhr.statusText);
                 }
-            });
+            })
+            .always(() => this.spinners.loadingDocument(false));
     }
 
     applyTestScript() {
@@ -217,32 +236,36 @@ class patchTester extends viewModelBase {
     runTest() {
         eventsCollector.default.reportEvent("patch", "test");
 
-        if (this.isValid(this.validationGroup)) {
-            this.resetForm();
+        this.afterAsyncValidationCompleted(this.validationGroup, () => {
+            if (this.isValid(this.validationGroup)) {
+                this.spinners.testing(true);
+                this.resetForm();
 
-            new patchDocumentCommand(this.documentId(), this.script(), true, this.db())
-                .execute()
-                .done((result) => {
-                    this.beforeDoc(result.OriginalDocument);
-                    this.afterDoc(result.ModifiedDocument);
-                    const debug = result.Debug;
-                    const actions = debug.Actions as Raven.Server.Documents.Patch.PatchDebugActions;
-                    this.actions.loadDocument(actions.LoadDocument);
-                    this.actions.putDocument(actions.PutDocument);
-                    this.actions.info(debug.Info);
+                new patchDocumentCommand(this.documentId(), this.script(), true, this.db())
+                    .execute()
+                    .done((result) => {
+                        this.beforeDoc(result.OriginalDocument);
+                        this.afterDoc(result.ModifiedDocument);
+                        const debug = result.Debug;
+                        const actions = debug.Actions as Raven.Server.Documents.Patch.PatchDebugActions;
+                        this.actions.loadDocument(actions.LoadDocument);
+                        this.actions.putDocument(actions.PutDocument);
+                        this.actions.info(debug.Info);
 
-                    if (result.Status === "Patched") {
-                        messagePublisher.reportSuccess("Test completed");
-                    }
-                })
-                .fail((xhr: JQueryXHR) => {
-                    if (xhr.status === 404) {
-                        messagePublisher.reportWarning("Test failed: Document doesn't exist.");
-                    } else {
-                        messagePublisher.reportError("Failed to test patch.", xhr.responseText, xhr.statusText);
-                    }
-                });
-        }
+                        if (result.Status === "Patched") {
+                            messagePublisher.reportSuccess("Test completed");
+                        }
+                    })
+                    .fail((xhr: JQueryXHR) => {
+                        if (xhr.status === 404) {
+                            messagePublisher.reportWarning("Test failed: Document doesn't exist.");
+                        } else {
+                            messagePublisher.reportError("Failed to test patch.", xhr.responseText, xhr.statusText);
+                        }
+                    })
+                    .always(() => this.spinners.testing(false));
+            }
+        });
     }
 }
 
@@ -255,13 +278,14 @@ class patch extends viewModelBase {
     patchSaveName = ko.observable<string>();
 
     spinners = {
-        save: ko.observable<boolean>(false)
+        save: ko.observable<boolean>(false),
+        preview: ko.observable<boolean>(false)
     }
 
     gridController = ko.observable<virtualGridController<document>>();
     private documentsProvider: documentBasedColumnsProvider;
     private columnPreview = new columnPreviewPlugin<document>();
-    columnsSelector = new columnsSelector<document>(); //TODO: refesh on selected item changed
+    columnsSelector = new columnsSelector<document>();
     private fullDocumentsProvider: documentPropertyProvider;
     private fetcher = ko.observable<fetcherType>();
 
@@ -280,6 +304,7 @@ class patch extends viewModelBase {
     runPatchValidationGroup: KnockoutValidationGroup;
     runQueryValidationGroup: KnockoutValidationGroup;
     savePatchValidationGroup: KnockoutValidationGroup;
+    previewDocumentValidationGroup: KnockoutValidationGroup;
 
     savedPatches = new patchList(item => this.usePatch(item), item => this.removePatch(item));
 
@@ -291,8 +316,6 @@ class patch extends viewModelBase {
         }
     }
 
-    //TODO: implement: Data has changed. Your results may contain duplicates or non-current entries
-
     constructor() {
         super();
         aceEditorBindingHandler.install();
@@ -301,6 +324,26 @@ class patch extends viewModelBase {
 
         this.bindToCurrentInstance("usePatchOption", "useIndex", "useCollection", "previewDocument");
         this.initObservables();
+    }
+
+    static setupDocumentIdValidation(field: KnockoutObservable<string>, db: KnockoutObservable<database>, onlyIf: () => boolean) {
+        const verifyDocuments = (val: string, params: any, callback: (currentValue: string, result: boolean) => void) => {
+            new verifyDocumentsIDsCommand([val], db())
+                .execute()
+                .done((ids: string[]) => {
+                    callback(field(), ids.length > 0);
+                });
+        };
+
+        field.extend({
+            required: true,
+            validation: {
+                message: "Document doesn't exist.",
+                async: true,
+                onlyIf: onlyIf,
+                validator: generalUtils.debounceAndFunnel(verifyDocuments)
+            }
+        });
     }
 
     private initValidation() {
@@ -313,6 +356,10 @@ class patch extends viewModelBase {
         doc.selectedItem.extend({
             required: true
         });
+
+        patch.setupDocumentIdValidation(doc.selectedItem,
+            this.activeDatabase,
+            () => this.patchDocument().patchOnOption() === "Document");
 
         this.patchSaveName.extend({
             required: true
@@ -329,6 +376,10 @@ class patch extends viewModelBase {
         this.savePatchValidationGroup = ko.validatedObservable({
             patchSaveName: this.patchSaveName
         });
+
+        this.previewDocumentValidationGroup = ko.validatedObservable({
+            selectedItem: doc.selectedItem
+        });
     }
 
     private initObservables() {
@@ -343,10 +394,9 @@ class patch extends viewModelBase {
         });
 
         this.patchDocument().patchAll.subscribe((patchAll) => {
-            this.documentsProvider.showRowSelectionCheckbox = !patchAll; //TODO: should we have to always set to true?
+            this.documentsProvider.showRowSelectionCheckbox = !patchAll;
 
-            //TODO: if has custom layout just toggle checkbox? 
-
+            this.columnsSelector.reset();
             this.gridController().reset(true);
         });
 
@@ -699,19 +749,39 @@ class patch extends viewModelBase {
     }
 
     previewDocument() {
-        new getDocumentWithMetadataCommand(this.patchDocument().selectedItem(), this.activeDatabase())
-            .execute()
-            .done((doc: document) => {
-                const text = JSON.stringify(doc, null, 4);
-                app.showBootstrapDialog(new showDataDialog("Document: " + doc.getId(), text, "javascript"));
-            });
+        this.spinners.preview(true);
+
+        this.afterAsyncValidationCompleted(this.previewDocumentValidationGroup, () => {
+            if (this.isValid(this.previewDocumentValidationGroup)) {
+                new getDocumentWithMetadataCommand(this.patchDocument().selectedItem(), this.activeDatabase())
+                    .execute()
+                    .done((doc: document) => {
+                        const text = JSON.stringify(doc, null, 4);
+                        app.showBootstrapDialog(new showDataDialog("Document: " + doc.getId(), text, "javascript"));
+                    })
+                    .always(() => this.spinners.preview(false));
+            } else {
+                this.spinners.preview(false);
+            }
+        });
     }
 
     enterTestMode() {
         const patchDoc = this.patchDocument();
-        const documentIdToUse = patchDoc.patchOnOption() === "Document" ? patchDoc.selectedItem() : null;
 
-        //TODO: if in index/collection mode - preload with first document
+        let documentIdToUse: string = null;
+        switch (patchDoc.patchOnOption()) {
+            case "Document":
+                documentIdToUse = patchDoc.selectedItem();
+                break;
+            case "Collection":
+            case "Index":
+                const selection = this.gridController().getSelectedItems();
+                if (selection.length > 0) {
+                    documentIdToUse = selection[0].getId();
+                }
+                break;
+        }
 
         this.test.enterTestMode(documentIdToUse);
     }

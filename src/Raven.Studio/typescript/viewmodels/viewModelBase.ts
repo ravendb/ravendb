@@ -339,6 +339,38 @@ class viewModelBase {
         }
     }
 
+    protected afterAsyncValidationCompleted(context: KnockoutValidationGroup, callback: Function) {
+        const validationGroup = (context as any)();
+        const keys = _.keys(validationGroup);
+
+        const asyncValidations = [] as Array<KnockoutObservable<boolean>>;
+
+        keys.forEach(key => {
+            if ("isValidating" in validationGroup[key]) {
+                asyncValidations.push(validationGroup[key].isValidating);
+            }
+        });
+
+        if (asyncValidations.length === 0 || _.every(asyncValidations, x => !x())) {
+            callback();
+            return;
+        }
+
+        // there are any validations in progress, await them
+
+        let subscriptions = [] as Array<KnockoutSubscription>;
+
+        const onUpdate = () => {
+            if (_.every(asyncValidations, x => !x())) {
+                // all validators completed its work, clean up and call callback
+                subscriptions.forEach(x => x.dispose());
+                callback();
+            }
+        }
+
+        subscriptions = asyncValidations.map(v => v.subscribe(() => onUpdate()));
+    }
+
     protected isValid(context: KnockoutValidationGroup, showErrors = true): boolean {
         if (context.isValid()) {
             return true;
