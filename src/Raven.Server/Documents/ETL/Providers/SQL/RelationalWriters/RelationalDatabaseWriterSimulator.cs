@@ -25,20 +25,17 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
         public IEnumerable<string> SimulateExecuteCommandText(SqlTableWithRecords records, CancellationToken token)
         {
-            foreach (var table in _configuration.SqlTables)
+            if (records.InsertOnlyMode == false)
             {
-                if (table.InsertOnlyMode)
-                    continue;
-
                 // first, delete all the rows that might already exist there
-                foreach (string deleteQuery in GenerateDeleteItemsCommandText(table.TableName, table.DocumentKeyColumn, _configuration.ParameterizeDeletesDisabled,
-                    records.Inserts, token))
+                foreach (var deleteQuery in GenerateDeleteItemsCommandText(records.TableName, records.DocumentKeyColumn, _configuration.ParameterizeDeletesDisabled,
+                    records.Deletes, token))
                 {
                     yield return deleteQuery;
                 }
             }
 
-            foreach (string insertQuery in GenerteInsertItemCommandText(records.TableName, records.DocumentKeyColumn, records.Inserts, token))
+            foreach (var insertQuery in GenerteInsertItemCommandText(records.TableName, records.DocumentKeyColumn, records.Inserts, token))
             {
                 yield return insertQuery;
             }
@@ -65,7 +62,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
 
                 sb.Append(") VALUES (")
+                    .Append("'")
                     .Append(itemToReplicate.DocumentKey)
+                    .Append("'")
                     .Append(", ");
 
                 foreach (var column in itemToReplicate.Columns)
