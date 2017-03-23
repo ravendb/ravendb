@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.ETL
 
         public Document Document { get; protected set; }
 
-        public string DocumentKey { get; protected set; }
+        public LazyStringValue DocumentKey { get; protected set; }
 
         public long Etag { get; protected set; }
 
