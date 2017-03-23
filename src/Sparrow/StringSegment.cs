@@ -8,6 +8,7 @@ namespace Sparrow
     public class CaseInsensitiveStringSegmentEqualityComparer : IEqualityComparer<StringSegment>
     {
         public static CaseInsensitiveStringSegmentEqualityComparer Instance = new CaseInsensitiveStringSegmentEqualityComparer();
+
         [ThreadStatic]
         private static char[] _buffer;
 
@@ -40,32 +41,45 @@ namespace Sparrow
         }
     }
 
-    public unsafe struct StringSegmentEqualityStructComparer : IEqualityComparer<StringSegment>
+    public struct StringSegmentEqualityStructComparer : IEqualityComparer<StringSegment>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(StringSegment x, StringSegment y)
         {
-            if (x.Length != y.Length)
-                return false;
+            int xSize = x.Length;
+            int ySize = y.Length;
+            if (xSize != ySize)
+                goto ReturnFalse;  // PERF: Because this method is going to be inlined, in case of false we will want to jump at the end.     
 
-            fixed (char* pX = x.String)
-            fixed (char* pY = y.String)
+            int xStart = x.Start;
+            int yStart = y.Start;
+            string xStr = x.String;
+            string yStr = y.String;
+            for (int i = 0; i < xSize; i++)
             {
-                return Memory.Compare((byte*)pX + x.Start * sizeof(char), (byte*)pY + y.Start * sizeof(char), x.Length * sizeof(char)) == 0;
+                if (xStr[xStart + i] != yStr[yStart + i])
+                    goto ReturnFalse;
             }
+            return true;
+
+            ReturnFalse: return false;
 
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetHashCode(StringSegment str)
-        {
-            fixed (char* p = str.String)
+        public int GetHashCode(StringSegment x)
+        {            
+            int xStart = x.Start;
+            int xSize = x.Length;
+            string xStr = x.String;
+
+            uint hash = 0;
+            for (int i = 0; i < xSize; i++)
             {
-                //PERF: JIT will remove the corresponding line based on the target architecture using dead code removal.                                 
-                if (IntPtr.Size == 4)
-                    return (int)Hashing.XXHash32.CalculateInline(((byte*)p + str.Start * sizeof(char)), str.Length * sizeof(char));
-                return (int)Hashing.XXHash64.CalculateInline(((byte*)p + str.Start * sizeof(char)), (ulong)str.Length * sizeof(char));
+                hash = Hashing.CombineInline(hash, xStr[xStart + i]);
             }
+
+            return (int)hash;
         }
     }
 
