@@ -7,6 +7,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 // ReSharper disable ForCanBeConvertedToForeach
 
@@ -63,7 +64,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _commands.Add(new PutCommandDataWithBlittableJson(id, null, transformResult));
         }
 
-        private string GetPrefixedId(string documentId, string loadCollectionName, bool putUsage)
+        private string GetPrefixedId(LazyStringValue documentId, string loadCollectionName, bool putUsage)
         {
             return $"{documentId}/{_script.IdPrefixForCollection[loadCollectionName]}{(putUsage ? "|" : "/")}";
         }

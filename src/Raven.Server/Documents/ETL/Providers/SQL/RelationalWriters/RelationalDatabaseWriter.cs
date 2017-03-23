@@ -154,7 +154,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     var pkParam = cmd.CreateParameter();
 
                     pkParam.ParameterName = GetParameterName(pkName);
-                    pkParam.Value = itemToReplicate.DocumentKey;
+                    pkParam.Value = itemToReplicate.DocumentKey.ToString();
                     cmd.Parameters.Add(pkParam);
 
                     sb.Append(") \r\nVALUES (")
@@ -275,7 +275,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         {
                             var dbParameter = cmd.CreateParameter();
                             dbParameter.ParameterName = GetParameterName("p" + j);
-                            dbParameter.Value = toDelete[j].DocumentKey;
+                            dbParameter.Value = toDelete[j].DocumentKey.ToString();
                             cmd.Parameters.Add(dbParameter);
                             sb.Append(dbParameter.ParameterName);
                         }
