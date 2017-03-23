@@ -475,9 +475,9 @@ namespace Raven.Server.Documents.Replication
                         tempBufferPos = 0;
                         continue;
                     }
-                    item.Stream.Read(_tempBuffer, tempBufferPos, sizeToCopy);
-                    tempBufferPos += sizeToCopy;
-                    readPos += sizeToCopy;
+                    var readCount = item.Stream.Read(_tempBuffer, tempBufferPos, sizeToCopy);
+                    tempBufferPos += readCount;
+                    readPos += readCount;
                 }
 
                 _stream.Write(_tempBuffer, 0, tempBufferPos);
