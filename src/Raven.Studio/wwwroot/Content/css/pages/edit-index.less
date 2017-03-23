@@ -1,9 +1,29 @@
-.edit-index {
+.rename-actions {
+    display:none;
+}
 
-     .rename-widget {
-        z-index: 1049;
-        position: relative;
+.show-rename {
+    .backdrop {
+        .backdrop.show;
     }
+
+    overflow:hidden;
+
+    .rename-show {
+        display:none;
+    }
+
+    .rename-actions {
+        display:table-cell;
+    }
+
+    .rename-widget {
+        position:relative;
+        z-index:1050;
+    }
+}
+
+.edit-index {
 
     .panel-info {
         background-color: fadeout(@brand-info-dark,60%);
