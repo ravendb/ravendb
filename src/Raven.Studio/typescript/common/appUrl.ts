@@ -228,8 +228,14 @@ class appUrl {
     }
 
     static forEditDoc(id: string, db: database): string {
-        var databaseUrlPart = appUrl.getEncodedDbPart(db);
-        var docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
+        const databaseUrlPart = appUrl.getEncodedDbPart(db);
+        const docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
+        return "#databases/edit?" + docIdUrlPart + databaseUrlPart;
+    }
+
+    static forViewDocumentAtRevision(id: string, revisionEtag: number, db: database): string {
+        const databaseUrlPart = appUrl.getEncodedDbPart(db);
+        const docIdUrlPart = "&id=" + encodeURIComponent(id) + "&revision=" + revisionEtag;
         return "#databases/edit?" + docIdUrlPart + databaseUrlPart;
     }
 

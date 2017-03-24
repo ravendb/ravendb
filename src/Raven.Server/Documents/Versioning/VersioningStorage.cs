@@ -369,7 +369,7 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        public IEnumerable<Document> GetRevisionsAfter(DocumentsOperationContext context, long etag, int take)
+        public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, long etag, int take)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
 

@@ -8,6 +8,7 @@ import recentDocumentsCtr = require("models/database/documents/recentDocuments")
 
 import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDocumentsIDsCommand");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
+import getDocumentRevisionsCommand = require("commands/database/documents/getDocumentRevisionsCommand");
 
 import appUrl = require("common/appUrl");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
@@ -15,6 +16,8 @@ import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import documentHelpers = require("common/helpers/database/documentHelpers");
 import starredDocumentsStorage = require("common/storage/starredDocumentsStorage");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
+
+type connectedDocsTabs = "related" | "collection" | "recent" | "revisions";
 
 class connectedDocuments {
 
@@ -26,21 +29,23 @@ class connectedDocuments {
         new hyperlinkColumn<connectedDocument>(x => x.id, x => x.href, "", "100%")
     ];
     currentDocumentIsStarred = ko.observable<boolean>(false);
-    currentTab = ko.observable<string>(connectedDocuments.connectedDocsTabs.related);
+    currentTab = ko.observable<connectedDocsTabs>("related");
     recentDocuments = new recentDocumentsCtr();
-    isRelatedActive = ko.pureComputed(() => this.currentTab() === connectedDocuments.connectedDocsTabs.related);
-    isCollectionActive = ko.pureComputed(() => this.currentTab() === connectedDocuments.connectedDocsTabs.collection);
-    isRecentActive = ko.pureComputed(() => this.currentTab() === connectedDocuments.connectedDocsTabs.recent);
-    isStarredActive = ko.pureComputed(() => this.currentTab() === connectedDocuments.connectedDocsTabs.starred);
+    isRelatedActive = ko.pureComputed(() => this.currentTab() === "related");
+    isCollectionActive = ko.pureComputed(() => this.currentTab() === "collection");
+    isRecentActive = ko.pureComputed(() => this.currentTab() === "recent");
+    isRevisionsActive = ko.pureComputed(() => this.currentTab() === "revisions");
 
     gridController = ko.observable<virtualGridController<connectedDocument>>();
 
-    static connectedDocsTabs = {
-        related: "related",
-        collection: "collection",
-        recent: "recent",
-        starred: "starred"
-    };
+    revisionsEnabled = ko.pureComputed(() => {
+        const doc = this.document();
+
+        if (!doc) {
+            return false;
+        }
+        return doc.__metadata.hasFlag("Versioned");
+    });
 
     constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, loadDocument: (docId: string) => void) {
         _.bindAll(this, "toggleStar" as keyof this);
@@ -61,14 +66,14 @@ class connectedDocuments {
 
     fetchCurrentTabDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
         switch (this.currentTab()) {
-            case connectedDocuments.connectedDocsTabs.related:
+            case "related":
                 return this.fetchRelatedDocs(skip, take);
-            case connectedDocuments.connectedDocsTabs.collection:
+            case "collection":
                 return this.fetchCollectionDocs(skip, take);
-            case connectedDocuments.connectedDocsTabs.recent:
+            case "recent":
                 return this.fetchRecentDocs(skip, take);
-            case connectedDocuments.connectedDocsTabs.starred:
-                return this.fetchStarredDocs(skip, take);
+            case "revisions":
+                return this.fetchRevisionDocs(skip, take);
             default: return this.emptyDocResult();
         }
     }
@@ -133,19 +138,36 @@ class connectedDocuments {
         }).promise();
     }
 
-    fetchStarredDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
-        const starredDocsTask = $.Deferred<pagedResult<connectedDocument>>();
+    fetchRevisionDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
+        //TODO: should endpoint return results in different order - newest first?
+        const doc = this.document();
 
-        starredDocumentsStorage.getStarredDocumentsWithDocumentIdsCheck(this.db())
-            .done((verifiedIds: string[]) => {
-                const starredDocs = verifiedIds.map(id => this.docIdToConnectedDoc(id));
-                starredDocsTask.resolve({
-                    items: starredDocs,
-                    totalResultCount: starredDocs.length
-                });
+        if (doc.__metadata.hasFlag("Versioned")) {
+            const fetchTask = $.Deferred<pagedResult<connectedDocument>>();
+            new getDocumentRevisionsCommand(doc.getId(), this.db(), skip, take, true)
+                .execute()
+                .done(result => {
+                    fetchTask.resolve({
+                        items: result.items.map(x => this.revisionToConnectedDocument(x)),
+                        totalResultCount: result.totalResultCount
+                    });
+                })
+                .fail(xhr => fetchTask.reject(xhr));
+
+            return fetchTask.promise();
+        } else {
+            return $.Deferred<pagedResult<connectedDocument>>().resolve({
+                items: [],
+                totalResultCount: 0
             });
+        }
+    }
 
-        return starredDocsTask.promise();
+    private revisionToConnectedDocument(doc: document): connectedDocument {
+        return {
+            href: appUrl.forViewDocumentAtRevision(doc.getId(), doc.__metadata.etag(), this.db()),
+            id: doc.__metadata.lastModified()
+        };
     }
 
     emptyDocResult(): JQueryPromise<pagedResult<connectedDocument>> {
@@ -156,24 +178,24 @@ class connectedDocuments {
     }
 
     activateRelated() {
-        this.currentTab(connectedDocuments.connectedDocsTabs.related);
+        this.currentTab("related");
     }
 
     activateCollection() {
-        this.currentTab(connectedDocuments.connectedDocsTabs.collection);
+        this.currentTab("collection");
     }
 
     activateRecent() {
-        this.currentTab(connectedDocuments.connectedDocsTabs.recent);
+        this.currentTab("recent");
     }
 
-    activateStarred() {
-        this.currentTab(connectedDocuments.connectedDocsTabs.starred);
+    activateRevisions() {
+        this.currentTab("revisions");
     }
 
     onDocumentDeleted() {
         this.recentDocuments.documentRemoved(this.db(), this.document().getId());
-        var previous = this.recentDocuments.getPreviousDocument(this.db());
+        const previous = this.recentDocuments.getPreviousDocument(this.db());
         if (previous) {
             this.loadDocumentAction(previous);
             router.navigate(appUrl.forEditDoc(previous, this.db()), false);
@@ -185,18 +207,18 @@ class connectedDocuments {
     toggleStar() {
         this.currentDocumentIsStarred(!this.currentDocumentIsStarred());
         starredDocumentsStorage.markDocument(this.db(), this.document().getId(), this.currentDocumentIsStarred());
-
-        // If we're showing the starred docs, update the list.
-        if (this.isStarredActive()) {
-            const gridItemsResetState = this.currentTab; // The view has bound the grid reset items state to .currentTab observable. 
-            gridItemsResetState.valueHasMutated(); // Tell the grid the items list has changed.
-        }
     }
 
     private onDocumentLoaded(document: document) {
         if (document) {
             this.recentDocuments.appendRecentDocument(this.db(), this.document().getId());
             this.currentDocumentIsStarred(starredDocumentsStorage.isStarred(this.db(), this.document().getId()));
+        }
+    }
+
+    onDocumentSaved() {
+        if (this.currentTab() === "revisions") {
+            this.gridController().reset();
         }
     }
 
