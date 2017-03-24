@@ -98,13 +98,17 @@ namespace SlowTests.Issues
                     try
                     {
                         var @class = Activator.CreateInstance(test.DeclaringType);
-                        using ((IDisposable)@class)
+                        using (@class as IDisposable)
                         {
                             test.Invoke(@class, null);
                         }
                     }
                     catch (Exception e)
                     {
+                        var tie = e as TargetInvocationException;
+                        if (tie != null)
+                            e = tie.InnerException;
+
                         builder.AppendLine($"Culture: {culture.Name}. Test: {test.Name}. Message: {e.Message}. StackTrace: {e.StackTrace}");
                     }
                 }
