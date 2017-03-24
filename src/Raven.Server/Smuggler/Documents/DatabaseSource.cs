@@ -79,7 +79,7 @@ namespace Raven.Server.Smuggler.Documents
             if (versioningStorage == null)
                 return Enumerable.Empty<Document>();
 
-            return versioningStorage.GetRevisionsAfter(_context, _startRevisionDocumentsEtag, limit);
+            return versioningStorage.GetRevisionsFrom(_context, _startRevisionDocumentsEtag, limit);
         }
 
         public IEnumerable<IndexDefinitionAndType> GetIndexes()

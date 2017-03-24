@@ -1,11 +1,14 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
+type knownDocumentFlags = "Versioned"; //TODO: add more flags
+
 class documentMetadata {
     collection: string;
     ravenClrType: string;
     nonAuthoritativeInfo: boolean;
     id: string;
     tempIndexScore: number;
+    flags: string;
     lastModified = ko.observable<string>();
     nonStandardProps: Array<keyof documentMetadataDto>;
    
@@ -15,6 +18,7 @@ class documentMetadata {
     constructor(dto?: documentMetadataDto) {
         if (dto) {
             this.collection = dto['@collection'];
+            this.flags = dto['@flags'];
             this.ravenClrType = dto['Raven-Clr-Type'];
             this.nonAuthoritativeInfo = dto['Non-Authoritative-Information'];
             this.id = dto['@id'];
@@ -32,6 +36,7 @@ class documentMetadata {
 
             for (let property in dto) {
                 if (property.toUpperCase() !== '@collection'.toUpperCase() &&
+                    property.toUpperCase() !== '@flags'.toUpperCase() &&
                     property.toUpperCase() !== 'Raven-Clr-Type'.toUpperCase() &&
                     property.toUpperCase() !== 'Non-Authoritative-Information'.toUpperCase() &&
                     property.toUpperCase() !== '@id'.toUpperCase() &&
@@ -47,10 +52,15 @@ class documentMetadata {
         }
     }
 
+    hasFlag(flag: knownDocumentFlags) {
+        return _.includes(this.flags, flag);
+    }
+
     toDto(): documentMetadataDto {
         const dto: documentMetadataDto = {
             '@collection': this.collection,
             'Raven-Clr-Type': this.ravenClrType,
+            '@flags': this.flags,
             'Non-Authoritative-Information': this.nonAuthoritativeInfo,
             '@id': this.id,
             'Temp-Index-Score': this.tempIndexScore,

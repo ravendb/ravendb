@@ -17,19 +17,61 @@ namespace Raven.Server.Documents.Handlers
 {
     public class VersioningHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/revisions", "GET", "/databases/{databaseName:string}/revisions?key={documentKey:string}&start={start:int|optional}&pageSize={pageSize:int|optional(25)")]
+        [RavenAction("/databases/*/revisions", "GET")]
         public Task GetRevisionsFor()
         {
             var versioningStorage = Database.BundleLoader.VersioningStorage;
             if (versioningStorage == null)
                 throw new VersioningDisabledException();
 
+            var etag = GetLongQueryString("etag", required: false);
+
+            if (etag.HasValue)
+            {
+                return GetRevisionByEtag(etag.Value);
+            }
+            return GetRevisions();
+        }
+
+        private Task GetRevisionByEtag(long etag)
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                var versioningStorage = Database.BundleLoader.VersioningStorage;
+                var revision = versioningStorage.GetRevisionsFrom(context, etag, 1).FirstOrDefault();
+
+                if (revision != null)
+                {
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    { 
+                        writer.WriteStartObject();
+                        writer.WritePropertyName("Results");
+                        writer.WriteDocuments(context, new [] { revision }, false);
+                        writer.WriteEndObject();
+                    }
+                }
+                else
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private Task GetRevisions()
+        {
             var key = GetQueryStringValueAndAssertIfSingleAndNotEmpty("key");
+            var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
+                var versioningStorage = Database.BundleLoader.VersioningStorage;
+
                 int start = GetStart();
                 int take = GetPageSize(Database.Configuration.Core.MaxPageSize);
                 var revisions = versioningStorage.GetRevisions(context, key, start, take).ToList();
@@ -47,7 +89,12 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
-                    writer.WriteDocuments(context, revisions, false);
+                    writer.WriteDocuments(context, revisions, metadataOnly);
+
+                    writer.WriteComma();
+
+                    writer.WritePropertyName("TotalResults");
+                    writer.WriteInteger(versioningStorage.CountOfRevisions(context, key));
                     writer.WriteEndObject();
                 }
             }

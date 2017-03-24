@@ -23,6 +23,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import connectedDocuments = require("viewmodels/database/documents/editDocumentConnectedDocuments");
 import timeHelpers = require("common/timeHelpers");
+import getDocumentAtRevisionCommand = require("commands/database/documents/getDocumentAtRevisionCommand");
 
 import eventsCollector = require("common/eventsCollector");
 
@@ -32,10 +33,12 @@ class editDocument extends viewModelBase {
     static documentNameSelector = "#documentName";
     static docEditorSelector = "#docEditor";
 
+    inReadOnlyMode = ko.observable<boolean>(false);
     document = ko.observable<document>();
     documentText = ko.observable("");
     metadata: KnockoutComputed<documentMetadata>;
     lastModifiedAsAgo: KnockoutComputed<string>;
+    latestRevisionUrl: KnockoutComputed<string>;
 
     isCreatingNewDocument = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
@@ -81,17 +84,20 @@ class editDocument extends viewModelBase {
     canActivate(args: any) {
         super.canActivate(args);
 
-        if (args && args.id) {
+        if (args && args.id && args.revision) {
+            return this.activateByRevision(args.id, args.revision);
+        } else if (args && args.id) {
             return this.activateById(args.id);
         } else {
             return $.Deferred().resolve({ can: true });
         }
     }
 
-    activate(navigationArgs: { list: string, database: string, item: string, id: string, new: string, index: string }) {
+    activate(navigationArgs: { list: string, database: string, item: string, id: string, new: string, index: string, revision: number }) {
         super.activate(navigationArgs);
         this.updateHelpLink('M72H1R');        
 
+        //TODO: raw url for revision
         if (navigationArgs && navigationArgs.id) {
             ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), navigationArgs.id));
         } else {
@@ -131,8 +137,19 @@ class editDocument extends viewModelBase {
                 canActivateResult.resolve({ can: true });
             })
             .fail(() => {
-                messagePublisher.reportError(`Could not find ${id} document`);
                 canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocumentsCollectionName, this.activeDatabase()) });
+            });
+        return canActivateResult;
+    }
+
+    private activateByRevision(id: string, etag: number) {
+        const canActivateResult = $.Deferred<canActivateResultDto>();
+        this.loadRevision(etag)
+            .done(() => {
+                canActivateResult.resolve({ can: true });
+            })
+            .fail(() => {
+                canActivateResult.resolve({ redirect: appUrl.forEditDoc(id, this.activeDatabase()) });
             });
         return canActivateResult;
     }
@@ -243,6 +260,11 @@ class editDocument extends viewModelBase {
             const now = timeHelpers.utcNowWithMinutePrecision();
             const metadata = this.metadata();
             return metadata ? moment.utc(metadata.lastModified()).from(now) : "";
+        });
+
+        this.latestRevisionUrl = ko.pureComputed(() => {
+            const id = this.document().getId();
+            return appUrl.forEditDoc(id, this.activeDatabase());
         });
     }
 
@@ -450,7 +472,7 @@ class editDocument extends viewModelBase {
             .execute()
             .done((saveResult: saveDocumentResponseDto) => this.onDocumentSaved(saveResult))
             .fail(() => {
-                this.isSaving(false)
+                this.isSaving(false);
             });
     }
 
@@ -465,6 +487,7 @@ class editDocument extends viewModelBase {
                 this.docEditor.selection.setRange(currentSelection, false);
                 this.isSaving(false);
                 this.syncChangeNotification();
+                this.connectedDocuments.onDocumentSaved();
             });
         this.updateUrl(savedDocumentDto.Key);
 
@@ -493,6 +516,7 @@ class editDocument extends viewModelBase {
             .execute()
             .done((doc: document) => {
                 this.document(doc);
+                this.inReadOnlyMode(false);
                 this.dirtyFlag().reset();
 
                 if (this.autoCollapseMode()) {
@@ -501,6 +525,28 @@ class editDocument extends viewModelBase {
             })
             .fail(() => messagePublisher.reportError("Could not find " + id + " document"))
             .always(() => this.isBusy(false));
+    }
+
+    loadRevision(etag: number) : JQueryPromise<document> {
+        this.isBusy(true);
+
+        return new getDocumentAtRevisionCommand(etag, this.activeDatabase())
+            .execute()
+            .done((doc: document) => {
+                this.document(doc);
+
+                this.inReadOnlyMode(true);
+                this.connectedDocuments.currentTab("revisions");
+
+                this.dirtyFlag().reset();
+
+                if (this.autoCollapseMode()) {
+                    this.foldAll();
+                }
+            })
+            .fail(() => messagePublisher.reportError("Could not find requested revision. Redirecting to latest version"))
+            .always(() => this.isBusy(false));
+
     }
 
     refreshDocument() {

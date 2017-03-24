@@ -340,6 +340,16 @@ namespace Raven.Server.Documents.Versioning
             return new ReleaseMemory(keyMem, context);
         }
 
+        public long CountOfRevisions(DocumentsOperationContext context, string key)
+        {
+            var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
+            Slice loweredKey;
+            using (DocumentKeyWorker.GetSliceFromKey(context, key, out loweredKey))
+            {
+                return numbers.Read(loweredKey)?.Reader.ReadLittleEndianInt64() ?? 0;
+            }
+        }
+
         public IEnumerable<Document> GetRevisions(DocumentsOperationContext context, string key, int start, int take)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
@@ -359,7 +369,7 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        public IEnumerable<Document> GetRevisionsAfter(DocumentsOperationContext context, long etag, int take)
+        public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, long etag, int take)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
 

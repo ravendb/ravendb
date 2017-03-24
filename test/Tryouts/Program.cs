@@ -15,9 +15,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new SmugglerApiTests())
+                using (var a = new AttachmentsReplication())
                 {
-                    a.WillNotCreateMoreRevisionsAfterImport().Wait();
+                    a.DeleteDocumentWithAttachmentsThatHaveTheSameStream();
                 }
             }
         }

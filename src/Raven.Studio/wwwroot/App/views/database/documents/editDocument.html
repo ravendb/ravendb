@@ -35,10 +35,10 @@
                             Recent
                         </button>
                     </div>
-                    <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-xs btn-default doc-starred" data-bind="css: { active: isStarredActive() }, click: activateStarred">
-                            <div class="icon-star"></div>
-                            Starred
+                    <div class="btn-group" role="group" data-bind="visible: revisionsEnabled">
+                        <button type="button" class="btn btn-xs btn-default doc-revisions" data-bind="css: { active: isRevisionsActive() }, click: activateRevisions">
+                            <div class="icon">TODO</div>
+                            Revisions
                         </button>
                     </div>
                 </div>
@@ -74,6 +74,8 @@
                                 <span data-bind="attr: { class: connectedDocuments.currentDocumentIsStarred()?'icon-star-filled favorite':'icon-star' }"></span>
                             </a>
                             <span class="obj-name" data-bind="text: userSpecifiedId">corp/SetObjectName</span>
+                            
+                            <span data-bind="visible: inReadOnlyMode">Revision</span>
                         </div>
                     </div>
                 </div>
@@ -91,7 +93,7 @@
             </div>
             <div class="btn-bar toolbar">
                 <div class="pull-left-sm">
-                    <button type="submit" class="btn btn-primary save-btn" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': isSaving }">
+                    <button type="submit" class="btn btn-primary save-btn" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': isSaving }, visible: !inReadOnlyMode()">
                         <i class="icon-save"></i>
                         <span>Save</span>
                     </button>
@@ -99,10 +101,14 @@
                         <i class="icon-clone"></i>
                         <span>Clone</span>
                     </button>
-                    <button type="button" data-bind="click: deleteDocument, enable: !isCreatingNewDocument()" class="delete-btn btn btn-danger">
+                    <button type="button" data-bind="click: deleteDocument, enable: !isCreatingNewDocument(), visible: !inReadOnlyMode()" class="delete-btn btn btn-danger">
                         <i class="icon-trash"></i>
                         <span>Delete</span>
                     </button>
+                    <a  data-bind="attr: { href: latestRevisionUrl }, visible: inReadOnlyMode()" class="btn btn-default">
+                        <i class="icon-arrow-left"></i>
+                        <span>See latest revision</span>
+                    </a>
                 </div>
                 <div class="pull-right-sm">
                     <div class="btn-group">
@@ -132,7 +138,7 @@
         </div>
         <div class="flex-window-scroll">
             <pre id="docEditor" class="form-control absolute-fill" 
-                 data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/json'}, attr: { disabled: isBusy }, validationElement: documentText"></pre>
+                 data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/json', readOnly: inReadOnlyMode() }, attr: { disabled: isBusy }, validationElement: documentText"></pre>
         </div>
         <div data-bind="validationElement: documentText">
             <div class="help-block" data-bind="validationMessage: documentText"></div>
