@@ -79,7 +79,7 @@ namespace SlowTests.Bugs.MultiTenancy
 
 
         [Fact]
-        public void CanQueryDefaultDatabaseQuickly()
+        public void CanQueryDefaultDatabase()
         {
             DoNotReuseServer();
             using (var store = GetDocumentStore())
@@ -102,7 +102,6 @@ namespace SlowTests.Bugs.MultiTenancy
                 {
                     Assert.Empty(s.Query<User>().Where(x => x.Name == "Hello"));
                 }
-                Assert.True(TimeSpan.FromSeconds(5) > sp.Elapsed);
             }
         }
 
