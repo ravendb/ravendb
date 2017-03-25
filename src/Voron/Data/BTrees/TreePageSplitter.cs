@@ -37,7 +37,7 @@ namespace Voron.Data.BTrees
             _pageNumber = pageNumber;
             _nodeType = nodeType;
             _cursor = cursor;
-            TreePage page = _cursor.Pages.First.Value;
+            TreePage page = _cursor.Pages.Peek();
             _page = _tree.ModifyPage(page);
             _cursor.Pop();
         }
@@ -75,7 +75,7 @@ namespace Voron.Data.BTrees
 
                     _parentPage = _tree.ModifyPage(_cursor.CurrentPage);
 
-                    _cursor.Update(_cursor.Pages.First, _parentPage);
+                    _cursor.Update(_cursor.Pages, _parentPage);
                 }
 
                 if (_page.IsLeaf)

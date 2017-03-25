@@ -12,6 +12,7 @@ using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
+using Sparrow.Collections;
 
 namespace Voron.Data.BTrees
 {
@@ -348,7 +349,7 @@ namespace Voron.Data.BTrees
                 {
                     using (var cursor = cursorConstructor.Build(key))
                     {
-                        cursor.Update(cursor.Pages.First, page);
+                        cursor.Update(cursor.Pages, page);
 
                         var pageSplitter = new TreePageSplitter(_llt, this, key, len, pageNumber, nodeType, cursor);
                         dataPos = pageSplitter.Execute();
@@ -592,13 +593,19 @@ namespace Voron.Data.BTrees
 
             return SearchForPage(key, allowCompressed, out cursor, out node);
         }
+        [ThreadStatic]
+        private FastList<long> _cursorPathBuffer;
 
         private TreePage SearchForPage(Slice key, out TreeNodeHeader* node)
         {
             var p = GetReadOnlyTreePage(State.RootPageNumber);
 
-            var cursorPath = new List<long>();
-            cursorPath.Add(p.PageNumber);
+            if (_cursorPathBuffer == null)
+                _cursorPathBuffer = new FastList<long>();
+            else
+                _cursorPathBuffer.Clear();
+
+            _cursorPathBuffer.Add(p.PageNumber);
 
             bool rightmostPage = true;
             bool leftmostPage = true;
@@ -646,7 +653,7 @@ namespace Voron.Data.BTrees
                 Debug.Assert(pageNode->PageNumber == p.PageNumber,
                     string.Format("Requested Page: #{0}. Got Page: #{1}", pageNode->PageNumber, p.PageNumber));
 
-                cursorPath.Add(p.PageNumber);
+                _cursorPathBuffer.Add(p.PageNumber);
             }
 
             if (p.IsLeaf == false)
@@ -657,7 +664,7 @@ namespace Voron.Data.BTrees
 
             node = p.Search(_llt, key); // will set the LastSearchPosition
 
-            AddToRecentlyFoundPages(cursorPath, p, leftmostPage, rightmostPage);
+            AddToRecentlyFoundPages(_cursorPathBuffer, p, leftmostPage, rightmostPage);
 
             return p;
         }
@@ -738,7 +745,7 @@ namespace Voron.Data.BTrees
             throw new InvalidOperationException($"Page {p.PageNumber} is compressed. You need to decompress it to be able to access its content.");
         }
 
-        private void AddToRecentlyFoundPages(List<long> c, TreePage p, bool leftmostPage, bool rightmostPage)
+        private void AddToRecentlyFoundPages(FastList<long> c, TreePage p, bool leftmostPage, bool rightmostPage)
         {
             Debug.Assert(p.IsCompressed == false);
 
@@ -800,13 +807,10 @@ namespace Voron.Data.BTrees
             }
 
             var cursorPath = new long[c.Pages.Count];
-
-            var cur = c.Pages.First;
             int pos = cursorPath.Length - 1;
-            while (cur != null)
+            foreach (var page in c.Pages)
             {
-                cursorPath[pos--] = cur.Value.PageNumber;
-                cur = cur.Next;
+                cursorPath[pos--] = page.PageNumber;
             }
 
             var foundPage = new RecentlyFoundTreePages.FoundTreePage(p.PageNumber, p, firstKey, lastKey, cursorPath, firstScope, lastScope);

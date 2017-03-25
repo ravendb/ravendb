@@ -393,6 +393,13 @@ namespace Sparrow.Collections
                 builder.WeakClear();
             }
         }
+
+        public T[] ToArray()
+        {
+            var copy = new T[_size];
+            CopyTo(copy, 0);
+            return copy;
+        }
     }
 }
 

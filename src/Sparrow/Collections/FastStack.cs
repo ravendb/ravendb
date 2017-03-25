@@ -152,6 +152,18 @@ namespace Sparrow.Collections
             return true;
         }
 
+        public bool TryPeek(int depth, out T result)
+        {
+            if (_size < depth)
+            {
+                result = default(T);
+                return false;
+            }
+
+            result = _array[_size - depth];
+            return true;
+        }
+
         // Pops an item from the top of the stack.  If the stack is empty, Pop
         // throws an InvalidOperationException.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
