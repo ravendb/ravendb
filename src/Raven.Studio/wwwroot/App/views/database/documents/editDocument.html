@@ -1,4 +1,4 @@
-<form data-bind="submit: saveDocument" class="editDocument">
+<form data-bind="submit: saveDocument" class="editDocument" autocomplete="off">
     <div id="right-options-panel" class="flex-window">
         <div class="panel flex-window-head">
             <div class="panel-body">
@@ -18,27 +18,27 @@
             <div class="flex-window-head">
                 <div class="btn-group btn-group-justified btn-tabs" role="group">
                     <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-xs btn-default doc-related" data-bind="css: { active: isRelatedActive() }, click: activateRelated">
-                            <div class="icon-link"></div>
-                            Related
-                        </button>
-                    </div>
-                    <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-xs btn-default doc-collection" data-bind="css: { active: isCollectionActive() }, click: activateCollection">
-                            <div class="icon-document-group"></div>
-                            Collection
-                        </button>
-                    </div>
-                    <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-xs btn-default doc-recent" data-bind="css: { active: isRecentActive() }, click: activateRecent">
-                            <div class="icon-recent"></div>
-                            Recent
+                        <button type="button" class="btn btn-xs btn-default doc-attachments" data-bind="css: { active: isAttachmentsActive() }, click: activateAttachments">
+                            <div class="icon">TODO</div>
+                            Attachments
                         </button>
                     </div>
                     <div class="btn-group" role="group" data-bind="visible: revisionsEnabled">
                         <button type="button" class="btn btn-xs btn-default doc-revisions" data-bind="css: { active: isRevisionsActive() }, click: activateRevisions">
                             <div class="icon">TODO</div>
                             Revisions
+                        </button>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-xs btn-default doc-related" data-bind="css: { active: isRelatedActive() }, click: activateRelated">
+                            <div class="icon-link"></div>
+                            Related
+                        </button>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-xs btn-default doc-recent" data-bind="css: { active: isRecentActive() }, click: activateRecent">
+                            <div class="icon-recent"></div>
+                            Recent
                         </button>
                     </div>
                 </div>
@@ -50,6 +50,8 @@
                 <div class="panel-body objects-list-container">
                     <virtual-grid params="controller: gridController"></virtual-grid>
                 </div>
+            </div>
+            <div class="flex-window-head" data-bind="visible: isAttachmentsActive(), template: { name: 'uploader-template' }">
             </div>
         </div>
     </div>
@@ -145,3 +147,25 @@
         </div>
     </div>
 </form>
+
+<script type="text/html" id="uploader-template">
+    <div class="flex-container" data-bind="with: uploader">
+        
+        <!-- TODO: review this html start -->
+        <div class="input-group____removed file-input" data-bind="validationElement: fileName">
+            <input type="file" id="uploadAttachmentFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }" tabindex="-1">
+            <span class="static-name form-control" data-bind="text: fileName() || 'Select file...'"></span>
+            <span class="input-group-btn">
+                <label for="uploadAttachmentFilePicker" class="btn btn-default">
+                    <i class="icon-document"></i>
+                    <span>Browse</span>
+                </label>
+                
+                <button class="btn btn-default" type="button" data-bind="click: uploadFile">Upload</button> <!-- TODO: icon -->
+            </span>
+            <p class="help-block" data-bind="validationMessage: fileName"></p>
+        </div>
+        <!-- TODO: review this html end -->
+    </div>
+    
+</script>

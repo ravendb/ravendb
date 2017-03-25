@@ -517,6 +517,7 @@ class editDocument extends viewModelBase {
             .done((doc: document) => {
                 this.document(doc);
                 this.inReadOnlyMode(false);
+                this.displayDocumentChange(false);
                 this.dirtyFlag().reset();
 
                 if (this.autoCollapseMode()) {
@@ -534,9 +535,9 @@ class editDocument extends viewModelBase {
             .execute()
             .done((doc: document) => {
                 this.document(doc);
+                this.displayDocumentChange(false);
 
                 this.inReadOnlyMode(true);
-                this.connectedDocuments.currentTab("revisions");
 
                 this.dirtyFlag().reset();
 
@@ -555,7 +556,10 @@ class editDocument extends viewModelBase {
         .done(() => {
             const docId = this.editedDocId();
             this.userSpecifiedId("");
-            this.loadDocument(docId);
+                this.loadDocument(docId)
+                    .done(() => {
+                        this.connectedDocuments.gridController().reset(true);
+                    });
 
             this.displayDocumentChange(false);
         });

@@ -14,6 +14,7 @@ import downloader = require("common/downloader");
 import databasesManager = require("common/shell/databasesManager");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import eventsCollector = require("common/eventsCollector");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
@@ -257,21 +258,7 @@ class viewModelBase {
     }
 
     protected confirmationMessage(title: string, confirmationMessage: string, options: string[] = ["No", "Yes"], forceRejectWithResolve: boolean = false): JQueryPromise<confirmDialogResult> {
-        const viewTask = $.Deferred<confirmDialogResult>();
-
-        app.showBootstrapDialog(new confirmationDialog(confirmationMessage, title, options))
-            .done((answer) => {
-                var isConfirmed = answer === _.last(options);
-                if (isConfirmed) {
-                    viewTask.resolve({ can: true });
-                } else if (!forceRejectWithResolve) {
-                    viewTask.reject();
-                } else {
-                    viewTask.resolve({ can: false });
-                }
-            });
-
-        return viewTask;
+        return viewHelpers.confirmationMessage(title, confirmationMessage, options, forceRejectWithResolve);
     }
 
     canContinueIfNotDirty(title: string, confirmationMessage: string) {
@@ -372,14 +359,7 @@ class viewModelBase {
     }
 
     protected isValid(context: KnockoutValidationGroup, showErrors = true): boolean {
-        if (context.isValid()) {
-            return true;
-        } else {
-            if (showErrors) {
-                context.errors.showAllMessages();
-            }
-            return false;
-        }
+        return viewHelpers.isValid(context, showErrors);
     }
 
 }
