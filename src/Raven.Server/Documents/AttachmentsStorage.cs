@@ -340,6 +340,9 @@ namespace Raven.Server.Documents
                 var attachment = TableValueToAttachment(context, ref sr.Reader);
                 if (attachment == null)
                     continue;
+
+                attachment.Size = GetAttachmentStreamLength(context, attachment.Base64Hash);
+
                 yield return attachment;
             }
         }
@@ -431,6 +434,15 @@ namespace Raven.Server.Documents
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
             return tree.ReadStream(hashSlice);
+        }
+
+        private long GetAttachmentStreamLength(DocumentsOperationContext context, Slice hashSlice)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
+            var info = tree.GetStreamInfo(hashSlice, false);
+            if (info == null)
+                return -1;
+            return info->TotalSize;
         }
 
         /*

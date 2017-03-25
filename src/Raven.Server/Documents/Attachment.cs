@@ -15,5 +15,6 @@ namespace Raven.Server.Documents
         public Slice Base64Hash;
         public Stream Stream;
         public short TransactionMarker;
+        public long Size;
     }
 }

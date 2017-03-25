@@ -5,13 +5,13 @@ namespace Sparrow
 {
     public static unsafe class Sodium
     {
-            private static int crypto_kdf_keybytes()
+        private static int crypto_kdf_keybytes()
         {
-          
+
             if (_kdfbytes == null)
             {
-                _kdfbytes = 
-                    Platform.PlatformDetails.RunningOnPosix ? 
+                _kdfbytes =
+                    Platform.PlatformDetails.RunningOnPosix ?
                     Platform.Posix.PosixSodium.crypto_kdf_keybytes() : Platform.Win32.WinSodium.crypto_kdf_keybytes();
             }
             return _kdfbytes.Value;
@@ -20,7 +20,7 @@ namespace Sparrow
             byte* buffer,
             int size)
         {
-            return Platform.PlatformDetails.RunningOnPosix ? 
+            return Platform.PlatformDetails.RunningOnPosix ?
                 Platform.Posix.PosixSodium.randombytes_buf(buffer, size) : Platform.Win32.WinSodium.randombytes_buf(buffer, size);
         }
 
