@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
@@ -30,10 +26,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return QueryExpression(
                 FromClause(
                     expressionSyntax.Parameter.Identifier,
-                    ParenthesizedExpression((ExpressionSyntax)Visit(memeberAccess.Expression))
+                    RavenLinqOptimizer.MaybeParenthesizedExpression((ExpressionSyntax)Visit(memeberAccess.Expression))
                 ),
                 QueryBody(SelectClause((ExpressionSyntax)Visit(expressionSyntax.Body)))
-            ).NormalizeWhitespace();
+            );
 
         }
     }
@@ -69,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 var whereClauseSyntax = clause as WhereClauseSyntax;
                 if (whereClauseSyntax != null)
                 {
-                    body = body.AddStatements(IfStatement(BinaryExpression(SyntaxKind.EqualsExpression, ParenthesizedExpression(whereClauseSyntax.Condition), LiteralExpression(SyntaxKind.FalseLiteralExpression)), ContinueStatement()));
+                    body = body.AddStatements(IfStatement(BinaryExpression(SyntaxKind.EqualsExpression, MaybeParenthesizedExpression(whereClauseSyntax.Condition), LiteralExpression(SyntaxKind.FalseLiteralExpression)), ContinueStatement()));
                     continue;
                 }
                 var letClauseSyntax = clause as LetClauseSyntax;
@@ -147,6 +143,17 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return parent.WithStatement(
                 parentBody.ReplaceNode(yieldStatementSyntax, parentVar).AddStatements(stmt.Statement)
             );
+        }
+
+        internal static ExpressionSyntax MaybeParenthesizedExpression(ExpressionSyntax es)
+        {
+            if (es is MemberAccessExpressionSyntax)
+                return es;
+
+            if (es is IdentifierNameSyntax)
+                return es;
+
+            return ParenthesizedExpression(es);
         }
 
         private static ExpressionSyntax StripExpressionParenthesis(ExpressionSyntax expr)

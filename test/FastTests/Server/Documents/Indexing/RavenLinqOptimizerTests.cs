@@ -8,34 +8,43 @@ namespace FastTests.Server.Documents.Indexing
 {
     public class RavenLinqOptimizerTests : RavenTestBase
     {
-        [Fact]
-        public void CanOptimizeExpression()
-        {
-            var str = @"
+        [Theory]
+        [InlineData(@"
             from u in docs.Users
             from tag in u.Tags
             select new { tag }
-            ";
+            ", @"foreach (var u in docs.Users)
+{
+    foreach (var tag in u.Tags)
+    {
+        yield return new
+        {
+        tag
+        }
 
-            var result = OptimizeExpression(str);
-            Assert.IsType<ForEachStatementSyntax>(result);
-            Assert.Equal(result.ToString(),
-                "foreach (var u in docs.Users)\r\n{\r\n    foreach (var tag in u.Tags)\r\n    {\r\n        yield return new\r\n        {\r\n        tag\r\n        }\r\n\r\n        ;\r\n    }\r\n}");
-
-            str = @"
+        ;
+    }
+}")]
+        [InlineData(@"
             from u in docs.Users
             where u.IsActive
             let address = u.Address
             where address.City != ""Tel Aviv""
-            select new { u.Name, u.Email }";
+            select new { u.Name, u.Email }", @"foreach (var u in docs.Users)
+{
+    if (u.IsActive == false)
+        continue;
+    var address = u.Address;
+    if ((address.City != ""Tel Aviv"") == false)
+        continue;
+    yield return new
+    {
+    u.Name, u.Email
+    }
 
-            result = OptimizeExpression(str);
-            Assert.IsType<ForEachStatementSyntax>(result);
-            Assert.Equal(result.ToString(),
-                "foreach (var u in docs.Users)\r\n{\r\n    if ((u.IsActive) == false)\r\n        continue;\r\n    var address = u.Address;\r\n    if ((address.City != \"Tel Aviv\") == false)\r\n        continue;\r\n    yield return new\r\n    {\r\n    u.Name, u.Email\r\n    }\r\n\r\n    ;\r\n}");
-
-            str = @"
-                        docs.Books.Select(p => new {
+    ;
+}")]
+        [InlineData(@"docs.Books.Select(p => new {
                             Name = p.Name,
                             Category = p.Category,
                             Ratings = p.Ratings.Select(x => x.Rate)
@@ -48,20 +57,42 @@ namespace FastTests.Server.Documents.Indexing
                                     MaxRating = DynamicEnumerable.Max(p0.Ratings)
                                 }
                             }
-                        })";
+                        })", @"foreach (var p in docs.Books)
+{
+    var p0 = new
+    {
+    Name = p.Name, Category = p.Category, Ratings =
+        from x in p.Ratings
+        select x.Rate
+    }
 
-            result = OptimizeExpression(str);
+    ;
+    {
+        yield return new
+        {
+        Category = p0.Category, Books = new object[]{new
+        {
+        Name = p0.Name, MinRating = DynamicEnumerable.Min(p0.Ratings), MaxRating = DynamicEnumerable.Max(p0.Ratings)}
+        }}
+
+        ;
+    }
+}")]
+        public void CanOptimizeExpression(string code, string optimized)
+        {
+            var result = OptimizeExpression(code);
             Assert.IsType<ForEachStatementSyntax>(result);
-            Assert.Equal(result.ToString(),
-                "foreach (var p in (docs.Books))\r\n{\r\n    var p0 = new\r\n    {\r\n    Name = p.Name, Category = p.Category, Ratings =\r\n        from x in (p.Ratings)select x.Rate\r\n    }\r\n\r\n    ;\r\n    {\r\n        yield return new\r\n        {\r\n        Category = p0.Category, Books = new object[]{new\r\n        {\r\n        Name = p0.Name, MinRating = DynamicEnumerable.Min(p0.Ratings), MaxRating = DynamicEnumerable.Max(p0.Ratings)}\r\n        }}\r\n\r\n        ;\r\n    }\r\n}");
 
+            Assert.Equal(result.ToFullString(), optimized);
         }
 
         private static SyntaxNode OptimizeExpression(string str)
         {
-           var expression = SyntaxFactory.ParseExpression(str);
-           var result = new RavenLinqPrettifier().Visit(expression).NormalizeWhitespace();
-           return new RavenLinqOptimizer().Visit(result).NormalizeWhitespace();
+           var expression = SyntaxFactory.ParseExpression(str.Trim());
+           var result = new RavenLinqPrettifier().Visit(expression);
+            var expr = new RavenLinqOptimizer().Visit(result);
+            expr = expr.ReplaceTrivia(expr.DescendantTrivia(), (t1, t2)  => new SyntaxTrivia());
+           return expr.NormalizeWhitespace();
         }
 
     }

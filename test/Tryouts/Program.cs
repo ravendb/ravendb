@@ -15,9 +15,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new AttachmentsReplication())
+                using (var a = new FastTests.Server.Replication.ReplicationResolveToDatabase())
                 {
-                    a.DeleteDocumentWithAttachmentsThatHaveTheSameStream();
+                    a.ChangeDatabaseAndResolve();
                 }
             }
         }
