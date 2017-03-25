@@ -10,14 +10,16 @@ class actionColumn<T> implements virtualColumn {
     header: string;
     private buttonText: string;
     width: string;
+    extraClass: string;
 
     actionUniqueId = _.uniqueId("action-");
 
-    constructor(action: (obj: T) => void, header: string, buttonText: string, width: string) {
+    constructor(action: (obj: T) => void, header: string, buttonText: string, width: string, extraClass: string = "") {
         this.action = action;
         this.header = header;
         this.buttonText = buttonText;
         this.width = width;
+        this.extraClass = extraClass;
     }
 
     canHandle(actionId: string) {
@@ -30,7 +32,7 @@ class actionColumn<T> implements virtualColumn {
 
     renderCell(item: document, isSelected: boolean): string {
         return `<div class="cell action-cell" style="width: ${this.width}">
-            <button data-action="${this.actionUniqueId}" class="btn btn-sm btn-block">${this.buttonText}</button>
+            <button type="button" data-action="${this.actionUniqueId}" class="btn btn-sm btn-block ${this.extraClass}">${this.buttonText}</button>
         </div>`;
     }
 

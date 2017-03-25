@@ -88,6 +88,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexDefinition));
             scripter.AddType(typeof(PutIndexResult));
 
+            // attachments
+            scripter.AddType(typeof(AttachmentResult));
+
             // notifications
             scripter.AddType(typeof(AlertRaised));
             scripter.AddType(typeof(NotificationUpdated));
