@@ -6,7 +6,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Indexing
 {
-    public class RavenLinqOptimizerTests : RavenTestBase
+    public class RavenLinqOptimizerTests : NoDisposalNeeded
     {
         [Theory]
         [InlineData(@"
@@ -44,6 +44,31 @@ namespace FastTests.Server.Documents.Indexing
 
     ;
 }")]
+        [InlineData(@"from doc in docs.Foos
+                                from docBarSomeOtherDictionaryItem in ((IEnumerable<dynamic>)doc.Bar.SomeOtherDictionary).DefaultIfEmpty()
+                                from docBarSomeDictionaryItem in ((IEnumerable<dynamic>)doc.Bar.SomeDictionary).DefaultIfEmpty()
+                                select new
+                                {
+                                    Bar_SomeOtherDictionary_Value = docBarSomeOtherDictionaryItem.Value,
+                                    Bar_SomeOtherDictionary_Key = docBarSomeOtherDictionaryItem.Key,
+                                    Bar_SomeDictionary_Value = docBarSomeDictionaryItem.Value,
+                                    Bar_SomeDictionary_Key = docBarSomeDictionaryItem.Key,
+                                    Bar = doc.Bar
+                                }", @"foreach (var doc in docs.Foos)
+{
+    foreach (var docBarSomeOtherDictionaryItem in ((IEnumerable<dynamic>)doc.Bar.SomeOtherDictionary).DefaultIfEmpty())
+    {
+        foreach (var docBarSomeDictionaryItem in ((IEnumerable<dynamic>)doc.Bar.SomeDictionary).DefaultIfEmpty())
+        {
+            yield return new
+            {
+            Bar_SomeOtherDictionary_Value = docBarSomeOtherDictionaryItem.Value, Bar_SomeOtherDictionary_Key = docBarSomeOtherDictionaryItem.Key, Bar_SomeDictionary_Value = docBarSomeDictionaryItem.Value, Bar_SomeDictionary_Key = docBarSomeDictionaryItem.Key, Bar = doc.Bar
+            }
+
+            ;
+        }
+    }
+}")]
         [InlineData(@"docs.Books.Select(p => new {
                             Name = p.Name,
                             Category = p.Category,
@@ -78,6 +103,39 @@ namespace FastTests.Server.Documents.Indexing
         ;
     }
 }")]
+        [InlineData(@"from doc in docs.Foos
+let a = doc.Aloha
+                                from docBarSomeOtherDictionaryItem in ((IEnumerable<dynamic>)doc.Bar.SomeOtherDictionary).DefaultIfEmpty()
+where a != docBarSomeOtherDictionaryItem.Free
+                                from docBarSomeDictionaryItem in ((IEnumerable<dynamic>)doc.Bar.SomeDictionary).DefaultIfEmpty()
+where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
+                                select new
+                                {
+                                    Bar_SomeOtherDictionary_Value = docBarSomeOtherDictionaryItem.Value,
+                                    Bar_SomeOtherDictionary_Key = docBarSomeOtherDictionaryItem.Key,
+                                    Bar_SomeDictionary_Value = docBarSomeDictionaryItem.Value,
+                                    Bar_SomeDictionary_Key = docBarSomeDictionaryItem.Key,
+                                    Bar = doc.Bar
+                                }", @"foreach (var doc in docs.Foos)
+{
+    var a = doc.Aloha;
+    foreach (var docBarSomeOtherDictionaryItem in ((IEnumerable<dynamic>)doc.Bar.SomeOtherDictionary).DefaultIfEmpty())
+    {
+        if ((a != docBarSomeOtherDictionaryItem.Free) == false)
+            continue;
+        foreach (var docBarSomeDictionaryItem in ((IEnumerable<dynamic>)doc.Bar.SomeDictionary).DefaultIfEmpty())
+        {
+            if ((docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2) == false)
+                continue;
+            yield return new
+            {
+            Bar_SomeOtherDictionary_Value = docBarSomeOtherDictionaryItem.Value, Bar_SomeOtherDictionary_Key = docBarSomeOtherDictionaryItem.Key, Bar_SomeDictionary_Value = docBarSomeDictionaryItem.Value, Bar_SomeDictionary_Key = docBarSomeDictionaryItem.Key, Bar = doc.Bar
+            }
+
+            ;
+        }
+    }
+}")]
         public void CanOptimizeExpression(string code, string optimized)
         {
             var result = OptimizeExpression(code);
@@ -88,11 +146,11 @@ namespace FastTests.Server.Documents.Indexing
 
         private static SyntaxNode OptimizeExpression(string str)
         {
-           var expression = SyntaxFactory.ParseExpression(str.Trim());
-           var result = new RavenLinqPrettifier().Visit(expression);
+            var expression = SyntaxFactory.ParseExpression(str.Trim());
+            var result = new RavenLinqPrettifier().Visit(expression);
             var expr = new RavenLinqOptimizer().Visit(result);
-            expr = expr.ReplaceTrivia(expr.DescendantTrivia(), (t1, t2)  => new SyntaxTrivia());
-           return expr.NormalizeWhitespace();
+            expr = expr.ReplaceTrivia(expr.DescendantTrivia(), (t1, t2) => new SyntaxTrivia());
+            return expr.NormalizeWhitespace();
         }
 
     }
