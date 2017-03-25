@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using FastTests.Client.Attachments;
 using FastTests.Smuggler;
+using System.Threading.Tasks;
 
 namespace Tryouts
 {
@@ -12,14 +13,15 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            for (int i = 0; i < 100; i++)
+
+            Parallel.For(0, 100, i =>
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Server.Replication.ReplicationResolveToDatabase())
+                using (var a = new FastTests.Server.Documents.Expiration.Expiration())
                 {
-                    a.ChangeDatabaseAndResolve();
+                    a.CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(count: 100).Wait();
                 }
-            }
+            });
         }
     }
 }
