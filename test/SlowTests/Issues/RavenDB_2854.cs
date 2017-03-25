@@ -8,7 +8,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_2854 : RavenTestBase
     {
-        public class Dog
+        private class Dog
         {
             public bool Cute { get; set; }
         }
@@ -19,7 +19,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
-                { 
+                {
                     var count = s.Query<Dog>().Count(x => x.Cute);
                     Assert.Equal(0, count);
                 }
@@ -59,9 +59,9 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-               using (var s = store.OpenAsyncSession())
+                using (var s = store.OpenAsyncSession())
                 {
-                    
+
                     var countCute = s.Query<Dog>().Where(x => x.Cute).CountLazilyAsync();
                     var countNotCute = s.Query<Dog>().Where(x => x.Cute == false).CountLazilyAsync();
 

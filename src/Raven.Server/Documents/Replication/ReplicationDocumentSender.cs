@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Replication
         {
             var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
             var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
-            var conflicts = _parent._database.DocumentsStorage.GetConflictsFrom(ctx, etag + 1);
+            var conflicts = _parent._database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(ctx, etag + 1);
             var revisions = _parent._database.BundleLoader?.VersioningStorage?.GetRevisionsAfter(ctx, etag + 1);
             var attachments = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
 
@@ -130,14 +130,13 @@ namespace Raven.Server.Documents.Replication
                     _lastEtag = _parent._lastSentDocumentEtag;
                     _parent.CancellationToken.ThrowIfCancellationRequested();
 
-                    const int batchSize = 1024;//TODO: Make batchSize & maxSizeToSend configurable
-                    const int maxSizeToSend = 16 * 1024 * 1024;
+                    var batchSize = _parent._database.Configuration.Replication.MaxItemsCount;
+                    var maxSizeToSend = _parent._database.Configuration.Replication.MaxSizeToSend;
                     long size = 0;
                     int numberOfItemsSent = 0;
                     short lastTransactionMarker = -1;
                     foreach (var item in GetDocsConflictsTombstonesRevisionsAndAttachmentsAfter(documentsContext, _lastEtag))
                     {
-                        // TODO: add a configuration option to disable this check
                         if (lastTransactionMarker != item.TransactionMarker)
                         {
                             lastTransactionMarker = item.TransactionMarker;
@@ -145,8 +144,9 @@ namespace Raven.Server.Documents.Replication
                             // Include the attachment's document which is right after its latest attachment.
                             if (item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
                                 // We want to limit batch sizes to reasonable limits.
-                                (size > maxSizeToSend || numberOfItemsSent > batchSize))
-                                break;
+                                ((maxSizeToSend.HasValue && size > maxSizeToSend.Value) ||
+                                 (batchSize.HasValue && numberOfItemsSent > batchSize.Value)))
+                            break;
                         }
 
                         _lastEtag = item.Etag;
@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Replication
             {
                 _replicaAttachmentStreams[item.Base64Hash] = item;
             }
-            else
+            else if (item.Type == ReplicationBatchItem.ReplicationItemType.Document)
             {
                 if ((item.Flags & DocumentFlags.Artificial) == DocumentFlags.Artificial)
                 {
@@ -314,6 +314,11 @@ namespace Raven.Server.Documents.Replication
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
             {
                 WriteAttachmentToServer(item);
+                return;
+            }
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
+            {
+                WriteAttachmentTombstoneToServer(item);
                 return;
             }
 
@@ -450,6 +455,34 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private unsafe void WriteAttachmentTombstoneToServer(ReplicationBatchItem item)
+        {
+            var requiredSize = sizeof(byte) + // type
+                               sizeof(short) + // transaction marker
+                               sizeof(int) + // size of key
+                               item.Key.Size;
+
+            if (requiredSize > _tempBuffer.Length)
+                throw new ArgumentOutOfRangeException("item", $"Attachment key ({item.Key.Size} - {item.Key}) " +
+                                                              "(which might include the change vector for revisions or conflicts) is too big.");
+
+            fixed (byte* pTemp = _tempBuffer)
+            {
+                int tempBufferPos = 0;
+                pTemp[tempBufferPos++] = (byte)item.Type;
+
+                *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
+                tempBufferPos += sizeof(short);
+
+                *(int*)(pTemp + tempBufferPos) = item.Key.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, item.Key.Buffer, item.Key.Size);
+                tempBufferPos += item.Key.Size;
+
+                _stream.Write(_tempBuffer, 0, tempBufferPos);
+            }
+        }
+
         private unsafe void WriteAttachmentStreamToServer(ReplicationBatchItem item)
         {
             fixed (byte* pTemp = _tempBuffer)
@@ -468,17 +501,16 @@ namespace Raven.Server.Documents.Replication
                 long readPos = 0;
                 while (readPos < item.Stream.Length)
                 {
-                    var partialStreamLength = (int)Math.Min(item.Stream.Length - readPos, int.MaxValue);
-                    var sizeToCopy = Math.Min(partialStreamLength, _tempBuffer.Length - tempBufferPos);
+                    var sizeToCopy = (int)Math.Min(item.Stream.Length - readPos, _tempBuffer.Length - tempBufferPos);
                     if (sizeToCopy == 0) // buffer is full, need to flush it
                     {
                         _stream.Write(_tempBuffer, 0, tempBufferPos);
                         tempBufferPos = 0;
                         continue;
                     }
-                    item.Stream.Read(_tempBuffer, tempBufferPos, sizeToCopy);
-                    tempBufferPos += sizeToCopy;
-                    readPos += sizeToCopy;
+                    var readCount = item.Stream.Read(_tempBuffer, tempBufferPos, sizeToCopy);
+                    tempBufferPos += readCount;
+                    readPos += readCount;
                 }
 
                 _stream.Write(_tempBuffer, 0, tempBufferPos);

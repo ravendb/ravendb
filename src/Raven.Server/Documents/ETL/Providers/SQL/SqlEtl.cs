@@ -1,18 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Diagnostics;
 using System.Linq;
 using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Raven.Server.Documents.ETL.Providers.SQL.Enumerators;
 using Raven.Server.Documents.ETL.Providers.SQL.Metrics;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
-using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Documents.ETL.Providers.SQL.Simulation;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
@@ -22,15 +19,16 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public SqlEtlConfiguration SqlConfiguration { get; }
 
-        private PredefinedSqlConnection _predefinedSqlConnection;
+        private readonly PredefinedSqlConnection _predefinedSqlConnection;
 
-        public readonly SqlEtlMetricsCountersManager Metrics = new SqlEtlMetricsCountersManager();
+        public readonly SqlEtlMetricsCountersManager SqlMetrics = new SqlEtlMetricsCountersManager();
 
         public SqlEtl(DocumentDatabase database, SqlEtlConfiguration configuration, PredefinedSqlConnection predefinedConnection)
             : base(database, configuration, SqlEtlTag)
         {
-            SqlConfiguration = configuration;
             _predefinedSqlConnection = predefinedConnection;
+            SqlConfiguration = configuration;
+            Metrics = SqlMetrics;
         }
 
         protected override IEnumerator<ToSqlItem> ConvertDocsEnumerator(IEnumerator<Document> docs)
@@ -97,17 +95,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
         }
 
-        public override bool CanContinueBatch()
+        public SqlEtlSimulationResult Simulate(SimulateSqlEtl simulateSqlEtl, DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite)
         {
-            return true; // TODO
-        }
+            var summaries = new List<TableQuerySummary>();
 
-        public DynamicJsonValue Simulate(SimulateSqlEtl simulateSqlEtl, DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite)
-        {
             if (simulateSqlEtl.PerformRolledBackTransaction)
             {
-                var summaries = new List<TableQuerySummary>();
-
                 using (var writer = new RelationalDatabaseWriter(this, _predefinedSqlConnection, Database))
                 {
                     foreach (var records in toWrite)
@@ -121,83 +114,68 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
                     writer.Rollback();
                 }
-
-                return new DynamicJsonValue
-                {
-                    ["Results"] = new DynamicJsonArray(summaries.ToArray()),
-                    ["LastAlert"] = Statistics.LastAlert,
-                };
             }
             else
             {
-                var tableQuerySummaries = new List<TableQuerySummary.CommandData>();
-
                 var simulatedwriter = new RelationalDatabaseWriterSimulator(_predefinedSqlConnection, SqlConfiguration);
 
                 foreach (var records in toWrite)
                 {
-                    var commands = simulatedwriter.SimulateExecuteCommandText(records, CancellationToken);
-
-                    tableQuerySummaries.AddRange(commands.Select(x => new TableQuerySummary.CommandData
+                    var commands = simulatedwriter.SimulateExecuteCommandText(records, CancellationToken).Select(x => new TableQuerySummary.CommandData
                     {
                         CommandText = x
-                    }));
-                }
+                    }).ToArray();
 
-                return new DynamicJsonValue
-                {
-                    ["Results"] = new DynamicJsonArray(tableQuerySummaries.ToArray()),
-                    ["LastAlert"] = Statistics.LastAlert,
-                };
+                    summaries.Add(new TableQuerySummary()
+                    {
+                        TableName = records.TableName,
+                        Commands = commands
+                    });
+                }
             }
+
+            return new SqlEtlSimulationResult
+            {
+                LastAlert = Statistics.LastAlert,
+                Summary = summaries
+            };
         }
 
-        public static DynamicJsonValue SimulateSqlEtl(SimulateSqlEtl simulateSqlEtl, DocumentDatabase database, DocumentsOperationContext context)
+        public static SqlEtlSimulationResult SimulateSqlEtl(SimulateSqlEtl simulateSqlEtl, DocumentDatabase database, DocumentsOperationContext context)
         {
-            try
+            var document = database.DocumentsStorage.Get(context, simulateSqlEtl.DocumentId);
+            
+            if (document == null)
+                throw new InvalidOperationException($"Document {simulateSqlEtl.DocumentId} does not exist");
+
+            List<string> errors;
+            if (simulateSqlEtl.Configuration.Validate(out errors) == false)
             {
-                var document = database.DocumentsStorage.Get(context, simulateSqlEtl.DocumentId);
-
-                PredefinedSqlConnection predefinedConnection;
-                var connectionStringName = simulateSqlEtl.Configuration.ConnectionStringName;
-
-                if (database.EtlLoader.CurrentConfiguration.SqlConnections.TryGetValue(connectionStringName, out predefinedConnection) == false)
-                {
-                    throw new InvalidOperationException($"Could not find connection string named '{connectionStringName}' in ETL config");
-                }
-
-                using (var etl = new SqlEtl(database, simulateSqlEtl.Configuration, predefinedConnection))
-                {
-                    var transformed = etl.Transform(new[] { new ToSqlItem(document) }, context);
-
-                    return etl.Simulate(simulateSqlEtl, context, transformed);
-                }
+                throw new InvalidOperationException($"Invalid ETL configuration for: '{simulateSqlEtl.Configuration.Name}'. " +
+                                                    $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.");
             }
-            catch (Exception e)
+
+            PredefinedSqlConnection predefinedConnection;
+            var connectionStringName = simulateSqlEtl.Configuration.ConnectionStringName;
+
+            if (database.EtlLoader.CurrentConfiguration == null)
             {
-                return new DynamicJsonValue
-                {
-                    ["LastAlert"] =
-                    AlertRaised.Create("SQL ETL",
-                        $"Simulate SQL ETL operation for {simulateSqlEtl.Configuration.Name} failed",
-                        AlertType.Etl_Error,
-                        NotificationSeverity.Error,
-                        key: simulateSqlEtl.Configuration.Name,
-                        details: new ExceptionDetails(e)).ToJson()
-                };
+                throw new InvalidOperationException(
+                    $"ETL is not configured. In particular {nameof(EtlConfiguration.SqlConnections)} are not provided, " +
+                    $"while you specified the following connection string name: {connectionStringName}");
             }
-        }
 
-        protected override void UpdateMetrics(DateTime startTime, Stopwatch duration, int batchSize)
-        {
-            Metrics.BatchSizeMeter.Mark(batchSize);
+            if (database.EtlLoader.CurrentConfiguration.SqlConnections.TryGetValue(connectionStringName, out predefinedConnection) == false)
+                throw new InvalidOperationException($"Could not find connection string named '{connectionStringName}' in ETL config");
 
-            Metrics.UpdateReplicationPerformance(new SqlEtlPerformanceStats
+            using (var etl = new SqlEtl(database, simulateSqlEtl.Configuration, predefinedConnection))
             {
-                BatchSize = batchSize,
-                Duration = duration.Elapsed,
-                Started = startTime
-            });
+                etl.EnsureThreadAllocationStats();
+
+                var transformed = etl.Transform(new[] {new ToSqlItem(document)}, context, new EtlStatsScope(new EtlRunStats()));
+
+                return etl.Simulate(simulateSqlEtl, context, transformed);
+            }
         }
     }
 }

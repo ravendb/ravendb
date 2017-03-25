@@ -31,23 +31,8 @@ namespace Sparrow.Json
         private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
         private List<GCHandle> _pinnedObjects;
-
-        private struct StringEqualityStructComparer : IEqualityComparer<string>
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool Equals(string x, string y)
-            {
-                return x.Length == y.Length && string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int GetHashCode(string str)
-            {                
-                return str.GetHashCode();                
-            }
-        }
-
-        private readonly FastDictionary<string, LazyStringValue, StringEqualityStructComparer> _fieldNames = new FastDictionary<string, LazyStringValue, StringEqualityStructComparer>(default(StringEqualityStructComparer));
+   
+        private readonly FastDictionary<string, LazyStringValue, OrdinalStringStructComparer> _fieldNames = new FastDictionary<string, LazyStringValue, OrdinalStringStructComparer>(OrdinalStringStructComparer.Instance);
 
         private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
         private int _numberOfAllocatedStringsValues;
@@ -58,6 +43,7 @@ namespace Sparrow.Json
             if (_numberOfAllocatedStringsValues < _allocateStringValues.Count)
             {
                 var lazyStringValue = _allocateStringValues[_numberOfAllocatedStringsValues++];
+                Debug.Assert(lazyStringValue != null);
                 lazyStringValue.Renew(str,ptr, size);
                 return lazyStringValue;
             }
@@ -287,6 +273,7 @@ namespace Sparrow.Json
             _disposed = true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue GetLazyStringForFieldWithCaching(StringSegment key)
         {
             LazyStringValue value;
@@ -299,12 +286,7 @@ namespace Sparrow.Json
                 return value;
             }
 
-            value = GetLazyString(key, longLived: true);
-            _fieldNames[field] = value;
-
-            //sanity check, in case the 'value' is manually disposed outside of this function
-            Debug.Assert(value.IsDisposed == false);
-            return value;
+            return GetLazyStringForFieldWithCachingUnlikely(field);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -319,9 +301,13 @@ namespace Sparrow.Json
                 return value;
             }
 
-            var key = new StringSegment(field, field.Length);
-            value = GetLazyString(key, longLived: true);
-            _fieldNames[field] = value;
+            return GetLazyStringForFieldWithCachingUnlikely(field);
+        }
+
+        private LazyStringValue GetLazyStringForFieldWithCachingUnlikely(StringSegment key)
+        {
+            LazyStringValue value = GetLazyString(key, longLived: true);
+            _fieldNames[key] = value;
 
             //sanity check, in case the 'value' is manually disposed outside of this function
             Debug.Assert(value.IsDisposed == false);
@@ -492,6 +478,41 @@ namespace Sparrow.Json
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
                         bytes.Valid = read;
+                        bytes.Used = 0;
+                    }
+                    parser.SetBuffer(bytes);
+                    var result = builder.Read();
+                    bytes.Used += parser.BufferOffset;
+                    if (result)
+                        break;
+                }
+                builder.FinalizeDocument();
+
+                var reader = builder.CreateReader();
+                return reader;
+            }
+        }
+
+        public async Task<BlittableJsonReaderObject> ParseToMemoryAsync(WebSocket webSocket, string debugTag,
+           BlittableJsonDocumentBuilder.UsageMode mode,
+           ManagedPinnedBuffer bytes,
+           CancellationToken token = default(CancellationToken)
+           )
+        {
+            _jsonParserState.Reset();
+            using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
+            using (var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState))
+            {
+                CachedProperties.NewDocument();
+                builder.ReadObjectDocument();
+                while (true)
+                {
+                    if (bytes.Valid == bytes.Used)
+                    {
+                        var read = await webSocket.ReceiveAsync(bytes.Buffer, token);
+                        if (read.Count == 0)
+                            throw new EndOfStreamException("Stream ended without reaching end of json content");
+                        bytes.Valid = read.Count;
                         bytes.Used = 0;
                     }
                     parser.SetBuffer(bytes);

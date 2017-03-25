@@ -24,6 +24,8 @@ class virtualGrid<T> {
     private virtualWidth = ko.observable<number>();
     private scrollAnimationFrameHandle = 0;
     private isLoading = ko.observable(false);
+    private emptyResult = ko.observable(false);
+    private emptyTemplate: string = null;
     private queuedFetch: itemFetch | null = null;
     private columns = ko.observableArray<virtualColumn>();
     private isGridVisible = false;
@@ -47,7 +49,7 @@ class virtualGrid<T> {
     private static readonly viewportScrollerSelector = ".viewport-scroller";
     private static readonly minColumnWidth = 20;
 
-    constructor(params: { controller: KnockoutObservable<virtualGridController<T>> }) {
+    constructor(params: { controller: KnockoutObservable<virtualGridController<T>>, emptyTemplate: string }) {
         this.gridId = _.uniqueId("vg_");
 
         this.refreshSelection();
@@ -56,6 +58,10 @@ class virtualGrid<T> {
 
         if (params.controller) {
             params.controller(this.controller);
+        }
+
+        if (params.emptyTemplate) {
+            this.emptyTemplate = params.emptyTemplate;
         }
     }
 
@@ -99,12 +105,10 @@ class virtualGrid<T> {
         //TODO: bind only if resizable form
         this.$gridElement.on("mousedown.columnResize", ".column", (e) => {
             this.handleResize(e);
+        });
 
-            // Stop propagation of the event so the text selection doesn't fire up
-            if (e.stopPropagation) e.stopPropagation();
-            if (e.preventDefault) e.preventDefault();
-            e.cancelBubble = true;
-            e.returnValue = false;
+        this.$gridElement.on("mousedown.columnResize", ".cell", (e) => {
+            this.handleResize(e);
         });
 
         this.shiftSelection = new shiftSelectionPreview(this.gridId, () => this.virtualRows, (s, e) => this.checkIfAllRecordsInRangeAreLoaded(s, e));
@@ -124,17 +128,27 @@ class virtualGrid<T> {
     }
 
     private handleResize(e: JQueryEventObject) {
-        const $document = $(document);
-        const columnToResize = ko.dataFor(e.target) as virtualColumn;
-        const startX = e.pageX;
-        const columnWidthInPixels = virtualGridUtils.widthToPixels(columnToResize);
-        const columnIndex = this.columns.indexOf(columnToResize);
-
         // since resize handles are pseudo html elements, we get invalid target
         // check click location to distinguish between handle and title click
-        if (e.offsetX < columnWidthInPixels - 12) {
+        if (e.offsetX > 8) {
             return;
         }
+
+        // Stop propagation of the event so the text selection doesn't fire up
+        if (e.stopPropagation) e.stopPropagation();
+        if (e.preventDefault) e.preventDefault();
+        e.cancelBubble = true;
+        e.returnValue = false;
+
+        const $document = $(document);
+        const targetColumnIdx = $(e.target).index();
+        const columnIndex = targetColumnIdx - 1;
+        if (columnIndex < 0) {
+            return;
+        }
+        const columnToResize = this.columns()[columnIndex];
+        const startX = e.pageX;
+        const columnWidthInPixels = virtualGridUtils.widthToPixels(columnToResize);
 
         $document.on("mousemove.columnResize", e => {
             const dx = e.pageX - startX;
@@ -274,8 +288,8 @@ class virtualGrid<T> {
     }
 
     private checkForUpdatedGridHeight(): number {
-        var oldHeight = this.gridElementHeight;
-        var newHeight = this.$gridElement.height();
+        const oldHeight = this.gridElementHeight;
+        const newHeight = this.$gridElement.height();
         this.gridElementHeight = newHeight;
 
         // If the grid grew taller, we may need more virtual rows.
@@ -431,6 +445,8 @@ class virtualGrid<T> {
             this.syncVirtualWidth();
         }
 
+        this.emptyResult(results.totalResultCount === 0);
+
         this.updateResultEtag(results.resultEtag);
 
         // Add these results to the .items array as necessary.
@@ -509,7 +525,7 @@ class virtualGrid<T> {
             if (input) {
                 return input;
             }
-        } else if (tagName === "span") {
+        } else if (tagName === "span" || tagName === "i") {
             const button = $target.closest("button");
             if (button) {
                 return button;
@@ -718,6 +734,9 @@ class virtualGrid<T> {
     <div class="viewport flex-window-scroll" data-bind="css: { 'header-visible': settings.showHeader }">
         <div class="viewport-scroller" data-bind="style: { height: virtualHeight() + 'px', width: virtualWidth() + 'px' }, template: { afterRender: afterRender.bind($data) }">
         </div>
+    </div>
+    <div class="absolute-center" data-bind="visible: emptyTemplate && emptyResult(), if: emptyTemplate">
+        <div data-bind="template: emptyTemplate"></div>
     </div>
 </div>
 `

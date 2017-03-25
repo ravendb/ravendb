@@ -33,10 +33,10 @@
                 </div>
                 <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }"><i class="icon-edit"></i><span>Edit index</span></a>
                 <a class="btn btn-default" data-bind="attr: { href: indexPerformanceUrl }" title="Navigate to index performance"><i class="icon-traffic-watch"></i><span>Index performance</span></a>
-                <a class="btn btn-default" data-bind="attr: { href: termsUrl }" title="Navigate to index terms"><i class="icon-indexing"></i><span>Index terms</span></a>
-                <span class="has-disable-reason" data-bind="attr: { 'data-original-title': isIndexMapReduce() ? '' : 'Available only for map/reduce indexes' }">
+                <a class="btn btn-default" data-bind="attr: { href: termsUrl }" title="Navigate to index terms"><i class="icon-terms"></i><span>Index terms</span></a>
+                <div class="btn-group has-disable-reason"  data-bind="attr: { 'data-original-title': isIndexMapReduce() ? '' : 'Available only for map/reduce indexes' }">
                     <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, css: { 'disabled' : !isIndexMapReduce() }" title="Map/Reduce Visualizer"><i class="icon-map-reduce-visualizer"></i> <span>Map/Reduce Visualizer</span></a>
-                </span>
+                </div>
                 <div class="pull-right-sm">
                     <div class="dropdown dropdown-right">
                         <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" data-bind="enable: recentQueries().length">
@@ -133,7 +133,9 @@
                     <small data-bind="html: querySummary"></small>
                 </div>
                 <div class="btn-group btn-group-sm pull-right" role="group">
-                    <button type="button" class="btn btn-danger btn-prerelease" disabled="disabled"><i class="icon-trash"></i> <span>Delete documents</span></button>
+                    <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': isIndexMapReduce() ? 'Available only for map indexes' : '' }">
+                        <button type="button" class="btn btn-danger btn-sm" data-bind="enable: !isIndexMapReduce(), click: deleteDocsMatchingQuery"><i class="icon-trash"></i> <span>Delete documents</span></button>
+                    </div>
                     <div class="btn-group dropdown-right">
                         <button class="btn btn-default btn-sm dropdown-toggle btn-checkable" type="button" data-toggle="dropdown" 
                                 data-bind="css: { 'btn-info active': criteria().hasSorts }, enable: !criteria().allDocumentsIndexSelected()">
@@ -184,7 +186,7 @@
                             <span>Transform results</span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu settings-menu padding padding-sm" role="menu" data-bind="dropdownPanel: true">
+                        <div class="dropdown-menu settings-menu padding padding-sm" role="menu" data-bind="dropdownPanel: true">
                             <div class="row row-sm margin-bottom">
                                 <div class="col-xs-12">
                                     <div class="dropdown btn-block">
@@ -213,8 +215,8 @@
                                 </div>
                             </div>
 
-                            <button class="btn btn-success pull-right close-panel" data-bind="click: applyTransformer"><i class="icon-check"></i> <span>Apply</span></button>
-                        </ul>
+                            <button class="btn btn-success btn-sm pull-right close-panel" data-bind="click: applyTransformer"><i class="icon-check"></i> <span>Apply</span></button>
+                        </div>
                     </div>
                     <!-- TODO: csv enabled for: isStaticIndexSelected -->
                     <button type="button" class="btn btn-default btn-prerelease" disabled="disabled"><i class="icon-csv-export"></i> <span>Export CSV</span></button>
@@ -237,7 +239,7 @@
         <div class="panel flex-window-scroll">
             <div class="has-error results-error" data-bind="visible: staleResult()">
                 <div class="help-block">
-                    <i class="icon-danger"></i><span>Index is stale, possibly not all results are displayed.</span>
+                    <i class="icon-danger"></i><span>Index is stale, possibly not all results are displayed. <a href="#" data-bind="click: refresh">Refresh.</a></span>
                 </div>
             </div>
             <div class="has-error results-error" data-bind="visible: dirtyResult() && !staleResult()">
@@ -256,7 +258,7 @@
 
 <div class="backdrop" data-bind="click: closeAddFilter"></div>
 
-<div class="tooltip" style="opacity: 0">
+<div class="tooltip json-preview" style="opacity: 0">
     <pre><code></code></pre>
 </div>
 
@@ -338,7 +340,7 @@
                         <div class="col-sm-8 col-md-9 input-group date" id="rangeFromInputDate" data-bind="datePicker: rangeDateFrom, datepickerOptions: { endDateElement: 'rangeToInputDate'}" >
                             <input type="text" class="form-control" data-bind="textInput: rangeFrom" />
                             <span class="input-group-addon">
-                                <span class="icon-check"></span>
+                                <span class="icon-calendar"></span>
                             </span>
                         </div>
                     </div>
@@ -347,7 +349,7 @@
                         <div class="col-sm-8 col-md-9 input-group date" id="rangeToInputDate" data-bind="datePicker: rangeDateTo, datepickerOptions: { startDateElement: 'rangeFromInputDate'}">
                             <input type="text" class="form-control" data-bind="textInput: rangeTo" />
                             <span class="input-group-addon">
-                                <span class="icon-check"></span>
+                                <span class="icon-calendar"></span>
                             </span>
                         </div>
                     </div>

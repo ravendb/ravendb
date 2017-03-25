@@ -6,16 +6,21 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.WebSockets;
 using System.Runtime.ExceptionServices;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
@@ -23,6 +28,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
@@ -104,6 +110,121 @@ namespace Raven.Server.Documents.Handlers
 
                     context.OpenReadTransaction();
                     GetDocumentsById(context, new StringValues(ids), null, metadataOnly);
+                }
+            }
+        }
+
+        [RavenAction("/databases/*/bulk_insert", "GET", "/databases/*/bulk_insert")]
+        public async Task BulkInsert()
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var socket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            {
+                var list = new List<Document>();
+                try
+                {
+                    var totalSize = 0;
+                    while (true)
+                    {
+                        var task = context.ReadFromWebSocket(socket, "bulk-insert", Server.ServerStore.ServerShutdown);
+                        if (task.IsCompleted == false || totalSize > 16*Voron.Global.Constants.Size.Megabyte)
+                        {
+                            await FlushBatchAsync(list);
+                            totalSize = 0;
+                        }
+
+                        var obj = await task;
+                        if (obj == null)
+                            break;
+                        totalSize += obj.Size;
+
+                        LazyStringValue id;
+                        var data = BuildObjectFromBulkInsertOp(context,obj,out id);
+                        
+                        var doc = new Document
+                        {
+                            Key = id,
+                            Data = data
+                        };
+                        list.Add(doc);
+                    }
+                    await FlushBatchAsync(list);
+                }
+                catch (Exception e)
+                {
+                    using (var ms = new MemoryStream())
+                    using (var writer = new BlittableJsonTextWriter(context, ms))
+                    {
+                        writer.WriteStartObject();
+                        writer.WritePropertyName("Exception");
+                        writer.WriteString(e.ToString());
+                        writer.WriteEndObject();
+                        writer.Flush();
+                        ArraySegment<byte> bytes;
+                        ms.TryGetBuffer(out bytes);
+                        await socket.SendAsync(bytes, WebSocketMessageType.Text, true, Server.ServerStore.ServerShutdown);
+                    }
+                }
+                finally
+                {
+                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Bulk-insert", Server.ServerStore.ServerShutdown);
+                }
+            }
+        }
+
+        private static BlittableJsonReaderObject BuildObjectFromBulkInsertOp(JsonOperationContext ctx, BlittableJsonReaderObject obj,out LazyStringValue id)
+        {
+            BlittableJsonReaderObject content;
+            BlittableJsonReaderObject metadata;
+
+            obj.TryGet(Constants.Documents.BulkInsert.Content, out content);
+            obj.TryGet(Constants.Documents.Metadata.Key, out metadata);
+
+            string collection;
+            string clrType;
+
+            metadata.TryGet(Constants.Documents.Metadata.Id, out id);
+            metadata.TryGet(Constants.Documents.Metadata.Collection, out collection);
+            metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out clrType);
+            content.Modifications = new DynamicJsonValue(content)
+            {
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Id] = id
+                }
+            };
+            var modifiedMetadata = (DynamicJsonValue)content.Modifications[Constants.Documents.Metadata.Key];
+            if (collection != null)
+                modifiedMetadata[Constants.Documents.Metadata.Collection] = collection;
+            if(clrType != null)
+                modifiedMetadata[Constants.Documents.Metadata.RavenClrType] = clrType;
+
+            return ctx.ReadObject(content,id);
+        }
+
+        private async Task FlushBatchAsync(List<Document> list)
+        {
+            if (list.Count == 0)
+                return;
+            
+            await Database.TxMerger.Enqueue(new MergedInsertBulkCommand
+            {
+                Database = Database,
+                Docs = list
+            });
+        }
+
+        private class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            public DocumentDatabase Database;
+            public List<Document> Docs;
+
+            public override void Execute(DocumentsOperationContext context)
+            {
+                foreach (var doc in Docs)
+                {
+                    Database.DocumentsStorage.Put(context, doc.Key, null, doc.Data);
                 }
             }
         }
@@ -447,7 +568,7 @@ namespace Raven.Server.Documents.Handlers
                     PatchResult patchResult;
                     using (context.OpenWriteTransaction())
                     {
-                        patchResult = Database.Patch.Apply(context, id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode: isDebugOnly);
+                        patchResult = Database.Patcher.Apply(context, id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode: isDebugOnly);
 
                         if (isTestOnly == false)
                         {
@@ -455,9 +576,12 @@ namespace Raven.Server.Documents.Handlers
                         }
                         else
                         {
-                            // origin document is only accessible from the transaction, and we are closing it
-                            // so we have hold on to a copy of it
-                            origin = patchResult.OriginalDocument.Clone(context);
+                            if (patchResult.OriginalDocument != null)
+                            {
+                                // origin document is only accessible from the transaction, and we are closing it
+                                // so we have hold on to a copy of it
+                                origin = patchResult.OriginalDocument.Clone(context);
+                            }
                         }
                     }
 
@@ -501,12 +625,13 @@ namespace Raven.Server.Documents.Handlers
                             else
                                 writer.WriteNull();
 
+                            writer.WriteComma();
+
                             writer.WritePropertyName(nameof(patchResult.Debug));
                             if (patchResult.Debug != null)
                                 writer.WriteObject(patchResult.Debug);
                             else
                                 writer.WriteNull();
-                            writer.WriteComma();
                         }
 
                         writer.WriteEndObject();

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Sparrow;
+using Sparrow.Collections;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.RawData;
@@ -23,8 +24,8 @@ namespace Voron.Data.Tables
         private FixedSizeTree _inactiveSections;
         private FixedSizeTree _activeCandidateSection;
 
-        private readonly Dictionary<Slice, Tree> _treesBySliceCache = new Dictionary<Slice, Tree>(SliceComparer.Instance);
-        private readonly Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache = new Dictionary<Slice, Dictionary<Slice, FixedSizeTree>>(SliceComparer.Instance);
+        private readonly FastDictionary<Slice, Tree, SliceStructComparer> _treesBySliceCache = new FastDictionary<Slice, Tree, SliceStructComparer>(SliceStructComparer.Instance);
+        private readonly FastDictionary<Slice, FastDictionary<Slice, FixedSizeTree, SliceStructComparer>, SliceStructComparer> _fixedSizeTreeCache = new FastDictionary<Slice, FastDictionary<Slice, FixedSizeTree, SliceStructComparer>, SliceStructComparer>(SliceStructComparer.Instance);
 
         public readonly Slice Name;
 
@@ -550,11 +551,11 @@ namespace Voron.Data.Tables
 
         private FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize)
         {
-            Dictionary<Slice, FixedSizeTree> cache;
+            FastDictionary<Slice, FixedSizeTree, SliceStructComparer> cache;
 
             if (_fixedSizeTreeCache.TryGetValue(parent.Name, out cache) == false)
             {
-                cache = new Dictionary<Slice, FixedSizeTree>(SliceComparer.Instance);
+                cache = new FastDictionary<Slice, FixedSizeTree, SliceStructComparer>(SliceStructComparer.Instance);
                 _fixedSizeTreeCache[parent.Name] = cache;
             }
 
@@ -759,6 +760,23 @@ namespace Voron.Data.Tables
                         };
                     }
                 } while (it.MoveNext());
+            }
+        }
+
+        public TableValueHolder SeekOneForwardFrom(TableSchema.SchemaIndexDef index, Slice value)
+        {
+            var tree = GetTree(index);
+            using (var it = tree.Iterate(false))
+            {
+                if (it.Seek(value) == false)
+                    return null;
+
+                foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
+                {
+                    return result;
+                }
+
+                return null;
             }
         }
 
@@ -1029,7 +1047,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, long numberOfEntriesToDelete,
+        public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, bool startsWith, long numberOfEntriesToDelete,
             Action<TableValueHolder> beforeDelete = null)
         {
             if (numberOfEntriesToDelete < 0)
@@ -1044,8 +1062,11 @@ namespace Voron.Data.Tables
                 // them one at a time
                 using (var it = tree.Iterate(false))
                 {
+                    if (startsWith)
+                        it.RequiredPrefix = value.Clone(_tx.Allocator);
                     if (it.Seek(value) == false)
                         return deleted;
+
                     var fst = GetFixedSizeTree(tree, it.CurrentKey.Clone(_tx.Allocator), 0);
                     using (var fstIt = fst.Iterate())
                     {

@@ -220,7 +220,7 @@ namespace Sparrow.Json
 
         public bool TryGet<T>(string name, out T obj)
         {
-            return TryGet(new StringSegment(name, name.Length), out obj);
+            return TryGet(new StringSegment(name), out obj);
         }
 
         public bool TryGetWithoutThrowingOnError<T>(string name, out T obj)
@@ -321,7 +321,7 @@ namespace Sparrow.Json
 
         public bool TryGet(string name, out double? nullableDbl)
         {
-            return TryGet(new StringSegment(name, name.Length), out nullableDbl);
+            return TryGet(new StringSegment(name), out nullableDbl);
         }
 
         public bool TryGet(StringSegment name, out double? nullableDbl)
@@ -339,7 +339,7 @@ namespace Sparrow.Json
 
         public bool TryGet(string name, out double dbl)
         {
-            return TryGet(new StringSegment(name, name.Length), out dbl);
+            return TryGet(new StringSegment(name), out dbl);
         }
 
         public bool TryGet(StringSegment name, out double dbl)
@@ -370,7 +370,7 @@ namespace Sparrow.Json
 
         public bool TryGet(string name, out string str)
         {
-            return TryGet(new StringSegment(name, name.Length), out str);
+            return TryGet(new StringSegment(name), out str);
         }
 
         public bool TryGet(StringSegment name, out string str)
@@ -408,7 +408,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetMember(string name, out object result)
         {
-            return TryGetMember(new StringSegment(name, name.Length), out result);
+            return TryGetMember(new StringSegment(name), out result);
         }
 
 
@@ -513,7 +513,7 @@ namespace Sparrow.Json
 
         public int GetPropertyIndex(string name)
         {
-            return GetPropertyIndex(new StringSegment(name, name.Length));
+            return GetPropertyIndex(new StringSegment(name));
         }
 
 

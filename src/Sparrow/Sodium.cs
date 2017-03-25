@@ -1,45 +1,27 @@
-using Sparrow.Binary;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Sparrow
 {
     public static unsafe class Sodium
     {
-        static Sodium()
+            private static int crypto_kdf_keybytes()
         {
-            var rc = sodium_init();
-            if (rc != 0)
-                throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
+          
+            if (_kdfbytes == null)
+            {
+                _kdfbytes = 
+                    Platform.PlatformDetails.RunningOnPosix ? 
+                    Platform.Posix.PosixSodium.crypto_kdf_keybytes() : Platform.Win32.WinSodium.crypto_kdf_keybytes();
+            }
+            return _kdfbytes.Value;
         }
-
-
-        private static int crypto_kdf_keybytes()
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.crypto_kdf_keybytes();
-            return Platform.Win32.WinSodium.crypto_kdf_keybytes();
-        }
-
-        private static int sodium_init()
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.sodium_init();
-            return Platform.Win32.WinSodium.sodium_init();
-        }
-
         public static int randombytes_buf(
             byte* buffer,
             int size)
         {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.randombytes_buf(buffer, size);
-            return Platform.Win32.WinSodium.randombytes_buf(buffer, size);
+            return Platform.PlatformDetails.RunningOnPosix ? 
+                Platform.Posix.PosixSodium.randombytes_buf(buffer, size) : Platform.Win32.WinSodium.randombytes_buf(buffer, size);
         }
 
         private static void crypto_kdf_keygen(
@@ -69,6 +51,7 @@ namespace Sparrow
         public static int crypto_aead_chacha20poly1305_encrypt_detached(
             byte* c,
             byte* mac,
+            // ReSharper disable once InconsistentNaming
             ulong* maclen_p,
             byte* m,
             ulong mlen,
@@ -100,6 +83,69 @@ namespace Sparrow
             return Platform.Win32.WinSodium.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
         }
 
+        public static int crypto_box_seal(byte* c, byte* m, ulong mlen, byte* pk)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.crypto_box_seal(c, m, mlen, pk);
+            return Platform.Win32.WinSodium.crypto_box_seal(c, m, mlen, pk);
+        }
+
+        public static int crypto_box_seal_open(byte* m, byte* c,
+                         ulong clen, byte* pk, byte* sk)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.crypto_box_seal_open(m, c, clen, pk, sk);
+            return Platform.Win32.WinSodium.crypto_box_seal_open(m, c, clen, pk, sk);
+        }
+
+        public static int crypto_box_sealbytes()
+        {
+            if (_sealbytes == null)
+            {
+                if (Platform.PlatformDetails.RunningOnPosix)
+                    _sealbytes = Platform.Posix.PosixSodium.crypto_box_sealbytes();
+                else
+                    _sealbytes = Platform.Win32.WinSodium.crypto_box_sealbytes();
+            }
+            return _sealbytes.Value;
+        }
+
+        public static int crypto_box_secretkeybytes()
+        {
+            if (_secretkeybytes == null)
+            {
+                if (Platform.PlatformDetails.RunningOnPosix)
+                    _secretkeybytes = Platform.Posix.PosixSodium.crypto_box_secretkeybytes();
+                else
+                    _secretkeybytes = Platform.Win32.WinSodium.crypto_box_secretkeybytes();
+            }
+            return _secretkeybytes.Value;
+        }
+
+        public static int crypto_box_publickeybytes()
+        {
+            if (_publickeybytes == null)
+            {
+                if (Platform.PlatformDetails.RunningOnPosix)
+                    _publickeybytes = Platform.Posix.PosixSodium.crypto_box_publickeybytes();
+                else
+                    _publickeybytes = Platform.Win32.WinSodium.crypto_box_publickeybytes();
+            }
+            return _publickeybytes.Value;
+        }
+
+        public static int crypto_generichash_bytes_max()
+        {
+            if (_generichashBytesMax == null)
+            {
+                if (Platform.PlatformDetails.RunningOnPosix)
+                    _generichashBytesMax = Platform.Posix.PosixSodium.crypto_generichash_bytes_max();
+                else
+                    _generichashBytesMax = Platform.Win32.WinSodium.crypto_generichash_bytes_max();
+            }
+            return _generichashBytesMax.Value;
+        }
+
         public static byte[] GenerateMasterKey()
         {
             var masterKey = new byte[crypto_kdf_keybytes()];
@@ -111,6 +157,12 @@ namespace Sparrow
         }
 
         public static readonly byte[] Context = Encoding.UTF8.GetBytes("Raven DB");
+
+        private static int? _sealbytes;
+        private static int? _kdfbytes;
+        private static int? _generichashBytesMax;
+        private static int? _secretkeybytes;
+        private static int? _publickeybytes;
 
         public static byte[] DeriveKey(byte[] masterKey, long num)
         {
@@ -213,6 +265,31 @@ namespace Sparrow
                 return message;
             }
 
+        }
+
+        public static void crypto_box_keypair(byte* pk, byte* sk)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+            {
+                Platform.Posix.PosixSodium.crypto_box_keypair(pk, sk);
+                return;
+            }
+            Platform.Win32.WinSodium.crypto_box_keypair(pk, sk);
+        }
+
+        public static int crypto_generichash(byte* @out, IntPtr outlen, byte* @in,
+            ulong inlen, byte* key, IntPtr keylen)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.crypto_generichash(@out, outlen, @in, inlen, key, keylen);
+            return Platform.Win32.WinSodium.crypto_generichash(@out, outlen, @in, inlen, key, keylen);
+        }
+
+        public static int sodium_memcmp(byte* b, byte* vh, IntPtr verifiedHashLength)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.sodium_memcmp(b, vh, verifiedHashLength);
+            return Platform.Win32.WinSodium.sodium_memcmp(b, vh, verifiedHashLength);
         }
     }
 }

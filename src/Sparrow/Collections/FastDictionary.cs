@@ -361,7 +361,9 @@ namespace Sparrow.Collections
                     bucket = (bucket + numProbes) & _capacityMask;
                     numProbes++;
 
-                    Debug.Assert(numProbes < 100);
+                    //Debug.Assert(numProbes < 100);
+                    if (numProbes >= _capacity)
+                        break;
                 }
                 while (nHash != KUnusedHash);
 
@@ -406,7 +408,9 @@ namespace Sparrow.Collections
                     bucket = (bucket + numProbes) & _capacityMask;
                     numProbes++;
 
-                    Debug.Assert(numProbes < 100);
+                    //Debug.Assert(numProbes < 100);
+                    if (numProbes >= _capacity)
+                        break;
                 }
                 while (true);
 
@@ -478,7 +482,9 @@ namespace Sparrow.Collections
                 bucket = (bucket + numProbes) & _capacityMask;
                 numProbes++;
 
-                Debug.Assert(numProbes < 100);
+                //Debug.Assert(numProbes < 100);
+                if (numProbes >= _capacity)
+                    break;
             }
             while (nHash != KUnusedHash);
 
@@ -513,7 +519,9 @@ namespace Sparrow.Collections
                 bucket = ((bucket + numProbes) & _capacityMask);
                 numProbes++;
 
-                Debug.Assert(numProbes < 100);
+                //Debug.Assert(numProbes < 100);
+                if (numProbes >= _capacity)
+                    break;
             }
             while (nHash != KUnusedHash);
 

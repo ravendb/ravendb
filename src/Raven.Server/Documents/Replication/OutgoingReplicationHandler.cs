@@ -461,6 +461,8 @@ namespace Raven.Server.Documents.Replication
             while (true)
             {
                 var timeout = 2 * 60 * 1000;// TODO: configurable
+                if (Debugger.IsAttached)
+                    timeout *= 10;
                 using (var replicationBatchReplyMessage = _interruptableRead.ParseToMemory(
                     _connectionDisposed,
                     "replication acknowledge message",

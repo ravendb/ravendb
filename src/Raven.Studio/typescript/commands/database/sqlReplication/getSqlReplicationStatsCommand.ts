@@ -11,12 +11,12 @@ class getSqlReplicationStatsCommand extends commandBase {
         }
     }
 
-    execute(): JQueryPromise<Raven.Server.Documents.ETL.EtlStatistics> {
+    execute(): JQueryPromise<Raven.Server.Documents.ETL.EtlProcessStatistics> { // TODO warapped by 'Results'
         const args = {
             name: this.sqlReplicationName
         };
 
-        const url = endpoints.databases.sqlReplication.sqlReplicationStats;
+        const url = endpoints.databases.etl.etlStats;
 
         return this.query(url, args, this.ownerDb);
     }

@@ -373,7 +373,7 @@ namespace FastTests.Client.Queries
             }
         }
 
-        [Fact(Skip = "Missing feature: Suggestions")]
+        [Fact(Skip = "RavenDB-6573")]
         public void UsingSuggest()
         {
             using (var store = GetDocumentStore())

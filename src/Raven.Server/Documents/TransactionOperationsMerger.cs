@@ -22,6 +22,7 @@ namespace Raven.Server.Documents
         private readonly CancellationToken _shutdown;
         private bool _runTransactions = true;
         private readonly ConcurrentQueue<MergedTransactionCommand> _operations = new ConcurrentQueue<MergedTransactionCommand>();
+        private readonly CountdownEvent _concurrentOperations = new CountdownEvent(1);
 
         private readonly ConcurrentQueue<List<MergedTransactionCommand>> _opsBuffers = new ConcurrentQueue<List<MergedTransactionCommand>>();
         private readonly ManualResetEventSlim _waitHandle = new ManualResetEventSlim(false);
@@ -57,14 +58,29 @@ namespace Raven.Server.Documents
         /// Enqueue the command to be eventually executed. If the command implements
         ///  IDisposable, the command will be disposed after it is run and a tx is committed.
         /// </summary>
-        public Task Enqueue(MergedTransactionCommand cmd)
+        public async Task Enqueue(MergedTransactionCommand cmd)
         {
             _edi?.Throw();
 
             _operations.Enqueue(cmd);
             _waitHandle.Set();
 
-            return cmd.TaskCompletionSource.Task;
+            if (_concurrentOperations.TryAddCount() == false)
+                ThrowTxMergerWasDisposed();
+
+            try
+            {
+                await cmd.TaskCompletionSource.Task;
+            }
+            finally
+            {
+                _concurrentOperations.Signal(); // done with this
+            }
+        }
+
+        private static void ThrowTxMergerWasDisposed()
+        {
+            throw new ObjectDisposedException("Transaction Merger");
         }
 
         private void MergeOperationThreadProc()
@@ -107,8 +123,15 @@ namespace Raven.Server.Documents
                         result.Exception = e;
                         NotifyOnThreadPool(result);
                     }
-                    _waitHandle.Wait(50, _shutdown);
-                    _waitHandle.Reset();
+                    try
+                    {
+                        _waitHandle.Wait(50, _shutdown);
+                        _waitHandle.Reset();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
                 }
             }
         }
@@ -245,7 +268,7 @@ namespace Raven.Server.Documents
         }
 
         private void MergeTransactionsWithAsycnCommit(
-            DocumentsOperationContext context, 
+            DocumentsOperationContext context,
             List<MergedTransactionCommand> previousPendingOps)
         {
             var previous = context.Transaction;
@@ -253,7 +276,7 @@ namespace Raven.Server.Documents
             {
                 while (true)
                 {
-                    if(_log.IsInfoEnabled)
+                    if (_log.IsInfoEnabled)
                         _log.Info($"More pending operations than can handle quickly, started async commit and proceeding concurrently, has {_operations.Count} additional operations");
                     try
                     {
@@ -339,7 +362,7 @@ namespace Raven.Server.Documents
         }
 
         private void CompletePreviousTransction(
-            RavenTransaction previous, 
+            RavenTransaction previous,
             List<MergedTransactionCommand> previousPendingOps,
             bool throwOnError)
         {
@@ -373,8 +396,8 @@ namespace Raven.Server.Documents
 
 
         private PendingOperations ExecutePendingOperationsInTransaction(
-            List<MergedTransactionCommand> pendingOps, 
-            DocumentsOperationContext context, 
+            List<MergedTransactionCommand> pendingOps,
+            DocumentsOperationContext context,
             Task previousOperation)
         {
             _alreadyListeningToPreviousOperationEnd = false;
@@ -462,7 +485,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private  PendingOperations GetPendingOperationsStatus(DocumentsOperationContext context)
+        private PendingOperations GetPendingOperationsStatus(DocumentsOperationContext context)
         {
             if (sizeof(int) == IntPtr.Size || _parent.Configuration.Storage.ForceUsing32BitsPager) // this optimization is disabled for 32 bits
                 return PendingOperations.CompletedAll;
@@ -536,10 +559,37 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             _runTransactions = false;
+
+            // once all the concurrent transactions are done, this will signal the event, preventing
+            // it from adding additional operations
+            var done = _concurrentOperations.Signal();
+
             _waitHandle.Set();
             _txMergingThread?.Join();
             _waitHandle.Dispose();
-        }
 
+            // make sure that the queue is empty and there are no pending 
+            // transactions waiting. 
+            // this is probably a bit more aggresive that what is needed, but it is better 
+            // to be cautious and slower on rare dispose than hang
+
+            while (done == false)
+            {
+                try
+                {
+                    done = _concurrentOperations.Signal();
+                }
+                catch (InvalidOperationException)
+                {
+                    break;
+                }
+            }
+
+            MergedTransactionCommand result;
+            while (_operations.TryDequeue(out result))
+            {
+                result.TaskCompletionSource.TrySetCanceled();
+            }
+        }
     }
 }

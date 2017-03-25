@@ -27,12 +27,13 @@ namespace Raven.Server.Documents.Replication
     {
         public event Action<string, Exception> ReplicationFailed;
 
-        private readonly DocumentDatabase _database;
+        public readonly DocumentDatabase Database;
         private volatile bool _isInitialized;
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
         private readonly Timer _reconnectAttemptTimer;
         internal int MinimalHeartbeatInterval;
+
+        public ResolveConflictOnReplicationConfigurationChange ConflictResolver { get; }
 
         internal readonly ReplicationStatistics RepliactionStats;
 
@@ -88,9 +89,6 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache =
-            new Dictionary<string, ScriptResolver>();
-
         private readonly Logger _log;
         internal ReplicationDocument ReplicationDocument;
         private int _numberOfSiblings;
@@ -103,17 +101,16 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks =
             new ConcurrentQueue<TaskCompletionSource<object>>();
 
-        public Task ResolveConflictsTask = Task.CompletedTask;
-
         public DocumentReplicationLoader(DocumentDatabase database)
         {
-            _database = database;
-            _log = LoggingSource.Instance.GetLogger<DocumentReplicationLoader>(_database.Name);
+            Database = database;
+            _log = LoggingSource.Instance.GetLogger<DocumentReplicationLoader>(Database.Name);
             _reconnectAttemptTimer = new Timer(AttemptReconnectFailedOutgoing,
                 null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
             MinimalHeartbeatInterval =
-               (int)_database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
+               (int)Database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
             RepliactionStats = new ReplicationStatistics(this);
+            ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
         }
 
         public IReadOnlyDictionary<ReplicationDestination, ConnectionShutdownInfo> OutgoingFailureInfo
@@ -190,8 +187,8 @@ namespace Raven.Server.Documents.Replication
             {
                 DocumentsOperationContext documentsOperationContext;
                 TransactionOperationContext configurationContext;
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
-                using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
+                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
+                using (Database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
                 using (var writer = new BlittableJsonTextWriter(documentsOperationContext, tcpConnectionOptions.Stream))
                 using (documentsOperationContext.OpenReadTransaction())
                 using (var configTx = configurationContext.OpenReadTransaction())
@@ -199,7 +196,7 @@ namespace Raven.Server.Documents.Replication
                     var documentsChangeVector = new DynamicJsonArray();
                     foreach (
                         var changeVectorEntry in
-                        _database.DocumentsStorage.GetDatabaseChangeVector(documentsOperationContext))
+                        Database.DocumentsStorage.GetDatabaseChangeVector(documentsOperationContext))
                     {
                         documentsChangeVector.Add(new DynamicJsonValue
                         {
@@ -210,7 +207,7 @@ namespace Raven.Server.Documents.Replication
 
                     var indexesChangeVector = new DynamicJsonArray();
                     var changeVectorAsArray =
-                        _database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector(
+                        Database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector(
                             configTx.InnerTransaction);
                     foreach (var changeVectorEntry in changeVectorAsArray)
                     {
@@ -221,7 +218,7 @@ namespace Raven.Server.Documents.Replication
                         });
                     }
 
-                    var lastEtagFromSrc = _database.DocumentsStorage.GetLastReplicateEtagFrom(
+                    var lastEtagFromSrc = Database.DocumentsStorage.GetLastReplicateEtagFrom(
                         documentsOperationContext, getLatestEtagMessage.SourceDatabaseId);
                     if (_log.IsInfoEnabled)
                     {
@@ -233,7 +230,7 @@ namespace Raven.Server.Documents.Replication
                         [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
                         [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
                         [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] =
-                        _database.IndexMetadataPersistence.GetLastReplicateEtagFrom(configTx.InnerTransaction,
+                        Database.IndexMetadataPersistence.GetLastReplicateEtagFrom(configTx.InnerTransaction,
                             getLatestEtagMessage.SourceDatabaseId),
                         [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentsChangeVector,
                         [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVector,
@@ -241,7 +238,7 @@ namespace Raven.Server.Documents.Replication
                         ReplicationDocument?.DefaultResolver?.ResolvingDatabaseId,
                         [nameof(ReplicationMessageReply.ResolverVersion)] =
                         ReplicationDocument?.DefaultResolver?.Version,
-                        [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString()
+                        [nameof(ReplicationMessageReply.DatabaseId)] = Database.DbId.ToString()
                     };
 
                     documentsOperationContext.Write(writer, response);
@@ -328,13 +325,13 @@ namespace Raven.Server.Documents.Replication
                 !Guid.TryParse(connectionInfo.SourceDatabaseId, out sourceDbId))
             {
                 throw new InvalidOperationException(
-                    $"Failed to parse source database Id. What I got is {(string.IsNullOrWhiteSpace(connectionInfo.SourceDatabaseId) ? "<empty string>" : _database.DbId.ToString())}. This is not supposed to happen and is likely a bug.");
+                    $"Failed to parse source database Id. What I got is {(string.IsNullOrWhiteSpace(connectionInfo.SourceDatabaseId) ? "<empty string>" : Database.DbId.ToString())}. This is not supposed to happen and is likely a bug.");
             }
 
-            if (sourceDbId == _database.DbId)
+            if (sourceDbId == Database.DbId)
             {
                 throw new InvalidOperationException(
-                    $"Cannot have replication with source and destination being the same database. They share the same db id ({connectionInfo} - {_database.DbId})");
+                    $"Cannot have replication with source and destination being the same database. They share the same db id ({connectionInfo} - {Database.DbId})");
             }
 
             IncomingReplicationHandler value;
@@ -347,8 +344,6 @@ namespace Raven.Server.Documents.Replication
                 }
                 value.Dispose();
             }
-
-
         }
 
         public void Initialize()
@@ -358,180 +353,10 @@ namespace Raven.Server.Documents.Replication
 
             _isInitialized = true;
 
-            _database.Changes.OnSystemDocumentChange += OnSystemDocumentChange;
+            Database.Changes.OnSystemDocumentChange += OnSystemDocumentChange;
 
             InitializeOutgoingReplications();
-            InitializeResolvers();
-
-        }
-
-        private void ResolveConflictsInBackground()
-        {
-            var resolverStats = new ReplicationStatistics.ResolverIterationStats();
-            DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            {
-                Slice lastKey;
-                Slice.From(context.Allocator, string.Empty, out lastKey);
-                try
-                {
-                    bool hasConflicts = true;
-                    resolverStats.StartTime = DateTime.UtcNow;
-                    var timeout = 150;
-                    if (Debugger.IsAttached)
-                        timeout *= 10;
-                    while (hasConflicts && !_cts.IsCancellationRequested)
-                    {
-                        try
-                        {
-                            var sp = Stopwatch.StartNew();
-                            DocumentsTransaction tx = null;
-                            try
-                            {
-                                try
-                                {
-                                    tx = context.OpenWriteTransaction();
-                                }
-                                catch (TimeoutException)
-                                {
-                                    continue;
-                                }
-                                hasConflicts = false;
-                                while (!_cts.IsCancellationRequested)
-                                {
-                                    if (sp.ElapsedMilliseconds > timeout)
-                                    {
-                                        // we must release the write transaction to avoid
-                                        // completely blocking all other operations.
-                                        // This is a background task that we can leave later
-                                        hasConflicts = true;
-                                        break;
-                                    }
-
-                                    var conflicts = _database.DocumentsStorage.GetAllConflictsBySameKeyAfter(context,
-                                            ref lastKey);
-                                    if (conflicts.Count == 0)
-                                        break;
-                                    if (TryResolveConflict(context, conflicts, resolverStats) == false)
-                                        continue;
-                                    hasConflicts = true;
-                                }
-
-                                tx.Commit();
-                            }
-                            finally
-                            {
-                                tx?.Dispose();
-                            }
-                        }
-                        finally
-                        {
-                            if (lastKey.HasValue)
-                                lastKey.Release(context.Allocator);
-
-                            Slice.From(context.Allocator, string.Empty, out lastKey);
-                        }
-                    }
-                    resolverStats.EndTime = DateTime.UtcNow;
-                    resolverStats.ConflictsLeft = ConflictsCount;
-                    resolverStats.DefaultResolver = ReplicationDocument?.DefaultResolver;
-                    RepliactionStats.Add(resolverStats);
-                }
-                finally
-                {
-                    if (lastKey.HasValue)
-                        lastKey.Release(context.Allocator);
-                }
-            }
-        }
-
-        public long ConflictsCount => _database.DocumentsStorage.ConflictsCount;
-
-        private bool TryResolveConflict(DocumentsOperationContext context, List<DocumentConflict> conflictList, ReplicationStatistics.ResolverIterationStats stats)
-        {
-            var collection = conflictList[0].Collection;
-
-            ScriptResolver scriptResovler;
-            if (ScriptConflictResolversCache.TryGetValue(collection, out scriptResovler) &&
-                scriptResovler != null)
-            {
-                if (_database.DocumentsStorage.TryResolveConflictByScriptInternal(
-                    context,
-                    scriptResovler,
-                    conflictList,
-                    collection,
-                    hasLocalTombstone: false))
-                {
-                    stats.AddResolvedBy(collection + " Script", conflictList.Count);
-                    return true;
-                }
-
-            }
-
-            if (_database.DocumentsStorage.TryResolveUsingDefaultResolverInternal(
-                context,
-                ReplicationDocument?.DefaultResolver,
-                conflictList,
-                hasTombstoneInStorage: false))
-            {
-                stats.AddResolvedBy("DatabaseResolver", conflictList.Count);
-                return true;
-            }
-
-            if (ReplicationDocument?.DocumentConflictResolution == StraightforwardConflictResolution.ResolveToLatest)
-            {
-                _database.DocumentsStorage.ResolveToLatest(context, conflictList, false);
-                stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
-                return true;
-            }
-
-            return false;
-        }
-
-        private void UpdateScriptResolvers()
-        {
-            if (ReplicationDocument?.ResolveByCollection == null)
-            {
-                if (ScriptConflictResolversCache.Count > 0)
-                    ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
-                return;
-            }
-            var copy = new Dictionary<string, ScriptResolver>();
-            foreach (var kvp in ReplicationDocument.ResolveByCollection)
-            {
-                var collection = kvp.Key;
-                var script = kvp.Value.Script;
-                if (string.IsNullOrEmpty(script.Trim()))
-                {
-                    continue;
-                }
-                copy[collection] = new ScriptResolver
-                {
-                    Script = script
-                };
-            }
-            ScriptConflictResolversCache = copy;
-        }
-
-        private void InitializeResolvers()
-        {
-            UpdateScriptResolvers();
-
-            if (_database.DocumentsStorage.ConflictsCount > 0)
-            {
-                ResolveConflictsTask = Task.Run(() =>
-                {
-                    try
-                    {
-                        ResolveConflictsInBackground();
-                    }
-                    catch (Exception e)
-                    {
-                        if (_log.IsInfoEnabled)
-                            _log.Info("Failed to run automatic conflict resolution", e);
-                    }
-                });
-            }
+            ConflictResolver.RunConflictResolversOnce();
         }
 
         private void InitializeOutgoingReplications()
@@ -548,12 +373,12 @@ namespace Raven.Server.Documents.Replication
                     _log.Info("Tried to initialize outgoing replications, but there is no replication document or destinations are empty. Nothing to do...");
 
                 _numberOfSiblings = 0;
-                _database.DocumentTombstoneCleaner.Unsubscribe(this);
+                Database.DocumentTombstoneCleaner.Unsubscribe(this);
 
                 return;
             }
 
-            _database.DocumentTombstoneCleaner.Subscribe(this);
+            Database.DocumentTombstoneCleaner.Subscribe(this);
 
             if (_log.IsInfoEnabled)
                 _log.Info($"Initializing {ReplicationDocument.Destinations.Count:#,#} outgoing replications..");
@@ -584,7 +409,6 @@ namespace Raven.Server.Documents.Replication
                    NotificationSeverity.Error,
                    "DatabaseMismatch"
                );
-
         private bool ValidateReplicaitonSource()
         {
             var replicationDocument = ReplicationDocument;
@@ -595,16 +419,16 @@ namespace Raven.Server.Documents.Replication
 
             if (replicationDocument.Source == null)
             {
-                replicationDocument.Source = _database.DbId.ToString();
+                replicationDocument.Source = Database.DbId.ToString();
                 DocumentsOperationContext context;
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenWriteTransaction())
                 {
                     var djv = replicationDocument.ToJson();
                     using (var doc = context.ReadObject(djv,
                         Constants.Documents.Replication.ReplicationConfigurationDocument))
                     {
-                        _database.DocumentsStorage.Put(context, Constants.Documents.Replication.ReplicationConfigurationDocument,
+                        Database.DocumentsStorage.Put(context, Constants.Documents.Replication.ReplicationConfigurationDocument,
                             null, doc);
                         tx.Commit();
                     }
@@ -618,21 +442,21 @@ namespace Raven.Server.Documents.Replication
 
             Guid sourceDbId;
             if (Guid.TryParse(replicationDocument.Source, out sourceDbId) == false ||
-                sourceDbId != _database.DbId)
+                sourceDbId != Database.DbId)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"Replication source '{replicationDocument.Source}' does not match this database, outgoing replication is disabled until this will be fixed.");
 
-                _database.NotificationCenter.Add(_databaseMismatchAlert);
+                Database.NotificationCenter.Add(_databaseMismatchAlert);
                 return false;
             }
-            _database.NotificationCenter.Dismiss(_databaseMismatchAlert.Id);
+            Database.NotificationCenter.Dismiss(_databaseMismatchAlert.Id);
             return true;
         }
 
         private void AddAndStartOutgoingReplication(ReplicationDestination destination)
         {
-            var outgoingReplication = new OutgoingReplicationHandler(this, _database, destination);
+            var outgoingReplication = new OutgoingReplicationHandler(this, Database, destination);
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
@@ -776,7 +600,7 @@ namespace Raven.Server.Documents.Replication
 
             InitializeOutgoingReplications();
 
-            InitializeResolvers();
+            ConflictResolver.RunConflictResolversOnce();
 
             if (_log.IsInfoEnabled)
                 _log.Info($"Replication configuration was changed: {change.Key}");
@@ -795,10 +619,10 @@ namespace Raven.Server.Documents.Replication
                 ThrowConflictingResolvers(uid, version, ReplicationDocument.DefaultResolver.ResolvingDatabaseId);
 
             DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (context.OpenWriteTransaction())
             {
-                var configurationDocument = _database.DocumentsStorage.Get(context, Constants.Documents.Replication.ReplicationConfigurationDocument);
+                var configurationDocument = Database.DocumentsStorage.Get(context, Constants.Documents.Replication.ReplicationConfigurationDocument);
                 ReplicationDocument replicationDoc = null;
 
                 if (configurationDocument != null)
@@ -840,7 +664,7 @@ namespace Raven.Server.Documents.Replication
                 var djv = replicationDoc.ToJson();
                 var replicatedBlittable = context.ReadObject(djv, Constants.Documents.Replication.ReplicationConfigurationDocument);
 
-                _database.DocumentsStorage.Put(context, Constants.Documents.Replication.ReplicationConfigurationDocument, null, replicatedBlittable);
+                Database.DocumentsStorage.Put(context, Constants.Documents.Replication.ReplicationConfigurationDocument, null, replicatedBlittable);
 
                 context.Transaction.Commit();// will force reload of all connections as side affect
             }
@@ -859,10 +683,10 @@ namespace Raven.Server.Documents.Replication
         private ReplicationDocument GetReplicationDocument()
         {
             DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var configurationDocument = _database.DocumentsStorage.Get(context, Constants.Documents.Replication.ReplicationConfigurationDocument);
+                var configurationDocument = Database.DocumentsStorage.Get(context, Constants.Documents.Replication.ReplicationConfigurationDocument);
 
                 if (configurationDocument == null)
                     return null;
@@ -878,14 +702,11 @@ namespace Raven.Server.Documents.Replication
         {
             var ea = new ExceptionAggregator("Failed during dispose of document replication loader");
 
-            _cts.Cancel();
-            _cts.Dispose();
-
             ea.Execute(_reconnectAttemptTimer.Dispose);
 
-            _database.Changes.OnSystemDocumentChange -= OnSystemDocumentChange;
+            Database.Changes.OnSystemDocumentChange -= OnSystemDocumentChange;
 
-            ea.Execute(() => ResolveConflictsTask.Wait());
+            ea.Execute(() => ConflictResolver.ResolveConflictsTask.Wait());
 
             if (_log.IsInfoEnabled)
                 _log.Info("Closing and disposing document replication connections.");
@@ -896,7 +717,7 @@ namespace Raven.Server.Documents.Replication
             foreach (var outgoing in _outgoing)
                 ea.Execute(outgoing.Dispose);
 
-            _database.DocumentTombstoneCleaner?.Unsubscribe(this);
+            Database.DocumentTombstoneCleaner?.Unsubscribe(this);
 
             ea.ThrowIfNeeded();
         }
@@ -932,16 +753,16 @@ namespace Raven.Server.Documents.Replication
 
             bool tooManyTombstones;
             DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                tooManyTombstones = _database.DocumentsStorage.HasMoreOfTombstonesAfter(context, minEtag, maxTombstones);
+                tooManyTombstones = Database.DocumentsStorage.HasMoreOfTombstonesAfter(context, minEtag, maxTombstones);
             }
 
             if (!tooManyTombstones)
                 return result;
 
-            _database.NotificationCenter.Add(
+            Database.NotificationCenter.Add(
                 PerformanceHint.Create(
                     title: "Large number of tombstones because of disabled replication destination",
                     msg:

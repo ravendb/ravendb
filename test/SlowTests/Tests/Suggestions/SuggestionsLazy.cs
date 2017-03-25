@@ -17,7 +17,7 @@ namespace SlowTests.Tests.Suggestions
 {
     public class SuggestionsLazy : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Suggestions")]
+        [Fact(Skip = "RavenDB-6573")]
         public void UsingLinq()
         {
             using (var store = GetDocumentStore())

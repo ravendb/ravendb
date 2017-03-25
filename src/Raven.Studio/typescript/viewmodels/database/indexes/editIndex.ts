@@ -1,8 +1,10 @@
+import app = require("durandal/app");
 import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
 import document = require("models/database/documents/document");
 import indexDefinition = require("models/database/index/indexDefinition");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
+import getCSharpIndexDefinitionCommand = require("commands/database/index/getCSharpIndexDefinitionCommand");
 import appUrl = require("common/appUrl");
 import dialog = require("plugins/dialog");
 import jsonUtil = require("common/jsonUtil");
@@ -22,10 +24,12 @@ import getIndexNamesCommand = require("commands/database/index/getIndexNamesComm
 import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
+import showDataDialog = require("viewmodels/common/showDataDialog");
 
 class editIndex extends viewModelBase { 
 
     static readonly DefaultIndexStoragePath = "~/{Database Name}/Indexes";
+    static readonly $body = $("body");
 
     isEditingExistingIndex = ko.observable<boolean>(false);
     editedIndex = ko.observable<indexDefinition>();
@@ -94,6 +98,10 @@ class editIndex extends viewModelBase {
             const renameMode = this.renameMode();
             const editMode = this.isEditingExistingIndex();
             return !editMode || renameMode;
+        });
+
+        this.renameMode.subscribe(renameMode => {
+            editIndex.$body.toggleClass('show-rename', renameMode);
         });
     }
 
@@ -542,6 +550,13 @@ class editIndex extends viewModelBase {
         editedIndex.renameValidationGroup.errors.showAllMessages(false);
     }
 
+    getCSharpCode() {
+        eventsCollector.default.reportEvent("index", "generate-csharp-code");
+        new getCSharpIndexDefinitionCommand(this.editedIndex().name(), this.activeDatabase())
+            .execute()
+            .done((data: string) => app.showBootstrapDialog(new showDataDialog("C# Index Definition", data, "csharp")));
+    }
+
     /* TODO
     refreshIndex() {
         eventsCollector.default.reportEvent("index", "refresh");
@@ -558,13 +573,6 @@ class editIndex extends viewModelBase {
     copyIndex() {
         eventsCollector.default.reportEvent("index", "copy");
         app.showBootstrapDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
-    }
-
-    createCSharpCode() {
-        eventsCollector.default.reportEvent("index", "generate-csharp-code");
-        new getCSharpIndexDefinitionCommand(this.editedIndex().name(), this.activeDatabase())
-            .execute()
-            .done((data: string) => app.showBootstrapDialog(new showDataDialog("C# Index Definition", data, null)));
     }
 
     formatIndex() {

@@ -12,7 +12,7 @@ import endpoints = require("endpoints");
              factoryName: this.factoryName,
              connectionString: this.connectionString
          };
-         return this.query<any>(endpoints.databases.sqlReplication.sqlReplicationTestSqlConnection, args, this.db, null, 60000);
+         return this.query<any>(endpoints.databases.sqlEtl.etlSqlTestSqlConnection, args, this.db, null, 60000);
      }
  }
 

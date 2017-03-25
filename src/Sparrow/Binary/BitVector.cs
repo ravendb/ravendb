@@ -390,7 +390,7 @@ namespace Sparrow.Binary
                 fixed (ulong* destPtr = dest.Bits)
                 fixed (ulong* srcPtr = src.Bits)
                 {
-                    Memory.CopyInline((byte*)destPtr, (byte*)srcPtr, src.Bits.Length * sizeof(ulong));
+                    Memory.Copy((byte*)destPtr, (byte*)srcPtr, src.Bits.Length * sizeof(ulong));
                 }
             }
         }
@@ -481,20 +481,20 @@ namespace Sparrow.Binary
         }
 
 
-        public unsafe static BitVector Of(bool prefixFree, ulong* values, int length)
+        public static unsafe BitVector Of(bool prefixFree, ulong* values, int length)
         {
             int prefixAdjustment = (prefixFree ? 2 : 0);
 
             ulong[] newValue = new ulong[length + prefixAdjustment];
             fixed( ulong* newValuePtr = newValue)
             {
-                Memory.CopyInline((byte*)newValuePtr, (byte*)values, length * sizeof(ulong));
+                Memory.Copy((byte*)newValuePtr, (byte*)values, length * sizeof(ulong));
             }
 
             return new BitVector(length * BitsPerWord + prefixAdjustment * BitVector.BitsPerByte, newValue);
         }
 
-        public unsafe static BitVector Of(bool prefixFree, uint* values, int length)
+        public static unsafe BitVector Of(bool prefixFree, uint* values, int length)
         {
             int prefixAdjustment = (prefixFree ? 1 : 0);
 

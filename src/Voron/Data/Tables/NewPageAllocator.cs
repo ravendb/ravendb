@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Sparrow;
+using Sparrow.Binary;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Global;
@@ -129,7 +130,7 @@ namespace Voron.Data.Tables
                         }
                         for (int i = 0; i < BitmapSize*8; i++)
                         {
-                            if (GetBitInBuffer(i, slice.Content.Ptr) == false)
+                            if (PtrBitVector.GetBitInPointer(buffer, i) == false)
                             {
                                 var currentSectionStart = it.CurrentKey;
                                 SetValue(fst, currentSectionStart, i);
@@ -168,7 +169,8 @@ namespace Voron.Data.Tables
                 if (isNew)
                     ThrowInvalidNewBuffer();
 
-                ptr[positionInBitmap / 8] |= (byte) (1 << (positionInBitmap % 8));
+                PtrBitVector.SetBitInPointer(ptr, positionInBitmap, true);
+                // ptr[positionInBitmap / 8] |= (byte) (1 << (positionInBitmap % 8));
             }
         }
 
@@ -181,13 +183,9 @@ namespace Voron.Data.Tables
                 if (isNew)
                     ThrowInvalidNewBuffer();
 
-                ptr[positionInBitmap / 8] &= (byte) ~(1 << (positionInBitmap % 8));
+                PtrBitVector.SetBitInPointer(ptr, positionInBitmap, false);
+                // ptr[positionInBitmap / 8] &= (byte) ~(1 << (positionInBitmap % 8));
             }
-        }
-
-        private static unsafe bool GetBitInBuffer(int positionInBitmap, byte* ptr)
-        {
-            return (ptr[positionInBitmap/8] & (1 << (positionInBitmap%8))) != 0;
         }
 
         private static void ThrowInvalidNewBuffer()
@@ -241,9 +239,10 @@ namespace Voron.Data.Tables
                 Slice slice;
                 using (it.Value(out slice))
                 {
+                    byte* ptr = slice.Content.Ptr;
                     for (int i = 0; i < NumberOfPagesInSection; i++)
                     {
-                        if (GetBitInBuffer(i, slice.Content.Ptr) == false)
+                        if (PtrBitVector.GetBitInPointer(ptr, i) == false)
                         {
                             free++;
                         }

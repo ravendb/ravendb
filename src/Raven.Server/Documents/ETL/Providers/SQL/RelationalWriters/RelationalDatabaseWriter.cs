@@ -154,7 +154,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     var pkParam = cmd.CreateParameter();
 
                     pkParam.ParameterName = GetParameterName(pkName);
-                    pkParam.Value = itemToReplicate.DocumentKey;
+                    pkParam.Value = itemToReplicate.DocumentKey.ToString();
                     cmd.Parameters.Add(pkParam);
 
                     sb.Append(") \r\nVALUES (")
@@ -209,7 +209,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Insert took: {elapsedMilliseconds}ms, statement: {stmt}");
 
-                        var tableMetrics = _etl.Metrics.GetTableMetrics(tableName);
+                        var tableMetrics = _etl.SqlMetrics.GetTableMetrics(tableName);
                         tableMetrics.InsertActionsMeter.Mark(1);
 
                         if (elapsedMilliseconds > LongStatementWarnThresholdInMilliseconds)
@@ -233,8 +233,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
                 if (_etl.SqlConfiguration.CommandTimeout.HasValue)
                     cmd.CommandTimeout = _etl.SqlConfiguration.CommandTimeout.Value;
-                else if (_database.Configuration.SqlReplication.CommandTimeout.HasValue)
-                    cmd.CommandTimeout = (int)_database.Configuration.SqlReplication.CommandTimeout.Value.AsTimeSpan.TotalSeconds;
+                else if (_database.Configuration.Etl.SqlCommandTimeout.HasValue)
+                    cmd.CommandTimeout = (int)_database.Configuration.Etl.SqlCommandTimeout.Value.AsTimeSpan.TotalSeconds;
 
                 return cmd;
             }
@@ -275,7 +275,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         {
                             var dbParameter = cmd.CreateParameter();
                             dbParameter.ParameterName = GetParameterName("p" + j);
-                            dbParameter.Value = toDelete[j].DocumentKey;
+                            dbParameter.Value = toDelete[j].DocumentKey.ToString();
                             cmd.Parameters.Add(dbParameter);
                             sb.Append(dbParameter.ParameterName);
                         }
@@ -320,7 +320,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Delete took: {elapsedMiliseconds}ms, statement: {stmt}");
 
-                        var tableMetrics = _etl.Metrics.GetTableMetrics(tableName);
+                        var tableMetrics = _etl.SqlMetrics.GetTableMetrics(tableName);
                         tableMetrics.DeleteActionsMeter.Mark(1);
 
                         if (elapsedMiliseconds > LongStatementWarnThresholdInMilliseconds)

@@ -89,87 +89,100 @@ namespace Voron.Data.BTrees
         {
             int numberOfEntries = NumberOfEntries;
             if (numberOfEntries == 0)
+                goto NoEntries;
+
+            switch (key.Options)
+            {
+                case SliceOptions.Key:
+                {
+                    if (numberOfEntries == 1)
+                        goto SingleEntryKey;
+
+                    int low = IsLeaf ? 0 : 1;
+                    int high = numberOfEntries - 1;
+                    int position = 0;
+
+                    ByteStringContext allocator = tx.Allocator;
+                    ushort* offsets = KeysOffsets;
+                    while (low <= high)
+                    {
+                        position = (low + high) >> 1;
+
+                        var node = (TreeNodeHeader*)(Base + offsets[position]);
+
+                        Slice pageKey;
+                        using (TreeNodeHeader.ToSlicePtr(allocator, node, out pageKey))
+                        {
+                            LastMatch = SliceComparer.CompareInline(key, pageKey);
+                        }
+
+                        if (LastMatch == 0)
+                            break;
+
+                        if (LastMatch > 0)
+                            low = position + 1;
+                        else
+                            high = position - 1;
+                    }
+
+                    if (LastMatch > 0) // found entry less than key
+                    {
+                        position++; // move to the smallest entry larger than the key
+                    }
+
+                    Debug.Assert(position < ushort.MaxValue);
+                    LastSearchPosition = position;
+
+                    if (position >= numberOfEntries)
+                        return null;
+
+                    return GetNode(position);
+                }
+                case SliceOptions.BeforeAllKeys:
+                {
+                    LastSearchPosition = 0;
+                    LastMatch = 1;
+                    return GetNode(0);
+                }
+                case SliceOptions.AfterAllKeys:
+                {
+                    LastMatch = -1;
+                    LastSearchPosition = numberOfEntries - 1;
+                    return GetNode(LastSearchPosition);
+                }
+                default:
+                    ThrowNotSupportedException();
+                    return null;
+            }
+
+            NoEntries:
             {
                 LastSearchPosition = 0;
                 LastMatch = 1;
                 return null;
             }
 
-            switch (key.Options)
+            SingleEntryKey:
             {
-                case SliceOptions.Key:
-                    {   
-                        if (numberOfEntries == 1)
-                        {
-                            var node = GetNode(0);
+                var node = GetNode(0);
 
-                            Slice pageKey;
-                            using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out pageKey))
-                            {
-                                LastMatch = SliceComparer.CompareInline(key, pageKey);
-                            }
+                Slice pageKey;
+                using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out pageKey))
+                {
+                    LastMatch = SliceComparer.CompareInline(key, pageKey);
+                }
 
-                            LastSearchPosition = LastMatch > 0 ? 1 : 0;
-                            return LastSearchPosition == 0 ? node : null;
-                        }
-
-                        int low = IsLeaf ? 0 : 1;
-                        int high = numberOfEntries - 1;
-                        int position = 0;
-
-                        ByteStringContext allocator = tx.Allocator;
-                        ushort* offsets = KeysOffsets;
-                        while (low <= high)
-                        {
-                            position = (low + high) >> 1;
-
-                            var node = (TreeNodeHeader*)(Base + offsets[position]);
-
-                            Slice pageKey;
-                            using (TreeNodeHeader.ToSlicePtr(allocator, node, out pageKey))
-                            {
-                                LastMatch = SliceComparer.CompareInline(key, pageKey);
-                            }
-
-
-                            if (LastMatch == 0)
-                                break;
-
-                            if (LastMatch > 0)
-                                low = position + 1;
-                            else
-                                high = position - 1;
-                        }
-
-                        if (LastMatch > 0) // found entry less than key
-                        {
-                            position++; // move to the smallest entry larger than the key
-                        }
-
-                        Debug.Assert(position < ushort.MaxValue);
-                        LastSearchPosition = position;
-
-                        if (position >= numberOfEntries)
-                            return null;
-
-                        return GetNode(position);
-                    }
-                case SliceOptions.BeforeAllKeys:
-                    {
-                        LastSearchPosition = 0;
-                        LastMatch = 1;
-                        return GetNode(0);
-                    }
-                case SliceOptions.AfterAllKeys:
-                    {
-                        LastMatch = -1;
-                        LastSearchPosition = numberOfEntries - 1;
-                        return GetNode(LastSearchPosition);
-                    }
-                default:
-                    throw new NotSupportedException("This SliceOptions is not supported. Make sure you have updated this code when adding a new one.");
+                LastSearchPosition = LastMatch > 0 ? 1 : 0;
+                return LastSearchPosition == 0 ? node : null;
             }
         }
+
+        private void ThrowNotSupportedException()
+        {
+            throw new NotSupportedException("This SliceOptions is not supported. Make sure you have updated this code when adding a new one.");
+        }
+
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public TreeNodeHeader* GetNode(int n)

@@ -11,8 +11,6 @@ namespace Raven.Server.Documents
 {
     internal unsafe class DocumentKeyWorker
     {
-        private static readonly Encoding Utf8 = Encoding.UTF8;
-
         [ThreadStatic]
         private static JsonParserState _jsonParserState;
 
@@ -20,7 +18,7 @@ namespace Raven.Server.Documents
             TransactionOperationContext<TTransaction> context, string key, out Slice keySlice)
             where TTransaction : RavenTransaction
         {
-            var byteCount = Utf8.GetMaxByteCount(key.Length);
+            var byteCount = Encoding.GetMaxByteCount(key.Length);
 
             var buffer = context.GetMemory(
                 byteCount // this buffer is allocated to also serve the GetSliceFromUnicodeKey
@@ -63,7 +61,7 @@ namespace Raven.Server.Documents
 
                 var keyBytes = buffer + key.Length * sizeof(char);
 
-                var size = Utf8.GetBytes(destChars, key.Length, keyBytes, byteCount);
+                var size = Encoding.GetBytes(destChars, key.Length, keyBytes, byteCount);
 
                 if (size > 512)
                     ThrowKeyTooBig(key);
@@ -72,6 +70,8 @@ namespace Raven.Server.Documents
             }
         }
 
+
+        private static readonly UTF8Encoding Encoding = new UTF8Encoding();
 
         public static void GetLowerKeySliceAndStorageKey(JsonOperationContext context, string str, out byte* lowerKey,
             out int lowerSize,
@@ -108,20 +108,26 @@ namespace Raven.Server.Documents
 
             fixed (char* pChars = str)
             {
-                int size = Encoding.UTF8.GetMaxByteCount(str.Length);
-                var strSize = Encoding.UTF8.GetBytes(pChars, str.Length, buffer.Address, size);
+                int size = Encoding.GetMaxByteCount(str.Length);
+                var strSize = Encoding.GetBytes(pChars, str.Length, buffer.Address, size);
                 _jsonParserState.FindEscapePositionsIn(buffer.Address, strSize, escapePositionsSize);
             }
 
             for (var i = 0; i < str.Length; i++)
             {
                 var ch = str[i];
-                if (ch > 127) // not ASCII, use slower mode
-                    goto UnlikelyUnicode;
-                if ((ch >= 65) && (ch <= 90))
-                    buffer.Address[i] = (byte)(ch | 0x20);
-                else
+                if ((ch < 65) || (ch > 90))
+                {
+                    if (ch > 127) // not ASCII, use slower mode
+                        goto UnlikelyUnicode;
+
                     buffer.Address[i] = (byte)ch;
+                }
+                else
+                {
+                    buffer.Address[i] = (byte)(ch | 0x20);
+                }
+
 
                 buffer.Address[i + keySize + str.Length] = (byte)ch;
             }
@@ -147,7 +153,7 @@ namespace Raven.Server.Documents
         {
             // See comment in GetLowerKeySliceAndStorageKey for the format
             _jsonParserState.Reset();
-            var byteCount = Utf8.GetMaxByteCount(str.Length);
+            var byteCount = Encoding.GetMaxByteCount(str.Length);
             var maxKeyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
 
             int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str);
@@ -161,7 +167,7 @@ namespace Raven.Server.Documents
 
             fixed (char* pChars = str)
             {
-                var size = Utf8.GetBytes(pChars, str.Length, buffer.Address, byteCount);
+                var size = Encoding.GetBytes(pChars, str.Length, buffer.Address, byteCount);
                 _jsonParserState.FindEscapePositionsIn(buffer.Address, size, escapePositionsSize);
 
                 var destChars = (char*)buffer.Address;
@@ -170,14 +176,14 @@ namespace Raven.Server.Documents
 
                 lowerKey = buffer.Address + str.Length * sizeof(char);
 
-                lowerSize = Utf8.GetBytes(destChars, str.Length, lowerKey, byteCount);
+                lowerSize = Encoding.GetBytes(destChars, str.Length, lowerKey, byteCount);
 
                 if (lowerSize > 512)
                     ThrowKeyTooBig(str);
 
                 key = buffer.Address + str.Length * sizeof(char) + byteCount;
                 var writePos = key;
-                keySize = Utf8.GetBytes(pChars, str.Length, writePos + maxKeyLenSize, byteCount);
+                keySize = Encoding.GetBytes(pChars, str.Length, writePos + maxKeyLenSize, byteCount);
 
                 var actualKeyLenSize = JsonParserState.VariableSizeIntSize(keySize);
                 if (actualKeyLenSize < maxKeyLenSize)
@@ -196,11 +202,11 @@ namespace Raven.Server.Documents
         private static void ThrowKeyTooBig(string str)
         {
             throw new ArgumentException(
-                $"Key cannot exceed 512 bytes, but the key was {Utf8.GetByteCount(str)} bytes. The invalid key is '{str}'.",
+                $"Key cannot exceed 512 bytes, but the key was {Encoding.GetByteCount(str)} bytes. The invalid key is '{str}'.",
                 nameof(str));
         }
 
-        public static IDisposable GetStringPreserveCase(DocumentsOperationContext context, string str, out Slice strSlice)
+        public static ByteStringContext.InternalScope GetStringPreserveCase(DocumentsOperationContext context, string str, out Slice strSlice)
         {
             byte* lowerKey;
             int lowerKeySize;

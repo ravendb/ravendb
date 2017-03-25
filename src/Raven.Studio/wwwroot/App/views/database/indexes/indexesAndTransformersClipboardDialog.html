@@ -12,7 +12,7 @@
                 <span data-bind="text: isPaste === true ? 'to save' : 'to copy'"></span>
             </h4>
             <div>
-                <pre data-bind="aceEditor: { code: json, lang: 'ace/mode/json', getFocus: true, selectAll: true, readOnly: !isPaste, bubbleEscKey: true }" style="width: 600px; height: 400px;"></pre>
+                <pre class="form-control" data-bind="aceEditor: { code: json, lang: 'ace/mode/json', getFocus: true, selectAll: true, readOnly: !isPaste, bubbleEscKey: true }" style="width: 600px; height: 400px;"></pre>
             </div>
         </div>
         <div class="modal-footer">

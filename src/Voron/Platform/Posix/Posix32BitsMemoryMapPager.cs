@@ -425,7 +425,7 @@ namespace Voron.Platform.Posix
 
                 _parent.UnprotectPageRange(destination, (ulong)toWrite);
 
-                Memory.BulkCopy(destination, source, toWrite);
+                Memory.Copy(destination, source, toWrite);
 
                 _parent.ProtectPageRange(destination, (ulong)toWrite);
             }

@@ -1,13 +1,18 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
+using Raven.Server.Config.Settings;
+using Raven.Server.Documents.ETL.Metrics;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -20,6 +25,10 @@ namespace Raven.Server.Documents.ETL
     public abstract class EtlProcess : IDisposable
     {
         public string Tag { get; protected set; }
+
+        public EtlProcessStatistics Statistics { get; protected set; }
+
+        public EtlMetricsCountersManager Metrics { get; protected set; }
 
         public abstract string Name { get; }
 
@@ -37,12 +46,16 @@ namespace Raven.Server.Documents.ETL
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim();
         private readonly EtlProcessConfiguration _configuration;
         private readonly CancellationTokenSource _cts;
+        private readonly ConcurrentQueue<EtlStatsAggregator> _lastEtlStats =
+            new ConcurrentQueue<EtlStatsAggregator>();
+        private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
+        private NativeMemory.ThreadStats _threadAllocations;
         private Thread _thread;
-        protected readonly CurrentEtlRun CurrentBatch = new CurrentEtlRun();
+        private EtlStatsAggregator _lastStats;
         protected readonly Logger Logger;
         protected readonly DocumentDatabase Database;
         protected TimeSpan? FallbackTime;
-        public readonly EtlStatistics Statistics;
+        private int _statsId;
 
         protected EtlProcess(DocumentDatabase database, EtlProcessConfiguration configuration, string tag)
         {
@@ -51,7 +64,7 @@ namespace Raven.Server.Documents.ETL
             Tag = tag;
             Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
             Database = database;
-            Statistics = new EtlStatistics(tag, _configuration.Name, Database.NotificationCenter);
+            Statistics = new EtlProcessStatistics(tag, _configuration.Name, Database.NotificationCenter);
         }
 
         protected CancellationToken CancellationToken => _cts.Token;
@@ -62,7 +75,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract IEnumerator<TExtracted> ConvertTombstonesEnumerator(IEnumerator<DocumentTombstone> tombstones);
 
-        public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context)
+        public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context, EtlStatsScope stats)
         {
             var documents = Database.DocumentsStorage.GetDocumentsFrom(context, _configuration.Collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue);
             var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, _configuration.Collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue);
@@ -70,14 +83,13 @@ namespace Raven.Server.Documents.ETL
             using (var documentsIt = documents.GetEnumerator())
             using (var tombstonesIt = tombstones.GetEnumerator())
             {
-                using (var merged = new MergedEnumerator<TExtracted>())
+                using (var merged = new ExtractedItemsEnumerator<TExtracted>(stats))
                 {
                     merged.AddEnumerator(ConvertDocsEnumerator(documentsIt));
                     merged.AddEnumerator(ConvertTombstonesEnumerator(tombstonesIt));
 
                     while (merged.MoveNext())
                     {
-                        CurrentBatch.NumberOfExtractedItems++;
                         yield return merged.Current;
                     }
                 }
@@ -86,76 +98,82 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract EtlTransformer<TExtracted, TTransformed> GetTransformer(DocumentsOperationContext context);
 
-        public IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context)
+        public IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context, EtlStatsScope stats)
         {
             var transformer = GetTransformer(context);
 
             foreach (var item in items)
             {
-                CancellationToken.ThrowIfCancellationRequested();
-
-                try
+                using (stats.For(EtlOperations.Transform))
                 {
-                    transformer.Transform(item);
+                    CancellationToken.ThrowIfCancellationRequested();
 
-                    Statistics.TransformationSuccess();
+                    try
+                    {
+                        transformer.Transform(item);
 
-                    CurrentBatch.LastTransformedEtag = item.Etag;
+                        Statistics.TransformationSuccess();
 
-                    if (CanContinueBatch() == false)
+                        stats.RecordLastTransformedEtag(item.Etag);
+
+                        if (CanContinueBatch(stats) == false)
+                            break;
+                    }
+                    catch (JavaScriptParseException e)
+                    {
+                        var message = $"[{Name}] Could not parse transformation script. Stopping ETL process.";
+
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations(message, e);
+
+                        var alert = AlertRaised.Create(
+                            Tag,
+                            message,
+                            AlertType.Etl_TransformationError,
+                            NotificationSeverity.Error,
+                            key: Name,
+                            details: new ExceptionDetails(e));
+
+                        Database.NotificationCenter.Add(alert);
+
+                        Stop();
+
                         break;
-                }
-                catch (JavaScriptParseException e)
-                {
-                    var message = $"[{Name}] Could not parse transformation script. Stopping ETL process.";
+                    }
+                    catch (Exception e)
+                    {
+                        Statistics.RecordTransformationError(e);
 
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations(message, e);
-
-                    var alert = AlertRaised.Create(
-                        Tag,
-                        message,
-                        AlertType.Etl_TransformationError,
-                        NotificationSeverity.Error,
-                        key: Name,
-                        details: new ExceptionDetails(e));
-
-                    Database.NotificationCenter.Add(alert);
-
-                    Stop();
-
-                    break;
-                }
-                catch (Exception e)
-                {
-                    Statistics.RecordTransformationError(e);
-
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentKey}", e);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentKey}", e);
+                    }
                 }
             }
 
             return transformer.GetTransformedResults();
         }
 
-        public void Load(IEnumerable<TTransformed> items, JsonOperationContext context)
+        public void Load(IEnumerable<TTransformed> items, JsonOperationContext context, EtlStatsScope stats)
         {
-            try
+            using (stats.For(EtlOperations.Load))
             {
-                LoadInternal(items, context);
+                try
+                {
+                    LoadInternal(items, context);
 
-                CurrentBatch.LastLoadedEtag = CurrentBatch.LastTransformedEtag;
+                    stats.RecordLastLoadedEtag(stats.LastTransformedEtag);
 
-                Statistics.LoadSuccess(CurrentBatch.NumberOfExtractedItems);
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to load transformed data for '{Name}'", e);
+                    Statistics.LoadSuccess(stats.NumberOfExtractedItems);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Failed to load transformed data for '{Name}'", e);
 
-                HandleFallback();
+                    HandleFallback();
 
-                Statistics.RecordLoadError(e, CurrentBatch.NumberOfExtractedItems);
+                    Statistics.RecordLoadError(e, stats.NumberOfExtractedItems);
+                }
             }
         }
 
@@ -165,7 +183,36 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract void LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
 
-        public abstract bool CanContinueBatch();
+        public bool CanContinueBatch(EtlStatsScope stats)
+        {
+            if (stats.NumberOfExtractedItems >= Database.Configuration.Etl.MaxNumberOfExtractedDocuments)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Stopping the batch because it has already processed {stats.NumberOfExtractedItems} items");
+
+                return false;
+            }
+
+            if (stats.Duration >= Database.Configuration.Etl.ExtractAndTransformTimeout.AsTimeSpan)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Stopping the batch after {stats.Duration} due to extract and transform processing timeout");
+
+                return false;
+            }
+
+            if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
+            {
+                ProcessMemoryUsage memoryUsage;
+                if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
+                        Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out memoryUsage) == false)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         protected void LoadLastProcessedEtag(DocumentsOperationContext context)
         {
@@ -190,7 +237,10 @@ namespace Raven.Server.Documents.ETL
             Database.DocumentsStorage.Put(context, key, null, document);
         }
 
-        protected abstract void UpdateMetrics(DateTime startTime, Stopwatch duration, int batchSize);
+        protected void UpdateMetrics(DateTime startTime, EtlStatsScope stats)
+        {
+            Metrics.BatchSizeMeter.Mark(stats.NumberOfExtractedItems);
+        }
 
         public override void NotifyAboutWork()
         {
@@ -247,77 +297,79 @@ namespace Raven.Server.Documents.ETL
             {
                 _waitForChanges.Reset();
 
-                CurrentBatch.Reset();
-
                 var startTime = Database.Time.GetUtcNow();
-                var duration = Stopwatch.StartNew();
 
                 if (FallbackTime != null)
                 {
                     Thread.Sleep(FallbackTime.Value);
                     FallbackTime = null;
                 }
-                
-                var didWork = false;
 
-                try
+                DocumentsOperationContext context;
+                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 {
-                    DocumentsOperationContext context;
-                    using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                    var didWork = false;
+
+                    var statsAggregator = _lastStats = new EtlStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
+
+                    AddPerformanceStats(statsAggregator);
+
+                    using (var stats = statsAggregator.CreateScope())
                     {
-                        using (context.OpenReadTransaction())
+                        try
                         {
-                            LoadLastProcessedEtag(context);
+                            EnsureThreadAllocationStats();
 
-                            var extracted = Extract(context);
-
-                            var transformed = Transform(extracted, context);
-
-                            Load(transformed, context);
-                            
-                            if (CurrentBatch.LastLoadedEtag > Statistics.LastProcessedEtag)
+                            using (context.OpenReadTransaction())
                             {
-                                didWork = true;
-                                Statistics.LastProcessedEtag = CurrentBatch.LastLoadedEtag;
+                                LoadLastProcessedEtag(context);
+
+                                var extracted = Extract(context, stats);
+
+                                var transformed = Transform(extracted, context, stats);
+
+                                Load(transformed, context, stats);
+
+                                if (stats.LastLoadedEtag > Statistics.LastProcessedEtag)
+                                {
+                                    didWork = true;
+                                    Statistics.LastProcessedEtag = stats.LastLoadedEtag;
+                                }
+
+                                if (didWork)
+                                    UpdateMetrics(startTime, stats);
                             }
                         }
-
-                        if (didWork)
+                        catch (OperationCanceledException)
                         {
-                            using (var tx = context.OpenWriteTransaction())
-                            {
-                                StoreLastProcessedEtag(context);
-                                tx.Commit();
-                            }
+                            return;
+                        }
+                        catch (Exception e)
+                        {
+                            var message = $"Exception in ETL process named '{Name}'";
 
-                            continue;
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"{Tag} {message}", e);
                         }
                     }
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
-                catch (Exception e)
-                {
-                    var message = $"Exception in ETL process named '{Name}'";
 
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"{Tag} {message}", e);
-                }
-                finally
-                {
-                    duration.Stop();
+                    statsAggregator.Complete();
 
                     if (didWork)
                     {
-                        UpdateMetrics(startTime, duration, CurrentBatch.NumberOfExtractedItems);
-
+                        using (var tx = context.OpenWriteTransaction())
+                        {
+                            StoreLastProcessedEtag(context);
+                            tx.Commit();
+                        }
+                        
                         if (CancellationToken.IsCancellationRequested == false)
                         {
                             var batchCompleted = Database.EtlLoader.BatchCompleted;
                             batchCompleted?.Invoke(Name, Statistics);
                         }
+
+                        continue;
                     }
                 }
 
@@ -330,6 +382,29 @@ namespace Raven.Server.Documents.ETL
                     return;
                 }
             }
+        }
+
+        protected void EnsureThreadAllocationStats()
+        {
+            _threadAllocations = NativeMemory.ThreadAllocations.Value;
+        }
+
+        private void AddPerformanceStats(EtlStatsAggregator stats)
+        {
+            _lastEtlStats.Enqueue(stats);
+
+            while (_lastEtlStats.Count > 25)
+                _lastEtlStats.TryDequeue(out stats);
+        }
+
+        public EtlPerformanceStats[] GetIndexingPerformance()
+        {
+            //var lastStats = _lastStats;
+
+            return _lastEtlStats
+                // .Select(x => x == lastStats ? x.ToEtlPerformanceStats().ToIndexingPerformanceLiveStatsWithDetails() : x.ToIndexingPerformanceStats())
+                .Select(x => x.ToPerformanceStats())
+                .ToArray();
         }
 
         public override void Dispose()

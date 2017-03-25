@@ -20,6 +20,7 @@ using Raven.Client.Json.Converters;
 using Raven.Server.Documents.Replication;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Sdk;
 
 namespace FastTests.Server.Replication
 {
@@ -112,9 +113,8 @@ namespace FastTests.Server.Replication
                 {
                     var replicationStats = GetReplicationStats(store);
 
-                    Assert.False(true,
-                        "Timed out while waiting for conflicts on " + docId + " we have " + conflicts.Results.Length + " conflicts \r\n" +
-                        JsonConvert.SerializeObject(replicationStats, Formatting.Indented));
+                    throw new XunitException($"Timed out while waiting for conflicts on {docId} we have {conflicts.Results.Length} conflicts on database {store.DefaultDatabase}{Environment.NewLine}" +
+                                             $"{JsonConvert.SerializeObject(replicationStats, Formatting.Indented)}");
                 }
             } while (true);
 

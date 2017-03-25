@@ -185,7 +185,7 @@ namespace Raven.Client.Json
             if (TokenType == JsonToken.Null)
                 return new int?();
 
-            return (int)Convert.ChangeType(Value, typeof(int));
+            return (int)Convert.ChangeType(Value, typeof(int), CultureInfo.InvariantCulture);
         }
 
         public override string ReadAsString()
@@ -219,7 +219,7 @@ namespace Raven.Client.Json
                 return (decimal)Value;
             if (Value == null)
                 return null;
-            return (decimal)Convert.ChangeType(Value, typeof(decimal));
+            return (decimal)Convert.ChangeType(Value, typeof(decimal), CultureInfo.InvariantCulture);
         }
 
         public override DateTime? ReadAsDateTime()

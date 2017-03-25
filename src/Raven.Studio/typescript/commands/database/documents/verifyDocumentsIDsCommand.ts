@@ -20,7 +20,13 @@ class verifyDocumentsIDsCommand extends commandBase {
             const url = endpoints.databases.document.docs + this.urlEncodeArgs(args);
 
             this.post(url, JSON.stringify(this.docIDs), this.db)
-                .fail((xhr: JQueryXHR) => verifyResult.reject(xhr))
+                .fail((xhr: JQueryXHR) => {
+                    if (xhr.status === 404) {
+                        verifyResult.resolve(verifiedIDs);
+                    } else {
+                        verifyResult.reject(xhr);
+                    }
+                })
                 .done((queryResult: queryResultDto<documentDto>) => {
                     if (queryResult && queryResult.Results) {
                         queryResult.Results.forEach(curVerifiedID => {

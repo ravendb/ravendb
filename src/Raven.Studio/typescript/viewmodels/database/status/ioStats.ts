@@ -13,7 +13,7 @@ type rTreeLeaf = {
     minY: number;
     maxX: number;
     maxY: number;
-    actionType: "toggleIndexes" | "trackItem" | "gapItem";
+    actionType: "toggleIndexes" | "trackItem" | "closedTrackItem" | "gapItem";
     arg: any;
 }
 
@@ -22,7 +22,8 @@ class hitTest {
     private rTree = rbush<rTreeLeaf>();
     private container: d3.Selection<any>;    
     private onToggleIndexes: () => void;
-    private handleTrackTooltip: (item: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) => void;
+    private handleTrackTooltip: (item: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) => void;   
+    private handleClosedTrackTooltip: (item: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) => void;
     private handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void;
     private removeTooltip: () => void;
 
@@ -33,13 +34,15 @@ class hitTest {
     init(container: d3.Selection<any>,
         onToggleIndexes: () => void,
         handleTrackTooltip: (item: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) => void,
+        handleClosedTrackTooltip: (item: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) => void,
         handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void,
         removeTooltip: () => void) {
-        this.container = container;
-        this.onToggleIndexes = onToggleIndexes;
-        this.handleTrackTooltip = handleTrackTooltip;
-        this.handleGapTooltip = handleGapTooltip;
-        this.removeTooltip = removeTooltip;
+            this.container = container;
+            this.onToggleIndexes = onToggleIndexes;
+            this.handleTrackTooltip = handleTrackTooltip;
+            this.handleClosedTrackTooltip = handleClosedTrackTooltip;
+            this.handleGapTooltip = handleGapTooltip;
+            this.removeTooltip = removeTooltip;
     }
 
     registerTrackItem(x: number, y: number, width: number, height: number, element: Raven.Server.Documents.Handlers.IOMetricsRecentStats) {
@@ -49,6 +52,18 @@ class hitTest {
             maxX: x + width,
             maxY: y + height,
             actionType: "trackItem",
+            arg: element
+        } as rTreeLeaf;
+        this.rTree.insert(data);
+    }
+
+    registerClosedTrackItem(x: number, y: number, width: number, height: number, element: Raven.Server.Documents.Handlers.IOMetricsRecentStats) {
+        const data = {
+            minX: x,
+            minY: y,
+            maxX: x + width,
+            maxY: y + height,
+            actionType: "closedTrackItem",
             arg: element
         } as rTreeLeaf;
         this.rTree.insert(data);
@@ -110,13 +125,19 @@ class hitTest {
             this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);          
         }
         else {
-            const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
-            if (currentGapItem) {
-                this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
+            const currentItem = items.filter(x => x.actionType === "closedTrackItem").map(x => x.arg as Raven.Server.Documents.Handlers.IOMetricsRecentStats)[0];
+            if (currentItem) {
+                this.handleClosedTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
             }
             else {
-                this.removeTooltip();
-            }
+                const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
+                if (currentGapItem) {
+                    this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
+                }
+                else {
+                    this.removeTooltip();
+                }
+            }           
         }
     }
 
@@ -127,6 +148,65 @@ class hitTest {
             minY: y - ioStats.brushSectionHeight,
             maxY: y - ioStats.brushSectionHeight
         });
+    }
+}
+
+class legend {
+    imageStr = ko.observable<string>();
+    maxSize = ko.observable<number>(0);   
+
+    sizeScale: d3.scale.Linear<number, number>;  // domain: legend pixels, range: item size
+    colorScale: d3.scale.Linear<string, string>; // domain: item size,     range: item color    
+
+    private lowSizeColor: string;
+    private highSizeColor: string;
+        
+    static readonly imageWidth = 150;
+    static readonly imageHeight = 20;   
+    static readonly legendArrowBorderSize = 6;
+
+    constructor(lowSizeColor: string, highSizeColor: string) {        
+        this.lowSizeColor = lowSizeColor;
+        this.highSizeColor = highSizeColor;        
+    }  
+
+    setLegendScales() {
+        this.sizeScale = d3.scale.linear<number>()
+            .domain([0, legend.imageWidth - legend.legendArrowBorderSize])
+            .range([0, this.maxSize()]);
+
+        this.colorScale = d3.scale.linear<string>()
+            .domain([0, this.maxSize()])
+            .range([this.lowSizeColor, this.highSizeColor])
+            .interpolate(d3.interpolateHsl); 
+    }   
+
+    createLegendImage() {
+        // Create legend image on a virtual canvas,
+        // Will be used as an image in the dom 
+
+        const legendCanvas = document.createElement("canvas");
+        legendCanvas.width = legend.imageWidth;
+        legendCanvas.height = legend.imageHeight;
+        const legendContext = legendCanvas.getContext("2d");
+
+        const widthToColorScale = d3.scale.linear<string, string>()
+            .domain([0, legend.imageWidth])
+            .range([this.lowSizeColor, this.highSizeColor])
+            .interpolate(d3.interpolateHsl);
+
+        legendContext.fillStyle = this.lowSizeColor;
+        legendContext.fillRect(0, 0, 1, 25);
+
+        for (let i = 0; i < legend.imageWidth; i++) {
+            legendContext.fillStyle = widthToColorScale(i);
+            legendContext.fillRect(i, 7, 1, legend.imageHeight);
+        }
+
+        legendContext.fillStyle = this.highSizeColor;
+        legendContext.fillRect(legend.imageWidth - 1, 0, 1, 25);
+
+        this.imageStr(legendCanvas.toDataURL());
     }
 }
 
@@ -145,15 +225,12 @@ class ioStats extends viewModelBase {
     }
 
     static readonly eventsColors = {       
-        "JournalWriteLowSizeColor": "#38761d",
-        "JournalWriteMedSizeColor": "#6aa84f",
-        "JournalWriteHighSizeColor": "#93c47d",
-        "DataFlushLowSizeColor": "#085394",
-        "DataFlushMedSizeColor": "#597eaa",
-        "DataFlushHighSizeColor": "#6fa8dc",
-        "DataSyncLowSizeColor": "#b45f06",
-        "DataSyncMedSizeColor": "#e69138",
-        "DataSyncHighSizeColor": "#f6b26b"
+        "LowSizeColorJW": "#38761d",       // JW - Journal Write
+        "HighSizeColorJW": "#93c47d",
+        "LowSizeColorDF": "#085394",       // DF - Data Flush
+        "HighSizeColorDF": "#6fa8dc",
+        "LowSizeColorDS": "#b45f06",       // DS - Data Sync
+        "HighSizeColorDS": "#f6b26b"
     }
    
     private static readonly trackHeight = 18; 
@@ -175,11 +252,11 @@ class ioStats extends viewModelBase {
 
     private static readonly indexesString = "Indexes";
     private static readonly documentsString = "Documents";
-    private static readonly journalWriteString = "JournalWrite";
-    private static readonly dataSyncString = "DataSync";
-    private static readonly dataFlushString = "DataFlush";       
+    private static readonly journalWriteString = "JournalWrite";  
+    private static readonly dataFlushString = "DataFlush";      
+    private static readonly dataSyncString = "DataSync"; 
 
-    /* observables */
+    /* private observables */
 
     private autoScroll = ko.observable<boolean>(false);
     private hasAnyData = ko.observable<boolean>(false);    
@@ -194,17 +271,21 @@ class ioStats extends viewModelBase {
     private allIndexesAreFiltered = ko.observable<boolean>(false);
     private indexesVisible: KnockoutComputed<boolean>; 
 
-    private journalWriteLowSizeLevel = ko.observable<number>();
-    private journalWriteHighSizeLevel = ko.observable<number>();
-    private dataSyncLowSizeLevel = ko.observable<number>();
-    private dataSyncHighSizeLevel = ko.observable<number>();
-    private dataFlushLowSizeLevel = ko.observable<number>();
-    private dataFlushHighSizeLevel = ko.observable<number>();   
+    private legendJW = ko.observable<legend>();
+    private legendDF = ko.observable<legend>();
+    private legendDS = ko.observable<legend>(); 
+
+    private itemSizePositionJW = ko.observable<string>(); 
+    private itemSizePositionDF = ko.observable<string>(); 
+    private itemSizePositionDS = ko.observable<string>(); 
+
+    private itemHoveredJW = ko.observable<boolean>(false); 
+    private itemHoveredDF = ko.observable<boolean>(false); 
+    private itemHoveredDS = ko.observable<boolean>(false); 
 
     /* private */
 
     private liveViewClient: liveIOStatsWebSocketClient;
-
     private data: Raven.Server.Documents.Handlers.IOMetricsResponse;    
     private commonPathsPrefix: string;     
     private totalWidth: number;
@@ -216,6 +297,10 @@ class ioStats extends viewModelBase {
     private hitTest = new hitTest();
     private brushSection: HTMLCanvasElement; // a virtual canvas for brush section
     private brushAndZoomCallbacksDisabled = false;    
+
+    private indexesItemsStartEndJW: Array<[number, number]>; // Start & End times for joined duration times for closed index track items
+    private indexesItemsStartEndDF: Array<[number, number]>; 
+    private indexesItemsStartEndDS: Array<[number, number]>; 
 
     /* d3 */
 
@@ -248,6 +333,10 @@ class ioStats extends viewModelBase {
     activate(args: { indexName: string, database: string }): void {
         super.activate(args);        
         this.indexesVisible = ko.pureComputed(() => this.hasIndexes() && !this.allIndexesAreFiltered());    
+
+        this.legendJW(new legend(ioStats.eventsColors.LowSizeColorJW, ioStats.eventsColors.HighSizeColorJW));
+        this.legendDF(new legend(ioStats.eventsColors.LowSizeColorDF, ioStats.eventsColors.HighSizeColorDF));
+        this.legendDS(new legend(ioStats.eventsColors.LowSizeColorDS, ioStats.eventsColors.HighSizeColorDS));
     }
 
     deactivate() {
@@ -264,28 +353,43 @@ class ioStats extends viewModelBase {
         this.tooltip = d3.select(".tooltip");
         [this.totalWidth, this.totalHeight] = this.getPageHostDimenensions();
         this.totalHeight -= 50; // substract toolbar height
-
-        this.initCanvas();
+              
+        this.initCanvas();     
 
         this.hitTest.init(this.svg,
             () => this.onToggleIndexes(),
-            (item, x, y) => this.handleTrackTooltip(item, x, y),
+            (trackItem, x, y) => this.handleTrackTooltip(trackItem, x, y),
+            (closedTrackItem, x, y) => this.handleClosedTrackTooltip(closedTrackItem, x, y),
             (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
             () => this.hideTooltip());                    
          
         this.enableLiveView();
     }
 
-    private initViewData() {
-        let maxJournalWriteSize: number = 0;
-        let maxVoronDataSyncSize: number = 0;
-        let maxVoronDataFlushSize: number = 0;
+    private initLegendImages() {     
+        this.legendJW().createLegendImage();
+        this.legendDF().createLegendImage();
+        this.legendDS().createLegendImage();
+    }  
+  
+    private setLegendScales() {
+        this.legendJW().setLegendScales();
+        this.legendDF().setLegendScales();
+        this.legendDS().setLegendScales();               
+    }
+
+    private initViewData() {        
         this.hasIndexes(false);
 
         // 1. Find common paths prefix
         this.commonPathsPrefix = this.findPrefix(this.data.Environments.map(env => env.Path));
 
-        // 2. Loop on info from EndPoint 
+        // 1.1 Init max size (for legend scale)       
+        this.legendJW().maxSize(0);
+        this.legendDF().maxSize(0);
+        this.legendDS().maxSize(0);
+
+        // 2. Loop on info from EndPoint        
         this.data.Environments.forEach(env => {           
 
             // 2.0 Set the track name for the database path
@@ -302,29 +406,24 @@ class ioStats extends viewModelBase {
                    
                     // 2.3 Calc highest batch size for each type
                     if (recentItem.Type === ioStats.journalWriteString) {
-                        maxJournalWriteSize = recentItem.Size > maxJournalWriteSize ? recentItem.Size : maxJournalWriteSize;
-                    }
-                    if (recentItem.Type === ioStats.dataSyncString) {
-                        maxVoronDataSyncSize = recentItem.Size > maxVoronDataSyncSize ? recentItem.Size : maxVoronDataSyncSize;
+                        this.legendJW().maxSize(recentItem.Size > this.legendJW().maxSize() ? recentItem.Size : this.legendJW().maxSize());
                     }
                     if (recentItem.Type === ioStats.dataFlushString) {
-                        maxVoronDataFlushSize = recentItem.Size > maxVoronDataFlushSize ? recentItem.Size : maxVoronDataFlushSize;
+                        this.legendDF().maxSize(recentItem.Size > this.legendDF().maxSize() ? recentItem.Size : this.legendDF().maxSize());
+
+                    }
+                    if (recentItem.Type === ioStats.dataSyncString) {
+                        this.legendDS().maxSize(recentItem.Size > this.legendDS().maxSize() ? recentItem.Size : this.legendDS().maxSize());
                     }
 
                     this.hasAnyData(true);
                 });
             });
         });
-
-        // 3. Calc levels so we know what color to use for the data in UI (low/med/high)
-        this.journalWriteLowSizeLevel(generalUtils.roundBytesToNearstSize(maxJournalWriteSize / 3));
-        this.journalWriteHighSizeLevel(generalUtils.roundBytesToNearstSize(maxJournalWriteSize / 3 * 2));
-
-        this.dataSyncLowSizeLevel(generalUtils.roundBytesToNearstSize(maxVoronDataSyncSize / 3));
-        this.dataSyncHighSizeLevel(generalUtils.roundBytesToNearstSize(maxVoronDataSyncSize / 3 * 2));
-
-        this.dataFlushLowSizeLevel(generalUtils.roundBytesToNearstSize(maxVoronDataFlushSize / 3));
-        this.dataFlushHighSizeLevel(generalUtils.roundBytesToNearstSize(maxVoronDataFlushSize / 3 * 2));
+   
+        this.legendJW().maxSize(this.legendJW().maxSize() === 0 ? 1 : this.legendJW().maxSize());
+        this.legendDF().maxSize(this.legendDF().maxSize() === 0 ? 1 : this.legendDF().maxSize());
+        this.legendDS().maxSize(this.legendDS().maxSize() === 0 ? 1 : this.legendDS().maxSize());         
     }
 
     private initCanvas() {
@@ -366,8 +465,6 @@ class ioStats extends viewModelBase {
     }
 
     private setupEvents(selection: d3.Selection<any>) {
-        let mousePressed = false;
-
         const onMove = () => {
             this.hitTest.onMouseMove();
         }
@@ -461,6 +558,12 @@ class ioStats extends viewModelBase {
             }
 
             this.initViewData();
+            this.setLegendScales();
+
+            if (firstTime) {
+                this.initLegendImages();
+            }
+           
             this.draw(firstTime);
 
             if (firstTime) {
@@ -525,7 +628,7 @@ class ioStats extends viewModelBase {
     }
 
     private draw(resetFilteredIndexNames: boolean) {
-        if (this.hasAnyData()) {           
+        if (this.hasAnyData()) {
 
             // 0. Prepare
             this.prepareBrushSection();
@@ -651,7 +754,7 @@ class ioStats extends viewModelBase {
         let firstIndex = true;        
 
         // TODO: Maybe refactor this method so it can handle any incoming number of environments,
-        // But, as discussed, this will be left out for now inorder to avoid extra string comparisons
+        // But, as discussed, this will be left out for now in order to avoid extra string comparisons
 
         // 1. Database main path
         domain.push(this.data.Environments[0].Path);
@@ -816,9 +919,12 @@ class ioStats extends viewModelBase {
         let yStartItem: number;
         let firstIndexTrack = true;
 
+        this.indexesItemsStartEndJW = []; 
+        this.indexesItemsStartEndDF = [];
+        this.indexesItemsStartEndDS = []; 
+
         try {
             context.save();
-
 
             context.translate(0, ioStats.brushSectionHeight); 
             context.clearRect(0, 0, this.totalWidth, this.totalHeight - ioStats.brushSectionHeight);
@@ -897,15 +1003,27 @@ class ioStats extends viewModelBase {
                                     const humanSizeTextWidth = context.measureText(recentItem.HumanSize).width;
                                     if (dx > humanSizeTextWidth) {
                                         context.fillStyle = 'black';
-                                        context.fillText(recentItem.HumanSize, x1 + dx / 2 - humanSizeTextWidth / 2, yStartItem + ioStats.trackHeight / 2 + 4);
+                                        context.fillText(generalUtils.formatBytesToSize(recentItem.Size), x1 + dx / 2 - humanSizeTextWidth / 2, yStartItem + ioStats.trackHeight / 2 + 4);
+                                        // Note: there is a slight difference between Server side calculated 'HumanSize' &  the generalUtils calculation ....
                                     }
 
                                     // 3.7 Register track item for tooltip (but not for the 'closed' indexes track)
                                     this.hitTest.registerTrackItem(x1 - 2, yStartItem, dx + 2, ioStats.itemHeight, recentItem);
                                 }
                                 else {
-                                    // 3.8 If on the closed index track, might as well register toggle, so that indexes details will open, can be nice 
+                                    // 3.8 On the closed index track: 
+                                    // Register toggle, so that indexes details will open
                                     this.hitTest.registerIndexToggle(x1 - 5, yStartItem, dx + 5, ioStats.itemHeight);
+
+                                    // Register closed index track item for toolip
+                                    this.hitTest.registerClosedTrackItem(x1 - 2, yStartItem, dx + 2, ioStats.itemHeight, recentItem);
+
+                                    // Update closed index track StartEnd array (durations array), used in the tooltip on closed index track items
+                                    switch (recentItem.Type) {
+                                        case ioStats.journalWriteString: this.indexesItemsStartEndJW.push([itemStartDateAsInt, itemEndDateAsInt]); break;
+                                        case ioStats.dataFlushString: this.indexesItemsStartEndDF.push([itemStartDateAsInt, itemEndDateAsInt]); break;
+                                        case ioStats.dataSyncString: this.indexesItemsStartEndDS.push([itemStartDateAsInt, itemEndDateAsInt]); break;
+                                    }
                                 }
                             }
                         }
@@ -913,12 +1031,46 @@ class ioStats extends viewModelBase {
                 };
             };
 
-            // 4. Draw gaps   
+            // 4. Comact closed index track StartEnd durations array
+            this.indexesItemsStartEndJW = this.compactDurationsInfo(this.indexesItemsStartEndJW);
+            this.indexesItemsStartEndDF = this.compactDurationsInfo(this.indexesItemsStartEndDF);
+            this.indexesItemsStartEndDS = this.compactDurationsInfo(this.indexesItemsStartEndDS);
+
+            // 5. Draw gaps   
             this.drawGaps(context, xScale);
         }
         finally {
             context.restore();
         }
+    }
+
+    private compactDurationsInfo(durationsInfo: Array<[number, number]>): Array<[number, number]>{
+
+        let joinedDurations: Array<[number, number]> = [];
+        let joinedIndex = 0;
+
+        // 1. Sort array (by start time, a[0] is start time, a[1] is end time)
+        durationsInfo.sort((a, b) => a[0] === b[0] ? a[1] - b[1] : a[0] - b[0]);
+
+        // 2. Join the overlapping array durations
+        joinedDurations.push(durationsInfo[0]);
+
+        for (let i = 1; i < durationsInfo.length; i++) {            
+            const currentStart = durationsInfo[i][0];
+            const currentEnd = durationsInfo[i][1];
+
+            if (currentStart <= joinedDurations[joinedIndex][1]) {
+                if (currentEnd > joinedDurations[joinedIndex][1]) {
+                    joinedDurations[joinedIndex][1] = currentEnd;
+                }
+            }
+            else {
+                joinedIndex++;
+                joinedDurations.push(durationsInfo[i]);
+            }
+        }
+
+        return joinedDurations;
     }
 
     private filtered(envPath: string): boolean {             
@@ -1088,6 +1240,7 @@ class ioStats extends viewModelBase {
                 this.fillCache();     
                 this.prepareTimeData();
                 this.initViewData();                
+                this.setLegendScales();
                 this.draw(true);
                 this.isImport(true);
             }
@@ -1176,41 +1329,29 @@ class ioStats extends viewModelBase {
 
         switch (recentItem.Type) {
             case ioStats.journalWriteString: {
-                color = ioStats.eventsColors.JournalWriteLowSizeColor;
-                if (recentItem.Size > this.journalWriteLowSizeLevel()) {
-                    color = ioStats.eventsColors.JournalWriteMedSizeColor;
+                if (calcColorBasedOnSize) {                
+                    color = this.legendJW().colorScale(recentItem.Size);
                 }
-                if (recentItem.Size > this.journalWriteHighSizeLevel()) {
-                    color = ioStats.eventsColors.JournalWriteHighSizeColor;
-                }
-                if (!calcColorBasedOnSize) {
-                    color = ioStats.eventsColors.JournalWriteHighSizeColor;
-                }
-            } break;
-            case ioStats.dataSyncString: {
-                color = ioStats.eventsColors.DataSyncLowSizeColor;
-                if (recentItem.Size > this.dataSyncLowSizeLevel()) {
-                    color = ioStats.eventsColors.DataSyncMedSizeColor;
-                }
-                if (recentItem.Size > this.dataSyncHighSizeLevel()) {
-                    color = ioStats.eventsColors.DataSyncHighSizeColor;
-                }
-                if (!calcColorBasedOnSize) {
-                    color = ioStats.eventsColors.DataSyncHighSizeColor;
+                else {
+                    color = ioStats.eventsColors.HighSizeColorJW;
                 }
             } break;
             case ioStats.dataFlushString: {
-                color = ioStats.eventsColors.DataFlushLowSizeColor;
-                if (recentItem.Size > this.dataFlushLowSizeLevel()) {
-                    color = ioStats.eventsColors.DataFlushMedSizeColor;
+                if (calcColorBasedOnSize) {   
+                    color = this.legendDF().colorScale(recentItem.Size);
                 }
-                if (recentItem.Size > this.dataFlushHighSizeLevel()) {
-                    color = ioStats.eventsColors.DataFlushHighSizeColor;
-                }
-                if (!calcColorBasedOnSize) {
-                    color = ioStats.eventsColors.DataFlushHighSizeColor;
+                else {
+                    color = ioStats.eventsColors.HighSizeColorDF;
                 }
             } break;
+            case ioStats.dataSyncString: {
+                if (calcColorBasedOnSize) {
+                    color = this.legendDS().colorScale(recentItem.Size);            
+                }
+                else {
+                    color = ioStats.eventsColors.HighSizeColorDS;
+                }
+            } break;           
         }
 
         return color;
@@ -1250,22 +1391,83 @@ class ioStats extends viewModelBase {
         }
     }
 
-    private handleTrackTooltip(element: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) {     
+    private handleClosedTrackTooltip(element: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== element) {
             let typeString;
+            let duration;
+
             switch (element.Type) {
-                case "JournalWrite": typeString = "Journal Write"; break;
-                case "DataSync": typeString = "Voron Data Sync"; break;
-                case "DataFlush": typeString = "Voron Data Flush"; break;
+                case ioStats.journalWriteString:
+                    typeString = "Journal Write";
+                    duration = this.getJoinedDuration(this.indexesItemsStartEndJW, element);
+                    break;
+                case ioStats.dataFlushString:
+                    typeString = "Voron Data Flush";
+                    duration = this.getJoinedDuration(this.indexesItemsStartEndDF, element);
+                    break;
+                case ioStats.dataSyncString:
+                    typeString = "Voron Data Sync";
+                    duration = this.getJoinedDuration(this.indexesItemsStartEndDS, element);
+                    break;
+            }
+            let tooltipHtml = `*** ${typeString} ***<br/>`;       
+            duration = (duration === 0) ? "0" : generalUtils.formatMillis(duration);                                      
+            tooltipHtml += `Duration: ${duration}<br/>`;
+            tooltipHtml += `Click for details`;           
+
+            this.handleTooltip(element, x, y, tooltipHtml);
+        }
+    }
+
+    private getJoinedDuration(joinedDurationInfo: Array<[number, number]>, element: Raven.Server.Documents.Handlers.IOMetricsRecentStats): number {      
+        const elementStart = new Date(element.Start).getTime();
+        const elementEnd = new Date(elementStart + element.Duration).getTime();
+       
+        // Find containing part from the joined durations array
+        let joinedDuration = joinedDurationInfo.find(duration => (duration[0] <= elementStart) && (elementEnd <= duration[1]));
+        let duration = joinedDuration[1] - joinedDuration[0];       
+        return duration;
+    }
+
+    private handleTrackTooltip(element: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) {     
+        const currentDatum = this.tooltip.datum();
+
+        // 1. Show item size position in the legend (in addition to showing the tooltip)
+        this.itemHoveredJW(false);
+        this.itemHoveredDF(false);
+        this.itemHoveredDS(false);
+               
+        switch (element.Type) {           
+            case ioStats.journalWriteString: {
+                this.itemHoveredJW(true);
+                this.itemSizePositionJW(this.legendJW().sizeScale.invert(element.Size).toString() + "px");
+            } break;
+            case ioStats.dataFlushString: {
+                this.itemHoveredDF(true);
+                this.itemSizePositionDF(this.legendDF().sizeScale.invert(element.Size).toString() + "px");
+            } break;
+            case ioStats.dataSyncString: {
+                this.itemHoveredDS(true);               
+                this.itemSizePositionDS(this.legendDS().sizeScale.invert(element.Size).toString() + "px");
+            } break;
+        }
+
+        // 2. Show tooltip
+        if (currentDatum !== element) {
+            let typeString;
+            switch (element.Type) {
+                case ioStats.journalWriteString: typeString = "Journal Write"; break;               
+                case ioStats.dataFlushString: typeString = "Voron Data Flush"; break;
+                case ioStats.dataSyncString: typeString = "Voron Data Sync"; break;
             }
             let tooltipHtml = `*** ${typeString} ***<br/>`;
             let duration = (element.Duration === 0) ? "0" : generalUtils.formatMillis((element).Duration);
             tooltipHtml += `Duration: ${duration}<br/>`;
-            tooltipHtml += `Size: ${element.HumanSize}<br/>`;
+            tooltipHtml += `Size: ${generalUtils.formatBytesToSize(element.Size)}<br/>`; 
             tooltipHtml += `Size (bytes): ${element.Size.toLocaleString()}<br/>`;
-            tooltipHtml += `Allocated Size: ${element.HumanFileSize.toLocaleString()}<br/>`;
+            tooltipHtml += `Allocated Size: ${generalUtils.formatBytesToSize(element.FileSize)}<br/>`; 
             tooltipHtml += `Allocated Size (bytes): ${element.FileSize.toLocaleString()}<br/>`;
 
             this.handleTooltip(element, x, y, tooltipHtml);
@@ -1312,6 +1514,11 @@ class ioStats extends viewModelBase {
             .style("opacity", 0);
 
         this.tooltip.datum(null);
+
+        // No need to show arrow position in legend any more..
+        this.itemHoveredJW(false);
+        this.itemHoveredDF(false);
+        this.itemHoveredDS(false);
     }   
 }
 

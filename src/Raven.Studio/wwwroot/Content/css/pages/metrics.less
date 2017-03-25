@@ -34,19 +34,47 @@ rect.pane {
     }
 }
 
-.legendColor {
-    width: 12px;
-    height: 12px;
-    display: inline-block;
+@legend-container-width: 200px;
+@legend-arrow-border: 6px;
+@legend-arrow-color: #f00;
+
+.arrow-down {
+  position: absolute;
+  top: 20px; 
+  width: 0; 
+  height: 0; 
+  border-left: @legend-arrow-border solid transparent;
+  border-right: @legend-arrow-border solid transparent;
+  border-top: @legend-arrow-border solid @legend-arrow-color;
 }
 
-.legendHeading {
-    padding-left: 10px;
-    padding-right: 10px;
-    padding-top: 1px;
-    padding-bottom: 1px;
+.legend-container {
+  position: relative;
+  width: @legend-container-width;
+  float: left;
 }
 
-.legendText {
-    font-size:0.8em;
+.legend-start-range {
+  position: absolute;
+  top: 0;
+  left: -3px; /* Position inside containing element, the distance from left edge of legend-container */
+}
+
+.legend-end-range {
+  position: absolute;
+  top: 0;
+  right: 33px; /* Position inside containing element, the distance from right edge of legend-container */
+}
+
+.legend-container img {
+  margin-top: 20px;
+}
+
+.legend-container div {
+  font-size: 12px;
+  text-align: center;
+
+  &.legend-title {     
+      width: @legend-container-width - 50px;
+  }
 }

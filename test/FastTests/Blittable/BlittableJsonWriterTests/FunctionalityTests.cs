@@ -173,7 +173,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         }
 
         [Fact]
-        public void UsingBoolleans()
+        public void UsingBooleans()
         {
             var json = JsonConvert.SerializeObject(new
             {

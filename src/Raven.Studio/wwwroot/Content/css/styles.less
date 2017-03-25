@@ -265,6 +265,21 @@ a {
     }
 
     .dropdown-menu {
+        &.max-height, .max-height {
+            max-height: 50vh;
+            overflow:auto;
+        }
+
+        &.has-info {
+            padding-bottom: 0;
+
+            .bg-primary, .bg-success, .bg-info, .bg-warning, .bg-danger {
+                padding:2px;
+                font-size:12px;
+                text-align:center;
+            }
+        }
+
         &.settings-menu {
             width: 400px;
             max-width: 100vw;
@@ -1132,6 +1147,12 @@ pre {
             & > .set-size {
                 .btn-sm;
                 line-height: 26px;
+
+                span {
+                    white-space:nowrap;
+                    overflow:hidden;
+                    text-overflow:ellipsis;
+                }
             }
         }
 
@@ -1186,6 +1207,7 @@ pre {
                     text-align: left;
                     overflow: hidden;
                     text-overflow: ellipsis;
+                    white-space:nowrap;
 
                     .caret {
                         margin-top: 11px;
@@ -1226,27 +1248,27 @@ pre {
 
     &.active {
         &.state-primary {
-            box-shadow: 0 0 0 2px @brand-primary-dark;
+            box-shadow: 0 0 0 2px @brand-primary-dark inset;
         }
 
         &.state-success {
-            box-shadow: 0 0 0 2px @brand-success-dark;
+            box-shadow: 0 0 0 2px @brand-success-dark inset;
         }
 
         &.state-info {
-            box-shadow: 0 0 0 2px @brand-info-dark;
+            box-shadow: 0 0 0 2px @brand-info-dark inset;
         }
 
         &.state-warning {
-            box-shadow: 0 0 0 2px @brand-warning-dark;
+            box-shadow: 0 0 0 2px @brand-warning-dark inset;
         }
 
         &.state-danger {
-            box-shadow: 0 0 0 2px @brand-danger-dark;
+            box-shadow: 0 0 0 2px @brand-danger-dark inset;
         }
 
         &.state-offline {
-            box-shadow: 0 0 0 2px @gray;
+            box-shadow: 0 0 0 2px @gray inset;
         }
     }
 }
@@ -1301,11 +1323,6 @@ pre {
     }
 }
 
-.input-group-btn > .btn {
-    border-color: @input-border;
-    border-left-color: @gray-dark;
-}
-
 .form-group-dropdown {
     position: relative;
 
@@ -1332,7 +1349,7 @@ pre {
 
 .input-group {
     &.has-error {
-        padding-bottom: 22px;
+        padding-bottom: 25px;
 
         .input-group-addon {
             color: inherit;
@@ -1367,7 +1384,7 @@ pre {
 
 .input-group {
     &.has-error {
-        padding-bottom: 22px;
+        padding-bottom: 25px;
 
         .input-group-addon {
             color: inherit;
@@ -1412,6 +1429,38 @@ pre {
 
     cursor: not-allowed;
 }
+
+.ace_editor {
+    &.has-error {
+        border-color:@brand-danger;
+    }
+
+    .fullScreenModeLabel {
+        z-index:950 !important;
+    }
+}
+
+.fullScreen .fullScreen-editor {
+    height: auto !important;
+    width: auto !important;
+    border: 0;
+    margin: 0;
+    position: fixed !important;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10000;
+}
+
+.fullScreen {
+    overflow: hidden;
+}
+
+.autocomplete-list {
+    top: 37px !important; 
+}
+
 
 
 @import "pages/tasks-sampleData";

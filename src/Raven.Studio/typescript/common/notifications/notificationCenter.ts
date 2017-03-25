@@ -17,6 +17,7 @@ import postponeNotificationCommand = require("commands/operations/postponeNotifi
 import dismissNotificationCommand = require("commands/operations/dismissNotificationCommand");
 import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
 import killOperationCommand = require("commands/operations/killOperationCommand");
+import showDataDialog = require("viewmodels/common/showDataDialog");
 
 class notificationCenter {
     static instance = new notificationCenter();
@@ -257,13 +258,16 @@ class notificationCenter {
 
         if (notification instanceof alert) {
             const currentAlert = notification as alert;
-            app.showBootstrapDialog(new tempStatDialog(currentAlert.details))
+            const text = JSON.stringify(currentAlert.details, null, 4);
+
+            app.showBootstrapDialog(new showDataDialog("Alert", text, "javascript"))
                 .done(() => {
                     this.showNotifications(notificationCenterOpened);
                 });
         } else if (notification instanceof performanceHint) {
             const currentHint = notification as performanceHint;
-            app.showBootstrapDialog(new tempStatDialog(currentHint.details))
+            const text = JSON.stringify(currentHint.details, null, 4);
+            app.showBootstrapDialog(new showDataDialog("Performance Hint", text, "javascript"))
                 .done(() => {
                     this.showNotifications(notificationCenterOpened);
                 });

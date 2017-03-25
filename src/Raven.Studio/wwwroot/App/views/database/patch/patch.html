@@ -1,11 +1,11 @@
 <div class="flex-window stretch patch">
     <div class="flex-window-head">
-        <div id="patch-target" class="collapse in">
+        <div id="patch-target" data-bind="collapse: !test.testMode()">
             <div class="clearfix">
-                <h2 class="pull-left-sm">Patch target</h2>
+                <h2 class="pull-left-sm">Patch</h2>
                 <div class="pull-right-sm form-inline">
-                    <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationElement: patchSaveName">
-                        <input class="form-control"  style="display: none" placeholder="Patch name" data-bind="textInput: patchSaveName">
+                    <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationElement: patchSaveName, validationOptions: { insertMessages: false }">
+                        <input class="form-control" style="display: none" placeholder="Patch name" data-bind="textInput: patchSaveName">
                         <span class="input-group-btn">
                             <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch, css: { 'btn-spinner': spinners.save }">
                                 <i class="icon-save"></i> <span data-bind="text: inSaveMode() ? 'Save' : 'Save...'"></span>
@@ -33,22 +33,27 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="row" data-bind="visible: isDocumentMode, with: patchDocument">
                     <label class="control-label col-sm-3 col-lg-2">Document ID</label>
 
                     <div class="col-sm-9 col-lg-4 margin-bottom" data-bind="validationElement: selectedItem">
-                        <input type="text" id="selectedItem" data-bind="textInput: selectedItem" class="form-control" />
-                        <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#selectedItem', foreach: $root.documentIdSearchResults">
-                            <li role="presentation" data-bind="click: $parent.selectedItem.bind($parent, $data)">
-                                <a role="menuitem" tabindex="-1" href="#">
-                                    <span data-bind="text: $data"></span>
-                                </a>
-                            </li>
-                        </ul>
+                        <div class="input-group">
+                            <input type="text" id="selectedItem" data-bind="textInput: selectedItem" class="form-control" />
+                            <ul class="dropdown-menu autocomplete-list" role="menu" style="display: none;" data-bind="autoComplete: '#selectedItem', foreach: $root.documentIdSearchResults">
+                                <li role="presentation" data-bind="click: $parent.selectedItem.bind($parent, $data)">
+                                    <a role="menuitem" tabindex="-1" href="#">
+                                        <span data-bind="text: $data"></span>
+                                    </a>
+                                </li>
+                            </ul>
+                            <span class="input-group-btn">
+                                <button class="btn" type="button" data-bind="click: $root.previewDocument, css: { 'btn-spinner': $root.spinners.preview }, disable: $root.spinners.preview" title="Show preview"><i class="icon-preview"></i></button>
+                            </span>
+                        </div>
                     </div>
                 </div>
-                
+
                 <div class="row" data-bind="visible: isIndexMode()">
                     <label class="control-label col-sm-3 col-lg-2">Index</label>
 
@@ -58,14 +63,19 @@
                                 <span data-bind="text: patchDocument().selectedItem() || 'Select index...'"></span>
                                 <span class="caret"></span>
                             </button>
-                            <ul class="dropdown-menu" data-bind="foreach: indexNames">
-                                <li><a href="#" data-bind="text: $data, click: _.partial($parent.useIndex, $data)"></a></li>
-                            </ul>
+                            <div class="dropdown-menu has-info">
+                                <ul class="menu max-height" data-bind="foreach: indexNames">
+                                    <li><a href="#" data-bind="text: $data, click: _.partial($parent.useIndex, $data)"></a></li>
+                                </ul>
+                                <div class="bg-info">
+                                    <i class="icon-info"></i> <span>Map-Reduce indexes are not available for patching</span>
+                                </div>
+                            </div>
                         </div>
                         <span class="help-block" data-bind="validationMessage: patchDocument().selectedItem"></span>
                     </div>
                 </div>
-                
+
                 <div class="row" data-bind="visible: isCollectionMode()">
                     <label class="control-label col-sm-3 col-lg-2">Collection</label>
 
@@ -111,95 +121,192 @@
                         </div>
                     </div>
                 </div>
-                <div data-bind="visible: !isDocumentMode()">
-                    <div class="clearfix">
-                        <div class="pull-right">
-                            <div class="btn-group dropdown-right">
-                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                                    <i class="icon-table"></i><span>Display</span>
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
-                                    <div data-bind="compose: $root.columnsSelector"></div>
-                                </ul>
+                <div class="row margin-bottom" data-bind="visible: !isDocumentMode()">
+                    <label class="control-label col-sm-3 col-lg-2">Matching documents</label>
+                    <div class="col-sm-9 col-lg-10">
+                        <div class="clearfix">
+                            <div class="pull-right">
+                                <div class="btn-group dropdown-right">
+                                    <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                        <i class="icon-table"></i><span>Display</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <div class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
+                                        <div data-bind="compose: $root.columnsSelector"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <label class="control-label col-sm-3 col-lg-2">Matching documents</label>
-                    <div class="col-sm-9 col-lg-10" style="height: 300px">
-                        <virtual-grid class="resizable patch-grid" params="controller: $root.gridController"></virtual-grid>
+                        <div style="height: 300px; position:relative;">
+                            <virtual-grid class="resizable patch-grid" params="controller: $root.gridController"></virtual-grid>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div id="patch-script">
-            <h2 class="patch-title">Patch script <small><i class="icon-info"></i></small></h2>
 
-            <div class="patch-container">
-                <div class="patch-main">
-                    <pre class="form-control patch-source" data-bind="aceEditor: { code: patchDocument().script, lang:'ace/mode/javascript' }" style="height: 160px;"></pre>
-                    
-                    <div data-bind="validationElement: patchDocument().script">
-                        <div class="help-block" data-bind="validationMessage: patchDocument().script"></div>
+        <div class="row form-horizontal" id="patch-script">
+            <label class="control-label col-sm-3 col-lg-2 patch-title">Patch script <small><i class="icon-info"></i></small></label>
+            <div class="col-sm-9 col-lg-10">
+                <div class="patch-container">
+                    <div class="patch-main">
+                        <pre class="form-control patch-source" data-bind="aceEditor: { code: patchDocument().script, lang:'ace/mode/javascript' }, validationElement: patchDocument().script" style="height: 160px;"></pre>
+
+                        <div data-bind="validationElement: patchDocument().script">
+                            <div class="help-block" data-bind="validationMessage: patchDocument().script"></div>
+                        </div>
+                    </div>
+                    <div class="patch-controls">
+                        <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: runPatch">
+                            <i class="icon-play2 icon-lg"></i><br />
+                            <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
+                        </button>
+                        <div class="flex-separator"></div>
+                        <button class="btn btn-default btn-block text-center margin-top" data-bind="click: enterTestMode">
+                            <i class="icon-rocket"></i><span>Test</span>
+                        </button>
+                    </div>
+                    <div class="test-controls">
+                        <button class="btn btn-primary btn-block text-center" data-bind="click: test.runTest, css: { 'btn-spinner' : test.spinners.testing }, disable: test.spinners.testing">
+                            <i class="icon-rocket"></i><span>Test</span>
+                        </button>
+                        <div class="flex-separator"></div>
+                        <button class="btn btn-success btn-block text-center test-close" data-bind="click: test.applyTestScript">
+                            <i class="icon-check"></i><span>Apply</span>
+                        </button>
+                        <button class="btn btn-default btn-block text-center test-close" data-bind="click: test.closeTestMode">
+                            <i class="icon-cancel"></i><span>Close</span>
+                        </button>
                     </div>
                 </div>
-                <div class="patch-controls">
-                    <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: runPatch">
-                        <i class="icon-play2 icon-lg"></i><br />
-                        <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
-                    </button>
-                    <button class="btn btn-default btn-block text-center btn-prerelease margin-top" disabled="disabled">
-                        <i class="icon-rocket"></i><span>Test</span>
-                    </button>
-                </div>
-                <div class="test-controls">
-                    <button class="btn btn-primary btn-block text-center">
-                        <i class="icon-rocket"></i><span>Test</span>
-                    </button>
-                    <button class="btn btn-default statistics btn-block text-center">
-                        <i class="icon-stats"></i><span>Statistics (?)</span>
-                    </button>
-                    <div class="flex-separator"></div>
-                    <button class="btn btn-success btn-block text-center test-close" data-target="body" data-class="show-test">
-                        <i class="icon-check"></i><span>Apply</span>
-                    </button>
-                    <button class="btn btn-default btn-block text-center test-close" data-target="body" data-class="show-test">
-                        <i class="icon-cancel"></i><span>Close</span>
-                    </button>
-                </div>
             </div>
-            <div id="test-container" class="collapse" data-bind="template: { name: 'test-component' }">
-            </div>
+        </div>
+        <div id="test-container" data-bind="template: { name: 'test-component' }, collapse: test.testMode()">
         </div>
     </div>
 </div>
-<div class="backdrop btn-toggle" data-target="body" data-class="show-test"></div><!-- TODO: -->
-<div class="tooltip" style="opacity: 0">
+<div class="backdrop" data-bind="click: test.closeTestMode"></div>
+<div class="tooltip json-preview" style="opacity: 0">
     <pre><code></code></pre>
 </div>
 <script type="text/html" id="test-component">
-    <div class="panel">
-        <div class="padding">
-            <div class="row margin-bottom">
-                <label class="control-label col-xs-12 col-sm-4 col-lg-3 col-xl-2">Document ID</label>
-                <div class="col-sm-8 col-lg-6 col-xl-4 col-lg-offset-3  col-xl-offset-0">
-                    <div class="input-group">
-                        <input class="form-control" placeholder="Search for...">
-                        <span class="input-group-btn">
-                            <button class="btn btn-default" type="button"><i class="icon-import"></i> <span>Load</span></button>
-                        </span>
-                    </div>
-                </div>
-                <div class="col-xs-12 col-xl-5"><small class="text-info"><i class="icon-info"></i> You can also paste your own document JSON to test</small></div>
-            </div>
+    <div class="row margin-bottom form-horizontal" data-bind="with: test">
+        <label class="control-label col-sm-3 col-lg-2">Document ID</label>
+        <div class="col-sm-9 col-lg-10">
             <div class="row">
                 <div class="col-sm-6">
-                    <h3>Before</h3>
-                    <textarea rows="10" class="form-control"></textarea>
+                    <div class="input-group" data-bind="validationElement: documentId">
+                        <input class="form-control" id="testDocumentId" data-bind="textInput: documentId">
+                        <ul class="dropdown-menu autocomplete-list" role="menu" style="display: none;" data-bind="autoComplete: '#testDocumentId', foreach: documentIdSearchResults">
+                            <li role="presentation" data-bind="click: _.partial($parent.onAutocompleteOptionSelected, $data)">
+                                <a role="menuitem" tabindex="-1" href="#">
+                                    <span data-bind="text: $data"></span>
+                                </a>
+                            </li>
+                        </ul>
+                        <span class="input-group-btn">
+                            <button class="btn btn-default" type="button" data-bind="click: loadDocument, css: { 'btn-spinner': spinners.loadingDocument }, disable: spinners.loadingDocument">
+                            <i class="icon-import"></i> <span>Load</span></button>
+                        </span>
+
+
+                    </div>
                 </div>
                 <div class="col-sm-6">
-                    <h3>After</h3>
-                    <textarea rows="10" class="form-control"></textarea>
+                    <!-- TODO: <small class="text-info"><i class="icon-info"></i> You can also paste your own document JSON to test</small>-->
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row tabs-left form-horizontal">
+        <div class="col-sm-3 col-lg-2">
+
+            <ul class="nav nav-tabs nav-stacked" data-bind="with: test">
+                <li class="active">
+                    <a href="#preview" data-toggle="tab">
+                        <i class="icon-preview"></i>
+                        <span>Preview</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#puts" data-toggle="tab">
+                        <i class="icon-export"></i>
+                        <span>Puts</span>
+                        <span class="label label-primary pull-right" data-bind="text: actions.putDocument().length || ''"></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#loads" data-toggle="tab">
+                        <i class="icon-import"></i>
+                        <span>Loads</span>
+                        <span class="label label-primary pull-right" data-bind="text: actions.loadDocument().length || ''"></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#output" data-toggle="tab">
+                        <i class="icon-rocket"></i>
+                        <span>Output</span>
+                        <span class="label label-primary pull-right" data-bind="text: actions.info().length || ''"></span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="col-sm-9 col-lg-10">
+            <div class="panel ">
+                <div class="" data-bind="with: test">
+                    <div class="tab-content">
+                        <div class="tab-pane fade in active" id="preview">
+                            <div class="row flex-row">
+                                <div class="col-sm-6 flex-vertical">
+                                    <h3 class="flex-header">Before</h3>
+                                    <pre class="flex-content scroll" data-bind="html: formatAsJson(beforeDoc)"></pre>
+                                </div>
+                                <div class="col-sm-6 flex-vertical">
+                                    <h3 class="flex-header">After</h3>
+                                    <pre class="flex-content scroll" data-bind="html: formatAsJson(afterDoc)"></pre>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade flex-vertical" id="puts" data-bind="css: { 'show-objects': showObjectsInPutSection }">
+                            <div class="flex-header">
+                                <div class="clearfix">
+                                    <h3 class="pull-left">Puts</h3>
+                                    <div class="pull-right">
+                                        <div class="toggle toggle-inline">
+                                            <input type="checkbox" class="styled" id="showObjects" data-bind="checked: showObjectsInPutSection">
+                                            <label for="showObjects"> Show objects </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex-content scroll" data-bind="foreach: actions.putDocument">
+                                <div class="put-item">
+                                    <div class="put-heading" data-bind="text: Key"></div>
+                                    <div class="put-placeholder">{ ... }</div>
+                                    <pre data-bind="html: $parent.formatAsJson(Data)"></pre>
+                                </div>
+                            </div>
+
+                            <p data-bind="visible: actions.putDocument().length === 0">No data available.</p>
+                        </div>
+                        <div class="tab-pane fade flex-vertical" id="loads">
+                            <h3 class="flex-header">Loads</h3>
+                            <ul class="flex-content scroll" data-bind="foreach: actions.loadDocument">
+                                <li data-bind="text: $data"></li>
+                            </ul>
+
+                            <p data-bind="visible: actions.loadDocument().length === 0">No data available.</p>
+                        </div>
+                        <div class="tab-pane fade flex-vertical" id="output">
+                            <h3 class="flex-header">Output</h3>
+                            <ul class="flex-content scroll" data-bind="foreach: actions.info">
+                                <li data-bind="text: $data"></li>
+                            </ul>
+
+                            <p data-bind="visible: actions.info().length === 0">No data available.</p>
+                        </div>
+                    </div>
+                    <div class="clearfix"></div>
                 </div>
             </div>
         </div>
@@ -208,26 +315,47 @@
 
 <script type="text/html" id="saved-patches-dialog">
     <button class="btn btn-default dropdown-toggle" type="button" id="dropdownLoadPatch" data-toggle="dropdown" data-bind="enable: savedPatches.hasAnySavedPatch">
-        <i class="icon-folder"></i> <span>Load patch</span>
+        <i class="icon-patch"></i> <span>Load patch</span>
         <span class="caret"></span>
     </button>
     <div class="dropdown-menu slidein-style" aria-labelledby="dropdownLoadPatch" data-bind="dropdownPanel: true, with: savedPatches">
-        <div class="loadpatch-dropdown show-preview">
-            <div class="patch-preview-container">
-                <h3>
-                    Patch preview <span data-bind="visible: previewItem()">-</span> <strong data-bind="text: previewItem() ? previewItem().name() : ''"></strong>
-                </h3>
-                
-                <div class="pre-container">
-                    <pre>
+        <div class="loadpatch-dropdown" data-bind="css: { 'show-preview': previewItem() }">
+            <div class="patch-preview-container flex-vertical">
+                <div class="flex-header">
+                    <h3>
+                        Patch preview
+                    </h3>
+                </div>
+                <div class="flex-content flex-vertical scroll">
+                <div class="bg-info padding padding-xs">
+                    <div class="row">
+                        <div class="col-xs-6">
+                            <strong data-bind="text: previewItem() ? previewItem().name() : ''"></strong>
+                        </div>
+                        <div class="col-xs-6">
+                            <div data-bind="with: previewItem()">
+                                <span data-bind="text: patchOnOption"></span> - <span data-bind="text: selectedItem"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                    <div class="pre-container">
+                        <pre>
 <code data-bind="html: previewCode"></code>
 </pre>
+                    </div>
                 </div>
             </div>
             <div class="patch-list-container flex-vertical">
                 <div class="flex-header">
-                    <h3>Select patch</h3>
-                    <input type="search" class="form-control input-sm patch-filter" data-bind="textInput: filters.searchText" placeholder="filter">
+                    <div class="row">
+                        <div class="col-xs-6">
+                            <h3>Select patch</h3>
+                        </div>
+                        <div class="col-xs-6">
+                            <input type="search" class="form-control input-sm patch-filter" data-bind="textInput: filters.searchText" placeholder="filter">
+                        </div>
+                    </div>
                 </div>
                 <div class="flex-content scroll">
                     <ul class="patch-list" data-bind="foreach: filteredPatches">
@@ -249,78 +377,3 @@
         </div>
     </div>
 </script>
-
-<!-- TODO  
-
-
-    <div class="btn-toolbar" role="toolbar">
-        <div class="btn-group">
-            <button class="btn btn-default btn-prerelease" disabled title="Test the patch script on the selected document (Alt+T)" data-bind="click: testPatch" accesskey="T"> Test</button>
-        </div>
-    </div>
-    <br />
-    <div class="form-horizontal">
-      
-        <div class="form-group patch-preview-flag" data-bind="with: $root" id="beforeAfterContainer">
-            <div class="col-md-6">
-                <div>
-                    <label>Before Patch</label>
-                </div>
-                <div>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <ul class="nav nav-tabs">
-                                <li data-bind="click: activateBeforeDoc, css: { active: beforePatchDocMode()}" title="View document data"><a style="cursor: pointer;">Data</a></li>
-                                <li data-bind="click: activateBeforeMeta, css: { active: !beforePatchDocMode() }" title="View document metadata"><a style="cursor: pointer;">Metadata</a></li>
-                            </ul>
-                            <pre id="beforePatchEditor" class="form-control" data-bind="aceEditor: { code: beforePatch, readOnly: true }" style="height: 260px;"></pre>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div>
-                    <label>After Patch</label>
-                </div>
-                <div>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <ul class="nav nav-tabs">
-                                <li data-bind="click: activateAfterDoc, css: { active: afterPatchDocMode()}" title="View document data"><a style="cursor: pointer;">Data</a></li>
-                                <li data-bind="click: activateAfterMeta, css: { active: !afterPatchDocMode() }" title="View document metadata"><a style="cursor: pointer;">Metadata</a></li>
-                            </ul>
-                            <pre id="afterPatchEditor" class="form-control" data-bind="aceEditor: { code: afterPatch, readOnly: true }" style="height: 260px;"></pre>
-                        </div>
-                    </div>
-                </div>
-                <div class="tabs-container" style="display: none">
-                    <ul class="nav nav-tabs" role="tablist">
-                        <li class="active"><a href="#patchPut" role="tab" data-toggle="tab">Document Puts <span data-bind="text: putDocuments().length" class="badge"></span></a></li>
-                        <li><a href="#patchLoad" role="tab" data-toggle="tab">Document Loads <span data-bind="text: loadedDocuments().length" class="badge"></span></a></li>
-                        <li><a href="#patchDebug" role="tab" data-toggle="tab">Output <span data-bind="text: outputLog().length" class="badge"></span></a></li>
-                    </ul>
-
-                    <!-- Tab panes --
-                    <div class="tab-content">
-                        <div class="tab-pane active jsContent" id="patchPut" data-bind="foreach: putDocuments">
-                            <pre data-bind="html: $data"></pre>
-                        </div>
-                        <div class="tab-pane" id="patchLoad" data-bind="visible: loadedDocuments().length">
-                            <pre>
-<!-- ko foreach: loadedDocuments --<span data-bind="text: $data"></span>
-<!-- /ko --
-</pre>
-                        </div>
-                        <div class="tab-pane" id="patchDebug" data-bind="visible: outputLog().length">
-                            <pre>
-<!-- ko foreach: outputLog --<span data-bind="text: $data"></span>
-<!-- /ko --
-</pre>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
--->

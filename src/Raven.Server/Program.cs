@@ -121,8 +121,6 @@ namespace Raven.Server
             LoggingSource.Instance.SetupLogMode(LogMode.None,
                 Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
 
-            WriteServerStatsAndWaitForEsc(server);
-
             while (true)
             {
                 var lower = Console.ReadLine()?.ToLower();
@@ -143,6 +141,7 @@ namespace Raven.Server
                         Console.Clear();
                         break;
 
+                    case "log -n":
                     case "log no http":
                     case "log-no-http":
                         RavenServerStartup.SkipHttpLogging = true;
@@ -155,6 +154,7 @@ namespace Raven.Server
                             Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
                         break;
 
+                    case "no-log":
                     case "nolog":
                         LoggingSource.Instance.DisableConsoleLogging();
                         LoggingSource.Instance.SetupLogMode(LogMode.None,
@@ -183,15 +183,7 @@ namespace Raven.Server
                     case "--help":
                     case "/?":
                     case "--?":
-                        Console.WriteLine("Avaliable Commands :");
-                        Console.WriteLine("[cls] : clear screen");
-                        Console.WriteLine("[log]: dump logs to console");
-                        Console.WriteLine("[log no http]: dump logs to console without outputting the http request logs");
-                        Console.WriteLine("[nolog]: stop dumping logs to console");
-                        Console.WriteLine("[low-mem] : simulate low memory");
-                        Console.WriteLine("[stats]: dump statistical information");
-                        Console.WriteLine("[q]: quit");
-                        Console.WriteLine();
+                        WriteListOfAvailableCommands();
                         break;
 
                     default:
@@ -201,9 +193,38 @@ namespace Raven.Server
             }
         }
 
+        private static void WriteListOfAvailableCommands()
+        {
+            Console.WriteLine("Available Commands:");
+
+            var description = "clear screen";
+            Console.WriteLine($"    cls {description, 23}");
+
+            description = "dump logs to console";
+            Console.WriteLine($"    log [-n] {description, 26}");
+
+            description = "-n to dump logs without outputting http request logs";
+            Console.WriteLine($"    {description, 67}");
+
+            description = "stop dumping logs to console";
+            Console.WriteLine($"    no-log {description, 36}");
+
+            description = "simulate low memory";
+            Console.WriteLine($"    low-mem {description, 26}");
+
+            description = "dump statistical information";
+            Console.WriteLine($"    stats {description, 37}");
+
+            description = "quit";
+            Console.WriteLine($"    q {description, 17}");
+
+            Console.WriteLine();
+
+        }
+
         private static void WriteServerStatsAndWaitForEsc(RavenServer server)
         {
-            Console.WriteLine("Showing stats, press ESC to close...");
+            Console.WriteLine("Showing stats, press any key to close...");
             Console.WriteLine("    working set     | native mem      | managed mem     | mmap size         | reqs/sec       | docs (all dbs)");
             var i = 0;
             while (Console.KeyAvailable == false)

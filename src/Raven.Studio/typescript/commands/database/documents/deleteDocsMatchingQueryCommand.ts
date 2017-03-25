@@ -7,21 +7,15 @@ class deleteDocsMatchingQueryCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<{ OperationId: number; }> {
-        this.reportInfo("Deleting docs matching query...");
-
-        var args = {
+    execute(): JQueryPromise<operationIdDto> {
+        const args = {
             query: this.queryText,
-            pageSize: 128,
             allowStale: false
         };
 
-        var url = endpoints.databases.batch.bulk_docs + "/" + this.indexName + this.urlEncodeArgs(args);
-        var task = this.del(url, null, this.db);
-        task.done(() => this.reportSuccess("Docs deleted"));
-        task.fail((response: JQueryXHR) => this.reportError("Error deleting docs matching query", response.responseText, response.statusText));
-
-        return task;
+        const url = endpoints.databases.queries.queries$ + this.indexName + this.urlEncodeArgs(args);
+        return this.del(url, null, this.db)
+            .fail((response: JQueryXHR) => this.reportError("Error deleting docs matching query", response.responseText, response.statusText));
     }
 
 }

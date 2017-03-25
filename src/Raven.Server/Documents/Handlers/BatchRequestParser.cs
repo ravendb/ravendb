@@ -27,7 +27,8 @@ namespace Raven.Server.Documents.Handlers
             public BlittableJsonReaderObject Document;
             public PatchRequest Patch;
             public PatchRequest PatchIfMissing;
-            public long? Etag { get; set; } //TODO: revert to field once https://github.com/cjlpowers/TypeScripter/pull/12 will be merged
+            public long? Etag;
+            public bool KeyPrefixed;
         }
 
         [ThreadStatic]
@@ -161,7 +162,17 @@ namespace Raven.Server.Documents.Handlers
                                     cmds[index].Etag = state.Long;
                                 }
                                 break;
+                            case CommandPropertyName.KeyPrefixed:
+                                while (parser.Read() == false)
+                                    await RefillParserBuffer(stream, buffer, parser);
 
+                                if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
+                                {
+                                    ThrowUnexpectedToken(JsonParserToken.True, state);
+                                }
+
+                                cmds[index].KeyPrefixed = state.CurrentTokenType == JsonParserToken.True;
+                                break;
                             case CommandPropertyName.NoSuchProperty:
                                 // unknown command - ignore it
                                 while (parser.Read() == false)
@@ -269,7 +280,8 @@ namespace Raven.Server.Documents.Handlers
             Document,
             Etag,
             Patch,
-            PatchIfMissing
+            PatchIfMissing,
+            KeyPrefixed
             // other properties are ignore (for legacy support)
         }
 
@@ -316,6 +328,11 @@ namespace Raven.Server.Documents.Handlers
                         return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.PatchIfMissing;
 
+                case 11:
+                    if (*(long*)state.StringBuffer != 7594869363257730379)
+                        return CommandPropertyName.NoSuchProperty;
+
+                    return CommandPropertyName.KeyPrefixed;
                 default:
                     return CommandPropertyName.NoSuchProperty;
             }

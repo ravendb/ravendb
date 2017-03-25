@@ -144,12 +144,9 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-        public bool ShouldVersionDocument(CollectionName collectionName,
-            NonPersistentDocumentFlags nonPersistentFlags,
-            Func<Document> getExistingDocument,
-            BlittableJsonReaderObject document,
-            ref DocumentFlags documentFlags,
-            out VersioningConfigurationCollection configuration)
+        public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags, 
+            DocumentsOperationContext context, ref TableValueReader oldDocument, BlittableJsonReaderObject document,
+            ref DocumentFlags documentFlags, out VersioningConfigurationCollection configuration)
         {
             configuration = GetVersioningConfiguration(collectionName);
             if (configuration.Active == false)
@@ -160,8 +157,7 @@ namespace Raven.Server.Documents.Versioning
                 if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler)
                     return true;
 
-                var existingDocument = getExistingDocument();
-                if (existingDocument == null)
+                if (oldDocument.Pointer == null)
                 {
                     // we are not going to create a revision if it's an import from v3
                     // (since this import is going to import revisions as well)
@@ -169,6 +165,7 @@ namespace Raven.Server.Documents.Versioning
                 }
 
                 // compare the contents of the existing and the new document
+                var existingDocument = _documentsStorage.TableValueToDocument(context, ref oldDocument);
                 if (existingDocument.IsMetadataEqualTo(document) && existingDocument.IsEqualTo(document))
                 {
                     // no need to create a new revision, both documents have identical content
@@ -228,7 +225,7 @@ namespace Raven.Server.Documents.Versioning
         {
             BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
 
-            flags |= DocumentFlags.FromVersionStorage;
+            flags |= DocumentFlags.Revision;
 
             byte* keyPtr;
             int keySize;
@@ -286,7 +283,7 @@ namespace Raven.Server.Documents.Versioning
         {
             long maxEtagDeleted = 0;
 
-            var deletedRevisionsCount = table.DeleteForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice,
+            var deletedRevisionsCount = table.DeleteForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, true,
                 numberOfRevisionsToDelete,
                 deleted =>
                 {
@@ -343,6 +340,16 @@ namespace Raven.Server.Documents.Versioning
             return new ReleaseMemory(keyMem, context);
         }
 
+        public long CountOfRevisions(DocumentsOperationContext context, string key)
+        {
+            var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
+            Slice loweredKey;
+            using (DocumentKeyWorker.GetSliceFromKey(context, key, out loweredKey))
+            {
+                return numbers.Read(loweredKey)?.Reader.ReadLittleEndianInt64() ?? 0;
+            }
+        }
+
         public IEnumerable<Document> GetRevisions(DocumentsOperationContext context, string key, int start, int take)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
@@ -362,7 +369,7 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        public IEnumerable<Document> GetRevisionsAfter(DocumentsOperationContext context, long etag, int take)
+        public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, long etag, int take)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
 

@@ -29,16 +29,8 @@ namespace Raven.Server.Documents.Handlers
                 var tombstones = context.DocumentDatabase.DocumentsStorage.GetTombstonesFrom(context, 0, start, pageSize);
                 foreach (var tombstone in tombstones)
                 {
-                    array.Add(new DynamicJsonValue
-                    {
-                        ["Key"] = tombstone.Key.ToString(),
-                        ["Collection"] = tombstone.Collection.ToString(),
-                        ["Etag"] = tombstone.Etag,
-                        ["DeletedEtag"] = tombstone.DeletedEtag,
-                        ["ChangeVector"] = tombstone.ChangeVector.ToJson()
-                    });
+                    array.Add(tombstone.ToJson());
                 }
-
                 context.Write(writer, new DynamicJsonValue
                 {
                     ["Results"] = array
@@ -60,7 +52,7 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var array = new DynamicJsonArray();
-                var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, docId);
+                var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
                 foreach (var conflict in conflicts)
                 {
                     if (maxEtag < conflict.Etag)
@@ -280,7 +272,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
-                var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, docId);
+                var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
                 var advisor = new ConflictResovlerAdvisor(conflicts.Select(c=>c.Doc),context);
                 var resovled = advisor.Resolve();
 

@@ -17,13 +17,28 @@ namespace Raven.Server.Documents.Replication
     public class ReplicationBatchItem
     {
         public LazyStringValue Key;
+        public long Etag;
+        public short TransactionMarker;
+
+        #region Document
+
         public ChangeVectorEntry[] ChangeVector;
         public BlittableJsonReaderObject Data;
-        public long Etag;
         public LazyStringValue Collection;
         public DocumentFlags Flags;
-        public short TransactionMarker;
         public long LastModifiedTicks;
+
+        #endregion
+
+        #region Attachment
+
+        public ReplicationItemType Type;
+        public LazyStringValue Name;
+        public LazyStringValue ContentType;
+        public Slice Base64Hash;
+        public Stream Stream;
+        
+        #endregion
 
         public static ReplicationBatchItem From(Document doc)
         {
@@ -42,17 +57,27 @@ namespace Raven.Server.Documents.Replication
 
         public static ReplicationBatchItem From(DocumentTombstone doc)
         {
-            return new ReplicationBatchItem
+            var item = new ReplicationBatchItem
             {
-                Type = ReplicationItemType.Document,
                 Etag = doc.Etag,
-                ChangeVector = doc.ChangeVector,
-                Collection = doc.Collection,
-                Key = doc.Key,
-                Flags = doc.Flags,
+                Key = doc.LoweredKey,
                 TransactionMarker = doc.TransactionMarker,
-                LastModifiedTicks = doc.LastModified.Ticks,
             };
+
+            if (doc.Type == DocumentTombstone.TombstoneType.Document)
+            {
+                item.Type = ReplicationItemType.Document;
+                item.ChangeVector = doc.ChangeVector;
+                item.Collection = doc.Collection;
+                item.Flags = doc.Flags;
+                item.LastModifiedTicks = doc.LastModified.Ticks;
+            }
+            else
+            {
+                item.Type = ReplicationItemType.AttachmentTombstone;
+            }
+
+            return item;
         }
 
         public static ReplicationBatchItem From(DocumentConflict doc)
@@ -85,17 +110,12 @@ namespace Raven.Server.Documents.Replication
             };
         }
 
-        public ReplicationItemType Type { get; set; }
-        public LazyStringValue Name { get; set; }
-        public LazyStringValue ContentType { get; set; }
-        public Slice Base64Hash { get; set; }
-        public Stream Stream { get; set; }
-
         public enum ReplicationItemType : byte
         {
             Document = 1,
             Attachment = 2,
             AttachmentStream = 3,
+            AttachmentTombstone = 4,
         }
     }
 }

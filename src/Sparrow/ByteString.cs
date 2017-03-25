@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Collections;
 using Sparrow.Global;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -138,10 +139,18 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetUserDefinedFlags(ByteStringType flags)
         {
-            if ((flags & ByteStringType.ByteStringMask) != 0)
-                throw new ArgumentException("The flags passed contains reserved bits.");
+            if ((flags & ByteStringType.ByteStringMask) == 0)
+            {
+                _pointer->Flags |= flags;
+                return;
+            }
 
-            _pointer->Flags |= flags;
+            ThrowFlagsWithReservedBits();
+        }
+
+        private void ThrowFlagsWithReservedBits()
+        {
+            throw new ArgumentException("The flags passed contains reserved bits.");
         }
 
         public bool IsMutable
@@ -211,7 +220,7 @@ namespace Sparrow
                 throw new ArgumentOutOfRangeException(nameof(from), "Cannot copy data after the end of the slice");
 
             EnsureIsNotBadPointer();
-            Memory.CopyInline(dest + offset, _pointer->Ptr + from, count);
+            Memory.Copy(dest + offset, _pointer->Ptr + from, count);
         }
 
         public void CopyTo(byte* dest)
@@ -219,7 +228,7 @@ namespace Sparrow
             Debug.Assert(HasValue);
 
             EnsureIsNotBadPointer();
-            Memory.CopyInline(dest, _pointer->Ptr, _pointer->Length);
+            Memory.Copy(dest, _pointer->Ptr, _pointer->Length);
         }
 
         public void CopyTo(byte[] dest)
@@ -229,7 +238,7 @@ namespace Sparrow
             EnsureIsNotBadPointer();
             fixed (byte* p = dest)
             {
-                Memory.CopyInline(p, _pointer->Ptr, _pointer->Length);
+                Memory.Copy(p, _pointer->Ptr, _pointer->Length);
             }
         }
 
@@ -271,7 +280,7 @@ namespace Sparrow
             EnsureIsNotBadPointer();
             fixed (byte* p = dest)
             {
-                Memory.CopyInline(p + offset, _pointer->Ptr + from, count);
+                Memory.Copy(p + offset, _pointer->Ptr + from, count);
             }
         }
 
@@ -533,7 +542,7 @@ namespace Sparrow
         /// </summary>
         private readonly List<SegmentInformation> _internalReadyToUseMemorySegments;
         private readonly int[] _internalReusableStringPoolCount;
-        private readonly Stack<IntPtr>[] _internalReusableStringPool;
+        private readonly FastStack<IntPtr>[] _internalReusableStringPool;
         private SegmentInformation _internalCurrent;
 
 
@@ -542,8 +551,10 @@ namespace Sparrow
         private int _externalCurrentLeft = 0;
         private int _externalFastPoolCount = 0;
         private readonly IntPtr[] _externalFastPool = new IntPtr[ExternalFastPoolSize];
-        private readonly Stack<IntPtr> _externalStringPool;
+        private readonly FastStack<IntPtr> _externalStringPool;
         private SegmentInformation _externalCurrent;
+
+        private static readonly UTF8Encoding Encoding = new UTF8Encoding();
 
         public ByteStringContext(int allocationBlockSize = ByteStringContext.DefaultAllocationBlockSizeInBytes)
         {
@@ -555,13 +566,13 @@ namespace Sparrow
             this._wholeSegments = new List<SegmentInformation>();
             this._internalReadyToUseMemorySegments = new List<SegmentInformation>();
 
-            this._internalReusableStringPool = new Stack<IntPtr>[LogMinBlockSize];
+            this._internalReusableStringPool = new FastStack<IntPtr>[LogMinBlockSize];
             this._internalReusableStringPoolCount = new int[LogMinBlockSize];
 
             this._internalCurrent = AllocateSegment(allocationBlockSize);
             AllocateExternalSegment(allocationBlockSize);
 
-            this._externalStringPool = new Stack<IntPtr>(64);
+            this._externalStringPool = new FastStack<IntPtr>(64);
 
             PrepareForValidation();
         }
@@ -621,6 +632,7 @@ namespace Sparrow
             return $"Allocated {Sizes.Humane(_currentlyAllocated)} / {Sizes.Humane(_totalAllocated)}";
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ByteString AllocateExternal(byte* valuePtr, int size, ByteStringType type)
         {
             Debug.Assert((type & ByteStringType.External) != 0, "This allocation routine is only for use with external storage byte strings.");
@@ -689,7 +701,7 @@ namespace Sparrow
             if (allocationSize <= ByteStringContext.MinBlockSizeInBytes && _internalReusableStringPoolCount[reusablePoolIndex] != 0)
             {
                 // This is a stack because hotter memory will be on top. 
-                Stack<IntPtr> pool = _internalReusableStringPool[reusablePoolIndex];
+                FastStack<IntPtr> pool = _internalReusableStringPool[reusablePoolIndex];
 
                 _internalReusableStringPoolCount[reusablePoolIndex]--;
                 void* ptr = pool.Pop().ToPointer();
@@ -732,10 +744,10 @@ namespace Sparrow
                         // The memory chunk left is big enough to make sense to reuse it.
                         reusablePoolIndex = GetPoolIndexForReservation(currentSizeLeft);
 
-                        Stack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
+                        FastStack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
                         if (pool == null)
                         {
-                            pool = new Stack<IntPtr>();
+                            pool = new FastStack<IntPtr>();
                             this._internalReusableStringPool[reusablePoolIndex] = pool;
                         }
 
@@ -776,19 +788,19 @@ namespace Sparrow
             if (str.IsMutable == false)
                 throw new InvalidOperationException("Cannot mutate an immutable ByteString");
 
-            var charCount = Encoding.UTF8.GetCharCount(str._pointer->Ptr, str.Length);
+            var charCount = Encoding.GetCharCount(str._pointer->Ptr, str.Length);
             if (ToLowerTempBuffer == null || ToLowerTempBuffer.Length < charCount)
             {
                 ToLowerTempBuffer = new char[Bits.NextPowerOf2(charCount)];
             }
             fixed (char* pChars = ToLowerTempBuffer)
             {
-                charCount = Encoding.UTF8.GetChars(str._pointer->Ptr, str.Length, pChars, ToLowerTempBuffer.Length);
+                charCount = Encoding.GetChars(str._pointer->Ptr, str.Length, pChars, ToLowerTempBuffer.Length);
                 for (int i = 0; i < charCount; i++)
                 {
                     ToLowerTempBuffer[i] = char.ToLowerInvariant(ToLowerTempBuffer[i]);
                 }
-                var byteCount = Encoding.UTF8.GetByteCount(pChars, charCount);
+                var byteCount = Encoding.GetByteCount(pChars, charCount);
                 if (// we can't mutate external memory!
                     str.IsExternal ||
                     // calling to lower has increased the size, and we can't fit in the space
@@ -797,7 +809,7 @@ namespace Sparrow
                 {
                     str = Allocate(byteCount);
                 }
-                str._pointer->Length = Encoding.UTF8.GetBytes(pChars, charCount, str._pointer->Ptr, str._pointer->Size);
+                str._pointer->Length = Encoding.GetBytes(pChars, charCount, str._pointer->Ptr, str._pointer->Size);
             }
         }
 
@@ -887,10 +899,10 @@ namespace Sparrow
 
             if (value._pointer->Size <= ByteStringContext.MinBlockSizeInBytes)
             {
-                Stack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
+                FastStack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
                 if (pool == null)
                 {
-                    pool = new Stack<IntPtr>();
+                    pool = new FastStack<IntPtr>();
                     this._internalReusableStringPool[reusablePoolIndex] = pool;
                 }
 
@@ -974,7 +986,7 @@ namespace Sparrow
 
             int size = value.Length - bytesToSkip;
             var result = AllocateInternal(size, type);
-            Memory.CopyInline(result._pointer->Ptr, value._pointer->Ptr + bytesToSkip, size);
+            Memory.Copy(result._pointer->Ptr, value._pointer->Ptr + bytesToSkip, size);
 
             RegisterForValidation(result);
             return result;
@@ -987,7 +999,7 @@ namespace Sparrow
             // TODO: If origin and destination are immutable, we can create external references.
 
             var result = AllocateInternal(value.Length, type);
-            Memory.CopyInline(result._pointer->Ptr, value._pointer->Ptr, value._pointer->Length);
+            Memory.Copy(result._pointer->Ptr, value._pointer->Ptr, value._pointer->Length);
 
             RegisterForValidation(result);
             return result;
@@ -1002,11 +1014,11 @@ namespace Sparrow
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            var byteCount = Encoding.UTF8.GetByteCount(value);
+            var byteCount = Encoding.GetByteCount(value);
             str = AllocateInternal(byteCount, type);
             fixed (char* ptr = value)
             {
-                int length = Encoding.UTF8.GetBytes(ptr, value.Length, str.Ptr, byteCount);
+                int length = Encoding.GetBytes(ptr, value.Length, str.Ptr, byteCount);
 
                 // We can do this because it is internal. See if it makes sense to actually give this ability. 
                 str._pointer->Length = length;
@@ -1025,7 +1037,7 @@ namespace Sparrow
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            var byteCount = Encoding.UTF8.GetByteCount(value);
+            var byteCount = Encoding.GetByteCount(value);
 
             str = AllocateInternal(byteCount, type);
             fixed (char* ptr = value)

@@ -1,29 +1,57 @@
 ﻿using System;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents
 {
     public class DocumentTombstone
     {
-        public LazyStringValue Key;
-
-        public DocumentFlags Flags;
-
-        public LazyStringValue LoweredKey;
-
-        public long DeletedEtag;
-
-        public long Etag;
-
         public long StorageId;
 
-        public LazyStringValue Collection;
+        public TombstoneType Type;
+        public LazyStringValue LoweredKey;
 
-        public ChangeVectorEntry[] ChangeVector;
-
+        public long Etag;
+        public long DeletedEtag;
         public short TransactionMarker;
 
+        #region Document
+
+        public LazyStringValue Collection;
+        public DocumentFlags Flags;
+
+        public ChangeVectorEntry[] ChangeVector;
         public DateTime LastModified;
+
+        #endregion
+
+        public enum TombstoneType : byte
+        {
+            Document = 1,
+            Attachment = 2,
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            var json = new DynamicJsonValue
+            {
+                ["Key"] = LoweredKey.ToString(),
+                [nameof(Etag)] = Etag,
+                [nameof(DeletedEtag)] = DeletedEtag,
+            };
+
+            if (Type == TombstoneType.Document)
+            {
+                json[nameof(Collection)] = Collection.ToString();
+                json[nameof(ChangeVector)] = ChangeVector.ToString();
+            }
+            else
+            {
+                json[nameof(Type)] = Type.ToString();
+            }
+
+            return json;
+        }
     }
 }

@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Sparrow;
+using Sparrow.Collections;
 
 namespace Voron.Data.BTrees
 {
     public class TreeCursor : IDisposable
     {
-        public LinkedList<TreePage> Pages = new LinkedList<TreePage>();
+        public FastStack<TreePage> Pages = new FastStack<TreePage>();
 
         private static readonly ObjectPool<Dictionary<long, TreePage>> _pagesByNumPool = new ObjectPool<Dictionary<long, TreePage>>(() => new Dictionary<long, TreePage>(NumericEqualityComparer.Instance), 50);
 
@@ -37,35 +38,33 @@ namespace Voron.Data.BTrees
             }
         }
 
-        public void Update(LinkedListNode<TreePage> node, TreePage newVal)
+        public void Update(FastStack<TreePage> stack, TreePage newVal)
         {
-            var oldPageNumber = node.Value.PageNumber;
+            var oldNode = stack.Pop();
+            stack.Push(newVal);
+
+            var oldPageNumber = oldNode.PageNumber;
             var newPageNumber = newVal.PageNumber;
 
             if (oldPageNumber == newPageNumber)
             {
                 _pagesByNum[oldPageNumber] = newVal;
-                node.Value = newVal;
                 return;
             }
 
             _anyOverrides = true;
             _pagesByNum[oldPageNumber] = newVal;
             _pagesByNum.Add(newPageNumber, newVal);
-            node.Value = newVal;
         }
 
         public TreePage ParentPage
         {
             get
             {
-                LinkedListNode<TreePage> linkedListNode = Pages.First;
-                if (linkedListNode == null)
-                    throw new InvalidOperationException("No pages in cursor");
-                linkedListNode = linkedListNode.Next;
-                if (linkedListNode == null)
-                    throw new InvalidOperationException("No parent page in cursor");
-                return linkedListNode.Value;
+                TreePage result;
+                if (Pages.TryPeek(2, out result))
+                    return result;
+                throw new InvalidOperationException("No parent page in cursor");
             }
         }
 
@@ -73,10 +72,7 @@ namespace Voron.Data.BTrees
         {
             get
             {
-                LinkedListNode<TreePage> linkedListNode = Pages.First;
-                if (linkedListNode == null)
-                    throw new InvalidOperationException("No pages in cursor");
-                return linkedListNode.Value;
+                return Pages.Peek();
             }
         }
 
@@ -84,7 +80,7 @@ namespace Voron.Data.BTrees
 
         public void Push(TreePage p)
         {
-            Pages.AddFirst(p);
+            Pages.Push(p);
             _pagesByNum.Add(p.PageNumber, p);
         }
 
@@ -93,8 +89,7 @@ namespace Voron.Data.BTrees
             if (Pages.Count == 0)
                 throw new InvalidOperationException("No page to pop");
 
-            var p = Pages.First.Value;
-            Pages.RemoveFirst();
+            var p = Pages.Pop();
 
             var removedPrimary = _pagesByNum.Remove(p.PageNumber);
             var removedSecondary = false;

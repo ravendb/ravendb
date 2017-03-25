@@ -101,8 +101,8 @@ namespace SlowTests.Issues
                 using (context.OpenReadTransaction())
                 {
                     var docAndTumbstone = slaveServer.DocumentsStorage.GetDocumentOrTombstone(context, "addresses/1", throwOnConflict: false);
-                    Assert.NotNull(docAndTumbstone.Item2);
-                    Assert.Null(docAndTumbstone.Item1);
+                    Assert.NotNull(docAndTumbstone.Tombstone);
+                    Assert.Null(docAndTumbstone.Document);
                 }
 
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 
@@ -18,9 +19,7 @@ namespace Raven.Server.Documents
         public static DocumentConflict From(JsonOperationContext ctx,Document doc)
         {
             if (doc == null)
-            {
                 return null;
-            }
 
             return new DocumentConflict
             {
@@ -37,14 +36,14 @@ namespace Raven.Server.Documents
         public static DocumentConflict From(DocumentTombstone tombstone)
         {
             if (tombstone == null)
-            {
                 return null;
-            }
+
+            Debug.Assert(tombstone.Type == DocumentTombstone.TombstoneType.Document);
 
             return new DocumentConflict
             {
                 LoweredKey = tombstone.LoweredKey,
-                Key = tombstone.Key,
+                Key = tombstone.LoweredKey,
                 Doc = null,
                 StorageId = tombstone.StorageId,
                 ChangeVector = tombstone.ChangeVector,

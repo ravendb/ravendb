@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.Handlers
                             // TODO: We should have an object that handles this externally, 
                             // TODO: and apply it there
 
-                            var patchResult = Database.Patch.Apply(context, cmd.Key, cmd.Etag, cmd.Patch, cmd.PatchIfMissing, skipPatchIfEtagMismatch: false, debugMode: false);
+                            var patchResult = Database.Patcher.Apply(context, cmd.Key, cmd.Etag, cmd.Patch, cmd.PatchIfMissing, skipPatchIfEtagMismatch: false, debugMode: false);
                             if (patchResult.ModifiedDocument != null)
                                 context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, patchResult.ModifiedDocument.Size);
                             if (patchResult.Etag != null)
@@ -283,18 +283,42 @@ namespace Raven.Server.Documents.Handlers
                             });
                             break;
                         case BatchRequestParser.CommandType.DELETE:
-                            var deleted = Database.DocumentsStorage.Delete(context, cmd.Key, cmd.Etag);
-                            if (deleted != null)
+                            
+                            if (cmd.KeyPrefixed == false)
                             {
-                                LastEtag = deleted.Value.Etag;
-                                ModifiedCollections?.Add(deleted.Value.Collection.Name);
+                                var deleted = Database.DocumentsStorage.Delete(context, cmd.Key, cmd.Etag);
+
+                                if (deleted != null)
+                                {
+                                    LastEtag = deleted.Value.Etag;
+                                    ModifiedCollections?.Add(deleted.Value.Collection.Name);
+                                }
+
+                                Reply.Add(new DynamicJsonValue
+                                {
+                                    ["Key"] = cmd.Key,
+                                    ["Method"] = "DELETE",
+                                    ["Deleted"] = deleted != null
+                                });
                             }
-                            Reply.Add(new DynamicJsonValue
+                            else
                             {
-                                ["Key"] = cmd.Key,
-                                ["Method"] = "DELETE",
-                                ["Deleted"] = deleted != null
-                            });
+                                var deleteResults = Database.DocumentsStorage.DeleteDocumentsStartingWith(context, cmd.Key);
+
+                                for (var j = 0; j < deleteResults.Count; j++)
+                                {
+                                    LastEtag = deleteResults[j].Etag;
+                                    ModifiedCollections?.Add(deleteResults[j].Collection.Name);
+                                }
+
+                                Reply.Add(new DynamicJsonValue
+                                {
+                                    ["Key"] = cmd.Key,
+                                    ["Method"] = "DELETE",
+                                    ["Deleted"] = deleteResults.Count > 0
+                                });
+                            }
+                            
                             break;
                     }
                 }

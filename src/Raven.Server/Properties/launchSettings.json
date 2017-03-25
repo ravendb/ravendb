@@ -1,7 +1,7 @@
 {
   "profiles": {
     "Raven.Server": {
-      "commandName": "Raven.Server",
+      "commandName": "Project",
       "environmentVariables": {
         "COMPlus_ReadyToRunExcludeList": "System.Security.Cryptography.X509Certificates"
       }

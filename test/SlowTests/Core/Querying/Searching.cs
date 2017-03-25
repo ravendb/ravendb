@@ -278,7 +278,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact(Skip = "Missing feature: Suggestions")]
+        [Fact(Skip = "RavenDB-6573")]
         public void CanProvideSuggestionsAndLazySuggestions()
         {
             using (var store = GetDocumentStore())

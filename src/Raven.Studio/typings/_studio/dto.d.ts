@@ -48,6 +48,7 @@ interface documentMetadataDto {
     'Temp-Index-Score'?: number;
     '@last-modified'?: string;
     '@etag'?: number;
+    '@flags': string;
 }
 
 interface connectedDocument {

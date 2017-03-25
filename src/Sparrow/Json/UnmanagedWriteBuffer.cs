@@ -219,11 +219,13 @@ namespace Sparrow.Json
             if (length == 0)
                 return;
 
-            if (_current.Allocation.SizeInBytes - _current.Used > length)
+            var current = _current;
+
+            if (current.Allocation.SizeInBytes - current.Used > length)
             {
-                Unsafe.CopyBlock(_current.Address + _current.Used, buffer, (uint)length);
+                Unsafe.CopyBlock(current.Address + current.Used, buffer, (uint)length);
                 _sizeInBytes += length;
-                _current.Used += length;
+                current.Used += length;
             }
             else
             {
@@ -294,12 +296,13 @@ namespace Sparrow.Json
                 return;
             }
 #endif
-            if (_current.Used == _current.Allocation.SizeInBytes)
+            var current = _current;
+            if (current.Used == current.Allocation.SizeInBytes)
                 goto Grow; // PERF: Diminish the size of the most common path.
 
             _sizeInBytes++;
-            *(_current.Address + _current.Used) = data;
-            _current.Used++;
+            *(current.Address + current.Used) = data;
+            current.Used++;
             return;
 
             Grow:

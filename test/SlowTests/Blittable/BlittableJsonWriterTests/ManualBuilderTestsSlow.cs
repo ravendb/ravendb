@@ -12,7 +12,7 @@ namespace SlowTests.Blittable.BlittableJsonWriterTests
         [InlineData(byte.MaxValue)]
         [InlineData(short.MaxValue)]
         [InlineData(short.MaxValue + 1)]
-        public void BigAmountOfPreperties(int propertiesAmount)
+        public void BigAmountOfProperties(int propertiesAmount)
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
             {

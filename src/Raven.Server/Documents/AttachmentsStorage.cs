@@ -4,13 +4,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
@@ -32,8 +32,10 @@ namespace Raven.Server.Documents
         private static readonly Slice AttachmentsMetadataSlice;
         public static readonly Slice AttachmentsEtagSlice;
         private static readonly Slice AttachmentsHashSlice;
+        private static readonly Slice AttachmentsTombstonesSlice;
 
         private static readonly TableSchema AttachmentsSchema = new TableSchema();
+        public static readonly string AttachmentsTombstones = "Attachments.Tombstones";
 
         // The attachments schema is as follows
         // 5 fields (lowered document id AND record separator AND lowered name, etag, name, content type, last modified)
@@ -56,6 +58,7 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, "AttachmentsMetadata", ByteStringType.Immutable, out AttachmentsMetadataSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AttachmentsEtag", ByteStringType.Immutable, out AttachmentsEtagSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AttachmentsHash", ByteStringType.Immutable, out AttachmentsHashSlice);
+            Slice.From(StorageEnvironment.LabelsContext, AttachmentsTombstones, ByteStringType.Immutable, out AttachmentsTombstonesSlice);
 
             AttachmentsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
@@ -83,6 +86,7 @@ namespace Raven.Server.Documents
 
             tx.CreateTree(AttachmentsSlice);
             AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, 32);
+            DocumentsStorage.TombstonesSchema.Create(tx, AttachmentsTombstonesSlice, 16);
         }
 
         public IEnumerable<ReplicationBatchItem> GetAttachmentsFrom(DocumentsOperationContext context, long etag)
@@ -162,7 +166,7 @@ namespace Raven.Server.Documents
                     if (table.ReadByKey(keySlice, out oldValue))
                     {
                         // TODO: Support overwrite
-                        throw new NotImplementedException("Cannot overwrite an exisitng attachment.");
+                        throw new NotImplementedException("Cannot overwrite an existing attachment.");
 
                         /*
                         var oldEtag = TableValueToEtag(context, 1, ref oldValue);
@@ -189,21 +193,10 @@ namespace Raven.Server.Documents
                 PutAttachmentStream(context, keySlice, hashSlice, stream);
 
                 _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
-                _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
 
                 // Update the document with an etag which is bigger than the attachmenEtag
                 // We need to call this after we already put the attachment, so it can version also this attachment
-                var putResult = _documentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId, tvr);
-
-                context.Transaction.AddAfterCommitNotification(new AttachmentChange
-                {
-                    Etag = attachmenEtag,
-                    CollectionName = putResult.Collection.Name,
-                    Key = documentId,
-                    Name = name,
-                    Type = DocumentChangeTypes.PutAttachment,
-                    IsSystemDocument = putResult.Collection.IsSystem,
-                });
+                _documentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId, tvr);
             }
 
             return new AttachmentResult
@@ -215,13 +208,28 @@ namespace Raven.Server.Documents
                 Hash = hash,
             };
         }
-        public void PutFromReplication(DocumentsOperationContext context, byte[] attachmentLoweredKey, string attachmentName, 
-            string attachmentContentType, byte[] attachmentBase64Hash, short attachmentTransactionMarker)
+
+        public void PutFromReplication(DocumentsOperationContext context, Slice key, Slice name, Slice contentType, 
+            Slice base64Hash, short transactionMarker)
         {
             // Attachment etag should be generated before updating the document
             var attachmenEtag = _documentsStorage.GenerateNextEtag();
 
-            /* TODO: Implement */
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            TableValueBuilder tbv;
+            using (table.Allocate(out tbv))
+            {
+                tbv.Add(key.Content.Ptr, key.Size);
+                tbv.Add(Bits.SwapBytes(attachmenEtag));
+                tbv.Add(name.Content.Ptr, name.Size);
+                tbv.Add(contentType.Content.Ptr, contentType.Size);
+                tbv.Add(base64Hash.Content.Ptr, base64Hash.Size);
+                tbv.Add(transactionMarker);
+
+                table.Set(tbv);
+            }
+
+            _documentDatabase.Metrics.AttachmentPutsPerSecond.MarkSingleThreaded(1);
         }
 
         public void RevisionAttachments(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, ChangeVectorEntry[] changeVector)
@@ -290,12 +298,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void PutAttachmentStream(DocumentsOperationContext context, Slice key, Slice hash, Stream stream)
+        public void PutAttachmentStream(DocumentsOperationContext context, Slice key, Slice base64Hash, Stream stream)
         {
             var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-            var existingStream = tree.ReadStream(hash);
+            var existingStream = tree.ReadStream(base64Hash);
             if (existingStream == null)
-                tree.AddStream(hash, stream, tag: key);
+                tree.AddStream(base64Hash, stream, tag: key);
+
+            _documentDatabase.Metrics.AttachmentBytesPutsPerSecond.MarkSingleThreaded(stream.Length);
         }
 
         private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 1)
@@ -467,7 +477,7 @@ namespace Raven.Server.Documents
 
             var keyMem = context.Allocator.Allocate(size);
 
-            Memory.CopyInline(keyMem.Ptr, lowerKey, lowerKeySize);
+            Memory.Copy(keyMem.Ptr, lowerKey, lowerKeySize);
             var pos = lowerKeySize;
             keyMem.Ptr[pos++] = VersioningStorage.RecordSeperator;
 
@@ -491,14 +501,14 @@ namespace Raven.Server.Documents
             {
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
-                    Memory.CopyInline(keyMem.Ptr + pos, (byte*)pChangeVector, changeVectorSize);
+                    Memory.Copy(keyMem.Ptr + pos, (byte*)pChangeVector, changeVectorSize);
                 }
                 pos += changeVectorSize;
                 keyMem.Ptr[pos++] = VersioningStorage.RecordSeperator;
             }
 
             if (isPrefix == false)
-                Memory.CopyInline(keyMem.Ptr + pos, lowerName, lowerNameSize);
+                Memory.Copy(keyMem.Ptr + pos, lowerName, lowerNameSize);
 
             keySlice = new Slice(SliceOptions.Key, keyMem);
             return new ReleaseMemory(keyMem, context);
@@ -549,32 +559,36 @@ namespace Raven.Server.Documents
                 Slice keySlice;
                 using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Document, null, out keySlice))
                 {
-                    DeleteAttachment(context, keySlice, lowerDocumentId, documentId, name, expectedEtag);
+                    TableValueReader docTvr;
+                    var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out docTvr);
+                    if (hasDoc == false)
+                    {
+                        if (expectedEtag != null)
+                            throw new ConcurrencyException($"Document {documentId} does not exist, " +
+                                                           $"but delete was called with etag {expectedEtag} to remove attachment {name}. " +
+                                                           $"Optimistic concurrency violation, transaction will be aborted.");
+
+                        // this basically mean that we tried to delete attachment whose document doesn't exist.
+                        return;
+                    }
+
+                    DeleteAttachmentDirect(context, keySlice, name, expectedEtag);
+
+                    _documentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId, docTvr);
                 }
             }
         }
 
-        private void DeleteAttachment(DocumentsOperationContext context, Slice keySlice, Slice lowerDocumentId, 
-            string documentId, string name, long? expectedEtag)
+        public void DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, string name, long? expectedEtag)
         {
-            TableValueReader docTvr;
-            var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out docTvr);
-            if (hasDoc == false)
-            {
-                if (expectedEtag != null)
-                    throw new ConcurrencyException(
-                        $"Document {documentId} does not exist, but delete was called with etag {expectedEtag} to remove attachment {name}. Optimistic concurrency violation, transaction will be aborted.");
-
-                // this basically mean that we tried to delete attachment whose document doesn't exist.
-                return;
-            }
-
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             TableValueReader tvr;
-            if (table.ReadByKey(keySlice, out tvr) == false)
+            if (table.ReadByKey(key, out tvr) == false)
             {
                 if (expectedEtag != null)
-                    throw new ConcurrencyException($"Attachment {name} of document {documentId} does not exist, but delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.");
+                    throw new ConcurrencyException($"Attachment {name} with key '{key}' does not exist, " +
+                                                   $"but delete was called with etag {expectedEtag}. " +
+                                                   $"Optimistic concurrency violation, transaction will be aborted.");
 
                 // this basically means that we tried to delete attachment that doesn't exist.
                 return;
@@ -583,7 +597,7 @@ namespace Raven.Server.Documents
             var etag = DocumentsStorage.TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
             if (expectedEtag != null && etag != expectedEtag)
             {
-                throw new ConcurrencyException($"Attachment {name} of document '{documentId}' has etag {etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                throw new ConcurrencyException($"Attachment {name} with key '{key}' has etag {etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
                 {
                     ActualETag = etag,
                     ExpectedETag = (long)expectedEtag
@@ -594,21 +608,33 @@ namespace Raven.Server.Documents
             using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out hashSlice))
             {
                 DeleteAttachmentStream(context, hashSlice);
-
-                // TODO: Create a tombstone of the delete for replication
-                table.Delete(tvr.Id);
             }
 
-            var putResult = _documentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId, docTvr);
-            context.Transaction.AddAfterCommitNotification(new AttachmentChange
+            table.Delete(tvr.Id);
+
+            CreateTombstone(context, key, etag);
+        }
+
+        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag)
+        {
+            var newEtag = _documentsStorage.GenerateNextEtag();
+
+            var table = context.Transaction.InnerTransaction.OpenTable(DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);
+            TableValueBuilder tbv;
+            using (table.Allocate(out tbv))
             {
-                Etag = putResult.Etag,
-                CollectionName = putResult.Collection.Name,
-                Key = documentId,
-                Name = name,
-                Type = DocumentChangeTypes.Delete,
-                IsSystemDocument = putResult.Collection.IsSystem,
-            });
+                tbv.Add(keySlice.Content.Ptr, keySlice.Size);
+                tbv.Add(Bits.SwapBytes(newEtag));
+                tbv.Add(Bits.SwapBytes(attachmentEtag));
+                tbv.Add(context.GetTransactionMarker());
+                tbv.Add((byte)DocumentTombstone.TombstoneType.Attachment);
+                tbv.Add(null, 0);
+                tbv.Add((int)DocumentFlags.None);
+                tbv.Add(null, 0);
+                tbv.Add(null, 0);
+
+                table.Insert(tbv);
+            }
         }
 
         private void DeleteAttachmentsOfDocumentInternal(DocumentsOperationContext context, Slice prefixSlice)
@@ -644,6 +670,36 @@ namespace Raven.Server.Documents
             using (GetAttachmentPrefix(context, loweredKey.Content.Ptr, loweredKey.Size, AttachmentType.Document, null, out prefixSlice))
             {
                 DeleteAttachmentsOfDocumentInternal(context, prefixSlice);
+            }
+        }
+
+        public ReleaseTempFile GetTempFile(out FileStream file, bool fromReplication = false)
+        {
+            var name = $"attachment.{Guid.NewGuid():N}.put";
+            if (fromReplication)
+                name = "replication-" + name;
+            var tempPath = Path.Combine(_documentsStorage.Environment.Options.DataPager.Options.TempPath, name);
+            file = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan);
+            return new ReleaseTempFile(tempPath, file);
+        }
+
+        public struct ReleaseTempFile : IDisposable
+        {
+            private readonly string _tempFile;
+            private readonly FileStream _file;
+
+            public ReleaseTempFile(string tempFile, FileStream file)
+            {
+                _tempFile = tempFile;
+                _file = file;
+            }
+
+            public void Dispose()
+            {
+                _file.Dispose();
+
+                // Linux does not clean the file, so we should clean it manually
+                IOExtensions.DeleteFile(_tempFile);
             }
         }
     }

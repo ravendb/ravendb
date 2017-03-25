@@ -15,6 +15,10 @@ class createSampleData extends viewModelBase {
     justCreatedSampleData = ko.observable<boolean>(false);
     classesVisible = ko.observable<boolean>(false);
 
+    classDataFormatted = ko.pureComputed(() => {
+        return Prism.highlight(this.classData(), (Prism.languages as any).javascript);
+    });
+
     constructor() {
         super();
         aceEditorBindingHandler.install();

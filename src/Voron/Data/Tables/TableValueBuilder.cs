@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Runtime.CompilerServices;
+using DotNetCross.Memory;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
@@ -10,23 +11,46 @@ namespace Voron.Data.Tables
 {
     public unsafe class TableValueBuilder : IEnumerable
     {
-        public TableValueBuilder()
-        {
-            
-        }
-        
         public void Reset()
         {
            _values.Clear();
            _size = 0;
            _elementSize = 1;
+           _isDirty = false;
         }
 
         private readonly FastList<PtrSize> _values = new FastList<PtrSize>();
 
         private int _size;
+        private bool _isDirty;
         private int _elementSize = 1;
-        public int Size => _size + _elementSize * _values.Count + JsonParserState.VariableSizeIntSize(_values.Count);
+
+        public int ElementSize
+        {
+            get
+            {
+                if (!_isDirty)
+                    return _elementSize;
+
+                int size = _size;
+                if (size + _values.Count * 2 + 1 > ushort.MaxValue)
+                {
+                    _elementSize = 4;
+                    goto Return;
+                }
+
+                if (size + _values.Count + 1 > byte.MaxValue)
+                {
+                    _elementSize = 2;
+                }
+
+                Return:
+                _isDirty = false;
+                return _elementSize;
+            }
+        }
+
+        public int Size => _size + ElementSize * _values.Count + JsonParserState.VariableSizeIntSize(_values.Count);
 
         public int Count => _values.Count;
 
@@ -49,47 +73,50 @@ namespace Voron.Data.Tables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Add<T>(T value) where T : struct
         {
-            Add(PtrSize.Create(value));
+            var ptr = PtrSize.Create(value);
+            Add(ref ptr);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(void* ptr, int size)
+        public void Add(void* pointer, int size)
         {
-            Add(PtrSize.Create(ptr, size));
+            var ptr = PtrSize.Create(pointer, size);
+            Add(ref ptr);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         IEnumerator IEnumerable.GetEnumerator()
         {
             throw new NotSupportedException("Only for the collection initializer syntax");
         }
 
-        private void Add(PtrSize ptr)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void Add(ref PtrSize ptr)
         {
+#if DEBUG
             if (ptr.Size < 0)
-                throw new ArgumentException("Size cannot be negative", nameof(ptr.Size));
+                ThrowSizeCannotBeNegative(nameof(ptr.Size));
+#endif
 
             _values.Add(ptr);
             _size += ptr.Size;
+            _isDirty = true;
+        }
 
-            if (_size + _values.Count + 1 > byte.MaxValue)
-            {
-                _elementSize = 2;
-            }
-
-            if (_size + _values.Count * 2 + 1 > ushort.MaxValue)
-            {
-                _elementSize = 4;
-            }
+        private void ThrowSizeCannotBeNegative(string argument)
+        {
+            throw new ArgumentException("Size cannot be negative", argument);
         }
 
         public void CopyTo(byte* ptr)
         {
             JsonParserState.WriteVariableSizeInt(ref ptr, _values.Count);
-            var pos = _values.Count * _elementSize;
+
+            int elementSize = ElementSize;
+
+            var pos = _values.Count * elementSize;
             var dataStart = ptr + pos;
 
-            switch (_elementSize)
+            switch (elementSize)
             {
                 case 1:
                     var bytePtr = ptr;
@@ -116,7 +143,7 @@ namespace Voron.Data.Tables
                     }
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(_elementSize), "Unknown element size " + _elementSize);
+                    throw new ArgumentOutOfRangeException(nameof(ElementSize), "Unknown element size " + ElementSize);
             }
 
             ulong value; // Do not move inside because we require value to exist inside the for loop. 
@@ -135,7 +162,7 @@ namespace Voron.Data.Tables
                     srcPtr = p.Ptr;                    
                 }
 
-                Memory.CopyInline(dataStart, srcPtr, p.Size);
+                Memory.Copy(dataStart, srcPtr, p.Size);
 
                 dataStart += p.Size;
                 value = 0; // This ensures there cannot be any JIT optimization that could reuse the memory location.          

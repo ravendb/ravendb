@@ -5,8 +5,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import deleteCollection = require("viewmodels/database/documents/deleteCollection");
 import messagePublisher = require("common/messagePublisher");
-import copyDocuments = require("viewmodels/database/documents/copyDocuments");
-import copyDocumentIds = require("viewmodels/database/documents/copyDocumentIds");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
 
@@ -30,6 +28,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
+import showDataDialog = require("viewmodels/common/showDataDialog");
 
 class documents extends viewModelBase {
 
@@ -184,9 +183,11 @@ class documents extends viewModelBase {
         this.columnPreview.install(".documents-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
             if (column instanceof textColumn) {
                 this.fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
-                    const json = JSON.stringify(v, null, 4);
-                    const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                    onValue(html);
+                    if (!_.isUndefined(v)) {
+                        const json = JSON.stringify(v, null, 4);
+                        const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                        onValue(html);    
+                    }
                 }, error => {
                     const html = Prism.highlight("Unable to generate column preview: " + error.toString(), (Prism.languages as any).javascript);
                     onValue(html);
@@ -291,8 +292,10 @@ class documents extends viewModelBase {
         new getDocumentsWithMetadataCommand(selectedItems.map(x => x.getId()), this.activeDatabase())
             .execute()
             .done((results: Array<document>) => {
-                const copyDialog = new copyDocuments(results);
-                app.showBootstrapDialog(copyDialog);
+                const prettifySpacing = 4;
+                const text = results.map(d => d.getId() + "\r\n" + JSON.stringify(d.toDto(false), null, prettifySpacing)).join("\r\n\r\n");
+
+                app.showBootstrapDialog(new showDataDialog("Documents", text, "javascript"));
             })
             .always(() => this.spinners.copy(false));
     }
@@ -302,8 +305,9 @@ class documents extends viewModelBase {
 
         const selectedItems = this.gridController().getSelectedItems();
 
-        const copyDialog = new copyDocumentIds(selectedItems);
-        app.showBootstrapDialog(copyDialog);
+        const text = selectedItems.map(x => '"' + x.getId() + '"').join(", \r\n");
+
+        app.showBootstrapDialog(new showDataDialog("Document IDs", text, "javascript"));
     }
 
     /* TODO:

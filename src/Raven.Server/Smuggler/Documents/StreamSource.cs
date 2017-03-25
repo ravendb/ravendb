@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
@@ -13,6 +14,7 @@ using Raven.Server.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Size = Raven.Server.Config.Settings.Size;
@@ -105,7 +107,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public class BlittableMetadataModifier : IDisposable, IBlittableDocumentModifier
+        public sealed class BlittableMetadataModifier : IDisposable, IBlittableDocumentModifier
         {
             private bool _readingMetadataObject;
             private int _depth;
@@ -117,8 +119,9 @@ namespace Raven.Server.Smuggler.Documents
             public NonPersistentDocumentFlags NonPersistentFlags;
 
             private JsonOperationContext _ctx;
+            private LazyStringValue _metadataCollections;
 
-            private readonly List<AllocatedMemoryData> _allocations = new List<AllocatedMemoryData>();
+            private readonly FastList<AllocatedMemoryData> _allocations = new FastList<AllocatedMemoryData>();
 
             private const string HistoricalRevisionState = "Historical";
             private const string VersionedDocumentState = "Current";
@@ -151,6 +154,7 @@ namespace Raven.Server.Smuggler.Documents
                 IgnoreRevisionStatusProperty
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void StartObject()
             {
                 if (_readingMetadataObject == false)
@@ -159,6 +163,7 @@ namespace Raven.Server.Smuggler.Documents
                 _depth++;
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void EndObject()
             {
                 if (_readingMetadataObject == false)
@@ -280,30 +285,16 @@ namespace Raven.Server.Smuggler.Documents
                                 *(int*)(state.StringBuffer + 1) != 1734440037)
                                 return true;
 
-                            if (reader.Read() == false)
-                            {
-                                _state = State.IgnorePropertyEtag;
-                                return false;
-                            }
-                            if (state.CurrentTokenType != JsonParserToken.String &&
-                                state.CurrentTokenType != JsonParserToken.Integer)
-                                ThrowInvalidEtagType(state);
-                            break;
+                            goto case -1;
+
                         case 13: //Last-Modified
                             if (*(long*)state.StringBuffer != 7237087983830262092 ||
                                 *(int*)(state.StringBuffer + sizeof(long)) != 1701406313 ||
                                 state.StringBuffer[12] != (byte)'d')
                                 return true;
 
-                            if (reader.Read() == false)
-                            {
-                                _state = State.IgnoreProperty;
-                                return false;
-                            }
-                            if (state.CurrentTokenType == JsonParserToken.StartArray ||
-                                state.CurrentTokenType == JsonParserToken.StartObject)
-                                ThrowInvalidMetadataProperty(state);
-                            break;
+                            goto case -1;
+
                         case 15: //Raven-Read-Only
                             if (*(long*)state.StringBuffer != 7300947898092904786 ||
                                 *(int*)(state.StringBuffer + sizeof(long)) != 1328374881 ||
@@ -311,22 +302,15 @@ namespace Raven.Server.Smuggler.Documents
                                 state.StringBuffer[14] != (byte)'y')
                                 return true;
 
-                            if (reader.Read() == false)
-                            {
-                                _state = State.IgnoreProperty;
-                                return false;
-                            }
-                            if (state.CurrentTokenType == JsonParserToken.StartArray ||
-                                state.CurrentTokenType == JsonParserToken.StartObject)
-                                ThrowInvalidMetadataProperty(state);
-                            break;
+                            goto case -1;
+
                         case 17: //Raven-Entity-Name --> @collection
                             if (*(long*)state.StringBuffer != 7945807069737017682 ||
                                 *(long*)(state.StringBuffer + sizeof(long)) != 7881666780093245812 ||
                                 state.StringBuffer[16] != (byte)'e')
                                 return true;
 
-                            var collection = _ctx.GetLazyStringForFieldWithCaching(MetadataCollectionSegment);
+                            var collection = _metadataCollections;
                             state.StringBuffer = collection.AllocatedMemoryData.Address;
                             state.StringSize = collection.Size;
                             return true;
@@ -337,15 +321,7 @@ namespace Raven.Server.Smuggler.Documents
                                 state.StringBuffer[18] != (byte)'d')
                                 return true;
 
-                            if (reader.Read() == false)
-                            {
-                                _state = State.IgnoreProperty;
-                                return false;
-                            }
-                            if (state.CurrentTokenType == JsonParserToken.StartArray ||
-                                state.CurrentTokenType == JsonParserToken.StartObject)
-                                ThrowInvalidMetadataProperty(state);
-                            break;
+                            goto case -1;
                         case 23: //Raven-Document-Revision
                             if (*(long*)state.StringBuffer != 8017583188798234962 ||
                                 *(long*)(state.StringBuffer + sizeof(long)) != 5921517102558967139 ||
@@ -354,30 +330,14 @@ namespace Raven.Server.Smuggler.Documents
                                 state.StringBuffer[22] != (byte)'n')
                                 return true;
 
-                            if (reader.Read() == false)
-                            {
-                                _state = State.IgnoreProperty;
-                                return false;
-                            }
-                            if (state.CurrentTokenType == JsonParserToken.StartArray ||
-                                state.CurrentTokenType == JsonParserToken.StartObject)
-                                ThrowInvalidMetadataProperty(state);
-                            break;
+                            goto case -1;
                         case 24: //Raven-Replication-Source
                             if (*(long*)state.StringBuffer != 7300947898092904786 ||
                                 *(long*)(state.StringBuffer + sizeof(long)) != 8028075772393122928 ||
                                 *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 7305808869229538670)
                                 return true;
 
-                            if (reader.Read() == false)
-                            {
-                                _state = State.IgnoreProperty;
-                                return false;
-                            }
-                            if (state.CurrentTokenType == JsonParserToken.StartArray ||
-                                state.CurrentTokenType == JsonParserToken.StartObject)
-                                ThrowInvalidMetadataProperty(state);
-                            break;
+                            goto case -1;
                         case 25: //Raven-Replication-Version OR Raven-Replication-History
                             if (*(long*)state.StringBuffer != 7300947898092904786 ||
                                *(long*)(state.StringBuffer + sizeof(long)) != 8028075772393122928)
@@ -424,15 +384,8 @@ namespace Raven.Server.Smuggler.Documents
                                 state.StringBuffer[28] != (byte)'n')
                                 return true;
 
-                            if (reader.Read() == false)
-                            {
-                                _state = State.IgnoreProperty;
-                                return false;
-                            }
-                            if (state.CurrentTokenType == JsonParserToken.StartArray ||
-                                state.CurrentTokenType == JsonParserToken.StartObject)
-                                ThrowInvalidMetadataProperty(state);
-                            break;
+                            goto case -1;
+
                         case 30: //Raven-Document-Parent-Revision OR Raven-Document-Revision-Status
                             if (*(long*)state.StringBuffer != 8017583188798234962)
                                 return true;
@@ -479,6 +432,10 @@ namespace Raven.Server.Smuggler.Documents
                                 *(long*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long)) != 8751179571877464109)
                                 return true;
 
+                            goto case -1;
+
+                        case -1: // IgnoreProperty
+                            {
                             if (reader.Read() == false)
                             {
                                 _state = State.IgnoreProperty;
@@ -488,6 +445,8 @@ namespace Raven.Server.Smuggler.Documents
                                 state.CurrentTokenType == JsonParserToken.StartObject)
                                 ThrowInvalidMetadataProperty(state);
                             break;
+                        }
+
                         default: // accept this property
                             return true;
                     }
@@ -533,6 +492,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_ctx == null)
                 {
                     _ctx = ctx;
+                    _metadataCollections = _ctx.GetLazyStringForFieldWithCaching(MetadataCollectionSegment);
                     return;
                 }
                 Id = null;
@@ -541,7 +501,7 @@ namespace Raven.Server.Smuggler.Documents
                 _state = State.None;
                 _readingMetadataObject = false;
                 _ctx = ctx;
-
+                _metadataCollections = _ctx.GetLazyStringForFieldWithCaching(MetadataCollectionSegment);
             }
         }
 

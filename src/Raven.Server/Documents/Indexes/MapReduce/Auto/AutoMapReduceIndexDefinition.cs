@@ -46,8 +46,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
-            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted}>"))}]";
-            var reduce = $"{Collections.First()}:[{string.Join(";", GroupByFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted},Operation:{x.Value.MapReduceOperation}>"))}]";
+            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted},Operation:{x.Value.MapReduceOperation}>"))}]";
+            var reduce = $"{Collections.First()}:[{string.Join(";", GroupByFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted}>"))}]";
 
             var indexDefinition = new IndexDefinition();
             indexDefinition.Maps.Add(map);
