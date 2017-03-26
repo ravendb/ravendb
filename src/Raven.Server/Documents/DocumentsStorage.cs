@@ -1494,7 +1494,7 @@ namespace Raven.Server.Documents
                             ref flags,
                             out configuration))
                         {
-                            _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, configuration);
+                            _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, modifiedTicks, configuration);
                         }
                     }
                 }
