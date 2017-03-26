@@ -524,6 +524,31 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public IEnumerable<string> GetdatabaseNames(TransactionOperationContext context,int start = 0, int take = Int32.MaxValue)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+            var dbKey = "db/";
+            Slice loweredPrefix;
+            using (Slice.From(context.Allocator, dbKey, out loweredPrefix))
+            {
+                
+                foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
+                {
+                    if (take-- <= 0)
+                        yield break;
+
+                    yield return GetCurrentItemKey(context, result).Substring(3);
+                }
+            }
+        }
+
+        private static unsafe string GetCurrentItemKey(TransactionOperationContext context, Table.TableValueHolder result)
+        {
+            int size;
+            return Encoding.UTF8.GetString(result.Reader.Read(1, out size), size);
+        }
+
         private static unsafe Tuple<string, BlittableJsonReaderObject> GetCurrentItem(TransactionOperationContext context, Table.TableValueHolder result)
         {
             int size;
@@ -636,6 +661,22 @@ namespace Raven.Server.ServerWide
                 tcpClient.Dispose();
                 throw;
             }
+        }
+
+        public override void OnSnapshotInstalled(TransactionOperationContext context)
+        {
+            var listOfDatabaseName = GetdatabaseNames(context).ToList();
+            //There is potentially a lot of work to be done here so we are responding to the change on a separate task.
+            if(DatabaseChanged != null)
+            {
+                Task.Run(() =>
+                {
+                    foreach (var db in listOfDatabaseName)
+                    {
+                        DatabaseChanged.Invoke(this, db);
+                    }
+                });
+            }            
         }
     }
 
