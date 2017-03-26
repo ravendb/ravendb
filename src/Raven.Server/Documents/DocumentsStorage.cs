@@ -1867,6 +1867,8 @@ namespace Raven.Server.Documents
 
         public IEnumerable<string> GetTombstoneCollections(Transaction transaction)
         {
+            yield return AttachmentsStorage.AttachmentsTombstones;
+
             using (var it = transaction.LowLevelTransaction.RootObjects.Iterate(false))
             {
                 it.RequiredPrefix = TombstonesPrefix;
