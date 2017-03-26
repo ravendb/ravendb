@@ -576,18 +576,18 @@ namespace Raven.Server.Rachis
 
                 var clusterTopology = _engine.GetTopology(context);
 
-                if (nodeTag == null)
-                {
-                    nodeTag = GenerateNodeTag(clusterTopology);
-                }
-
-
-                if (validateNotInTopology && clusterTopology.Contains(nodeTag))
+                //We need to validate that the node doesn't exists before we generate the nodeTag
+                if (validateNotInTopology && (nodeTag!= null && clusterTopology.Contains(nodeTag) || clusterTopology.HasUrl(nodeUrl)))
                 {
                     throw new InvalidOperationException($"Was requested to modify the topology for node={nodeTag} " +
                                                         $"with validation that it is not contained by the topology but current topology contains it.");
                 }
 
+                if (nodeTag == null)
+                {
+                    nodeTag = GenerateNodeTag(clusterTopology);
+                }
+               
                 var newVotes = new Dictionary<string, string>(clusterTopology.Members);
                 newVotes.Remove(nodeTag);
                 var newPromotables = new Dictionary<string, string>(clusterTopology.Promotables);

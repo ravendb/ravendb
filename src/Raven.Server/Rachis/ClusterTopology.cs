@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Raven.Server.Rachis
 {
@@ -19,7 +20,11 @@ namespace Raven.Server.Rachis
             return Members.ContainsKey(node) || Promotables.ContainsKey(node) || Watchers.ContainsKey(node);
         }
 
-
+        //Try to avoid using this since it is expensive
+        public bool HasUrl(string nodeUrl)
+        {
+            return Members.Values.Contains(nodeUrl) || Promotables.Values.Contains(nodeUrl) || Watchers.Values.Contains(nodeUrl);
+        }
 
         public ClusterTopology()
         {
