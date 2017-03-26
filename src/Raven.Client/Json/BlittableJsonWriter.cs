@@ -158,6 +158,12 @@ namespace Raven.Client.Json
                 _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Collection);
                 _manualBlittableJsonDocumentBuilder.WriteValue(_documentInfo.Collection);
 
+                if (_documentInfo.Id != null)
+                {
+                    _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Id);
+                    _manualBlittableJsonDocumentBuilder.WriteValue(_documentInfo.Id);
+                }
+
                 _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
             }
         }
