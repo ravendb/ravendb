@@ -32,6 +32,10 @@ namespace Raven.Tryouts
     {
         public static void Main(string[] args)
         {
+            using (var test = new RavenDB_6626())
+            {
+                test.LoadOperation_should_not_throw().Wait();
+            }
         }
 
         public static async Task AsyncMain()

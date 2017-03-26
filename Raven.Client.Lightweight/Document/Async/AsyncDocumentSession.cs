@@ -735,18 +735,30 @@ namespace Raven.Client.Document.Async
             return await CompleteLoadAsync<T>(id, loadOperation, token).ConfigureAwait(false);
         }
 
-        private async Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation, CancellationToken token = default (CancellationToken))
+        private async Task<T> CompleteLoadAsync<T>(string id, LoadOperation loadOperation, CancellationToken token = default(CancellationToken))
         {
             loadOperation.LogOperation();
             using (loadOperation.EnterLoadContext())
             {
-                var result = await AsyncDatabaseCommands.GetAsync(id, token).ConfigureAwait(false);
+                var result = await TryFetchDocumentBy<T>(id, loadOperation, token).ConfigureAwait(false);
+                while (result.Item1 == false)
+                {
+                    result = await TryFetchDocumentBy<T>(id, loadOperation, token).ConfigureAwait(false);
 
-                if (loadOperation.SetResult(result) == false)
-                    return loadOperation.Complete<T>();
+                    //prevent hogging CPU cycles
+                    await Task.Delay(100, token).ConfigureAwait(false);
+                }
 
-                return await CompleteLoadAsync<T>(id, loadOperation, token).WithCancellation(token).ConfigureAwait(false);
+                return result.Item2;
             }
+        }
+
+        private async Task<Tuple<bool, T>> TryFetchDocumentBy<T>(string id, LoadOperation loadOperation, CancellationToken token)
+        {
+            var result = await AsyncDatabaseCommands.GetAsync(id, token).ConfigureAwait(false);
+            return loadOperation.SetResult(result) == false ?
+                Tuple.Create(true, loadOperation.Complete<T>()) :
+                Tuple.Create(false, default(T));
         }
 
         public Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken))
