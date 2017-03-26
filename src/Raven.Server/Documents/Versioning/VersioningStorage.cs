@@ -7,6 +7,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -33,6 +34,8 @@ namespace Raven.Server.Documents.Versioning
         private readonly DocumentsStorage _documentsStorage;
         private readonly VersioningConfiguration _versioningConfiguration;
 
+        internal VersioningConfiguration VersioningConfiguration => _versioningConfiguration;
+        
         // The documents schema is as follows
         // (lowered key, recored separator, etag, lowered key, recored separator, change vector, lazy string key, document)
         // We are you using the record separator in order to avoid loading another documents that has the same key prefix, 
@@ -102,28 +105,35 @@ namespace Raven.Server.Documents.Versioning
             });
         }
 
-        public static VersioningStorage LoadConfigurations(DocumentDatabase database)
+        public static VersioningStorage LoadConfigurations(DocumentDatabase database, ServerStore serverStore, VersioningStorage versioningStorage)
         {
-            DocumentsOperationContext context;
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            TransactionOperationContext context;
+            using (serverStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
-
-                var configuration = database.DocumentsStorage.Get(context, Constants.Documents.Versioning.ConfigurationKey);
-                if (configuration == null)
+                var dbDoc = serverStore.Cluster.ReadDatabase(context, database.Name);
+                if (dbDoc == null)
                     return null;
-
                 try
                 {
-                    var versioningConfiguration = JsonDeserializationServer.VersioningConfiguration(configuration.Data);
-                    return new VersioningStorage(database, versioningConfiguration);
+                    var versioningConfiguration = dbDoc.VersioningConfiguration;
+                    if (versioningConfiguration == null)
+                        return null;
+                    if (versioningConfiguration.Equals(versioningStorage?.VersioningConfiguration))
+                        return versioningStorage;                    
+                    var config = new VersioningStorage(database, versioningConfiguration);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Versioning configuration changed");
+                    return config;
                 }
                 catch (Exception e)
                 {
                     //TODO: This should generate an alert, so admin will know that something is very bad
                     //TODO: Or this should throw and we should have a config flag to ignore the error
                     if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Cannot enable versioning for documents as the versioning configuration document {Constants.Documents.Versioning.ConfigurationKey} is not valid: {configuration.Data}", e);
+                        _logger.Operations(
+                            $"Cannot enable versioning for documents as the versioning configuration in the database record is missing or not valid: {dbDoc}",
+                            e);
                     return null;
                 }
             }
@@ -145,9 +155,13 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-        public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags, 
-            DocumentsOperationContext context, ref TableValueReader oldDocument, BlittableJsonReaderObject document,
-            ref DocumentFlags documentFlags, out VersioningConfigurationCollection configuration)
+
+        public bool ShouldVersionDocument(CollectionName collectionName,
+            NonPersistentDocumentFlags nonPersistentFlags,
+            Document existingDocument,
+            BlittableJsonReaderObject document,
+            ref DocumentFlags documentFlags,
+            out VersioningConfigurationCollection configuration)
         {
             configuration = GetVersioningConfiguration(collectionName);
             if (configuration.Active == false)
@@ -157,8 +171,7 @@ namespace Raven.Server.Documents.Versioning
             {
                 if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler)
                     return true;
-
-                if (oldDocument.Pointer == null)
+                if (existingDocument == null)
                 {
                     // we are not going to create a revision if it's an import from v3
                     // (since this import is going to import revisions as well)

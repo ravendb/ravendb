@@ -1,32 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
-using Sparrow.Binary;
+using Sparrow.Collections.LockFree;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron;
 using Sparrow.Logging;
-using Voron.Data.Tables;
-using Voron.Exceptions;
 
 namespace Raven.Server.ServerWide
 {
     /// <summary>
     /// Persistent store for server wide configuration, such as cluster settings, database configuration, etc
     /// </summary>
-    public unsafe class ServerStore : IDisposable
+    public class ServerStore : IDisposable
     {
         private readonly CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
 
@@ -38,55 +41,25 @@ namespace Raven.Server.ServerWide
 
         private readonly NotificationsStorage _notificationsStorage;
 
-        private static readonly TableSchema _itemsSchema;
-
-        private readonly IList<IDisposable> toDispose = new List<IDisposable>();
-        private static readonly Slice EtagIndexName;
+        private RequestExecutor _clusterRequestExecutor;
 
         public readonly RavenConfiguration Configuration;
+        private readonly RavenServer _ravenServer;
         public readonly DatabasesLandlord DatabasesLandlord;
         public readonly NotificationCenter.NotificationCenter NotificationCenter;
 
         public static LicenseStorage LicenseStorage { get; } = new LicenseStorage();
 
-        // this is only modified by write transactions under lock
-        // no need to use thread safe ops
-        private long _lastEtag;
-
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
-        static ServerStore()
+        public ServerStore(RavenConfiguration configuration, RavenServer ravenServer)
         {
-            Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out EtagIndexName);
-
-            _itemsSchema = new TableSchema();
-
-            // We use the follow format for the items data
-            // { lowered key, key, data, etag }
-            _itemsSchema.DefineKey(new TableSchema.SchemaIndexDef
-            {
-                StartIndex = 0,
-                Count = 0
-            });
-
-            _itemsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
-            {
-                Name = EtagIndexName,
-                IsGlobal = true,
-                StartIndex = 3
-            });
-        }
-
-        public ServerStore(RavenConfiguration configuration)
-        {
-            if (configuration == null)
-                throw new ArgumentNullException(nameof(configuration));
-
             var resourceName = "ServerStore";
-            _logger = LoggingSource.Instance.GetLogger<ServerStore>(resourceName);
 
+            if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             Configuration = configuration;
-
+            _ravenServer = ravenServer;
+            _logger = LoggingSource.Instance.GetLogger<ServerStore>(resourceName);
             DatabasesLandlord = new DatabasesLandlord(this);
 
             _notificationsStorage = new NotificationsStorage(resourceName);
@@ -102,7 +75,21 @@ namespace Raven.Server.ServerWide
 
         public TransactionContextPool ContextPool;
 
+        public ClusterStateMachine Cluster => _engine.StateMachine;
+        public string NodeTag => _engine.Tag;
+
         private Timer _timer;
+        private RachisConsensus<ClusterStateMachine> _engine;
+
+        public ClusterTopology GetClusterTopology(TransactionOperationContext context)
+        {
+            return _engine.GetTopology(context);
+        }
+
+        public async Task AddNodeToClusterAsync(string nodeUrl)
+        {
+            await _engine.AddToClusterAsync(nodeUrl);
+        }
 
         public void Initialize()
         {
@@ -127,29 +114,9 @@ namespace Raven.Server.ServerWide
                 {
                     _env = new StorageEnvironment(options);
                 }
-
                 catch (Exception e)
                 {
                     throw new DatabaseLoadFailureException("Failed to load system database " + Environment.NewLine + $"At {options.BasePath}", e);
-                }
-
-                using (var tx = _env.WriteTransaction())
-                {
-                    tx.DeleteTree("items");// note the different casing, we remove the old items tree 
-                    _itemsSchema.Create(tx, "Items", 16);
-                    tx.Commit();
-                }
-
-                using (var tx = _env.ReadTransaction())
-                {
-                    var table = tx.OpenTable(_itemsSchema, "Items");
-                    var reader = table.ReadLast(_itemsSchema.FixedSizeIndexes[EtagIndexName]);
-                    if (reader == null)
-                        _lastEtag = 0;
-                    else
-                    {
-                        _lastEtag = DocumentsStorage.TableValueToEtag(3, ref reader.Reader);
-                    }
                 }
             }
             catch (Exception e)
@@ -164,178 +131,85 @@ namespace Raven.Server.ServerWide
             BooleanQuery.MaxClauseCount = Configuration.Queries.MaxClauseCount;
 
             ContextPool = new TransactionContextPool(_env);
+
+
+            _engine = new RachisConsensus<ClusterStateMachine>();
+            _engine.Initialize(_env);
+
+            _engine.StateMachine.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
+
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             _notificationsStorage.Initialize(_env, ContextPool);
             DatabaseInfoCache.Initialize(_env, ContextPool);
             LicenseStorage.Initialize(_env, ContextPool);
             NotificationCenter.Initialize();
-        }
 
-        public long ReadLastEtag(TransactionOperationContext ctx)
-        {
-            var table = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
-            var reader = table.ReadLast(_itemsSchema.FixedSizeIndexes[EtagIndexName]);
-            if (reader == null)
-                return 0;
-
-            int size;
-            return Bits.SwapBytes(*(long*)reader.Reader.Read(3, out size));
-        }
-
-        public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id, out long etag)
-        {
-            var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
-            etag = 0;
-            TableValueReader reader;
-            Slice key;
-            using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
+            TransactionOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
             {
-                if (items.ReadByKey(key, out reader) == false)
-                    return null;
-            }
-            int size;
-            etag = Bits.SwapBytes(*(long*)reader.Read(3, out size));
-            var ptr = reader.Read(2, out size);
-            return new BlittableJsonReaderObject(ptr, size, ctx);
-        }
+                context.OpenReadTransaction();
 
-
-        public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id)
-        {
-            var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
-
-            TableValueReader reader;
-            Slice key;
-            using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
-            {
-                if (items.ReadByKey(key, out reader) == false)
-                    return null;
-            }
-            int size;
-            var ptr = reader.Read(2, out size);
-            return new BlittableJsonReaderObject(ptr, size, ctx);
-        }
-
-        public Tuple<BlittableJsonReaderObject, long> ReadWithEtag(TransactionOperationContext ctx, string id)
-        {
-            var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
-
-            TableValueReader reader;
-            Slice key;
-            using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
-            {
-                if (items.ReadByKey(key, out reader) == false)
-                    return null;
-            }
-            int size;
-            var ptr = reader.Read(2, out size);
-            return Tuple.Create(new BlittableJsonReaderObject(ptr, size, ctx), Bits.SwapBytes(*(long*)reader.Read(3, out size)));
-        }
-
-        public void Delete(TransactionOperationContext ctx, string id)
-        {
-            var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
-            Slice key;
-            using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
-            {
-                items.DeleteByKey(key);
-                DatabaseInfoCache.DeleteInternal(ctx, key);
-            }
-        }
-
-        public class Item
-        {
-            public string Key;
-            public BlittableJsonReaderObject Data;
-            public long Etag;
-        }
-
-        public IEnumerable<Item> StartingWith(TransactionOperationContext ctx, string prefix, int start, int take)
-        {
-            var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
-
-            Slice loweredPrefix;
-            using (Slice.From(ctx.Allocator, prefix.ToLowerInvariant(), out loweredPrefix))
-            {
-                foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, start))
+                foreach (var db in _engine.StateMachine.ItemsStartingWith(context, "db/", 0, int.MaxValue))
                 {
-                    if (take-- <= 0)
-                        yield break;
-
-                    yield return GetCurrentItem(ctx, ref result.Reader);
+                    DatabasesLandlord.ClusterOnDatabaseChanged(this, db.Item1);
                 }
             }
         }
 
-        private static Item GetCurrentItem(JsonOperationContext ctx, ref TableValueReader reader)
+        public async Task<long> DeleteDatabaseAsync(JsonOperationContext context, string db, bool hardDelete, string fromNode)
         {
-            int size;
-            return new Item
+            using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
-                Data = new BlittableJsonReaderObject(reader.Read(2, out size), size, ctx),
-                Key = Encoding.UTF8.GetString(reader.Read(1, out size), size),
-                Etag = Bits.SwapBytes(*(long*)reader.Read(3, out size))
-            };
-        }
-
-        public long Write(TransactionOperationContext ctx, string id, BlittableJsonReaderObject doc, long? expectedEtag = null)
-        {
-            var newEtag = _lastEtag + 1;
-
-            Slice idAsSlice;
-            Slice loweredId;
-            using (Slice.From(ctx.Allocator, id, out idAsSlice))
-            using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out loweredId))
+                ["Type"] = nameof(DeleteDatabaseCommand),
+                [nameof(DeleteDatabaseCommand.DatabaseName)] = db,
+                [nameof(DeleteDatabaseCommand.HardDelete)] = hardDelete,
+                [nameof(DeleteDatabaseCommand.FromNode)] = fromNode
+            }, "del-cmd"))
             {
-                var newEtagBigEndian = Bits.SwapBytes(newEtag);
-                var itemTable = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
-
-                TableValueReader oldValue;
-                if (itemTable.ReadByKey(loweredId, out oldValue) == false)
-                {
-                    if (expectedEtag != null && expectedEtag != 0)
-                    {
-                        throw new ConcurrencyException(
-                            $"Server store item {id} does not exists, but Write was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
-                        {
-                            ExpectedETag = (long)expectedEtag
-                        };
-                    }
-
-                    itemTable.Insert(new TableValueBuilder
-                    {
-                        loweredId,
-                        idAsSlice,
-                        {doc.BasePointer, doc.Size},
-                        {&newEtagBigEndian, sizeof(long)}
-                    });
-                }
-                else
-                {
-                    int size;
-                    var oldEtag = Bits.SwapBytes(*(long*)oldValue.Read(3, out size));
-                    if (expectedEtag != null && oldEtag != expectedEtag)
-                        throw new ConcurrencyException(
-                            $"Server store item {id} has etag {oldEtag}, but Write was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
-                        {
-                            ActualETag = oldEtag,
-                            ExpectedETag = (long)expectedEtag
-                        };
-
-                    itemTable.Update(oldValue.Id, new TableValueBuilder
-                    {
-                        loweredId,
-                        idAsSlice,
-                        {doc.BasePointer, doc.Size},
-                        {&newEtagBigEndian, sizeof(long)}
-                    });
-                }
+                return await SendToLeaderAsync(putCmd);
             }
-            _lastEtag++;
-            return newEtag;
         }
 
+        public async Task<long> PutValueInClusterAsync(JsonOperationContext context, string key, BlittableJsonReaderObject val)
+        {
+            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            {
+                ["Type"] = nameof(PutValueCommand),
+                [nameof(PutValueCommand.Name)] = key,
+                [nameof(PutValueCommand.Value)] = val,
+            }, "put-cmd"))
+            {
+                return await SendToLeaderAsync(putCmd);
+            }
+        }
 
+        public async Task DeleteValueInClusterAsync(JsonOperationContext context, string key)
+        {
+            //TODO: redirect to leader
+            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            {
+                ["Type"] = nameof(DeleteValueCommand),
+                [nameof(DeleteValueCommand.Name)] = key,
+            }, "delete-cmd"))
+            {
+                await _engine.PutAsync(putCmd);
+            }
+        }
+
+        public async Task PutEditVersioningCommandAsync(JsonOperationContext context, string databaseName, BlittableJsonReaderObject val)
+        {
+            //TODO: redirect to leader
+            using (var editVersioningCmd = context.ReadObject(new DynamicJsonValue
+            {
+                ["Type"] = nameof(EditVersioningCommand),
+                [nameof(EditVersioningCommand.Configuration)] = val,
+                [nameof(EditVersioningCommand.DatabaseName)] = databaseName,
+            }, "edit-versioning-cmd"))
+            {
+                var index = await _engine.PutAsync(editVersioningCmd);
+                await Cluster.WaitForIndexNotification(index);
+            }
+        }
 
         public void Dispose()
         {
@@ -346,10 +220,15 @@ namespace Raven.Server.ServerWide
                 if (_shutdownNotification.IsCancellationRequested)
                     return;
                 _shutdownNotification.Cancel();
-                toDispose.Add(NotificationCenter);
-                toDispose.Add(DatabasesLandlord);
-                toDispose.Add(_env);
-                toDispose.Add(ContextPool);
+                var toDispose = new List<IDisposable>
+                {
+                    _engine,
+                    NotificationCenter,
+                    DatabasesLandlord,
+                    _env,
+                    ContextPool
+                };
+
 
                 var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(ServerStore)}.");
 
@@ -378,7 +257,7 @@ namespace Raven.Server.ServerWide
         {
             try
             {
-                foreach (var db in DatabasesLandlord.ResourcesStoresCache)
+                foreach (var db in DatabasesLandlord.DatabasesCache)
                 {
                     try
                     {
@@ -411,7 +290,7 @@ namespace Raven.Server.ServerWide
                     {
                         // intentionally inside the loop, so we get better concurrency overall
                         // since shutting down a database can take a while
-                        DatabasesLandlord.UnloadResource(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.Core.RunInMemory);
+                        DatabasesLandlord.UnloadDatabase(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.Core.RunInMemory);
                     }
 
                 }
@@ -448,6 +327,150 @@ namespace Raven.Server.ServerWide
             }
 
             return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
+        }
+
+        public async Task<long> TEMP_WriteDbAsync(TransactionOperationContext context, string dbId, BlittableJsonReaderObject dbDoc, long? etag)
+        {
+            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            {
+                ["Type"] = nameof(TEMP_SetDatabaseCommand),
+                [nameof(TEMP_SetDatabaseCommand.Name)] = dbId,
+                [nameof(TEMP_SetDatabaseCommand.Value)] = dbDoc,
+                [nameof(TEMP_SetDatabaseCommand.Etag)] = etag,
+            }, "put-cmd"))
+            {
+                return await _engine.PutAsync(putCmd);
+            }
+        }
+
+        public void EnsureNotPassive()
+        {
+            if (_engine.CurrentState == RachisConsensus.State.Passive)
+            {
+                _engine.Bootstarp(_ravenServer.WebUrls[0]);
+            }
+        }
+
+        public Task<long> PutCommandAsync(BlittableJsonReaderObject cmd)
+        {
+            return _engine.PutAsync(cmd);
+        }
+
+        public async Task<long> SendToLeaderAsync(BlittableJsonReaderObject cmd)
+        {
+            while (true)
+            {
+                var logChange = _engine.WaitForHeartbeat();
+
+                if (_engine.CurrentState == RachisConsensus.State.Leader)
+                {
+                    return await _engine.PutAsync(cmd);
+                }
+
+                var engineLeaderTag = _engine.LeaderTag;// not actually working
+                try
+                {
+                    return await SendToNodeAsync(engineLeaderTag, cmd);
+                }
+                catch (Exception ex)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Tried to send message to leader, retrying",ex);
+                }
+
+                await logChange;
+            }
+        }
+
+        private async Task<long> SendToNodeAsync(string engineLeaderTag, BlittableJsonReaderObject cmd)
+        {
+            TransactionOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenReadTransaction();
+
+                var clusterTopology = _engine.GetTopology(context);
+                string leaderUrl;
+                if (clusterTopology.Members.TryGetValue(engineLeaderTag, out leaderUrl) == false)
+                    throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
+                var command = new PutRaftCommand(context, cmd);
+
+                if (_clusterRequestExecutor == null)
+                    _clusterRequestExecutor = RequestExecutor.CreateForSingleNode(leaderUrl, "Rachis.Server", clusterTopology.ApiKey);
+                else if (_clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false ||
+                         _clusterRequestExecutor.ApiKey.Equals(clusterTopology.ApiKey) == false)
+                {
+                    _clusterRequestExecutor.Dispose();
+                    _clusterRequestExecutor = RequestExecutor.CreateForSingleNode(leaderUrl, "Rachis.Server", clusterTopology.ApiKey);                    
+                }
+
+                await _clusterRequestExecutor.ExecuteAsync(command, context, ServerShutdown);
+
+                return command.Result.ETag;
+            }
+        }        
+
+        protected internal class PutRaftCommand : RavenCommand<PutRaftCommandResult>
+        {
+            private readonly JsonOperationContext _context;
+            private readonly BlittableJsonReaderObject _command;
+            public override bool IsReadRequest => false;
+            public long CommandIndex { get; private set; }
+
+            public PutRaftCommand(JsonOperationContext context, BlittableJsonReaderObject command)
+            {
+                _context = context;
+                _command = context.ReadObject(command, "Raft command");
+            }
+
+            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            {
+                url = $"{node.Url}/rachis/send";
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    Content = new BlittableJsonContent(stream =>
+                    {
+                        using (var writer = new BlittableJsonTextWriter(_context, stream))
+                        {
+                            writer.WriteObject(_command);
+                        }
+                    })
+                };
+
+                return request;
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            {
+                Result = JsonDeserializationCluster.PutRaftCommandResult(response);
+            }
+        }
+
+        public class PutRaftCommandResult
+        {
+            public long ETag { get; set; }
+        }
+
+        public Task WaitForTopology(Leader.TopologyModification state)
+        {                        
+            return _engine.WaitForTopology(state);
+        }
+
+        public Task WaitForState(RachisConsensus.State state)
+        {
+            return _engine.WaitForState(state);
+        }
+
+        public void ClusterAcceptNewConnection(TcpClient client)
+        {
+            _engine.AcceptNewConnection(client);
+        }
+
+        public async Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value)
+        {
+            await _engine.WaitForCommitIndexChange(modification, value);
         }
     }
 }

@@ -42,10 +42,5 @@ namespace Raven.Client.Documents.Exceptions.Transformers
         {
             throw new TransformerDoesNotExistException($"There is no transformer with '{transformerName}' name.");
         }
-
-        public static TransformerDoesNotExistException ThrowFor(int transformerId)
-        {
-            throw new TransformerDoesNotExistException($"There is no transformer with '{transformerId}' id.");
-        }
     }
 }

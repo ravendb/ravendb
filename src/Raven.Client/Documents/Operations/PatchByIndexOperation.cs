@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Operations
                 _context = context;
                 _indexName = indexName;
                 _queryToUpdate = queryToUpdate;
-                _patch = new EntityToBlittable(null).ConvertEntityToBlittable(patch, conventions, _context);
+                _patch = EntityToBlittable.ConvertEntityToBlittable(patch, conventions, _context);
                 _options = options ?? new QueryOperationOptions();
             }
 

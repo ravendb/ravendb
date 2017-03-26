@@ -1,32 +1,54 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
 
 namespace Raven.Server.Rachis
 {
     public class ClusterTopology
     {
-        public ClusterTopology(string topologyId, string apiKey, string[] voters, string[] promotables, string[] nonVotingMembers)
+        public ClusterTopology(string topologyId, string apiKey, Dictionary<string, string> members, Dictionary<string, string> promotables, Dictionary<string, string> watchers, string lastNodeId)
         {
             TopologyId = topologyId;
             ApiKey = apiKey;
-            Voters = voters;
+            Members = members;
             Promotables = promotables;
-            NonVotingMembers = nonVotingMembers;
+            Watchers = watchers;
+            LastNodeId = lastNodeId;
         }
 
         public bool Contains(string node)
         {
-            return Voters.Contains(node) || Promotables.Contains(node) || NonVotingMembers.Contains(node);
+            return Members.ContainsKey(node) || Promotables.ContainsKey(node) || Watchers.ContainsKey(node);
         }
+
+
 
         public ClusterTopology()
         {
             
         }
 
-        public string TopologyId;
-        public string ApiKey;
-        public string[] Voters;
-        public string[] Promotables;
-        public string[] NonVotingMembers;
+        public string GetUrlFormTag(string tag)
+        {
+            string url;
+            if (Members.TryGetValue(tag, out url))
+            {
+                return url;
+            }
+            if (Promotables.TryGetValue(tag, out url))
+            {
+                return url;
+            }
+            if (Watchers.TryGetValue(tag, out url))
+            {
+                return url;
+            }
+            return null;
+        }
+
+        public readonly string LastNodeId;
+        public readonly string TopologyId;
+        public readonly string ApiKey;
+        public readonly Dictionary<string,string> Members;
+        public readonly Dictionary<string,string> Promotables;
+        public readonly Dictionary<string,string> Watchers;
     }
 }

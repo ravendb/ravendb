@@ -6,12 +6,7 @@ namespace Raven.Client.Documents.Transformers
         /// Projection function.
         /// </summary>
         public string TransformResults { get; set; }
-
-        /// <summary>
-        /// Transformer identifier (internal).
-        /// </summary>
-        public int TransfomerId { get; set; }
-
+        
         /// <summary>
         /// Temporary (used for data exploration - internal)
         /// </summary>
@@ -26,7 +21,10 @@ namespace Raven.Client.Documents.Transformers
 
         public bool Equals(TransformerDefinition other)
         {
-            return string.Equals(TransformResults, other.TransformResults);
+            if (other == null)
+                return false;
+
+            return LockMode == other.LockMode && string.Equals(TransformResults, other.TransformResults);
         }
 
         public override bool Equals(object obj)

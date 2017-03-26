@@ -111,7 +111,7 @@ namespace FastTests
 
         private readonly object _getNewServerSync = new object();
 
-        protected RavenServer GetNewServer(IDictionary<string, string> customSettings = null)
+        protected RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null)
         {
             lock (_getNewServerSync)
             {
@@ -127,14 +127,18 @@ namespace FastTests
 
                 configuration.Initialize();
                 configuration.DebugLog.LogMode = LogMode.None;
-                configuration.Core.ServerUrl = "http://127.0.0.1:0";
+                if (customSettings == null || customSettings.ContainsKey("Raven/ServerUrl") == false)
+                {
+                    configuration.Core.ServerUrl = "http://127.0.0.1:0";
+                }
                 configuration.Server.Name = ServerName;
-                configuration.Core.RunInMemory = true;
+                configuration.Core.RunInMemory = runInMemory;
                 configuration.Core.DataDirectory =
-                    configuration.Core.DataDirectory.Combine($"Tests{Interlocked.Increment(ref _serverCounter)}");
+                    configuration.Core.DataDirectory.Combine(partialPath??$"Tests{Interlocked.Increment(ref _serverCounter)}");
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
 
-                IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
+                if (deletePrevious)
+                    IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
 
                 var server = new RavenServer(configuration);
                 server.Initialize();

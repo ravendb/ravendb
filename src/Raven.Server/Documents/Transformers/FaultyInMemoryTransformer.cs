@@ -1,5 +1,4 @@
 ﻿using System;
-using Raven.Client.Documents.Transformers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -8,25 +7,22 @@ namespace Raven.Server.Documents.Transformers
 {
     internal class FaultyInMemoryTransformer : Transformer
     {
-        public FaultyInMemoryTransformer(int transformerId, string name)
-            : base(transformerId, null, null, null)
+        private readonly Exception _error;
+
+        public FaultyInMemoryTransformer(string name, Exception error)
+            : base(null, null, null)
         {
-            TransformerId = transformerId;
+            _error = error;
             Name = name;
         }
 
-        public override int TransformerId { get; }
-
         public override string Name { get; }
 
-        public override void SetLock(TransformerLockMode mode)
-        {
-            throw new NotSupportedException($"Transformer with id {TransformerId} is in-memory implementation of a faulty transformer");
-        }
+        public Exception Error => _error;
 
         public override TransformationScope OpenTransformationScope(BlittableJsonReaderObject parameters, IncludeDocumentsCommand include, DocumentsStorage documentsStorage, TransformerStore transformerStore, DocumentsOperationContext context, bool nested)
         {
-            throw new NotSupportedException($"Transformer with id {TransformerId} is in-memory implementation of a faulty transformer");
+            throw new NotSupportedException($"Transformer with name {Name} is in-memory implementation of a faulty transformer", _error);
         }
     }
 }

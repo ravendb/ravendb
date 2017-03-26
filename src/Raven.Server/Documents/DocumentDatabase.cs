@@ -19,9 +19,11 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
@@ -43,7 +45,6 @@ namespace Raven.Server.Documents
         /// </summary>
         private readonly object _indexAndTransformerLocker = new object();
         private Task _indexStoreTask;
-        private Task _transformerStoreTask;
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
@@ -64,7 +65,7 @@ namespace Raven.Server.Documents
             Changes = new DocumentsChanges();
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this, _indexAndTransformerLocker);
-            TransformerStore = new TransformerStore(this, _indexAndTransformerLocker);
+            TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
             EtlLoader = new EtlLoader(this);
             DocumentReplicationLoader = new DocumentReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
@@ -78,6 +79,7 @@ namespace Raven.Server.Documents
             ConfigurationStorage = new ConfigurationStorage(this);
             NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
+            _serverStore = serverStore;
         }
 
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
@@ -212,12 +214,23 @@ namespace Raven.Server.Documents
             ConfigurationStorage.InitializeNotificationsStorage();
 
             _indexStoreTask = IndexStore.InitializeAsync();
-            _transformerStoreTask = TransformerStore.InitializeAsync();
+            TransactionOperationContext context;
+            if (_serverStore != null)
+            {
+                using (_serverStore.ContextPool.AllocateOperationContext(out context))
+                {
+                    context.OpenReadTransaction();
+                    var record = _serverStore.Cluster.ReadDatabase(context, Name);
+                    TransformerStore.Initialize(record);
+                }
+            }
+
+            BundleLoader = new BundleLoader(this, _serverStore);
             Patcher.Initialize();
             EtlLoader.Initialize();
 
             DocumentTombstoneCleaner.Initialize();
-            BundleLoader = new BundleLoader(this);
+            
 
             try
             {
@@ -227,16 +240,7 @@ namespace Raven.Server.Documents
             {
                 _indexStoreTask = null;
             }
-
-            try
-            {
-                _transformerStoreTask.Wait(DatabaseShutdown);
-            }
-            finally
-            {
-                _transformerStoreTask = null;
-            }
-
+            
             SubscriptionStorage.Initialize();
 
             //Index Metadata Store shares Voron env and context pool with documents storage, 
@@ -299,15 +303,6 @@ namespace Raven.Server.Documents
                     {
                         _indexStoreTask.Wait(DatabaseShutdown);
                         _indexStoreTask = null;
-                    });
-                }
-
-                if (_transformerStoreTask != null)
-                {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        _transformerStoreTask.Wait(DatabaseShutdown);
-                        _transformerStoreTask = null;
                     });
                 }
 
@@ -385,15 +380,17 @@ namespace Raven.Server.Documents
         }
 
         private static readonly string CachedDatabaseInfo = "CachedDatabaseInfo";
+        private ServerStore _serverStore;
+
         public DynamicJsonValue GenerateDatabaseInfo()
         {
-            var envs = GetAllStoragesEnvironment();
+            var envs = GetAllStoragesEnvironment().ToList();
             if (envs.Any(x => x.Environment == null))
                 return null;
             Size size = new Size(envs.Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));
             var databaseInfo = new DynamicJsonValue
             {
-                [nameof(DatabaseInfo.Bundles)] = new DynamicJsonArray(BundleLoader.GetActiveBundles()),
+                [nameof(DatabaseInfo.Bundles)] = BundleLoader!= null? new DynamicJsonArray(BundleLoader.GetActiveBundles()):null,
                 [nameof(DatabaseInfo.IsAdmin)] = true, //TODO: implement me!
                 [nameof(DatabaseInfo.Name)] = Name,
                 [nameof(DatabaseInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
@@ -405,7 +402,7 @@ namespace Raven.Server.Documents
                 [nameof(DatabaseInfo.Errors)] = IndexStore.GetIndexes().Sum(index => index.GetErrors().Count),
                 [nameof(DatabaseInfo.Alerts)] = NotificationCenter.GetAlertCount(),
                 [nameof(DatabaseInfo.UpTime)] = null, //it is shutting down
-                [nameof(DatabaseInfo.BackupInfo)] = BundleLoader.GetBackupInfo(),
+                [nameof(DatabaseInfo.BackupInfo)] = BundleLoader?.GetBackupInfo(),
                 [nameof(DatabaseInfo.DocumentsCount)] = DocumentsStorage.GetNumberOfDocuments(),
                 [nameof(DatabaseInfo.IndexesCount)] = IndexStore.GetIndexes().Count(),
                 [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
@@ -493,6 +490,11 @@ namespace Raven.Server.Documents
         public void IncrementalBackupTo(string backupPath)
         {
             BackupMethods.Incremental.ToFile(GetAllStoragesEnvironmentInformation(), backupPath);
+        }
+
+        public void StateChanged()
+        {
+            
         }
     }
 

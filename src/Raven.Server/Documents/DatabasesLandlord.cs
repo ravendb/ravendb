@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Client;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Json.Converters;
@@ -17,25 +18,23 @@ using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
     public class DatabasesLandlord : IDisposable
     {
-        public static readonly string DisposingLock = Guid.NewGuid().ToString();
-
+        private ReaderWriterLockSlim _disposing = new ReaderWriterLockSlim();
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
 
-        private readonly ConcurrentSet<string> _locks =
-            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        public readonly ResourceCache<DocumentDatabase> ResourcesStoresCache = new ResourceCache<DocumentDatabase>();
+        public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
         private readonly TimeSpan _concurrentResourceLoadTimeout;
-        private int _hasLocks;
         private readonly Logger _logger;
         private readonly SemaphoreSlim _resourceSemaphore;
         private readonly ServerStore _serverStore;
@@ -45,59 +44,174 @@ namespace Raven.Server.Documents
             _serverStore = serverStore;
             _resourceSemaphore = new SemaphoreSlim(_serverStore.Configuration.Databases.MaxConcurrentResourceLoads);
             _concurrentResourceLoadTimeout = _serverStore.Configuration.Databases.ConcurrentResourceLoadTimeout.AsTimeSpan;
-            _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Raven/Server");
+            _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Raven/Server");            
+        }	
+
+        public void ClusterOnDatabaseChanged(object sender, string dbName)
+        {
+            // response to changed database.
+            // if disabled, unload
+
+            TransactionOperationContext context;
+            using (_serverStore.ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenReadTransaction();
+                var record = _serverStore.Cluster.ReadDatabase(context, dbName);
+                if (record == null)
+                {
+                    // was removed, need to make sure that it isn't loaded 
+                    UnloadDatabase(dbName, null);
+                    return;
+                }
+
+                DeletionInProgressStatus deletionInProgress;
+                if (record.DeletionInProgress != null && 
+                    record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
+                    deletionInProgress != DeletionInProgressStatus.No)
+                {
+                    UnloadDatabase(dbName, null);
+
+                    if (deletionInProgress == DeletionInProgressStatus.HardDelete)
+                    {
+                        var configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true);
+                        DatabaseHelper.DeleteDatabaseFiles(configuration);
+                    }
+
+                    _serverStore.NotificationCenter.Add(DatabaseChanged.Create(dbName, DatabaseChangeType.Delete));
+
+                    NotifyLeaderAboutRemoval(dbName);
+                    
+
+                    return;
+                }
+
+                if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
+                    return;
+
+                if (record.Disabled)
+                {
+                    UnloadDatabase(dbName, null);
+                    return;
+                }
+                Task<DocumentDatabase> task;
+                if (DatabasesCache.TryGetValue(dbName, out task) == false)
+                    return;
+
+                if (task.IsCanceled || task.IsFaulted)
+                    return;
+
+                if (task.IsCompleted)
+                {
+                    NotifyDatabaseAboutStateChange(dbName, task);
+                    return;
+                }
+                task.ContinueWith(done =>
+                {
+                    NotifyDatabaseAboutStateChange(dbName, done);
+                });
+            }
+
+            // if deleted, unload / deleted and then notify leader that we removed it
+        }
+
+        private void NotifyLeaderAboutRemoval(string dbName)
+        {
+            var cmd = new DynamicJsonValue
+            {
+                ["Type"] = nameof(RemoveNodeFromDatabaseCommand),
+                [nameof(RemoveNodeFromDatabaseCommand.DatabaseName)] = dbName,
+                [nameof(RemoveNodeFromDatabaseCommand.NodeTag)] = _serverStore.NodeTag
+            };
+            JsonOperationContext myContext;
+            using (_serverStore.ContextPool.AllocateOperationContext(out myContext))
+            using (var json = myContext.ReadObject(cmd, "rachis command"))
+            {
+                _serverStore.SendToLeaderAsync(json)
+                    .ContinueWith(t =>
+                    {
+                        if (t.Exception != null)
+                        {
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info($"Failed to notify leader about removal of node {_serverStore.NodeTag} from database {dbName}", t.Exception);
+                            }
+                        }
+                    });
+            }
+        }
+
+        private void NotifyDatabaseAboutStateChange(string changedDatabase, Task<DocumentDatabase> done)
+        {
+            try
+            {
+                done.Result.StateChanged();
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Failed to update database {changedDatabase} about new state", e);
+                }
+                // nothing to do here
+            }
         }
 
         public TimeSpan DatabaseLoadTimeout => _serverStore.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad.AsTimeSpan;
 
         public void Dispose()
         {
-            _locks.TryAdd(DisposingLock);
-
-            var exceptionAggregator = new ExceptionAggregator(_logger, "Failure to dispose landlord");
-
-            // shut down all databases in parallel, avoid having to wait for each one
-            Parallel.ForEach(ResourcesStoresCache.Values, new ParallelOptions
-            {
-                // we limit the number of resources we dispose concurrently to avoid
-                // putting too much pressure on the I/O system if a disposing db need
-                // to flush data to disk
-                MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2)
-            }, dbTask =>
-            {
-                if (dbTask.IsCompleted == false)
-                    dbTask.ContinueWith(task =>
-                    {
-                        if (task.Status != TaskStatus.RanToCompletion)
-                            return;
-
-                        try
-                        {
-                            ((IDisposable)task.Result).Dispose();
-                        }
-                        catch (Exception e)
-                        {
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info("Failure in deferred disposal of a database", e);
-                        }
-                    });
-                else if (dbTask.Status == TaskStatus.RanToCompletion)
-                    exceptionAggregator.Execute(((IDisposable)dbTask.Result).Dispose);
-                // there is no else, the db is probably faulted
-            });
-            ResourcesStoresCache.Clear();
-
+            _disposing.EnterWriteLock();
             try
             {
-                _resourceSemaphore.Dispose();
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Failed to dispose resource semaphore", e);
-            }
+                var exceptionAggregator = new ExceptionAggregator(_logger, "Failure to dispose landlord");
 
-            exceptionAggregator.ThrowIfNeeded();
+                // shut down all databases in parallel, avoid having to wait for each one
+                Parallel.ForEach(DatabasesCache.Values, new ParallelOptions
+                {
+                    // we limit the number of resources we dispose concurrently to avoid
+                    // putting too much pressure on the I/O system if a disposing db need
+                    // to flush data to disk
+                    MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2)
+                }, dbTask =>
+                {
+                    if (dbTask.IsCompleted == false)
+                        dbTask.ContinueWith(task =>
+                        {
+                            if (task.Status != TaskStatus.RanToCompletion)
+                                return;
+
+                            try
+                            {
+                                ((IDisposable)task.Result).Dispose();
+                            }
+                            catch (Exception e)
+                            {
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info("Failure in deferred disposal of a database", e);
+                            }
+                        });
+                    else if (dbTask.Status == TaskStatus.RanToCompletion)
+                        exceptionAggregator.Execute(((IDisposable)dbTask.Result).Dispose);
+                    // there is no else, the db is probably faulted
+                });
+                DatabasesCache.Clear();
+
+                try
+                {
+                    _resourceSemaphore.Dispose();
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Failed to dispose resource semaphore", e);
+                }
+
+                exceptionAggregator.ThrowIfNeeded();
+            }
+            finally
+            {
+                _disposing.ExitWriteLock();
+            }
         }
 
         public event Action<string> OnDatabaseLoaded = delegate { };
@@ -105,23 +219,37 @@ namespace Raven.Server.Documents
 
         public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, bool ignoreDisabledDatabase = false)
         {
-            if (_hasLocks != 0)
-                AssertLocks(databaseName);
-            Task<DocumentDatabase> database;
-            if (ResourcesStoresCache.TryGetValue(databaseName, out database))
-                if (database.IsFaulted || database.IsCanceled)
-                {
-                    ResourcesStoresCache.TryRemove(databaseName, out database);
-                    DateTime time;
-                    LastRecentlyUsed.TryRemove(databaseName, out time);
-                    // and now we will try creating it again
-                }
-                else
-                {
-                    return database;
-                }
+            try
+            {
+                if (_disposing.TryEnterReadLock(0) == false)
+                    ThrowServerIsBeingDisposed(databaseName);
 
-            return CreateDatabase(databaseName, ignoreDisabledDatabase);
+                Task<DocumentDatabase> database;
+                if (DatabasesCache.TryGetValue(databaseName, out database))
+                    if (database.IsFaulted || database.IsCanceled)
+                    {
+                        DatabasesCache.TryRemove(databaseName, out database);
+                        DateTime time;
+                        LastRecentlyUsed.TryRemove(databaseName, out time);
+                        // and now we will try creating it again
+                    }
+                    else
+                    {
+                        return database;
+                    }
+
+                return CreateDatabase(databaseName, ignoreDisabledDatabase);
+            }
+            finally
+            {
+                if (_disposing.IsReadLockHeld)
+                    _disposing.ExitReadLock();
+            }
+        }
+
+        private static void ThrowServerIsBeingDisposed(StringSegment databaseName)
+        {
+            throw new ObjectDisposedException("The server is being disposed, cannot load database " + databaseName);
         }
 
         private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName, bool ignoreDisabledDatabase = false)
@@ -137,7 +265,7 @@ namespace Raven.Server.Documents
             {
                 var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config));
 
-                var database = ResourcesStoresCache.GetOrAdd(databaseName, task);
+                var database = DatabasesCache.GetOrAdd(databaseName, task);
                 if (database == task)
                     task.Start(); // the semaphore will be released here at the end of the task
                 else
@@ -169,7 +297,7 @@ namespace Raven.Server.Documents
                 if (e.Data.Contains("Raven/KeepInResourceStore") == false)
                 {
                     Task<DocumentDatabase> val;
-                    ResourcesStoresCache.TryRemove(databaseName, out val);
+                    DatabasesCache.TryRemove(databaseName, out val);
                 }
                 throw;
             }
@@ -183,15 +311,6 @@ namespace Raven.Server.Documents
                 {
                 }
             }
-        }
-
-        private void AssertLocks(string databaseName)
-        {
-            if (_locks.Contains(DisposingLock))
-                throw new ObjectDisposedException("DatabaseLandlord", "Server is shutting down, can't access any databases");
-
-            if (_locks.Contains(databaseName))
-                throw new InvalidOperationException($"Database '{databaseName}' is currently locked and cannot be accessed.");
         }
 
         private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config)
@@ -226,7 +345,7 @@ namespace Raven.Server.Documents
             serverStore.DatabaseInfoCache.Delete(database.Name);
         }
 
-        public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false)
+        public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false)
         {
             if (databaseName.IsNullOrWhiteSpace())
                 throw new ArgumentNullException(nameof(databaseName), "Database name cannot be empty");
@@ -234,77 +353,51 @@ namespace Raven.Server.Documents
                 throw new ArgumentNullException(nameof(databaseName),
                     "Database name cannot be <system>. Using of <system> database indicates outdated code that was targeted RavenDB 3.5.");
 
-            var document = GetDatabaseDocument(databaseName, ignoreDisabledDatabase);
-            if (document == null)
-                return null;
 
-            return CreateConfiguration(databaseName, document, RavenConfiguration.GetKey(x => x.Core.DataDirectory));
-        }
-
-        protected RavenConfiguration CreateConfiguration(StringSegment databaseName, DatabaseDocument document, string folderPropName)
-        {
-            var config = RavenConfiguration.CreateFrom(_serverStore.Configuration, databaseName, ResourceType.Database);
-
-            foreach (var setting in document.Settings)
-                config.SetSetting(setting.Key, setting.Value);
-            Unprotect(document);
-
-            foreach (var securedSetting in document.SecuredSettings)
-                config.SetSetting(securedSetting.Key, securedSetting.Value);
-
-            config.Initialize();
-            config.CopyParentSettings(_serverStore.Configuration);
-            return config;
-        }
-
-        public void Unprotect(DatabaseDocument databaseDocument)
-        {
-            if (databaseDocument.SecuredSettings == null)
-            {
-                databaseDocument.SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                return;
-            }
-
-            foreach (var prop in databaseDocument.SecuredSettings.ToList())
-            {
-                if (prop.Value == null)
-                    continue;
-                var bytes = Convert.FromBase64String(prop.Value);
-                var entrophy = Encoding.UTF8.GetBytes(prop.Key);
-                try
-                {
-                    /*var unprotectedValue = ProtectedData.Unprotect(bytes, entrophy, DataProtectionScope.CurrentUser);
-                    databaseDocument.SecuredSettings[prop.Key] = Encoding.UTF8.GetString(unprotectedValue);*/
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Could not unprotect secured db data " + prop.Key + " setting the value to '<data could not be decrypted>'", e);
-                    databaseDocument.SecuredSettings[prop.Key] = Constants.Documents.Encryption.DataCouldNotBeDecrypted;
-                }
-            }
-        }
-
-        private DatabaseDocument GetDatabaseDocument(StringSegment databaseName, bool ignoreDisabledDatabase = false)
-        {
-            // We allocate the context here because it should be relatively rare operation
             TransactionOperationContext context;
             using (_serverStore.ContextPool.AllocateOperationContext(out context))
             {
                 context.OpenReadTransaction();
 
-                var dbId = Constants.Documents.Prefix + databaseName;
-                var jsonReaderObject = _serverStore.Read(context, dbId);
-                if (jsonReaderObject == null)
+                var doc = _serverStore.Cluster.Read(context, "db/" + databaseName.Value.ToLowerInvariant());
+                if (doc == null)
                     return null;
 
-                var document = JsonDeserializationClient.DatabaseDocument(jsonReaderObject);
+                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
 
-                if (document.Disabled && !ignoreDisabledDatabase)
-                    throw new DatabaseDisabledException("The database has been disabled.");
+                if (databaseRecord.Disabled && ignoreDisabledDatabase == false)
+                    throw new DatabaseDisabledException(databaseName + " has been disabled");
 
-                return document;
+                DeletionInProgressStatus deletionInProgress;
+                var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
+                                            databaseRecord.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
+                                            deletionInProgress != DeletionInProgressStatus.No;
+                if (ignoreBeenDeleted == false && databaseIsBeenDeleted)
+                    throw new DatabaseDisabledException(databaseName + " is currently being deleted on " + _serverStore.NodeTag);
+
+                if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false &&
+                    databaseIsBeenDeleted == false)
+                    // TODO: need to handle this properly, need to redirect to somewhere it is on
+                    throw new InvalidOperationException(databaseName + " is not relevant for " + _serverStore.NodeTag);
+                return CreateConfiguration(databaseName, databaseRecord);
+
             }
+
+        }
+
+        protected RavenConfiguration CreateConfiguration(StringSegment databaseName, DatabaseRecord record)
+        {
+            var config = RavenConfiguration.CreateFrom(_serverStore.Configuration, databaseName, ResourceType.Database);
+
+            foreach (var setting in record.Settings)
+                config.SetSetting(setting.Key, setting.Value);
+
+            config.Initialize();
+
+            config.CopyParentSettings(_serverStore.Configuration);
+
+
+            return config;
         }
 
         public DateTime LastWork(DocumentDatabase resource)
@@ -328,27 +421,27 @@ namespace Raven.Server.Documents
             return maxLastWork + TimeSpan.FromMilliseconds(dbSize / 1024L);
         }
 
-        public void UnloadResource(string resourceName, TimeSpan? skipIfActiveInDuration, Func<DocumentDatabase, bool> shouldSkip = null)
+        public void UnloadDatabase(string dbName, TimeSpan? skipIfActiveInDuration, Func<DocumentDatabase, bool> shouldSkip = null)
         {
             DateTime time;
-            Task<DocumentDatabase> resourceTask;
-            if (ResourcesStoresCache.TryGetValue(resourceName, out resourceTask) == false)
+            Task<DocumentDatabase> dbTask;
+            if (DatabasesCache.TryGetValue(dbName, out dbTask) == false)
             {
-                LastRecentlyUsed.TryRemove(resourceName, out time);
+                LastRecentlyUsed.TryRemove(dbName, out time);
                 return;
             }
-            var resourceTaskStatus = resourceTask.Status;
-            if (resourceTaskStatus == TaskStatus.Faulted || resourceTaskStatus == TaskStatus.Canceled)
+            var dbTaskStatus = dbTask.Status;
+            if (dbTaskStatus == TaskStatus.Faulted || dbTaskStatus == TaskStatus.Canceled)
             {
-                LastRecentlyUsed.TryRemove(resourceName, out time);
-                ResourcesStoresCache.TryRemove(resourceName, out resourceTask);
+                LastRecentlyUsed.TryRemove(dbName, out time);
+                DatabasesCache.TryRemove(dbName, out dbTask);
                 return;
             }
-            if (resourceTaskStatus != TaskStatus.RanToCompletion)
-                throw new InvalidOperationException($"Couldn't modify '{resourceName}' while it is loading, current status {resourceTaskStatus}");
+            if (dbTaskStatus != TaskStatus.RanToCompletion)
+                throw new InvalidOperationException($"Couldn't modify '{dbName}' while it is loading, current status {dbTaskStatus}");
 
             // will never wait, we checked that we already run to completion here
-            var database = resourceTask.Result;
+            var database = dbTask.Result;
 
             if (skipIfActiveInDuration != null && SystemTime.UtcNow - LastWork(database) < skipIfActiveInDuration ||
                 shouldSkip != null && shouldSkip(database))
@@ -361,28 +454,11 @@ namespace Raven.Server.Documents
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not dispose database: " + resourceName, e);
+                    _logger.Info("Could not dispose database: " + dbName, e);
             }
 
-            LastRecentlyUsed.TryRemove(resourceName, out time);
-            ResourcesStoresCache.TryRemove(resourceName, out resourceTask);
-        }
-
-        public void UnloadAndLock(string resourceName, Action actionToTake)
-        {
-            if (_locks.TryAdd(resourceName) == false)
-                throw new InvalidOperationException(resourceName + "' is currently locked and cannot be accessed");
-            Interlocked.Increment(ref _hasLocks);
-            try
-            {
-                UnloadResource(resourceName, null);
-                actionToTake();
-            }
-            finally
-            {
-                _locks.TryRemove(resourceName);
-                Interlocked.Decrement(ref _hasLocks);
-            }
+            LastRecentlyUsed.TryRemove(dbName, out time);
+            DatabasesCache.TryRemove(dbName, out dbTask);
         }
     }
 }

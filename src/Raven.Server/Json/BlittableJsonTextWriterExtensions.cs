@@ -793,11 +793,6 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName((nameof(transformerDefinition.Temporary)));
             writer.WriteBool(transformerDefinition.Temporary);
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(transformerDefinition.TransfomerId)));
-            writer.WriteInteger(transformerDefinition.TransfomerId);
-
             writer.WriteEndObject();
         }
 

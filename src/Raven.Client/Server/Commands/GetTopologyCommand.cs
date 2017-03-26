@@ -7,14 +7,21 @@ namespace Raven.Client.Server.Commands
 {
     public class GetTopologyCommand : RavenCommand<Topology>
     {
-        public GetTopologyCommand()
+        private string _forcedUrl;
+
+        public GetTopologyCommand(string forcedUrl = null)
         {
             AvoidFailover = true;
+            _forcedUrl = forcedUrl;
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/topology?url={node.Url}";
+            url = $"{node.Url}/topology?&name={node.Database}";
+            if (string.IsNullOrEmpty(_forcedUrl) == false)
+            {
+                url += $"&url={_forcedUrl}";
+            }
             return new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
@@ -23,6 +30,9 @@ namespace Raven.Client.Server.Commands
 
         public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
+            if (response == null)
+                return;
+
             Result = JsonDeserializationClient.ClusterTopology(response);
         }
 

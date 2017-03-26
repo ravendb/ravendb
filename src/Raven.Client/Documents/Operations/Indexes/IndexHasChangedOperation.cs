@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                     throw new ArgumentNullException(nameof(definition.Name));
 
                 _context = context;
-                _definition = new EntityToBlittable(null).ConvertEntityToBlittable(definition, conventions, context);
+                _definition = EntityToBlittable.ConvertEntityToBlittable(definition, conventions, context);
             }
 
             public override bool IsReadRequest => false;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -97,15 +98,19 @@ namespace Tests.Infrastructure
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, port);
             tcpListener.Start();
-            var ch = (char)(65 + (_count++));
+              var ch = (char)(65 + (_count++));
             var url = "http://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port + "/?" + caller + "#" + ch;
 
+
             var server = StorageEnvironmentOptions.CreateMemoryOnly();
-            if (bootstrap)
-                RachisConsensus.Bootstarp(server, url);
+        
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : _count;
-            var rachis = new RachisConsensus<CountingStateMachine>(server, url, seed);
-            rachis.Initialize();
+            var rachis = new RachisConsensus<CountingStateMachine>(seed);
+            rachis.Initialize(new StorageEnvironment(server));
+            if (bootstrap)
+        
+                rachis.Bootstarp(url);
+            rachis.Url = url;
             _listeners.Add(tcpListener);
             RachisConsensuses.Add(rachis);
             var task = AcceptConnection(tcpListener, rachis);
@@ -250,7 +255,7 @@ namespace Tests.Infrastructure
                 return read.Reader.ReadLittleEndianInt64();
             }
 
-            protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd)
+            protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
             {
                 int val;
                 string name;
@@ -269,6 +274,14 @@ namespace Tests.Infrastructure
             public override bool ShouldSnapshot(Slice slice, RootObjectType type)
             {
                 return slice.ToString() == "values";
+            }
+
+            public override async Task<Stream> ConenctToPeer(string url, string apiKey)
+            {
+                var tcpInfo = new Uri(url);
+                var tcpClient = new TcpClient();
+                await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
+                return tcpClient.GetStream();
             }
         }
     }
