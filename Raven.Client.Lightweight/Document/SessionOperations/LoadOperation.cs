@@ -49,6 +49,7 @@ namespace Raven.Client.Document.SessionOperations
             documentFound = document;
             if (documentFound == null)
                 return false;
+
             return
                 documentFound.NonAuthoritativeInformation.HasValue &&
                 documentFound.NonAuthoritativeInformation.Value &&
