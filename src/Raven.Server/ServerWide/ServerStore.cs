@@ -91,6 +91,11 @@ namespace Raven.Server.ServerWide
             await _engine.AddToClusterAsync(nodeUrl);
         }
 
+        public async Task RemoveFromClusterAsync(string nodeTag)
+        {
+            await _engine.RemoveFromClusterAsync(nodeTag);
+        }
+
         public void Initialize()
         {
             AbstractLowMemoryNotification.Initialize(ServerShutdown, Configuration);
