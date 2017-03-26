@@ -70,8 +70,6 @@ namespace Raven.Server.Documents
                     {
                         tombstones[tombstoneCollection] = long.MaxValue;
                     }
-
-                    tombstones[AttachmentsStorage.AttachmentsTombstones] = long.MaxValue;
                 }
 
                 if (tombstones.Count == 0)
