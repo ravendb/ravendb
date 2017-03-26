@@ -6,7 +6,6 @@ using Xunit;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Server.Documents;
-using Raven.Server.ServerWide.Context;
 
 namespace FastTests.Client.Attachments
 {
@@ -105,10 +104,7 @@ namespace FastTests.Client.Attachments
                     }
                 }
 
-                var statistics = store2.Admin.Send(new GetStatisticsOperation());
-                Assert.Equal(3, statistics.CountOfAttachments);
-                Assert.Equal(2, statistics.CountOfDocuments);
-                Assert.Equal(0, statistics.CountOfIndexes);
+                AttachmentsCrud.AssertAttachmentCount(store2, 3, 3, 2);
 
                 using (var session = store2.OpenSession())
                 {
@@ -243,12 +239,12 @@ namespace FastTests.Client.Attachments
                     using (var profileStream = new MemoryStream(Enumerable.Range(1, 3 * i).Select(x => (byte)x).ToArray()))
                         store1.Operations.Send(new PutAttachmentOperation("users/1", "file" + i, profileStream, "image/png"));
                 }
-                Assert.Equal(3, store1.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AttachmentsCrud.AssertAttachmentCount(store1, 3);
 
                 store1.Operations.Send(new DeleteAttachmentOperation("users/1", "file2"));
 
                 SetupAttachmentReplication(store1, store2);
-                Assert.Equal(2, store2.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AttachmentsCrud.AssertAttachmentCount(store2, 2);
 
                 using (var session = store2.OpenSession())
                 {
@@ -294,15 +290,7 @@ namespace FastTests.Client.Attachments
                     session.SaveChanges();
                 }
                 Assert.True(WaitForDocument(store2, "marker2"));
-
-
-                var database = GetDocumentDatabaseInstanceFor(store2).Result;
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
-                using (context.OpenReadTransaction())
-                {
-                    database.DocumentsStorage.AttachmentsStorage.AssertNoAttachmentsForDocument(context, "users/1");
-                }
-                Assert.Equal(0, store2.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AttachmentsCrud.AssertAttachmentCount(store2, 0);
             }
         }
 
@@ -328,7 +316,7 @@ namespace FastTests.Client.Attachments
                     store1.Operations.Send(new PutAttachmentOperation("users/1", "big-file", stream2, "image/png"));
 
                 SetupAttachmentReplication(store1, store2);
-                Assert.Equal(2, store2.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AttachmentsCrud.AssertAttachmentCount(store2, 2, 4);
 
                 using (var session = store2.OpenSession())
                 {
@@ -356,7 +344,7 @@ namespace FastTests.Client.Attachments
                 }
 
                 store1.Operations.Send(new DeleteAttachmentOperation("users/1", "file1"));
-                AssertDelete(store1, store2, "file1", 2);
+                AssertDelete(store1, store2, "file1", 2, 3);
 
                 store1.Operations.Send(new DeleteAttachmentOperation("users/2", "file2"));
                 AssertDelete(store1, store2, "file2", 2);
@@ -387,7 +375,7 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        private void AssertDelete(DocumentStore store1, DocumentStore store2, string name, int expectedAttachments)
+        private void AssertDelete(DocumentStore store1, DocumentStore store2, string name, long expectedUniqueAttachments, long? expectedAttachments = null)
         {
             using (var session = store1.OpenSession())
             {
@@ -395,7 +383,7 @@ namespace FastTests.Client.Attachments
                 session.SaveChanges();
             }
             Assert.True(WaitForDocument(store2, "marker-" + name));
-            Assert.Equal(expectedAttachments, store2.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+            AttachmentsCrud.AssertAttachmentCount(store2, expectedUniqueAttachments, expectedAttachments);
         }
 
         [Fact]
@@ -419,10 +407,10 @@ namespace FastTests.Client.Attachments
                     store1.Operations.Send(new PutAttachmentOperation("users/1", "second-file", profileStream, "image/png"));
 
                 SetupAttachmentReplication(store1, store2);
-                Assert.Equal(2, store2.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AttachmentsCrud.AssertAttachmentCount(store2, 2, 4);
 
                 store1.Commands().Delete("users/2", null);
-                AssertDelete(store1, store2, "#1", 2);
+                AssertDelete(store1, store2, "#1", 2, 3);
 
                 store1.Commands().Delete("users/1", null);
                 AssertDelete(store1, store2, "#2", 1);

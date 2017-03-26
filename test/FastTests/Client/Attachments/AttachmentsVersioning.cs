@@ -10,7 +10,6 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
-using Raven.Server.ServerWide.Context;
 
 namespace FastTests.Client.Attachments
 {
@@ -68,7 +67,7 @@ namespace FastTests.Client.Attachments
                     AssertRevisionAttachments(names, 1, revisions[1], session);
                     AssertRevisionAttachments(names, 2, revisions[2], session);
                     AssertRevisionAttachments(names, 3, revisions[3], session);
-                });
+                }, 9);
 
                 // Delete document should delete all the attachments
                 store.Commands().Delete("users/1", null);
@@ -78,7 +77,7 @@ namespace FastTests.Client.Attachments
                     AssertRevisionAttachments(names, 1, revisions[1], session);
                     AssertRevisionAttachments(names, 2, revisions[2], session);
                     AssertRevisionAttachments(names, 3, revisions[3], session);
-                }, expectedCountOfDocuments: 1);
+                }, 6, expectedCountOfDocuments: 1);
 
                 // Create another revision which should delete old revision
                 using (var session = store.OpenSession()) // This will delete the revision #1 which is without attachment
@@ -92,7 +91,7 @@ namespace FastTests.Client.Attachments
                     AssertRevisionAttachments(names, 2, revisions[1], session);
                     AssertRevisionAttachments(names, 3, revisions[2], session);
                     AssertNoRevisionAttachment(revisions[3], session);
-                });
+                }, 6);
 
                 using (var session = store.OpenSession()) // This will delete the revision #2 which is with attachment
                 {
@@ -105,7 +104,7 @@ namespace FastTests.Client.Attachments
                     AssertRevisionAttachments(names, 3, revisions[1], session);
                     AssertNoRevisionAttachment(revisions[2], session);
                     AssertNoRevisionAttachment(revisions[3], session);
-                });
+                }, 5);
 
                 using (var session = store.OpenSession()) // This will delete the revision #3 which is with attachment
                 {
@@ -118,7 +117,7 @@ namespace FastTests.Client.Attachments
                     AssertNoRevisionAttachment(revisions[1], session);
                     AssertNoRevisionAttachment(revisions[2], session);
                     AssertNoRevisionAttachment(revisions[3], session);
-                });
+                }, 3);
 
                 using (var session = store.OpenSession()) // This will delete the revision #4 which is with attachment
                 {
@@ -131,21 +130,18 @@ namespace FastTests.Client.Attachments
                     AssertNoRevisionAttachment(revisions[1], session);
                     AssertNoRevisionAttachment(revisions[2], session);
                     AssertNoRevisionAttachment(revisions[3], session);
-                }, expectedCountOfAttachments: 0);
+                }, 0, expectedCountOfUniqueAttachments: 0);
 
-                var database = GetDocumentDatabaseInstanceFor(store).Result;
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
-                using (context.OpenReadTransaction())
-                {
-                    database.DocumentsStorage.AttachmentsStorage.AssertNoAttachments(context);
-                }
+                AttachmentsCrud.AssertAttachmentCount(store, 0);
             }
         }
 
-        private void AssertRevisions(DocumentStore store, string[] names, Action<IDocumentSession, List<User>> assertAction, long expectedCountOfDocuments = 2, long expectedCountOfAttachments = 3)
+        private void AssertRevisions(DocumentStore store, string[] names, Action<IDocumentSession, List<User>> assertAction,
+            long expectedCountOfAttachments, long expectedCountOfDocuments = 2, long expectedCountOfUniqueAttachments = 3)
         {
             var statistics = store.Admin.Send(new GetStatisticsOperation());
             Assert.Equal(expectedCountOfAttachments, statistics.CountOfAttachments);
+            Assert.Equal(expectedCountOfUniqueAttachments, statistics.CountOfUniqueAttachments);
             Assert.Equal(4, statistics.CountOfRevisionDocuments.Value);
             Assert.Equal(expectedCountOfDocuments, statistics.CountOfDocuments);
             Assert.Equal(0, statistics.CountOfIndexes);
