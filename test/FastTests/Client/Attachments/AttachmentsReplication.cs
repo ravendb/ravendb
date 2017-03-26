@@ -27,10 +27,7 @@ namespace FastTests.Client.Attachments
                 }
                 if (replicateDocumentFirst)
                 {
-                    var database1 = GetDocumentDatabaseInstanceFor(store1).Result;
-                    database1.Configuration.Replication.MaxItemsCount = null;
-                    database1.Configuration.Replication.MaxSizeToSend = null;
-                    SetupReplication(store1, store2);
+                    SetupAttachmentReplication(store1, store2, false);
                     Assert.True(WaitForDocument(store2, "users/1"));
                 }
 
@@ -75,10 +72,7 @@ namespace FastTests.Client.Attachments
                 }
                 if (replicateDocumentFirst == false)
                 {
-                    var database1 = GetDocumentDatabaseInstanceFor(store1).Result;
-                    database1.Configuration.Replication.MaxItemsCount = null;
-                    database1.Configuration.Replication.MaxSizeToSend = null;
-                    SetupReplication(store1, store2);
+                    SetupAttachmentReplication(store1, store2, false);
                 }
                 Assert.True(WaitForDocument(store2, "marker"));
 
@@ -205,10 +199,7 @@ namespace FastTests.Client.Attachments
                     Assert.Equal(name, result.ContentType);
                 }
 
-                var database1 = GetDocumentDatabaseInstanceFor(store1).Result;
-                database1.Configuration.Replication.MaxItemsCount = null;
-                database1.Configuration.Replication.MaxSizeToSend = null;
-                SetupReplication(store1, store2);
+                SetupAttachmentReplication(store1, store2, false);
                 Assert.True(WaitForDocument(store2, "users/1"));
 
                 using (var session = store2.OpenSession())
@@ -256,17 +247,7 @@ namespace FastTests.Client.Attachments
 
                 store1.Operations.Send(new DeleteAttachmentOperation("users/1", "file2"));
 
-                var database1 = GetDocumentDatabaseInstanceFor(store1).Result;
-                database1.Configuration.Replication.MaxItemsCount = null;
-                database1.Configuration.Replication.MaxSizeToSend = null;
-                SetupReplication(store1, store2);
-                using (var session = store1.OpenSession())
-                {
-                    session.Store(new User { Name = "Marker" }, "marker");
-                    session.SaveChanges();
-                }
-                Assert.True(WaitForDocument(store2, "marker"));
-
+                SetupAttachmentReplication(store1, store2);
                 Assert.Equal(2, store2.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
 
                 using (var session = store2.OpenSession())
@@ -346,16 +327,7 @@ namespace FastTests.Client.Attachments
                 using (var stream2 = new MemoryStream(Enumerable.Range(1, 999 * 1024).Select(x => (byte)x).ToArray()))
                     store1.Operations.Send(new PutAttachmentOperation("users/1", "big-file", stream2, "image/png"));
 
-                var database1 = GetDocumentDatabaseInstanceFor(store1).Result;
-                database1.Configuration.Replication.MaxItemsCount = null;
-                database1.Configuration.Replication.MaxSizeToSend = null;
-                SetupReplication(store1, store2);
-                using (var session = store1.OpenSession())
-                {
-                    session.Store(new User { Name = "Marker" }, "marker");
-                    session.SaveChanges();
-                }
-                Assert.True(WaitForDocument(store2, "marker"));
+                SetupAttachmentReplication(store1, store2);
                 Assert.Equal(2, store2.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
 
                 using (var session = store2.OpenSession())
@@ -397,6 +369,24 @@ namespace FastTests.Client.Attachments
             }
         }
 
+        private void SetupAttachmentReplication(DocumentStore store1, DocumentStore store2, bool waitOnMarker = true)
+        {
+            var database1 = GetDocumentDatabaseInstanceFor(store1).Result;
+            database1.Configuration.Replication.MaxItemsCount = null;
+            database1.Configuration.Replication.MaxSizeToSend = null;
+            SetupReplication(store1, store2);
+
+            if (waitOnMarker)
+            {
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User {Name = "Marker"}, "marker");
+                    session.SaveChanges();
+                }
+                Assert.True(WaitForDocument(store2, "marker"));
+            }
+        }
+
         private void AssertDelete(DocumentStore store1, DocumentStore store2, string name, int expectedAttachments)
         {
             using (var session = store1.OpenSession())
@@ -428,19 +418,8 @@ namespace FastTests.Client.Attachments
                 using (var profileStream = new MemoryStream(Enumerable.Range(1, 17).Select(x => (byte)x).ToArray()))
                     store1.Operations.Send(new PutAttachmentOperation("users/1", "second-file", profileStream, "image/png"));
 
-                var database1 = GetDocumentDatabaseInstanceFor(store1).Result;
-                database1.Configuration.Replication.MaxItemsCount = null;
-                database1.Configuration.Replication.MaxSizeToSend = null;
-                SetupReplication(store1, store2);
-                using (var session = store1.OpenSession())
-                {
-                    session.Store(new User { Name = "Marker" }, "marker");
-                    session.SaveChanges();
-                }
-                Assert.True(WaitForDocument(store2, "marker"));
+                SetupAttachmentReplication(store1, store2);
                 Assert.Equal(2, store2.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
-
-
 
                 store1.Commands().Delete("users/2", null);
                 AssertDelete(store1, store2, "#1", 2);
