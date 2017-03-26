@@ -1231,9 +1231,11 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName(nameof(AttachmentResult.Hash));
                 writer.WriteRawStringWhichMustBeWithoutEscapeChars(attachment.Base64Hash.Content.Ptr, attachment.Base64Hash.Size);
+                writer.WriteComma();
 
                 writer.WritePropertyName(nameof(AttachmentResult.ContentType));
                 writer.WriteString(attachment.ContentType);
+                writer.WriteComma();
 
                 writer.WritePropertyName(nameof(AttachmentResult.Size));
                 writer.WriteInteger(attachment.Size);
