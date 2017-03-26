@@ -179,7 +179,6 @@ namespace Raven.Server.Documents.Versioning
                 }
 
                 // compare the contents of the existing and the new document
-                var existingDocument = _documentsStorage.TableValueToDocument(context, ref oldDocument);
                 if (existingDocument.IsMetadataEqualTo(document) && existingDocument.IsEqualTo(document))
                 {
                     // no need to create a new revision, both documents have identical content
