@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests.Server.Documents.Versioning;
 using Raven.Client.Documents.Operations;
 using Xunit;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.Context;
 
 namespace FastTests.Client.Attachments
@@ -16,27 +17,11 @@ namespace FastTests.Client.Attachments
     public class AttachmentsVersioning : RavenTestBase
     {
         [Fact]
-        public void PutAttachments()
+        public async Task PutAttachments()
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new VersioningConfiguration
-                    {
-                        Collections = new Dictionary<string, VersioningConfigurationCollection>
-                        {
-                            ["Users"] = new VersioningConfigurationCollection
-                            {
-                                Active = true,
-                                PurgeOnDelete = false,
-                                MaxRevisions = 4
-                            }
-                        }
-                    }, Constants.Documents.Versioning.ConfigurationKey);
-
-                    session.SaveChanges();
-                }
+                await VersioningHelper.SetupVersioning(store, false, 4);
 
                 using (var session = store.OpenSession())
                 {
