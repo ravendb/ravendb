@@ -25,7 +25,7 @@ namespace Sparrow.Json
         private struct FreeSection
         {
 #pragma warning disable 649
-            public FreeSection* Previous ;
+            public FreeSection* Previous;
             public int SizeInBytes;
 #pragma warning restore 649
         }
@@ -92,7 +92,8 @@ namespace Sparrow.Json
         {
             if (_isDisposed)
                 ThrowAlreadyDisposedException();
-            if(_ptrStart == null)
+
+            if (_ptrStart == null)
                 ThrowInvalidAllocateFromResetWithoutRenew();
 
 
@@ -105,23 +106,21 @@ namespace Sparrow.Json
 #else
             size = Bits.NextPowerOf2(Math.Max(sizeof(FreeSection), size));
 
+            var index = Bits.MostSignificantBit(size) - 1;
+            if (_freed[index] != null)
+            {
+                var section = _freed[index];
+                _freed[index] = section->Previous;
+
+                return new AllocatedMemoryData
+                {
+                    Address = (byte*)section,
+                    SizeInBytes = section->SizeInBytes
+                };
+            }
+
             if (_used + size > _allocated)
             {
-                for (int index = Bits.MostSignificantBit(size) - 1; index < _freed.Length; index++)
-                {
-                    if (_freed[index] == null)
-                        continue;
-
-                    var section = _freed[index];
-                    _freed[index] = section->Previous;
-
-                    return new AllocatedMemoryData
-                    {
-                        Address = (byte*)section,
-                        SizeInBytes = section->SizeInBytes
-                    };
-                }
-
                 GrowArena(size);
             }
 
@@ -199,7 +198,7 @@ namespace Sparrow.Json
         {
             // Reset current arena buffer
             _ptrCurrent = _ptrStart;
-            Array.Clear(_freed,0, _freed.Length);
+            Array.Clear(_freed, 0, _freed.Length);
 
             if (_olderBuffers == null)
             {
@@ -348,7 +347,7 @@ namespace Sparrow.Json
         }
     }
 
-    public unsafe class AllocatedMemoryData 
+    public unsafe class AllocatedMemoryData
     {
         public int SizeInBytes;
         public int ContextGeneration;
