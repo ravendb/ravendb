@@ -43,6 +43,11 @@ namespace Raven.Client.Documents.Operations
         public long CountOfAttachments { get; set; }
 
         /// <summary>
+        /// Total number of attachments in database.
+        /// </summary>
+        public long CountOfUniqueAttachments { get; set; }
+
+        /// <summary>
         /// List of stale index names in database..
         /// </summary>
         public string[] StaleIndexes => Indexes?.Where(x => x.IsStale).Select(x => x.Name).ToArray();

@@ -29,7 +29,9 @@ namespace Raven.Server.Documents.Handlers
                 stats.LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
                 stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
                 stats.CountOfRevisionDocuments = Database.BundleLoader.VersioningStorage?.GetNumberOfRevisionDocuments(context);
-                stats.CountOfAttachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
+                var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
+                stats.CountOfAttachments = attachments.attachmentCount;
+                stats.CountOfUniqueAttachments = attachments.streamsCount;
                 stats.CountOfIndexes = indexes.Count;
                 stats.CountOfTransformers = transformersCount;
                 stats.DatabaseId = Database.DocumentsStorage.Environment.DbId;

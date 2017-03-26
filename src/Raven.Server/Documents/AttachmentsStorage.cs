@@ -347,45 +347,17 @@ namespace Raven.Server.Documents
             }
         }
 
-        public long GetNumberOfAttachments(DocumentsOperationContext context)
+        public (long attachmentCount, long streamsCount) GetNumberOfAttachments(DocumentsOperationContext context)
         {
-            // We count in also versioned streams
+            // We count in also versioned attachments
+
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            var count = table.NumberOfEntries;
+
             var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-            return tree.State.NumberOfEntries;
-        }
+            var streamsCount = tree.State.NumberOfEntries;
 
-        [Conditional("DEBUG")]
-        public void AssertNoAttachmentsForDocument(DocumentsOperationContext context, string documentId)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-
-            byte* lowerDocumentId;
-            int lowerDocumentIdSize;
-            byte* documentIdPtr; // not in use
-            int documentIdSize; // not in use
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, documentId, out lowerDocumentId, out lowerDocumentIdSize,
-                out documentIdPtr, out documentIdSize);
-
-            Slice prefixSlice;
-            using (GetAttachmentPrefix(context, lowerDocumentId, lowerDocumentIdSize, AttachmentType.Document, null, out prefixSlice))
-            {
-                foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
-                {
-                    var attachment = TableValueToAttachment(context, ref sr.Reader);
-                    throw new InvalidOperationException($"Found attachment {attachment.Name} but it should be deleted.");
-                }
-            }
-        }
-
-        [Conditional("DEBUG")]
-        public void AssertNoAttachments(DocumentsOperationContext context)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            foreach (var result in table.SeekForwardFrom(AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice], 0, 0))
-            {
-                var attachment = TableValueToAttachment(context, ref result.Reader);
-                throw new InvalidOperationException($"Found attachment {attachment.Name} but it should be deleted.");
-            }
+            return (count, streamsCount);
         }
 
         public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name, 
