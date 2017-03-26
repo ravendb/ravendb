@@ -50,6 +50,7 @@ namespace Raven.Server.Documents.Versioning
             Key = 4,
             Document = 5,
             Flags = 6,
+            LastModified = 7,
         }
 
         public const byte RecordSeperator = 30;
@@ -181,13 +182,13 @@ namespace Raven.Server.Documents.Versioning
         }
 
         public void PutFromDocument(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, 
-            DocumentFlags flags, ChangeVectorEntry[] changeVector, VersioningConfigurationCollection configuration = null)
+            DocumentFlags flags, ChangeVectorEntry[] changeVector, long lastModifiedTicks, VersioningConfigurationCollection configuration = null)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
 
             byte* lowerKey;
             int lowerKeySize;
-            PutInternal(context, key, document, flags, table, changeVector, out lowerKey, out lowerKeySize);
+            PutInternal(context, key, document, flags, lastModifiedTicks, table, changeVector, out lowerKey, out lowerKeySize);
 
             if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
@@ -211,17 +212,17 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        public void PutDirect(DocumentsOperationContext context, string key, BlittableJsonReaderObject document,
-            DocumentFlags flags, ChangeVectorEntry[] changeVector)
+        public void PutDirect(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, DocumentFlags flags, 
+            ChangeVectorEntry[] changeVector, long lastModifiedTicks)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
             byte* lowerKey;
             int lowerKeySize;
-            PutInternal(context, key, document, flags, table, changeVector, out lowerKey, out lowerKeySize);
+            PutInternal(context, key, document, flags, lastModifiedTicks, table, changeVector, out lowerKey, out lowerKeySize);
         }
 
         private void PutInternal(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, 
-            DocumentFlags flags, Table table, ChangeVectorEntry[] changeVector, out byte* lowerKey, out int lowerSize)
+            DocumentFlags flags, long lastModifiedTicks, Table table, ChangeVectorEntry[] changeVector, out byte* lowerKey, out int lowerSize)
         {
             BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
 
@@ -259,6 +260,7 @@ namespace Raven.Server.Documents.Versioning
                     tbv.Add(keyPtr, keySize);
                     tbv.Add(data.BasePointer, data.Size);
                     tbv.Add((int)flags);
+                    tbv.Add(lastModifiedTicks);
                     table.Set(tbv);
                 }
             }
@@ -287,7 +289,7 @@ namespace Raven.Server.Documents.Versioning
                 numberOfRevisionsToDelete,
                 deleted =>
                 {
-                    var revision = TableValueToDocument(context, ref deleted.Reader);
+                    var revision = TableValueToRevision(context, ref deleted.Reader);
                     maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
                     if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                     {
@@ -363,7 +365,7 @@ namespace Raven.Server.Documents.Versioning
                     if (take-- <= 0)
                         yield break;
 
-                    var document = TableValueToDocument(context, ref tvr.Result.Reader);
+                    var document = TableValueToRevision(context, ref tvr.Result.Reader);
                     yield return document;
                 }
             }
@@ -375,7 +377,7 @@ namespace Raven.Server.Documents.Versioning
 
             foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice], etag, 0))
             {
-                var document = TableValueToDocument(context, ref tvr.Reader);
+                var document = TableValueToRevision(context, ref tvr.Reader);
                 yield return document;
 
                 if (take-- <= 0)
@@ -389,11 +391,11 @@ namespace Raven.Server.Documents.Versioning
 
             foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice], etag, 0))
             {
-                yield return ReplicationBatchItem.From(TableValueToDocument(context, ref tvr.Reader));
+                yield return ReplicationBatchItem.From(TableValueToRevision(context, ref tvr.Reader));
             }
         }
 
-        private Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
+        private Document TableValueToRevision(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var result = new Document
             {
@@ -405,6 +407,7 @@ namespace Raven.Server.Documents.Versioning
 
             int size;
             result.Data = new BlittableJsonReaderObject(tvr.Read((int)Columns.Document, out size), size, context);
+            result.LastModified = new DateTime(*(long*)tvr.Read((int)Columns.LastModified, out size));
 
             var ptr = tvr.Read((int)Columns.ChangeVector, out size);
             int changeVecotorCount = size / sizeof(ChangeVectorEntry);
