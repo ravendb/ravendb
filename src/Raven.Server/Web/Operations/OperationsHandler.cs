@@ -22,7 +22,10 @@ namespace Raven.Server.Web.Operations
             {
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("id");
                     writer.WriteInteger(nextId);
+                    writer.WriteEndObject();                   
                 }
             }
 

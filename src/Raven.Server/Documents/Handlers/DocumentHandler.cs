@@ -6,23 +6,16 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.WebSockets;
 using System.Runtime.ExceptionServices;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Session;
-using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
@@ -30,9 +23,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Logging;
-using Voron.Exceptions;
+using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers
@@ -113,105 +104,6 @@ namespace Raven.Server.Documents.Handlers
 
                     context.OpenReadTransaction();
                     GetDocumentsById(context, new StringValues(ids), null, metadataOnly);
-                }
-            }
-        }
-        
-        [RavenAction("/databases/*/bulk_insert", "POST")]
-        public async Task BulkInsert()
-        {
-            var logger = LoggingSource.Instance.GetLogger<MergedInsertBulkCommand>(Database.Name);
-            IDisposable currentCtxReset = null, previousCtxReset = null;
-            try
-            {
-                JsonOperationContext context;
-                using (ContextPool.AllocateOperationContext(out context))
-                using (var buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
-                {
-                    JsonOperationContext docsCtx;
-                    currentCtxReset = ContextPool.AllocateOperationContext(out docsCtx);
-                    var requestBodyStream = RequestBodyStream();
-
-                    using (var parser = new BatchRequestParser.ReadMany(context, requestBodyStream, buffer))
-                    {
-                        try
-                        {
-                            await parser.Init();
-                        }
-                        catch (EndOfStreamException)
-                        {
-                            currentCtxReset?.Dispose();
-                            return; // we closed the stream before we wrote anything to it.     
-                        }
-
-                        var list = new List<BatchRequestParser.CommandData>();
-                        long totalSize = 0;
-                        while (true)
-                        {
-                            var task = parser.MoveNext(docsCtx);
-                            if (task == null)
-                                break;
-
-                            if (task.IsCompleted == false && list.Count > 0 ||
-                                totalSize > 16 * Voron.Global.Constants.Size.Megabyte)
-                            {
-                                await Database.TxMerger.Enqueue(new MergedInsertBulkCommand
-                                {
-                                    Commands = list,
-                                    Database = Database,
-                                    Logger = logger,
-                                    TotalSize = totalSize
-                                });
-
-                                previousCtxReset?.Dispose();
-                                previousCtxReset = currentCtxReset;
-                                currentCtxReset = ContextPool.AllocateOperationContext(out docsCtx);
-
-                                list.Clear();
-                                totalSize = 0;
-                            }
-
-                            var commandData = await task;
-                            totalSize += commandData.Document.Size;
-                            list.Add(commandData);
-                        }
-                        if (list.Count > 0)
-                        {
-                            await Database.TxMerger.Enqueue(new MergedInsertBulkCommand
-                            {
-                                Commands = list,
-                                Database = Database,
-                                Logger = logger,
-                                TotalSize = totalSize
-                            });
-                        }
-                    }
-                }
-            }
-            finally
-            {
-                currentCtxReset?.Dispose();
-                previousCtxReset?.Dispose();
-            }
-        }
-
-
-        private class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransactionCommand
-        {
-            public Logger Logger;
-            public DocumentDatabase Database;
-            public List<BatchRequestParser.CommandData> Commands;
-            public long TotalSize;
-            public override void Execute(DocumentsOperationContext context)
-            {
-                foreach (var cmd in Commands)
-                {
-                    Debug.Assert(cmd.Method == BatchRequestParser.CommandType.PUT);
-                    Database.DocumentsStorage.Put(context, cmd.Key, null, cmd.Document);
-                }
-                if (Logger.IsInfoEnabled)
-                {
-                    Logger.Info($"Merged {Commands.Count:#,#;;0} operations and {Math.Round(TotalSize / 1024d, 1):#,#.#;;0} kb");
                 }
             }
         }

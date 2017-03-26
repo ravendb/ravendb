@@ -52,13 +52,13 @@ namespace SlowTests.Issues
                                 Assert.Equal(null, exp);
                                 break;
                             case 2:
-                                Assert.True(exp.Message.StartsWith("Write to stream faild at"));
+                                Assert.Equal("The server returned an invalid or unrecognized response", exp.InnerException.Message);
                                 break;
                             case 3:
-                                Assert.True(exp.Message.StartsWith("Write to stream faild at"));
+                                Assert.Equal("An error occurred while sending the request.", exp.InnerException.Message);
                                 break;
                             case 4:
-                                Assert.True(exp.Message.StartsWith("Write to stream faild at"));
+                                Assert.Equal("An error occurred while sending the request.", exp.InnerException.Message);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();
