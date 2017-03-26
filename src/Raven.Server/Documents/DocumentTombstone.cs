@@ -39,16 +39,13 @@ namespace Raven.Server.Documents
                 ["Key"] = LoweredKey.ToString(),
                 [nameof(Etag)] = Etag,
                 [nameof(DeletedEtag)] = DeletedEtag,
+                [nameof(Type)] = Type.ToString(),
             };
 
             if (Type == TombstoneType.Document)
             {
                 json[nameof(Collection)] = Collection.ToString();
                 json[nameof(ChangeVector)] = ChangeVector.ToString();
-            }
-            else
-            {
-                json[nameof(Type)] = Type.ToString();
             }
 
             return json;
