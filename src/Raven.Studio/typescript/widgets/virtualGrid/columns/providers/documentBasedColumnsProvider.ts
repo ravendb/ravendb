@@ -48,7 +48,10 @@ class documentBasedColumnsProvider {
         }
 
         if (this.enableInlinePreview) {
-            const previewColumn = new actionColumn<document>((doc: document) => this.showPreview(doc), "Preview", `<i class="icon-preview"></i>`, "70px");
+            const previewColumn = new actionColumn<document>((doc: document) => this.showPreview(doc), "Preview", `<i class="icon-preview"></i>`, "70px",
+            {
+                title: () => 'Show item preview'
+            });
             initialColumns.push(previewColumn);
         }
 

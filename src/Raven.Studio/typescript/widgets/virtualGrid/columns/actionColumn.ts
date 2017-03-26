@@ -1,25 +1,33 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
-import document = require("models/database/documents/document");
 import virtualRow = require("widgets/virtualGrid/virtualRow");
+import utils = require("widgets/virtualGrid/virtualGridUtils");
+
+type actionColumnOpts<T> = {
+    extraClass?: (item: T) => string;
+    title?: (item:T) => string;
+}
+type provider<T> = (item: T) => string;
 
 class actionColumn<T> implements virtualColumn {
     private readonly action: (obj: T) => void;
 
     header: string;
-    private buttonText: string;
+    private buttonText: (item: T) => string;
     width: string;
     extraClass: string;
 
+    private opts: actionColumnOpts<T>;
+
     actionUniqueId = _.uniqueId("action-");
 
-    constructor(action: (obj: T) => void, header: string, buttonText: string, width: string, extraClass: string = "") {
+    constructor(action: (obj: T) => void, header: string, buttonText: provider<T> | string, width: string, opts: actionColumnOpts<T> = {}) {
         this.action = action;
         this.header = header;
-        this.buttonText = buttonText;
+        this.buttonText = _.isString(buttonText) ? (item: T) => buttonText : buttonText;
         this.width = width;
-        this.extraClass = extraClass;
+        this.opts = opts || {};
     }
 
     canHandle(actionId: string) {
@@ -30,9 +38,11 @@ class actionColumn<T> implements virtualColumn {
         this.action(row.data as T);
     }
 
-    renderCell(item: document, isSelected: boolean): string {
+    renderCell(item: T, isSelected: boolean): string {
+        const extraButtonHtml = this.opts.title ? ` title="${utils.escape(this.opts.title(item))}" ` : '';
+        const extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
         return `<div class="cell action-cell" style="width: ${this.width}">
-            <button type="button" data-action="${this.actionUniqueId}" class="btn btn-sm btn-block ${this.extraClass}">${this.buttonText}</button>
+            <button type="button" ${extraButtonHtml} data-action="${this.actionUniqueId}" class="btn btn-sm btn-block ${extraCssClasses}">${this.buttonText(item)}</button>
         </div>`;
     }
 

@@ -67,7 +67,7 @@ class editDocument extends viewModelBase {
 
     private changeNotification: changeSubscription;
 
-    connectedDocuments = new connectedDocuments(this.document, this.activeDatabase, (docId) => this.loadDocument(docId));
+    connectedDocuments = new connectedDocuments(this.document, this.activeDatabase, (docId) => this.loadDocument(docId), this.isCreatingNewDocument, this.inReadOnlyMode);
 
     isSaveEnabled: KnockoutComputed<boolean>;
     documentSize: KnockoutComputed<string>;

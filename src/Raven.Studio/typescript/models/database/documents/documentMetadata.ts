@@ -79,7 +79,7 @@ class documentMetadata {
     static filterMetadata(metaDto: documentMetadataDto, removedProps: any[] = null) {
         // We don't want to show certain reserved properties in the metadata text area.
         // Remove them from the DTO, restore them on save.
-        const metaPropsToRemove = ["@id", "@etag", "@last-modified"];
+        const metaPropsToRemove = ["@id", "@etag", "@last-modified", "@attachments"];
 
         for (let property in metaDto) {
             if (metaDto.hasOwnProperty(property) && _.includes(metaPropsToRemove, property)) {

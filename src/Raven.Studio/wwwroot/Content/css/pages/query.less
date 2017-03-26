@@ -9,17 +9,19 @@
 
     .query-error {
         display: none;
+
         .help-block {
             margin-bottom: 0;
         }
     }
 
     .query-main {
-        width:100%;
+        width: 100%;
         position: relative;
     }
+
     .query-controls {
-        margin-left:@line-height-computed/2;
+        margin-left: @line-height-computed/2;
         flex-basis: @controls-width;
         flex-shrink: 0;
         display: flex;
@@ -38,12 +40,24 @@
         display: none;
         .slidein-style;
         padding: @grid-gutter-width/2;
-
-
         background-color: @gray-darker;
         width: 100%;
         position: absolute;
         top: 100%;
+    }
+}
+
+#queryContainer {
+    .virtual-grid {
+        .cell {
+            &.action-cell {
+                text-align: center;
+
+                .btn {
+                    font-size: 20px;
+                }
+            }
+        }
     }
 }
 
