@@ -8,7 +8,7 @@ namespace FastTests.Server.Documents.Versioning
 {
     public class VersioningHelper
     {
-        public static async Task SetupVersioning(DocumentStore store)
+        public static async Task SetupVersioning(DocumentStore store, bool purgeOnDelete = true, long maxRevisions = 123)
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -24,8 +24,8 @@ namespace FastTests.Server.Documents.Versioning
                         ["Users"] = new VersioningConfigurationCollection
                         {
                             Active = true,
-                            PurgeOnDelete = true,
-                            MaxRevisions = 123
+                            PurgeOnDelete = purgeOnDelete,
+                            MaxRevisions = maxRevisions
                         },
                         ["Comments"] = new VersioningConfigurationCollection
                         {
