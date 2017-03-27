@@ -3,25 +3,26 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-
-using Raven.Client;
-using Raven.Json.Linq;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_2124 : RavenTest
+    public class RavenDB_2124 : RavenTestBase
     {
         [Fact]
         public void IncludeWithBadClrTypeShouldWorkForBothLoadsAndQueries()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put("addresses/1", null, RavenJObject.FromObject(new Address { Street = "Street1" }), new RavenJObject());
+                using (var commands = store.Commands())
+                {
+                    commands.Put("addresses/1", null, new Address { Street = "Street1" });
+                }
 
                 using (var session = store.OpenSession())
                 {
