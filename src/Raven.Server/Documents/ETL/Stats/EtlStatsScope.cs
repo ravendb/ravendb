@@ -54,5 +54,10 @@ namespace Raven.Server.Documents.ETL.Stats
 
             return operation;
         }
+
+        public void RecordBatchCompleteReason(string reason)
+        {
+            _stats.BatchCompleteReason = reason;
+        }
     }
 }

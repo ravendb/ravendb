@@ -44,6 +44,7 @@ namespace Raven.Server.Documents.ETL.Stats
                 LastLoadedEtag = Stats.LastLoadedEtag,
                 LastTransformedEtag = Stats.LastTransformedEtag,
                 NumberOfExtractedItems = Stats.NumberOfExtractedItems,
+                BatchCompleteReason = Stats.BatchCompleteReason
             };
         }
     }
