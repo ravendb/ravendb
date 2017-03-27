@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Serialization;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions.Database;
@@ -83,7 +84,7 @@ namespace FastTests.Server.Basic
             }
         }
 
-        private static DatabaseDocument GenerateDatabaseDoc(string name)
+        private static DatabaseRecord GenerateDatabaseDoc(string name)
         {
             var doc = MultiDatabase.CreateDatabaseDocument(name);
             doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "10";

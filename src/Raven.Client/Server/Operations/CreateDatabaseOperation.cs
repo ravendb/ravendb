@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -11,19 +12,19 @@ namespace Raven.Client.Server.Operations
 {
     public class CreateDatabaseOperation : IServerOperation<CreateDatabaseResult>
     {
-        private readonly DatabaseDocument _databaseDocument;
+        private readonly DatabaseRecord _databaseRecord;
         private readonly int _replicationFactor;
 
-        public CreateDatabaseOperation(DatabaseDocument databaseDocument, int replicationFactor = 1)
+        public CreateDatabaseOperation(DatabaseRecord databaseRecord, int replicationFactor = 1)
         {
-            MultiDatabase.AssertValidName(databaseDocument.Id);
-            _databaseDocument = databaseDocument;
+            MultiDatabase.AssertValidName(databaseRecord.DatabaseName);
+            _databaseRecord = databaseRecord;
             _replicationFactor = replicationFactor;
         }
 
         public RavenCommand<CreateDatabaseResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new CreateDatabaseCommand(conventions, context, _databaseDocument, this);
+            return new CreateDatabaseCommand(conventions, context, _databaseRecord, this);
         }
 
         private class CreateDatabaseCommand : RavenCommand<CreateDatabaseResult>
@@ -33,20 +34,20 @@ namespace Raven.Client.Server.Operations
             private readonly BlittableJsonReaderObject _databaseDocument;
             private readonly string _databaseName;
 
-            public CreateDatabaseCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseDocument databaseDocument,
+            public CreateDatabaseCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseRecord databaseRecord,
                 CreateDatabaseOperation createDatabaseOperation)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
-                if (databaseDocument == null)
-                    throw new ArgumentNullException(nameof(databaseDocument));
+                if (databaseRecord == null)
+                    throw new ArgumentNullException(nameof(databaseRecord));
 
                 _context = context;
                 _createDatabaseOperation = createDatabaseOperation;
-                _databaseName = databaseDocument.Id;
-                _databaseDocument = EntityToBlittable.ConvertEntityToBlittable(databaseDocument, conventions, context);
+                _databaseName = databaseRecord.DatabaseName;
+                _databaseDocument = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, conventions, context);
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

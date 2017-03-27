@@ -44,7 +44,7 @@ namespace FastTests
             [CallerMemberName] string caller = null,
             string dbSuffixIdentifier = null,
             string path = null,
-            Action<DatabaseDocument> modifyDatabaseDocument = null,
+            Action<DatabaseRecord> modifyDatabaseRecord = null,
             Func<string, string> modifyName = null,
             string apiKey = null,
             bool ignoreDisabledDatabase = false,
@@ -88,7 +88,7 @@ namespace FastTests
                         RavenConfiguration.GetKey(
                             x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] =
                     int.MaxValue.ToString();
-                modifyDatabaseDocument?.Invoke(doc);
+                modifyDatabaseRecord?.Invoke(doc);
 
                 if (createDatabase)
                 {

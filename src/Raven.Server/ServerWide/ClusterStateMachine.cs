@@ -90,9 +90,6 @@ namespace Raven.Server.ServerWide
 
             switch (type)
             {
-                case nameof(AddDatabaseCommand):
-                    AddDatabase(context, cmd, index, leader);
-                    break;
                 case nameof(DeleteDatabaseCommand):
                     DeleteDatabase(context, cmd, index, leader);
                     break;
@@ -113,11 +110,8 @@ namespace Raven.Server.ServerWide
                 case nameof(PutValueCommand):
                     PutValue(context, cmd, index, leader);
                     break;
-                case nameof(TEMP_DelDatabaseCommand):
-                    TEMP_DeleteValue(context, cmd, index, leader);
-                    break;
-                case nameof(TEMP_SetDatabaseCommand):
-                    TEMP_SetDatabaseValue(context, cmd, index, leader);
+                case nameof(AddDatabaseCommand):
+                    AddDatabase(context, cmd, index, leader);
                     break;
             }
         }
@@ -250,44 +244,24 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void TEMP_DeleteValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private unsafe void AddDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            var delCmd = JsonDeserializationCluster.DeleteValueCommand(cmd);
-            Slice str;
-            using (Slice.From(context.Allocator, delCmd.Name, out str))
-            {
-                items.DeleteByKey(str);
-            }
-
-
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
-            {
-                Task.Run(() =>
-                {
-                    DatabaseChanged?.Invoke(this, delCmd.Name.Replace("db/", ""));
-                });
-            };
-        }
-
-        private unsafe void TEMP_SetDatabaseValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
-        {
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            var setDb = JsonDeserializationCluster.TEMP_SetDatabaseCommand(cmd);
+            var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
 
             TableValueBuilder builder;
             Slice valueName, valueNameLowered;
             using (items.Allocate(out builder))
-            using (Slice.From(context.Allocator, "db/"+ setDb.Name, out valueName))
-            using (Slice.From(context.Allocator, "db/" + setDb.Name.ToLowerInvariant(), out valueNameLowered))
-            using (var rec = context.ReadObject(setDb.Value, "inner-val"))
+            using (Slice.From(context.Allocator, "db/"+ addDatabaseCommand.Name, out valueName))
+            using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out valueNameLowered))
+            using (var rec = context.ReadObject(addDatabaseCommand.Value, "inner-val"))
             {
-                if (setDb.Etag != null)
+                if (addDatabaseCommand.Etag != null)
                 {
                     TableValueReader reader;
-                    if (items.ReadByKey(valueNameLowered, out reader) == false && setDb.Etag != 0)
+                    if (items.ReadByKey(valueNameLowered, out reader) == false && addDatabaseCommand.Etag != 0)
                     {
-                        NotifyLeaderAboutError(index, leader, new ConcurrencyException("Concurrency violation, the database " + setDb.Name + " does not exists, but had a non zero etag"));
+                        NotifyLeaderAboutError(index, leader, new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " does not exists, but had a non zero etag"));
                         return;
                     }
 
@@ -295,10 +269,10 @@ namespace Raven.Server.ServerWide
                     var actualEtag = *(long*)reader.Read(3, out size);
                     Debug.Assert(size == sizeof(long));
 
-                    if (actualEtag != setDb.Etag.Value)
+                    if (actualEtag != addDatabaseCommand.Etag.Value)
                     {
                         NotifyLeaderAboutError(index, leader,
-                            new ConcurrencyException("Concurrency violation, the database " + setDb.Name + " has etag " + actualEtag + " but was expecting " + setDb.Etag));
+                            new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag + " but was expecting " + addDatabaseCommand.Etag));
                         return;
                     }
                 }
@@ -309,7 +283,7 @@ namespace Raven.Server.ServerWide
                 builder.Add(index);
 
                 items.Set(builder);
-                NotifyDatabaseChanged(context, setDb.Name, index);
+                NotifyDatabaseChanged(context, addDatabaseCommand.Name, index);
             }
         }
 
@@ -352,51 +326,6 @@ namespace Raven.Server.ServerWide
                 builder.Add(index);
 
                 items.Set(builder);
-            }
-        }
-
-        private unsafe void AddDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
-        {
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            var addDb = JsonDeserializationCluster.AddDatabaseCommand(cmd);
-
-            var databaseName = addDb.DatabaseName;
-            var dbKey = "db/" + databaseName.ToLowerInvariant();
-            Slice key;
-            using (Slice.From(context.Allocator, dbKey, out key))
-            {
-                TableValueReader reader;
-                if (items.ReadByKey(key, out reader))
-                {
-                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"Cannot create database {databaseName} because it already exists"));
-                    return;
-                }
-
-                TableValueBuilder builder;
-                Slice databaseNameSlice;
-                using (items.Allocate(out builder))
-                using (Slice.From(context.Allocator, databaseName, out databaseNameSlice))
-                using (var dbRec = context.ReadObject(new DynamicJsonValue
-                {
-                    [nameof(DatabaseRecord.DatabaseName)] = databaseNameSlice,
-                    [nameof(DatabaseRecord.DataDirectory)] = addDb.DataDirectory,
-                    [nameof(DatabaseRecord.Topology)] = new DynamicJsonValue
-                    {
-                        [nameof(DatabaseTopology.Members)] = new DynamicJsonArray(addDb.Topology.Members),
-                        [nameof(DatabaseTopology.Promotables)] = new DynamicJsonArray(addDb.Topology.Promotables),
-                        [nameof(DatabaseTopology.Watchers)] = new DynamicJsonArray(addDb.Topology.Watchers),
-                    },
-                }, databaseName))
-                {
-                    builder.Add(key);
-                    builder.Add(databaseNameSlice);
-                    builder.Add(dbRec.BasePointer, dbRec.Size);
-                    builder.Add(index);
-
-                    items.Set(builder);
-
-                    NotifyDatabaseChanged(context, databaseName, index);
-                }
             }
         }
 
@@ -702,16 +631,6 @@ namespace Raven.Server.ServerWide
         }
     }
 
-    public class AddDatabaseCommand
-    {
-        public string DatabaseName;
-
-        public string DataDirectory;
-
-        public DatabaseTopology Topology;
-
-        public VersioningConfiguration VersioningConfiguration;
-    }
 
     public class DeleteDatabaseCommand
     {
@@ -720,68 +639,18 @@ namespace Raven.Server.ServerWide
         public string FromNode;
     }
 
-    public class TEMP_SetDatabaseCommand
+    public class AddDatabaseCommand
     {
         public string Name;
         public BlittableJsonReaderObject Value;
         public long? Etag;
     }
 
-    public class TEMP_DelDatabaseCommand
-    {
-        public string Name;
-        public BlittableJsonReaderObject Value;
-    }
 
     public class RemoveNodeFromDatabaseCommand
     {
         public string DatabaseName;
         public string NodeTag;
-    }
-
-    public class DatabaseRecord
-    {
-        public string DatabaseName;
-
-        public bool Disabled;
-
-        public Dictionary<string, DeletionInProgressStatus> DeletionInProgress;
-
-        public string DataDirectory;
-
-        public DatabaseTopology Topology;
-
-        public Dictionary<string, IndexDefinition> Indexes;
-
-        //todo: see how we can protect this
-        public Dictionary<string, TransformerDefinition> Transformers;
-
-        public Dictionary<string, string> Settings;
-
-        public VersioningConfiguration VersioningConfiguration;
-
-        public void AddTransformer(TransformerDefinition definition)
-        {
-            if (Indexes != null && Indexes.ContainsKey(definition.Name))
-            {
-                throw new IndexOrTransformerAlreadyExistException($"Tried to create a transformer with a name of {definition.Name}, but an index under the same name exist");
-            }
-
-            TransformerDefinition existingTransformer;
-            var lockMode = TransformerLockMode.Unlock;
-            if (Transformers.TryGetValue(definition.Name, out existingTransformer))
-            {
-                if (existingTransformer.Equals(definition))
-                    return;
-
-                lockMode = existingTransformer.LockMode;
-            }
-
-            if (lockMode == TransformerLockMode.LockedIgnore)
-                throw new IndexOrTransformerAlreadyExistException($"Cannot edit existing transformer {definition.Name} with lock mode {lockMode}");
-
-            Transformers[definition.Name] = definition;
-        }
     }
 
     public interface IUpdateDatabaseCommand
@@ -820,16 +689,8 @@ namespace Raven.Server.ServerWide
         }
     }
 
-    public enum DeletionInProgressStatus
-    {
-        No,
-        SoftDelete,
-        HardDelete
-    }
-
     public class JsonDeserializationCluster : JsonDeserializationBase
     {
-        public static readonly Func<BlittableJsonReaderObject, TEMP_SetDatabaseCommand> TEMP_SetDatabaseCommand = GenerateJsonDeserializationRoutine<TEMP_SetDatabaseCommand>();
 
         public static readonly Func<BlittableJsonReaderObject, PutValueCommand> PutValueCommand = GenerateJsonDeserializationRoutine<PutValueCommand>();
 

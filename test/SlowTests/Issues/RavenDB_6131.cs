@@ -34,7 +34,7 @@ namespace SlowTests.Issues
             var path3 = NewDataPath();
             var path4 = NewDataPath();
 
-            using (var store = GetDocumentStore(path: path1, modifyDatabaseDocument: document =>
+            using (var store = GetDocumentStore(path: path1, modifyDatabaseRecord: document =>
             {
                 document.Settings[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = path2;
                 document.Settings[RavenConfiguration.GetKey(x => x.Indexing.TempPath)] = path3;

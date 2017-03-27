@@ -35,7 +35,7 @@ namespace SlowTests.Issues
         {
             var path = NewDataPath();
             var otherPath = NewDataPath();
-            using (var store = GetDocumentStore(path: path, modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths)] = otherPath))
+            using (var store = GetDocumentStore(path: path, modifyDatabaseRecord: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths)] = otherPath))
             {
                 var index = new Users_ByCity();
                 var indexDefinition = index.CreateIndexDefinition();
@@ -57,7 +57,7 @@ namespace SlowTests.Issues
             var otherPath = NewDataPath();
             using (var store = GetDocumentStore(
                 path: path,
-                modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths)] = otherPath,
+                modifyDatabaseRecord: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths)] = otherPath,
                 modifyName: n => name))
             {
                 var indexDefinition = index.CreateIndexDefinition();
@@ -68,7 +68,7 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(
                 path: path,
-                modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths)] = otherPath,
+                modifyDatabaseRecord: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths)] = otherPath,
                 modifyName: n => name))
             {
                 var indexDefinition = store.Admin.Send(new GetIndexOperation(index.IndexName));
@@ -89,7 +89,7 @@ namespace SlowTests.Issues
             var otherPath = NewDataPath();
             using (var store = GetDocumentStore(
                 path: path,
-                modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths)] = otherPath,
+                modifyDatabaseRecord: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths)] = otherPath,
                 modifyName: n => name))
             {
                 var indexDefinition1 = index.CreateIndexDefinition();
@@ -114,7 +114,7 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(
                 path: path,
-                modifyDatabaseDocument: document =>
+                modifyDatabaseRecord: document =>
                 {
                     document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths)] = otherPath;
                     document.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "false";
