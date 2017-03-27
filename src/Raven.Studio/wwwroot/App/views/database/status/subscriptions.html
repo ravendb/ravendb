@@ -14,7 +14,7 @@
         <div class="panel-heading">
             <div class="row">
                 <div class="col-sm-3">
-                    <i data-bind="css: { 'icon-circle': !Connection, 'icon-circle-filled': Connection }"></i>
+                    <i data-bind="css: { 'icon-disconnected': !Connection, 'icon-connected': Connection }"></i>
 
                     <strong>ID <span data-bind="text: SubscriptionId"></span></strong>
                     &nbsp;&nbsp;
@@ -51,8 +51,7 @@
                         <div class="col-xs-6 col-sm-3 text-right">
                             <label>Filter script</label>
                         </div>
-                        <div class="col-xs-6 col-sm-4" data-bind="text: Criteria.FilterJavaScript || 'Not defined' ">
-                           
+                        <div class="col-xs-6 col-sm-4" data-bind="html: $root.filterFormatter(Criteria.FilterJavaScript)">
                         </div>
                     </div>
                     <div class="row">
