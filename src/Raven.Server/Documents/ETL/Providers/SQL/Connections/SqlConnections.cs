@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.Connections
 {
-    public class SqlConnections
+    public class SqlConnections // TODO arek - delete it - it's here just because fixing the studio compilation wasn't easy for me
     {
         public string Id { get; set; }
 
