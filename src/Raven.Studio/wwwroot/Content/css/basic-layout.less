@@ -38,6 +38,21 @@
     .slidein-style;
 }
 
+.flex-horizontal {
+    display:flex;
+    align-items:center;
+
+    div + div {
+        margin-left:@grid-gutter-width/4;
+    }
+
+    .flex-content {
+        flex-grow:1;
+        position:relative;
+    }
+
+}
+
 .flex-vertical {
     display:flex;
     flex-direction:column;
