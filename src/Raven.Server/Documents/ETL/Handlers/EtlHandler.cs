@@ -1,8 +1,11 @@
-﻿using System.Linq;
-using System.Net;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -13,25 +16,7 @@ namespace Raven.Server.Documents.ETL.Handlers
         [RavenAction("/databases/*/etl/stats", "GET")]
         public Task GetStats()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            EtlProcessStatistics[] etlStats;
-            if (string.IsNullOrEmpty(name))
-            {
-                etlStats = Database.EtlLoader.Processes.Select(x => x.Statistics).ToArray();
-            }
-            else
-            {
-                var etl = Database.EtlLoader.Processes.FirstOrDefault(r => r.Name == name);
-
-                if (etl == null)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.CompletedTask;
-                }
-
-                etlStats = new[] { etl.Statistics };
-            }
+            var etlStats = GetProcessesToReportOn().Select(x => x.Statistics).ToArray();
             
             JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -55,6 +40,14 @@ namespace Raven.Server.Documents.ETL.Handlers
         [RavenAction("/databases/*/etl/debug/stats", "GET")]
         public Task GetDebugStats()
         {
+            var debugStats = GetProcessesToReportOn()
+                .Select(etl => new DynamicJsonValue()
+                {
+                    [nameof(etl.Name)] = etl.Name,
+                    [nameof(etl.Statistics)] = etl.Statistics.ToJson(),
+                    [nameof(etl.Metrics)] = etl.Metrics.ToJson(),
+                }).ToArray();
+
             JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
@@ -62,15 +55,9 @@ namespace Raven.Server.Documents.ETL.Handlers
                 {
                     writer.WriteStartObject();
 
-                    writer.WriteResults(context, Database.EtlLoader.Processes, (w, c, etl) =>
+                    writer.WriteResults(context, debugStats, (w, c, stats) =>
                     {
-                        w.WriteObject(context.ReadObject(new DynamicJsonValue
-                        {
-                            [nameof(etl.Name)] = etl.Name,
-                            [nameof(etl.Statistics)] = etl.Statistics.ToJson(),
-                            [nameof(etl.Metrics)] = etl.Metrics.ToJson(),
-
-                        }, "etl/debug/stats"));
+                        w.WriteObject(context.ReadObject(stats, "etl/debug/stats"));
                     });
 
                     writer.WriteEndObject();
@@ -82,9 +69,55 @@ namespace Raven.Server.Documents.ETL.Handlers
         [RavenAction("/databases/*/etl/performance", "GET")]
         public Task Performance()
         {
-            // TODO arek
+            var stats = GetProcessesToReportOn()
+                .Select(x => new EtlProcessPerformanceStats
+                {
+                    ProcessName = x.Name,
+                    Performance = x.GetPerformanceStats()
+                })
+                .ToArray();
+
+            JsonOperationContext context;
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteArray(context, stats, (w, c, stat) =>
+                {
+                    w.WriteStartObject();
+
+                    w.WritePropertyName(nameof(stat.ProcessName));
+                    w.WriteString(stat.ProcessName);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(stat.Performance));
+                    w.WriteArray(c, stat.Performance, (wp, cp, performance) =>
+                    {
+                        var statsDjv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats);
+                        wp.WriteObject(context.ReadObject(statsDjv, "etl/performance"));
+                    });
+
+                    w.WriteEndObject();
+                });
+            }
 
             return Task.CompletedTask;
+        }
+
+        private IEnumerable<EtlProcess> GetProcessesToReportOn()
+        {
+            IEnumerable<EtlProcess> etls;
+            var names = HttpContext.Request.Query["name"];
+
+            if (names.Count == 0)
+                etls = Database.EtlLoader.Processes
+                    .OrderBy(x => x.Name);
+            else
+            {
+                etls = Database.EtlLoader.Processes
+                    .Where(x => names.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
+            }
+
+            return etls;
         }
     }
 }
