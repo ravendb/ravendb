@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using FastTests.Voron.FixedSize;
 using FastTests.Voron.Util;
+using Sparrow;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl.Compaction;
@@ -224,8 +225,6 @@ namespace SlowTests.Voron.Compaction
             StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir),
                 (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactedData));
 
-            // ensure it can write more data
-
             using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(compactedData)))
             {
                 using (var tx = compacted.WriteTransaction())
@@ -241,6 +240,75 @@ namespace SlowTests.Voron.Compaction
                     Assert.Equal(barSize, barStream.Length);
                     Assert.Equal(barBytes, barStream.ReadData());
                     Assert.Null(tree.GetStreamTag("bar"));
+                }
+            }
+        }
+
+        [Theory]
+        [InlineDataWithRandomSeed(398, 345)]
+        [InlineDataWithRandomSeed(217, 701)]
+        public void Compressed_tree_RavenDB_6510(int iterationCount, int size, int seed)
+        {
+            var r = new Random(seed);
+
+            var bytes = new byte[size];
+            r.NextBytes(bytes);
+
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            {
+                using (var tx = env.WriteTransaction())
+                {
+                    tx.CreateTree("tree", flags: TreeFlags.LeafsCompressed);
+
+                    tx.Commit();
+                }
+                
+                using (var tx = env.WriteTransaction())
+                {
+                    var tree = tx.ReadTree("tree");
+
+                    for (var i = 0; i < iterationCount; i++)
+                    {
+                        tree.Add(i.ToString(), new MemoryStream(bytes));
+                    }
+
+                    tx.Commit();
+                }
+            }
+
+            var compactedData = Path.Combine(DataDir, "Compacted");
+            StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir),
+                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactedData));
+
+            using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(compactedData)))
+            {
+                using (var tx = compacted.WriteTransaction())
+                {
+                    var tree = tx.ReadTree("tree");
+
+                    Assert.True(tree.IsLeafCompressionSupported);
+
+                    for (var i = 0; i < iterationCount; i++)
+                    {
+                        Slice key;
+
+                        using (Slice.From(tx.Allocator, i.ToString(), ByteStringType.Immutable, out key))
+                        {
+                            using (var readResult = tree.ReadDecompressed(key))
+                            {
+                                if (readResult == null)
+                                {
+                                    
+                                }
+
+                                Assert.NotNull(readResult);
+
+                                var result = readResult.Reader.ReadBytes(readResult.Reader.Length).ToArray();
+
+                                Assert.Equal(bytes, result);
+                            }
+                        }
+                    }
                 }
             }
         }
