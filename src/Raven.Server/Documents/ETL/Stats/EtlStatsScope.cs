@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public EtlPerformanceOperation ToPerformanceOperation(string name)
         {
-            var operation = new EtlPerformanceOperation
+            var operation = new EtlPerformanceOperation(Duration)
             {
                 Name = name
             };

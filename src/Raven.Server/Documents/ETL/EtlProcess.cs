@@ -39,6 +39,8 @@ namespace Raven.Server.Documents.ETL
         public abstract void Dispose();
 
         public abstract void NotifyAboutWork();
+
+        public abstract EtlPerformanceStats[] GetPerformanceStats();
     }
 
     public abstract class EtlProcess<TExtracted, TTransformed> : EtlProcess where TExtracted : ExtractedItem
@@ -397,7 +399,7 @@ namespace Raven.Server.Documents.ETL
                 _lastEtlStats.TryDequeue(out stats);
         }
 
-        public EtlPerformanceStats[] GetIndexingPerformance()
+        public override EtlPerformanceStats[] GetPerformanceStats()
         {
             //var lastStats = _lastStats;
 
