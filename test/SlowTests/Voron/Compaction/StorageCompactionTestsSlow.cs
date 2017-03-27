@@ -2,7 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using FastTests.Voron.FixedSize;
+using FastTests.Voron.Util;
 using Voron;
+using Voron.Data.BTrees;
 using Voron.Impl.Compaction;
 using Xunit;
 
@@ -187,6 +190,57 @@ namespace SlowTests.Voron.Compaction
                             Assert.Equal(multiValuesCount, count);
                         }
                     }
+                }
+            }
+        }
+
+        [Theory]
+        [InlineDataWithRandomSeed(123, 99)]
+        [InlineDataWithRandomSeed(1024*1024*5, 1)]
+        public void Streams_RavenDB_6510(int fooSize, int barSize, int seed)
+        {
+            var r = new Random(seed);
+
+            var fooBytes = new byte[fooSize];
+            var barBytes = new byte[barSize];
+
+            r.NextBytes(fooBytes);
+            r.NextBytes(barBytes);
+
+            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
+            {
+                using (var tx = env.WriteTransaction())
+                {
+                    var tree = tx.CreateTree("streams");
+
+                    tree.AddStream("foo", new MemoryStream(fooBytes), "t4g");
+                    tree.AddStream("bar", new MemoryStream(barBytes));
+
+                    tx.Commit();
+                }
+            }
+
+            var compactedData = Path.Combine(DataDir, "Compacted");
+            StorageCompaction.Execute(StorageEnvironmentOptions.ForPath(DataDir),
+                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactedData));
+
+            // ensure it can write more data
+
+            using (var compacted = new StorageEnvironment(StorageEnvironmentOptions.ForPath(compactedData)))
+            {
+                using (var tx = compacted.WriteTransaction())
+                {
+                    var tree = tx.ReadTree("streams");
+
+                    var fooStream = tree.ReadStream("foo");
+                    Assert.Equal(fooSize, fooStream.Length);
+                    Assert.Equal(fooBytes, fooStream.ReadData());
+                    Assert.Equal("t4g", tree.GetStreamTag("foo"));
+
+                    var barStream = tree.ReadStream("bar");
+                    Assert.Equal(barSize, barStream.Length);
+                    Assert.Equal(barBytes, barStream.ReadData());
+                    Assert.Null(tree.GetStreamTag("bar"));
                 }
             }
         }

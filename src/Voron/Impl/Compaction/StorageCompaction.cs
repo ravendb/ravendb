@@ -197,6 +197,24 @@ namespace Voron.Impl.Compaction
                                     } while (multiTreeIterator.MoveNext());
                                 }
                             }
+                            else if (existingTree.State.Flags == (TreeFlags.FixedSizeTrees | TreeFlags.Streams))
+                            {
+                                var tag = existingTree.GetStreamTag(key);
+
+                                using (var stream = existingTree.ReadStream(key))
+                                {
+                                    if (tag != null)
+                                    {
+                                        Slice tagStr;
+                                        using (Slice.From(txw.Allocator, tag, out tagStr))
+                                            newTree.AddStream(key, stream, tagStr);
+                                    }
+                                    else
+                                        newTree.AddStream(key, stream);
+
+                                    transactionSize += stream.Length;
+                                }
+                            }
                             else
                             {
                                 using (var value = existingTree.Read(key).Reader.AsStream())
