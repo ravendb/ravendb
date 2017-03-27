@@ -13,7 +13,7 @@ class resetIndexCommand extends commandBase {
             name: this.indexNameToReset
         };
         const url = endpoints.databases.index.indexes + this.urlEncodeArgs(args);
-        return this.reset(url, null, this.db)
+        return this.reset<{ IndexId: number }>(url, null, this.db)
             .done(() => this.reportSuccess("Index " + this.indexNameToReset + " successfully reset"))
             .fail((response: JQueryXHR) => this.reportError("Failed to reset index: " + this.indexNameToReset, response.responseText, response.statusText));
     }

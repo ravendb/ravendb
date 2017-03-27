@@ -3,17 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Tests.Common;
 
-namespace Raven.Tests.Issues
+using System;
+using System.Globalization;
+using FastTests;
+using Raven.Client.Json.Converters;
+using Xunit;
+
+namespace SlowTests.Issues
 {
-    using System;
-    using System.Globalization;
-
-    using Raven.Abstractions.Linq;
-
-    using Xunit;
-
     public class RavenDB_2205 : NoDisposalNeeded
     {
         [Fact]

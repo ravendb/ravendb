@@ -17,6 +17,14 @@ class subscriptions extends viewModelBase {
             });
     }
 
+    filterFormatter(script: string) {
+        if (script) {
+            const formatted = Prism.highlight(script, (Prism.languages as any).javascript);
+            return `<pre><code>${formatted}</code></pre>`;
+        }
+        return 'Not defined';
+    }
+
     private fetchSubscriptions() {
         return new getSubscriptionsCommand(this.activeDatabase())
             .execute();
