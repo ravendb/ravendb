@@ -3,23 +3,23 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
+
+using FastTests;
+using SlowTests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_2209 : RavenTest
+    public class RavenDB_2209 : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-6244")]
         public void LazyLoadResultShouldBeUpToDateEvenIfAggressiveCacheIsEnabled()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Id = "users/1",
                         Name = "Arek"
@@ -32,11 +32,11 @@ namespace Raven.Tests.Issues
                     // make sure that object is cached
                     using (var session = store.OpenSession())
                     {
-                        store.Changes().Task.Result.WaitForAllPendingSubscriptions();
+                        //store.Changes().Task.Result.WaitForAllPendingSubscriptions();
 
                         var users = session.Load<User>(new[] { "users/1" });
 
-                        Assert.Equal("Arek", users[0].Name);
+                        Assert.Equal("Arek", users["users/1"].Name);
                     }
 
                     using (var session = store.OpenSession())
@@ -44,14 +44,14 @@ namespace Raven.Tests.Issues
                         var users = session.Advanced.Lazily.Load<User>(new[] { "users/1" });
                         session.Advanced.Lazily.Load<User>(new[] { "users/2" });
 
-                        Assert.Equal("Arek", users.Value[0].Name);
+                        Assert.Equal("Arek", users.Value["users/1"].Name);
                     }
 
                     store.GetObserveChangesAndEvictItemsFromCacheTask().Wait();
 
                     using (var session = store.OpenSession())
                     {
-                        session.Store(new User()
+                        session.Store(new User
                         {
                             Id = "users/1",
                             Name = "Adam"
@@ -59,13 +59,12 @@ namespace Raven.Tests.Issues
                         session.SaveChanges();
                     }
 
-
                     using (var session = store.OpenSession())
                     {
                         var users = session.Advanced.Lazily.Load<User>(new[] { "users/1" });
                         session.Advanced.Lazily.Load<User>(new[] { "users/2" });
 
-                        Assert.Equal("Adam", users.Value[0].Name);
+                        Assert.Equal("Adam", users.Value["users/1"].Name);
                     }
                 }
             }
