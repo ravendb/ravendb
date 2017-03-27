@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.ETL.Handlers
                     w.WritePropertyName(nameof(stat.Performance));
                     w.WriteArray(c, stat.Performance, (wp, cp, performance) =>
                     {
-                        var statsDjv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats);
+                        var statsDjv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(performance);
                         wp.WriteObject(context.ReadObject(statsDjv, "etl/performance"));
                     });
 
