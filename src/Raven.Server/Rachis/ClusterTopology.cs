@@ -21,9 +21,30 @@ namespace Raven.Server.Rachis
         }
 
         //Try to avoid using this since it is expensive
-        public bool HasUrl(string nodeUrl)
+        public (bool hasUrl,string nodeTag) HasUrl(string nodeUrl)
         {
-            return Members.Values.Contains(nodeUrl) || Promotables.Values.Contains(nodeUrl) || Watchers.Values.Contains(nodeUrl);
+            foreach (var memeber in Members)
+            {
+                if (memeber.Value == nodeUrl)
+                {
+                    return (true, memeber.Key);
+                }
+            }
+            foreach (var promotable in Promotables)
+            {
+                if (promotable.Value == nodeUrl)
+                {
+                    return (true, promotable.Key);
+                }
+            }
+            foreach (var watcher in Watchers)
+            {
+                if (watcher.Value == nodeUrl)
+                {
+                    return (true, watcher.Key);
+                }
+            }
+            return (false, "does not exists");
         }
 
         public ClusterTopology()

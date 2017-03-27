@@ -76,6 +76,8 @@ namespace Raven.Server.ServerWide
         public TransactionContextPool ContextPool;
 
         public ClusterStateMachine Cluster => _engine.StateMachine;
+        public string LeaderTag => _engine.LeaderTag;
+
         public string NodeTag => _engine.Tag;
 
         private Timer _timer;
