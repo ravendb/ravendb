@@ -189,16 +189,24 @@ namespace Raven.Server.Documents.ETL
         {
             if (stats.NumberOfExtractedItems >= Database.Configuration.Etl.MaxNumberOfExtractedDocuments)
             {
+                var reason = $"Stopping the batch because it has already processed {stats.NumberOfExtractedItems} items";
+
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Stopping the batch because it has already processed {stats.NumberOfExtractedItems} items");
+                    Logger.Info(reason);
+
+                stats.RecordBatchCompleteReason(reason);
 
                 return false;
             }
 
             if (stats.Duration >= Database.Configuration.Etl.ExtractAndTransformTimeout.AsTimeSpan)
             {
+                var reason = $"Stopping the batch after {stats.Duration} due to extract and transform processing timeout";
+
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Stopping the batch after {stats.Duration} due to extract and transform processing timeout");
+                    Logger.Info(reason);
+
+                stats.RecordBatchCompleteReason(reason);
 
                 return false;
             }
@@ -209,6 +217,15 @@ namespace Raven.Server.Documents.ETL
                 if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
                         Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out memoryUsage) == false)
                 {
+                    var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {_threadAllocations.Allocations}. Current memory usage: " +
+                                 $"{nameof(memoryUsage.WorkingSet)} = {memoryUsage.WorkingSet}," +
+                                 $"{nameof(memoryUsage.PrivateMemory)} = {memoryUsage.PrivateMemory}";
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info(reason);
+
+                    stats.RecordBatchCompleteReason(reason);
+
                     return false;
                 }
             }

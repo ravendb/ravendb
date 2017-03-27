@@ -24,5 +24,7 @@ namespace Raven.Server.Documents.ETL.Stats
         public long LastTransformedEtag { get; set; }
 
         public int NumberOfExtractedItems { get; set; }
+
+        public string BatchCompleteReason { get; set; }
     }
 }
