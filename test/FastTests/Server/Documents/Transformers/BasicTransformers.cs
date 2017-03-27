@@ -24,7 +24,7 @@ namespace FastTests.Server.Documents.Transformers
         public async Task CanPersist()
         {
             using (var server = GetNewServer(runInMemory: false, partialPath: "CanPersist"))
-            using (var store = GetDocumentStore(modifyName: x => "CanPersistDB", defaultServer: server, deleteDatabaseWhenDisposed: false, modifyDatabaseDocument: x => x.Settings["Raven/RunInMemory"] = "False"))
+            using (var store = GetDocumentStore(modifyName: x => "CanPersistDB", defaultServer: server, deleteDatabaseWhenDisposed: false, modifyDatabaseRecord: x => x.Settings["Raven/RunInMemory"] = "False"))
             {
                 var task1 = store.Admin.SendAsync(new PutTransformerOperation(new TransformerDefinition
                 {
@@ -97,7 +97,7 @@ namespace FastTests.Server.Documents.Transformers
 
                     var blittableJsonReaderObject = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                    var index = await Server.ServerStore.TEMP_WriteDbAsync(context, store.DefaultDatabase, blittableJsonReaderObject, null);
+                    var index = await Server.ServerStore.WriteDbAsync(context, store.DefaultDatabase, blittableJsonReaderObject, null);
                     await Server.ServerStore.Cluster.WaitForIndexNotification(index);
 
                 }

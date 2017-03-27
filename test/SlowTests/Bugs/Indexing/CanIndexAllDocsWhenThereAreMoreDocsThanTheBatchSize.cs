@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Server;
@@ -22,7 +23,7 @@ namespace SlowTests.Bugs.Indexing
             public bool Active { get; set; }
         }
 
-        private readonly Action<DatabaseDocument> _modifyMapTimeout = doc =>
+        private readonly Action<DatabaseRecord> _modifyMapTimeout = doc =>
         {
             doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "0";
         };
@@ -30,7 +31,7 @@ namespace SlowTests.Bugs.Indexing
         [Fact]
         public void WillIndexAllWhenCreatingIndex()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: _modifyMapTimeout))
+            using (var store = GetDocumentStore(modifyDatabaseRecord: _modifyMapTimeout))
             {
                 using (var session = store.OpenSession())
                 {
@@ -60,7 +61,7 @@ namespace SlowTests.Bugs.Indexing
         [Fact]
         public void WillIndexAllAfterCreatingIndex()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: _modifyMapTimeout))
+            using (var store = GetDocumentStore(modifyDatabaseRecord: _modifyMapTimeout))
             {
                 store.Admin.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition

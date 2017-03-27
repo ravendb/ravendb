@@ -12,7 +12,7 @@ namespace SlowTests.SlowTests.Bugs
         [Fact]
         public void CanGetVeryBigResultSetsEvenThoughItIsBadForYou()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.MaxPageSize)] = "20000"))
+            using (var store = GetDocumentStore(modifyDatabaseRecord: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.MaxPageSize)] = "20000"))
             {
                 using (var session = store.OpenSession())
                 {

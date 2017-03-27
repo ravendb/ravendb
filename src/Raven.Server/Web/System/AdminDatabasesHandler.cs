@@ -114,7 +114,7 @@ namespace Raven.Server.Web.System
                 }
                 var topologyJson = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                var newEtag = await ServerStore.TEMP_WriteDbAsync(context, name, topologyJson, etag);
+                var newEtag = await ServerStore.WriteDbAsync(context, name, topologyJson, etag);
 
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
@@ -152,7 +152,7 @@ namespace Raven.Server.Web.System
                 var etag = GetLongFromHeaders("ETag");
 
                 var json = context.ReadForDisk(RequestBodyStream(), name);
-                var document = JsonDeserializationServer.DatabaseDocument(json);
+                var document = JsonDeserializationCluster.DatabaseRecord(json);
 
                 try
                 {
@@ -188,7 +188,7 @@ namespace Raven.Server.Web.System
                     [nameof(DatabaseRecord.Topology)] = topologyJson
                 };
 
-                var newEtag = await ServerStore.TEMP_WriteDbAsync(context, name, json, etag);
+                var newEtag = await ServerStore.WriteDbAsync(context, name, json, etag);
 
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
@@ -313,7 +313,7 @@ namespace Raven.Server.Web.System
 
                     var json = EntityToBlittable.ConvertEntityToBlittable(dbDoc, DocumentConventions.Default, context);
 
-                    var index = await ServerStore.TEMP_WriteDbAsync(context, name, json, null);
+                    var index = await ServerStore.WriteDbAsync(context, name, json, null);
                     await ServerStore.Cluster.WaitForIndexNotification(index);
 
                     ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));

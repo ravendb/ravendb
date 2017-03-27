@@ -1,5 +1,6 @@
 using System;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
@@ -20,9 +21,9 @@ namespace SlowTests.Issues
                 store
                     .Admin
                     .Server
-                    .Send(new CreateDatabaseOperation(new DatabaseDocument
+                    .Send(new CreateDatabaseOperation(new DatabaseRecord
                     {
-                        Id = dbName
+                        DatabaseName = dbName
                     }));
 
                 using (var session = store.OpenSession(dbName))
