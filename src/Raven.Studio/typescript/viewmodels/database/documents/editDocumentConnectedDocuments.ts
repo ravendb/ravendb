@@ -103,7 +103,7 @@ class connectedDocuments {
             new actionColumn<attachmentItem>(x => this.downloadAttachment(x), "Name", x => x.name, "160px",
                 {
                     extraClass: () => 'btn-link',
-                    title: () => "Download attachment"
+                    title: (item: attachmentItem) => "Download file: " + item.name
                 }),
             new textColumn<attachmentItem>(x => generalUtils.formatBytesToSize(x.size), "Size", "70px"),
             new actionColumn<attachmentItem>(x => this.deleteAttachment(x),
