@@ -16,7 +16,7 @@ class saveDocumentCommand extends commandBase {
 
         const args = ko.toJSON(commands);
         const url = endpoints.databases.batch.bulk_docs;
-        const saveTask = this.post(url, args, this.db);
+        const saveTask = this.post<saveDocumentResponseDto>(url, args, this.db);
 
         if (this.reportSaveProgress) {
             saveTask.done((result: saveDocumentResponseDto) => this.reportSuccess("Saved " + result.Results[0].Key));
