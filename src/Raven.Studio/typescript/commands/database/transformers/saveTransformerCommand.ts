@@ -15,7 +15,7 @@ class saveTransformerCommand extends commandBase {
         const url = endpoints.databases.transformer.transformers + this.urlEncodeArgs(args);
         const saveTransformerPutArgs = JSON.stringify(this.transformer.toDto());
 
-        return this.put(url, saveTransformerPutArgs, this.db)
+        return this.put<void>(url, saveTransformerPutArgs, this.db)
             .done(() => this.reportSuccess("Saved " + this.transformer.name()))
             .fail((result: JQueryXHR) => this.reportError("Unable to save transformer", result.responseText, result.statusText));
 

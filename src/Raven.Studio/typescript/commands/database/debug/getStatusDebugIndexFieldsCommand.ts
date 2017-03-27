@@ -9,7 +9,7 @@ class getStatusDebugIndexFieldsCommand extends commandBase {
 
     execute(): JQueryPromise<statusDebugIndexFieldsDto> {
         var url = "/debug/index-fields";//TODO: use endpoints
-        return this.post(url, this.indexStr, this.db);
+        return this.post<statusDebugIndexFieldsDto>(url, this.indexStr, this.db);
     }
 }
 

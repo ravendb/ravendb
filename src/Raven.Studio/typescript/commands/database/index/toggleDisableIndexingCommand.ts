@@ -17,7 +17,7 @@ class toggleDisableIndexingCommand extends commandBase {
             headers: { "ETag": databaseConfigDocument["@metadata"]["@etag"] }
         };
 
-        return this.put(basicUrl, JSON.stringify(databaseConfigDocument), null, jQueryOptions)
+        return this.put<void>(basicUrl, JSON.stringify(databaseConfigDocument), null, jQueryOptions)
             .done(() => {
                 const state = this.start ? "Enabled" : "Disabled";
                 this.reportSuccess(`Indexing is ${state}`);
