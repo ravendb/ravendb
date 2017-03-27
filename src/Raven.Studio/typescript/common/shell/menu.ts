@@ -160,7 +160,7 @@ class menu {
 
     private setActiveMenuItem() {
         let flattenedItems = this.itemsFlattened();
-        for (let i = 0; i++; i < flattenedItems.length) {
+        for (let i = 0; i < flattenedItems.length; i++) {
             let item = flattenedItems[i];
             if (item.type === 'intermediate') {
                 (item as intermediateMenuItem).isOpen(false);
