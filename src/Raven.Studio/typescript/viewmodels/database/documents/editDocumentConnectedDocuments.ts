@@ -207,13 +207,25 @@ class connectedDocuments {
             return connectedDocuments.emptyDocResult<connectedDocument>();
         }
 
+        const includeLatestFakeItem = skip === 0;
+
+        const fakeCurrentItem = {
+            id: 'Current document',
+            href: appUrl.forEditDoc(doc.getId(), this.db())
+        } as connectedDocument;
+
+        // shift by one item, to serve fake item properly
+        if (skip > 0) { skip--; }
+        take--;
+
         const fetchTask = $.Deferred<pagedResult<connectedDocument>>();
         new getDocumentRevisionsCommand(doc.getId(), this.db(), skip, take, true)
             .execute()
             .done(result => {
+                const mappedResults = result.items.map(x => this.revisionToConnectedDocument(x));
                 fetchTask.resolve({
-                    items: result.items.map(x => this.revisionToConnectedDocument(x)),
-                    totalResultCount: result.totalResultCount
+                    items: includeLatestFakeItem ? [fakeCurrentItem].concat(...mappedResults) : mappedResults,
+                    totalResultCount: result.totalResultCount + 1 // include latest item
                 });
             })
             .fail(xhr => fetchTask.reject(xhr));
