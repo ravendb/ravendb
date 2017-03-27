@@ -13,7 +13,10 @@ namespace Raven.Client.Server
         {
             AssertValidName(name);
 
-            return new DatabaseRecord(name);
+            return new DatabaseRecord(name)
+            {
+                Settings = new System.Collections.Generic.Dictionary<string, string>(),
+            };
         }
 
 
