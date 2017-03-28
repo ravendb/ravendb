@@ -1,10 +1,7 @@
 using Sparrow.Binary;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Sparrow
 {
@@ -69,6 +66,31 @@ namespace Sparrow
             internal const uint PRIME32_5 = 374761393U;
         }
 
+        public interface ICharacterModifier
+        {
+            char Modify(char ch);
+        }
+
+        public struct OrdinalModifier : ICharacterModifier
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public char Modify(char ch)
+            {
+                return ch;
+            }
+        }
+
+        public struct OrdinalIgnoreCaseModifier : ICharacterModifier
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public char Modify(char ch)
+            {
+                if (ch >= 65 && ch <= 90)
+                    ch = (char)(ch | 0x0020);
+                return ch;
+            }
+        }
+
         /// <summary>
         /// A port of the original XXHash algorithm from Google in 32bits 
         /// </summary>
@@ -76,7 +98,7 @@ namespace Sparrow
         public static class XXHash32
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static unsafe uint CalculateInline(byte* buffer, int len, uint seed = 0)
+            public static uint CalculateInline(byte* buffer, int len, uint seed = 0)
             {
                 unchecked
                 {
@@ -123,7 +145,6 @@ namespace Sparrow
 
                     h32 += (uint)len;
 
-
                     while (buffer + 4 <= bEnd)
                     {
                         h32 += *((uint*)buffer) * XXHash32Constants.PRIME32_3;
@@ -134,7 +155,7 @@ namespace Sparrow
                     while (buffer < bEnd)
                     {
                         h32 += (uint)(*buffer) * XXHash32Constants.PRIME32_5;
-                        h32 = Bits.RotateLeft32(h32, 11) * XXHash32Constants.PRIME32_1;
+                        h32 = Bits.RotateLeft32(h32, 11) * XXHash32Constants.PRIME32_1;                    
                         buffer++;
                     }
 
@@ -148,7 +169,7 @@ namespace Sparrow
                 }
             }
 
-            public static unsafe uint Calculate(byte* buffer, int len, uint seed = 0)
+            public static uint Calculate(byte* buffer, int len, uint seed = 0)
             {
                 return CalculateInline(buffer, len, seed);
             }
@@ -162,12 +183,95 @@ namespace Sparrow
                     return CalculateInline(buffer, buf.Length, seed);
                 }
             }
-            public static uint CalculateRaw(string buf, uint seed = 0)
+
+            public static uint CalculateRaw(string buffer, uint seed = 0)
             {
-                fixed (char* buffer = buf)
+                fixed (char* bufferPtr = buffer)
                 {
-                    return CalculateInline((byte*)buffer, buf.Length * sizeof(char), seed);
+                    return CalculateInline((byte*)bufferPtr, buffer.Length * sizeof(char), seed);
                 }
+            }
+
+            public static uint Calculate(string buffer, uint seed = 0)
+            {
+                return CalculateInline<OrdinalModifier>(buffer, seed);
+            }
+
+            public static uint Calculate<TCharacterModifier>(string buffer, uint seed = 0) where TCharacterModifier : struct, ICharacterModifier
+            {
+                return CalculateInline<TCharacterModifier>(buffer, seed);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]            
+            public static uint CalculateInline<TCharacterModifier>(string buffer, uint seed = 0) where TCharacterModifier : struct, ICharacterModifier
+            {                
+                unchecked
+                {
+                    uint h32;
+
+                    uint len = (uint)buffer.Length;
+
+                    uint position = 0;
+                    if (len >= 8)
+                    {                        
+                        uint v1 = seed + XXHash32Constants.PRIME32_1 + XXHash32Constants.PRIME32_2;
+                        uint v2 = seed + XXHash32Constants.PRIME32_2;
+                        uint v3 = seed + 0;
+                        uint v4 = seed - XXHash32Constants.PRIME32_1;
+
+                        uint limit = len - 8;
+                        do
+                        {
+                            v1 += CharToUInt32<TCharacterModifier>(buffer, position) * XXHash32Constants.PRIME32_2;
+                            v2 += CharToUInt32<TCharacterModifier>(buffer, position + 2) * XXHash32Constants.PRIME32_2;
+                            v3 += CharToUInt32<TCharacterModifier>(buffer, position + 4) * XXHash32Constants.PRIME32_2;
+                            v4 += CharToUInt32<TCharacterModifier>(buffer, position + 6) * XXHash32Constants.PRIME32_2;
+
+                            position += 8;
+
+                            v1 = Bits.RotateLeft32(v1, 13);
+                            v2 = Bits.RotateLeft32(v2, 13);
+                            v3 = Bits.RotateLeft32(v3, 13);
+                            v4 = Bits.RotateLeft32(v4, 13);
+
+                            v1 *= XXHash32Constants.PRIME32_1;
+                            v2 *= XXHash32Constants.PRIME32_1;
+                            v3 *= XXHash32Constants.PRIME32_1;
+                            v4 *= XXHash32Constants.PRIME32_1;
+                        }
+                        while (position <= limit);
+
+                        h32 = Bits.RotateLeft32(v1, 1) + Bits.RotateLeft32(v2, 7) + Bits.RotateLeft32(v3, 12) + Bits.RotateLeft32(v4, 18);
+                    }
+                    else
+                    {
+                        h32 = seed + XXHash32Constants.PRIME32_5;
+                    }
+
+                    h32 += len * sizeof(char);
+
+                    while (position + 2 <= len)
+                    {
+                        h32 += CharToUInt32<TCharacterModifier>(buffer, position) * XXHash32Constants.PRIME32_3;
+                        h32 = Bits.RotateLeft32(h32, 17) * XXHash32Constants.PRIME32_4;
+                        position += 2;
+                    }
+
+                    h32 ^= h32 >> 15;
+                    h32 *= XXHash32Constants.PRIME32_2;
+                    h32 ^= h32 >> 13;
+                    h32 *= XXHash32Constants.PRIME32_3;
+                    h32 ^= h32 >> 16;
+
+                    return h32;
+                }                
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static uint CharToUInt32<TCharacterModifier>(string buffer, uint position) where TCharacterModifier : struct, ICharacterModifier
+            {
+                TCharacterModifier modifier = default(TCharacterModifier);
+                return (uint)modifier.Modify(buffer[(int)position + 1]) << 16 | modifier.Modify(buffer[(int)position]);
             }
 
             public static uint Calculate(byte[] buf, int len = -1, uint seed = 0)
@@ -218,7 +322,7 @@ namespace Sparrow
         public static class XXHash64
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static unsafe ulong CalculateInline(byte* buffer, ulong len, ulong seed = 0)
+            public static ulong CalculateInline(byte* buffer, ulong len, ulong seed = 0)
             {
                 ulong h64;
 
@@ -605,5 +709,109 @@ namespace Sparrow
         }
 
         #endregion
+
+        public static class Marvin32
+        {
+            public static uint Calculate(byte[] buffer, ulong seed = 0x5D70D359C498B3F8ul)
+            {
+                fixed ( byte* ptr = buffer )
+                    return CalculateInline(ptr, buffer.Length, seed);
+            }
+
+            public static uint Calculate(string buffer, ulong seed = 0x5D70D359C498B3F8ul)
+            {
+                return CalculateInline<OrdinalModifier>(buffer, seed);
+            }
+
+            public static uint Calculate<TCharacterModifier>(string buffer, ulong seed = 0x5D70D359C498B3F8ul) where TCharacterModifier : struct, ICharacterModifier
+            {
+                return CalculateInline<TCharacterModifier>(buffer, seed);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static uint CalculateInline(byte* buffer, int len, ulong seed = 0x5D70D359C498B3F8ul)
+            {
+                unchecked
+                {
+                    uint high = (uint)(seed >> 32);
+                    uint low = (uint)seed;
+
+                    byte* bEnd = buffer + len;
+                    byte* loopEnd = bEnd - sizeof(uint);
+                    byte* ptr = buffer;
+                    while (ptr <= loopEnd)
+                    {
+                        MarvinMix(ref high, ref low, *(uint*)ptr);
+                        ptr += sizeof(uint);
+                    }
+
+                    uint final = 0x80;
+                    switch ((int)(bEnd - ptr))
+                    {
+                        case 3: final = (final << 8) | ptr[2]; goto case 2;
+                        case 2: final = (final << 8) | ptr[1]; goto case 1;
+                        case 1: final = (final << 8) | ptr[0]; break;
+                    }
+
+                    MarvinMix(ref high, ref low, final);
+                    MarvinMix(ref high, ref low, 0);
+
+                    return low ^ high;
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static uint CalculateInline(string buffer, ulong seed = 0x5D70D359C498B3F8ul)
+            {
+                return CalculateInline<OrdinalModifier>(buffer, seed);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static uint CalculateInline<TCharacterModifier>(string buffer, ulong seed = 0x5D70D359C498B3F8ul) where TCharacterModifier : struct, ICharacterModifier
+            {
+                uint high = (uint)(seed >> 32);
+                uint low = (uint)seed;
+
+                int len = buffer.Length;
+                int len2 = len - 2;
+                int position = 0;
+                while (position <= len2)
+                {
+                    MarvinMix(ref high, ref low, CharToUInt32<TCharacterModifier>(buffer, position));
+                    position += 2;
+                }
+
+                uint final = 0x80;
+                if ((len & 1) != 0) // Case we have yet another char available to process.
+                {
+                    TCharacterModifier modifier = default(TCharacterModifier);
+                    final = (final << 16) | modifier.Modify(buffer[position]);
+                }
+
+                MarvinMix(ref high, ref low, final);
+                MarvinMix(ref high, ref low, 0);
+
+                return low ^ high;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static uint CharToUInt32<TCharacterModifier>(string buffer, int position) where TCharacterModifier : struct, ICharacterModifier
+            {
+                TCharacterModifier modifier = default(TCharacterModifier);
+                return (uint)modifier.Modify(buffer[position + 1]) << 16 | modifier.Modify(buffer[position]);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static void MarvinMix(ref uint high, ref uint low, uint v)
+            {
+                low += v;
+                high ^= low;
+                low = Bits.RotateLeft32(low, 20) + high;
+                high = Bits.RotateLeft32(high, 9) ^ low;
+                low = Bits.RotateLeft32(low, 27) + high;
+                high = Bits.RotateLeft32(high, 19);
+            }
+        }
+
     }
 }
