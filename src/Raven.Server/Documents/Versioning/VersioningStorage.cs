@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Versioning
         }
 
         public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags, 
-            DocumentsOperationContext context, ref TableValueReader oldDocument, BlittableJsonReaderObject document,
+            BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document,
             ref DocumentFlags documentFlags, out VersioningConfigurationCollection configuration)
         {
             configuration = GetVersioningConfiguration(collectionName);
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Versioning
                 if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler)
                     return true;
 
-                if (oldDocument.Pointer == null)
+                if (existingDocument == null)
                 {
                     // we are not going to create a revision if it's an import from v3
                     // (since this import is going to import revisions as well)
@@ -166,8 +166,7 @@ namespace Raven.Server.Documents.Versioning
                 }
 
                 // compare the contents of the existing and the new document
-                var existingDocument = _documentsStorage.TableValueToDocument(context, ref oldDocument);
-                if (existingDocument.IsMetadataEqualTo(document) && existingDocument.IsEqualTo(document))
+                if (Document.IsEqualTo(existingDocument, document))
                 {
                     // no need to create a new revision, both documents have identical content
                     return false;
@@ -422,11 +421,11 @@ namespace Raven.Server.Documents.Versioning
         {
             var result = new Document
             {
-                StorageId = tvr.Id
+                StorageId = tvr.Id,
+                LoweredKey = DocumentsStorage.TableValueToString(context, (int)Columns.LoweredKey, ref tvr),
+                Key = DocumentsStorage.TableValueToKey(context, (int)Columns.Key, ref tvr),
+                Etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr)
             };
-            result.LoweredKey = DocumentsStorage.TableValueToString(context, (int)Columns.LoweredKey, ref tvr);
-            result.Key = DocumentsStorage.TableValueToKey(context, (int)Columns.Key, ref tvr);
-            result.Etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr);
 
             int size;
             result.Data = new BlittableJsonReaderObject(tvr.Read((int)Columns.Document, out size), size, context);
@@ -441,15 +440,6 @@ namespace Raven.Server.Documents.Versioning
             }
 
             result.Flags = *(DocumentFlags*)tvr.Read((int)Columns.Flags, out size);
-            if ((result.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
-            {
-                Slice prefixSlice;
-                using (_documentsStorage.AttachmentsStorage.GetAttachmentPrefix(context, result.LoweredKey.Buffer, result.LoweredKey.Size,
-                    AttachmentType.Revision, result.ChangeVector, out prefixSlice))
-                {
-                    result.Attachments = _documentsStorage.AttachmentsStorage.GetAttachmentsForDocument(context, prefixSlice.Clone(context.Allocator));
-                }
-            }
 
             return result;
         }

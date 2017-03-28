@@ -109,6 +109,16 @@ namespace Raven.Server.Documents.Replication
             ChangeVectorEntry[] incomingChangeVector,
             BlittableJsonReaderObject doc)
         {
+            var collection = CollectionName.GetCollectionName(id, doc);
+
+            var hasScript = _conflictResolver.ScriptConflictResolversCache.TryGetValue(collection, out ScriptResolver scriptResolver);
+            if (!hasScript || scriptResolver == null)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Script not found to resolve the {collection} collection");
+                return false;
+            }
+
             var conflictedDocs = new List<DocumentConflict>(documentsContext.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(documentsContext, id));
             var isTomstone = false;
 
@@ -132,8 +142,6 @@ namespace Raven.Server.Documents.Replication
             if (conflictedDocs.Count == 0)
                 InvalidConflictWhenThereIsNone(id);
 
-            var collection = CollectionName.GetCollectionName(id, doc);
-
             conflictedDocs.Add(new DocumentConflict
             {
                 LoweredKey = conflictedDocs[0].LoweredKey,
@@ -142,15 +150,6 @@ namespace Raven.Server.Documents.Replication
                 ChangeVector = incomingChangeVector,
                 Doc = doc
             });
-
-            ScriptResolver scriptResolver;
-            var hasScript = _conflictResolver.ScriptConflictResolversCache.TryGetValue(collection, out scriptResolver);
-            if (!hasScript || scriptResolver == null)
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Script not found to resolve the {collection} collection");
-                return false;
-            }
 
             return _conflictResolver.TryResolveConflictByScriptInternal(
                 documentsContext,
@@ -167,6 +166,9 @@ namespace Raven.Server.Documents.Replication
             ChangeVectorEntry[] incomingChangeVector,
             BlittableJsonReaderObject doc)
         {
+            if (_replicationDocument?.DefaultResolver?.ResolvingDatabaseId == null)
+                return false;
+
             var conflicts = new List<DocumentConflict>(_database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id));
             var localDocumentTuple = _database.DocumentsStorage.GetDocumentOrTombstone(context, id, false);
             var localDoc = DocumentConflict.From(context, localDocumentTuple.Document) ??
@@ -236,8 +238,7 @@ namespace Raven.Server.Documents.Replication
             var existingDoc = existing.Document;
             var existingTombstone = existing.Tombstone;
 
-            if (existingDoc != null && existingDoc.IsMetadataEqualTo(incomingDoc) &&
-                    existingDoc.IsEqualTo(incomingDoc))
+            if (existingDoc != null && Document.IsEqualTo(existingDoc.Data, incomingDoc))
             {
                 // no real conflict here, both documents have identical content
                 var mergedChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);

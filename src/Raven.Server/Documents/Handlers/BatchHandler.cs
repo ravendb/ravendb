@@ -76,8 +76,6 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task WaitForReplicationAsync(TimeSpan waitForReplicasTimeout, MergedBatchCommand mergedCmd)
         {
-
-
             int numberOfReplicasToWaitFor;
             var numberOfReplicasStr = GetStringQueryString("numberOfReplicasToWaitFor", required: false) ?? "1";
             if (numberOfReplicasStr == "majority")

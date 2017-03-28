@@ -196,7 +196,7 @@ namespace Raven.Server.Documents
 
                 // Update the document with an etag which is bigger than the attachmenEtag
                 // We need to call this after we already put the attachment, so it can version also this attachment
-                _documentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId, tvr);
+                _documentsStorage.UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr);
             }
 
             return new AttachmentResult
@@ -419,13 +419,11 @@ namespace Raven.Server.Documents
 
         /*
         // Document key: {lowerDocumentId|d|lowerName}
-        // Conflict key: {lowerDocumentId|c|changeVector|lowerName}
         // Revision key: {lowerDocumentId|r|changeVector|lowerName}
         // 
         // TODO: We'll solve conflicts using the hash value in the table value reader. No need to put it also in the key.
         //
         // Document prefix: {lowerDocumentId|d|}
-        // Conflict prefix: {lowerDocumentId|c|changeVector|}
         // Revision prefix: {lowerDocumentId|r|changeVector|}
         */
 
@@ -441,6 +439,13 @@ namespace Raven.Server.Documents
             AttachmentType type, ChangeVectorEntry[] changeVector, out Slice prefixSlice)
         {
             return GetAttachmentKeyInternal(context, lowerKey, lowerKeySize, null, 0, true, type, changeVector, out prefixSlice);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ReleaseMemory GetAttachmentPrefix(DocumentsOperationContext context, Slice lowerKey,
+            AttachmentType type, ChangeVectorEntry[] changeVector, out Slice prefixSlice)
+        {
+            return GetAttachmentKeyInternal(context, lowerKey.Content.Ptr, lowerKey.Size, null, 0, true, type, changeVector, out prefixSlice);
         }
 
         private ReleaseMemory GetAttachmentKeyInternal(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize,
@@ -472,9 +477,6 @@ namespace Raven.Server.Documents
                     break;
                 case AttachmentType.Revision:
                     keyMem.Ptr[pos++] = (byte)'r';
-                    break;
-                case AttachmentType.Conflict:
-                    keyMem.Ptr[pos++] = (byte)'c';
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -558,7 +560,7 @@ namespace Raven.Server.Documents
 
                     DeleteAttachmentDirect(context, keySlice, name, expectedEtag);
 
-                    _documentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId, docTvr);
+                    _documentsStorage.UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, docTvr);
                 }
             }
         }

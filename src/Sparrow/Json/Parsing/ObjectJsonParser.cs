@@ -304,8 +304,7 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
-                var lsv = current as LazyStringValue;
-                if (lsv != (LazyStringValue)null)
+                if (current is LazyStringValue lsv)
                 {
                     _state.StringBuffer = lsv.Buffer;
                     _state.StringSize = lsv.Size;
@@ -315,8 +314,7 @@ namespace Sparrow.Json.Parsing
                     return true;
                 }
 
-                var lcsv = current as LazyCompressedStringValue;
-                if (lcsv != null)
+                if (current is LazyCompressedStringValue lcsv)
                 {
                     _state.StringBuffer = lcsv.Buffer;
                     _state.StringSize = lcsv.UncompressedSize;
@@ -326,8 +324,7 @@ namespace Sparrow.Json.Parsing
                     return true;
                 }
 
-                var ldv = current as LazyDoubleValue;
-                if (ldv != null)
+                if (current is LazyDoubleValue ldv)
                 {
                     _state.StringBuffer = ldv.Inner.Buffer;
                     _state.StringSize = ldv.Inner.Size;
@@ -337,8 +334,7 @@ namespace Sparrow.Json.Parsing
                     return true;
                 }
 
-                var str = current as string;
-                if (str != null)
+                if (current is string str)
                 {
                     SetStringBuffer(str);
                     _state.CurrentTokenType = JsonParserToken.String;

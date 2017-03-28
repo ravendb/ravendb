@@ -1,5 +1,7 @@
 ﻿using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests.Server.Documents.Versioning;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
 using Xunit;
@@ -420,9 +422,341 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        private class User
+        [Fact(Skip = "WIP")]
+        public async Task AttachmentsVersioningReplication()
+         {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await VersioningHelper.SetupVersioning(store1, false, 4);
+                await VersioningHelper.SetupVersioning(store2, false, 4);
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                var names = new[]
+                {
+                    "profile.png",
+                    "background-photo.jpg",
+                    "fileNAME_#$1^%_בעברית.txt"
+                };
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
+                    Assert.Equal(4, result.Etag);
+                    Assert.Equal(names[0], result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("image/png", result.ContentType);
+                    Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", result.Hash);
+                }
+                using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                {
+                    var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
+                    Assert.Equal(8, result.Etag);
+                    Assert.Equal(names[1], result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("ImGgE/jPeG", result.ContentType);
+                    Assert.Equal("mpqSy7Ky+qPhkBwhLiiM2no82Wvo9gQw", result.Hash);
+                }
+                using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
+                {
+                    var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
+                    Assert.Equal(13, result.Etag);
+                    Assert.Equal(names[2], result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("", result.ContentType);
+                    Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", result.Hash);
+                }
+                SetupAttachmentReplication(store1, store2);
+
+                WaitForUserToContinueTheTest(store2);
+
+                AttachmentsVersioning.AssertRevisions(store2, names, (session, revisions) =>
+                {
+                    AttachmentsVersioning.AssertRevisionAttachments(names, 3, revisions[0], session);
+                    AttachmentsVersioning.AssertRevisionAttachments(names, 2, revisions[1], session);
+                    AttachmentsVersioning.AssertRevisionAttachments(names, 1, revisions[2], session);
+                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[3], session);
+                }, 9, expectedCountOfDocuments: 3);
+
+                // Delete document should delete all the attachments
+                store1.Commands().Delete("users/1", null);
+                AttachmentsVersioning.AssertRevisions(store2, names, (session, revisions) =>
+                {
+                    AttachmentsVersioning.AssertRevisionAttachments(names, 3, revisions[0], session);
+                    AttachmentsVersioning.AssertRevisionAttachments(names, 2, revisions[1], session);
+                    AttachmentsVersioning.AssertRevisionAttachments(names, 1, revisions[2], session);
+                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[3], session);
+                }, 6, expectedCountOfDocuments: 2);
+
+                // Create another revision which should delete old revision
+                using (var session = store1.OpenSession()) // This will delete the revision #1 which is without attachment
+                {
+                    session.Store(new User { Name = "Fitzchak 2" }, "users/1");
+                    session.SaveChanges();
+                }
+                AttachmentsVersioning.AssertRevisions(store2, names, (session, revisions) =>
+                {
+                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[0], session);
+                    AttachmentsVersioning.AssertRevisionAttachments(names, 3, revisions[1], session);
+                    AttachmentsVersioning.AssertRevisionAttachments(names, 2, revisions[2], session);
+                    AttachmentsVersioning.AssertRevisionAttachments(names, 1, revisions[3], session);
+                }, 6);
+
+                using (var session = store1.OpenSession()) // This will delete the revision #2 which is with attachment
+                {
+                    session.Store(new User { Name = "Fitzchak 3" }, "users/1");
+                    session.SaveChanges();
+                }
+                AttachmentsVersioning.AssertRevisions(store2, names, (session, revisions) =>
+                {
+                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[0], session);
+                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[1], session);
+                    AttachmentsVersioning.AssertRevisionAttachments(names, 3, revisions[2], session);
+                    AttachmentsVersioning.AssertRevisionAttachments(names, 2, revisions[3], session);
+                }, 5);
+
+                using (var session = store1.OpenSession()) // This will delete the revision #3 which is with attachment
+                {
+                    session.Store(new User { Name = "Fitzchak 4" }, "users/1");
+                    session.SaveChanges();
+                }
+                AttachmentsVersioning.AssertRevisions(store2, names, (session, revisions) =>
+                {
+                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[0], session);
+                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[1], session);
+                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[2], session);
+                    AttachmentsVersioning.AssertRevisionAttachments(names, 3, revisions[2], session);
+                }, 3);
+
+                using (var session = store1.OpenSession()) // This will delete the revision #4 which is with attachment
+                {
+                    session.Store(new User { Name = "Fitzchak 5" }, "users/1");
+                    session.SaveChanges();
+                }
+                AttachmentsVersioning.AssertRevisions(store2, names, (session, revisions) =>
+                {
+                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[0], session);
+                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[1], session);
+                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[2], session);
+                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[3], session);
+                }, 0, expectedCountOfUniqueAttachments: 0);
+            }
+        }
+
+        [Fact(Skip = "WIP")]
+        public async Task PutDifferentAttachmentsShouldNotConflict()
         {
-            public string Name { get; set; }
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
+                    }
+
+                    await session.StoreAsync(new User { Name = "Marker 1" }, "marker 1");
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a2 = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
+                    {
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a2", a2, "a2/jpeg"));
+                    }
+
+                    await session.StoreAsync(new User { Name = "Marker 2" }, "marker 2");
+                    await session.SaveChangesAsync();
+                }
+                
+                SetupReplication(store1, store2);
+                SetupReplication(store2, store1);
+                Assert.True(WaitForDocument(store1, "marker 1"));
+                Assert.True(WaitForDocument(store2, "marker 2"));
+
+                // TODO:
+            }
+        }
+
+        [Fact(Skip = "WIP")]
+        public async Task PutSameAttachmentsShouldNotConflict()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
+                    }
+
+                    await session.StoreAsync(new User { Name = "Marker 1" }, "marker 1");
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
+                    }
+
+                    await session.StoreAsync(new User { Name = "Marker 2" }, "marker 2");
+                    await session.SaveChangesAsync();
+                }
+                
+                SetupReplication(store1, store2);
+                SetupReplication(store2, store1);
+                Assert.True(WaitForDocument(store1, "marker 1"));
+                Assert.True(WaitForDocument(store2, "marker 2"));
+
+                // TODO:
+            }
+        }
+
+        [Fact(Skip = "WIP")]
+        public async Task PutSameAttachmentsDifferentContentTypeShouldConflict()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
+                    }
+
+                    await session.StoreAsync(new User { Name = "Marker 1" }, "marker 1");
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
+                    }
+
+                    await session.StoreAsync(new User { Name = "Marker 2" }, "marker 2");
+                    await session.SaveChangesAsync();
+                }
+                
+                SetupReplication(store1, store2);
+                SetupReplication(store2, store1);
+                Assert.True(WaitForDocument(store1, "marker 1"));
+                Assert.True(WaitForDocument(store2, "marker 2"));
+
+                // TODO:
+            }
+        }
+
+        [Fact(Skip = "WIP")]
+        public async Task PutDifferentAttachmentsShouldConflict()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
+                    }
+
+                    await session.StoreAsync(new User { Name = "Marker 1" }, "marker 1");
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a2 = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                    {
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a2, "a1/png"));
+                    }
+
+                    await session.StoreAsync(new User { Name = "Marker 2" }, "marker 2");
+                    await session.SaveChangesAsync();
+                }
+                
+                SetupReplication(store1, store2);
+                WaitForUserToContinueTheTest(store2);
+                SetupReplication(store2, store1);
+                Assert.True(WaitForDocument(store1, "marker 1"));
+                Assert.True(WaitForDocument(store2, "marker 2"));
+
+                // TODO:
+            }
+        }
+
+        [Fact(Skip = "WIP")]
+        public async Task PutAndDeleteAttachmentsShouldConflict()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
+                    }
+
+                    await session.StoreAsync(new User { Name = "Marker 1" }, "marker 1");
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a2 = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                    {
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a2, "a1/png"));
+                    }
+                    store2.Operations.Send(new DeleteAttachmentOperation("users/1", "a1"));
+
+                    await session.StoreAsync(new User {Name = "Marker 2"}, "marker 2");
+                    await session.SaveChangesAsync();
+                }
+
+                SetupReplication(store1, store2);
+                SetupReplication(store2, store1);
+                Assert.True(WaitForDocument(store1, "marker 1"));
+                Assert.True(WaitForDocument(store2, "marker 2"));
+
+                // TODO:
+            }
         }
     }
 }
