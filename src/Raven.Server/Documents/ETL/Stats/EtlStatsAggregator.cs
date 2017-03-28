@@ -35,16 +35,16 @@ namespace Raven.Server.Documents.ETL.Stats
 
         private EtlPerformanceStats CreatePerformanceStats(bool completed)
         {
-            return new EtlPerformanceStats
+            return new EtlPerformanceStats(Scope.Duration)
             {
                 Id = Id,
                 Started = StartTime,
                 Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
-                Duration = Scope.Duration,
                 Details = Scope.ToPerformanceOperation("ETL"),
                 LastLoadedEtag = Stats.LastLoadedEtag,
                 LastTransformedEtag = Stats.LastTransformedEtag,
                 NumberOfExtractedItems = Stats.NumberOfExtractedItems,
+                BatchCompleteReason = Stats.BatchCompleteReason
             };
         }
     }

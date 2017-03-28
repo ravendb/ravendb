@@ -342,10 +342,5 @@ namespace FastTests.Client.Attachments
                 AssertAttachmentCount(store, 0);
             }
         }
-
-        private class User
-        {
-            public string Name { get; set; }
-        }
     }
 }

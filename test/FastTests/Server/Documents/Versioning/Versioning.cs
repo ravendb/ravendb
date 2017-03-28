@@ -6,7 +6,6 @@
 
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Exceptions.Versioning;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -37,8 +36,8 @@ namespace FastTests.Server.Documents.Versioning
                 {
                     var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>(company.Id);
                     Assert.Equal(2, companiesRevisions.Count);
-                    Assert.Equal("Company Name", companiesRevisions[0].Name);
-                    Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
+                    Assert.Equal("Hibernating Rhinos", companiesRevisions[0].Name);
+                    Assert.Equal("Company Name", companiesRevisions[1].Name);
                 }
             }
         }
@@ -144,8 +143,8 @@ namespace FastTests.Server.Documents.Versioning
                 {
                     var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>(company.Id);
                     Assert.Equal(2, companiesRevisions.Count);
-                    Assert.Equal("Company Name", companiesRevisions[0].Name);
-                    Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
+                    Assert.Equal("Hibernating Rhinos", companiesRevisions[0].Name);
+                    Assert.Equal("Company Name", companiesRevisions[1].Name);
                 }
                 var newInstance = GetDocumentDatabaseInstanceFor(store).Result;
 
@@ -182,9 +181,9 @@ namespace FastTests.Server.Documents.Versioning
                 {
                     var users = await session.Advanced.GetRevisionsForAsync<User>(product.Id);
                     Assert.Equal(3, users.Count);
-                    Assert.Equal("Hibernating", users[0].Name);
+                    Assert.Equal("Hibernating Rhinos - RavenDB", users[0].Name);
                     Assert.Equal("Hibernating Rhinos", users[1].Name);
-                    Assert.Equal("Hibernating Rhinos - RavenDB", users[2].Name);
+                    Assert.Equal("Hibernating", users[2].Name);
                 }
             }
         }
@@ -244,8 +243,8 @@ namespace FastTests.Server.Documents.Versioning
                 {
                     var revisions = await session.Advanced.GetRevisionsForAsync<Company>(company.Id);
                     Assert.Equal(5, revisions.Count);
-                    Assert.Equal("Company #2: 5", revisions[0].Name);
-                    Assert.Equal("Company #2: 9", revisions[4].Name);
+                    Assert.Equal("Company #2: 9", revisions[0].Name);
+                    Assert.Equal("Company #2: 5", revisions[4].Name);
                 }
             }
         }
@@ -308,8 +307,44 @@ namespace FastTests.Server.Documents.Versioning
                     var companies = await session.Advanced.GetRevisionsForAsync<Company>("companies/1");
                     var users = await session.Advanced.GetRevisionsForAsync<User>("users/1");
                     Assert.Equal(5, companies.Count);
-                    Assert.Equal("New Company", companies.Last().Name);
+                    Assert.Equal("New Company", companies.First().Name);
                     Assert.Equal(1, users.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task RevisionsOrder()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.DefaultDatabase);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Hibernating" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Hibernating11" }, "users/11");
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Hibernating Rhinos" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Hibernating Rhinos11" }, "users/11");
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Hibernating Rhinos - RavenDB" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Hibernating Rhinos - RavenDB11" }, "users/11");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var users = await session.Advanced.GetRevisionsForAsync<User>("users/1");
+                    Assert.Equal(3, users.Count);
+                    Assert.Equal("Hibernating Rhinos - RavenDB", users[0].Name);
+                    Assert.Equal("Hibernating Rhinos", users[1].Name);
+                    Assert.Equal("Hibernating", users[2].Name);
                 }
             }
         }

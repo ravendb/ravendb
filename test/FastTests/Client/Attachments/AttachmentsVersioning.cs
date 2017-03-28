@@ -95,20 +95,20 @@ namespace FastTests.Client.Attachments
                 }
                 AssertRevisions(store, names, (session, revisions) =>
                 {
-                    AssertNoRevisionAttachment(revisions[0], session);
-                    AssertRevisionAttachments(names, 1, revisions[1], session);
-                    AssertRevisionAttachments(names, 2, revisions[2], session);
-                    AssertRevisionAttachments(names, 3, revisions[3], session);
+                    AssertRevisionAttachments(names, 3, revisions[0], session);
+                    AssertRevisionAttachments(names, 2, revisions[1], session);
+                    AssertRevisionAttachments(names, 1, revisions[2], session);
+                    AssertNoRevisionAttachment(revisions[3], session);
                 }, 9);
 
                 // Delete document should delete all the attachments
                 store.Commands().Delete("users/1", null);
                 AssertRevisions(store, names, (session, revisions) =>
                 {
-                    AssertNoRevisionAttachment(revisions[0], session);
-                    AssertRevisionAttachments(names, 1, revisions[1], session);
-                    AssertRevisionAttachments(names, 2, revisions[2], session);
-                    AssertRevisionAttachments(names, 3, revisions[3], session);
+                    AssertRevisionAttachments(names, 3, revisions[0], session);
+                    AssertRevisionAttachments(names, 2, revisions[1], session);
+                    AssertRevisionAttachments(names, 1, revisions[2], session);
+                    AssertNoRevisionAttachment(revisions[3], session);
                 }, 6, expectedCountOfDocuments: 0);
 
                 // Create another revision which should delete old revision
@@ -119,10 +119,10 @@ namespace FastTests.Client.Attachments
                 }
                 AssertRevisions(store, names, (session, revisions) =>
                 {
-                    AssertRevisionAttachments(names, 1, revisions[0], session);
-                    AssertRevisionAttachments(names, 2, revisions[1], session);
-                    AssertRevisionAttachments(names, 3, revisions[2], session);
-                    AssertNoRevisionAttachment(revisions[3], session);
+                    AssertNoRevisionAttachment(revisions[0], session);
+                    AssertRevisionAttachments(names, 3, revisions[1], session);
+                    AssertRevisionAttachments(names, 2, revisions[2], session);
+                    AssertRevisionAttachments(names, 1, revisions[3], session);
                 }, 6);
 
                 using (var session = store.OpenSession()) // This will delete the revision #2 which is with attachment
@@ -132,10 +132,10 @@ namespace FastTests.Client.Attachments
                 }
                 AssertRevisions(store, names, (session, revisions) =>
                 {
-                    AssertRevisionAttachments(names, 2, revisions[0], session);
-                    AssertRevisionAttachments(names, 3, revisions[1], session);
-                    AssertNoRevisionAttachment(revisions[2], session);
-                    AssertNoRevisionAttachment(revisions[3], session);
+                    AssertNoRevisionAttachment(revisions[0], session);
+                    AssertNoRevisionAttachment(revisions[1], session);
+                    AssertRevisionAttachments(names, 3, revisions[2], session);
+                    AssertRevisionAttachments(names, 2, revisions[3], session);
                 }, 5);
 
                 using (var session = store.OpenSession()) // This will delete the revision #3 which is with attachment
@@ -145,10 +145,10 @@ namespace FastTests.Client.Attachments
                 }
                 AssertRevisions(store, names, (session, revisions) =>
                 {
-                    AssertRevisionAttachments(names, 3, revisions[0], session);
+                    AssertNoRevisionAttachment(revisions[0], session);
                     AssertNoRevisionAttachment(revisions[1], session);
                     AssertNoRevisionAttachment(revisions[2], session);
-                    AssertNoRevisionAttachment(revisions[3], session);
+                    AssertRevisionAttachments(names, 3, revisions[3], session);
                 }, 3);
 
                 using (var session = store.OpenSession()) // This will delete the revision #4 which is with attachment
@@ -163,8 +163,6 @@ namespace FastTests.Client.Attachments
                     AssertNoRevisionAttachment(revisions[2], session);
                     AssertNoRevisionAttachment(revisions[3], session);
                 }, 0, expectedCountOfUniqueAttachments: 0);
-
-                AttachmentsCrud.AssertAttachmentCount(store, 0);
             }
         }
 
@@ -186,14 +184,14 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        private void AssertNoRevisionAttachment(User revision, IDocumentSession session)
+        public static void AssertNoRevisionAttachment(User revision, IDocumentSession session)
         {
             var metadata = session.Advanced.GetMetadataFor(revision);
             Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision).ToString(), metadata[Constants.Documents.Metadata.Flags]);
             Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
         }
 
-        private void AssertRevisionAttachments(string[] names, int expectedCount, User revision, IDocumentSession session)
+        public static void AssertRevisionAttachments(string[] names, int expectedCount, User revision, IDocumentSession session)
         {
             var metadata = session.Advanced.GetMetadataFor(revision);
             Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision | DocumentFlags.HasAttachments).ToString(), metadata[Constants.Documents.Metadata.Flags]);
@@ -279,9 +277,6 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        private class User
-        {
-            public string Name { get; set; }
-        }
+        
     }
 }

@@ -774,6 +774,8 @@ more responsive application.
                         DocumentsById.Remove(documentInfo.Id);
                     }
                     etag = UseOptimisticConcurrency ? etag : null;
+                    var beforeDeleteEventArgs = new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity);
+                    OnBeforeDelete?.Invoke(this, beforeDeleteEventArgs);
                     result.Commands.Add(new DeleteCommandData(documentInfo.Id, etag));
                 }
             }

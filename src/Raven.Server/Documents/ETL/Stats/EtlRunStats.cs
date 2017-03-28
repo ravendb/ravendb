@@ -7,5 +7,7 @@
         public long LastTransformedEtag;
 
         public long LastLoadedEtag;
+
+        public string BatchCompleteReason;
     }
 }

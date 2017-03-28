@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
@@ -12,7 +13,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.Versioning
             }
 
             Slice prefixSlice;
-            using (DocumentKeyWorker.GetSliceFromKey(context, key, out prefixSlice))
+            using (GetKeyPrefix(context, lowerKey, lowerKeySize, out prefixSlice))
             {
                 // We delete the old revisions after we put the current one, 
                 // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
@@ -292,8 +292,7 @@ namespace Raven.Server.Documents.Versioning
             IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
         }
 
-        private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice,
-            long numberOfRevisionsToDelete)
+        private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, long numberOfRevisionsToDelete)
         {
             long maxEtagDeleted = 0;
 
@@ -345,41 +344,65 @@ namespace Raven.Server.Documents.Versioning
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ReleaseMemory GetKeyPrefix(DocumentsOperationContext context, Slice loweredKey, out Slice prefixSlice)
         {
-            var keyMem = context.Allocator.Allocate(loweredKey.Size + 1);
+            return GetKeyPrefix(context, loweredKey.Content.Ptr, loweredKey.Size, out prefixSlice);
+        }
 
-            loweredKey.CopyTo(0, keyMem.Ptr, 0, loweredKey.Size);
-            keyMem.Ptr[loweredKey.Size] = RecordSeperator;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ReleaseMemory GetKeyPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, out Slice prefixSlice)
+        {
+            var keyMem = context.Allocator.Allocate(lowerKeySize + 1);
+
+            Memory.Copy(keyMem.Ptr, lowerKey, lowerKeySize);
+            keyMem.Ptr[lowerKeySize] = RecordSeperator;
 
             prefixSlice = new Slice(SliceOptions.Key, keyMem);
             return new ReleaseMemory(keyMem, context);
         }
 
-        public long CountOfRevisions(DocumentsOperationContext context, string key)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ReleaseMemory GetLastKey(DocumentsOperationContext context, Slice lowerKey, out Slice prefixSlice)
+        {
+            var keyMem = context.Allocator.Allocate(lowerKey.Size + 1 + sizeof(long));
+
+            Memory.Copy(keyMem.Ptr, lowerKey.Content.Ptr, lowerKey.Size);
+            keyMem.Ptr[lowerKey.Size] = RecordSeperator;
+
+            var maxValue = Bits.SwapBytes(long.MaxValue);
+            Memory.Copy(keyMem.Ptr + lowerKey.Size + 1, (byte*)&maxValue, sizeof(long));
+
+            prefixSlice = new Slice(SliceOptions.Key, keyMem);
+            return new ReleaseMemory(keyMem, context);
+        }
+
+        private long CountOfRevisions(DocumentsOperationContext context, Slice prefix)
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
-            Slice loweredKey;
-            using (DocumentKeyWorker.GetSliceFromKey(context, key, out loweredKey))
+            return numbers.Read(prefix)?.Reader.ReadLittleEndianInt64() ?? 0;
+        }
+
+        public (Document[] revisions, long count) GetRevisions(DocumentsOperationContext context, string key, int start, int take)
+        {
+            Slice lowerKey, prefixSlice, lastKey;
+            using (DocumentKeyWorker.GetSliceFromKey(context, key, out lowerKey))
+            using (GetKeyPrefix(context, lowerKey, out prefixSlice))
+            using (GetLastKey(context, lowerKey, out lastKey))
             {
-                return numbers.Read(loweredKey)?.Reader.ReadLittleEndianInt64() ?? 0;
+                var revisions = GetRevisions(context, prefixSlice, lastKey, start, take).ToArray();
+                var count = CountOfRevisions(context, prefixSlice);
+                return (revisions, count);
             }
         }
 
-        public IEnumerable<Document> GetRevisions(DocumentsOperationContext context, string key, int start, int take)
+        private IEnumerable<Document> GetRevisions(DocumentsOperationContext context, Slice prefixSlice, Slice lastKey, int start, int take)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
-
-            Slice prefixSlice;
-            using (DocumentKeyWorker.GetSliceFromKey(context, key, out prefixSlice))
+            foreach (var tvr in table.SeekBackwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, lastKey, start))
             {
-                // ReSharper disable once LoopCanBeConvertedToQuery
-                foreach (var tvr in table.SeekForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, start, startsWith: true))
-                {
-                    if (take-- <= 0)
-                        yield break;
+                if (take-- <= 0)
+                    yield break;
 
-                    var document = TableValueToRevision(context, ref tvr.Result.Reader);
-                    yield return document;
-                }
+                var document = TableValueToRevision(context, ref tvr.Result.Reader);
+                yield return document;
             }
         }
 

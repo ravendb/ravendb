@@ -215,7 +215,7 @@ namespace FastTests
             do
             {
                 Thread.Sleep(500);
-            } while (/*documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached)*/ true);
+            } while (documentStore.Commands().Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
         }
 
         /// <summary>
