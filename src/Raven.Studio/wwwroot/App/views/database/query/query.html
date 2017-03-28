@@ -46,7 +46,8 @@
                             <i class="icon-recent"></i><span>Recent</span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu" role="menu" data-bind="foreach: recentQueries">
+                        <div class="dropdown-menu" role="menu" >
+                            <ul class="menu max-height" data-bind="foreach: recentQueries">
                             <li>
                                 <a href="#" data-bind="click: _.partial($root.runRecentQuery, $data)">
                                     <span data-bind="text: indexName === 'dynamic' ? 'All Documents' : indexName"></span>
@@ -76,7 +77,8 @@
                                     </span>
                                 </a>
                             </li>
-                        </ul>
+                            </ul>
+                        </div>
                     </div>
                     <div class="dropdown dropdown-right">
                         <button class="btn btn-default query-settings dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
@@ -114,10 +116,10 @@
                             <i class="icon-play2 icon-lg"></i><br />
                             <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
                         </button>
+                        <div class="flex-separator"></div>
                         <button class="btn btn-default btn-block text-center" data-bind="click: openAddFilter">
                             <i class="icon-plus"></i><span>Add filter</span>
                         </button>
-                        <div class="flex-separator"></div>
                     </div>
                 </div>
 
@@ -232,7 +234,7 @@
                             <i class="icon-table"></i><span>Display</span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu colselect-dropdown slidein-style padding padding-sm" role="menu" data-bind="dropdownPanel: true">
+                        <ul class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
                             <div data-bind="compose: $root.columnsSelector"></div>
                         </ul>
                     </div>
