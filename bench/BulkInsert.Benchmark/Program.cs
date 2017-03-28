@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Extensions;
@@ -91,9 +93,17 @@ namespace BulkInsert.Benchmark
         private string RandomString(int length)
         {
             const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 ";
-            return new string(Enumerable.Repeat(chars, length)
-                .Select(s => s[_random.Next(s.Length)]).ToArray());
+            var str = new char[length];
+            for (int i = 0; i < length; i++)
+            {
+                str[i] = chars[_random.Next(chars.Length)];
+            }
+            return new string(str);
+//            return new string(Enumerable.Repeat(chars, length)
+//                .Select(s => s[_random.Next(s.Length)]).ToArray());
         }
+
+
 
         public void PerformBulkInsert(string collection, long numberOfDocuments, int? sizeOfDocuments,
             bool useSeqId = true)
@@ -107,7 +117,15 @@ namespace BulkInsert.Benchmark
 
             string[] tags = null;
             long id = 1;
+            var dummies = Math.Min(numberOfDocuments, 1024*1024*1024/docSize  + 1);
+            Console.WriteLine("dummies==" + dummies);
+            var randStr  = new string[dummies];
+            for (int index = 0; index < randStr.Length; index++)
+            {
+                randStr[index] = RandomString(docSize);
+            }
             var sp = Stopwatch.StartNew();
+            long clientSideTime;
             using (var bulkInsert = store.BulkInsert())
             {
                 for (long i = 0; i < numberOfDocuments; i++)
@@ -119,7 +137,7 @@ namespace BulkInsert.Benchmark
                     {
                         SerialId = i,
                         RandomId = _random.Next(),
-                        SomeRandomText = RandomString(docSize),
+                        SomeRandomText = randStr[i % dummies],
                         Tags = tags
                     };
                     var idToUse = useSeqId ? _seqId++ : id++;
@@ -146,10 +164,11 @@ namespace BulkInsert.Benchmark
                     ids[1] == -1 ||
                     ids[2] == -1)
                     throw new Exception("Internal Error");
+                clientSideTime = sp.ElapsedMilliseconds;
             }
 
             var elapsed = sp.ElapsedMilliseconds;
-
+            Log($"Client Inserted {numberOfDocuments:#,#} documents of size {docSize:#,#} at " + clientSideTime.ToString("#,#") + " mSec");
             Log($"Finished Bulk Insert {numberOfDocuments:#,#} documents of size {docSize:#,#} at " + elapsed.ToString("#,#") + " mSec");
 
             if (sizeOfDocuments == null)
@@ -197,43 +216,70 @@ namespace BulkInsert.Benchmark
         {
             store.Dispose();
         }
-    }
 
-    public class Program
-    {
-        public static void Main(string[] args)
+        public async Task Write(int numberOfDocuments, int docSize)
         {
-            using (var massiveObj = new BulkInsertBench("http://localhost:8080", 1805861237))
+            using (var bulkInsert = store.BulkInsert())
             {
-                massiveObj.CreateDb();
-
-                var k = 1000;
-                var kb = 1024;
-
-                if (args.Length == 1)
-                    k = Convert.ToInt32(args[0]);
-
-                //Console.WriteLine("metoraf...");
-                //massiveObj.PerformBulkInsert("warmup", 1000 * k, 30 * kb * kb);
-
-
-                Console.WriteLine("warmup...");
-                massiveObj.PerformBulkInsert("warmup", 10 * k, 2 * kb);
-                Console.WriteLine("smallSize...");
-                massiveObj.PerformBulkInsert("smallSize", 2 * k * k, 2 * kb);
-                Console.WriteLine("bigSize...");
-                massiveObj.PerformBulkInsert("bigSize", 1 * k, 30 * kb * kb);
-                Console.WriteLine("forOverrite...");
-                massiveObj.PerformBulkInsert("forOverrite", 500 * k, 5 * kb, false);
-                Console.WriteLine("forOverrite2...");
-                massiveObj.PerformBulkInsert("forOverrite", 1000 * k, 5 * kb, false);
-                for (int i = 1; i <= 5; i++)
+                for (long i = 0; i < numberOfDocuments; i++)
                 {
-                    Console.WriteLine($"random {i}...");
-                    massiveObj.PerformBulkInsert("random", i * k * k, null);
+                    if ((i % (16 * 1024)) == 0)
+                        Console.WriteLine($"{SystemTime.UtcNow:G} : Progress {i:##,###} out of {numberOfDocuments} ...");
+
+                    var entity = new DocEntity
+                    {
+                        SerialId = i,
+                        RandomId = _random.Next(),
+                    };
+                    await bulkInsert.StoreAsync(entity, $"items|").ConfigureAwait(false);
                 }
 
-                Console.WriteLine("Ending tests...");
+                await bulkInsert.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
+        public class Program
+        {
+            public static void Main(string[] args)
+            {
+                using (var massiveObj = new BulkInsertBench("http://localhost:8080", 1805861237))
+                {
+                    massiveObj.CreateDb();
+//                    var sp = Stopwatch.StartNew();
+//                    massiveObj.Write(64 * 1024, 1024);
+//                    Console.WriteLine(sp.Elapsed);
+
+                    var k = 1000;
+                    var kb = 1024;
+
+                    if (args.Length == 1)
+                        k = Convert.ToInt32(args[0]);
+
+                    //Console.WriteLine("metoraf...");
+                    //massiveObj.PerformBulkInsert("warmup", 1000 * k, 30 * kb * kb);
+
+//                    Console.WriteLine("bigSize...");
+//                    massiveObj.PerformBulkInsert("bigSize", 1 * k, 30 * kb * kb);
+                                    
+
+                                        Console.WriteLine("warmup...");
+                                        massiveObj.PerformBulkInsert("warmup", 10 * k, 2 * kb);
+                                        Console.WriteLine("smallSize...");
+                                        massiveObj.PerformBulkInsert("smallSize", 2 * k * k, 2 * kb);
+                                        Console.WriteLine("bigSize...");
+                                        massiveObj.PerformBulkInsert("bigSize", 1 * k, 30 * kb * kb);
+                                        Console.WriteLine("forOverrite...");
+                                        massiveObj.PerformBulkInsert("forOverrite", 500 * k, 5 * kb, false);
+                                        Console.WriteLine("forOverrite2...");
+                                        massiveObj.PerformBulkInsert("forOverrite", 1000 * k, 5 * kb, false);
+                                        for (int i = 1; i <= 5; i++)
+                                        {
+                                            Console.WriteLine($"random {i}...");
+                                            massiveObj.PerformBulkInsert("random", i * k * k, null);
+                                        }
+                    
+                                        Console.WriteLine("Ending tests...");
+                }
             }
         }
     }

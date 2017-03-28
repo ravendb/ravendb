@@ -14,6 +14,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
 using System.Threading;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.Utils;
 using Raven.Server.Web;
@@ -244,6 +245,10 @@ namespace Raven.Server.Routing
 
         private void DrainRequest(JsonOperationContext ctx, HttpContext context)
         {
+            StringValues value;
+            if (context.Response.Headers.TryGetValue("Connection", out value) && value == "close")
+                return; // don't need to drain it, the connection will close 
+
             JsonOperationContext.ManagedPinnedBuffer buffer;
             using (ctx.GetManagedBuffer(out buffer))
             {

@@ -10,6 +10,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Exceptions.BulkInsert;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Server.Commands;
 using Raven.Server.Extensions;
 using SlowTests.Core.Utils.Entities;
@@ -20,7 +22,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_2514 : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-6498")]
+        [Fact]
         public void CanKillBulkInsert()
         {
             const int bulkInsertSize = 2000;
@@ -29,28 +31,24 @@ namespace SlowTests.Issues
                 // we don't use using statement here becase dispose would throw OperationCanceledException and we want to assert this
                 var bulkInsert = store.BulkInsert();
 
-                bulkInsert.Store(new User { Name = "New Data" });
-
-                var requestExecutor = store.GetRequestExecuter();
-
-                JsonOperationContext context;
-                using (requestExecutor.ContextPool.AllocateOperationContext(out context))
+                for (var i = 0; i < bulkInsertSize; i++)
                 {
-                    var killCommand = new CloseTcpConnectionCommand(1);
-
-                    requestExecutor.Execute(killCommand, context);
-
-                    ExpectEndOfStreamOrOperationCanceledException(() =>
-                    {
-                        for (var i = 0; i < bulkInsertSize; i++)
-                        {
-                            bulkInsert.Store(new User { Name = "New Data" + i });
-                            Thread.Sleep(30);
-                        }
-                    });
-
-                    ExpectEndOfStreamOrOperationCanceledException(bulkInsert.Dispose);
+                    bulkInsert.Store(new User { Name = "New Data" });
                 }
+                
+                bulkInsert.Kill();
+
+                ExpectEndOfStreamOrOperationCanceledException(() =>
+                {
+                    for (var i = 0; i < bulkInsertSize; i++)
+                    {
+                        bulkInsert.Store(new User { Name = "New Data" + i });
+                        Thread.Sleep(30);
+                    }
+                });
+
+                ExpectEndOfStreamOrOperationCanceledException(bulkInsert.Dispose);
+            
             }
         }
 
@@ -61,15 +59,10 @@ namespace SlowTests.Issues
                 action();
                 Assert.True(false);
             }
-            catch (EndOfStreamException)
+            catch(BulkInsertAbortedException)
             {
             }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (IOException)
-            {
-            }
+            catch (IOException) { }
         }
     }
 }

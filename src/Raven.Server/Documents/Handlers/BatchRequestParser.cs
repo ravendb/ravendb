@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Patch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -27,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
             public BlittableJsonReaderObject Document;
             public PatchRequest Patch;
             public PatchRequest PatchIfMissing;
-            public long? Etag;
+            public long? Etag { get; set; } //TODO: revert to field once https://github.com/cjlpowers/TypeScripter/pull/12 will be merged
             public bool KeyPrefixed;
         }
 
@@ -78,131 +81,203 @@ namespace Raven.Server.Documents.Handlers
                     if (state.CurrentTokenType == JsonParserToken.EndArray)
                         break;
 
-                    if (state.CurrentTokenType != JsonParserToken.StartObject)
-                    {
-                        ThrowUnexpectedToken(JsonParserToken.StartObject, state);
-                    }
-
                     index++;
                     if (index >= cmds.Length)
                     {
                         cmds = IncreaseSizeOfCommandsBuffer(index, cmds);
                     }
 
-                    while (true)
-                    {
+                    cmds[index] = await ReadSingleCommand(ctx, stream, state, parser, buffer, default(CancellationToken));
+                }
+            }
+            return new ArraySegment<CommandData>(cmds, 0, index + 1);
+        }
+
+
+        public class ReadMany : IDisposable
+        {
+            private readonly Stream _stream;
+            private UnmanagedJsonParser _parser;
+            private JsonOperationContext.ManagedPinnedBuffer _buffer;
+            private JsonParserState _state;
+            private CancellationToken _token;
+
+            public ReadMany(JsonOperationContext ctx, Stream stream, JsonOperationContext.ManagedPinnedBuffer buffer, CancellationToken token)
+            {
+                _stream = stream;
+                _buffer = buffer;
+                _token = token;
+
+                _state = new JsonParserState();
+                _parser = new UnmanagedJsonParser(ctx, _state, "bulk_docs");
+            }
+
+            public async Task Init()
+            {
+                while (_parser.Read() == false)
+                    await RefillParserBuffer(_stream, _buffer, _parser, _token);
+                if (_state.CurrentTokenType != JsonParserToken.StartArray)
+                {
+                    ThrowUnexpectedToken(JsonParserToken.StartArray, _state);
+                }
+            }
+
+            public void Dispose()
+            {
+                _parser.Dispose();
+            }
+
+            public Task<CommandData> MoveNext(JsonOperationContext ctx)
+            {
+                if (_parser.Read())
+                {
+                    if (_state.CurrentTokenType == JsonParserToken.EndArray)
+                        return null;
+
+                    return ReadSingleCommand(ctx, _stream, _state, _parser, _buffer, _token);
+                }
+
+                return MoveNextUnlikely(ctx);
+            }
+
+            private async Task<CommandData> MoveNextUnlikely(JsonOperationContext ctx)
+            {
+                do
+                {
+                    await RefillParserBuffer(_stream, _buffer, _parser, _token);
+                } while (_parser.Read() == false);
+                return await ReadSingleCommand(ctx, _stream, _state, _parser, _buffer, _token);
+            }
+        }
+
+
+        private static async Task<CommandData> ReadSingleCommand(
+            JsonOperationContext ctx, 
+            Stream stream, 
+            JsonParserState state, 
+            UnmanagedJsonParser parser, 
+            JsonOperationContext.ManagedPinnedBuffer buffer,
+            CancellationToken token)
+        {
+            var commandData = new CommandData();
+            if (state.CurrentTokenType != JsonParserToken.StartObject)
+            {
+                ThrowUnexpectedToken(JsonParserToken.StartObject, state);
+            }
+
+            while (true)
+            {
+                while (parser.Read() == false)
+                    await RefillParserBuffer(stream, buffer, parser, token);
+
+                if (state.CurrentTokenType == JsonParserToken.EndObject)
+                    break;
+
+                if (state.CurrentTokenType != JsonParserToken.String)
+                {
+                    ThrowUnexpectedToken(JsonParserToken.String, state);
+                }
+                switch (GetPropertyType(state))
+                {
+                    case CommandPropertyName.Method:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser);
-
-                        if (state.CurrentTokenType == JsonParserToken.EndObject)
-                            break;
-
+                            await RefillParserBuffer(stream, buffer, parser, token);
                         if (state.CurrentTokenType != JsonParserToken.String)
                         {
                             ThrowUnexpectedToken(JsonParserToken.String, state);
                         }
-                        switch (GetPropertyType(state))
+                        commandData.Method = GetMethodType(state, ctx);
+                        break;
+                    case CommandPropertyName.Key:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        switch (state.CurrentTokenType)
                         {
-                            case CommandPropertyName.Method:
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-                                if (state.CurrentTokenType != JsonParserToken.String)
-                                {
-                                    ThrowUnexpectedToken(JsonParserToken.String, state);
-                                }
-                                cmds[index].Method = GetMethodType(state, ctx);
+                            case JsonParserToken.Null:
+                                commandData.Key = null;
                                 break;
-                            case CommandPropertyName.Key:
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-                                switch (state.CurrentTokenType)
-                                {
-                                    case JsonParserToken.Null:
-                                        cmds[index].Key = null;
-                                        break;
-                                    case JsonParserToken.String:
-                                        cmds[index].Key = GetDocumentKey(state);
-                                        break;
-                                    default:
-                                        ThrowUnexpectedToken(JsonParserToken.String, state);
-                                        break;
-                                }
+                            case JsonParserToken.String:
+                                commandData.Key = GetDocumentKey(state);
                                 break;
-                            case CommandPropertyName.Document:
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-                                cmds[index].Document = await ReadJsonObject(ctx, stream, cmds[index].Key, parser, state, buffer);
-                                break;
-                            case CommandPropertyName.Patch:
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-                                var patch = await ReadJsonObject(ctx, stream, cmds[index].Key, parser, state, buffer);
-                                cmds[index].Patch = PatchRequest.Parse(patch);
-                                break;
-                            case CommandPropertyName.PatchIfMissing:
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-                                var patchIfMissing = await ReadJsonObject(ctx, stream, cmds[index].Key, parser, state, buffer);
-                                cmds[index].PatchIfMissing = PatchRequest.Parse(patchIfMissing);
-                                break;
-                            case CommandPropertyName.Etag:
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-                                if (state.CurrentTokenType == JsonParserToken.Null)
-                                {
-                                    cmds[index].Etag = null;
-                                }
-                                else
-                                {
-                                    if (state.CurrentTokenType != JsonParserToken.Integer)
-                                    {
-                                        ThrowUnexpectedToken(JsonParserToken.Integer, state);
-                                    }
-
-                                    cmds[index].Etag = state.Long;
-                                }
-                                break;
-                            case CommandPropertyName.KeyPrefixed:
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-
-                                if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
-                                {
-                                    ThrowUnexpectedToken(JsonParserToken.True, state);
-                                }
-
-                                cmds[index].KeyPrefixed = state.CurrentTokenType == JsonParserToken.True;
-                                break;
-                            case CommandPropertyName.NoSuchProperty:
-                                // unknown command - ignore it
-                                while (parser.Read() == false)
-                                    await RefillParserBuffer(stream, buffer, parser);
-                                if (state.CurrentTokenType == JsonParserToken.StartObject ||
-                                    state.CurrentTokenType == JsonParserToken.StartArray)
-                                {
-                                    await ReadJsonObject(ctx, stream, cmds[index].Key, parser, state, buffer);
-                                }
+                            default:
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
                                 break;
                         }
-                    }
+                        break;
+                    case CommandPropertyName.Document:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        commandData.Document = await ReadJsonObject(ctx, stream, commandData.Key, parser, state, buffer, token);
+                        break;
+                    case CommandPropertyName.Patch:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        var patch = await ReadJsonObject(ctx, stream, commandData.Key, parser, state, buffer, token);
+                        commandData.Patch = PatchRequest.Parse(patch);
+                        break;
+                    case CommandPropertyName.PatchIfMissing:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        var patchIfMissing = await ReadJsonObject(ctx, stream, commandData.Key, parser, state, buffer, token);
+                        commandData.PatchIfMissing = PatchRequest.Parse(patchIfMissing);
+                        break;
+                    case CommandPropertyName.Etag:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        if (state.CurrentTokenType == JsonParserToken.Null)
+                        {
+                            commandData.Etag = null;
+                        }
+                        else
+                        {
+                            if (state.CurrentTokenType != JsonParserToken.Integer)
+                            {
+                                ThrowUnexpectedToken(JsonParserToken.Integer, state);
+                            }
 
-                    switch (cmds[index].Method)
-                    {
-                        case CommandType.None:
-                            ThrowInvalidMethod();
-                            break;
-                        case CommandType.PUT:
-                            if (cmds[index].Document == null)
-                                ThrowMissingDocumentProperty();
-                            break;
-                        case CommandType.PATCH:
-                            if (cmds[index].Patch == null)
-                                ThrowMissingPatchProperty();
-                            break;
-                    }
+                            commandData.Etag = state.Long;
+                        }
+                        break;
+                    case CommandPropertyName.KeyPrefixed:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+
+                        if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.True, state);
+                        }
+
+                        commandData.KeyPrefixed = state.CurrentTokenType == JsonParserToken.True;
+                        break;
+                    case CommandPropertyName.NoSuchProperty:
+                        // unknown command - ignore it
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        if (state.CurrentTokenType == JsonParserToken.StartObject ||
+                            state.CurrentTokenType == JsonParserToken.StartArray)
+                        {
+                            await ReadJsonObject(ctx, stream, commandData.Key, parser, state, buffer, token);
+                        }
+                        break;
                 }
             }
-            return new ArraySegment<CommandData>(cmds, 0, index + 1);
+
+            switch (commandData.Method)
+            {
+                case CommandType.None:
+                    ThrowInvalidMethod();
+                    break;
+                case CommandType.PUT:
+                    if (commandData.Document == null)
+                        ThrowMissingDocumentProperty();
+                    break;
+                case CommandType.PATCH:
+                    if (commandData.Patch == null)
+                        ThrowMissingPatchProperty();
+                    break;
+            }
+
+            return commandData;
         }
 
         private static CommandData[] IncreaseSizeOfCommandsBuffer(int index, CommandData[] cmds)
@@ -242,7 +317,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         private static async Task<BlittableJsonReaderObject> ReadJsonObject(JsonOperationContext ctx, Stream stream, string key, UnmanagedJsonParser parser,
-            JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
+            JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer, CancellationToken token)
         {
             if (state.CurrentTokenType == JsonParserToken.Null)
                 return null;
@@ -258,7 +333,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     if (builder.Read())
                         break;
-                    await RefillParserBuffer(stream, buffer, parser);
+                    await RefillParserBuffer(stream, buffer, parser, token);
                 }
                 builder.FinalizeDocument();
                 reader = builder.CreateReader();
@@ -333,6 +408,7 @@ namespace Raven.Server.Documents.Handlers
                         return CommandPropertyName.NoSuchProperty;
 
                     return CommandPropertyName.KeyPrefixed;
+
                 default:
                     return CommandPropertyName.NoSuchProperty;
             }
@@ -382,9 +458,11 @@ namespace Raven.Server.Documents.Handlers
             throw new InvalidOperationException("Expected " + jsonParserToken + " , but got " + state.CurrentTokenType);
         }
 
-        private static async Task RefillParserBuffer(Stream stream, JsonOperationContext.ManagedPinnedBuffer buffer, UnmanagedJsonParser parser)
+        private static async Task RefillParserBuffer(Stream stream, JsonOperationContext.ManagedPinnedBuffer buffer, UnmanagedJsonParser parser, CancellationToken token = default(CancellationToken))
         {
-            var read = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count);
+            // Although we using here WithCancellation and passing the token,
+            // the stream will stay open even after the cancellation until the entire server will be disposed.
+            var read = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count, token).WithCancellation(token);
             if (read == 0)
                 ThrowUnexpectedEndOfStream();
             parser.SetBuffer(buffer, 0, read);
