@@ -280,8 +280,7 @@ namespace Raven.Server.Documents.Versioning
             IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
         }
 
-        private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice,
-            long numberOfRevisionsToDelete)
+        private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, long numberOfRevisionsToDelete)
         {
             long maxEtagDeleted = 0;
 
