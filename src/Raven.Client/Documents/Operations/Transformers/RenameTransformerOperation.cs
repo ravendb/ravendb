@@ -6,42 +6,31 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Transformers
 {
-    public class RenameTransformerOperation : IAdminOperation
+    public class RenameTransformerOperation : IAdminOperation<long>
     {
         private readonly string _name;
         private readonly string _newName;
 
         public RenameTransformerOperation(string name, string newName)
         {
-            if (name == null)
-                throw new ArgumentNullException(nameof(name));
-            if (newName == null)
-                throw new ArgumentNullException(nameof(newName));
-
-            _name = name;
-            _newName = newName;
+            _name = name ?? throw new ArgumentNullException(nameof(name));
+            _newName = newName ?? throw new ArgumentNullException(nameof(newName));
         }
 
-        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<long> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new RenameTransformerCommand(_name, _newName);
         }
 
-        private class RenameTransformerCommand : RavenCommand<object>
+        private class RenameTransformerCommand : RavenCommand<long>
         {
             private readonly string _name;
             private readonly string _newName;
 
             public RenameTransformerCommand(string name, string newName)
             {
-                if (name == null)
-                    throw new ArgumentNullException(nameof(name));
-
-                if(newName == null)
-                    throw new ArgumentNullException(nameof(newName));
-
-                _name = name;
-                _newName = newName;
+                _name = name ?? throw new ArgumentNullException(nameof(name));
+                _newName = newName ?? throw new ArgumentNullException(nameof(newName));
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -56,6 +45,9 @@ namespace Raven.Client.Documents.Operations.Transformers
 
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
+                if(response.TryGet("Etag", out long etag) == false)
+                    throw new InvalidOperationException("Expected to get Etag from response");
+                Result = etag;
             }
 
             public override bool IsReadRequest => false;

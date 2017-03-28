@@ -120,7 +120,9 @@ namespace SlowTests.Issues
                 var usersTransformer = new Users_FullName_Transformer();
                 usersTransformer.Execute(documentStore);
 
-                documentStore.Admin.Send(new RenameTransformerOperation(usersTransformer.TransformerName, newTransformerName));
+                var etag = documentStore.Admin.Send(new RenameTransformerOperation(usersTransformer.TransformerName, newTransformerName));
+
+                await Server.ServerStore.Cluster.WaitForIndexNotification(etag);
 
                 var database = await GetDatabase(documentStore.DefaultDatabase);
 
@@ -128,13 +130,12 @@ namespace SlowTests.Issues
 
                 Assert.Equal(newTransformerName, transformer.Name);
                 Assert.Equal(1, database.TransformerStore.GetTransformers().Count());
-            }
 
-            using (var documentStore = GetDocumentStore(path: path))
-            {
-                var database = await GetDatabase(documentStore.DefaultDatabase);
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(documentStore.DefaultDatabase, null);
 
-                var transformer = database.TransformerStore.GetTransformer(newTransformerName);
+                database = await GetDatabase(documentStore.DefaultDatabase);
+
+                transformer = database.TransformerStore.GetTransformer(newTransformerName);
 
                 Assert.Equal(newTransformerName, transformer.Name);
                 Assert.Equal(1, database.TransformerStore.GetTransformers().Count());

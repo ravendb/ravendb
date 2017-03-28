@@ -59,7 +59,6 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteString(name);
                     writer.WriteComma();
 
-                    // todo: we probably won't need that
                     writer.WritePropertyName("Etag");
                     writer.WriteInteger(index);
                     writer.WriteEndObject();
@@ -129,7 +128,14 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var existingTransformer = Database.TransformerStore.GetTransformer(name);
-                var transformerBlittable = EntityToBlittable.ConvertEntityToBlittable(existingTransformer, DocumentConventions.Default, context);
+                var newDefinition = new TransformerDefinition
+                {
+                    Name = newName,
+                    LockMode = TransformerLockMode.Unlock, // todo: check that this is not blocked
+                    Temporary = existingTransformer.Definition.Temporary,
+                    TransformResults = existingTransformer.Definition.TransformResults
+                };
+                var transformerBlittable = EntityToBlittable.ConvertEntityToBlittable(newDefinition, DocumentConventions.Default, context);
 
                 var delVal = new DynamicJsonValue
                 {
@@ -144,17 +150,29 @@ namespace Raven.Server.Documents.Handlers
                     [nameof(PutTransformerCommand.DatabaseName)] = Database.Name,
                 };
 
+                long index;
                 using (var deleteTransformerCommand = context.ReadObject(delVal, "delete-transformer-cmd"))
                 using (var putTransfomerCommand = context.ReadObject(putVal, "put-transformer-cmd"))
                 {
                     var del = ServerStore.SendToLeaderAsync(deleteTransformerCommand);
                     var put = ServerStore.SendToLeaderAsync(putTransfomerCommand);
                     await Task.WhenAll(del, put);
-                    var index = await put;
+                    index = await put;
                     await ServerStore.Cluster.WaitForIndexNotification(index);
                 }
-               
-                NoContentStatus();
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName("Transformer");
+                    writer.WriteString(name);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName("Etag");
+                    writer.WriteInteger(index);
+                    writer.WriteEndObject();
+                }
             }
         }
 
@@ -179,7 +197,7 @@ namespace Raven.Server.Documents.Handlers
                     if (transformer == null)
                         TransformerDoesNotExistException.ThrowFor(name);
                     var faultyInMemoryTransformer = transformer as FaultyInMemoryTransformer;
-                    if(faultyInMemoryTransformer != null)
+                    if (faultyInMemoryTransformer != null)
                         throw new NotSupportedException("Cannot change lock mode on faulty index", faultyInMemoryTransformer.Error);
 
                     using (var setTranformerLockModeCommand = context.ReadObject(new DynamicJsonValue

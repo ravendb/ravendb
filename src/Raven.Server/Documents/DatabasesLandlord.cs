@@ -45,8 +45,8 @@ namespace Raven.Server.Documents
             _serverStore = serverStore;
             _resourceSemaphore = new SemaphoreSlim(_serverStore.Configuration.Databases.MaxConcurrentResourceLoads);
             _concurrentResourceLoadTimeout = _serverStore.Configuration.Databases.ConcurrentResourceLoadTimeout.AsTimeSpan;
-            _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Raven/Server");            
-        }	
+            _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Raven/Server");
+        }
 
         public void ClusterOnDatabaseChanged(object sender, string dbName)
         {
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents
                 }
 
                 DeletionInProgressStatus deletionInProgress;
-                if (record.DeletionInProgress != null && 
+                if (record.DeletionInProgress != null &&
                     record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
                     deletionInProgress != DeletionInProgressStatus.No)
                 {
@@ -81,7 +81,7 @@ namespace Raven.Server.Documents
                     _serverStore.NotificationCenter.Add(DatabaseChanged.Create(dbName, DatabaseChangeType.Delete));
 
                     NotifyLeaderAboutRemoval(dbName);
-                    
+
 
                     return;
                 }
@@ -227,6 +227,7 @@ namespace Raven.Server.Documents
 
                 Task<DocumentDatabase> database;
                 if (DatabasesCache.TryGetValue(databaseName, out database))
+                {
                     if (database.IsFaulted || database.IsCanceled)
                     {
                         DatabasesCache.TryRemove(databaseName, out database);
@@ -238,6 +239,7 @@ namespace Raven.Server.Documents
                     {
                         return database;
                     }
+                }
 
                 return CreateDatabase(databaseName, ignoreDisabledDatabase);
             }
