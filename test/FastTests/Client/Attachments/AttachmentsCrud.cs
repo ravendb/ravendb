@@ -129,6 +129,43 @@ namespace FastTests.Client.Attachments
             }
         }
 
+        [Fact]
+        public void PutAttachmentAndPutDocument_ShouldHaveHasAttachmentsFlag()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Fitzchak"}, "users/1");
+                    session.SaveChanges();
+
+                    using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
+                    {
+                        store.Operations.Send(new PutAttachmentOperation("users/1", "pic", profileStream, "image/png"));
+                    }
+
+                    var user = session.Load<User>("users/1");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak 2" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                AssertAttachmentCount(store, 1, 1, 1);
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                }
+            }
+        }
+
         [Theory]
         [InlineData("\t", null)]
         [InlineData("\\", "\\")]
