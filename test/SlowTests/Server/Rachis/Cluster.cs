@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
-using Raven.Server.Documents;
-using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -49,13 +43,14 @@ namespace SlowTests.Server.Rachis
                     var serverTagToBeDeleted = databaseResult.Topology.Members[startReplicationFactor-replicationFactor];
                     replicationFactor--;
                     deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted));
-                    await AssertNumberOfNodesContainingDatabase(deleteResult.ETag, databaseName, numberOfInstances, replicationFactor);
+                    //The +1 is for NotifyLeaderAboutRemoval
+                    await AssertNumberOfNodesContainingDatabase(deleteResult.ETag + 1, databaseName, numberOfInstances, replicationFactor);
                 }
                 TransactionOperationContext context;
                 using (leader.ServerStore.ContextPool.AllocateOperationContext(out context))
-                using(context.OpenReadTransaction())
+                using (context.OpenReadTransaction())
                 {
-                    Assert.Null(leader.ServerStore.Cluster.ReadDatabase(context, databaseName));
+                    Assert.Null(leader.ServerStore.Cluster.ReadDatabase(context, databaseName));                    
                 }
             }
         }

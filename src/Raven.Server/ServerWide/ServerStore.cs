@@ -405,7 +405,7 @@ namespace Raven.Server.ServerWide
                 if (_clusterRequestExecutor == null)
                     _clusterRequestExecutor = RequestExecutor.CreateForSingleNode(leaderUrl, "Rachis.Server", clusterTopology.ApiKey);
                 else if (_clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false ||
-                         _clusterRequestExecutor.ApiKey.Equals(clusterTopology.ApiKey) == false)
+                         _clusterRequestExecutor.ApiKey?.Equals(clusterTopology.ApiKey) == false)
                 {
                     _clusterRequestExecutor.Dispose();
                     _clusterRequestExecutor = RequestExecutor.CreateForSingleNode(leaderUrl, "Rachis.Server", clusterTopology.ApiKey);                    
