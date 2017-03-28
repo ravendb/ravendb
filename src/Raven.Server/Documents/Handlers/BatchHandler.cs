@@ -201,7 +201,7 @@ namespace Raven.Server.Documents.Handlers
             return indexesToCheck;
         }
 
-        private class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+        public class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             public DynamicJsonArray Reply;
             public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;

@@ -1059,7 +1059,7 @@ namespace Voron.Impl.Journal
                 var journalEntry = PrepareToWriteToJournal(tx);
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Preparing to write tx {tx.Id} to jouranl with {journalEntry.NumberOfUncompressedPages:#,#} pages ({(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte:#,#} kb) in {sp.Elapsed} with {journalEntry.NumberOf4Kbs / 4:#,#} kb compressed.");
+                    _logger.Info($"Preparing to write tx {tx.Id} to jouranl with {journalEntry.NumberOfUncompressedPages:#,#} pages ({(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte:#,#} kb) in {sp.Elapsed} with {Math.Round(journalEntry.NumberOf4Kbs / 4d, 1):#,#.#;;0} kb compressed.");
                 }
 
                 if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
