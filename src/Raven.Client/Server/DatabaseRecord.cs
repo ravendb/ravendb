@@ -59,6 +59,9 @@ namespace Raven.Client.Documents
             }
 
             if (lockMode == TransformerLockMode.LockedIgnore)
+                return;
+
+            if (lockMode == TransformerLockMode.LockedError)
                 throw new IndexOrTransformerAlreadyExistException($"Cannot edit existing transformer {definition.Name} with lock mode {lockMode}");
 
             Transformers[definition.Name] = definition;
