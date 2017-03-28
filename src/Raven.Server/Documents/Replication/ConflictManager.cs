@@ -238,8 +238,7 @@ namespace Raven.Server.Documents.Replication
             var existingDoc = existing.Document;
             var existingTombstone = existing.Tombstone;
 
-            if (existingDoc != null && existingDoc.IsMetadataEqualTo(incomingDoc) &&
-                    existingDoc.IsEqualTo(incomingDoc))
+            if (existingDoc != null && Document.IsEqualTo(existingDoc.Data, incomingDoc))
             {
                 // no real conflict here, both documents have identical content
                 var mergedChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);

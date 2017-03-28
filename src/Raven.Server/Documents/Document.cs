@@ -27,7 +27,6 @@ namespace Raven.Server.Documents
         public DocumentFlags Flags;
         public NonPersistentDocumentFlags NonPersistentFlags;
         public short TransactionMarker;
-        public IEnumerable<Attachment> Attachments;
 
         public unsafe ulong DataHash
         {
@@ -103,15 +102,15 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public bool IsMetadataEqualTo(BlittableJsonReaderObject obj)
+        private static bool IsMetadataEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument)
         {
-            if (obj == null)
+            if (targetDocument == null)
                 return false;
 
             BlittableJsonReaderObject myMetadata;
             BlittableJsonReaderObject objMetadata;
-            Data.TryGet(Constants.Documents.Metadata.Key, out myMetadata);
-            obj.TryGet(Constants.Documents.Metadata.Key, out objMetadata);
+            currentDocument.TryGet(Constants.Documents.Metadata.Key, out myMetadata);
+            targetDocument.TryGet(Constants.Documents.Metadata.Key, out objMetadata);
 
             if (myMetadata == null && objMetadata == null)
                 return true;
@@ -122,9 +121,13 @@ namespace Raven.Server.Documents
             return ComparePropertiesExceptionStartingWithAt(myMetadata, objMetadata, isMetadata: true);
         }
 
-        public bool IsEqualTo(BlittableJsonReaderObject obj)
+        public static bool IsEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument)
         {
-            return ComparePropertiesExceptionStartingWithAt(Data, obj);
+            // Performance improvemnt: We compare the metadata first 
+            // because that most of the time the metadata itself won't be the equal, so no need to compare all values
+
+            return IsMetadataEqualTo(currentDocument, targetDocument) &&
+                   ComparePropertiesExceptionStartingWithAt(currentDocument, targetDocument);
         }
 
         private static bool ComparePropertiesExceptionStartingWithAt(BlittableJsonReaderObject myObject,
