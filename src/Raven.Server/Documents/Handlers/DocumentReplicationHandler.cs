@@ -6,9 +6,8 @@ using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Documents.Session;
+using Raven.Server.Json;
 using Raven.Server.Utils;
 namespace Raven.Server.Documents.Handlers
 {
@@ -59,7 +58,7 @@ namespace Raven.Server.Documents.Handlers
                         maxEtag = conflict.Etag;
 
                     array.Add(new DynamicJsonValue
-                    {                        
+                    {
                         [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector.ToJson(),
                         [nameof(GetConflictsResult.Conflict.Doc)] = conflict.Doc
                     });
@@ -76,19 +75,39 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/replication/stats", "GET")]
-        public Task GetRepliationStats()
+        [RavenAction("/databases/*/replication/performance", "GET")]
+        public Task Performance()
         {
-            var stats = Database.DocumentReplicationLoader.RepliactionStats;
-            DocumentsOperationContext context;
+            JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                stats.Update();
-                var entityToBlittable = new EntityToBlittable(null);
-                var json = entityToBlittable.ConvertEntityToBlittable(stats, new DocumentConventions(), context);
-                context.Write(writer, json);             
+                writer.WriteStartObject();
+
+                writer.WritePropertyName("Incoming");
+                writer.WriteStartArray();
+                writer.WriteEndArray();
+                writer.WriteComma();
+
+                writer.WritePropertyName("Outgoing");
+                writer.WriteArray(context, Database.DocumentReplicationLoader.OutgoingHandlers, (w, c, handler) =>
+                {
+                    w.WritePropertyName("Destination");
+                    w.WriteString(handler.FromToString);
+                    w.WriteComma();
+
+                    w.WritePropertyName("Performance");
+                    w.WriteArray(c, handler.GetReplicationPerformance(), (innerWriter, innerContext, performance) =>
+                    {
+                        var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(performance);
+                        innerWriter.WriteObject(context.ReadObject(djv, "replication/performance"));
+                    });
+                });
+                writer.WriteComma();
+
+                writer.WriteEndObject();
             }
+
             return Task.CompletedTask;
         }
 
@@ -273,7 +292,7 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
-                var advisor = new ConflictResovlerAdvisor(conflicts.Select(c=>c.Doc),context);
+                var advisor = new ConflictResovlerAdvisor(conflicts.Select(c => c.Doc), context);
                 var resovled = advisor.Resolve();
 
                 context.Write(writer, new DynamicJsonValue

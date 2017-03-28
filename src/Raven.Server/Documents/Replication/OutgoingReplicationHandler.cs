@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using Raven.Client.Documents;
@@ -43,9 +45,6 @@ namespace Raven.Server.Documents.Replication
         public long LastAcceptedDocumentEtag;
         internal long _lastSentIndexOrTransformerEtag;
 
-        internal ReplicationStatistics.OutgoingBatchStats OutgoingStats = new ReplicationStatistics.OutgoingBatchStats();
-        internal ReplicationStatistics ReplicationStats;
-
         internal DateTime _lastDocumentSentTime;
         internal DateTime _lastIndexOrTransformerSentTime;
 
@@ -75,6 +74,10 @@ namespace Raven.Server.Documents.Replication
 
         public event Action<OutgoingReplicationHandler> SuccessfulTwoWaysCommunication;
 
+        private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
+
+        private OutgoingReplicationStatsAggregator _lastStats;
+
         public OutgoingReplicationHandler(DocumentReplicationLoader parent,
             DocumentDatabase database,
             ReplicationDestination destination)
@@ -87,7 +90,15 @@ namespace Raven.Server.Documents.Replication
             _database.Changes.OnIndexChange += OnIndexChange;
             _database.Changes.OnTransformerChange += OnTransformerChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
-            ReplicationStats = _parent.RepliactionStats;
+        }
+
+        public ReplicationPerformanceStats[] GetReplicationPerformance()
+        {
+            var lastStats = _lastStats;
+
+            return _lastReplicationStats
+                .Select(x => x == lastStats ? x.ToReplicationPerformanceLiveStatsWithDetails() : x.ToReplicationPerformanceStats())
+                .ToArray();
         }
 
         public void Start()
@@ -168,25 +179,32 @@ namespace Raven.Server.Documents.Replication
 
                         while (_cts.IsCancellationRequested == false)
                         {
-                            long currentEtag;
-
                             Debug.Assert(_database.IndexMetadataPersistence.IsInitialized);
 
-                            currentEtag = GetLastIndexEtag();
+                            var currentEtag = GetLastIndexEtag();
 
-                            if (_destination.SkipIndexReplication == false &&
-                                currentEtag != indexAndTransformerSender.LastEtag)
+                            if (_destination.SkipIndexReplication == false && currentEtag != indexAndTransformerSender.LastEtag)
                             {
                                 indexAndTransformerSender.ExecuteReplicationOnce();
                             }
 
-                            var sp = Stopwatch.StartNew();
-                            while (documentSender.ExecuteReplicationOnce())
+                            while (true)
                             {
-                                if (sp.ElapsedMilliseconds > 60 * 1000)
+                                var sp = Stopwatch.StartNew();
+                                var stats = _lastStats = new OutgoingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
+                                AddReplicationPerformance(stats);
+
+                                using (var scope = stats.CreateScope())
                                 {
-                                    _waitForChanges.Set();
-                                    break;
+                                    var didWork = documentSender.ExecuteReplicationOnce(scope);
+                                    if (didWork == false)
+                                        break;
+
+                                    if (sp.ElapsedMilliseconds > 60 * 1000)
+                                    {
+                                        _waitForChanges.Set();
+                                        break;
+                                    }
                                 }
                             }
 
@@ -227,6 +245,14 @@ namespace Raven.Server.Documents.Replication
                         e);
                 Failed?.Invoke(this, e);
             }
+        }
+
+        private void AddReplicationPerformance(OutgoingReplicationStatsAggregator stats)
+        {
+            _lastReplicationStats.Enqueue(stats);
+
+            while (_lastReplicationStats.Count > 25)
+                _lastReplicationStats.TryDequeue(out stats);
         }
 
         private long GetLastIndexEtag()
@@ -567,7 +593,7 @@ namespace Raven.Server.Documents.Replication
             {
                 if (_log.IsInfoEnabled)
                     _log.Info(
-                        $"Failed to connect to remote replication destination {connection.Url}. Socket Error Code = {((SocketException) ae.InnerException).SocketErrorCode}",
+                        $"Failed to connect to remote replication destination {connection.Url}. Socket Error Code = {((SocketException)ae.InnerException).SocketErrorCode}",
                         ae.InnerException);
                 throw;
             }
