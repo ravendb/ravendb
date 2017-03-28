@@ -74,8 +74,12 @@ namespace Raven.Server.Documents
 
                     if (deletionInProgress == DeletionInProgressStatus.HardDelete)
                     {
-                        var configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true);
-                        DatabaseHelper.DeleteDatabaseFiles(configuration);
+                        var configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, databaseRecord:record);
+                        //this can happen if the database record was already deleted
+                        if (configuration != null)
+                        {
+                            DatabaseHelper.DeleteDatabaseFiles(configuration);
+                        }
                     }
 
                     _serverStore.NotificationCenter.Add(DatabaseChanged.Create(dbName, DatabaseChangeType.Delete));
@@ -365,25 +369,29 @@ namespace Raven.Server.Documents
                     return null;
 
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
-
-                if (databaseRecord.Disabled && ignoreDisabledDatabase == false)
-                    throw new DatabaseDisabledException(databaseName + " has been disabled");
-
-                DeletionInProgressStatus deletionInProgress;
-                var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
-                                            databaseRecord.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
-                                            deletionInProgress != DeletionInProgressStatus.No;
-                if (ignoreBeenDeleted == false && databaseIsBeenDeleted)
-                    throw new DatabaseDisabledException(databaseName + " is currently being deleted on " + _serverStore.NodeTag);
-
-                if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false &&
-                    databaseIsBeenDeleted == false)
-                    // TODO: need to handle this properly, need to redirect to somewhere it is on
-                    throw new InvalidOperationException(databaseName + " is not relevant for " + _serverStore.NodeTag);
-                return CreateConfiguration(databaseName, databaseRecord);
+                return CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, databaseRecord);
 
             }
 
+        }
+
+        public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase, bool ignoreBeenDeleted, DatabaseRecord databaseRecord)
+        {
+            if (databaseRecord.Disabled && ignoreDisabledDatabase == false)
+                throw new DatabaseDisabledException(databaseName + " has been disabled");
+
+            DeletionInProgressStatus deletionInProgress;
+            var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
+                                        databaseRecord.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
+                                        deletionInProgress != DeletionInProgressStatus.No;
+            if (ignoreBeenDeleted == false && databaseIsBeenDeleted)
+                throw new DatabaseDisabledException(databaseName + " is currently being deleted on " + _serverStore.NodeTag);
+
+            if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false &&
+                databaseIsBeenDeleted == false)
+                // TODO: need to handle this properly, need to redirect to somewhere it is on
+                throw new InvalidOperationException(databaseName + " is not relevant for " + _serverStore.NodeTag);
+            return CreateConfiguration(databaseName, databaseRecord);
         }
 
         protected RavenConfiguration CreateConfiguration(StringSegment databaseName, DatabaseRecord record)

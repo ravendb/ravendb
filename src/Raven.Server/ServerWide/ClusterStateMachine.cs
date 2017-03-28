@@ -25,6 +25,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -141,9 +142,10 @@ namespace Raven.Server.ServerWide
                 if (doc.TryGet(nameof(DatabaseRecord.Topology), out topology) == false)
                 {
                     items.DeleteByKey(loweredKey);
+                    NotifyDatabaseChanged(context, databaseName, index);
                     return;
                 }
-                //TODO: Remove those 3 lines? i think it is already removed at this point
+
                 databaseRecord.Topology.Members.Remove(remove.NodeTag);
                 databaseRecord.Topology.Promotables.Remove(remove.NodeTag);
                 databaseRecord.Topology.Watchers.Remove(remove.NodeTag);
