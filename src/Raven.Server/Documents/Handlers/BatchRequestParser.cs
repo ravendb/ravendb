@@ -145,7 +145,11 @@ namespace Raven.Server.Documents.Handlers
                 do
                 {
                     await RefillParserBuffer(_stream, _buffer, _parser, _token);
+
                 } while (_parser.Read() == false);
+                if (_state.CurrentTokenType == JsonParserToken.EndArray)
+                    return new CommandData{Method = CommandType.None};
+
                 return await ReadSingleCommand(ctx, _stream, _state, _parser, _buffer, _token);
             }
         }

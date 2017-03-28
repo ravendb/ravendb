@@ -36,7 +36,7 @@ namespace SlowTests.Issues
                     bulkInsert.Store(new User { Name = "New Data" });
                 }
                 
-                bulkInsert.Kill();
+                bulkInsert.Abort();
 
                 ExpectEndOfStreamOrOperationCanceledException(() =>
                 {

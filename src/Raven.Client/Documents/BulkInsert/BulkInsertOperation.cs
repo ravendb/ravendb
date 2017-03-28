@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -66,6 +68,11 @@ namespace Raven.Client.Documents.BulkInsert
             public void ErrorOnProcessingRequest(Exception exception)
             {
                 _done.TrySetException(exception);
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                _done.TrySetCanceled();
             }
         }
         
@@ -134,13 +141,6 @@ namespace Raven.Client.Documents.BulkInsert
 
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(store.Conventions, entity =>
                 AsyncHelpers.RunSync(() => store.Conventions.GenerateDocumentIdAsync(database, entity)));           
-        }
-
-        public long GetOperationId()
-        {
-            if(_operationId == -1)
-                AsyncHelpers.RunSync(WaitForId);
-            return _operationId;
         }
 
         private async Task WaitForId()
@@ -238,12 +238,11 @@ namespace Raven.Client.Documents.BulkInsert
         private async Task ThrowOnUnavailableStream(string id, Exception innerEx)
         {
             _streamExposerContent.ErrorOnProcessingRequest(
-                new BulkInsertAbortedException($"Write to stream failed at document with id {id}." + Environment.NewLine +
-                                               $"This does not mean, that the server put this document.", innerEx));           
+                new BulkInsertAbortedException($"Write to stream failed at document with id {id}.", innerEx));           
             await _bulkInsertExecuteTask.ConfigureAwait(false);                       
         }
 
-        public async Task AsyncKill()
+        public async Task AbortAsync()
         {
             if (_operationId == -1)
                 return; // nothing was done, nothing to kill
@@ -258,9 +257,9 @@ namespace Raven.Client.Documents.BulkInsert
             }
         }
 
-        public void Kill()
+        public void Abort()
         {
-            AsyncHelpers.RunSync(AsyncKill);
+            AsyncHelpers.RunSync(AbortAsync);
         }
 
         public void Dispose()
@@ -272,11 +271,19 @@ namespace Raven.Client.Documents.BulkInsert
         {
             try
             {
+                Exception flushEx = null;
                 if (_stream != null)
                 {
-                    _jsonWriter.WriteEndArray();
-                    _jsonWriter.Flush();
-                    await _stream.FlushAsync(_token).ConfigureAwait(false);
+                    try
+                    {
+                        _jsonWriter.WriteEndArray();
+                        _jsonWriter.Flush();
+                        await _stream.FlushAsync(_token).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        flushEx = e;
+                    }
                 }
 
                 _streamExposerContent.Done();
@@ -293,15 +300,20 @@ namespace Raven.Client.Documents.BulkInsert
                     {
                         await _bulkInsertExecuteTask.ConfigureAwait(false);
                     }
-                    catch
+                    catch(Exception e)
                     {
+                        var errors = new List<Exception>(3) {e};
+                        if(flushEx != null)
+                            errors.Add(flushEx);
                         var error = await GetExceptionFromOperation().ConfigureAwait(false);
                         if (error != null)
                         {
-                            throw error;
+                            errors.Add(error);
                         }
-                        throw;
-                    }                                 
+                        errors.Reverse();
+                        throw new BulkInsertAbortedException("Failed to execute bulk insert", new AggregateException(errors));
+
+                    }
                 }                 
             }
             finally

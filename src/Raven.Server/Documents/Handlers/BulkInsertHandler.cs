@@ -14,7 +14,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers
 {
-    class BulkInsertHandler : DatabaseRequestHandler
+    public class BulkInsertHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/bulk_insert", "POST")]
         public async Task BulkInsert()
@@ -59,8 +59,11 @@ namespace Raven.Server.Documents.Handlers
                                     break;
 
                                 token.ThrowIfCancellationRequested();
-                                
-                                if (totalSize > 16 * Voron.Global.Constants.Size.Megabyte)
+
+                                    // if we are going to wait on the network, flush immediately
+                                if ((task.IsCompleted == false && list.Count> 0) || 
+                                    // but don't batch too much anyway
+                                    totalSize > 16 * Voron.Global.Constants.Size.Megabyte)
                                 {
                                     await Database.TxMerger.Enqueue(new MergedInsertBulkCommand
                                     {
@@ -85,6 +88,9 @@ namespace Raven.Server.Documents.Handlers
                                 }
 
                                 var commandData = await task;
+                                if (commandData.Method == BatchRequestParser.CommandType.None)
+                                    break;
+
                                 totalSize += commandData.Document.Size;
                                 list.Add(commandData);
                                 
@@ -124,7 +130,7 @@ namespace Raven.Server.Documents.Handlers
             catch (Exception e)
             {
                 HttpContext.Response.Headers["Connection"] = "close";
-                throw new Exception(progress.ToString(), e);
+                throw new InvalidOperationException("Failed to process bulk insert " + progress.ToString(), e);
             }
         }
 
