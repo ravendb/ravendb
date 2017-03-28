@@ -22,8 +22,33 @@ namespace FastTests.Sparrow
         {
             var r1 = Hashing.XXHash32.CalculateRaw("Public");
             var r2 = Hashing.XXHash32.CalculateRaw(new string("Public".ToCharArray()));
+            var r3 = Hashing.XXHash32.Calculate("Public");
 
             Assert.Equal(r1, r2);
+            Assert.Equal(r2, r3);
+        }
+
+        [Fact]
+        public void Marvin32_UseActualValues()
+        {
+            byte[] value = { (byte)'A', 0, (byte)'b', 0, (byte)'c', 0, (byte)'d', 0, (byte)'e', 0, (byte)'f', 0, (byte)'g', 0, }; /* "Abcdefg" in UTF-16-LE */
+
+            var r1 = Hashing.Marvin32.Calculate(value);
+            var r2 = Hashing.Marvin32.Calculate("Abcdefg");
+
+            Assert.Equal(r1, r2);
+        }
+
+
+        [Fact]
+        public void XXHash32_UseLongActualValues()
+        {
+            var r1 = Hashing.XXHash32.CalculateRaw("PublicPublicPublicPublic");
+            var r2 = Hashing.XXHash32.CalculateRaw(new string("PublicPublicPublicPublic".ToCharArray()));
+            var r3 = Hashing.XXHash32.Calculate("PublicPublicPublicPublic");
+
+            Assert.Equal(r1, r2);
+            Assert.Equal(r2, r3);
         }
 
 
@@ -74,6 +99,14 @@ namespace FastTests.Sparrow
 
             Assert.Equal(r1.H1, 0x9B9FEDA4BFE27CC7UL);
             Assert.Equal(r1.H2, 0x97A27450ACB24805UL);
+        }
+
+        [Fact]
+        public void Marvin32()
+        {
+            byte[] test = { (byte)'A', 0, (byte)'b', 0, (byte)'c', 0, (byte)'d', 0, (byte)'e', 0, (byte)'f', 0, (byte)'g', 0, }; /* "Abcdefg" in UTF-16-LE */
+            uint r = Hashing.Marvin32.Calculate(test);
+            Assert.Equal(r, 0xba627c81);
         }
 
 
