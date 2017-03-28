@@ -471,6 +471,7 @@ hr {
 }
 
 .file-input input[type='file'] {
+    width:100%;
     visibility: hidden;
     height: 0;
 }
@@ -725,6 +726,7 @@ input[type=file] + .form-control {
     -ms-transition: transform 0.3s cubic-bezier(0.57, 1.68, 0.68, 1.05);
     -o-transition: transform 0.3s cubic-bezier(0.57, 1.68, 0.68, 1.05);
     transition: transform 0.3s cubic-bezier(0.57, 1.68, 0.68, 1.05);
+    pointer-events:none;
 
     &:before {
         content: '';
