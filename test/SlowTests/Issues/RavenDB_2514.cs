@@ -6,6 +6,7 @@
 
 using System;
 using System.IO;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -38,7 +39,7 @@ namespace SlowTests.Issues
                 
                 bulkInsert.Abort();
 
-                ExpectEndOfStreamOrOperationCanceledException(() =>
+                ExpectedErrorOnRequest(() =>
                 {
                     for (var i = 0; i < bulkInsertSize; i++)
                     {
@@ -47,22 +48,21 @@ namespace SlowTests.Issues
                     }
                 });
 
-                ExpectEndOfStreamOrOperationCanceledException(bulkInsert.Dispose);
+                ExpectedErrorOnRequest(bulkInsert.Dispose);
             
             }
         }
 
-        private static void ExpectEndOfStreamOrOperationCanceledException(Action action)
+        private static void ExpectedErrorOnRequest(Action action)
         {
             try
             {
                 action();
                 Assert.True(false);
             }
-            catch(BulkInsertAbortedException)
-            {
-            }
+            catch(BulkInsertAbortedException) { }
             catch (IOException) { }
+            catch (HttpRequestException) { }
         }
     }
 }
