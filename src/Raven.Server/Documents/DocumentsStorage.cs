@@ -7,9 +7,11 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Versioning;
@@ -24,8 +26,8 @@ using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Collections;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.Utils;
 using Voron.Data;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
@@ -765,20 +767,11 @@ namespace Raven.Server.Documents
             return table.CountBackwardFrom(TombstonesSchema.FixedSizeIndexes[DeletedEtagsSlice], etag);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var document = ParseDocument(context, ref tvr);
             DebugDisposeReaderAfterTransction(context.Transaction, document.Data);
-
-            if ((document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
-            {
-                Slice prefixSlice;
-                using (AttachmentsStorage.GetAttachmentPrefix(context, document.LoweredKey.Buffer, document.LoweredKey.Size, AttachmentType.Document, null, out prefixSlice))
-                {
-                    document.Attachments = AttachmentsStorage.GetAttachmentsForDocument(context, prefixSlice.Clone(context.Allocator));
-                }
-            }
-
             return document;
         }
 
@@ -1471,33 +1464,7 @@ namespace Raven.Server.Documents
                     table.ReadByKey(loweredKey, out oldValue);
                 }
 
-                if (changeVector == null)
-                {
-                    var oldChangeVector = oldValue.Pointer != null ? GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)DocumentsTable.ChangeVector) : null;
-                    changeVector = SetDocumentChangeVectorForLocalChange(context,
-                        loweredKey,
-                        oldChangeVector, newEtag);
-                }
-
-                if (collectionName.IsSystem == false && (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
-                {
-                    if (_documentDatabase.BundleLoader.VersioningStorage != null)
-                    {
-                        VersioningConfigurationCollection configuration;
-                        if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(
-                            collectionName, 
-                            nonPersistentFlags,
-                            context,
-                            ref oldValue,
-                            document,
-                            ref flags,
-                            out configuration))
-                        {
-                            _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, modifiedTicks, configuration);
-                        }
-                    }
-                }
-
+                BlittableJsonReaderObject oldDoc = null;
                 if (oldValue.Pointer == null)
                 {
                     if (expectedEtag != null && expectedEtag != 0)
@@ -1512,10 +1479,65 @@ namespace Raven.Server.Documents
                         ThrowConcurrentException(key, expectedEtag, oldEtag);
 
                     int oldSize;
-                    var oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsTable.Data, out oldSize), oldSize, context);
+                    oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsTable.Data, out oldSize), oldSize, context);
                     var oldCollectionName = ExtractCollectionName(context, key, oldDoc);
                     if (oldCollectionName != collectionName)
                         ThrowInvalidCollectionNameChange(key, oldCollectionName, collectionName);
+
+                    int size;
+                    var oldFlags = *(DocumentFlags*)oldValue.Read((int)DocumentsTable.Flags, out size);
+                    if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                    {
+                        flags |= DocumentFlags.HasAttachments;
+                    }
+                }
+
+                if (changeVector == null)
+                {
+                    var oldChangeVector = oldValue.Pointer != null ? GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)DocumentsTable.ChangeVector) : null;
+                    changeVector = SetDocumentChangeVectorForLocalChange(context,
+                        loweredKey,
+                        oldChangeVector, newEtag);
+                }
+
+                
+                if (collectionName.IsSystem == false &&
+                    (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
+                {
+                    if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
+                        (nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
+                        (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
+                    {
+                        Debug.Assert(oldDoc != null, "Can be null when it comes from replication, but we checked for this.");
+
+                        if (oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
+                            oldMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray oldAttachments))
+                        {
+                            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
+                            {
+                                // Make sure the user did not changed the value of attachments in the metadata
+                                // In most cases it isn't chagned so we can skip recreating the document
+                                if (attachments.Equals(oldAttachments) == false)
+                                {
+                                    metadata.Modifications = new DynamicJsonValue(metadata)
+                                    {
+                                        [Constants.Documents.Metadata.Attachments] = oldAttachments
+                                    };
+                                    document = context.ReadObject(document, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                                }
+                            }
+                        }
+                    }
+
+                    if (_documentDatabase.BundleLoader.VersioningStorage != null)
+                    {
+                        VersioningConfigurationCollection configuration;
+                        if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document, ref flags, out configuration))
+                        {
+                            _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, modifiedTicks, configuration);
+                        }
+                    }
                 }
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
@@ -2001,10 +2023,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public void UpdateDocumentAfterAttachmentChange(
-            DocumentsOperationContext context,
-            string documentId,
-            TableValueReader tvr)
+        public void UpdateDocumentAfterAttachmentChange(DocumentsOperationContext context, Slice lowerDocumentId, string documentId, TableValueReader tvr)
         {
             // We can optimize this by copy just the document's data instead of the all tvr
             var copyOfDoc = context.GetMemory(tvr.Size);
@@ -2014,10 +2033,32 @@ namespace Raven.Server.Documents
                 // can cause corruption if we read from the old value (which we just deleted)
                 Memory.Copy(copyOfDoc.Address, tvr.Pointer, tvr.Size);
                 var copyTvr = new TableValueReader(copyOfDoc.Address, tvr.Size);
-
                 int size;
                 var data = new BlittableJsonReaderObject(copyTvr.Read((int)DocumentsTable.Data, out size), size, context);
-                Put(context, documentId, null, data, null, null, DocumentFlags.HasAttachments);
+
+                var attachments = new DynamicJsonArray();
+                using (AttachmentsStorage.GetAttachmentPrefix(context, lowerDocumentId, AttachmentType.Document, null, out Slice prefixSlice))
+                {
+                    foreach (var attachment in AttachmentsStorage.GetAttachmentsForDocument(context, prefixSlice))
+                    {
+                        attachments.Add(new DynamicJsonValue
+                        {
+                            [nameof(AttachmentResult.Name)] = attachment.Name,
+                            [nameof(AttachmentResult.Hash)] = attachment.Base64Hash.ToString(), // TODO: Do better than create a string
+                            [nameof(AttachmentResult.ContentType)] = attachment.ContentType,
+                            [nameof(AttachmentResult.Size)] = attachment.Size,
+                        });
+                    }
+                }
+
+                data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
+                metadata.Modifications = new DynamicJsonValue(metadata)
+                {
+                    [Constants.Documents.Metadata.Attachments] = attachments
+                };
+                data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                Put(context, documentId, null, data, null, null, DocumentFlags.HasAttachments, NonPersistentDocumentFlags.ByAttachmentUpdate);
             }
             finally
             {
