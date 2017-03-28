@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Commands
         public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
             long id;
-            response.TryGet("id", out id);
+            response.TryGet("Id", out id);
             Result = id;
         }
     }

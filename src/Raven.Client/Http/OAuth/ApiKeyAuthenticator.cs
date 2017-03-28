@@ -86,7 +86,7 @@ namespace Raven.Client.Http.OAuth
                         throw new AuthenticationException((LazyStringValue)errorString);
 
                     object cryptedToken;
-                    if (tokenJson.TryGetMember("cryptedToken", out cryptedToken) == false)
+                    if (tokenJson.TryGetMember("Token", out cryptedToken) == false)
                         throw new InvalidDataException("Missing 'cryptedToken' property in the POST request body");
 
                     var cryptTokenBytes = Convert.FromBase64String(((LazyStringValue)cryptedToken).ToString());
@@ -148,10 +148,10 @@ namespace Raven.Client.Http.OAuth
                         var pkString = Convert.ToBase64String(publicKey);
 
                         writer.WriteStartObject();
-                        writer.WritePropertyName("hash");
+                        writer.WritePropertyName("Hash");
                         writer.WriteString(hashString);
                         writer.WriteComma();
-                        writer.WritePropertyName("public-key");
+                        writer.WritePropertyName("PublicKey");
                         writer.WriteString(pkString);
                         writer.WriteEndObject();
                     }
