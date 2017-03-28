@@ -1,6 +1,7 @@
 ﻿.virtual-grid {
     background-color: @gray-darker;
     padding: @grid-gutter-width/4;
+    overflow-x: hidden;
 
     .viewport-scroller {
         position: relative;
@@ -133,6 +134,8 @@
             display: block;
             margin: 0 -@grid-gutter-width/4;
             padding: 0 @grid-gutter-width/4;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         &:last-of-type {
@@ -202,6 +205,8 @@
 
         .column {
             position: relative;
+            overflow:hidden;
+            text-overflow:ellipsis;
 
             + .column {
                 border-left: 1px solid @gray-dark;
