@@ -11,7 +11,9 @@
                         <span data-bind="text: selectedIndexLabel"></span>
                         <span class="caret"></span>
                     </button>
-                    <ul class="dropdown-menu">
+                    <div class="dropdown-menu">
+                        <ul class="menu max-height">
+
                         <!-- ko foreach: indexes -->
                         <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
                         <!-- /ko -->
@@ -29,7 +31,8 @@
                                 <span>dynamic/All Documents</span>
                             </a>
                         </li>
-                    </ul>
+                        </ul>
+                    </div>
                 </div>
                 <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }"><i class="icon-edit"></i><span>Edit index</span></a>
                 <a class="btn btn-default" data-bind="attr: { href: indexPerformanceUrl }" title="Navigate to index performance"><i class="icon-traffic-watch"></i><span>Index performance</span></a>
