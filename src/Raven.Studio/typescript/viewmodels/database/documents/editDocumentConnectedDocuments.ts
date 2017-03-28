@@ -56,6 +56,7 @@ class connectedDocuments {
     isRecentActive = ko.pureComputed(() => connectedDocuments.currentTab() === "recent");
     isRevisionsActive = ko.pureComputed(() => connectedDocuments.currentTab() === "revisions");
     isUploaderActive: KnockoutComputed<boolean>;
+    showUploadNotAvailable: KnockoutComputed<boolean>;
 
     gridController = ko.observable<virtualGridController<connectedDocument | attachmentItem>>();
     uploader: editDocumentUploader;
@@ -92,6 +93,11 @@ class connectedDocuments {
             const readOnly = inReadOnlyMode();
             return onAttachmentsPane && !newDoc && !readOnly;
         });
+        this.showUploadNotAvailable = ko.pureComputed(() => {
+            const onAttachmentsPane = this.isAttachmentsActive();
+            const readOnly = inReadOnlyMode();
+            return onAttachmentsPane && readOnly;
+        });
     }
 
     private initColumns() {
@@ -105,7 +111,7 @@ class connectedDocuments {
                     extraClass: () => 'btn-link',
                     title: (item: attachmentItem) => "Download file: " + item.name
                 }),
-            new textColumn<attachmentItem>(x => generalUtils.formatBytesToSize(x.size), "Size", "70px"),
+            new textColumn<attachmentItem>(x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
             new actionColumn<attachmentItem>(x => this.deleteAttachment(x),
                 "Delete",
                 `<i class="icon-trash"></i>`,
@@ -119,7 +125,7 @@ class connectedDocuments {
                     extraClass: () => 'btn-link',
                     title: () => "Download attachment"
                 }),
-            new textColumn<attachmentItem>(x => generalUtils.formatBytesToSize(x.size), "Size", "70px")
+            new textColumn<attachmentItem>(x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' })
         ];
     }
 

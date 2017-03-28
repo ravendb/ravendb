@@ -51,8 +51,8 @@
                     <virtual-grid params="controller: gridController"></virtual-grid>
                 </div>
             </div>
-                    <div class="bg-warning padding padding-xs text-center">
-                    <small><i class="icon-info"></i> <span>File editing is not available in revisions.</span></small>
+            <div class="bg-warning padding padding-xs text-center" data-bind="visible: showUploadNotAvailable">
+                <small><i class="icon-info"></i> <span>File editing is not available in revisions.</span></small>
             </div>
             <div class="flex-window-head" data-bind="visible: isUploaderActive, template: { name: 'uploader-template' }">
             </div>
@@ -154,22 +154,12 @@
 
 <script type="text/html" id="uploader-template">
     <div class="padding padding-xs margin-bottom" data-bind="with: uploader">
-        <button class="btn btn-sm btn-primary" type="button" data-bind="click: uploadFile">
-            <i class="icon-upload"></i> <span>Add attachment</span>
-        </button>
-        <!-- TODO: upload file automaticly after selection -->
-        <!--
-        <div class="input-group file-input margin-bottom" data-bind="validationElement: fileName">
+        <div class="input-group file-input">
             <input type="file" id="uploadAttachmentFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }" tabindex="-1">
-            <span class="static-name form-control" data-bind="text: fileName() || 'Select file...'"></span>
-            <span class="input-group-btn">
-                <label for="uploadAttachmentFilePicker" class="btn btn-default">
-                    <i class="icon-folder"></i>
-                </label>
-            </span>
-            <p class="help-block" data-bind="validationMessage: fileName"></p>
-        </div> -->
-        <!-- TODO: review this html end -->
+            <label for="uploadAttachmentFilePicker" class="btn btn-default btn-primary">
+                <i class="icon-upload"></i> <span>Add attachment</span>
+            </label>
+        </div>
     </div>
     
 </script>
