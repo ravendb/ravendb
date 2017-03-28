@@ -128,7 +128,10 @@ namespace FastTests
 
                         defaultServer.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
                         if(deleteDatabaseWhenDisposed)
-                            store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
+                        {
+                            var result = store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
+                            defaultServer.ServerStore.Cluster.WaitForIndexNotification(result.ETag).ConfigureAwait(false).GetAwaiter().GetResult();
+                        }
                     }
                 };
                 CreatedStores.Add(store);

@@ -24,6 +24,7 @@ using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Collections;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Data;

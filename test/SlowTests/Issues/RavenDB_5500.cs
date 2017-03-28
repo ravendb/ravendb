@@ -173,6 +173,7 @@ namespace SlowTests.Issues
             var path = NewDataPath();
             using (var store = GetDocumentStore(path: path))
             {
+
                 var indexDefinition1 = index.CreateIndexDefinition();
                 indexDefinition1.Configuration[RavenConfiguration.GetKey(x => x.Indexing.RunInMemory)] = "true";
                 indexDefinition1.Name = index.IndexName + "_1";
@@ -187,7 +188,7 @@ namespace SlowTests.Issues
 
                 var directories = Directory.GetDirectories(database.Configuration.Indexing.StoragePath.FullPath);
 
-                Assert.Equal(2, directories.Length); // Transformers + 1 index
+                Assert.Equal(1, directories.Length); // 1 index
             }
 
             using (var store = GetDocumentStore(path: path))

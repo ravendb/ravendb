@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace Tryouts
@@ -8,16 +9,8 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
-            {
-                Console.WriteLine(i);
-
-                using (var a = new FastTests.Server.Replication.ReplicationWithFailover())
-                {
-                    a.LoadDocumentsWithFailOver().Wait();
-                }
-                
-            }
+            var h = new HttpClient();
+            h.GetAsync("http://google.com").Wait();
         }
     }
 }
