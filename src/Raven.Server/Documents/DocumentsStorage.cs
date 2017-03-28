@@ -1248,7 +1248,6 @@ namespace Raven.Server.Documents
 
                     //make sure that the relevant collection tree exists
                     var table = tx.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
-
                     table.Delete(existingDoc.StorageId);
                 }
             }
@@ -1309,6 +1308,7 @@ namespace Raven.Server.Documents
                     }
                 }
             }
+
             fixed (ChangeVectorEntry* pChangeVector = incomingChangeVector)
             {
                 byte* doc = null;
@@ -1343,7 +1343,6 @@ namespace Raven.Server.Documents
                         conflictsTable.Set(tvb);
                     }
                 }
-
             }
 
             context.Transaction.AddAfterCommitNotification(new DocumentChange
