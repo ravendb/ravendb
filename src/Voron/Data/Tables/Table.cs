@@ -684,6 +684,29 @@ namespace Voron.Data.Tables
             }
         }
 
+        private IEnumerable<TableValueHolder> GetBackwardSecondaryIndexForValue(Tree tree, Slice value)
+        {
+            try
+            {
+                var fstIndex = GetFixedSizeTree(tree, value, 0);
+                using (var it = fstIndex.Iterate())
+                {
+                    it.Seek(long.MaxValue);
+
+                    var result = new TableValueHolder();
+                    while (it.MovePrev())
+                    {
+                        ReadById(it.CurrentKey, out result.Reader);
+                        yield return result;
+                    }
+                }
+            }
+            finally
+            {
+                value.Release(_tx.Allocator);
+            }
+        }
+
         private void ReadById(long id, out TableValueReader reader)
         {
             int size;
@@ -760,6 +783,44 @@ namespace Voron.Data.Tables
                         };
                     }
                 } while (it.MoveNext());
+            }
+        }
+
+        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.SchemaIndexDef index, Slice prefix, Slice last, int skip)
+        {
+            var tree = GetTree(index);
+            if(tree.State.NumberOfEntries == 0)
+                yield break;
+
+            using (var it = tree.Iterate(false))
+            {
+                if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
+                    yield break;
+
+                it.RequiredPrefix = prefix.Clone(_tx.Allocator);
+                if (SliceComparer.StartWith(it.CurrentKey, it.RequiredPrefix) == false)
+                {
+                    if (it.MovePrev() == false)
+                        yield break;
+                }
+
+                do
+                {
+                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator)))
+                    {
+                        if (skip > 0)
+                        {
+                            skip--;
+                            continue;
+                        }
+
+                        yield return new SeekResult
+                        {
+                            Key = it.CurrentKey,
+                            Result = result
+                        };
+                    }
+                } while (it.MovePrev());
             }
         }
 
