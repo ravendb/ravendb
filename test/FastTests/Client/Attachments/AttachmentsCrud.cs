@@ -182,7 +182,7 @@ namespace FastTests.Client.Attachments
         }
 
         [Fact]
-        public async Task DeleteAttachments()
+        public void DeleteAttachments()
         {
             using (var store = GetDocumentStore())
             {

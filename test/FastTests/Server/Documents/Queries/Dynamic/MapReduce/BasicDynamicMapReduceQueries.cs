@@ -308,8 +308,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                             },
                             new DynamicMapReduceField
                             {
-                                Name = "TotalCount",
-                                ClientSideName = "Count",
+                                Name = "Count",
+                                ClientSideName = "TotalCount",
                                 IsGroupBy = false,
                                 OperationType = FieldMapReduceOperation.Count
                             }
