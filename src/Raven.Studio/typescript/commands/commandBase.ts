@@ -216,7 +216,7 @@ class commandBase {
     }
 }
 
-class oauthHandler { //TODO: we use web socket now for doing this
+class oauthHandler {
     handleOAuth(task: JQueryDeferred<any>, request: JQueryXHR, retry: Function) {
         var oauthSource = request.getResponseHeader('OAuth-Source');
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using Raven.Client.Documents.Changes;
@@ -27,6 +28,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.Smuggler.Documents.Data;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -57,10 +59,14 @@ namespace TypingsGenerator
                 .WithTypeMapping(TsPrimitive.String, typeof(TimeSpan))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(List<>))
+                .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IEnumerable<>))
+                .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IReadOnlyList<>))
+                .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IReadOnlyCollection<>))
                 .WithTypeMapping(TsPrimitive.Any, typeof(TreePage))
                 .WithTypeMapping(TsPrimitive.String, typeof(DateTime))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(BlittableJsonReaderArray))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(DynamicJsonArray))
+                .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(IEnumerable))
                 .WithTypeMapping(TsPrimitive.Any, typeof(BlittableJsonReaderObject));
 
             scripter = ConfigureTypes(scripter);
@@ -136,6 +142,7 @@ namespace TypingsGenerator
 
             // smuggler
             scripter.AddType(typeof(DatabaseSmugglerOptions));
+            scripter.AddType(typeof(SmugglerResult));
 
             // versioning
             scripter.AddType(typeof(VersioningConfiguration));
