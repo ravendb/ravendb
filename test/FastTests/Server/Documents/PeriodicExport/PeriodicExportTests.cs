@@ -6,14 +6,12 @@
 
 using System;
 using System.IO;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Server.Documents.PeriodicExport;
 using Xunit;
 using System.Linq;
-using FastTests.Server.Basic.Entities;
 using Raven.Client;
 using Raven.Client.Documents.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
@@ -52,7 +50,6 @@ namespace FastTests.Server.Documents.PeriodicExport
             }
         }
 
-     
         [Fact, Trait("Category", "Smuggler")]
         public async Task CanExportToDirectory()
         {
@@ -89,6 +86,5 @@ namespace FastTests.Server.Documents.PeriodicExport
                 }
             }
         }
-
     }
 }

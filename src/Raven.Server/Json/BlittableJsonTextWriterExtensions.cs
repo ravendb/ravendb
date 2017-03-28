@@ -1077,7 +1077,6 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 first = false;
 
-
                 if (document == null)
                 {
                     writer.WriteNull();

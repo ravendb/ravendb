@@ -4,6 +4,8 @@ using FastTests.Client.Attachments;
 using FastTests.Smuggler;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Indexing;
+using FastTests.Server.Documents.PeriodicExport;
+using FastTests.Server.Replication;
 using Sparrow;
 
 namespace Tryouts
@@ -15,14 +17,13 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            using (var a = new AttachmentsCrud())
+            for (int i = 0; i < 1000; i++)
             {
-                a.PutAttachments();
-            }
-
-            using (var a = new AttachmentsReplication())
-            {
-                a.PutDifferentAttachmentsShouldConflict().Wait();
+                Console.WriteLine(i);
+                using (var a = new PeriodicExportTests())
+                {
+                    a.CanExportToDirectory().Wait();
+                }
             }
         }
     }
