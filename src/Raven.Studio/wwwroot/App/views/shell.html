@@ -20,8 +20,32 @@
                 <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
             </ul>
             <div class="inputs-container hidden-xs hidden-sm">
+                <div class="database-switcher-container" data-bind="with: databaseSwitcher">
+                    <div class="form-control btn-toggle database-switcher">
+                        <span class="database" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
+                    </div>
+                    <div class="box-container">
+                        <div class="database-filter-container">
+                            <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />
+                        </div>
+                        <div class="scroller">
+                            <section>
+                                <ul class="database-list" data-bind="foreach: filteredDatabases">
+                                    <li>
+                                        <a href="#" data-bind="click: $parent.selectDatabase.bind($parent)" class="database">
+                                            <span data-bind="text: name"></span> 
+                                            <span data-bind="visible: disabled" class="badge badge-info">Disabled</span>
+                                            <span data-bind="visible: errored" class="badge badge-danger">Errored</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </section>
+                        </div>
+                    </div>
+                </div>
                 <div class="search-prerelease"><i class="icon-search"></i><span>search</span> <span class="text-muted"> | in development</span></div>
-                <!--<div class="search-container">
+                <!--
+                <div class="search-container">
                     <input type="search" class="form-control omnisearch" placeholder="search" />
                     <div class="icon-search"></div>
                     <div class="autocomplete-list box-container">
@@ -71,30 +95,8 @@
                             </section>
                         </div>
                     </div>
-                </div>-->
-                <div class="database-switcher-container" data-bind="with: databaseSwitcher">
-                    <div class="form-control btn-toggle database-switcher">
-                        <span class="database" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
-                    </div>
-                    <div class="box-container">
-                        <div class="database-filter-container">
-                            <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />
-                        </div>
-                        <div class="scroller">
-                            <section>
-                                <ul class="database-list" data-bind="foreach: filteredDatabases">
-                                    <li>
-                                        <a href="#" data-bind="click: $parent.selectDatabase.bind($parent)" class="database">
-                                            <span data-bind="text: name"></span> 
-                                            <span data-bind="visible: disabled" class="badge badge-info">Disabled</span>
-                                            <span data-bind="visible: errored" class="badge badge-danger">Errored</span>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </section>
-                        </div>
-                    </div>
                 </div>
+                -->
             </div>
         </div><!--/.nav-collapse -->
     </div>

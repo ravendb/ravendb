@@ -153,7 +153,7 @@
                     position: absolute;
                     width: 70%;
                     margin: -10% 15%;
-                    padding-top: 75%;
+                    padding-top: 70%;
                     border-radius: 50%;
                     background-color: @gray-lighter;
                     z-index: 0;
@@ -331,10 +331,10 @@
                 position: relative;
 
                 .database-filter {
-                    background-color: @gray !important;
-                    //border-color: @gray !important;
+                    background-color: transparent !important;
+                    border-color: @gray !important;
                     padding: 2px (@grid-gutter-width / 2);
-                    height: 34px;
+                    height: 28px;
                     margin-bottom: (@grid-gutter-width / 4);
 
                     &:focus {
@@ -350,7 +350,7 @@
                 display: none;
                 width: 100%;
                 position: absolute;
-                top: 5px;
+                top: @grid-gutter-width / 4;
 
                 .scroller {
                     max-height: 0;
@@ -443,21 +443,21 @@
         @media (min-width: @screen-md) {
             clear: none;
             background-color: transparent;
-            margin-right: 120px;
+            margin-right: 90px;
             margin-left: @menu-width;
             max-height: none;
             position: relative;
 
             .database-switcher-container {
                 position: absolute;
-                right: @grid-gutter-width / 2;
-                left: 51%;
+                left: @grid-gutter-width / 2;
+                right: 51%;
             }
 
             .search-container {
                 position: absolute;
-                left: @grid-gutter-width / 2;
-                right: 51%;
+                right: @grid-gutter-width / 2;
+                left: 51%;
 
                 input:focus {
                     & + .search-autocomplete {
