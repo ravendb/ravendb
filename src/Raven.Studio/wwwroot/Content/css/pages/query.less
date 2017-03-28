@@ -74,11 +74,10 @@
 .show-add-filter {
     .query-error {
         position: absolute;
-        bottom:100%;
-        width:100%;
+        bottom: 100%;
+        width: 100%;
         display: block;
-        z-index: 1049;
-
+        z-index: @zindex-modal;
     }
 
     .backdrop {
@@ -87,19 +86,20 @@
 
     .query-title, .run-query, .query-editor {
         position: relative;
-        z-index: 1049;
+        z-index: @zindex-modal;
     }
 
     .query-source {
         border-color: @brand-primary;
         background-color: @gray-base;
         position: relative;
-        z-index: 1051;
+        z-index: @zindex-modal;
         margin-bottom: 0;
         .shadow-style;
     }
+
     .add-filter {
-        z-index: 1052;
+        z-index: @zindex-modal;
         display: block;
         .shadow-style;
     }

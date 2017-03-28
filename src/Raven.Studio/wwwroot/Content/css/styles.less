@@ -709,7 +709,7 @@ input[type=file] + .form-control {
     right: -10px;
     width: 130px;
     height: 130px;
-    z-index: 9990;
+    z-index: @zindex-processing-spinner;
     transition: transform 0.5s cubic-bezier(0.70, -0.40, 0.40, 1.30);
     @processing-color-1: rgba(0,0,0,0);
     @processing-color-2: @brand-primary;
@@ -726,7 +726,7 @@ input[type=file] + .form-control {
     -ms-transition: transform 0.3s cubic-bezier(0.57, 1.68, 0.68, 1.05);
     -o-transition: transform 0.3s cubic-bezier(0.57, 1.68, 0.68, 1.05);
     transition: transform 0.3s cubic-bezier(0.57, 1.68, 0.68, 1.05);
-    pointer-events:none;
+    pointer-events: none;
 
     &:before {
         content: '';
@@ -836,7 +836,7 @@ input[type=file] + .form-control {
     width: 100%;
     height: 100%;
     position: relative;
-    z-index: 9989;
+    z-index: @zindex-loading-overlay;
     -webkit-transition: opacity 0.3s 0.2s ease-in;
     -moz-transition: opacity 0.3s 0.2s ease-in;
     -ms-transition: opacity 0.3s 0.2s ease-in;
@@ -1411,7 +1411,7 @@ pre {
     right: 0;
     bottom: 0;
     left: 0;
-    z-index: 1040;
+    z-index: @zindex-modal-background;
     opacity: 0;
 
     &.show {
@@ -1434,11 +1434,11 @@ pre {
 
 .ace_editor {
     &.has-error {
-        border-color:@brand-danger;
+        border-color: @brand-danger;
     }
 
     .fullScreenModeLabel {
-        z-index:950 !important;
+        z-index: @zindex-ace-fullScreenModeLabel !important;
     }
 }
 
@@ -1452,7 +1452,7 @@ pre {
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 10000;
+    z-index: @zindex-ace-fullScreen;
 }
 
 .fullScreen {
