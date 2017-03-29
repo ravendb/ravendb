@@ -61,7 +61,7 @@ namespace Raven.Client.FileSystem
             this.requestFactory = requestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests, authenticationScheme: Conventions.AuthenticationScheme);
 
             if(requestFactory == null)
-                SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, serverUrl);
+                SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, serverUrl, autoRefreshToken: false);
 
             this.OperationsHeaders = operationsHeaders ?? new NameValueCollection();
         }
