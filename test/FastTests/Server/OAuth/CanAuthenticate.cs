@@ -123,7 +123,7 @@ namespace FastTests.Server.OAuth
                 using (var commands = store.Commands())
                 {
                     var apiKeyAuthenticator = new ApiKeyAuthenticator();
-                    var exception = await Assert.ThrowsAsync<AuthenticationException>(async () => await apiKeyAuthenticator.AuthenticateAsync(store.Url + "/oauth/api-key", "super/secret", commands.Context));
+                    var exception = await Assert.ThrowsAsync<AuthenticationException>(async () => await apiKeyAuthenticator.GetAuthenticationTokenAsync("super/secret", store.Url, commands.Context));
                     Assert.Contains("Could not find api key: super", exception.Message);
                 }
 
@@ -140,7 +140,7 @@ namespace FastTests.Server.OAuth
                 {
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
                     var apiKeyAuthenticator = new ApiKeyAuthenticator();
-                    token = await apiKeyAuthenticator.AuthenticateAsync(store.Url + "/oauth/api-key", "super/secret", commands.Context);
+                    token = await apiKeyAuthenticator.GetAuthenticationTokenAsync("super/secret", store.Url, commands.Context);
                     Assert.NotNull(token);
                     Assert.NotEqual(string.Empty, token);
                 }
