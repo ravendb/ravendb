@@ -17,6 +17,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Extensions;
+using Raven.Client.Extensions.Streams;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.Connections;
@@ -676,6 +677,8 @@ CREATE TABLE [dbo].[Orders]
 )
 ");
 
+                var attachmentBytes = new byte[] { 1, 2, 3 };
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Order
@@ -689,7 +692,7 @@ CREATE TABLE [dbo].[Orders]
                     await session.SaveChangesAsync();
                 }
 
-                store.Operations.Send(new PutAttachmentOperation("orders/1", "test-attachment", new MemoryStream(new byte[] { 1, 2, 3 }), "image/png"));
+                store.Operations.Send(new PutAttachmentOperation("orders/1", "test-attachment", new MemoryStream(attachmentBytes), "image/png"));
 
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
 
@@ -714,6 +717,20 @@ loadToOrders(orderData);
                     {
                         dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
                         Assert.Equal(1, dbCommand.ExecuteScalar());
+                    }
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1'";
+                        
+                        var sqlDataReader = dbCommand.ExecuteReader();
+                       
+                        Assert.True(sqlDataReader.Read());
+                        var stream = sqlDataReader.GetStream(0);
+
+                        var bytes = stream.ReadData();
+
+                        Assert.Equal(attachmentBytes, bytes);
                     }
                 }
             }
