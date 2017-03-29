@@ -16,7 +16,7 @@ namespace Raven.Database.Bundles.Replication.Data
     {
         public ReplicationTopology()
         {
-            Servers = new HashSet<string>();
+            Servers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             Connections = new HashSet<ReplicationTopologyConnection>();
         }
 
@@ -26,7 +26,7 @@ namespace Raven.Database.Bundles.Replication.Data
 
         public ReplicationTopologyConnection GetConnection(string fromUrl, string toUrl)
         {
-            return Connections.SingleOrDefault(x => x.Source == fromUrl && x.Destination == toUrl);
+            return Connections.SingleOrDefault(x => x.Source.Equals(fromUrl, StringComparison.OrdinalIgnoreCase) && x.Destination.Equals(toUrl, StringComparison.OrdinalIgnoreCase));
         }
     }
 
