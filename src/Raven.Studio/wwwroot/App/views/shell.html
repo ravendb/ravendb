@@ -32,11 +32,15 @@
                             <section>
                                 <ul class="database-list" data-bind="foreach: filteredDatabases">
                                     <li>
-                                        <a href="#" data-bind="click: $parent.selectDatabase.bind($parent)" class="database">
-                                            <span data-bind="text: name"></span> 
-                                            <span data-bind="visible: disabled" class="badge badge-info">Disabled</span>
+                                        <a href="#" data-bind="click: $parent.selectDatabase.bind($parent), visible: !disabled()" class="database">
+                                            <span data-bind="text: name"></span>
                                             <span data-bind="visible: errored" class="badge badge-danger">Errored</span>
                                         </a>
+                                        <div class="database" data-bind="visible: disabled">
+                                            <span data-bind="text: name"></span>
+                                            <span class="badge badge-info">Disabled</span>
+                                            <span data-bind="visible: errored" class="badge badge-danger">Errored</span>
+                                        </div>
                                     </li>
                                 </ul>
                             </section>
