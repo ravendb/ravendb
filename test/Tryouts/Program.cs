@@ -5,6 +5,7 @@ using FastTests.Smuggler;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Indexing;
 using FastTests.Server.Documents.PeriodicExport;
+using FastTests.Server.OAuth;
 using FastTests.Server.Replication;
 using Sparrow;
 
@@ -20,9 +21,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new PeriodicExportTests())
+                using (var a = new CanAuthenticate())
                 {
-                    a.CanExportToDirectory().Wait();
+                    a.CanGetTokenFromServer().Wait();
                 }
             }
         }

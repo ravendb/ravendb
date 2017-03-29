@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Json;
 using Sparrow;
+using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -18,54 +19,38 @@ namespace Raven.Client.Http.OAuth
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ApiKeyAuthenticator>("Client");
         private static readonly HttpClient Client = new HttpClient();
 
-        public async Task<string> GetAuthenticationTokenAsync(string apiKey, string url, JsonOperationContext context)
+        private readonly ConcurrentDictionary<string, byte[]> _ServersPublicKeys = new ConcurrentDictionary<string, byte[]>();
+
+        public async Task<string> GetAuthenticationTokenAsync(string apiKey, string serverUrl, JsonOperationContext context)
         {
             if (string.IsNullOrEmpty(apiKey))
                 return null;
-            var oauthSource = url + "/OAuth/API-Key";
-            return await AuthenticateAsync(oauthSource, apiKey, context).ConfigureAwait(false);
-        }
 
-        public async Task<string> AuthenticateAsync(string url, string apiKey, JsonOperationContext context)
-        {
+            if (_ServersPublicKeys.TryGetValue(serverUrl, out var serverPk) == false)
+            {
+                serverPk = await GetServerPublicKey(context, serverUrl);
+                _ServersPublicKeys.TryAdd(serverUrl, serverPk);
+            }
+
             try
             {
-                var apiKeyParts = ExtractApiKeyAndSecret(apiKey);
-                var apiKeyName = apiKeyParts[0].Trim();
-                var apiSecret = apiKeyParts[1].Trim();
-
                 var publicKey = new byte[Sodium.crypto_box_publickeybytes()];
                 var privateKey = new byte[Sodium.crypto_box_secretkeybytes()];
-                var hash = new byte[Sodium.crypto_generichash_bytes_max()];
 
-                unsafe
-                {
-                    fixed (byte* pubKey = publicKey)
-                    fixed (byte* prvKey = privateKey)
-                    fixed (byte* h = hash)
-                    fixed (byte* pSecret = Encoding.UTF8.GetBytes(apiSecret))
-                    {
-                        Sodium.crypto_box_keypair(pubKey, prvKey);
-
-                        if (Sodium.crypto_generichash(
-                                h,
-                                (IntPtr)hash.Length,
-                                pSecret,
-                                (ulong)(apiSecret.Length),
-                                pubKey,
-                                (IntPtr)publicKey.Length
-                            ) != 0)
-                        {
-                            throw new AuthenticationException("Failed to generate hash for secret of apikey name=" + apiKeyName);
-                        }
-                    }
-                }
-
-                var request = CreateRequest(hash, publicKey, context);
-                request.RequestUri = new Uri($"{url}?apiKey={apiKeyName}");
-                request.Headers.Add("Raven-Client-Version", RequestExecutor.ClientVersion);
+                var request = BuildGetTokenRequest(context, apiKey, serverUrl, serverPk, privateKey, publicKey);
 
                 var response = await Client.SendAsync(request);
+                if (response.StatusCode == HttpStatusCode.ExpectationFailed)
+                {
+                    // the server pk is invalid, retry, once
+
+                    var oldServerPk = serverPk;
+                    serverPk = await GetServerPublicKey(context, serverUrl);
+                    _ServersPublicKeys.TryUpdate(serverUrl, serverPk, oldServerPk);
+                    request = BuildGetTokenRequest(context, apiKey, serverUrl, serverPk, privateKey, publicKey);
+                    response = await Client.SendAsync(request);
+                }
+
                 if (response.StatusCode != HttpStatusCode.OK &&
                     response.StatusCode != HttpStatusCode.Forbidden &&
                     response.StatusCode != HttpStatusCode.InternalServerError)
@@ -73,9 +58,8 @@ namespace Raven.Client.Http.OAuth
                     throw new AuthenticationException("Bad response from server " + response.StatusCode);
                 }
 
-                var stream = await response.Content.ReadAsStreamAsync();
-               
                 JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
+                using (var stream = await response.Content.ReadAsStreamAsync())
                 using (context.GetManagedBuffer(out pinnedBuffer))
                 using (var tokenJson = context.ParseToMemory(stream, "apikey", BlittableJsonDocumentBuilder.UsageMode.None, pinnedBuffer))
                 {
@@ -85,25 +69,29 @@ namespace Raven.Client.Http.OAuth
                     if (tokenJson.TryGetMember("Error", out errorString) == true)
                         throw new AuthenticationException((LazyStringValue)errorString);
 
-                    object cryptedToken;
-                    if (tokenJson.TryGetMember("Token", out cryptedToken) == false)
-                        throw new InvalidDataException("Missing 'cryptedToken' property in the POST request body");
+                    string cryptedToken;
+                    if (tokenJson.TryGet("Token", out cryptedToken) == false)
+                        throw new InvalidDataException("Missing 'Token' property in the POST request body");
 
-                    var cryptTokenBytes = Convert.FromBase64String(((LazyStringValue)cryptedToken).ToString());
+                    string serverNonce;
+                    if (tokenJson.TryGet("Nonce", out serverNonce) == false)
+                        throw new InvalidDataException("Missing 'Nonce' property in the POST request body");
 
-                    var token = new byte[cryptTokenBytes.Length - Sodium.crypto_box_sealbytes()];
+                    var cryptTokenBytes = Convert.FromBase64String(cryptedToken);
+                    var nonceBytes = Convert.FromBase64String(serverNonce);
+
                     unsafe
                     {
-                        fixed (byte* pubKey = publicKey)
-                        fixed (byte* prvKey = privateKey)
+                        fixed (byte* client_sk = privateKey)
+                        fixed (byte* server_pk = serverPk)
                         fixed (byte* input = cryptTokenBytes)
-                        fixed (byte* output = token)
+                        fixed (byte* n = nonceBytes)
                         {
-                            if (Sodium.crypto_box_seal_open(output, input, (ulong)cryptTokenBytes.Length, pubKey, prvKey) != 0)
+                            if (Sodium.crypto_box_open_easy(input, input, cryptTokenBytes.Length, n, server_pk, client_sk) != 0)
                                 throw new AuthenticationException(
                                     @"Unable to authenticate api key (message corrupted or not intended for this recipient");
 
-                            return Encoding.UTF8.GetString(token);
+                            return Encoding.UTF8.GetString(cryptTokenBytes, 0, cryptTokenBytes.Length - Sodium.crypto_box_macbytes());
                         }
                     }
                 }
@@ -111,7 +99,7 @@ namespace Raven.Client.Http.OAuth
             catch (Exception ex)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to DoOAuthRequest to {url} with {apiKey}", ex);
+                    Logger.Info($"Failed to DoOAuthRequest to {serverUrl} with {apiKey}", ex);
 
                 //if (ex is AuthenticationException)
                 //    throw;
@@ -119,6 +107,70 @@ namespace Raven.Client.Http.OAuth
                 //throw new AuthenticationException(ex.Message, ex);
                 throw;
             }
+        }
+
+        private unsafe HttpRequestMessage BuildGetTokenRequest(JsonOperationContext context, string apiKey, string serverUrl, byte[] serverPk, byte[] privateKey, byte[] publicKey)
+        {
+            var url = serverUrl + "/api-key/validate";
+            var apiKeyParts = ExtractApiKeyAndSecret(apiKey);
+            var apiKeyName = apiKeyParts[0].Trim();
+            var apiSecret = apiKeyParts[1].Trim();
+
+            var nonce = new byte[Sodium.crypto_box_noncebytes()];
+            HttpRequestMessage request;
+            unsafe
+            {
+                var byteCount = Encoding.UTF8.GetByteCount(apiSecret);
+                var secretSizePadded = byteCount + (64 - (byteCount % 64));
+                var buffer = new byte[secretSizePadded + Sodium.crypto_box_macbytes()];
+                fixed (byte* server_pk = serverPk)
+                fixed (byte* client_sk = privateKey)
+                fixed (byte* client_pk = publicKey)
+                fixed (byte* n = nonce)
+                fixed (byte* c = buffer)
+                {
+                    Sodium.crypto_box_keypair(client_pk, client_sk);
+                    Sodium.randombytes_buf(n, nonce.Length);
+
+                    Sodium.randombytes_buf(c, buffer.Length);
+                    Encoding.UTF8.GetBytes(apiSecret, 0, apiSecret.Length, buffer, 0);
+
+                    if (Sodium.crypto_box_easy(
+                            c,
+                            c,
+                            secretSizePadded,
+                            n,
+                            server_pk,
+                            client_sk
+                        ) != 0)
+                    {
+                        throw new AuthenticationException("Failed to generate crypt secret of apikey name=" + apiKeyName);
+                    }
+                }
+
+                request = CreateRequest(buffer, publicKey, serverPk, nonce, context);
+            }
+            request.RequestUri = new Uri($"{url}?apiKey={apiKeyName}");
+            request.Headers.Add("Raven-Client-Version", RequestExecutor.ClientVersion);
+            return request;
+        }
+
+        private static async Task<byte[]> GetServerPublicKey(JsonOperationContext context, string serverUrl)
+        {
+            byte[] serverPk;
+            var message = await Client.GetAsync(serverUrl + "/api-key/public-key");
+            message.EnsureSuccessStatusCode();
+            JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
+            using (var stream = await message.Content.ReadAsStreamAsync())
+            using (context.GetManagedBuffer(out pinnedBuffer))
+            using (var pkJson = context.ParseToMemory(stream, "publicKey", BlittableJsonDocumentBuilder.UsageMode.None, pinnedBuffer))
+            {
+                if (pkJson.TryGet("PublicKey", out string pkStr) == false)
+                    throw new InvalidOperationException("Could not get server public key " + serverUrl);
+
+                serverPk = Convert.FromBase64String(pkStr);
+            }
+            return serverPk;
         }
 
         private string[] ExtractApiKeyAndSecret(string apiKey)
@@ -135,7 +187,7 @@ namespace Raven.Client.Http.OAuth
             return apiKeyParts;
         }
 
-        public HttpRequestMessage CreateRequest(byte[] hash, byte[] publicKey, JsonOperationContext context)
+        public HttpRequestMessage CreateRequest(byte[] crypted, byte[] publicKey, byte[] serverPk, byte[] nonce, JsonOperationContext context)
         {
             return new HttpRequestMessage
             {
@@ -144,15 +196,18 @@ namespace Raven.Client.Http.OAuth
                 {
                     using (var writer = new BlittableJsonTextWriter(context, stream))
                     {
-                        var hashString = Convert.ToBase64String(hash);
-                        var pkString = Convert.ToBase64String(publicKey);
-
                         writer.WriteStartObject();
-                        writer.WritePropertyName("Hash");
-                        writer.WriteString(hashString);
+                        writer.WritePropertyName("Secret");
+                        writer.WriteString(Convert.ToBase64String(crypted));
                         writer.WriteComma();
                         writer.WritePropertyName("PublicKey");
-                        writer.WriteString(pkString);
+                        writer.WriteString(Convert.ToBase64String(publicKey));
+                        writer.WriteComma();
+                        writer.WritePropertyName("Nonce");
+                        writer.WriteString(Convert.ToBase64String(nonce));
+                        writer.WritePropertyName("ServerKey");
+                        writer.WriteString(Convert.ToBase64String(serverPk));
+                        writer.WriteComma();
                         writer.WriteEndObject();
                     }
                 })
