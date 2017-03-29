@@ -113,6 +113,7 @@ namespace Raven.Server.Documents
         public IoChangesNotifications IoChanges { get; }
 
         public NotificationCenter.NotificationCenter NotificationCenter { get; private set; }
+
         public DatabaseOperations Operations { get; private set; }
 
         public HugeDocuments HugeDocuments { get; }

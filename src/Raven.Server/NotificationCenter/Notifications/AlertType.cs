@@ -18,6 +18,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         Replication,
         Server_NewVersionAvailable,
         LicenseManager_InitializationError,
+        LicenseManager_LeaseLicenseError,
         IndexStore_IndexCouldNotBeOpened,
         TransformerStore_TransformerCouldNotBeOpened,
         WarnIndexOutputsPerDocument,

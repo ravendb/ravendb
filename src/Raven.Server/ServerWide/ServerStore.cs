@@ -46,8 +46,7 @@ namespace Raven.Server.ServerWide
         public readonly RavenConfiguration Configuration;
         public readonly DatabasesLandlord DatabasesLandlord;
         public readonly NotificationCenter.NotificationCenter NotificationCenter;
-
-        public static LicenseStorage LicenseStorage { get; } = new LicenseStorage();
+        public readonly LicenseManager LicenseManager;
 
         // this is only modified by write transactions under lock
         // no need to use thread safe ops
@@ -92,6 +91,8 @@ namespace Raven.Server.ServerWide
             _notificationsStorage = new NotificationsStorage(resourceName);
 
             NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, resourceName, ServerShutdown);
+
+            LicenseManager = new LicenseManager(NotificationCenter);
 
             DatabaseInfoCache = new DatabaseInfoCache();
 
@@ -167,8 +168,9 @@ namespace Raven.Server.ServerWide
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             _notificationsStorage.Initialize(_env, ContextPool);
             DatabaseInfoCache.Initialize(_env, ContextPool);
-            LicenseStorage.Initialize(_env, ContextPool);
+            
             NotificationCenter.Initialize();
+            LicenseManager.Initialize(_env, ContextPool);
         }
 
         public long ReadLastEtag(TransactionOperationContext ctx)
@@ -341,12 +343,15 @@ namespace Raven.Server.ServerWide
         {
             if (_shutdownNotification.IsCancellationRequested)
                 return;
+
             lock (this)
             {
                 if (_shutdownNotification.IsCancellationRequested)
                     return;
+
                 _shutdownNotification.Cancel();
                 toDispose.Add(NotificationCenter);
+                toDispose.Add(LicenseManager);
                 toDispose.Add(DatabasesLandlord);
                 toDispose.Add(_env);
                 toDispose.Add(ContextPool);
