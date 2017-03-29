@@ -76,8 +76,6 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task WaitForReplicationAsync(TimeSpan waitForReplicasTimeout, MergedBatchCommand mergedCmd)
         {
-
-
             int numberOfReplicasToWaitFor;
             var numberOfReplicasStr = GetStringQueryString("numberOfReplicasToWaitFor", required: false) ?? "1";
             if (numberOfReplicasStr == "majority")
@@ -201,7 +199,7 @@ namespace Raven.Server.Documents.Handlers
             return indexesToCheck;
         }
 
-        private class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+        public class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             public DynamicJsonArray Reply;
             public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;

@@ -232,12 +232,12 @@ namespace Raven.Client.Http
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
                         {
                             cts.CancelAfter(command.Timeout.Value);
-                            response = await client.SendAsync(request, cts.Token).ConfigureAwait(false);
+                            response = await command.SendAsync(client, request, cts.Token).ConfigureAwait(false);                          
                         }
                     }
                     else
                     {
-                        response = await GetHttpClientForCommand(command).SendAsync(request, token).ConfigureAwait(false);
+                        response = await command.SendAsync(client, request, token).ConfigureAwait(false);
                     }
 
                     sp.Stop();

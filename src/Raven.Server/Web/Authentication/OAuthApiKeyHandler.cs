@@ -39,12 +39,12 @@ namespace Raven.Server.Web.Authentication
                     hashJson.BlittableValidation();
 
                     object hashString;
-                    if (hashJson.TryGetMember("hash", out hashString) == false)
-                        throw new InvalidDataException("Missing 'hash' property in the POST request body");
+                    if (hashJson.TryGetMember("Hash", out hashString) == false)
+                        throw new InvalidDataException("Missing 'Hash' property in the POST request body");
 
                     object pkString;
-                    if (hashJson.TryGetMember("public-key", out pkString) == false)
-                        throw new InvalidDataException("Missing 'public-key' property in the POST request body");
+                    if (hashJson.TryGetMember("PublicKey", out pkString) == false)
+                        throw new InvalidDataException("Missing 'PublicKey' property in the POST request body");
 
                     hash = Convert.FromBase64String(((LazyStringValue)hashString).ToString());
                     publicKey = Convert.FromBase64String(((LazyStringValue)pkString).ToString());
@@ -128,7 +128,7 @@ namespace Raven.Server.Web.Authentication
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
-                        writer.WritePropertyName("cryptedToken");
+                        writer.WritePropertyName("Token");
                         writer.WriteString(Convert.ToBase64String(cryptedToken));
                         writer.WriteEndObject();
                         writer.Flush();

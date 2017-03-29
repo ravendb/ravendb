@@ -28,11 +28,5 @@ namespace Raven.Client.Documents.Session
             var operation = new GetAttachmentOperation(documentId, name, stream, AttachmentType.Revision, changeVector);
             return DocumentStore.Operations.Send(operation);
         }
-
-        public AttachmentResult GetConflictAttachment(string documentId, string name, ChangeVectorEntry[] changeVector, Action<AttachmentResult, Stream> stream)
-        {
-            var operation = new GetAttachmentOperation(documentId, name, stream, AttachmentType.Conflict, changeVector);
-            return DocumentStore.Operations.Send(operation);
-        }
     }
 }

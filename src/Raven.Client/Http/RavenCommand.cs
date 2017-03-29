@@ -15,7 +15,6 @@ namespace Raven.Client.Http
     public abstract class RavenCommand<TResult>
     {
         public CancellationToken CancellationToken = CancellationToken.None;
-
         public HashSet<ServerNode> FailedNodes;
 
         public TResult Result;
@@ -31,6 +30,11 @@ namespace Raven.Client.Http
 
         public abstract HttpRequestMessage CreateRequest(ServerNode node, out string url);
         public abstract void SetResponse(BlittableJsonReaderObject response, bool fromCache);
+
+        public virtual Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationToken token)
+        {
+            return client.SendAsync(request, token);
+        }
 
         public virtual void SetResponse(BlittableJsonReaderArray response, bool fromCache)
         {

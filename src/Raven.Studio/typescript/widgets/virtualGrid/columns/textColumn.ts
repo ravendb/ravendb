@@ -3,6 +3,10 @@
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import utils = require("widgets/virtualGrid/virtualGridUtils");
 
+type textColumnOpts<T> = {
+    extraClass?: (item: T) => string;
+}
+
 type preparedValue = {
     rawText: string;
     typeCssClass: string;
@@ -12,7 +16,8 @@ class textColumn<T> implements virtualColumn {
     constructor(
         public valueAccessor: ((item: T) => any) | string,
         public header: string, 
-        public width: string) {
+        public width: string,
+        public opts: textColumnOpts<T> = {}) {
     }
 
     getCellValue(item: T) {
@@ -22,12 +27,13 @@ class textColumn<T> implements virtualColumn {
     }
 
     renderCell(item: T, isSelected: boolean): string {
+        const extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
         try {
             const preparedValue = this.prepareValue(item);
-            return `<div class="cell text-cell ${preparedValue.typeCssClass}" style="width: ${this.width}">${preparedValue.rawText}</div>`;
+            return `<div class="cell text-cell ${preparedValue.typeCssClass} ${extraCssClasses}" style="width: ${this.width}">${preparedValue.rawText}</div>`;
         } catch (error) {
             //TODO: work on L&F of errors!
-            return `<div class="cell text-cell eval-error" style="width: ${this.width}">Error!</div>`;
+            return `<div class="cell text-cell eval-error ${extraCssClasses}" style="width: ${this.width}">Error!</div>`;
         }
         
     }

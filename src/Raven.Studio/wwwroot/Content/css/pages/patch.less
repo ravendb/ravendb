@@ -211,7 +211,7 @@
 
     .patch-title {
         position: relative;
-        z-index: 1049;
+        z-index: @zindex-modal;
     }
 
     .patch-controls {
@@ -221,27 +221,27 @@
     .test-controls {
         display: flex;
         position: relative;
-        z-index: 1050;
+        z-index: @zindex-modal;
     }
 
     .patch-source {
-        background-color: @gray-base;        
+        background-color: @gray-base;
         .shadow-style;
     }
 
     .patch-main {
         position: relative;
-        z-index: 1051;
+        z-index: @zindex-modal;
 
         .help-block {
-            position:relative;
-            z-index:1052;
+            position: relative;
+            z-index: @zindex-modal;
         }
     }
 
     #test-container {
-        z-index: 1052;
-        position: relative;    
+        z-index: @zindex-modal;
+        position: relative;
         margin-top: @grid-gutter-width/2;
         margin-bottom: @grid-gutter-width;
 
@@ -252,66 +252,65 @@
 
     #preview {
         pre {
-            min-height:200px;
+            min-height: 200px;
             //max-height:60vh;
         }
     }
 
     #puts {
         .put-item {
-            display:flex;
+            display: flex;
 
             .put-heading {
-                background-color:transparent;
+                background-color: transparent;
                 padding: 0 @grid-gutter-width/4;
-                width:25%;
-                flex-shrink:0;
+                width: 25%;
+                flex-shrink: 0;
             }
 
             pre {
                 padding: 0 @grid-gutter-width/4;
-                border:none;
+                border: none;
                 flex-grow: 1;
-                display:none;
+                display: none;
             }
 
-            &+.put-item {
-                margin-top:@grid-gutter-width/4;
-                border-top:1px solid @gray-dark;
+            & + .put-item {
+                margin-top: @grid-gutter-width/4;
+                border-top: 1px solid @gray-dark;
             }
         }
 
         &.show-objects {
             .put-placeholder {
-                display:none;
+                display: none;
             }
 
             pre {
-                display:block;
+                display: block;
             }
         }
-        
     }
 
     #loads, #output {
         ul {
-            list-style:none;
-            padding:0;
-            margin:0;
+            list-style: none;
+            padding: 0;
+            margin: 0;
 
             li {
-                padding:@grid-gutter-width/4;
+                padding: @grid-gutter-width/4;
 
-                &+ li {
-                    border-top:1px solid @gray-dark;
-                }                
+                & + li {
+                    border-top: 1px solid @gray-dark;
+                }
             }
         }
     }
 
     .flex-content.scroll {
-        max-height:50vh;
-        overflow-y:auto;
+        max-height: 50vh;
+        overflow-y: auto;
     }
 }
 

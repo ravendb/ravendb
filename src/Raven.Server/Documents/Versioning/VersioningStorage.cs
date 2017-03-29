@@ -155,7 +155,6 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-
         public bool ShouldVersionDocument(CollectionName collectionName,
             NonPersistentDocumentFlags nonPersistentFlags,
             Document existingDocument,
@@ -179,7 +178,7 @@ namespace Raven.Server.Documents.Versioning
                 }
 
                 // compare the contents of the existing and the new document
-                if (existingDocument.IsMetadataEqualTo(document) && existingDocument.IsEqualTo(document))
+                if (Document.IsEqualTo(existingDocument, document))
                 {
                     // no need to create a new revision, both documents have identical content
                     return false;
@@ -434,11 +433,11 @@ namespace Raven.Server.Documents.Versioning
         {
             var result = new Document
             {
-                StorageId = tvr.Id
+                StorageId = tvr.Id,
+                LoweredKey = DocumentsStorage.TableValueToString(context, (int)Columns.LoweredKey, ref tvr),
+                Key = DocumentsStorage.TableValueToKey(context, (int)Columns.Key, ref tvr),
+                Etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr)
             };
-            result.LoweredKey = DocumentsStorage.TableValueToString(context, (int)Columns.LoweredKey, ref tvr);
-            result.Key = DocumentsStorage.TableValueToKey(context, (int)Columns.Key, ref tvr);
-            result.Etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr);
 
             int size;
             result.Data = new BlittableJsonReaderObject(tvr.Read((int)Columns.Document, out size), size, context);
@@ -453,15 +452,6 @@ namespace Raven.Server.Documents.Versioning
             }
 
             result.Flags = *(DocumentFlags*)tvr.Read((int)Columns.Flags, out size);
-            if ((result.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
-            {
-                Slice prefixSlice;
-                using (_documentsStorage.AttachmentsStorage.GetAttachmentPrefix(context, result.LoweredKey.Buffer, result.LoweredKey.Size,
-                    AttachmentType.Revision, result.ChangeVector, out prefixSlice))
-                {
-                    result.Attachments = _documentsStorage.AttachmentsStorage.GetAttachmentsForDocument(context, prefixSlice.Clone(context.Allocator));
-                }
-            }
 
             return result;
         }

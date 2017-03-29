@@ -18,7 +18,7 @@ namespace Sparrow.Collections
         internal const int KMinBuckets = 4;
 
         /// <summary>
-        /// By default, if you don't specify a hashtable size at construction-time, we use this size.  Must be a power of two, and  at least kMinBuckets.
+        /// By default, if you don't specify a hashtable size at construction-time, we use this size.  Must be a power of two, and at least kMinBuckets.
         /// </summary>
         internal const int KInitialCapacity = 32;
     }
@@ -428,7 +428,6 @@ namespace Sparrow.Collections
 
         public void Clear()
         {
-            this._entries = new Entry[_capacity];
             BlockCopyMemoryHelper.Memset(this._entries, new Entry(KUnusedHash, default(TKey), default(TValue)));
 
             this._numberOfUsed = 0;
@@ -457,40 +456,57 @@ namespace Sparrow.Collections
             Rehash(entries);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]        
         public bool TryGetValue(TKey key, out TValue value)
         {
             Contract.Requires(key != null);
             Contract.Ensures(this._numberOfUsed <= this._capacity);
 
-            int hash = GetInternalHashCode(key);
-            int bucket = hash & _capacityMask;
+            int hash = GetInternalHashCode(key); // PERF: This goes first because it can consume lots of registers.
 
             var entries = _entries;
 
-            uint nHash;
             int numProbes = 1;
+            int capacity = _capacity;
+            int bucket = hash & _capacityMask;
+
+            Loop:
             do
             {
-                nHash = entries[bucket].Hash;
-                if (nHash == hash && _comparer.Equals(entries[bucket].Key, key))
-                {
-                    value = entries[bucket].Value;
-                    return true;
-                }
+                uint nHash = entries[bucket].Hash;
+                if (nHash == KUnusedHash)
+                    goto ReturnFalse;
+                if (nHash == hash)
+                    goto PartialHit;
 
                 bucket = (bucket + numProbes) & _capacityMask;
                 numProbes++;
 
-                //Debug.Assert(numProbes < 100);
-                if (numProbes >= _capacity)
+#if DEBUG       
+                if ( numProbes >= 100 )
+                    throw new InvalidOperationException("The hash function used for this object is not good enough. The distribution is causing clusters and causing huge slowdowns.");
+#else
+                if (numProbes >= capacity)
                     break;
+#endif                
             }
-            while (nHash != KUnusedHash);
-
+            while (true);
+            
+            ReturnFalse:
             value = default(TValue);
             return false;
 
+            PartialHit:
+            if (!_comparer.Equals(entries[bucket].Key, key))
+            {
+                // PERF: This can happen with a very^3 low probability (assuming your hash function is good enough)
+                bucket = (bucket + numProbes) & _capacityMask;
+                numProbes++;
+                goto Loop;
+            }
+                
+            value = entries[bucket].Value;
+            return true;
         }
 
         /// <summary>

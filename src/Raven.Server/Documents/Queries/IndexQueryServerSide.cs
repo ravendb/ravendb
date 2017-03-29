@@ -136,9 +136,14 @@ namespace Raven.Server.Documents.Queries
                 if (Enum.TryParse(mapReduceField[1], out operation) == false)
                     throw new InvalidOperationException($"Could not parse map-reduce field operation: {mapReduceField[2]}");
 
+                var fieldName = mapReduceField[0];
+
+                if (operation == FieldMapReduceOperation.Count && string.Equals(fieldName, "Count", StringComparison.OrdinalIgnoreCase) == false)
+                    throw new InvalidOperationException($"The only valid field name for 'Count' operation is 'Count' but was '{fieldName}'.");
+
                 mapReduceFields[i] = new DynamicMapReduceField
                 {
-                    Name = mapReduceField[0],
+                    Name = fieldName,
                     OperationType = operation,
                     IsGroupBy = bool.Parse(mapReduceField[2]),
                 };
