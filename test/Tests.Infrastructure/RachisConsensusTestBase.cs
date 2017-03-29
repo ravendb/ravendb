@@ -99,7 +99,7 @@ namespace Tests.Infrastructure
             var tcpListener = new TcpListener(IPAddress.Loopback, port);
             tcpListener.Start();
               var ch = (char)(65 + (_count++));
-            var url = "http://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port + "/?" + caller + "#" + ch;
+            var url = "tcp://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port + "/?" + caller + "#" + ch;
 
 
             var server = StorageEnvironmentOptions.CreateMemoryOnly();
@@ -138,8 +138,13 @@ namespace Tests.Infrastructure
                     lock (this)
                     {
                         ConcurrentSet<string> set;
-                        if (_rejectionList.TryGetValue(rachis.Url, out set) && set.Contains(hello.DebugSourceIdentifier))
-                            throw new InvalidComObjectException("Simulated failure");
+                        if (_rejectionList.TryGetValue(rachis.Url, out set))
+                        {
+                            if (set.Contains(hello.DebugSourceIdentifier))
+                            {
+                                throw new InvalidComObjectException("Simulated failure");
+                            }
+                        }                            
                         var connections = _connections.GetOrAdd(rachis.Url, _ => new ConcurrentSet<Tuple<string, TcpClient>>());
                         connections.Add(Tuple.Create(hello.DebugSourceIdentifier, tcpClient));
                     }
@@ -152,14 +157,15 @@ namespace Tests.Infrastructure
             lock (this)
             {
                 var rejections = _rejectionList.GetOrAdd(to, _ => new ConcurrentSet<string>());
+                var fromTag = from.Substring(from.IndexOf('#') + 1);
+                rejections.Add(fromTag);
                 rejections.Add(from);
-
                 ConcurrentSet<Tuple<string, TcpClient>> set;
                 if (_connections.TryGetValue(to, out set))
-                {
+                {                    
                     foreach (var tuple in set)
                     {
-                        if (tuple.Item1 == from)
+                        if (tuple.Item1 == from || tuple.Item1 == fromTag)
                         {
                             set.TryRemove(tuple);
                             tuple.Item2.Dispose();
@@ -176,8 +182,9 @@ namespace Tests.Infrastructure
                 ConcurrentSet<string> rejectionList;
                 if (_rejectionList.TryGetValue(to, out rejectionList) == false)
                     return;
-
+                var fromTag = from.Substring(from.IndexOf('#') + 1);
                 rejectionList.TryRemove(from);
+                rejectionList.TryRemove(fromTag);
             }
         }
 
