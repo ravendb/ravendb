@@ -11,13 +11,13 @@ namespace Raven.Client.Extensions
 {
     internal static class SecurityExtensions
     {
-        internal static void InitializeSecurity(ConventionBase conventions, HttpJsonRequestFactory requestFactory, string serverUrl)
+        internal static void InitializeSecurity(ConventionBase conventions, HttpJsonRequestFactory requestFactory, string serverUrl, bool autoRefreshToken = true)
         {
             if (conventions.HandleUnauthorizedResponseAsync != null)
                 return; // already setup by the user
 
             var basicAuthenticator = new BasicAuthenticator(requestFactory.EnableBasicAuthenticationOverUnsecuredHttpEvenThoughPasswordsWouldBeSentOverTheWireInClearTextToBeStolenByHackers);
-            var securedAuthenticator = new SecuredAuthenticator(autoRefreshToken: true);
+            var securedAuthenticator = new SecuredAuthenticator(autoRefreshToken);
 
             requestFactory.OnDispose += (sender, args) => securedAuthenticator.Dispose();
             requestFactory.ConfigureRequest += basicAuthenticator.ConfigureRequest;
