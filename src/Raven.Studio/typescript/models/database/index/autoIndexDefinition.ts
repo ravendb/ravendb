@@ -12,7 +12,7 @@ class autoIndexField {
         this.sort(this.getFieldData(fieldStr,"Sort:", ","));
     }
 
-    getFieldData(fieldStr: string, searchStr: string, endChar: string): string {
+    protected getFieldData(fieldStr: string, searchStr: string, endChar: string): string {
         let value = "";
 
         const location = fieldStr.indexOf(searchStr);
@@ -50,14 +50,14 @@ class autoIndexDefinition extends indexDefinition {
         mapStr = mapStr.substr(mapStr.indexOf("["));
         const fieldsList = mapStr.split(";");
 
-        fieldsList.forEach(x => this.mapFields().push(new autoIndexMapField(x)));
+        this.mapFields(fieldsList.map(x => new autoIndexMapField(x)));
     }
 
     private parseReduceFields(reduceStr: string) {
         reduceStr = reduceStr.substr(reduceStr.indexOf("["));
         const fieldsList = reduceStr.split(";");
 
-        fieldsList.forEach(x => this.reduceFields().push(new autoIndexField(x)));
+        this.reduceFields(fieldsList.map(x => new autoIndexField(x)));
     }
 }
 
