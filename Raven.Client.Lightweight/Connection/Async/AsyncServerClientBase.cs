@@ -28,7 +28,7 @@ namespace Raven.Client.Connection.Async
             RequestFactory = jsonRequestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests, authenticationScheme: Conventions.AuthenticationScheme);
 
             if (jsonRequestFactory == null)
-                SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, ServerUrl);
+                SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, ServerUrl, autoRefreshToken: false);
 
             SessionId = sessionId;
             OperationsHeaders = operationsHeaders ?? DefaultNameValueCollection;
