@@ -854,18 +854,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 VisitEnumerableMethodCall(expression, negated);
                 return;
             }
-            if (declaringType.GetTypeInfo().IsGenericType &&
-                declaringType.GetGenericTypeDefinition() == typeof(List<>))
-            {
-                VisitListMethodCall(expression);
-                return;
-            }
 
-            if (declaringType == typeof(LinqExtensions) ||
-                declaringType == typeof(RavenQueryableExtensions))
+            if (declaringType.GetTypeInfo().IsGenericType)
             {
-                VisitLinqExtensionsMethodCall(expression);
-                return;
+                var genericTypeDefinition = declaringType.GetGenericTypeDefinition();
+                if (genericTypeDefinition == typeof(ICollection<>) ||
+                    genericTypeDefinition == typeof(List<>) ||
+                    genericTypeDefinition == typeof(IList<>) ||
+                    genericTypeDefinition == typeof(Array))
+                {
+                    VisitListMethodCall(expression);
+                    return;
+                }
             }
 
             var method = declaringType.Name + "." + expression.Method.Name;
