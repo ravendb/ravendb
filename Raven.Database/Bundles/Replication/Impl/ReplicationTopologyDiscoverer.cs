@@ -23,16 +23,16 @@ namespace Raven.Database.Bundles.Replication.Impl
 
         private readonly ILog log;
 
-        private readonly RavenJArray @from;
+        private readonly HashSet<string> @from;
 
         private readonly HttpRavenRequestFactory requestFactory;
 
-        public ReplicationTopologyDiscoverer(DocumentDatabase database, RavenJArray @from, int ttl, ILog log)
+        public ReplicationTopologyDiscoverer(DocumentDatabase database, IEnumerable<string> @from, int ttl, ILog log)
         {
             this.database = database;
             this.ttl = ttl;
             this.log = log;
-            this.@from = @from;
+            this.@from = new HashSet<string>(@from, StringComparer.OrdinalIgnoreCase);
             requestFactory = new HttpRavenRequestFactory();
         }
 
@@ -227,12 +227,12 @@ namespace Raven.Database.Bundles.Replication.Impl
             try
             {
                 var request = requestFactory.Create(url, "POST", connectionStringOptions);
-                request.Write(from);
+                request.Write(RavenJToken.FromObject(from));
 
                 error = null;
                 rootNode = request.ExecuteRequest<ReplicationTopologyRootNode>();
 
-                var visitedNodes = new HashSet<string>();
+                var visitedNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 FindVisitedNodes(rootNode, visitedNodes);
                 foreach (var visitedNode in visitedNodes)
                 {
