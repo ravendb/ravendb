@@ -34,6 +34,7 @@ class indexDefinition {
     isTestIndex = ko.observable<boolean>(false);
     fields = ko.observableArray<indexFieldOptions>();
     defaultFieldOptions = ko.observable<indexFieldOptions>();
+    isAutoIndex = ko.observable<boolean>(false);
 
     outputReduceToCollection = ko.observable<string>();
 
@@ -52,9 +53,12 @@ class indexDefinition {
     renameValidationGroup: KnockoutValidationGroup;
 
     constructor(dto: Raven.Client.Documents.Indexes.IndexDefinition) {
+        this.isAutoIndex(dto.Type.startsWith("Auto"));
+
         this.name(dto.Name);
         this.maps(dto.Maps.map(x => new mapItem(x)));
         this.reduce(dto.Reduce);
+        this.hasReduce(!!dto.Reduce);
         this.isTestIndex(dto.IsTestIndex);
         this.outputReduceToCollection(dto.OutputReduceToCollection);
         this.fields(_.map(dto.Fields, (fieldDto, indexName) => new indexFieldOptions(indexName, fieldDto, indexFieldOptions.defaultFieldOptions())));
@@ -78,7 +82,9 @@ class indexDefinition {
             this.configuration.remove(existingIndexStoragePath);
         }
 
-        this.initValidation();
+        if (!this.isAutoIndex()) {
+            this.initValidation();
+        } 
     }
 
     private initValidation() {
