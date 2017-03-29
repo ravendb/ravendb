@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Diagnostics;
 using Jint;
 using Jint.Native;
+using Raven.Client.Documents.Attachments;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -13,10 +13,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
     internal class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords>
     {
         private const int DefaultSize = 50;
+
+        private const string AttachmentMarker = "$attachment/";
         
         private readonly SqlEtlConfiguration _config;
         private readonly PatchRequest _patchRequest;
-        private ToSqlItem _current;
         private readonly Dictionary<string, SqlTableWithRecords> _tables;
 
         public SqlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
@@ -44,14 +45,16 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             
             engine.Global.Delete("varchar", true);
             engine.Global.Delete("nVarchar", true);
+            engine.Global.Delete(LoadAttachment, true);
         }
-
+        
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
             base.CustomizeEngine(engine, scope);
 
             engine.SetValue("varchar", (Func<string, double?, ValueTypeLengthTriple>)(ToVarchar));
             engine.SetValue("nVarchar", (Func<string, double?, ValueTypeLengthTriple>)(ToNVarchar));
+            engine.SetValue(LoadAttachment, (Func<string, string>)(LoadAttachmentFunction));
         }
 
         protected override void LoadToFunction(string tableName, JsValue cols, PatcherOperationScope scope)
@@ -60,7 +63,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 ThrowLoadParameterIsMandatory(nameof(tableName));
             if (cols == null)
                 ThrowLoadParameterIsMandatory(nameof(cols));
-
+            
             var dynamicJsonValue = scope.ToBlittable(cols.AsObject());
             var blittableJsonReaderObject = Context.ReadObject(dynamicJsonValue, tableName);
             var columns = new List<SqlColumn>(blittableJsonReaderObject.Count);
@@ -69,18 +72,77 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             for (var i = 0; i < blittableJsonReaderObject.Count; i++)
             {
                 blittableJsonReaderObject.GetPropertyByIndex(i, ref prop);
-                columns.Add(new SqlColumn
+                
+                if (_config.HasLoadAttachment && prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
                 {
-                    Key = prop.Name,
-                    Value = prop.Value,
-                    Type = prop.Token,
-                });
+                    var stream =
+                        _database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentKey, attachmentName, AttachmentType.Document,
+                            Current.Document.ChangeVector).Stream;
+
+                    columns.Add(new SqlColumn
+                    {
+                        Key = prop.Name,
+                        Value = stream,
+                        Type = 0,
+                    });
+                }
+                else
+                {
+                    columns.Add(new SqlColumn
+                    {
+                        Key = prop.Name,
+                        Value = prop.Value,
+                        Type = prop.Token,
+                    });
+                }
             }
             
-            GetOrAdd(tableName).Inserts.Add(new ToSqlItem(_current)
+            GetOrAdd(tableName).Inserts.Add(new ToSqlItem(Current)
             {
                 Columns = columns
             });
+        }
+
+        private static unsafe bool IsLoadAttachment(LazyStringValue value, out string attachmentName)
+        {
+            if (value.Length <= AttachmentMarker.Length)
+            {
+                attachmentName = null;
+                return false;
+            }
+
+            var buffer = value.Buffer;
+
+            if (buffer[0] != (byte)'$' ||
+                buffer[1] != (byte)'a' ||
+                buffer[2] != (byte)'t' ||
+                buffer[3] != (byte)'t' ||
+                buffer[4] != (byte)'a' ||
+                buffer[5] != (byte)'c' ||
+                buffer[6] != (byte)'h' ||
+                buffer[7] != (byte)'m' ||
+                buffer[8] != (byte)'e' ||
+                buffer[9] != (byte)'n' ||
+                buffer[10] != (byte)'t' ||
+                buffer[11] != (byte)'/')
+            {
+                attachmentName = null;
+                return false;
+            }
+
+            attachmentName = value.Substring(AttachmentMarker.Length);
+
+            return true;
+        }
+
+        private string LoadAttachmentFunction(string attachmentName)
+        {
+            //var attachment = _database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentKey, attachmentName, AttachmentType.Document,
+            //    Current.Document.ChangeVector);
+
+           // attachment.Stream = null;
+
+            return $"{AttachmentMarker}{attachmentName}";
         }
 
         private SqlTableWithRecords GetOrAdd(string tableName)
@@ -124,9 +186,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
             if (item.IsDelete == false)
             {
-                _current = item;
+                Current = item;
 
-                Apply(Context, _current.Document, _patchRequest);
+                Apply(Context, Current.Document, _patchRequest);
             }
 
             // ReSharper disable once ForCanBeConvertedToForeach
