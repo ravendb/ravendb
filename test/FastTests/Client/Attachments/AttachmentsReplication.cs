@@ -428,8 +428,8 @@ namespace FastTests.Client.Attachments
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(store1, false, 4);
-                await VersioningHelper.SetupVersioning(store2, false, 4);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store1.DefaultDatabase, false, 4);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store2.DefaultDatabase, false, 4);
 
                 using (var session = store1.OpenSession())
                 {

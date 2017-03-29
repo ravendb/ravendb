@@ -166,7 +166,7 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        private void AssertRevisions(DocumentStore store, string[] names, Action<IDocumentSession, List<User>> assertAction,
+        internal static void AssertRevisions(DocumentStore store, string[] names, Action<IDocumentSession, List<User>> assertAction,
             long expectedCountOfAttachments, long expectedCountOfDocuments = 1, long expectedCountOfUniqueAttachments = 3)
         {
             var statistics = store.Admin.Send(new GetStatisticsOperation());

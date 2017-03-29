@@ -14,7 +14,7 @@ namespace FastTests.Server.Documents.Versioning
 {
     public class VersioningHelper
     {
-        public static async Task SetupVersioning(Raven.Server.ServerWide.ServerStore serverStore, string database, long maxRevisions = 123)
+        public static async Task SetupVersioning(Raven.Server.ServerWide.ServerStore serverStore, string database, bool purgeOnDelete = true, long maxRevisions = 123)
         {
             var versioningDoc = new VersioningConfiguration
             {
@@ -28,7 +28,7 @@ namespace FastTests.Server.Documents.Versioning
                     ["Users"] = new VersioningConfigurationCollection
                     {
                         Active = true,
-                        PurgeOnDelete = true,
+                        PurgeOnDelete = purgeOnDelete,
                         MaxRevisions = maxRevisions
                     },
                     ["Comments"] = new VersioningConfigurationCollection

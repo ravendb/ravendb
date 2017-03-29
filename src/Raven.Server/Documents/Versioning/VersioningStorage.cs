@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.Versioning
 
         public bool ShouldVersionDocument(CollectionName collectionName,
             NonPersistentDocumentFlags nonPersistentFlags,
-            Document existingDocument,
+            BlittableJsonReaderObject existingDocument,
             BlittableJsonReaderObject document,
             ref DocumentFlags documentFlags,
             out VersioningConfigurationCollection configuration)
