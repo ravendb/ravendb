@@ -12,6 +12,8 @@ namespace Raven.Server.Commercial
 
         Floating,
 
-        Subscription
+        Subscription, 
+
+        Free
     }
 }

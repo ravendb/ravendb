@@ -13,10 +13,8 @@ namespace Raven.Server.Commercial
 
         private static readonly string[] Terms =
         {
-            "id","expiration","type","version","maxRamUtilization","maxParallelism",
-            "allowWindowsClustering","OEM","numberOfDatabases","fips","periodicBackup",
-            "quotas","authorization","documentExpiration","replication","versioning",
-            "maxSizeInGb","ravenfs","encryption","compression","updatesExpiration",
+            "type", "version", "expiration", "updatesExpiration",
+            "RAM", "cores", "ISV", "encryption", "fips", "monitoring", "hotSpare"
         };
 
         private enum ValueType : byte

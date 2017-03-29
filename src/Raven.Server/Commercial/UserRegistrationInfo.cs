@@ -1,3 +1,5 @@
+using Raven.Client.Server.Operations;
+
 namespace Raven.Server.Commercial
 {
     public class UserRegistrationInfo
@@ -9,5 +11,7 @@ namespace Raven.Server.Commercial
         public string Email { get; set; }
 
         public string Company { get; set; }
+
+        public BuildNumber BuildInfo { get; set; }
     }
 }

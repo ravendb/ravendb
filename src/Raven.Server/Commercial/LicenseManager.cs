@@ -1,38 +1,72 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Client.Server.Operations;
 using Raven.Client.Util;
+using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Logging;
+using Voron;
 
 namespace Raven.Server.Commercial
 {
-    public static class LicenseManager
+    public class LicenseManager: IDisposable
     {
         private const string ApiRavenDbNet = "https://api.ravendb.net";
 
-        private static readonly LicenseStatus LicenseStatus = new LicenseStatus();
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LatestVersionCheck>("Server");
-        private static readonly HttpClient HttpClient = new HttpClient
+        private readonly LicenseStorage _licenseStorage = new LicenseStorage();
+        private readonly LicenseStatus _licenseStatus = new LicenseStatus();
+        private readonly BuildNumber _buildInfo;
+        private Timer _leaseLicenseTimer;
+        private readonly HttpClient _httpClient = new HttpClient
         {
             BaseAddress = new Uri(ApiRavenDbNet)
         };
 
-        //private Timer _leaseLicenseTimer = new Timer((state) =>
-        //        AsyncHelpers.RunSync(LeaseLicense), null, 0, (int)TimeSpan.FromHours(24).TotalMilliseconds);
+        public LicenseManager(NotificationCenter.NotificationCenter notificationCenter)
+        {
+            _notificationCenter = notificationCenter;
 
-        private static readonly object LeaseLicenseLock = new object();
+            _buildInfo = new BuildNumber
+            {
+                BuildVersion = ServerVersion.Build,
+                ProductVersion = ServerVersion.Version,
+                CommitHash = ServerVersion.CommitHash,
+                FullVersion = ServerVersion.FullVersion
+            };
 
-        private static RSAParameters? _rsaParameters;
+            var userAgent = $"RavenDB/{ServerVersion.Version} (" +
+                            $"{RuntimeInformation.OSDescription};" +
+                            $"{RuntimeInformation.OSArchitecture};" +
+                            $"{RuntimeInformation.FrameworkDescription};" +
+                            $"{RuntimeInformation.ProcessArchitecture};" +
+                            $"{CultureInfo.CurrentCulture.Name};" +
+                            $"{CultureInfo.CurrentUICulture.Name})";
 
-        private static RSAParameters RSAParameters
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", userAgent);
+        }
+
+        private readonly object _leaseLicenseLock = new object();
+
+        private RSAParameters? _rsaParameters;
+        private readonly NotificationCenter.NotificationCenter _notificationCenter;
+
+        private RSAParameters RSAParameters
         {
             get
             {
@@ -58,51 +92,65 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static void Initialize()
+        public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
         {
-            var firstServerStartDate = ServerStore.LicenseStorage.GetFirstServerStartDate();
-            if (firstServerStartDate == null)
-            {
-                firstServerStartDate = SystemTime.UtcNow;
-                ServerStore.LicenseStorage.SetFirstServerStartDate(firstServerStartDate.Value);
-            }
-
-            LicenseStatus.FirstServerStartDate = firstServerStartDate.Value;
-
-            var license = ServerStore.LicenseStorage.LoadLicense();
-            if (license == null)
-                return;
-
             try
             {
-                LicenseStatus.Attributes = LicenseValidator.Validate(license, RSAParameters);
-                LicenseStatus.Error = false;
-                LicenseStatus.Message = null;
+                _licenseStorage.Initialize(environment, contextPool);
+
+                var firstServerStartDate = _licenseStorage.GetFirstServerStartDate();
+                if (firstServerStartDate == null)
+                {
+                    firstServerStartDate = SystemTime.UtcNow;
+                    _licenseStorage.SetFirstServerStartDate(firstServerStartDate.Value);
+                }
+
+                _licenseStatus.FirstServerStartDate = firstServerStartDate.Value;
+
+                var license = _licenseStorage.LoadLicense();
+                if (license == null)
+                    return;
+
+                _leaseLicenseTimer = new Timer(state =>
+                    AsyncHelpers.RunSync(LeaseLicense), null, 0, (int)TimeSpan.FromHours(24).TotalMilliseconds);
+
+                _licenseStatus.Attributes = LicenseValidator.Validate(license, RSAParameters);
+                _licenseStatus.Error = false;
+                _licenseStatus.Message = null;
             }
             catch (Exception e)
             {
-                LicenseStatus.Attributes = null;
-                LicenseStatus.Error = true;
-                LicenseStatus.Message = e.Message;
+                _licenseStatus.Attributes = null;
+                _licenseStatus.Error = true;
+                _licenseStatus.Message = e.Message;
 
                 if (Logger.IsInfoEnabled)
-                    Logger.Info("Could not validate license. License details", e);
+                    Logger.Info("Could not validate license", e);
 
-                throw new InvalidDataException("Could not validate license!");
+                var alert = AlertRaised.Create(
+                    "License manager initialization error",
+                    "Could not intitalize the license manager",
+                    AlertType.LicenseManager_InitializationError,
+                    NotificationSeverity.Info,
+                    details: new ExceptionDetails(e));
+
+                _notificationCenter.Add(alert);
             }
         }
 
-        public static LicenseStatus GetLicenseStatus()
+        public LicenseStatus GetLicenseStatus()
         {
-            return LicenseStatus;
+            return _licenseStatus;
         }
 
-        public static async Task RegisterForFreeLicense(UserRegistrationInfo userInfo)
+        public async Task RegisterForFreeLicense(UserRegistrationInfo userInfo)
         {
-            var response = await HttpClient.PostAsync("api/v1/license/register",
+            userInfo.BuildInfo = _buildInfo;
+
+            var response = await _httpClient.PostAsync("api/v1/license/register",
                     new StringContent(JsonConvert.SerializeObject(userInfo), Encoding.UTF8, "application/json"))
                 .ConfigureAwait(false);
-
+            
             var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             if (response.IsSuccessStatusCode == false)
             {
@@ -111,27 +159,28 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static void Activate(License license)
+        public void Activate(License license, bool skipLeaseLicense)
         {
             try
             {
-                LicenseStatus.Attributes = LicenseValidator.Validate(license, RSAParameters);
-                LicenseStatus.Error = false;
-                LicenseStatus.Message = null;
+                _licenseStatus.Attributes = LicenseValidator.Validate(license, RSAParameters);
+                _licenseStatus.Error = false;
+                _licenseStatus.Message = null;
 
-                ServerStore.LicenseStorage.SaveLicense(license);
-                Task.Run(() => LeaseLicense());
+                _licenseStorage.SaveLicense(license);
+                if (skipLeaseLicense == false)
+                    Task.Run(LeaseLicense);
             }
             catch (Exception e)
             {
-                LicenseStatus.Attributes = null;
-                LicenseStatus.Error = true;
-                LicenseStatus.Message = e.Message;
+                _licenseStatus.Attributes = null;
+                _licenseStatus.Error = true;
+                _licenseStatus.Message = e.Message;
 
                 var message = $"Could not validate the following license:{Environment.NewLine}" +
                               $"Id: {license.Id}{Environment.NewLine}" +
                               $"Name: {license.Name}{Environment.NewLine}" +
-                              $"Keys: [{string.Join(", ", license.Keys)}]";
+                              $"Keys: [{(license.Keys != null ? string.Join(", ", license.Keys) : "N/A")}]";
 
                 if (Logger.IsInfoEnabled)
                     Logger.Info(message, e);
@@ -140,45 +189,77 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static void LeaseLicense()
+        private async Task LeaseLicense() 
         {
             var lockTaken = false;
             try
             {
-                Monitor.TryEnter(LeaseLicenseLock, ref lockTaken);
+                Monitor.TryEnter(_leaseLicenseLock, ref lockTaken);
                 if (lockTaken == false)
                     return;
 
-                var license = ServerStore.LicenseStorage.LoadLicense();
+                var license = _licenseStorage.LoadLicense();
                 if (license == null)
                     return;
 
-                //TODO: implement this (grisha)
-                /*using (var content = new StreamContent(stream))
+                var leaseLicenseInfo = new LeaseLicenseInfo
                 {
-                    var response = await _httpClient.PostAsync("/api/license/lease", content).ConfigureAwait(false);
-                    if (response.IsSuccessStatusCode == false)
-                        throw new InvalidOperationException("Import failed with status code: " + response.StatusCode +
-                                                            Environment.NewLine +
-                                                            await response.Content.ReadAsStringAsync()
-                        );
+                    License = license,
+                    BuildInfo = _buildInfo
+                };
 
-                    if (response.IsSuccessStatusCode)
+                var response = await _httpClient.PostAsync("/api/v1/license/lease",
+                        new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo))).ConfigureAwait(false);
+
+                if (response.IsSuccessStatusCode == false)
+                {
+                    var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    if (response.StatusCode == HttpStatusCode.ExpectationFailed)
                     {
-                        var x = await response.Content.ReadAsStringAsync();
+                        // the license was canceled
+                        _licenseStatus.Attributes = null;
+                        _licenseStatus.Error = true;
+                        _licenseStatus.Message = responseString;
                     }
-                }*/
+
+                    var alert = AlertRaised.Create(
+                        "Lease license failure",
+                        "Could not lease license",
+                        AlertType.LicenseManager_LeaseLicenseError,
+                        NotificationSeverity.Info,
+                        details: new ExceptionDetails(
+                            new InvalidOperationException($"Status code: {response.StatusCode}, response: {responseString}")));
+
+                    _notificationCenter.Add(alert);
+                }
+
+                var licenseAsStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var json = context.Read(licenseAsStream, "leased license");
+                    var newLicense = JsonDeserializationServer.License(json);
+                    if (newLicense.Name == license.Name && newLicense.Id == license.Id &&
+                        newLicense.Keys.Equals(license.Keys))
+                        return;
+
+                    Activate(newLicense, skipLeaseLicense: true);
+                }
             }
             catch (Exception e)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info("Error getting latest version info.", e);
+                    Logger.Info("Error leasing license.", e);
             }
             finally
             {
                 if (lockTaken)
-                    Monitor.Exit(LeaseLicenseLock);
+                    Monitor.Exit(_leaseLicenseLock);
             }
+        }
+
+        public void Dispose()
+        {
+            _leaseLicenseTimer?.Dispose();
         }
     }
 }

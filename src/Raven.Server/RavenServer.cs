@@ -188,24 +188,6 @@ namespace Raven.Server
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Could not setup latest version check.", e);
             }
-
-            try
-            {
-                LicenseManager.Initialize();
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not setup license check.", e);
-
-                var alert = AlertRaised.Create("License manager initialization error",
-                    "Could not intitalize the license manager",
-                    AlertType.LicenseManager_InitializationError,
-                    NotificationSeverity.Info,
-                    details: new ExceptionDetails(e));
-
-                ServerStore.NotificationCenter.Add(alert);
-            }
         }
 
         public string[] WebUrls { get; set; }

@@ -22,18 +22,16 @@ namespace Raven.Server.Web.System
         private static byte[] GetVersionBuffer()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var stream = new MemoryStream())
+            using (var writer = new BlittableJsonTextWriter(context, stream))
             {
-                var stream = new MemoryStream();
-                using (var writer = new BlittableJsonTextWriter(context, stream))
+                context.Write(writer, new DynamicJsonValue
                 {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(BuildNumber.BuildVersion)] = ServerVersion.Build, 
-                        [nameof(BuildNumber.ProductVersion)] = ServerVersion.Version,
-                        [nameof(BuildNumber.CommitHash)] = ServerVersion.CommitHash,
-                        [nameof(BuildNumber.FullVersion)] = ServerVersion.FullVersion,
-                    });
-                }
+                    [nameof(BuildNumber.BuildVersion)] = ServerVersion.Build,
+                    [nameof(BuildNumber.ProductVersion)] = ServerVersion.Version,
+                    [nameof(BuildNumber.CommitHash)] = ServerVersion.CommitHash,
+                    [nameof(BuildNumber.FullVersion)] = ServerVersion.FullVersion
+                });
                 var versionBuffer = stream.ToArray();
                 return versionBuffer;
             }
