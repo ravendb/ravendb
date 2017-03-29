@@ -6,9 +6,11 @@ using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Json;
 using Raven.Server.Utils;
+
 namespace Raven.Server.Documents.Handlers
 {
     public class DocumentReplicationHandler : DatabaseRequestHandler
@@ -84,26 +86,44 @@ namespace Raven.Server.Documents.Handlers
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName("Incoming");
-                writer.WriteStartArray();
-                writer.WriteEndArray();
-                writer.WriteComma();
-
-                writer.WritePropertyName("Outgoing");
-                writer.WriteArray(context, Database.DocumentReplicationLoader.OutgoingHandlers, (w, c, handler) =>
+                writer.WritePropertyName(nameof(ReplicationPerformance.Incoming));
+                writer.WriteArray(context, Database.DocumentReplicationLoader.IncomingHandlers, (w, c, handler) =>
                 {
-                    w.WritePropertyName("Destination");
+                    w.WriteStartObject();
+
+                    w.WritePropertyName(nameof(ReplicationPerformance.IncomingStats.Source));
                     w.WriteString(handler.FromToString);
                     w.WriteComma();
 
-                    w.WritePropertyName("Performance");
+                    w.WritePropertyName(nameof(ReplicationPerformance.IncomingStats.Performance));
                     w.WriteArray(c, handler.GetReplicationPerformance(), (innerWriter, innerContext, performance) =>
                     {
                         var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(performance);
                         innerWriter.WriteObject(context.ReadObject(djv, "replication/performance"));
                     });
+
+                    w.WriteEndObject();
                 });
                 writer.WriteComma();
+
+                writer.WritePropertyName(nameof(ReplicationPerformance.Outgoing));
+                writer.WriteArray(context, Database.DocumentReplicationLoader.OutgoingHandlers, (w, c, handler) =>
+                {
+                    w.WriteStartObject();
+
+                    w.WritePropertyName(nameof(ReplicationPerformance.OutgoingStats.Destination));
+                    w.WriteString(handler.FromToString);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(ReplicationPerformance.OutgoingStats.Performance));
+                    w.WriteArray(c, handler.GetReplicationPerformance(), (innerWriter, innerContext, performance) =>
+                    {
+                        var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(performance);
+                        innerWriter.WriteObject(context.ReadObject(djv, "replication/performance"));
+                    });
+
+                    w.WriteEndObject();
+                });
 
                 writer.WriteEndObject();
             }

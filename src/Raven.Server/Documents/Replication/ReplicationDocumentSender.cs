@@ -332,13 +332,10 @@ namespace Raven.Server.Documents.Replication
 
             foreach (var item in _replicaAttachmentStreams)
             {
-                using (_stats.AttachmentWrite.Start())
-                {
-                    var value = item.Value;
-                    WriteAttachmentStreamToServer(value);
+                var value = item.Value;
+                WriteAttachmentStreamToServer(value);
 
-                    stats.RecordAttachmentOutput(value.Stream.Length);
-                }
+                stats.RecordAttachmentOutput(value.Stream.Length);
             }
 
             // close the transaction as early as possible, and before we wait for reply
@@ -361,38 +358,26 @@ namespace Raven.Server.Documents.Replication
         {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
             {
-                using (_stats.AttachmentWrite.Start())
-                {
-                    WriteAttachmentToServer(item);
-                    return;
-                }
+                WriteAttachmentToServer(item);
+                return;
             }
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
             {
-                using (_stats.TombstoneWrite.Start())
-                {
-                    WriteAttachmentTombstoneToServer(item);
-                    stats.RecordTombstoneOutput(item.Data.Size);
-                    return;
-                }
+                WriteAttachmentTombstoneToServer(item);
+                stats.RecordTombstoneOutput(item.Data.Size);
+                return;
             }
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
             {
-                using (_stats.TombstoneWrite.Start())
-                {
-                    WriteDocumentToServer(item);
-                    stats.RecordTombstoneOutput(item.Data.Size);
-                    return;
-                }
+                WriteDocumentToServer(item);
+                stats.RecordTombstoneOutput(item.Data.Size);
+                return;
             }
 
-            using (_stats.DocumentWrite.Start())
-            {
-                WriteDocumentToServer(item);
-                stats.RecordDocumentOutput(item.Data.Size);
-            }
+            WriteDocumentToServer(item);
+            stats.RecordDocumentOutput(item.Data.Size);
         }
 
         private unsafe void WriteDocumentToServer(ReplicationBatchItem item)
@@ -608,12 +593,9 @@ namespace Raven.Server.Documents.Replication
                 return;
 
             _statsInstance = stats;
-            _stats.Network = stats.For(ReplicationOperation.Outgoing.Network, start: false);
             _stats.Storage = stats.For(ReplicationOperation.Outgoing.Storage, start: false);
+            _stats.Network = stats.For(ReplicationOperation.Outgoing.Network, start: false);
 
-            _stats.DocumentWrite = _stats.Network.For(ReplicationOperation.Outgoing.DocumentWrite, start: false);
-            _stats.TombstoneWrite = _stats.Network.For(ReplicationOperation.Outgoing.TombstoneWrite, start: false);
-            _stats.AttachmentWrite = _stats.Network.For(ReplicationOperation.Outgoing.AttachmentWrite, start: false);
             _stats.DocumentRead = _stats.Storage.For(ReplicationOperation.Outgoing.DocumentRead, start: false);
             _stats.TombstoneRead = _stats.Storage.For(ReplicationOperation.Outgoing.TombstoneRead, start: false);
             _stats.AttachmentRead = _stats.Storage.For(ReplicationOperation.Outgoing.AttachmentRead, start: false);
@@ -623,9 +605,6 @@ namespace Raven.Server.Documents.Replication
         {
             public OutgoingReplicationStatsScope Network;
             public OutgoingReplicationStatsScope Storage;
-            public OutgoingReplicationStatsScope DocumentWrite;
-            public OutgoingReplicationStatsScope TombstoneWrite;
-            public OutgoingReplicationStatsScope AttachmentWrite;
             public OutgoingReplicationStatsScope DocumentRead;
             public OutgoingReplicationStatsScope TombstoneRead;
             public OutgoingReplicationStatsScope AttachmentRead;

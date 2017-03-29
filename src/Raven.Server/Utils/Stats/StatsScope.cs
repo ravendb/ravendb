@@ -8,7 +8,8 @@ namespace Raven.Server.Utils.Stats
     {
         private readonly Stopwatch _sw;
         private readonly T _stats;
-        protected Dictionary<string, TStatsScope> Scopes;
+        private Dictionary<string, TStatsScope> _scopes;
+        protected List<KeyValuePair<string, TStatsScope>> Scopes;
 
         protected StatsScope(T stats, bool start = true)
         {
@@ -31,12 +32,19 @@ namespace Raven.Server.Utils.Stats
 
         public TStatsScope For(string name, bool start = true)
         {
+            if (_scopes == null)
+                _scopes = new Dictionary<string, TStatsScope>(StringComparer.OrdinalIgnoreCase);
+
             if (Scopes == null)
-                Scopes = new Dictionary<string, TStatsScope>(StringComparer.OrdinalIgnoreCase);
+                Scopes = new List<KeyValuePair<string, TStatsScope>>();
 
             TStatsScope scope;
-            if (Scopes.TryGetValue(name, out scope) == false)
-                return Scopes[name] = OpenNewScope(_stats, start);
+            if (_scopes.TryGetValue(name, out scope) == false)
+            {
+                var kvp = new KeyValuePair<string, TStatsScope>(name, OpenNewScope(_stats, start));
+                Scopes.Add(kvp);
+                return _scopes[name] = kvp.Value;
+            }
 
             if (start)
                 scope.Start();

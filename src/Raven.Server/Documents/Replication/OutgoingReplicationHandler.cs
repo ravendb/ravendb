@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Replication
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
 
-        public ReplicationPerformanceStats[] GetReplicationPerformance()
+        public OutgoingReplicationPerformanceStats[] GetReplicationPerformance()
         {
             var lastStats = _lastStats;
 
