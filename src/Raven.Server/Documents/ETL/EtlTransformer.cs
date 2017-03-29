@@ -7,11 +7,15 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL
 {
-    public abstract class EtlTransformer<TExtracted, TTransformed> : DocumentPatcherBase
+    public abstract class EtlTransformer<TExtracted, TTransformed> : DocumentPatcherBase where TExtracted : ExtractedItem
     {
         internal const string LoadTo = "loadTo";
 
+        internal const string LoadAttachment = "loadAttachment";
+
         protected readonly DocumentsOperationContext Context;
+
+        protected TExtracted Current;
 
         protected EtlTransformer(DocumentDatabase database, DocumentsOperationContext context) : base(database)
         {

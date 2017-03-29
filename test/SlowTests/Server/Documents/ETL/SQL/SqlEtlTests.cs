@@ -15,12 +15,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Extensions;
+using Raven.Client.Extensions.Streams;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.ServerWide.Context;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Platform;
 using Xunit;
 
@@ -141,18 +144,7 @@ loadToOrders(orderData);
             }
         }
 
-        protected void CreateRdbmsSchema(DocumentStore store)
-        {
-            CreateRdbmsDatabase(store);
-
-            using (var con = new SqlConnection())
-            {
-                con.ConnectionString = GetConnectionString(store);
-                con.Open();
-
-                using (var dbCommand = con.CreateCommand())
-                {
-                    dbCommand.CommandText = @"
+        protected void CreateRdbmsSchema(DocumentStore store, string command = @"
 CREATE TABLE [dbo].[OrderLines]
 (
     [Id] int identity primary key,
@@ -169,7 +161,18 @@ CREATE TABLE [dbo].[Orders]
     [TotalCost] [int] NOT NULL,
     [City] [nvarchar](50) NULL
 )
-";
+")
+        {
+            CreateRdbmsDatabase(store);
+
+            using (var con = new SqlConnection())
+            {
+                con.ConnectionString = GetConnectionString(store);
+                con.Open();
+
+                using (var dbCommand = con.CreateCommand())
+                {
+                    dbCommand.CommandText = command;
                     dbCommand.ExecuteNonQuery();
                 }
             }
@@ -656,6 +659,161 @@ var nameArr = this.StepName.split('.');");
                         Assert.Equal(2, orders.Commands.Length); // delete and insert
                     }
                     
+                }
+            }
+        }
+
+        [NonLinuxFact]
+        public async Task LoadingSingleAttachment()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateRdbmsSchema(store, @"
+CREATE TABLE [dbo].[Orders]
+(
+    [Id] [nvarchar](50) NOT NULL,
+    [Name] [nvarchar](255) NULL,
+    [Pic] [varbinary](max) NULL
+)
+");
+
+                var attachmentBytes = new byte[] { 1, 2, 3 };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order
+                    {
+                        OrderLines = new List<OrderLine>
+                        {
+                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+                        }
+                    });
+                    await session.SaveChangesAsync();
+                }
+
+                store.Operations.Send(new PutAttachmentOperation("orders/1", "test-attachment", new MemoryStream(attachmentBytes), "image/png"));
+
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+
+                SetupSqlEtl(store, @"
+var orderData = {
+    Id: __document_id,
+    Name: this['@metadata']['@attachments'][0].Name,
+    Pic: loadAttachment(this['@metadata']['@attachments'][0].Name)
+};
+
+loadToOrders(orderData);
+");
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                using (var con = new SqlConnection())
+                {
+                    con.ConnectionString = GetConnectionString(store);
+                    con.Open();
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                        Assert.Equal(1, dbCommand.ExecuteScalar());
+                    }
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1'";
+                        
+                        var sqlDataReader = dbCommand.ExecuteReader();
+                       
+                        Assert.True(sqlDataReader.Read());
+                        var stream = sqlDataReader.GetStream(0);
+
+                        var bytes = stream.ReadData();
+
+                        Assert.Equal(attachmentBytes, bytes);
+                    }
+                }
+            }
+        }
+
+        [NonLinuxFact]
+        public async Task LoadingMultipleAttachments()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateRdbmsSchema(store, @"
+CREATE TABLE [dbo].[Attachments]
+(
+    [Id] int identity primary key,
+    [UserId] [nvarchar](50) NOT NULL,
+    [AttachmentName] [nvarchar](50) NULL,
+    [Data] [varbinary](max) NULL
+)
+");
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User());
+                    await session.SaveChangesAsync();
+                }
+
+                store.Operations.Send(new PutAttachmentOperation("users/1", "profile.jpg", new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6, 7 }), "image/jpeg"));
+                store.Operations.Send(new PutAttachmentOperation("users/1", "profile-small.jpg", new MemoryStream(new byte[] { 1, 2, 3 }), "image/jpeg"));
+
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+
+                SetupEtl(store, new EtlConfiguration
+                {
+                    SqlConnections =
+                    {
+                        ["Ci1"] = new PredefinedSqlConnection
+                        {
+                            ConnectionString = GetConnectionString(store),
+                            FactoryName = "System.Data.SqlClient",
+                        }
+                    },
+                    SqlTargets =
+                    {
+                        new SqlEtlConfiguration
+                        {
+                            Name = "Attachments",
+                            ConnectionStringName = "Ci1",
+                            Collection = "Users",
+                            SqlTables =
+                            {
+                                new SqlEtlTable {TableName = "Attachments", DocumentKeyColumn = "UserId", InsertOnlyMode = false},
+                            },
+                            Script = @"
+
+var attachments = this['@metadata']['@attachments'];
+
+for (var i = 0; i < attachments.length; i++)
+{
+    var attachment = {
+        UserId: __document_id,
+        AttachmentName: attachments[i].Name,
+        Data: loadAttachment(attachments[i].Name)
+    };
+
+    loadToAttachments(attachment);
+}
+"
+                        }
+                    }
+                });
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                using (var con = new SqlConnection())
+                {
+                    con.ConnectionString = GetConnectionString(store);
+                    con.Open();
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT COUNT(*) FROM Attachments";
+                        Assert.Equal(2, dbCommand.ExecuteScalar());
+                    }
                 }
             }
         }

@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 {
     public class RavenEtlConfiguration : EtlProcessConfiguration
     {
-        private static readonly Regex LoadToMethodRegex = new Regex($@"{EtlTransformer<object, object>.LoadTo}(\w+)", RegexOptions.Compiled);
+        private static readonly Regex LoadToMethodRegex = new Regex($@"{EtlTransformer<ExtractedItem, object>.LoadTo}(\w+)", RegexOptions.Compiled);
 
         private string _url;
         private string[] _collections;
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             for (var i = 0; i < match.Count; i++)
             {
-                _collections[i] = match[i].Value.Substring(EtlTransformer<object, object>.LoadTo.Length);
+                _collections[i] = match[i].Value.Substring(EtlTransformer<ExtractedItem, object>.LoadTo.Length);
             }
 
             return _collections;

@@ -30,14 +30,24 @@
                         </div>
                         <div class="scroller">
                             <section>
-                                <ul class="database-list" data-bind="foreach: filteredDatabases">
-                                    <li>
+                                <ul class="database-list">
+                                    <!-- ko foreach: filteredDatabases-->
+                                    <li data-bind="visible: !disabled()">
                                         <a href="#" data-bind="click: $parent.selectDatabase.bind($parent)" class="database">
-                                            <span data-bind="text: name"></span> 
-                                            <span data-bind="visible: disabled" class="badge badge-info">Disabled</span>
+                                            <span data-bind="text: name"></span>
                                             <span data-bind="visible: errored" class="badge badge-danger">Errored</span>
                                         </a>
                                     </li>
+                                    <!-- /ko -->
+                                    <!-- ko foreach: filteredDatabases-->
+                                    <li data-bind="visible: disabled"> 
+                                        <a class="database disabled">
+                                            <span data-bind="text: name"></span>
+                                            <span class="label label-default">Disabled</span>
+                                            <span data-bind="visible: errored" class="label label-danger">Errored</span>
+                                        </a>
+                                    </li>
+                                    <!-- /ko -->
                                 </ul>
                             </section>
                         </div>

@@ -266,7 +266,7 @@ a {
 
     .dropdown-menu {
         &.max-height, .max-height {
-            max-height: 50vh;
+            max-height: 40vh;
             overflow:auto;
         }
 
@@ -306,6 +306,14 @@ a {
                 top: 5px;
             }
         }
+    }
+}
+
+.control-label {
+    .labelNote {
+        margin-top:-3px;
+        line-height: 12px;
+        font-size: 10px;
     }
 }
 
@@ -829,6 +837,14 @@ input[type=file] + .form-control {
             top: 2px;
         }
     }
+
+    .btn:not(.btn-primary):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-danger) {
+        border-color: @gray;
+    }
+
+    .btn-default {
+        background-color:@gray;
+    }
 }
 
 .loading-overlay {
@@ -1347,6 +1363,12 @@ pre {
 
 .font-normal {
     font-weight: normal;
+}
+
+.has-error {
+    .btn {
+        border-color: @brand-danger !important;
+    }
 }
 
 .input-group {
