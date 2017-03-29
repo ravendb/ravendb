@@ -45,7 +45,7 @@ namespace Voron.Impl.Scratch
             _allocatedPagesCount = 0;
         }
 
-        public void Reset(LowLevelTransaction tx)
+        public void Reset()
         {
             _allocatedPages.Clear();
 
@@ -181,9 +181,9 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Free(long pageNumber, LowLevelTransaction tx)
+        public void Free(long pageNumber, long? txId)
         {
-            long asOfTxId = tx?.Id ?? -1;
+            long asOfTxId = txId ?? -1;
 
 #if VALIDATE
             byte* pagePointer = _scratchPager.AcquirePagePointer(tx, pageNumber, PagerState);

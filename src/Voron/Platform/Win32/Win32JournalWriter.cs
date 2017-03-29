@@ -126,7 +126,7 @@ namespace Voron.Platform.Win32
                     out written,
                     _nativeOverlapped);
 
-                metrics.IncrementFileSize(NumberOfAllocated4Kb*(4*Constants.Size.Kilobyte));
+                metrics.SetFileSize(NumberOfAllocated4Kb*(4*Constants.Size.Kilobyte));
             }
 
             if (writeSuccess == false)

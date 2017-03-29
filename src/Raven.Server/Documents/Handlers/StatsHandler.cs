@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["DocsPutsPerSec"] = Database.Metrics.DocPutsPerSecond.CreateMeterData(true),
+                    ["DocsPutsPerSec"] = Database.Metrics.DocPutsPerSecond.CreateMeterData(true, GetBoolValueQueryString("empty", required:false) ?? true),
                 });
             }
 
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["BytesPutsPerSecond"] = Database.Metrics.BytesPutsPerSecond.CreateMeterData(true),
+                    ["BytesPutsPerSecond"] = Database.Metrics.BytesPutsPerSecond.CreateMeterData(true, GetBoolValueQueryString("empty", required: false) ?? true),
                 });
             }
 

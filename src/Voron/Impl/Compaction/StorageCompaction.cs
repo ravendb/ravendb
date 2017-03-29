@@ -11,6 +11,7 @@ using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Global;
 using Voron.Impl.FreeSpace;
+using Voron.Impl.Journal;
 
 namespace Voron.Impl.Compaction
 {
@@ -48,7 +49,10 @@ namespace Voron.Impl.Compaction
 
                 compactedEnv.FlushLogToDataFile();
 
-                compactedEnv.Journal.Applicator.SyncDataFile();
+                using (var op = new WriteAheadJournal.JournalApplicator.SyncOperation(compactedEnv.Journal.Applicator))
+                {
+                    op.SyncDataFile();
+                }
                 compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();
 
                 minimalCompactedDataFileSize = compactedEnv.NextPageNumber * Constants.Storage.PageSize;

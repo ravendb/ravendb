@@ -110,7 +110,7 @@ namespace Raven.Server.Utils.Metrics
         }
 
 
-        public DynamicJsonValue CreateMeterData(bool allResults = false)
+        public DynamicJsonValue CreateMeterData(bool allResults = false, bool filterEmpty = true)
         {
             var meterValue = this;
 
@@ -136,7 +136,7 @@ namespace Raven.Server.Utils.Metrics
             for (int i = index; i >= 0 ; i--)
             {
                 var d = _m15Rate[i];
-                if(Math.Abs(d) > double.Epsilon)
+                if(filterEmpty == false || Math.Abs(d) > double.Epsilon)
                     results[now.ToString()] = Math.Round(d, 1);
                 now = now - oneSec;
             }

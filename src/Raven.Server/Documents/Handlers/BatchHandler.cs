@@ -26,14 +26,13 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out ctx))
             {
                 var cmds = await BatchRequestParser.ParseAsync(ctx, RequestBodyStream());
-
+               
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
 
                 using (var mergedCmd = new MergedBatchCommand
                 {
                     Database = Database,
                     ParsedCommands = cmds,
-                    Reply = new DynamicJsonArray(),
                 })
                 {
                     if (waitForIndexesTimeout != null)
@@ -224,6 +223,7 @@ namespace Raven.Server.Documents.Handlers
 
             public override void Execute(DocumentsOperationContext context)
             {
+                Reply = new DynamicJsonArray();
                 for (int i = ParsedCommands.Offset; i < ParsedCommands.Count; i++)
                 {
                     var cmd = ParsedCommands.Array[ParsedCommands.Offset + i];

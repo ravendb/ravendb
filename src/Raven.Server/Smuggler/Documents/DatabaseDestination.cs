@@ -15,6 +15,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Voron.Global;
 using Size = Raven.Server.Config.Settings.Size;
 
 namespace Raven.Server.Smuggler.Documents
@@ -114,7 +115,7 @@ namespace Raven.Server.Smuggler.Documents
             private readonly Logger _log;
             private MergedBatchPutCommand _command;
             private MergedBatchPutCommand _prevCommand;
-            private Task _prevCommandTask;
+            private Task _prevCommandTask = Task.CompletedTask;
 
             private readonly Size _enqueueThreshold;
 
@@ -154,21 +155,28 @@ namespace Raven.Server.Smuggler.Documents
 
             private void HandleBatchOfDocumentsIfNecessary()
             {
-                if (_command.Context.AllocatedMemory < _enqueueThreshold.GetValue(SizeUnit.Bytes))
+                var prevDoneAndHasEnough = _command.Context.AllocatedMemory > Constants.Size.Megabyte && _prevCommandTask.IsCompleted;
+                var currentReachedLimit = _command.Context.AllocatedMemory > _enqueueThreshold.GetValue(SizeUnit.Bytes);
+
+
+                if (currentReachedLimit == false && prevDoneAndHasEnough == false)
                     return;
 
-                if (_prevCommand != null)
-                {
-                    using (_prevCommand)
-                    {
-                        _prevCommandTask.Wait();
-                        Debug.Assert(_prevCommand.IsDisposed == false,
-                            "we rely on reusing this context on the next batch, so it has to be disposed here");
-                    }
-                }
+                var prevCommand = _prevCommand;
+                var prevCommandTask = _prevCommandTask;
 
                 _prevCommand = _command;
                 _prevCommandTask = _database.TxMerger.Enqueue(_command);
+
+                if (prevCommand != null)
+                {
+                    using (prevCommand)
+                    {
+                        prevCommandTask.Wait();
+                        Debug.Assert(prevCommand.IsDisposed == false,
+                            "we rely on reusing this context on the next batch, so it has to be disposed here");
+                    }
+                }
 
                 _command = new MergedBatchPutCommand(_database, _buildType, _log)
                 {
