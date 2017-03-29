@@ -13,6 +13,10 @@ class editDocumentUploader {
     private db: KnockoutObservable<database>;
     private afterUpload: () => void;
 
+    spinners = {
+        upload: ko.observable<boolean>(false)
+    }
+
     constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, afterUpload: () => void) {
         this.document = document;
         this.db = db;
@@ -21,13 +25,15 @@ class editDocumentUploader {
 
     fileSelected(fileName: string) {
         if (fileName) {
+            this.spinners.upload(true);
             const selector = $(editDocumentUploader.filePickerSelector)[0] as HTMLInputElement;
             const file = selector.files[0];
             new uploadAttachmentCommand(file, this.document().getId(), this.db())
                 .execute()
                 .done(() => {
                     this.afterUpload();
-                });
+                })
+                .always(() => this.spinners.upload(false));
         }
     }
 }
