@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.Server.Documents.Replication
+namespace Raven.Client.Documents.Replication
 {
     public class ReplicationPerformanceOperation
     {

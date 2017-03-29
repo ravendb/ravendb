@@ -12,8 +12,8 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
@@ -1530,19 +1530,19 @@ namespace Raven.Server.Documents
                                         [Constants.Documents.Metadata.Attachments] = oldAttachments
                                     };
                                     document = context.ReadObject(document, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                                }
-                            }
                         }
+                    }
+                }
                     }
 
                     if (_documentDatabase.BundleLoader.VersioningStorage != null)
-                    {
+                {
                         VersioningConfigurationCollection configuration;
                         if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document, ref flags, out configuration))
-                        {
+                    {
                             _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, modifiedTicks, configuration);
-                        }
                     }
+                }
                 }
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
@@ -2053,7 +2053,7 @@ namespace Raven.Server.Documents
                             [nameof(AttachmentResult.ContentType)] = attachment.ContentType,
                             [nameof(AttachmentResult.Size)] = attachment.Size,
                         });
-                    }
+            }
                 }
 
                 data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);

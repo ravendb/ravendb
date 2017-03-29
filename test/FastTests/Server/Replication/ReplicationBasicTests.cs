@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Documents.Operations;
 using Xunit;
 
 namespace FastTests.Server.Replication
@@ -252,6 +253,47 @@ namespace FastTests.Server.Replication
                 Assert.NotNull(replicated2);
                 Assert.Equal("Jane Dow", replicated2.Name);
                 Assert.Equal(31, replicated2.Age);
+            }
+        }
+
+        [Fact]
+        public void Can_get_performance_stats()
+        {
+            var dbName1 = DbName + "-1";
+            var dbName2 = DbName + "-2";
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            {
+                SetupReplication(store1, store2); // master-slave
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "John Dow",
+                        Age = 30
+                    }, "users/1");
+
+                    session.Store(new User
+                    {
+                        Name = "Jane Dow",
+                        Age = 31
+                    }, "users/2");
+
+                    session.SaveChanges();
+                }
+
+                Assert.NotNull(WaitForDocumentToReplicate<User>(store2, "users/1", 15000));
+                Assert.NotNull(WaitForDocumentToReplicate<User>(store2, "users/2", 5000));
+
+                var stats1 = store1.Admin.Send(new GetReplicationPerformanceStatisticsOperation());
+                var stats2 = store2.Admin.Send(new GetReplicationPerformanceStatisticsOperation());
+
+                Assert.NotEmpty(stats1.Outgoing);
+                Assert.Empty(stats1.Incoming);
+
+                Assert.Empty(stats2.Outgoing);
+                Assert.NotEmpty(stats2.Incoming);
             }
         }
     }

@@ -1,10 +1,16 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
+using System.Linq;
+using Raven.Client.Documents.Replication;
+using Raven.Server.Config.Settings;
 using Raven.Server.Utils.Stats;
 
 namespace Raven.Server.Documents.Replication
 {
     public class OutgoingReplicationStatsAggregator : StatsAggregator<OutgoingReplicationRunStats, OutgoingReplicationStatsScope>
     {
+        private volatile OutgoingReplicationPerformanceStats _performanceStats;
+
         public OutgoingReplicationStatsAggregator(int id, StatsAggregator<OutgoingReplicationRunStats, OutgoingReplicationStatsScope> lastStats)
             : base(id, lastStats)
         {
@@ -17,22 +23,64 @@ namespace Raven.Server.Documents.Replication
             return Scope = new OutgoingReplicationStatsScope(Stats);
         }
 
-        public ReplicationPerformanceStats ToReplicationPerformanceLiveStatsWithDetails()
+        public OutgoingReplicationPerformanceStats ToReplicationPerformanceLiveStatsWithDetails()
         {
-            throw new System.NotImplementedException();
+            if (_performanceStats != null)
+                return _performanceStats;
+
+            if (Scope == null || Stats == null)
+                return null;
+
+            if (Completed)
+                return ToReplicationPerformanceStats();
+
+            return CreateIndexingPerformanceStats(completed: false);
         }
 
-        public ReplicationPerformanceStats ToReplicationPerformanceStats()
+        public OutgoingReplicationPerformanceStats ToReplicationPerformanceStats()
         {
-            throw new System.NotImplementedException();
+            if (_performanceStats != null)
+                return _performanceStats;
+
+            lock (Stats)
+            {
+                if (_performanceStats != null)
+                    return _performanceStats;
+
+                return _performanceStats = CreateIndexingPerformanceStats(completed: true);
+            }
+        }
+
+        private OutgoingReplicationPerformanceStats CreateIndexingPerformanceStats(bool completed)
+        {
+            return new OutgoingReplicationPerformanceStats(Scope.Duration)
+            {
+                Id = Id,
+                Started = StartTime,
+                Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
+                Details = Scope.ToReplicationPerformanceOperation("Replication"),
+                InputCount = Stats.InputCount,
+                ArtificialDocumentSkipCount = Stats.ArtificialDocumentSkipCount,
+                SystemDocumentSkipCount = Stats.SystemDocumentSkipCount,
+                DocumentChangeVectorSkipCount = Stats.DocumentChangeVectorSkipCount,
+                AttachmentOutputCount = Stats.AttachmentOutputCount,
+                AttachmentOutputSizeInBytes = Stats.AttachmentOutputSize.GetValue(SizeUnit.Bytes),
+                DocumentOutputCount = Stats.DocumentOutputCount,
+                DocumentOutputSizeInBytes = Stats.DocumentOutputSize.GetValue(SizeUnit.Bytes),
+                TombstoneOutputCount = Stats.TombstoneOutputCount,
+                TombstoneOutputSizeInBytes = Stats.TombstoneOutputSize.GetValue(SizeUnit.Bytes)
+            };
         }
     }
 
     public class OutgoingReplicationStatsScope : StatsScope<OutgoingReplicationRunStats, OutgoingReplicationStatsScope>
     {
+        private readonly OutgoingReplicationRunStats _stats;
+
         public OutgoingReplicationStatsScope(OutgoingReplicationRunStats stats, bool start = true)
             : base(stats, start)
         {
+            _stats = stats;
         }
 
         protected override OutgoingReplicationStatsScope OpenNewScope(OutgoingReplicationRunStats stats, bool start)
@@ -42,41 +90,74 @@ namespace Raven.Server.Documents.Replication
 
         public void RecordInputAttempt()
         {
-            throw new System.NotImplementedException();
+            _stats.InputCount++;
         }
 
         public void RecordArtificialDocumentSkip()
         {
-            throw new System.NotImplementedException();
+            _stats.ArtificialDocumentSkipCount++;
         }
 
         public void RecordSystemDocumentSkip()
         {
-            throw new System.NotImplementedException();
+            _stats.SystemDocumentSkipCount++;
         }
 
         public void RecordDocumentChangeVectorSkip()
         {
-            throw new System.NotImplementedException();
+            _stats.DocumentChangeVectorSkipCount++;
         }
 
-        public void RecordAttachmentOutput(long size)
+        public void RecordAttachmentOutput(long sizeInBytes)
         {
-            throw new System.NotImplementedException();
+            _stats.AttachmentOutputCount++;
+            _stats.AttachmentOutputSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
-        public void RecordTombstoneOutput(long size)
+        public void RecordTombstoneOutput(long sizeInBytes)
         {
-            throw new System.NotImplementedException();
+            _stats.TombstoneOutputCount++;
+            _stats.TombstoneOutputSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
-        public void RecordDocumentOutput(long size)
+        public void RecordDocumentOutput(long sizeInBytes)
         {
-            throw new System.NotImplementedException();
+            _stats.DocumentOutputCount++;
+            _stats.DocumentOutputSize.Add(sizeInBytes, SizeUnit.Bytes);
+        }
+
+        public ReplicationPerformanceOperation ToReplicationPerformanceOperation(string name)
+        {
+            var operation = new ReplicationPerformanceOperation(Duration)
+            {
+                Name = name
+            };
+
+            if (Scopes != null)
+            {
+                operation.Operations = Scopes
+                    .Select(x => x.Value.ToReplicationPerformanceOperation(x.Key))
+                    .ToArray();
+            }
+
+            return operation;
         }
     }
 
     public class OutgoingReplicationRunStats
     {
+        public int InputCount;
+        public int ArtificialDocumentSkipCount;
+        public int SystemDocumentSkipCount;
+        public int DocumentChangeVectorSkipCount;
+
+        public int AttachmentOutputCount;
+        public Size AttachmentOutputSize;
+
+        public int TombstoneOutputCount;
+        public Size TombstoneOutputSize;
+
+        public int DocumentOutputCount;
+        public Size DocumentOutputSize;
     }
 }
