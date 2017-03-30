@@ -311,7 +311,7 @@ a {
 
 .control-label {
     .labelNote {
-        margin-top:-3px;
+        margin-top: -3px;
         line-height: 12px;
         font-size: 10px;
     }
@@ -330,11 +330,16 @@ a {
 .flex-row {
     @media (min-width: @screen-sm) {
         display: flex;        
-
+        flex-wrap: wrap;
         .flex-bottom {
             align-self: flex-end;
         }
     }
+}
+
+.text-elipsis {
+    overflow:hidden;
+    text-overflow:ellipsis;
 }
 
 .padding {
@@ -1509,3 +1514,4 @@ pre {
 @import "pages/patch.less";
 @import "pages/metrics.less";
 @import "pages/export-progress.less";
+@import "pages/stats.less";

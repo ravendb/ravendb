@@ -1,68 +1,120 @@
-<section data-bind="if: stats">
+<section data-bind="if: stats" class="stats">
 
-    <h2>General Stats</h2>
-
-    <div class="row" data-bind="with: stats">
-
-        <div class="col-xs-12 visible-sm visible-xs">
-            <table class="table table-condensed table-responsive">
-                <tbody>
-                    <tr>
-                        <td>Database Id</td>
-                        <td data-bind="text: dataBaseId"></td>
-                    </tr>
-                    <tr>
-                        <td>Documents Count</td>
-                        <td data-bind="text: countOfDocuments"></td>
-                    </tr>
-                    <tr>
-                        <td>Indexes Count</td>
-                        <td data-bind="text: countOfIndexes"></td>
-                    </tr>
-                    <tr>
-                        <td>Transformers Count</td>
-                        <td data-bind="text: countOfTransformers"></td>
-                    </tr>
-                    <tr>
-                        <td>Last Document Etag</td>
-                        <td data-bind="text: lastDocEtag"></td>
-                    </tr>
-                    <tr>
-                        <td>64 Bit</td>
-                        <td data-bind="text: is64Bit"></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="col-lg-7 visible-md visible-lg">
-            <table class="table table-condensed table-responsive table-bordered">
-                <tbody>
-                    <tr>
-                        <td class="row"><span class="col-md-6">Documents Count</span><span class="col-md-3" data-bind="text: countOfDocuments" style="float: right"></span></td>
-                        <td class="row"><span class="col-md-6">Last Document Etag</span><span class="col-md-3" data-bind="text: lastDocEtag" style="float: right"></span></td>
-                    </tr>
-                    <tr>
-                        <td class="row"><span class="col-sm-6">Indexes Count</span><span class="col-sm-3" data-bind="text: countOfIndexes" style="float: right"></span></td>
-                        <td class="row"><span class="col-sm-6">Transformers Count</span><span class="col-sm-3" data-bind="text: countOfTransformers" style="float: right"></span></td>
-                    </tr>
-                    <tr>
-                        <td class="row"><span class="col-sm-6">64 Bit</span><span class="col-sm-3" data-bind="text: is64Bit" style="float: right"></span></td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td colspan="2" class="row"><span class="col-sm-3">Database Id</span><span class="col-sm-8" data-bind="text: dataBaseId"></span></td>
-                    </tr>
-                </tbody>
-            </table>
+    <h1>General Stats</h1>
+    <div class="stats-list margin-bottom">
+        <div class="row flex-row" data-bind="with: stats">
+            <div class="col-sm-12 col-xl-6">
+                <div class="stats-item">
+                    <div class="name"><i class="icon-database"></i> <span>Database Id</span></div>
+                    <div class="value long"><span data-bind="text: dataBaseId"></span></div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item">
+                    <div class="name"><i class="icon-documents"></i> <span>Documents Count</span></div>
+                    <div class="value"><span data-bind="text: countOfDocuments"></span></div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item">
+                    <div class="name"><i class="icon-indexing"></i><span>Indexes Count</span></div>
+                    <div class="value"><span data-bind="text: countOfIndexes"></span></div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item">
+                    <div class="name"><i class="icon-transformer"></i> <span>Transformers Count</span></div>
+                    <div class="value"><span data-bind="text: countOfTransformers"></span></div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item">
+                    <div class="name"><i class="icon-etag"></i> <span>Last Document Etag</span></div>
+                    <div class="value"><span data-bind="text: lastDocEtag"></span></div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4 col-xl-3">
+                <div class="stats-item">
+                    <div class="name">Server bitness</div>
+                    <div class="value"><span data-bind="visible: is64Bit">64 Bit</span><span data-bind="visible : !is64Bit">32 Bit</span></div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <hr />
-    <h2>Indexes Stats by type</h2>
-    <br />
+    <h1>Indexes Stats by type</h1>
 
     <h3 class="text-center" data-bind="visible: stats().indexesByType().length === 0">No indexes have been created for this database.</h3>
+
+    <div data-bind="foreach: stats().indexesByType">
+        <hr />
+        <h2 data-bind="text: indexType"></h2>
+        <div class="row row-sm flex-row" data-bind="foreach: indexes">
+
+            <div class="col-sm-6 col-lg-4 col-xl-3 flex-vertical">
+                <div class="stats-list margin-bottom flex-content">
+                    <div class="flex-horizontal title">
+                        <h3 class="flex-content text-elipsis">
+                            <a href="#" data-bind="attr: { href: $root.urlForIndexPerformance(indexName), title: indexName } ">
+                                <span class="text" data-bind="text: indexName"></span>
+                            </a>                           
+                        </h3>
+                        <span class="badge badge-warning pull-right flex-noshrink" data-bind="visible: isStale">Stale</span>
+                    </div>
+
+
+                    <div class="stats-item">
+                        <div class="name">Index Id:</div>
+                        <div class="value" data-bind="text: indexId"></div>
+                    </div>
+                    <div class="stats-item" data-bind="visible: !isFaultyIndex, if: !isFaultyIndex">
+                        <div class="name">Entries Count:</div>
+                        <div class="value" data-bind="text: entriesCount"></div>
+                    </div>
+                    <div class="stats-item" data-bind="visible: errorsCount > 0,if: errorsCount > 0">
+                        <div class="name">Errors Count:</div>
+                        <div class="value" data-bind="text: errorsCount"></div>
+                    </div>
+                    <div class="stats-item" data-bind="visible: !isFaultyIndex, if: !isFaultyIndex">
+                        <div class="name">Map Attempts:</div>
+                        <div class="value" data-bind="text: mapAttempts"></div>
+                    </div>
+                    <div class="stats-item" data-bind="visible: !isFaultyIndex, if: !isFaultyIndex">
+                        <div class="name">Map Successes:</div>
+                        <div class="value" data-bind="text: mapSuccesses"></div>
+                    </div>
+                    <div class="stats-item" data-bind="visible: mapErrors > 0, if: mapErrors > 0">
+                        <div class="name">Map Errors:</div>
+                        <div class="value" data-bind="text: mapErrors"></div>
+                    </div>
+                    <div class="stats-item" data-bind="visible: mappedPerSecondRate > 1, if: mappedPerSecondRate > 1">
+                        <div class="name">Mapped Per Second Rate:</div>
+                        <div class="value" data-bind="text: mappedPerSecondRateStr"></div>
+                    </div>
+                    <div class="stats-item" data-bind="visible: isReduceIndex, if: isReduceIndex">
+                        <div class="name">Reduce Attempts:</div>
+                        <div class="value" data-bind="text: reduceAttempts"></div>
+                    </div>
+                    <div class="stats-item" data-bind="visible: isReduceIndex, if: isReduceIndex">
+                        <div class="name">Reduce Successes:</div>
+                        <div class="value" data-bind="text: reduceSuccesses"></div>
+                    </div>
+                    <div class="stats-item" data-bind="visible: isReduceIndex && reduceErrors > 0, if: isReduceIndex && reduceErrors > 0">
+                        <div class="name">Reduce Errors:</div>
+                        <div class="value" data-bind="text: reduceErrors"></div>
+                    </div>
+                    <div class="stats-item" data-bind="visible: isReduceIndex && (reducedPerSecondRate > 1), if: isReduceIndex && (reducedPerSecondRate > 1)">
+                        <div class="name">Reduced Per Second Rate:</div>
+                        <div class="value" data-bind="text: reducedPerSecondRateStr"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--
+
+
 
     <div data-bind="foreach: stats().indexesByType">
 
@@ -140,6 +192,5 @@
                 </div>
             </div>
         </div>
-        <br />
-    </div>
+        -->
 </section>
