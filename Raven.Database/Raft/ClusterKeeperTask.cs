@@ -145,10 +145,11 @@ namespace Raven.Database.Raft
 
                 if (destination != null && node == null)
                 {
-                    if (removedNodes.Contains(url, StringComparer.OrdinalIgnoreCase) == false)
-                        continue; // external destination
+                    if (removedNodes != null && removedNodes.Contains(url, StringComparer.OrdinalIgnoreCase))
+                    {
+                        replicationDocument.Destinations.Remove(destination);
+                    }
 
-                    replicationDocument.Destinations.Remove(destination);
                     continue;
                 }
 

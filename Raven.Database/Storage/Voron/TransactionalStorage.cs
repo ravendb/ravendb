@@ -536,10 +536,12 @@ namespace Raven.Storage.Voron
             var stats = tableStorage.Environment.Stats();
             return new StorageStats
             {
-                VoronStats = new VoronStorageStats()
+                VoronStats = new VoronStorageStats
                 {
                     FreePagesOverhead = stats.FreePagesOverhead,
                     RootPages = stats.RootPages,
+                    NumberOfAllocatedPages = stats.NumberOfAllocatedPages,
+                    NextPageNumber = stats.NextPageNumber,
                     UnallocatedPagesAtEndOfFile = stats.UnallocatedPagesAtEndOfFile,
                     UsedDataFileSizeInBytes = stats.UsedDataFileSizeInBytes,
                     AllocatedDataFileSizeInBytes = stats.AllocatedDataFileSizeInBytes,
