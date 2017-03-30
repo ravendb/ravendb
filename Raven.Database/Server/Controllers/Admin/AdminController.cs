@@ -1398,7 +1398,7 @@ namespace Raven.Database.Server.Controllers.Admin
                     mergedTopology.LocalDatabaseIds.Add(databaseId.Value);
 
                 databaseNames.Remove(db.Name);
-                var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(db, new RavenJArray(), 10, Log);
+                var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(db, Enumerable.Empty<string>(), 10, Log);
                 var node = replicationSchemaDiscoverer.Discover();
                 var topology = node.Flatten();
                 topology.Servers.ForEach(s => mergedTopology.Servers.Add(s));

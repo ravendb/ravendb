@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -93,7 +94,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
         [RavenRoute("databases/{databaseName}/admin/replication/topology/view")]
         public Task<HttpResponseMessage> ReplicationTopology()
         {
-            var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(Database, new RavenJArray(), 10, Log);
+            var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(Database, Enumerable.Empty<string>(), 10, Log);
             var node = replicationSchemaDiscoverer.Discover();
             var topology = node.Flatten();
 

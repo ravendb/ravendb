@@ -296,8 +296,8 @@ class topology extends viewModelBase {
     private fillNodes(topologyGraph) {
         if (this.topologyFiltered().Databases) {
             this.topologyFiltered().Databases.SkippedResources.forEach(s => {
-                topologyGraph.setNode(s, {
-                    id: s,
+                topologyGraph.setNode(s.toLocaleLowerCase(), {
+                    id: s.toLocaleLowerCase(),
                     rType: "db",
                     url: s,
                     name: ' (skipped)',
@@ -307,8 +307,8 @@ class topology extends viewModelBase {
             });
 
             this.topologyFiltered().Databases.Servers.forEach(s => {
-                topologyGraph.setNode(s, {
-                    id: s,
+                topologyGraph.setNode(s.toLocaleLowerCase(), {
+                    id: s.toLocaleLowerCase(),
                     rType: "db",
                     url: s.split("/databases/")[0],
                     name: s.split("/databases/")[1],
@@ -319,14 +319,14 @@ class topology extends viewModelBase {
 
             this.topologyFiltered().Databases.Connections.forEach(c => {
                 c.UiType = "db";
-                topologyGraph.setEdge(c.Source, c.Destination, c);
+                topologyGraph.setEdge(c.Source.toLocaleLowerCase(), c.Destination.toLocaleLowerCase(), c);
             });
         }
 
         if (this.topologyFiltered().FileSystems) {
             this.topologyFiltered().FileSystems.SkippedResources.forEach(s => {
-                topologyGraph.setNode(s, {
-                    id: s,
+                topologyGraph.setNode(s.toLocaleLowerCase(), {
+                    id: s.toLocaleLowerCase(),
                     rType: "fs",
                     url: s,
                     name: " (skipped)",
@@ -336,8 +336,8 @@ class topology extends viewModelBase {
             });
 
             this.topologyFiltered().FileSystems.Servers.forEach(s => {
-                topologyGraph.setNode(s, {
-                    id: s,
+                topologyGraph.setNode(s.toLocaleLowerCase(), {
+                    id: s.toLocaleLowerCase(),
                     rType: "fs",
                     url: s.split("/fs/")[0],
                     name: s.split("/fs/")[1],
@@ -348,14 +348,14 @@ class topology extends viewModelBase {
 
             this.topologyFiltered().FileSystems.Connections.forEach(c => {
                 c.UiType = "fs";
-                topologyGraph.setEdge(c.Source, c.Destination, c);
+                topologyGraph.setEdge(c.Source.toLocaleLowerCase(), c.Destination.toLocaleLowerCase(), c);
             });
         }
 
         if (this.topologyFiltered().Counters) {
             this.topologyFiltered().Counters.SkippedResources.forEach(s => {
-                topologyGraph.setNode(s, {
-                    id: s,
+                topologyGraph.setNode(s.toLocaleLowerCase(), {
+                    id: s.toLocaleLowerCase(),
                     rType: "cs",
                     url: s,
                     name: " (skipped)",
@@ -365,8 +365,8 @@ class topology extends viewModelBase {
             });
 
             this.topologyFiltered().Counters.Servers.forEach(s => {
-                topologyGraph.setNode(s, {
-                    id: s,
+                topologyGraph.setNode(s.toLocaleLowerCase(), {
+                    id: s.toLocaleLowerCase(),
                     rType: "cs",
                     url: s.split("/cs/")[0],
                     name: s.split("/cs/")[1],
@@ -377,7 +377,7 @@ class topology extends viewModelBase {
 
             this.topologyFiltered().Counters.Connections.forEach(c => {
                 c.UiType = "cs";
-                topologyGraph.setEdge(c.Source, c.Destination, c);
+                topologyGraph.setEdge(c.Source.toLocaleLowerCase(), c.Destination.toLocaleLowerCase(), c);
             });
         }
     }

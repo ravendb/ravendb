@@ -379,15 +379,15 @@ class replicationStats extends viewModelBase {
         topologyGraph.setDefaultEdgeLabel(() => "");
 
         this.topology().Servers.forEach(s => {
-            topologyGraph.setNode(s, {
-                id: s,
+            topologyGraph.setNode(s.toLocaleLowerCase(), {
+                id: s.toLocaleLowerCase(),
                 width: 200,
                 height: 40
             });
         });
 
         this.topology().Connections.forEach(c => {
-            topologyGraph.setEdge(c.Source, c.Destination, c);
+            topologyGraph.setEdge(c.Source.toLocaleLowerCase(), c.Destination.toLocaleLowerCase(), c);
         });
 
         dagre.layout(topologyGraph);
