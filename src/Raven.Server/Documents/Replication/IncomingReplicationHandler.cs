@@ -949,7 +949,7 @@ namespace Raven.Server.Documents.Replication
                 }
                 else if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
                 {
-                    stats.RecordTombstoneRead();
+                    stats.RecordAttachmentTombstoneRead();
 
                     using (tombstoneRead.Start())
                     {
@@ -971,7 +971,7 @@ namespace Raven.Server.Documents.Replication
                     else
                     {
                         scope = tombstoneRead;
-                        stats.RecordTombstoneRead();
+                        stats.RecordDocumentTombstoneRead();
                     }
 
                     using (scope.Start())
