@@ -21,6 +21,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public const string DynamicIndexPrefix = "dynamic/";
 
+        public const string CollectionIndexPrefix = "collection/";
+
         private readonly IndexStore _indexStore;
         private readonly TransformerStore _transformerStore;
         private readonly DocumentsOperationContext _context;
@@ -121,8 +123,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var isAllDocsCollection = collection == Constants.Documents.Indexing.AllDocumentsCollection;
 
-            // we optimize for empty queries without sorting options
-            resultToFill.IndexName = isAllDocsCollection ? "AllDocs" : collection;
+            // we optimize for empty queries without sorting options, appending CollectionIndexPrefix to be able to distinguish index for collection vs. physical index
+            resultToFill.IndexName = isAllDocsCollection ? "AllDocs" : CollectionIndexPrefix + collection;
             resultToFill.IsStale = false;
             resultToFill.LastQueryTime = DateTime.MinValue;
             resultToFill.IndexTimestamp = DateTime.MinValue;

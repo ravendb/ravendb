@@ -568,9 +568,9 @@ class query extends viewModelBase {
     }
 
     openQueryStats() {
-        //TODO: work on explain in dialog + on index name
+        //TODO: work on explain in dialog
         eventsCollector.default.reportEvent("query", "show-stats");
-        const viewModel = new queryStatsDialog(this.queryStats(), this.requestedIndexForQuery());
+        const viewModel = new queryStatsDialog(this.queryStats(), this.requestedIndexForQuery(), this.activeDatabase());
         app.showBootstrapDialog(viewModel);
     }
 
