@@ -213,12 +213,17 @@ namespace Raven.Server.Documents
             }
 
             var options = _documentDatabase.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(_documentDatabase.Configuration.Core.DataDirectory.FullPath, null, _documentDatabase.IoChanges)
+                ? StorageEnvironmentOptions.CreateMemoryOnly(
+                    _documentDatabase.Configuration.Core.DataDirectory.FullPath,
+                    null, 
+                    _documentDatabase.IoChanges,
+                    _documentDatabase.CatastrophicFailureNotification)
                 : StorageEnvironmentOptions.ForPath(
                     _documentDatabase.Configuration.Core.DataDirectory.FullPath,
                     _documentDatabase.Configuration.Storage.TempPath?.FullPath,
                     _documentDatabase.Configuration.Storage.JournalsStoragePath?.FullPath,
-                    _documentDatabase.IoChanges
+                    _documentDatabase.IoChanges,
+                    _documentDatabase.CatastrophicFailureNotification
                     );
 
             options.ForceUsing32BitsPager = _documentDatabase.Configuration.Storage.ForceUsing32BitsPager;

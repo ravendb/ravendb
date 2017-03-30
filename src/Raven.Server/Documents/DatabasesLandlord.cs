@@ -13,6 +13,8 @@ using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -326,6 +328,30 @@ namespace Raven.Server.Documents
             }
 
             return maxLastWork + TimeSpan.FromMilliseconds(dbSize / 1024L);
+        }
+
+        public void UnloadResourceOnCatastrophicFailue(string databaseName, Exception e)
+        {
+            Task.Run(async () =>
+            {
+                var title = $"Critical error in '{databaseName}'";
+                var message = "Database is about to be unloaded due to an encountered error";
+
+                _serverStore.NotificationCenter.Add(AlertRaised.Create(
+                    title,
+                    message,
+                    AlertType.CatastrophicDatabaseFailue,
+                    NotificationSeverity.Error,
+                    key: databaseName,
+                    details: new ExceptionDetails(e)));
+
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"{title}. {message}", e);
+
+                await Task.Delay(2000); // let it propagate the exception to the client first
+
+                UnloadResource(databaseName, null);
+            });
         }
 
         public void UnloadResource(string resourceName, TimeSpan? skipIfActiveInDuration, Func<DocumentDatabase, bool> shouldSkip = null)
