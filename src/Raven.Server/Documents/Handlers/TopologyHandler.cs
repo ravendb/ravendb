@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Handlers
                 if (des.CanBeFailover() == false || des.Disabled || des.IgnoredClient ||
                     des.SpecifiedCollections?.Count > 0)
                     continue;
-                etags[index] = Database.DocumentReplicationLoader.GetLastReplicatedEtagForDestination(des) ??
+                etags[index] = Database.ReplicationLoader.GetLastReplicatedEtagForDestination(des) ??
                                -1;
                 destinations[index] = new DynamicJsonValue
                 {

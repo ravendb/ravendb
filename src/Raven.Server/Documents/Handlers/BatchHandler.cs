@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Handlers
             var numberOfReplicasStr = GetStringQueryString("numberOfReplicasToWaitFor", required: false) ?? "1";
             if (numberOfReplicasStr == "majority")
             {
-                numberOfReplicasToWaitFor = Database.DocumentReplicationLoader.GetSizeOfMajority();
+                numberOfReplicasToWaitFor = Database.ReplicationLoader.GetSizeOfMajority();
             }
             else
             {
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Handlers
             }
             var throwOnTimeoutInWaitForReplicas = GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas") ?? true;
 
-            var waitForReplicationAsync = Database.DocumentReplicationLoader.WaitForReplicationAsync(
+            var waitForReplicationAsync = Database.ReplicationLoader.WaitForReplicationAsync(
                 numberOfReplicasToWaitFor,
                 waitForReplicasTimeout,
                 mergedCmd.LastEtag);

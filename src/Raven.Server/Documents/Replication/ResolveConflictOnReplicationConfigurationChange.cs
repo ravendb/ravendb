@@ -19,16 +19,16 @@ namespace Raven.Server.Documents.Replication
     {
         private readonly DocumentDatabase _database;
         private readonly Logger _log;
-        private readonly DocumentReplicationLoader _documentReplicationLoader;
+        private readonly ReplicationLoader _replicationLoader;
 
         public Task ResolveConflictsTask = Task.CompletedTask;
 
         internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
 
-        public ResolveConflictOnReplicationConfigurationChange(DocumentReplicationLoader documentReplicationLoader, Logger log)
+        public ResolveConflictOnReplicationConfigurationChange(ReplicationLoader replicationLoader, Logger log)
         {
-            _documentReplicationLoader = documentReplicationLoader;
-            _database = _documentReplicationLoader.Database;
+            _replicationLoader = replicationLoader;
+            _database = _replicationLoader.Database;
             _log = log;
         }
 
@@ -160,14 +160,14 @@ namespace Raven.Server.Documents.Replication
 
             if (TryResolveUsingDefaultResolverInternal(
                 context,
-                _documentReplicationLoader.ReplicationDocument?.DefaultResolver,
+                _replicationLoader.ReplicationDocument?.DefaultResolver,
                 conflictList))
             {
                 //stats.AddResolvedBy("DatabaseResolver", conflictList.Count);
                 return true;
             }
 
-            if (_documentReplicationLoader.ReplicationDocument?.DocumentConflictResolution == StraightforwardConflictResolution.ResolveToLatest)
+            if (_replicationLoader.ReplicationDocument?.DocumentConflictResolution == StraightforwardConflictResolution.ResolveToLatest)
             {
                 ResolveToLatest(context, conflictList);
                 //stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
@@ -179,14 +179,14 @@ namespace Raven.Server.Documents.Replication
 
         private void UpdateScriptResolvers()
         {
-            if (_documentReplicationLoader.ReplicationDocument?.ResolveByCollection == null)
+            if (_replicationLoader.ReplicationDocument?.ResolveByCollection == null)
             {
                 if (ScriptConflictResolversCache.Count > 0)
                     ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
                 return;
             }
             var copy = new Dictionary<string, ScriptResolver>();
-            foreach (var kvp in _documentReplicationLoader.ReplicationDocument.ResolveByCollection)
+            foreach (var kvp in _replicationLoader.ReplicationDocument.ResolveByCollection)
             {
                 var collection = kvp.Key;
                 var script = kvp.Value.Script;

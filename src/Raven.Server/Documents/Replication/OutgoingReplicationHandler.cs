@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Replication
         private readonly CancellationTokenSource _cts;
         private readonly ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();
         private Thread _sendingThread;
-        internal readonly DocumentReplicationLoader _parent;
+        internal readonly ReplicationLoader _parent;
         internal long _lastSentDocumentEtag;
         public long LastAcceptedDocumentEtag;
         internal long _lastSentIndexOrTransformerEtag;
@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Replication
 
         private OutgoingReplicationStatsAggregator _lastStats;
 
-        public OutgoingReplicationHandler(DocumentReplicationLoader parent,
+        public OutgoingReplicationHandler(ReplicationLoader parent,
             DocumentDatabase database,
             ReplicationDestination destination)
         {

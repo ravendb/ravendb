@@ -437,7 +437,7 @@ namespace Raven.Server
                                 SubscriptionConnection.SendSubscriptionDocuments(tcp);
                                 break;
                             case TcpConnectionHeaderMessage.OperationTypes.Replication:
-                                var documentReplicationLoader = tcp.DocumentDatabase.DocumentReplicationLoader;
+                                var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;
                                 documentReplicationLoader.AcceptIncomingConnection(tcp);
                                 break;
                             case TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery:

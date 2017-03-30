@@ -64,7 +64,7 @@ namespace Raven.Server.Documents
             IndexStore = new IndexStore(this, _indexAndTransformerLocker);
             TransformerStore = new TransformerStore(this, _indexAndTransformerLocker);
             EtlLoader = new EtlLoader(this);
-            DocumentReplicationLoader = new DocumentReplicationLoader(this);
+            ReplicationLoader = new ReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
             SubscriptionStorage = new SubscriptionStorage(this);
             Operations = new DatabaseOperations(this);
@@ -132,7 +132,7 @@ namespace Raven.Server.Documents
 
         public IndexesEtagsStorage IndexMetadataPersistence => ConfigurationStorage.IndexesEtagsStorage;
 
-        public DocumentReplicationLoader DocumentReplicationLoader { get; private set; }
+        public ReplicationLoader ReplicationLoader { get; private set; }
 
         public EtlLoader EtlLoader { get; private set; }
 
@@ -248,7 +248,7 @@ namespace Raven.Server.Documents
             //so replication of both documents and indexes/transformers can be made within one transaction
             ConfigurationStorage.Initialize(IndexStore, TransformerStore);
 
-            DocumentReplicationLoader.Initialize();
+            ReplicationLoader.Initialize();
 
             NotificationCenter.Initialize(this);
         }
@@ -336,8 +336,8 @@ namespace Raven.Server.Documents
 
                 exceptionAggregator.Execute(() =>
                 {
-                    DocumentReplicationLoader?.Dispose();
-                    DocumentReplicationLoader = null;
+                    ReplicationLoader?.Dispose();
+                    ReplicationLoader = null;
                 });
 
                 exceptionAggregator.Execute(() =>
