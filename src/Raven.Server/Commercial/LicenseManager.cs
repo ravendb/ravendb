@@ -16,7 +16,6 @@ using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -24,11 +23,11 @@ using Voron;
 
 namespace Raven.Server.Commercial
 {
-    public class LicenseManager: IDisposable
+    public class LicenseManager : IDisposable
     {
         private const string ApiRavenDbNet = "https://api.ravendb.net";
 
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LatestVersionCheck>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
         private readonly LicenseStorage _licenseStorage = new LicenseStorage();
         private readonly LicenseStatus _licenseStatus = new LicenseStatus();
         private readonly BuildNumber _buildInfo;
@@ -131,7 +130,7 @@ namespace Raven.Server.Commercial
                     "License manager initialization error",
                     "Could not intitalize the license manager",
                     AlertType.LicenseManager_InitializationError,
-                    NotificationSeverity.Info,
+                    NotificationSeverity.Warning,
                     details: new ExceptionDetails(e));
 
                 _notificationCenter.Add(alert);
@@ -226,7 +225,7 @@ namespace Raven.Server.Commercial
                         "Lease license failure",
                         "Could not lease license",
                         AlertType.LicenseManager_LeaseLicenseError,
-                        NotificationSeverity.Info,
+                        NotificationSeverity.Warning,
                         details: new ExceptionDetails(
                             new InvalidOperationException($"Status code: {response.StatusCode}, response: {responseString}")));
 
