@@ -84,7 +84,7 @@ namespace SlowTests.Server.Replication
                     Assert.Equal(0, topologyInfo.NodesById[masterDocumentDatabase.DbId.ToString()].Outgoing.Count);
                     Assert.Equal(1, topologyInfo.NodesById[masterDocumentDatabase.DbId.ToString()].Offline.Count);
 
-                    var replicationDocument = masterDocumentDatabase.DocumentReplicationLoader.ReplicationDocument;
+                    var replicationDocument = masterDocumentDatabase.DocumentReplicationLoader.ReplicationConfig;
                     Assert.Equal(1, replicationDocument.Destinations.Count); //sanity check, this should always be true
 
                     var slaveUrl = replicationDocument.Destinations.First().Url;

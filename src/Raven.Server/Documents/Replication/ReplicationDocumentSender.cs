@@ -267,7 +267,7 @@ namespace Raven.Server.Documents.Replication
                 Destination = _parent.FromToString
             };
             var sw = Stopwatch.StartNew();
-            var defaultResolver = _parent._parent.ReplicationDocument?.DefaultResolver;
+            var defaultResolver = _parent._parent.ReplicationConfig?.Senator;
             var headerJson = new DynamicJsonValue
             {
                 [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,

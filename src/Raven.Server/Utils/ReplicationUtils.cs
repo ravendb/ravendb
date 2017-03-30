@@ -120,7 +120,7 @@ namespace Raven.Server.Utils
 
         public static NodeTopologyInfo GetLocalTopology(
             DocumentDatabase database,
-            ReplicationDocument replicationDocument)
+            IEnumerable<ReplicationDestination> destinations)
         {
             var topologyInfo = new NodeTopologyInfo { DatabaseId = database.DbId.ToString() };
             topologyInfo.InitializeOSInformation();
@@ -129,7 +129,7 @@ namespace Raven.Server.Utils
 
             GetLocalIncomingTopology(replicationLoader, topologyInfo);
 
-            foreach (var destination in replicationDocument.Destinations)
+            foreach (var destination in destinations)
             {
                 OutgoingReplicationHandler outgoingHandler;
                 DocumentReplicationLoader.ConnectionShutdownInfo connectionFailureInfo;

@@ -102,6 +102,10 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteValueCommand):
                     DeleteValue(context, cmd, index, leader);
                     break;
+                case nameof(UpdateReplicationTopologyCommand):
+                    // distinguish from transformer commands
+                    UpdateDatabase(context, type, cmd, index, leader);
+                    break;
                 case nameof(PutTransformerCommand):
                 case nameof(SetTransformerLockModeCommand):
                 case nameof(DeleteTransformerCommand):
@@ -660,6 +664,17 @@ namespace Raven.Server.ServerWide
         void UpdateDatabaseRecord(DatabaseRecord record);
     }
 
+    public class UpdateReplicationTopologyCommand : IUpdateDatabaseCommand
+    {
+        public string DatabaseName;
+        public ReplicationTopologyConfiguration NewReplicationTopology;
+
+        public void UpdateDatabaseRecord(DatabaseRecord record)
+        {
+            record.ReplicationTopology = NewReplicationTopology;
+        }
+    }
+
     public class PutTransformerCommand : IUpdateDatabaseCommand
     {
         public string DatabaseName;
@@ -709,7 +724,9 @@ namespace Raven.Server.ServerWide
             [nameof(EditVersioningCommand)] = GenerateJsonDeserializationRoutine<EditVersioningCommand>(),
             [nameof(PutTransformerCommand)] = GenerateJsonDeserializationRoutine<PutTransformerCommand>(),
             [nameof(DeleteTransformerCommand)] = GenerateJsonDeserializationRoutine<DeleteTransformerCommand>(),
-            [nameof(SetTransformerLockModeCommand)] = GenerateJsonDeserializationRoutine<SetTransformerLockModeCommand>()
+            [nameof(SetTransformerLockModeCommand)] = GenerateJsonDeserializationRoutine<SetTransformerLockModeCommand>(),
+
+            [nameof(UpdateReplicationTopologyCommand)] = GenerateJsonDeserializationRoutine<UpdateReplicationTopologyCommand>(),
         };
 
         public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();

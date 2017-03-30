@@ -132,13 +132,6 @@ namespace Raven.Server.Documents.Replication
                                         new InvalidOperationException(response.Item2.Exception));
                                 throw new InvalidOperationException(response.Item2.Exception);
                             }
-
-                            if (response.Item1 == ReplicationMessageReply.ReplyType.Ok)
-                            {
-                                _parent.UpdateReplicationDocumentWithResolver(
-                                    response.Item2.ResolverId,
-                                    response.Item2.ResolverVersion);
-                            }
                         }
                         catch (DatabaseDoesNotExistException e)
                         {
@@ -279,8 +272,6 @@ namespace Raven.Server.Documents.Replication
                     ["SourceDatabaseName"] = _database.Name,
                     ["SourceUrl"] = _database.Configuration.Core.ServerUrl,
                     ["MachineName"] = Environment.MachineName,
-                    ["ResolverVersion"] = _parent?.ReplicationDocument.DefaultResolver?.Version,
-                    ["ResolverId"] = _parent?.ReplicationDocument.DefaultResolver?.ResolvingDatabaseId,
                 };
 
                 documentsContext.Write(writer, request);

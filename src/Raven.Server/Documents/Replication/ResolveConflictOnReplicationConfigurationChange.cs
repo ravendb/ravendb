@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Replication
                     }
                     resolverStats.EndTime = DateTime.UtcNow;
                     resolverStats.ConflictsLeft = ConflictsCount;
-                    resolverStats.DefaultResolver = _documentReplicationLoader.ReplicationDocument?.DefaultResolver;
+                    resolverStats.DefaultResolver = _documentReplicationLoader.ReplicationConfig?.Senator;
                     _documentReplicationLoader.RepliactionStats.Add(resolverStats);
                 }
                 finally
@@ -166,14 +166,14 @@ namespace Raven.Server.Documents.Replication
 
             if (TryResolveUsingDefaultResolverInternal(
                 context,
-                _documentReplicationLoader.ReplicationDocument?.DefaultResolver,
+                _documentReplicationLoader.ReplicationConfig?.Senator,
                 conflictList))
             {
                 stats.AddResolvedBy("DatabaseResolver", conflictList.Count);
                 return true;
             }
 
-            if (_documentReplicationLoader.ReplicationDocument?.DocumentConflictResolution == StraightforwardConflictResolution.ResolveToLatest)
+            if (_documentReplicationLoader.ReplicationConfig?.ResolveToLatest ?? false)
             {
                 ResolveToLatest(context, conflictList);
                 stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
@@ -185,14 +185,14 @@ namespace Raven.Server.Documents.Replication
 
         private void UpdateScriptResolvers()
         {
-            if (_documentReplicationLoader.ReplicationDocument?.ResolveByCollection == null)
+            if (_documentReplicationLoader.ReplicationConfig?.ResolveByCollection == null)
             {
                 if (ScriptConflictResolversCache.Count > 0)
                     ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
                 return;
             }
             var copy = new Dictionary<string, ScriptResolver>();
-            foreach (var kvp in _documentReplicationLoader.ReplicationDocument.ResolveByCollection)
+            foreach (var kvp in _documentReplicationLoader.ReplicationConfig.ResolveByCollection)
             {
                 var collection = kvp.Key;
                 var script = kvp.Value.Script;

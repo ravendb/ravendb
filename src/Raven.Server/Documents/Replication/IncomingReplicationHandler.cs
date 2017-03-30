@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Replication
             _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
 
-            var replicationDoc = _parent.ReplicationDocument;
+            var replicationDoc = _parent.ReplicationConfig;
             _conflictManager = new ConflictManager(_database, replicationDoc, _parent.ConflictResolver);
         }
 
@@ -298,13 +298,6 @@ namespace Raven.Server.Documents.Replication
                 throw new InvalidDataException(
                     "Expected the 'AttachmentStreamsCount' field, but had no numeric field of this value, this is likely a bug");
 
-            string resovlerId;
-            int? resolverVersion;
-            if (message.TryGet(nameof(ReplicationMessageHeader.ResolverId), out resovlerId) &&
-                message.TryGet(nameof(ReplicationMessageHeader.ResolverVersion), out resolverVersion))
-            {
-                _parent.UpdateReplicationDocumentWithResolver(resovlerId, resolverVersion);
-            }
             IncomingStats = new ReplicationStatistics.IncomingBatchStats
             {
                 Status = ReplicationStatus.Received,
@@ -778,7 +771,6 @@ namespace Raven.Server.Documents.Replication
                 _log.Info(
                     $"Sending heartbeat ok => {FromToString} with last document etag = {lastDocumentEtag}, last index/transformer etag = {lastIndexOrTransformerEtag} and document change vector: {databaseChangeVector.Format()}");
             }
-            var defaultResolver = _parent.ReplicationDocument?.DefaultResolver;
             var heartbeat = new DynamicJsonValue
             {
                 [nameof(ReplicationMessageReply.Type)] = "Ok",
@@ -789,8 +781,6 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentChangeVectorAsDynamicJson,
                 [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVectorAsDynamicJson,
                 [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString(),
-                [nameof(ReplicationMessageReply.ResolverId)] = defaultResolver?.ResolvingDatabaseId,
-                [nameof(ReplicationMessageReply.ResolverVersion)] = defaultResolver?.Version
             };
 
             documentsContext.Write(writer, heartbeat);
