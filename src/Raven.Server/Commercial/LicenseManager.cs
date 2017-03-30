@@ -32,6 +32,9 @@ namespace Raven.Server.Commercial
         private readonly LicenseStatus _licenseStatus = new LicenseStatus();
         private readonly BuildNumber _buildInfo;
         private Timer _leaseLicenseTimer;
+        private RSAParameters? _rsaParameters;
+        private readonly NotificationCenter.NotificationCenter _notificationCenter;
+        private readonly InterlockedLock _interlockedLock = new InterlockedLock();
         private readonly HttpClient _httpClient = new HttpClient
         {
             BaseAddress = new Uri(ApiRavenDbNet)
@@ -59,11 +62,6 @@ namespace Raven.Server.Commercial
 
             _httpClient.DefaultRequestHeaders.Add("User-Agent", userAgent);
         }
-
-        private readonly object _leaseLicenseLock = new object();
-
-        private RSAParameters? _rsaParameters;
-        private readonly NotificationCenter.NotificationCenter _notificationCenter;
 
         private RSAParameters RSAParameters
         {
@@ -190,13 +188,11 @@ namespace Raven.Server.Commercial
 
         private async Task LeaseLicense() 
         {
-            var lockTaken = false;
+            if (_interlockedLock.TryEnter() == false)
+                return;
+
             try
             {
-                Monitor.TryEnter(_leaseLicenseLock, ref lockTaken);
-                if (lockTaken == false)
-                    return;
-
                 var license = _licenseStorage.LoadLicense();
                 if (license == null)
                     return;
@@ -251,8 +247,7 @@ namespace Raven.Server.Commercial
             }
             finally
             {
-                if (lockTaken)
-                    Monitor.Exit(_leaseLicenseLock);
+                _interlockedLock.Exit();
             }
         }
 
