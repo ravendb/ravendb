@@ -312,7 +312,7 @@ namespace Raven.Server.Web.Studio
         {
             var collectionName = GetStringQueryString("name");
 
-            var token = CreateTimeLimitedOperationToken();
+            var token = CreateOperationToken();
 
             var collectionRunner = new StudioCollectionRunner(Database, context, excludeIds);
 

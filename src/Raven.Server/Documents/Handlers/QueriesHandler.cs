@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.Handlers
 
             var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(int.MaxValue), context);
             var options = GetQueryOperationOptions();
-            var token = CreateTimeLimitedOperationToken();
+            var token = CreateOperationToken();
 
             var queryRunner = new QueryRunner(Database, context);
 
