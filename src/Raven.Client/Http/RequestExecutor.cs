@@ -78,6 +78,7 @@ namespace Raven.Client.Http
                     {
                         Url = url,
                         Database = databaseName,
+                        ClusterToken = "N/A" //initial topology before an update, so cluster token is not applicable here...
                     }
                 },
                 Etag = int.MinValue,
