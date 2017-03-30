@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using Jint;
 using Jint.Native;
 using Raven.Client.Documents.Attachments;
@@ -72,29 +73,29 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             for (var i = 0; i < blittableJsonReaderObject.Count; i++)
             {
                 blittableJsonReaderObject.GetPropertyByIndex(i, ref prop);
-                
+
+                var sqlColumn = new SqlColumn
+                {
+                    Key = prop.Name,
+                    Value = prop.Value,
+                    Type = prop.Token
+                };
+
                 if (_config.HasLoadAttachment && prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
                 {
-                    var stream =
-                        _database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentKey, attachmentName, AttachmentType.Document,
-                            Current.Document.ChangeVector).Stream;
+                    var attachmentStream = _database.DocumentsStorage.AttachmentsStorage.GetAttachment(
+                                                   Context,
+                                                   Current.DocumentKey,
+                                                   attachmentName,
+                                                   AttachmentType.Document,
+                                                   Current.Document.ChangeVector)
+                                               ?.Stream ?? Stream.Null;
 
-                    columns.Add(new SqlColumn
-                    {
-                        Key = prop.Name,
-                        Value = stream,
-                        Type = 0,
-                    });
+                    sqlColumn.Type = 0;
+                    sqlColumn.Value = attachmentStream;
                 }
-                else
-                {
-                    columns.Add(new SqlColumn
-                    {
-                        Key = prop.Name,
-                        Value = prop.Value,
-                        Type = prop.Token,
-                    });
-                }
+
+                columns.Add(sqlColumn);
             }
             
             GetOrAdd(tableName).Inserts.Add(new ToSqlItem(Current)

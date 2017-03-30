@@ -681,14 +681,7 @@ CREATE TABLE [dbo].[Orders]
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Order
-                    {
-                        OrderLines = new List<OrderLine>
-                        {
-                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-                        }
-                    });
+                    await session.StoreAsync(new Order());
                     await session.SaveChangesAsync();
                 }
 
@@ -813,6 +806,57 @@ for (var i = 0; i < attachments.length; i++)
                     {
                         dbCommand.CommandText = " SELECT COUNT(*) FROM Attachments";
                         Assert.Equal(2, dbCommand.ExecuteScalar());
+                    }
+                }
+            }
+        }
+
+        [NonLinuxFact]
+        public async Task LoadingNonExistingAttachmentWillStoreNull()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateRdbmsSchema(store, @"
+CREATE TABLE [dbo].[Orders]
+(
+    [Id] [nvarchar](50) NOT NULL,
+    [Pic] [varbinary](max) NULL
+)
+");
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order());
+                    await session.SaveChangesAsync();
+                }
+
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+
+                SetupSqlEtl(store, @"
+var orderData = {
+    Id: __document_id,
+    Pic: loadAttachment('non-existing')
+};
+
+loadToOrders(orderData);
+");
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                using (var con = new SqlConnection())
+                {
+                    con.ConnectionString = GetConnectionString(store);
+                    con.Open();
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1'";
+
+                        var sqlDataReader = dbCommand.ExecuteReader();
+                        
+
+                        Assert.True(sqlDataReader.Read());
+                        Assert.True(sqlDataReader.IsDBNull(0));
                     }
                 }
             }
