@@ -871,7 +871,11 @@ namespace Voron
 
         internal void AssertNoCatastrophicFailure()
         {
-            CatastrophicFailure?.Throw(); // force re-throw of error
+            if (CatastrophicFailure == null)
+                return;
+
+            _options.CatastrophicFailureNotification.RaiseNotification(CatastrophicFailure.SourceException);
+            CatastrophicFailure.Throw(); // force re-throw of error
         }
 
         internal void HandleDataDiskFullException(DiskFullException exception)

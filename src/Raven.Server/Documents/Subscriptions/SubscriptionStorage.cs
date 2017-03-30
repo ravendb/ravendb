@@ -38,8 +38,8 @@ namespace Raven.Server.Documents.Subscriptions
             var path = db.Configuration.Core.DataDirectory.Combine("Subscriptions");
 
             var options = db.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath, null, db.IoChanges)
-                : StorageEnvironmentOptions.ForPath(path.FullPath, null, null, db.IoChanges);
+                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath, null, db.IoChanges, db.CatastrophicFailureNotification)
+                : StorageEnvironmentOptions.ForPath(path.FullPath, null, null, db.IoChanges, db.CatastrophicFailureNotification);
 
 
             options.SchemaVersion = 1;

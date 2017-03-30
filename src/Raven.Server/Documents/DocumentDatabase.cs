@@ -5,15 +5,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
-using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.ETL;
-using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
@@ -25,6 +22,7 @@ using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
+using Voron.Exceptions;
 using Voron.Impl.Backup;
 using DatabaseInfo = Raven.Client.Server.Operations.DatabaseInfo;
 using Size = Raven.Client.Util.Size;
@@ -78,6 +76,10 @@ namespace Raven.Server.Documents
             ConfigurationStorage = new ConfigurationStorage(this);
             NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
+            CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
+            {
+                serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailue(name, e);
+            });
         }
 
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
@@ -112,7 +114,10 @@ namespace Raven.Server.Documents
 
         public IoChangesNotifications IoChanges { get; }
 
+        public CatastrophicFailureNotification CatastrophicFailureNotification { get;}
+
         public NotificationCenter.NotificationCenter NotificationCenter { get; private set; }
+
         public DatabaseOperations Operations { get; private set; }
 
         public HugeDocuments HugeDocuments { get; }
