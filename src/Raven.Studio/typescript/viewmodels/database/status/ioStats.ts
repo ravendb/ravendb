@@ -1003,7 +1003,8 @@ class ioStats extends viewModelBase {
                                     const humanSizeTextWidth = context.measureText(recentItem.HumanSize).width;
                                     if (dx > humanSizeTextWidth) {
                                         context.fillStyle = 'black';
-                                        context.fillText(generalUtils.formatBytesToSize(recentItem.Size), x1 + dx / 2 - humanSizeTextWidth / 2, yStartItem + ioStats.trackHeight / 2 + 4);
+                                        context.textAlign = "center";
+                                        context.fillText(generalUtils.formatBytesToSize(recentItem.Size), x1 + dx / 2, yStartItem + ioStats.trackHeight / 2 + 4);
                                         // Note: there is a slight difference between Server side calculated 'HumanSize' &  the generalUtils calculation ....
                                     }
 
