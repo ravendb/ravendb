@@ -269,7 +269,7 @@
             position: relative;
             top: 2px;
 
-            a {
+            .box-container a {
                 color: @gray-lighter;
                 text-decoration: none;
                 display: block;
@@ -402,6 +402,21 @@
         }
 
         .database-switcher-container {
+            .resources-link {
+                .slidein-style;
+                position: absolute;
+                top: @grid-gutter-width/4;
+                right: @grid-gutter-width/4;
+                z-index: 21;
+                display: none;
+            }
+
+            &.active {
+                .resources-link {
+                    display: block;
+                }
+            }
+
             .database {
                 &:before {
                     margin-right: 10px;
