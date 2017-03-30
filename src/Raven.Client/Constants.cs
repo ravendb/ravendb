@@ -33,6 +33,8 @@ namespace Raven.Client
 
             public const string RequestTime = "Raven-Request-Time";
 
+            public const string ForceTopologyUpdate = "Force-Topology-Update";
+
             public const string Etag = "ETag";
         }
 

@@ -114,7 +114,8 @@ namespace Raven.Server.Web.System
                 }
                 var topologyJson = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                var newEtag = await ServerStore.WriteDbAsync(context, name, topologyJson, etag);
+                var index = await ServerStore.WriteDbAsync(context, name, topologyJson, etag);
+                await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
@@ -124,7 +125,7 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        ["ETag"] = newEtag,
+                        ["ETag"] = index,
                         ["Key"] = name,
                         [nameof(DatabaseRecord.Topology)] = databaseRecord.Topology.ToJson()
                     });
@@ -188,7 +189,8 @@ namespace Raven.Server.Web.System
                     [nameof(DatabaseRecord.Topology)] = topologyJson
                 };
 
-                var newEtag = await ServerStore.WriteDbAsync(context, name, json, etag);
+                var index = await ServerStore.WriteDbAsync(context, name, json, etag);
+                await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
@@ -198,7 +200,7 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        ["ETag"] = newEtag,
+                        ["ETag"] = index,
                         ["Key"] = name,
                         [nameof(DatabaseRecord.Topology)] = topology.ToJson()
                     });

@@ -350,7 +350,7 @@ namespace Raven.Server.ServerWide
                 [nameof(AddDatabaseCommand.Etag)] = etag,
             }, "put-cmd"))
             {
-                return await _engine.PutAsync(putCmd);
+                return await SendToLeaderAsync(putCmd);
             }
         }
 

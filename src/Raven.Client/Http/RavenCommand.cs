@@ -58,9 +58,9 @@ namespace Raven.Client.Http
                 throw new ArgumentException($"{name} cannot be null or empty", name);
         }
 
-        public bool IsFailedWithNode(ServerNode leaderNode)
+        public bool IsFailedWithNode(ServerNode node)
         {
-            return FailedNodes != null && FailedNodes.Contains(leaderNode);
+            return FailedNodes != null && FailedNodes.Contains(node);
         }
 
         public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)

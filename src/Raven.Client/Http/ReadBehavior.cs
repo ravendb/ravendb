@@ -2,9 +2,9 @@
 {
     public enum ReadBehavior
     {
-        LeaderOnly,
-        LeaderWithFailover,
-        LeaderWithFailoverWhenRequestTimeSlaThresholdIsReached,
+        ConversationNodeOnly,
+        ConversationNodeWithFailover,
+        ConversationNodeWithFailoverWhenRequestTimeSlaThresholdIsReached,
         RoundRobin,
         RoundRobinWithFailoverWhenRequestTimeSlaThresholdIsReached,
         FastestNode,

@@ -590,11 +590,15 @@ namespace Raven.Server.Rachis
             UpdateLastMatchFromFollower(0);
             _thread = new Thread(Run)
             {
-                Name =
-                    $"Follower Ambassador for {_engine.Tag} > {_tag} in term {_engine.CurrentTerm}",
+                Name = ToString(),
                 IsBackground = true
             };
             _thread.Start();
+        }
+
+        public override string ToString()
+        {
+            return $"Follower Ambassador for {_engine.Tag} > {_tag} in term {_engine.CurrentTerm}";
         }
 
         public void Dispose()

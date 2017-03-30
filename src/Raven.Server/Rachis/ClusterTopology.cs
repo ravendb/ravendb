@@ -52,7 +52,7 @@ namespace Raven.Server.Rachis
             
         }
 
-        public string GetUrlFormTag(string tag)
+        public string GetUrlFromTag(string tag)
         {
             string url;
             if (Members.TryGetValue(tag, out url))

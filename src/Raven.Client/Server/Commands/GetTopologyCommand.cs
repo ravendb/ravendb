@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System.Collections.Generic;
+using System.Net.Http;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
@@ -7,17 +8,17 @@ namespace Raven.Client.Server.Commands
 {
     public class GetTopologyCommand : RavenCommand<Topology>
     {
-        private string _forcedUrl;
+        private readonly string _forcedUrl;
 
         public GetTopologyCommand(string forcedUrl = null)
         {
-            AvoidFailover = true;
             _forcedUrl = forcedUrl;
+            FailedNodes = new HashSet<ServerNode>();
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/topology?&name={node.Database}";
+            url = $"{node.Url}/topology?name={node.Database}";
             if (string.IsNullOrEmpty(_forcedUrl) == false)
             {
                 url += $"&url={_forcedUrl}";
