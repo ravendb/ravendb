@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Replication
         private readonly DocumentDatabase _database;
         private readonly TcpClient _tcpClient;
         private readonly Stream _stream;
-        private readonly DocumentReplicationLoader _parent;
+        private readonly ReplicationLoader _parent;
         private Thread _incomingThread;
         private readonly CancellationTokenSource _cts;
         private readonly Logger _log;
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Replication
         public IncomingReplicationHandler(
             TcpConnectionOptions options,
             ReplicationLatestEtagRequest replicatedLastEtag,
-            DocumentReplicationLoader parent)
+            ReplicationLoader parent)
         {
             _connectionOptions = options;
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);

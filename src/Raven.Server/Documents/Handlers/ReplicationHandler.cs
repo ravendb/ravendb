@@ -13,7 +13,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class DocumentReplicationHandler : DatabaseRequestHandler
+    public class ReplicationHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/replication/tombstones", "GET", "/databases/{databaseName:string}/replication/tombstones?start={start:int}&take={take:int}")]
         public Task GetAllTombstones()
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteStartObject();
 
                 writer.WritePropertyName(nameof(ReplicationPerformance.Incoming));
-                writer.WriteArray(context, Database.DocumentReplicationLoader.IncomingHandlers, (w, c, handler) =>
+                writer.WriteArray(context, Database.ReplicationLoader.IncomingHandlers, (w, c, handler) =>
                 {
                     w.WriteStartObject();
 
@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(ReplicationPerformance.Outgoing));
-                writer.WriteArray(context, Database.DocumentReplicationLoader.OutgoingHandlers, (w, c, handler) =>
+                writer.WriteArray(context, Database.ReplicationLoader.OutgoingHandlers, (w, c, handler) =>
                 {
                     w.WriteStartObject();
 
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var incoming = new DynamicJsonArray();
-                foreach (var item in Database.DocumentReplicationLoader.IncomingConnections)
+                foreach (var item in Database.ReplicationLoader.IncomingConnections)
                 {
                     incoming.Add(new DynamicJsonValue
                     {
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 var outgoing = new DynamicJsonArray();
-                foreach (var item in Database.DocumentReplicationLoader.OutgoingConnections)
+                foreach (var item in Database.ReplicationLoader.OutgoingConnections)
                 {
                     outgoing.Add(new DynamicJsonValue
                     {
@@ -189,7 +189,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
-                foreach (var item in Database.DocumentReplicationLoader.OutgoingFailureInfo)
+                foreach (var item in Database.ReplicationLoader.OutgoingFailureInfo)
                 {
                     data.Add(new DynamicJsonValue
                     {
@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
-                foreach (var item in Database.DocumentReplicationLoader.IncomingLastActivityTime)
+                foreach (var item in Database.ReplicationLoader.IncomingLastActivityTime)
                 {
                     data.Add(new DynamicJsonValue
                     {
@@ -251,7 +251,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
-                foreach (var statItem in Database.DocumentReplicationLoader.IncomingRejectionStats)
+                foreach (var statItem in Database.ReplicationLoader.IncomingRejectionStats)
                 {
                     data.Add(new DynamicJsonValue
                     {
@@ -284,7 +284,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
-                foreach (var queueItem in Database.DocumentReplicationLoader.ReconnectQueue)
+                foreach (var queueItem in Database.ReplicationLoader.ReconnectQueue)
                 {
                     data.Add(new DynamicJsonValue
                     {

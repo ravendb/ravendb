@@ -21,7 +21,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class DocumentReplicationLoader : IDisposable, IDocumentTombstoneAware
+    public class ReplicationLoader : IDisposable, IDocumentTombstoneAware
     {
         public event Action<string, Exception> ReplicationFailed;
 
@@ -100,10 +100,10 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks =
             new ConcurrentQueue<TaskCompletionSource<object>>();
 
-        public DocumentReplicationLoader(DocumentDatabase database)
+        public ReplicationLoader(DocumentDatabase database)
         {
             Database = database;
-            _log = LoggingSource.Instance.GetLogger<DocumentReplicationLoader>(Database.Name);
+            _log = LoggingSource.Instance.GetLogger<ReplicationLoader>(Database.Name);
             _reconnectAttemptTimer = new Timer(AttemptReconnectFailedOutgoing,
                 null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
             MinimalHeartbeatInterval =
