@@ -874,7 +874,7 @@ namespace Voron
             if (CatastrophicFailure == null)
                 return;
 
-            _options.CatastrophicFailureNotification.RaiseNotification(CatastrophicFailure.SourceException);
+            _options.CatastrophicFailureNotification.RaiseNotificationOnce(CatastrophicFailure.SourceException);
             CatastrophicFailure.Throw(); // force re-throw of error
         }
 

@@ -6,6 +6,7 @@ namespace Voron.Exceptions
     public class CatastrophicFailureNotification
     {
         private readonly Action<Exception> _catastrophicFailure;
+        private bool _raised;
 
         public CatastrophicFailureNotification(Action<Exception> catastrophicFailureHandler)
         {
@@ -14,9 +15,14 @@ namespace Voron.Exceptions
             _catastrophicFailure = catastrophicFailureHandler;
         }
 
-        public void RaiseNotification(Exception e)
+        public void RaiseNotificationOnce(Exception e)
         {
+            if (_raised)
+                return;
+
             _catastrophicFailure.Invoke(e);
+
+            _raised = true;
         }
     }
 }
