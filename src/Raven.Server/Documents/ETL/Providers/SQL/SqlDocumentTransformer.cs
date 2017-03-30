@@ -114,18 +114,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
             var buffer = value.Buffer;
 
-            if (buffer[0] != (byte)'$' ||
-                buffer[1] != (byte)'a' ||
-                buffer[2] != (byte)'t' ||
-                buffer[3] != (byte)'t' ||
-                buffer[4] != (byte)'a' ||
-                buffer[5] != (byte)'c' ||
-                buffer[6] != (byte)'h' ||
-                buffer[7] != (byte)'m' ||
-                buffer[8] != (byte)'e' ||
-                buffer[9] != (byte)'n' ||
-                buffer[10] != (byte)'t' ||
-                buffer[11] != (byte)'/')
+            if (*(long*)buffer != 7883660417928814884 || // $attachm
+                *(int*)(buffer + 8) != 796159589) // ent/
             {
                 attachmentName = null;
                 return false;
