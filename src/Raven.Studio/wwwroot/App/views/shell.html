@@ -5,7 +5,7 @@
 <nav class="navbar navbar-inverse navbar-fixed-top">
     <div class="container-fluid">
         <div class="navbar-header">
-            <a class="navbar-brand hidden-xs" href="#databases">RavenDB</a>
+            <a class="navbar-brand hidden-xs" data-bind="attr: { href: appUrls.databases }">RavenDB</a>
         </div>
         <div id="navbar">
             <ul class="nav navbar-nav navbar-right">
@@ -24,7 +24,7 @@
                     <div class="form-control btn-toggle database-switcher">
                         <span class="database" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
                     </div>
-                    <a href="#databases" class="btn btn-primary btn-sm resources-link">All Databases</a>
+                    <a data-bind="attr: { href: $root.appUrls.databases }" class="btn btn-primary btn-sm resources-link">All Databases</a>
                     <div class="box-container">
                         <div class="database-filter-container">
                             <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />
