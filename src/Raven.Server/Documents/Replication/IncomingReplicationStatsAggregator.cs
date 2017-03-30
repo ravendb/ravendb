@@ -58,10 +58,14 @@ namespace Raven.Server.Documents.Replication
                 Started = StartTime,
                 Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
                 Details = Scope.ToReplicationPerformanceOperation("Replication"),
-                InputCount = Stats.InputCount,
-                AttachmentReadCount = Stats.AttachmentReadCount,
-                DocumentReadCount = Stats.DocumentReadCount,
-                TombstoneReadCount = Stats.TombstoneReadCount
+                ReceivedLastEtag = Stats.LastEtag,
+                Network = new IncomingReplicationPerformanceStats.NetworkStats
+                {
+                    InputCount = Stats.InputCount,
+                    AttachmentReadCount = Stats.AttachmentReadCount,
+                    DocumentReadCount = Stats.DocumentReadCount,
+                    TombstoneReadCount = Stats.TombstoneReadCount
+                }
             };
         }
     }
@@ -117,13 +121,21 @@ namespace Raven.Server.Documents.Replication
         {
             _stats.InputCount++;
         }
+
+        public void RecordLastEtag(long etag)
+        {
+            _stats.LastEtag = etag;
+        }
     }
 
     public class IncomingReplicationRunStats
     {
+        public int InputCount;
+
+        public long LastEtag;
+
         public int DocumentReadCount;
         public int TombstoneReadCount;
         public int AttachmentReadCount;
-        public int InputCount;
     }
 }

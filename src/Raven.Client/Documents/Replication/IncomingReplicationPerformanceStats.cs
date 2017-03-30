@@ -14,9 +14,17 @@ namespace Raven.Client.Documents.Replication
         {
         }
 
-        public int DocumentReadCount { get; set; }
-        public int TombstoneReadCount { get; set; }
-        public int AttachmentReadCount { get; set; }
-        public int InputCount { get; set; }
+        public long ReceivedLastEtag { get; set; }
+
+        public NetworkStats Network { get; set; }
+
+        public class NetworkStats
+        {
+            public int InputCount { get; set; }
+
+            public int DocumentReadCount { get; set; }
+            public int TombstoneReadCount { get; set; }
+            public int AttachmentReadCount { get; set; }
+        }
     }
 }

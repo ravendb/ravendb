@@ -239,6 +239,8 @@ namespace Raven.Server.Documents.Replication
                         AddReplicationPerformance(stats);
                         using (var scope = stats.CreateScope())
                         {
+                            scope.RecordLastEtag(_lastDocumentEtag);
+
                             HandleReceivedDocumentsAndAttachmentsBatch(documentsContext, message, _lastDocumentEtag, scope);
                             break;
                         }
