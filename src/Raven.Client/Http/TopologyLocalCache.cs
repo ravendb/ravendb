@@ -76,9 +76,6 @@ namespace Raven.Client.Http
                 using (var writer = new BlittableJsonTextWriter(context, stream))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName(context.GetLazyString(nameof(Topology.LeaderNode)));
-                    WriteNode(writer, topology.LeaderNode, context);
-                    writer.WriteComma();
                     writer.WritePropertyName(context.GetLazyString(nameof(Topology.Nodes)));
                     writer.WriteStartArray();
                     for (var index = 0; index < topology.Nodes.Count; index++)

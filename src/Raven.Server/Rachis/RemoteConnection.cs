@@ -338,7 +338,7 @@ namespace Raven.Server.Rachis
 
         public override string ToString()
         {
-            return $"{_src} > {_destTag}";
+            return $"Remote connection (cluster) : {_src} > {_destTag}";
         }
 
         private static void ValidateMessage(string expectedType, BlittableJsonReaderObject json)

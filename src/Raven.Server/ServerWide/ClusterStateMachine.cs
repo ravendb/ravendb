@@ -68,15 +68,15 @@ namespace Raven.Server.ServerWide
         private readonly AsyncManualResetEvent _notifiedListeners = new AsyncManualResetEvent();
         private long _lastNotified;
 
-        public async Task WaitForIndexNotification(long index)
+        public async Task WaitForIndexNotification(long index, TimeSpan? timeout = null)
         {
-            var task = _notifiedListeners.WaitAsync();
+            //this is needed because WaitAsync without timeout is an overload of WaitAsync with timeout
+            var task = timeout.HasValue ? _notifiedListeners.WaitAsync(timeout.Value) : _notifiedListeners.WaitAsync();
 
             while (index > Volatile.Read(ref _lastNotified))
             {
                 await task;
-
-                task = _notifiedListeners.WaitAsync();
+                task = timeout.HasValue ? _notifiedListeners.WaitAsync(timeout.Value) : _notifiedListeners.WaitAsync();
             }
         }
 
@@ -87,7 +87,6 @@ namespace Raven.Server.ServerWide
             string type;
             if (cmd.TryGet("Type", out type) == false)
                 return;
-
 
             switch (type)
             {
@@ -357,12 +356,12 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        private static StringSegment _databaseName = new StringSegment("DatabaseName");
+        private static readonly StringSegment DatabaseName = new StringSegment("DatabaseName");
 
         private unsafe void UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             string databaseName;
-            if (cmd.TryGet(_databaseName, out databaseName) == false)
+            if (cmd.TryGet(DatabaseName, out databaseName) == false)
                 throw new ArgumentException("Update database command must contain a DatabaseName property");
 
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
