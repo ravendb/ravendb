@@ -120,7 +120,7 @@ namespace Sparrow.Logging
         {
             lock (this)
             {
-                if (_logMode == logMode)
+                if (_logMode == logMode && path == _path)
                     return;
                 _logMode = logMode;
                 IsInfoEnabled = (logMode & LogMode.Information) == LogMode.Information;

@@ -2,6 +2,10 @@
 using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Lucene.Net.Store;
+using SlowTests.Server.Rachis;
+using Sparrow.Logging;
+using Directory = System.IO.Directory;
 
 namespace Tryouts
 {
@@ -9,8 +13,7 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            var h = new HttpClient();
-            h.GetAsync("http://google.com").Wait();
+
         }
     }
 }

@@ -103,6 +103,10 @@ namespace Raven.Server.Rachis
 
         private void RefreshAmbassadors(ClusterTopology clusterTopology)
         {
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"Leader {_engine.Tag}: Refreshing ambassadors");
+            }
             var old = new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
             foreach (var peers in new[] { _voters, _promotables, _nonVoters })
             {
@@ -130,6 +134,10 @@ namespace Raven.Server.Rachis
                 var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, clusterTopology.ApiKey);
                 _voters.Add(voter.Key, ambasaddor);
                 _engine.AppendStateDisposable(this, ambasaddor);
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for voter {voter.Key} {voter.Value}");
+                }
                 ambasaddor.Start();
             }
 
@@ -147,6 +155,10 @@ namespace Raven.Server.Rachis
                 var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value, clusterTopology.ApiKey);
                 _promotables.Add(promotable.Key, ambasaddor);
                 _engine.AppendStateDisposable(this, ambasaddor);
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for promotable {promotable.Key} {promotable.Value}");
+                }
                 ambasaddor.Start();
             }
 
@@ -164,6 +176,10 @@ namespace Raven.Server.Rachis
                 var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value, clusterTopology.ApiKey);
                 _nonVoters.Add(nonVoter.Key, ambasaddor);
                 _engine.AppendStateDisposable(this, ambasaddor);
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for watcher {nonVoter.Key} {nonVoter.Value}");
+                }
                 ambasaddor.Start();
             }
 
@@ -211,6 +227,10 @@ namespace Raven.Server.Rachis
                     {
                         case 0: // new entry
                             _newEntry.Reset();
+                            if (_engine.Log.IsInfoEnabled)
+                            {
+                                _engine.Log.Info($"Leader {_engine.Tag}: Got new entry");
+                            }
                             // release any waiting ambassadors to send immediately
                             var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>());
                             ThreadPool.QueueUserWorkItem(o => ((TaskCompletionSource<object>)o).TrySetResult(null), old);
@@ -218,10 +238,18 @@ namespace Raven.Server.Rachis
                                 goto case 1;
                             break;
                         case 1: // voter responded
+                            if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
+                            {
+                                _engine.Log.Info($"Leader {_engine.Tag}: voter responded");
+                            }
                             _voterResponded.Reset();
                             OnVoterConfirmation();
                             break;
                         case 2: // promotable updated
+                            if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
+                            {
+                                _engine.Log.Info($"Leader {_engine.Tag}: promotable updated");
+                            }
                             _promotableUpdated.Reset();
                             CheckPromotables();
 
@@ -229,6 +257,10 @@ namespace Raven.Server.Rachis
                         case WaitHandle.WaitTimeout:
                             break;
                         case 3: // shutdown requested
+                            if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
+                            {
+                                _engine.Log.Info($"Leader {_engine.Tag}: shutting down");
+                            }
                             return;
                     }
                     EnsureThatWeHaveLeadership(VotersMajority);
@@ -267,7 +299,7 @@ namespace Raven.Server.Rachis
         }
 
         private void VoteOfNoConfidence()
-        {
+        {            
             if (TimeoutEvent.Disable)
                 return;
 
@@ -282,7 +314,10 @@ namespace Raven.Server.Rachis
                 sb.AppendLine(
                     $"{followerAmbassador.Tag}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.Status}");
             }
-
+            if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
+            {
+                _engine.Log.Info($"Leader {_engine.Tag}:VoteOfNoConfidence{Environment.NewLine } {sb}");
+            }
             throw new TimeoutException(
                 "Too long has passed since we got a confirmation from the majority of the cluster that this node is still the leader." +
                 Environment.NewLine +
@@ -546,6 +581,10 @@ namespace Raven.Server.Rachis
             _promotableUpdated.Dispose();
             _shutdownRequested.Dispose();
             _noop.Dispose();
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"Leader {_engine.Tag}: Dispose");
+            }
         }
 
         public Task WaitForNewEntries()

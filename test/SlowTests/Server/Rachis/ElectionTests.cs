@@ -31,10 +31,15 @@ namespace SlowTests.Server.Rachis
         [InlineData(3)]
         [InlineData(5)]
         [InlineData(7)]
-        public async Task OnNetworkDisconnectionANewLeaderIsElectedAfterReconnectOldLeaderStepsDownAndRollBackHisLog(int numberOfNodes)
+        public async Task OnNetworkDisconnectionANewLeaderIsElectedAfterReconnectOldLeaderStepsDownAndRollBackHisLog(int numberOfNodes)        
         {
             var firstLeader = await CreateNetworkAndGetLeader(numberOfNodes);
+            var timeToWait = firstLeader.ElectionTimeoutMs * 4;
             await IssueCommandsAndWaitForCommit(firstLeader, 3, "test", 1);
+            if (Log.IsInfoEnabled)
+            {
+                Log.Info($"Disconnecting from leader node {firstLeader.Tag}");
+            }
             DisconnectFromNode(firstLeader);
             List<Task> invalidCommands = IssueCommandsWithoutWaitingForCommits(firstLeader, 5, "test", 1);
             var followers = GetFollowers();
@@ -43,13 +48,23 @@ namespace SlowTests.Server.Rachis
             {
                 waitingList.Add(follower.WaitForState(RachisConsensus.State.LeaderElect));
             }
-            Assert.True(Task.WhenAny(waitingList).Wait(firstLeader.ElectionTimeoutMs * 2), "Followers didn't become leaders although old leader can't communicate with the cluster");
+            if (Log.IsInfoEnabled)
+            {
+                Log.Info("Started waiting for new leader");
+            }
+            var t = Task.WhenAny(waitingList).Wait(timeToWait);
+            if (Log.IsInfoEnabled && t == false)
+            {
+                Log.Info($"No leader was elected within {timeToWait}ms");
+            }
+            Assert.True(t, "Followers didn't become leaders although old leader can't communicate with the cluster");
+
             var newLeader = followers.First(f => f.CurrentState == RachisConsensus.State.Leader || f.CurrentState == RachisConsensus.State.LeaderElect);
             var newLeaderLastIndex = await IssueCommandsAndWaitForCommit(newLeader, 3, "test", 1);
             ReconnectToNode(firstLeader);
-            Assert.True(firstLeader.WaitForState(RachisConsensus.State.Follower).Wait(firstLeader.ElectionTimeoutMs * 2), "Old leader didn't become follower after two election timeouts");
+            Assert.True(firstLeader.WaitForState(RachisConsensus.State.Follower).Wait(timeToWait), "Old leader didn't become follower after two election timeouts");
             Assert.True(firstLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, newLeaderLastIndex)
-                .Wait(firstLeader.ElectionTimeoutMs * 2), "Old leader didn't rollback his log to the new leader log");
+                .Wait(timeToWait), "Old leader didn't rollback his log to the new leader log");
             var leaderUrl = new HashSet<string>();
             foreach (var consensus in RachisConsensuses)
             {

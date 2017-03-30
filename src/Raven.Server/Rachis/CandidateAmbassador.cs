@@ -50,6 +50,10 @@ namespace Raven.Server.Rachis
                 {
                     _conenctToPeer?.Dispose();
                 }
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Dispose");
+                }
             }
         }
 
@@ -82,7 +86,7 @@ namespace Raven.Server.Rachis
                             Status = "Failed - " + e.Message;
                             if (_engine.Log.IsInfoEnabled)
                             {
-                                _engine.Log.Info("Failed to connect to remote peer: " + _url, e);
+                                _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Failed to connect to remote peer: " + _url, e);
                             }
                             // wait a bit
                             _candidate.WaitForChangeInState();
@@ -134,15 +138,23 @@ namespace Raven.Server.Rachis
                                         rvr = connection.Read<RequestVoteResponse>(context);
                                         if (rvr.Term > currentElectionTerm)
                                         {
+                                            var message = "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm;
                                             // we need to abort the current elections
-                                            _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm, 
-                                                "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm);
+                                            _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm, message);
+                                            if (_engine.Log.IsInfoEnabled)
+                                            {
+                                                _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: {message}");
+                                            }
                                             _engine.FoundAboutHigherTerm(rvr.Term);
                                             return;
                                         }
                                         NotInTopology = rvr.NotInTopology;
                                         if (rvr.VoteGranted == false)
                                         {
+                                            if (_engine.Log.IsInfoEnabled)
+                                            {
+                                                _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a negative response from {_tag} reseason:{rvr.Message}");
+                                            }
                                             // we go a negative response here, so we can't proceed
                                             // we'll need to wait until the candidate has done something, like
                                             // change term or given up
@@ -167,15 +179,23 @@ namespace Raven.Server.Rachis
                                     rvr = connection.Read<RequestVoteResponse>(context);
                                     if (rvr.Term > currentElectionTerm)
                                     {
+                                        var message = "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm;
+                                        if (_engine.Log.IsInfoEnabled)
+                                        {
+                                            _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: {message}");
+                                        }
                                         // we need to abort the current elections
-                                        _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm,
-                                                "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm);
+                                        _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm, message);
                                         _engine.FoundAboutHigherTerm(rvr.Term);
                                         return;
                                     }
                                     NotInTopology = rvr.NotInTopology;
                                     if (rvr.VoteGranted == false)
                                     {
+                                        if (_engine.Log.IsInfoEnabled)
+                                        {
+                                            _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a negative response from {_tag} reseason:{rvr.Message}");
+                                        }
                                         // we go a negative response here, so we can't proceed
                                         // we'll need to wait until the candidate has done something, like
                                         // change term or given up
@@ -193,7 +213,7 @@ namespace Raven.Server.Rachis
                         Status = "Failed - " + e.Message;
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info("Failed to get vote from remote peer: " + _url, e);
+                            _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Failed to get vote from remote peer url={_url} tag={_tag}", e);
                         }
                         _candidate.WaitForChangeInState();
                     }
