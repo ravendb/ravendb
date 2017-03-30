@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using System.Linq;
+using System.Linq.Expressions;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
@@ -12,26 +13,76 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             var memeberAccess = node.Expression as MemberAccessExpressionSyntax;
-            if (memeberAccess == null)
+            if (memeberAccess == null || node.ArgumentList.Arguments.Count < 1 || !AllParentsAreMethods(node))
                 return base.VisitInvocationExpression(node);
 
-            if (memeberAccess.Name.Identifier.ValueText != "Select")
-            {
+            var expressionSyntax = GetSimpleLambdaExpressionSyntax(node);
+            if (expressionSyntax == null || memeberAccess.Name.Identifier.ValueText != "Select")            
                 return base.VisitInvocationExpression(node);
-            }
-            var expressionSyntax = node.ArgumentList.Arguments[0].Expression as SimpleLambdaExpressionSyntax;
-            if (expressionSyntax == null)
-            {
+            
+            var invocExp = memeberAccess.Expression as InvocationExpressionSyntax;
+            MemberAccessExpressionSyntax innerMemberAccess = null;
+            if (invocExp != null)
+                innerMemberAccess = invocExp.Expression as MemberAccessExpressionSyntax;
+
+            if (innerMemberAccess == null || innerMemberAccess.Name.Identifier.ValueText != "Where")
+                return QueryExpression(
+                    FromClause(
+                        expressionSyntax.Parameter.Identifier,
+                        RavenLinqOptimizer.MaybeParenthesizedExpression((ExpressionSyntax)Visit(memeberAccess.Expression))
+                    ),
+                    QueryBody(SelectClause((ExpressionSyntax)Visit(expressionSyntax.Body))));
+
+            var identifierNameSyntax = innerMemberAccess.Expression as IdentifierNameSyntax;
+            if (identifierNameSyntax == null)
                 return base.VisitInvocationExpression(node);
-            }
+
+            var whereClause = GetSimpleLambdaExpressionSyntax(invocExp);
+                whereClause = whereClause.WithParameter(expressionSyntax.Parameter)
+                    .WithBody(whereClause.Body.ReplaceNodes(whereClause.Body.DescendantNodes().OfType<IdentifierNameSyntax>(), (orig, _) =>
+                    {
+                        if (orig.Parent is MemberAccessExpressionSyntax access  && orig == access.Name)
+                            return orig;
+
+                        if (orig.Identifier.ValueText != whereClause.Parameter.Identifier.ValueText)
+                            return orig;
+                        return orig.WithIdentifier(expressionSyntax.Parameter.Identifier);
+                    }));
+
             return QueryExpression(
                 FromClause(
                     expressionSyntax.Parameter.Identifier,
-                    RavenLinqOptimizer.MaybeParenthesizedExpression((ExpressionSyntax)Visit(memeberAccess.Expression))
+                    IdentifierName(identifierNameSyntax.Identifier.ValueText)
                 ),
                 QueryBody(SelectClause((ExpressionSyntax)Visit(expressionSyntax.Body)))
-            );
+                    .WithClauses(SingletonList<QueryClauseSyntax>(WhereClause((ExpressionSyntax)Visit(whereClause.Body)))));
+            
+        }
 
+        private static SimpleLambdaExpressionSyntax GetSimpleLambdaExpressionSyntax(InvocationExpressionSyntax node)
+        {
+            SimpleLambdaExpressionSyntax expressionSyntax;
+            var castExpressionSyntax = node.ArgumentList.Arguments[0].Expression as CastExpressionSyntax;
+
+            if (castExpressionSyntax != null)
+                expressionSyntax = RavenLinqOptimizer.StripExpressionParenthesis(castExpressionSyntax.Expression) as SimpleLambdaExpressionSyntax;
+            else
+                expressionSyntax = node.ArgumentList.Arguments[0].Expression as SimpleLambdaExpressionSyntax;
+            return expressionSyntax;
+        }
+
+        private static bool AllParentsAreMethods(InvocationExpressionSyntax node)
+        {
+            var es = node.Parent;
+
+            while (es != null)
+            {
+                if (!(es is InvocationExpressionSyntax))
+                    return false;
+                es = es.Parent;
+            }
+
+            return true;
         }
     }
 
@@ -67,6 +118,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 var whereClauseSyntax = clause as WhereClauseSyntax;
                 if (whereClauseSyntax != null)
                 {
+
                     body = body.InsertNodesBefore(FindDummyYieldIn(body), new[]{
                         IfStatement(BinaryExpression(SyntaxKind.EqualsExpression, MaybeParenthesizedExpression(whereClauseSyntax.Condition), LiteralExpression(SyntaxKind.FalseLiteralExpression)), ContinueStatement())
                     });
@@ -165,7 +217,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return ParenthesizedExpression(es);
         }
 
-        private static ExpressionSyntax StripExpressionParenthesis(ExpressionSyntax expr)
+        internal static ExpressionSyntax StripExpressionParenthesis(ExpressionSyntax expr)
         {
             while (expr is ParenthesizedExpressionSyntax)
             {
@@ -175,7 +227,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return expr;
         }
 
-        private static SyntaxNode StripExpressionParentParenthesis(SyntaxNode expr)
+        internal static SyntaxNode StripExpressionParentParenthesis(SyntaxNode expr)
         {
             if (expr == null)
                 return null;
