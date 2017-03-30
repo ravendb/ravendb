@@ -128,11 +128,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         private string LoadAttachmentFunction(string attachmentName)
         {
-            //var attachment = _database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentKey, attachmentName, AttachmentType.Document,
-            //    Current.Document.ChangeVector);
-
-           // attachment.Stream = null;
-
             return $"{AttachmentMarker}{attachmentName}";
         }
 
