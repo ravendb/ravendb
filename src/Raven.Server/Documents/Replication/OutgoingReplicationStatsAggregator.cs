@@ -59,16 +59,25 @@ namespace Raven.Server.Documents.Replication
                 Started = StartTime,
                 Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
                 Details = Scope.ToReplicationPerformanceOperation("Replication"),
-                InputCount = Stats.InputCount,
-                ArtificialDocumentSkipCount = Stats.ArtificialDocumentSkipCount,
-                SystemDocumentSkipCount = Stats.SystemDocumentSkipCount,
-                DocumentChangeVectorSkipCount = Stats.DocumentChangeVectorSkipCount,
-                AttachmentOutputCount = Stats.AttachmentOutputCount,
-                AttachmentOutputSizeInBytes = Stats.AttachmentOutputSize.GetValue(SizeUnit.Bytes),
-                DocumentOutputCount = Stats.DocumentOutputCount,
-                DocumentOutputSizeInBytes = Stats.DocumentOutputSize.GetValue(SizeUnit.Bytes),
-                TombstoneOutputCount = Stats.TombstoneOutputCount,
-                TombstoneOutputSizeInBytes = Stats.TombstoneOutputSize.GetValue(SizeUnit.Bytes)
+                SendLastEtag = Stats.LastEtag,
+                Storage = new OutgoingReplicationPerformanceStats.StorageStats
+                {
+                    InputCount = Stats.InputCount,
+                    ArtificialDocumentSkipCount = Stats.ArtificialDocumentSkipCount,
+                    SystemDocumentSkipCount = Stats.SystemDocumentSkipCount,
+                    DocumentChangeVectorSkipCount = Stats.DocumentChangeVectorSkipCount,
+                },
+                Network = new OutgoingReplicationPerformanceStats.NetworkStats
+                {
+                    AttachmentOutputCount = Stats.AttachmentOutputCount,
+                    AttachmentOutputSizeInBytes = Stats.AttachmentOutputSize.GetValue(SizeUnit.Bytes),
+                    DocumentOutputCount = Stats.DocumentOutputCount,
+                    DocumentOutputSizeInBytes = Stats.DocumentOutputSize.GetValue(SizeUnit.Bytes),
+                    AttachmentTombstoneOutputCount = Stats.AttachmentTombstoneOutputCount,
+                    AttachmentTombstoneOutputSizeInBytes = Stats.AttachmentTombstoneOutputSize.GetValue(SizeUnit.Bytes),
+                    DocumentTombstoneOutputCount = Stats.DocumentTombstoneOutputCount,
+                    DocumentTombstoneOutputSizeInBytes = Stats.DocumentTombstoneOutputSize.GetValue(SizeUnit.Bytes)
+                }
             };
         }
     }
@@ -114,16 +123,27 @@ namespace Raven.Server.Documents.Replication
             _stats.AttachmentOutputSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
-        public void RecordTombstoneOutput(long sizeInBytes)
+        public void RecordAttachmentTombstoneOutput(long sizeInBytes)
         {
-            _stats.TombstoneOutputCount++;
-            _stats.TombstoneOutputSize.Add(sizeInBytes, SizeUnit.Bytes);
+            _stats.AttachmentTombstoneOutputCount++;
+            _stats.AttachmentTombstoneOutputSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
         public void RecordDocumentOutput(long sizeInBytes)
         {
             _stats.DocumentOutputCount++;
             _stats.DocumentOutputSize.Add(sizeInBytes, SizeUnit.Bytes);
+        }
+
+        public void RecordDocumentTombstoneOutput(long sizeInBytes)
+        {
+            _stats.DocumentTombstoneOutputCount++;
+            _stats.DocumentTombstoneOutputSize.Add(sizeInBytes, SizeUnit.Bytes);
+        }
+
+        public void RecordLastEtag(long etag)
+        {
+            _stats.LastEtag = etag;
         }
 
         public ReplicationPerformanceOperation ToReplicationPerformanceOperation(string name)
@@ -146,7 +166,10 @@ namespace Raven.Server.Documents.Replication
 
     public class OutgoingReplicationRunStats
     {
+        public long LastEtag;
+
         public int InputCount;
+
         public int ArtificialDocumentSkipCount;
         public int SystemDocumentSkipCount;
         public int DocumentChangeVectorSkipCount;
@@ -154,8 +177,11 @@ namespace Raven.Server.Documents.Replication
         public int AttachmentOutputCount;
         public Size AttachmentOutputSize;
 
-        public int TombstoneOutputCount;
-        public Size TombstoneOutputSize;
+        public int AttachmentTombstoneOutputCount;
+        public Size AttachmentTombstoneOutputSize;
+
+        public int DocumentTombstoneOutputCount;
+        public Size DocumentTombstoneOutputSize;
 
         public int DocumentOutputCount;
         public Size DocumentOutputSize;

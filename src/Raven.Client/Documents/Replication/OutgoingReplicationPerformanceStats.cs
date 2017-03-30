@@ -14,19 +14,35 @@ namespace Raven.Client.Documents.Replication
         {
         }
 
-        public int InputCount { get; set; }
-        public int ArtificialDocumentSkipCount { get; set; }
-        public int SystemDocumentSkipCount { get; set; }
-        public int DocumentChangeVectorSkipCount { get; set; }
+        public long SendLastEtag { get; set; }
 
-        public int AttachmentOutputCount { get; set; }
-        public long AttachmentOutputSizeInBytes { get; set; }
+        public StorageStats Storage { get; set; }
 
-        public int TombstoneOutputCount { get; set; }
-        public long TombstoneOutputSizeInBytes { get; set; }
+        public NetworkStats Network { get; set; }
 
-        public int DocumentOutputCount { get; set; }
-        public long DocumentOutputSizeInBytes { get; set; }
+        public class NetworkStats
+        {
+            public int AttachmentOutputCount { get; set; }
+            public long AttachmentOutputSizeInBytes { get; set; }
+
+            public int AttachmentTombstoneOutputCount { get; set; }
+            public long AttachmentTombstoneOutputSizeInBytes { get; set; }
+
+            public int DocumentTombstoneOutputCount { get; set; }
+            public long DocumentTombstoneOutputSizeInBytes { get; set; }
+
+            public int DocumentOutputCount { get; set; }
+            public long DocumentOutputSizeInBytes { get; set; }
+        }
+
+        public class StorageStats
+        {
+            public int InputCount { get; set; }
+
+            public int ArtificialDocumentSkipCount { get; set; }
+            public int SystemDocumentSkipCount { get; set; }
+            public int DocumentChangeVectorSkipCount { get; set; }
+        }
     }
 
     public abstract class ReplicationPerformanceBase<T>

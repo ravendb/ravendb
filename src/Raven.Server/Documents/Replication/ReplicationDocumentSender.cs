@@ -323,6 +323,8 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageHeader.ResolverVersion)] = defaultResolver?.Version
             };
 
+            stats.RecordLastEtag(_lastEtag);
+
             _parent.WriteToServer(headerJson);
             foreach (var item in _orderedReplicaItems)
             {
@@ -365,14 +367,14 @@ namespace Raven.Server.Documents.Replication
             if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
             {
                 WriteAttachmentTombstoneToServer(item);
-                stats.RecordTombstoneOutput(item.Data.Size);
+                stats.RecordAttachmentTombstoneOutput(item.Data.Size);
                 return;
             }
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
             {
                 WriteDocumentToServer(item);
-                stats.RecordTombstoneOutput(item.Data.Size);
+                stats.RecordDocumentTombstoneOutput(item.Data.Size);
                 return;
             }
 
