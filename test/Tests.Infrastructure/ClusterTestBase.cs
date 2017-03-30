@@ -121,10 +121,14 @@ namespace Tests.Infrastructure
             var tokenToUrl = Servers.ToDictionary(x => x.ServerStore.NodeTag, x => x.WebUrls[0]);
             foreach (var node in topologyNodes)
             {
+                string url;
+                if(!tokenToUrl.TryGetValue(node.ClusterToken,out url)) //precaution
+                    continue;
+
                 var store = new DocumentStore
                 {
                     DefaultDatabase = node.Database,
-                    Url = tokenToUrl[node.ClusterToken]
+                    Url = url
                 };
 
                 _toDispose.Add(store);

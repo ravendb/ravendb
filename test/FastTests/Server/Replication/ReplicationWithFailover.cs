@@ -45,23 +45,27 @@ namespace FastTests.Server.Replication
                 await WaitForEtagInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
 
                 var requestExecutor = master.GetRequestExecuter();
-                
+                await Task.WhenAny(requestExecutor.UpdateTopologyAsync(), Task.Delay(TimeSpan.FromSeconds(10)));
+
                 //TODO for Karmel: refactor this test so it uses replication when raft based topology replication is implemented
                 SetupReplicationOnDatabaseTopology(requestExecutor.TopologyNodes);
-
-                var sp = Stopwatch.StartNew();
-
-                while (await requestExecutor.UpdateTopologyAsync() == false)
-                {
-                    Assert.False(sp.Elapsed.Seconds > 30);
-                }
-
+              
                 using (var session = master.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges();
                     session.Store(new User { Name = "Idan" }, "users/1");
                     session.Store(new User { Name = "Shalom" }, "users/2");
                     session.SaveChanges();
+                }
+
+                using (var session = master.OpenSession())
+                {
+                    var user1 = session.Load<User>("users/1");
+                    Assert.NotNull(user1);
+                    Assert.Equal("Idan", user1.Name);
+                    var user2 = session.Load<User>("users/2");
+                    Assert.NotNull(user2);
+                    Assert.Equal("Shalom", user2.Name);
                 }
 
                 var result = master.Admin.Server.Send(new DisableDatabaseToggleOperation(master.DefaultDatabase, true));
