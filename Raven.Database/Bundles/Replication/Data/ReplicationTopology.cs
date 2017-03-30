@@ -16,7 +16,7 @@ namespace Raven.Database.Bundles.Replication.Data
     {
         public ReplicationTopology()
         {
-            Servers = new HashSet<string>();
+            Servers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             Connections = new HashSet<ReplicationTopologyConnection>();
             SkippedResources = new HashSet<string>();
             LocalDatabaseIds = new List<Guid>();
@@ -41,8 +41,8 @@ namespace Raven.Database.Bundles.Replication.Data
             }
 
             return Connections
-                .SingleOrDefault(x => x.SourceUrl.Any(y => y == fromUrl)
-                                      && x.DestinationUrl.Any(y => y == toUrl));
+                .SingleOrDefault(x => x.SourceUrl.Any(y => y.Equals(fromUrl, StringComparison.OrdinalIgnoreCase))
+                                      && x.DestinationUrl.Any(y => y.Equals(toUrl, StringComparison.OrdinalIgnoreCase)));
         }
     }
 

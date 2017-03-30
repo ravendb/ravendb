@@ -37,7 +37,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 from = await ReadJsonArrayAsync().ConfigureAwait(false);
             }
 
-            var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(Database, from, ttl, Log);
+            var replicationSchemaDiscoverer = new ReplicationTopologyDiscoverer(Database, from.Values<string>(), ttl, Log);
             var node = replicationSchemaDiscoverer.Discover();
 
             return GetMessageWithObject(node);
