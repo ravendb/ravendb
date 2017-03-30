@@ -379,7 +379,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             WriteDocumentToServer(item);
-            stats.RecordDocumentOutput(item.Data.Size);
+            stats.RecordDocumentOutput(item.Data?.Size ?? 0);
         }
 
         private unsafe void WriteDocumentToServer(ReplicationBatchItem item)
