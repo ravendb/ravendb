@@ -452,7 +452,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         if (column.Value is Stream stream)
                         {
                             colParam.DbType = DbType.Binary;
-                            colParam.Value = stream.ReadData();
+
+                            if (stream == Stream.Null)
+                                colParam.Value = DBNull.Value;
+                            else
+                                colParam.Value = stream.ReadData();
+
                             break;
                         }
                         throw new InvalidOperationException("Cannot understand how to save " + column.Type + " for " + colParam.ParameterName);
