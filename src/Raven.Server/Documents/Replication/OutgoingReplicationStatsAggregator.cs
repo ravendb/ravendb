@@ -74,9 +74,7 @@ namespace Raven.Server.Documents.Replication
                     DocumentOutputCount = Stats.DocumentOutputCount,
                     DocumentOutputSizeInBytes = Stats.DocumentOutputSize.GetValue(SizeUnit.Bytes),
                     AttachmentTombstoneOutputCount = Stats.AttachmentTombstoneOutputCount,
-                    AttachmentTombstoneOutputSizeInBytes = Stats.AttachmentTombstoneOutputSize.GetValue(SizeUnit.Bytes),
                     DocumentTombstoneOutputCount = Stats.DocumentTombstoneOutputCount,
-                    DocumentTombstoneOutputSizeInBytes = Stats.DocumentTombstoneOutputSize.GetValue(SizeUnit.Bytes)
                 }
             };
         }
@@ -123,10 +121,9 @@ namespace Raven.Server.Documents.Replication
             _stats.AttachmentOutputSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
-        public void RecordAttachmentTombstoneOutput(long sizeInBytes)
+        public void RecordAttachmentTombstoneOutput()
         {
             _stats.AttachmentTombstoneOutputCount++;
-            _stats.AttachmentTombstoneOutputSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
         public void RecordDocumentOutput(long sizeInBytes)
@@ -135,10 +132,9 @@ namespace Raven.Server.Documents.Replication
             _stats.DocumentOutputSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
-        public void RecordDocumentTombstoneOutput(long sizeInBytes)
+        public void RecordDocumentTombstoneOutput()
         {
             _stats.DocumentTombstoneOutputCount++;
-            _stats.DocumentTombstoneOutputSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
         public void RecordLastEtag(long etag)
@@ -178,10 +174,7 @@ namespace Raven.Server.Documents.Replication
         public Size AttachmentOutputSize;
 
         public int AttachmentTombstoneOutputCount;
-        public Size AttachmentTombstoneOutputSize;
-
         public int DocumentTombstoneOutputCount;
-        public Size DocumentTombstoneOutputSize;
 
         public int DocumentOutputCount;
         public Size DocumentOutputSize;

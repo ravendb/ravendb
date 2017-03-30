@@ -367,14 +367,14 @@ namespace Raven.Server.Documents.Replication
             if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
             {
                 WriteAttachmentTombstoneToServer(item);
-                stats.RecordAttachmentTombstoneOutput(item.Data.Size);
+                stats.RecordAttachmentTombstoneOutput();
                 return;
             }
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
             {
                 WriteDocumentToServer(item);
-                stats.RecordDocumentTombstoneOutput(item.Data.Size);
+                stats.RecordDocumentTombstoneOutput();
                 return;
             }
 

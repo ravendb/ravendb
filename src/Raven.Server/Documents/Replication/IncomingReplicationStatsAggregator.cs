@@ -64,7 +64,8 @@ namespace Raven.Server.Documents.Replication
                     InputCount = Stats.InputCount,
                     AttachmentReadCount = Stats.AttachmentReadCount,
                     DocumentReadCount = Stats.DocumentReadCount,
-                    TombstoneReadCount = Stats.TombstoneReadCount
+                    DocumentTombstoneReadCount = Stats.DocumentTombstoneReadCount,
+                    AttachmentTombstoneReadCount = Stats.AttachmentTombstoneReadCount
                 }
             };
         }
@@ -107,9 +108,14 @@ namespace Raven.Server.Documents.Replication
             _stats.DocumentReadCount++;
         }
 
-        public void RecordTombstoneRead()
+        public void RecordDocumentTombstoneRead()
         {
-            _stats.TombstoneReadCount++;
+            _stats.DocumentTombstoneReadCount++;
+        }
+
+        public void RecordAttachmentTombstoneRead()
+        {
+            _stats.AttachmentTombstoneReadCount++;
         }
 
         public void RecordAttachmentRead()
@@ -135,7 +141,8 @@ namespace Raven.Server.Documents.Replication
         public long LastEtag;
 
         public int DocumentReadCount;
-        public int TombstoneReadCount;
+        public int DocumentTombstoneReadCount;
+        public int AttachmentTombstoneReadCount;
         public int AttachmentReadCount;
     }
 }
