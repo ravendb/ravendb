@@ -6,6 +6,8 @@ namespace Voron.Debugging
     {
         public long FreePagesOverhead;
         public long RootPages;
+        public long NumberOfAllocatedPages;
+        public long NextPageNumber;
         public long UnallocatedPagesAtEndOfFile;
         public long UsedDataFileSizeInBytes;
         public long AllocatedDataFileSizeInBytes;

@@ -612,6 +612,8 @@ namespace Voron
                 {
                     FreePagesOverhead = tx.FreeSpaceRoot.State.PageCount,
                     RootPages = tx.Root.State.PageCount,
+                    NumberOfAllocatedPages = _dataPager.NumberOfAllocatedPages,
+                    NextPageNumber = NextPageNumber,
                     UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
                     UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * AbstractPager.PageSize,
                     AllocatedDataFileSizeInBytes = numberOfAllocatedPages * AbstractPager.PageSize,
