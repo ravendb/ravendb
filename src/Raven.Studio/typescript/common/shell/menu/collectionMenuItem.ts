@@ -22,12 +22,16 @@ class collectionMenuItem implements menuItem {
                 if (!instruction || !instruction.params) {
                     return false;
                 }
-                const param0 = instruction.params[0];
+                const param0 = instruction.params[0] as any;
                 if (!param0) {
                     return false;
                 }
 
-                return (param0 as any).collection === coll.name;
+                if (coll.isAllDocuments && !param0.collection) {
+                    return true;
+                }
+
+                return param0.collection === coll.name;
             }
 
             return false;

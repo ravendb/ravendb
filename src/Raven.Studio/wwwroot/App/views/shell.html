@@ -115,16 +115,40 @@
 
 <script type="text/html" id="collectionsMenuItem">
     <li>
+        <!-- ko with: $root.collectionsTracker.getAllDocumentsCollection() -->
+        <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
+            <i class="icon-recent"></i>
+            <span>Recent</span>
+            <span class="label label-primary collection-count" data-bind="text: documentCount().toLocaleString()"></span>
+        </a>
+        <!-- /ko -->
+    </li>
+    <li>
+        <!-- ko with: $root.collectionsTracker.getSystemDocumentsCollection() -->
+        <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
+            <span>System</span>
+            <span class="label label-primary collection-count" data-bind="text: documentCount().toLocaleString()"></span>
+        </a>
+        <!-- /ko -->
+    </li>
+    <li class="separator" data-bind="visible: $root.collectionsTracker.collections().length > 1">
+        <h3>Collections</h3>
+    </li>
+
+    <li>
         <ul>
             <!-- ko foreach: $root.collectionsTracker.collections -->
             <li>
-                <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
+                <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }, visible: !isAllDocuments && !isSystemDocuments">
                     <span data-bind="text: name"></span>
-                    <span class="label label-primary" data-bind="text: documentCount().toLocaleString()"></span>
+                    <span class="label label-primary collection-count" data-bind="text: documentCount().toLocaleString()"></span>
                 </a>
             </li>
             <!-- /ko -->
         </ul>
+    </li>
+    <li class="separator">
+        <h3></h3>
     </li>
 </script>
 
