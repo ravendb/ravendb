@@ -17,6 +17,7 @@ namespace Raven.Server.Documents.Replication
     {
         private readonly DocumentDatabase _database;
         private CancellationTokenSource _cts;
+        private readonly Task<Task> _task;
 
         private static readonly ConcurrentDictionary<string, ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator>> _incoming = new ConcurrentDictionary<string, ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator>>(StringComparer.OrdinalIgnoreCase);
 
@@ -26,8 +27,7 @@ namespace Raven.Server.Documents.Replication
         {
             _database = database;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
-
-            Task.Factory.StartNew(StartCollectingStats);
+            _task = Task.Factory.StartNew(StartCollectingStats);
         }
 
         public AsyncQueue<List<IReplicationPerformanceStats>> Stats { get; } = new AsyncQueue<List<IReplicationPerformanceStats>>();
@@ -38,6 +38,12 @@ namespace Raven.Server.Documents.Replication
             _database.ReplicationLoader.IncomingReplicationRemoved += IncomingHandlerRemoved;
             _database.ReplicationLoader.OutgoingReplicationAdded += OutgoingHandlerAdded;
             _database.ReplicationLoader.OutgoingReplicationRemoved += OutgoingHandlerRemoved;
+
+            foreach (var handler in _database.ReplicationLoader.IncomingHandlers)
+                IncomingHandlerAdded(handler.ConnectionInfo.SourceDatabaseId, handler);
+
+            foreach (var handler in _database.ReplicationLoader.OutgoingHandlers)
+                OutgoingHandlerAdded(handler);
 
             var token = _cts.Token;
 
@@ -82,7 +88,7 @@ namespace Raven.Server.Documents.Replication
 
                 var latestStats = handler.GetLatestReplicationPerformance();
 
-                if (latestStats.Completed == false && itemsToSend.Contains(latestStats) == false)
+                if (latestStats != null && latestStats.Completed == false && itemsToSend.Contains(latestStats) == false)
                     itemsToSend.Add(latestStats);
 
                 if (itemsToSend.Count > 0)
@@ -102,7 +108,7 @@ namespace Raven.Server.Documents.Replication
 
                 var latestStats = handler.GetLatestReplicationPerformance();
 
-                if (latestStats.Completed == false && itemsToSend.Contains(latestStats) == false)
+                if (latestStats != null && latestStats.Completed == false && itemsToSend.Contains(latestStats) == false)
                     itemsToSend.Add(latestStats);
 
                 if (itemsToSend.Count > 0)
@@ -177,6 +183,14 @@ namespace Raven.Server.Documents.Replication
             _cts?.Cancel();
             _cts?.Dispose();
             _cts = null;
+
+            try
+            {
+                _task.Wait();
+            }
+            catch (OperationCanceledException)
+            {
+            }
         }
 
         private class ReplicationHandlerAndPerformanceStatsList<THandler, TStatsAggregator>
