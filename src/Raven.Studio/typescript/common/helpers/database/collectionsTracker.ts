@@ -74,6 +74,10 @@ class collectionsTracker {
         return this.collections().find(x => x.isAllDocuments);
     }
 
+    getSystemDocumentsCollection() {
+        return this.collections().find(x => x.isSystemDocuments);
+    }
+
     registerOnCollectionCreatedHandler(handler: (collection: collection) => void): disposable {
         this.events.created.push(handler);
 
