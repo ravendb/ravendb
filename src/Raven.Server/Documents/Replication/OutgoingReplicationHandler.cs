@@ -33,6 +33,8 @@ namespace Raven.Server.Documents.Replication
     {
         public const string AlertTitle = "Replication";
 
+        public event Action<OutgoingReplicationHandler> DocumentsSend;
+
         internal readonly DocumentDatabase _database;
         internal readonly ReplicationDestination _destination;
         private readonly Logger _log;
@@ -99,6 +101,11 @@ namespace Raven.Server.Documents.Replication
             return _lastReplicationStats
                 .Select(x => x == lastStats ? x.ToReplicationPerformanceLiveStatsWithDetails() : x.ToReplicationPerformanceStats())
                 .ToArray();
+        }
+
+        public OutgoingReplicationStatsAggregator GetLatestReplicationPerformance()
+        {
+            return _lastStats;
         }
 
         public void Start()
@@ -199,6 +206,8 @@ namespace Raven.Server.Documents.Replication
                                     var didWork = documentSender.ExecuteReplicationOnce(scope);
                                     if (didWork == false)
                                         break;
+
+                                    DocumentsSend?.Invoke(this);
 
                                     if (sp.ElapsedMilliseconds > 60 * 1000)
                                     {
@@ -443,6 +452,7 @@ namespace Raven.Server.Documents.Replication
         public string FromToString => $"from {_database.ResourceName} to {_destination.Database} at {_destination.Url}";
 
         public ReplicationDestination Destination => _destination;
+        public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";
 
         internal void SendHeartbeat()
         {
@@ -690,7 +700,6 @@ namespace Raven.Server.Documents.Replication
         }
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
-
     }
 
     public static class ReplicationMessageType

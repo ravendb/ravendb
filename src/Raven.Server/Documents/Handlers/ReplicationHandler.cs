@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Handlers
                     w.WriteStartObject();
 
                     w.WritePropertyName(nameof(ReplicationPerformance.IncomingStats.Source));
-                    w.WriteString(handler.Source);
+                    w.WriteString(handler.SourceFormatted);
                     w.WriteComma();
 
                     w.WritePropertyName(nameof(ReplicationPerformance.IncomingStats.Performance));
@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Handlers
                     w.WriteStartObject();
 
                     w.WritePropertyName(nameof(ReplicationPerformance.OutgoingStats.Destination));
-                    w.WriteString($"{handler.Destination.Url}/databases/{handler.Destination.Database}");
+                    w.WriteString(handler.DestinationFormatted);
                     w.WriteComma();
 
                     w.WritePropertyName(nameof(ReplicationPerformance.OutgoingStats.Performance));

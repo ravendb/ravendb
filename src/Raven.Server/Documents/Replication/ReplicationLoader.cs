@@ -26,8 +26,10 @@ namespace Raven.Server.Documents.Replication
         public event Action<string, Exception> ReplicationFailed;
 
         public event Action<string, IncomingReplicationHandler> IncomingReplicationAdded;
-
         public event Action<string> IncomingReplicationRemoved;
+
+        public event Action<OutgoingReplicationHandler> OutgoingReplicationAdded;
+        public event Action<OutgoingReplicationHandler> OutgoingReplicationRemoved;
 
         public readonly DocumentDatabase Database;
         private volatile bool _isInitialized;
@@ -477,6 +479,8 @@ namespace Raven.Server.Documents.Replication
                 Destination = destination
             });
             outgoingReplication.Start();
+
+            OutgoingReplicationAdded?.Invoke(outgoingReplication);
         }
 
         private void OnIncomingReceiveFailed(IncomingReplicationHandler instance, Exception e)
@@ -504,6 +508,7 @@ namespace Raven.Server.Documents.Replication
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
 
                 _outgoing.TryRemove(instance);
+                OutgoingReplicationRemoved(instance);
 
                 ConnectionShutdownInfo failureInfo;
                 if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo) == false)
@@ -579,6 +584,9 @@ namespace Raven.Server.Documents.Replication
             {
                 instance.Failed -= OnOutgoingSendingFailed;
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
+
+                OutgoingReplicationRemoved?.Invoke(instance);
+
                 instance.Dispose();
             }
 
