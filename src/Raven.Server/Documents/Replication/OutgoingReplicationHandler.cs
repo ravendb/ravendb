@@ -201,19 +201,26 @@ namespace Raven.Server.Documents.Replication
                                 var stats = _lastStats = new OutgoingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
                                 AddReplicationPerformance(stats);
 
-                                using (var scope = stats.CreateScope())
+                                try
                                 {
-                                    var didWork = documentSender.ExecuteReplicationOnce(scope);
-                                    if (didWork == false)
-                                        break;
-
-                                    DocumentsSend?.Invoke(this);
-
-                                    if (sp.ElapsedMilliseconds > 60 * 1000)
+                                    using (var scope = stats.CreateScope())
                                     {
-                                        _waitForChanges.Set();
-                                        break;
+                                        var didWork = documentSender.ExecuteReplicationOnce(scope);
+                                        if (didWork == false)
+                                            break;
+
+                                        DocumentsSend?.Invoke(this);
+
+                                        if (sp.ElapsedMilliseconds > 60 * 1000)
+                                        {
+                                            _waitForChanges.Set();
+                                            break;
+                                        }
                                     }
+                                }
+                                finally
+                                {
+                                    stats.Complete();
                                 }
                             }
 

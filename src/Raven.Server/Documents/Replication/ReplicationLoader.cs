@@ -508,7 +508,7 @@ namespace Raven.Server.Documents.Replication
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
 
                 _outgoing.TryRemove(instance);
-                OutgoingReplicationRemoved(instance);
+                OutgoingReplicationRemoved?.Invoke(instance);
 
                 ConnectionShutdownInfo failureInfo;
                 if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo) == false)

@@ -243,12 +243,20 @@ namespace Raven.Server.Documents.Replication
                     case ReplicationMessageType.Documents:
                         var stats = _lastStats = new IncomingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
                         AddReplicationPerformance(stats);
-                        using (var scope = stats.CreateScope())
-                        {
-                            scope.RecordLastEtag(_lastDocumentEtag);
 
-                            HandleReceivedDocumentsAndAttachmentsBatch(documentsContext, message, _lastDocumentEtag, scope);
-                            break;
+                        try
+                        {
+                            using (var scope = stats.CreateScope())
+                            {
+                                scope.RecordLastEtag(_lastDocumentEtag);
+
+                                HandleReceivedDocumentsAndAttachmentsBatch(documentsContext, message, _lastDocumentEtag, scope);
+                                break;
+                            }
+                        }
+                        finally
+                        {
+                            stats.Complete();
                         }
                     case ReplicationMessageType.IndexesTransformers:
                         HandleReceivedIndexOrTransformerBatch(configurationContext, message, _lastIndexOrTransformerEtag);
