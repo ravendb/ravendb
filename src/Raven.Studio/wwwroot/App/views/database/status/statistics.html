@@ -44,7 +44,12 @@
 
     <h1>Indexes Stats by type</h1>
 
-    <h3 class="text-center" data-bind="visible: stats().indexesByType().length === 0">No indexes have been created for this database.</h3>
+    <div class="row" data-bind="visible: stats().indexesByType().length === 0">
+        <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+            <i class="icon-xl icon-empty-set text-muted"></i>
+            <h2 class="text-center">No indexes have been created for this database.</h2>
+        </div>
+    </div>
 
     <div data-bind="foreach: stats().indexesByType">
         <hr />
