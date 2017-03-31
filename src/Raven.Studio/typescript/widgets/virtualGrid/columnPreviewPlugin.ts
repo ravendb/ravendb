@@ -104,12 +104,16 @@ class columnPreviewPlugin<T> {
         }
 
         this.$tooltip
-            .css('opacity', 1);
+            .css('opacity', 1)
+            .show();
+
         $("code", this.$tooltip).html(markup);
     }
 
     hide() {
-        this.$tooltip.css('opacity', 0);
+        this.$tooltip
+            .css('opacity', 0)
+            .hide();
         $("code", this.$tooltip).html("");
     }
     
