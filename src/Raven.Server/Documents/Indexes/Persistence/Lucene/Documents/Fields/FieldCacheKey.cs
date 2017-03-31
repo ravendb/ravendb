@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
                     {
                         int nameHash = name?.GetHashCode() ?? 0;
                         int fieldHash = (index != null ? (byte)index : -1) << 16 | ((byte)store << 8) | (byte)termVector;
-                        int hash = Hashing.CombineInline(nameHash, fieldHash);
+                        int hash = Hashing.Combine(nameHash, fieldHash);
 
                         if (multipleItemsSameField.Length > 0)
                         {
