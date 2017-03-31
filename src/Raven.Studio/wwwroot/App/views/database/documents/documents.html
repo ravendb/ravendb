@@ -4,12 +4,12 @@
             <div class="clearfix">
             <div class="btn-group">
                 <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
-                    <span data-bind="text: tracker.currentCollection().name"></span>
+                    <span data-bind="text: currentCollection().name"></span>
                     <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" data-bind="foreach: tracker.collections">
                     <li>
-                        <a href="#" data-bind="click: _.partial($root.tracker.currentCollection, $data)">
+                        <a href="#" data-bind="click: _.partial($root.currentCollection, $data)">
                             <span data-bind="text: name"></span>                            
                             <span class="label label-primary" data-bind="text: documentCount().toLocaleString()"></span>                            
                         </a>

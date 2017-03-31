@@ -76,7 +76,7 @@ interface deleteDatabaseConfirmResult extends confirmDialogResult {
     keepFiles: boolean;
 }
 
-type menuItemType = "separator" | "intermediate" | "leaf";
+type menuItemType = "separator" | "intermediate" | "leaf" | "collections";
 
 interface menuItem {
     type: menuItemType;

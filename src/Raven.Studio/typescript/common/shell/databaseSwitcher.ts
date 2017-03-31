@@ -21,7 +21,7 @@ class databaseSwitcher {
 
     private readonly hideHandler = (e: Event) => {
         if (this.shouldConsumeHideEvent(e)) {
-            this.hide()
+            this.hide();
         }
     };
 
