@@ -113,6 +113,21 @@
     </div>
 </nav>
 
+<script type="text/html" id="collectionsMenuItem">
+    <li>
+        <ul>
+            <!-- ko foreach: $root.collectionsTracker.collections -->
+            <li>
+                <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
+                    <span data-bind="text: name"></span>
+                    <span class="label label-primary" data-bind="text: documentCount().toLocaleString()"></span>
+                </a>
+            </li>
+            <!-- /ko -->
+        </ul>
+    </li>
+</script>
+
 <script type="text/html" id="leafMenuItem">
     <li data-bind="with: item">
         <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav === true, attr: { href: path }, css: { 'active': $parent.menu.activeItem() === $data }">

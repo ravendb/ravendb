@@ -8,7 +8,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
     let documentsChildren = [
         new leafMenuItem({
             title: "List of documents",
-            nav: true,
+            nav: false,
             route: "databases/documents",
             moduleId: "viewmodels/database/documents/documents",
             css: 'icon-documents',

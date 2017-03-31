@@ -1,0 +1,39 @@
+﻿/// <reference path="../../../../typings/tsd.d.ts" />
+
+import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
+import collection = require("models/database/documents/collection");
+import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import router = require("plugins/router");
+
+class collectionMenuItem implements menuItem {
+    type: menuItemType = "collections";
+    parent: KnockoutObservable<intermediateMenuItem> = ko.observable(null);
+
+    isOpen(active: KnockoutObservable<menuItem>, coll: collection) {
+        return ko.pureComputed(() => {
+            const item = active();
+
+            if (!item) {
+                return false;
+            }
+
+            if (item instanceof leafMenuItem && item.route === "databases/documents") {
+                const instruction = router.activeInstruction();
+                if (!instruction || !instruction.params) {
+                    return false;
+                }
+                const param0 = instruction.params[0];
+                if (!param0) {
+                    return false;
+                }
+
+                return (param0 as any).collection === coll.name;
+            }
+
+            return false;
+        });
+    }
+
+}
+
+export = collectionMenuItem;
