@@ -81,6 +81,12 @@ namespace Raven.Server.Documents.Replication
                 .ToArray();
         }
 
+
+        public IncomingReplicationStatsAggregator GetLatestReplicationPerformance()
+        {
+            return _lastStats;
+        }
+
         public void Start()
         {
             if (_incomingThread != null)
@@ -819,6 +825,7 @@ namespace Raven.Server.Documents.Replication
             LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
         }
 
+        public string Source => $"{ConnectionInfo.SourceUrl}/databases/{ConnectionInfo.SourceDatabaseName} ({ConnectionInfo.SourceDatabaseId})";
         public string FromToString => $"from {ConnectionInfo.SourceDatabaseName} at {ConnectionInfo.SourceUrl} (into database {_database.Name})";
         public IncomingConnectionInfo ConnectionInfo { get; }
 

@@ -1,13 +1,18 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.IO;
+using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
+using System.Net.WebSockets;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Utils;
 
@@ -92,7 +97,7 @@ namespace Raven.Server.Documents.Handlers
                     w.WriteStartObject();
 
                     w.WritePropertyName(nameof(ReplicationPerformance.IncomingStats.Source));
-                    w.WriteString($"{handler.ConnectionInfo.SourceUrl}/databases/{handler.ConnectionInfo.SourceDatabaseName} ({handler.ConnectionInfo.SourceDatabaseId})");
+                    w.WriteString(handler.Source);
                     w.WriteComma();
 
                     w.WritePropertyName(nameof(ReplicationPerformance.IncomingStats.Performance));
@@ -129,6 +134,51 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return Task.CompletedTask;
+        }
+
+
+        [RavenAction("/databases/*/replication/performance/live", "GET", SkipUsagesCount = true)]
+        public async Task PerformanceLive()
+        {
+            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            {
+                var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
+                var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
+
+                using (var ms = new MemoryStream())
+                using (var collector = new LiveReplicationPerformanceCollector(Database))
+                {
+                    while (Database.DatabaseShutdown.IsCancellationRequested == false)
+                    {
+                        if (receive.IsCompleted || webSocket.State != WebSocketState.Open)
+                            break;
+
+                        var tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(4));
+                        if (tuple.Item1 == false)
+                        {
+                            await webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                            continue;
+                        }
+
+                        ms.SetLength(0);
+
+                        JsonOperationContext context;
+                        using (ContextPool.AllocateOperationContext(out context))
+                        using (var writer = new BlittableJsonTextWriter(context, ms))
+                        {
+                            writer.WriteArray(context, tuple.Item2, (w, c, p) =>
+                            {
+                                p.Write(c, w);
+                            });
+                        }
+
+                        ArraySegment<byte> bytes;
+                        ms.TryGetBuffer(out bytes);
+
+                        await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                    }
+                }
+            }
         }
 
         [RavenAction("/databases/*/replication/topology", "GET")]

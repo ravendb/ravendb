@@ -33,7 +33,7 @@ namespace SlowTests.Server.Documents.ETL.SQL
     {
         private static readonly Lazy<string> _masterDatabaseConnection = new Lazy<string>(() =>
         {
-            var local = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=1";
+            var local = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3";
             try
             {
                 using (var con = new SqlConnection(local))
@@ -46,7 +46,7 @@ namespace SlowTests.Server.Documents.ETL.SQL
             {
                 try
                 {
-                    local = @"Data Source=ci1\sqlexpress;Integrated Security=SSPI;Connection Timeout=1";
+                    local = @"Data Source=ci1\sqlexpress;Integrated Security=SSPI;Connection Timeout=3";
                     using (var con = new SqlConnection(local))
                     {
                         con.Open();
@@ -57,7 +57,7 @@ namespace SlowTests.Server.Documents.ETL.SQL
                 {
                     try
                     {
-                        local = @"Data Source=(localdb)\v11.0;Integrated Security=SSPI;Connection Timeout=1";
+                        local = @"Data Source=(localdb)\v11.0;Integrated Security=SSPI;Connection Timeout=3";
                         using (var con = new SqlConnection(local))
                         {
                             con.Open();
