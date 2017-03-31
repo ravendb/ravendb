@@ -17,7 +17,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(long obj)
         {
-            return unchecked((int)obj ^ (int)(obj >> 32));
+            return Hashing.Combine((int)(obj >> 32), (int)obj);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -41,7 +41,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(ulong obj)
         {
-            return unchecked((int)obj ^ (int)(obj >> 32));
+            return Hashing.Combine((int)(obj >> 32), (int)obj);
         }
     }
 
@@ -56,7 +56,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(long obj)
         {
-            return unchecked((int)obj ^ (int)(obj >> 32));
+            return Hashing.Mix(obj);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -80,7 +80,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(ulong obj)
         {
-            return unchecked((int)obj ^ (int)(obj >> 32));
+            return (int) Hashing.Mix(obj);
         }
     }
 
