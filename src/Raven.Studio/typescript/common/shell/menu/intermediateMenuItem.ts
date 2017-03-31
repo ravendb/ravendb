@@ -4,7 +4,7 @@ class intermediateMenuItem implements menuItem {
     title: string;
     children: menuItem[];
     css: string;
-    type: menuItemType = "intermediate";
+    readonly type: menuItemType = "intermediate";
     isOpen: KnockoutObservable<boolean> = ko.observable(false);
     parent: KnockoutObservable<menuItem> = ko.observable(null);
     hash: string;

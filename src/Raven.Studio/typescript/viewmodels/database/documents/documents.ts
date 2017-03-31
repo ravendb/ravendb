@@ -10,13 +10,8 @@ import documentPropertyProvider = require("common/helpers/database/documentPrope
 
 import notificationCenter = require("common/notifications/notificationCenter");
 
-import changesContext = require("common/changesContext");
-
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
-import database = require("models/resources/database");
-import collectionsStats = require("models/database/documents/collectionsStats");
-import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import getDocumentsWithMetadataCommand = require("commands/database/documents/getDocumentsWithMetadataCommand");
 
 import eventsCollector = require("common/eventsCollector");
@@ -41,7 +36,9 @@ class documents extends viewModelBase {
 
     dirtyResult = ko.observable<boolean>(false);
     dataChanged: KnockoutComputed<boolean>;
-    tracker: collectionsTracker;
+    tracker = collectionsTracker.default;
+    currentCollection = ko.observable<collection>();
+    dirtyCurrentCollection = ko.observable<boolean>(false);
 
     copyDisabledReason: KnockoutComputed<disabledReason>;
 
@@ -65,7 +62,7 @@ class documents extends viewModelBase {
 
     private initObservables() {
         this.inSpecificCollection = ko.pureComputed(() => {
-            const currentCollection = this.tracker.currentCollection();
+            const currentCollection = this.currentCollection();
             return currentCollection && !currentCollection.isAllDocuments;
         });
         this.selectedItemsCount = ko.pureComputed(() => {
@@ -98,7 +95,7 @@ class documents extends viewModelBase {
         });
         this.dataChanged = ko.pureComputed(() => {
             const resultDirty = this.dirtyResult();
-            const collectionChanged = this.tracker.dirtyCurrentCollection();
+            const collectionChanged = this.dirtyCurrentCollection();
             return resultDirty || collectionChanged;
         });
     }
@@ -109,45 +106,63 @@ class documents extends viewModelBase {
 
         this.collectionToSelectName = args ? args.collection : null;
 
-        const db = this.activeDatabase();
-        this.tracker = new collectionsTracker(db, () => this.gridController().resultEtag());
         this.fullDocumentsProvider = new documentPropertyProvider(this.activeDatabase());
 
-        return this.fetchCollectionsStats(db).done(results => {
-            this.collectionsLoaded(results, db);
+        this.configureDirtyCollectionDetection();
 
-            const dbStatsSubscription = changesContext.default.databaseNotifications()
-                .watchAllDatabaseStatsChanged(event => this.tracker.onDatabaseStatsChanged(event));
-            this.addNotification(dbStatsSubscription);
-        });
+        return collectionsTracker.default.loadStatsTask
+            .done(() => {
+                const collectionToSelect = this.tracker.collections().find(x => x.name === this.collectionToSelectName) || this.tracker.getAllDocumentsCollection();
+                this.currentCollection(collectionToSelect);
+            });
     }
 
-    private fetchCollectionsStats(db: database): JQueryPromise<collectionsStats> {
-        return new getCollectionsStatsCommand(db)
-            .execute();
-    }
+    private configureDirtyCollectionDetection() {
+        this.registerDisposable(this.tracker.registerOnCollectionCreatedHandler(c => {
+            if (c.isAllDocuments) {
+                this.dirtyCurrentCollection(true);
+            }
+        }));
 
-    private collectionsLoaded(collectionsStats: collectionsStats, db: database) {
-        let collections = collectionsStats.collections;
-        collections = _.sortBy(collections, x => x.name.toLocaleLowerCase());
+        this.registerDisposable(this.tracker.registerOnCollectionRemovedHandler(c => {
+            if (c === this.currentCollection()) {
+                messagePublisher.reportWarning(c.name + " was removed");
+                this.currentCollection(this.tracker.getAllDocumentsCollection());
+            } else if (this.currentCollection().isAllDocuments) {
+                this.dirtyCurrentCollection(true);
+            }
+        }));
 
-        //TODO: starred
-        const allDocsCollection = collection.createAllDocumentsCollection(db, collectionsStats.numberOfDocuments());
-        this.tracker.collections([allDocsCollection].concat(collections));
+        this.registerDisposable(this.tracker.registerOnCollectionUpdatedHandler((c, etag) => {
+            if (c.name === this.currentCollection().name) {
+                if (etag !== this.gridController().resultEtag()) {
+                    this.dirtyCurrentCollection(true);
+                }
+            }
+        }));
 
-        const collectionToSelect = this.tracker.collections().find(x => x.name === this.collectionToSelectName) || allDocsCollection;
-        this.tracker.currentCollection(collectionToSelect);
+        this.registerDisposable(this.tracker.registerOnGlobalEtagUpdatedHandler((etag: string) => {
+            if (this.currentCollection().isAllDocuments) {
+                if (this.gridController().resultEtag() !== etag) {
+                    this.dirtyCurrentCollection(true);
+                }
+            }
+        }));
     }
 
     refresh() {
         eventsCollector.default.reportEvent("documents", "refresh");
         this.columnsSelector.reset();
         this.gridController().reset(true);
-        this.tracker.setCurrentAsNotDirty();
+        this.setCurrentAsNotDirty();
+    }
+
+    setCurrentAsNotDirty() {
+        this.dirtyCurrentCollection(false);
     }
 
     fetchDocs(skip: number, take: number, previewColumns: string[], fullColumns: string[]): JQueryPromise<pagedResultWithAvailableColumns<any>> {
-        return this.tracker.currentCollection().fetchDocuments(skip, take, previewColumns, fullColumns);
+        return this.currentCollection().fetchDocuments(skip, take, previewColumns, fullColumns);
     }
 
     compositionComplete() {
@@ -163,7 +178,7 @@ class documents extends viewModelBase {
         grid.headerVisible(true);
 
         this.columnsSelector.init(grid, (s, t, previewCols, fullCols) => this.fetchDocs(s, t, previewCols, fullCols), (w, r) => {
-            if (this.tracker.currentCollection().isAllDocuments) {
+            if (this.currentCollection().isAllDocuments) {
                 return [
                     new checkedColumn(true),
                     new hyperlinkColumn<document>(x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
@@ -178,7 +193,7 @@ class documents extends viewModelBase {
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
-        this.tracker.currentCollection.subscribe(this.onCollectionSelected, this);
+        this.currentCollection.subscribe(this.onCollectionSelected, this);
 
         this.columnPreview.install(".documents-grid", ".tooltip", (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
             if (column instanceof textColumn) {
@@ -200,7 +215,7 @@ class documents extends viewModelBase {
         this.updateUrl(appUrl.forDocuments(newCollection.name, this.activeDatabase()));
         this.columnsSelector.reset();
         this.gridController().reset();
-        this.tracker.setCurrentAsNotDirty();
+        this.setCurrentAsNotDirty();
     }
 
     newDocument(docs: documents, $event: JQueryEventObject) {
@@ -214,7 +229,7 @@ class documents extends viewModelBase {
     }
 
     newDocumentInCollection(docs: documents, $event: JQueryEventObject) {
-        const url = appUrl.forNewDoc(this.activeDatabase(), this.tracker.currentCollection().name);
+        const url = appUrl.forNewDoc(this.activeDatabase(), this.currentCollection().name);
         if ($event.ctrlKey) {
             window.open(url);
         } else {
@@ -244,7 +259,7 @@ class documents extends viewModelBase {
             // exclusive
             const excludedIds = selection.excluded.map(x => x.getId());
 
-            const deleteCollectionDialog = new deleteCollection(this.tracker.currentCollection().name, this.activeDatabase(), selection.count, excludedIds);
+            const deleteCollectionDialog = new deleteCollection(this.currentCollection().name, this.activeDatabase(), selection.count, excludedIds);
            
             app.showBootstrapDialog(deleteCollectionDialog)
                 .done((deletionStarted: boolean) => {
@@ -255,16 +270,16 @@ class documents extends viewModelBase {
                             notificationCenter.instance.databseOperationsWatch.monitorOperation(operationId.OperationId)
                                 .done(() => {
                                     if (excludedIds.length === 0) {
-                                        messagePublisher.reportSuccess(`Deleted collection ${this.tracker.currentCollection().name}`);
+                                        messagePublisher.reportSuccess(`Deleted collection ${this.currentCollection().name}`);
                                     } else {
-                                        messagePublisher.reportSuccess(`Deleted ${this.pluralize(selection.count, "document", "documents")} from ${this.tracker.currentCollection().name}`);
+                                        messagePublisher.reportSuccess(`Deleted ${this.pluralize(selection.count, "document", "documents")} from ${this.currentCollection().name}`);
                                     }
 
                                     if (excludedIds.length === 0) {
                                         // deleted entire collection to go all documents
                                         const allDocsCollection = this.tracker.getAllDocumentsCollection();
-                                        if (this.tracker.currentCollection() !== allDocsCollection) {
-                                            this.tracker.currentCollection(allDocsCollection);
+                                        if (this.currentCollection() !== allDocsCollection) {
+                                            this.currentCollection(allDocsCollection);
                                         }
                                     }
                                 })
@@ -278,7 +293,7 @@ class documents extends viewModelBase {
     private onDeleteCompleted() {
         this.spinners.delete(false);
         this.gridController().reset(false);
-        this.tracker.setCurrentAsNotDirty();
+        this.setCurrentAsNotDirty();
     }
 
     copySelectedDocs() {

@@ -1,5 +1,6 @@
 ﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import collectionMenuItem = require("common/shell/menu/collectionMenuItem");
 
 export = getDocumentsMenuItem;
 
@@ -13,6 +14,9 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-documents',
             dynamicHash: appUrls.documents
         }),
+
+        new collectionMenuItem(),
+
 /* TODO:
         new leafMenuItem({
             title: "Conflicts",
