@@ -36,6 +36,7 @@ class connectedDocuments {
 
     // static field to remember current tab between navigation
     static currentTab = ko.observable<connectedDocsTabs>("attachments"); 
+    static readonly currentDocument = 'Current Document';
 
     loadDocumentAction: (docId: string) => void;
     document: KnockoutObservable<document>;
@@ -102,7 +103,12 @@ class connectedDocuments {
 
     private initColumns() {
         this.docsColumns = [
-            new hyperlinkColumn<connectedDocument>(x => x.id, x => x.href, "", "100%")
+            new hyperlinkColumn<connectedDocument>(x => x.id, x => x.href, "", "100%",
+            {
+                extraClass: (item) => {
+                    return item.id === connectedDocuments.currentDocument ? 'current-document' : '';
+                }
+            })
         ];
 
         this.attachmentsColumns = [
@@ -216,7 +222,7 @@ class connectedDocuments {
         const includeLatestFakeItem = skip === 0;
 
         const fakeCurrentItem = {
-            id: 'Current document',
+            id: connectedDocuments.currentDocument,
             href: appUrl.forEditDoc(doc.getId(), this.db())
         } as connectedDocument;
 
