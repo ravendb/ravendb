@@ -51,7 +51,7 @@
     <SignAssembly>true</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
-    <AssemblyOriginatorKeyFile>RavenDB.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>..\..\Raven.Database\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -76,7 +76,9 @@
     <Compile Include="Platform\Win32\Win32UnmanagedMemory.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="RavenDB.snk" />
+    <None Include="..\..\Raven.Database\RavenDB.snk">
+      <Link>RavenDB.snk</Link>
+    </None>
     <None Include="readme.md" />
     <None Include="Sparrow.project.json" />
   </ItemGroup>
