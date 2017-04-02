@@ -346,7 +346,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public (long attachmentCount, long streamsCount) GetNumberOfAttachments(DocumentsOperationContext context)
+        public (long AttachmentCount, long StreamsCount) GetNumberOfAttachments(DocumentsOperationContext context)
         {
             // We count in also versioned attachments
 

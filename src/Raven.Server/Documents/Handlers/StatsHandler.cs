@@ -30,8 +30,8 @@ namespace Raven.Server.Documents.Handlers
                 stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
                 stats.CountOfRevisionDocuments = Database.BundleLoader.VersioningStorage?.GetNumberOfRevisionDocuments(context);
                 var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
-                stats.CountOfAttachments = attachments.attachmentCount;
-                stats.CountOfUniqueAttachments = attachments.streamsCount;
+                stats.CountOfAttachments = attachments.AttachmentCount;
+                stats.CountOfUniqueAttachments = attachments.StreamsCount;
                 stats.CountOfIndexes = indexes.Count;
                 stats.CountOfTransformers = transformersCount;
                 stats.DatabaseId = Database.DocumentsStorage.Environment.DbId;
