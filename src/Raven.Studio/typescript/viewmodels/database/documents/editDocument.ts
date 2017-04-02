@@ -39,6 +39,7 @@ class editDocument extends viewModelBase {
     metadata: KnockoutComputed<documentMetadata>;
     lastModifiedAsAgo: KnockoutComputed<string>;
     latestRevisionUrl: KnockoutComputed<string>;
+    attachmentsCount: KnockoutComputed<number>;
 
     isCreatingNewDocument = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
@@ -202,6 +203,15 @@ class editDocument extends viewModelBase {
 
             return true;
         });         
+
+        this.attachmentsCount = ko.pureComputed(() => {
+            const doc = this.document();
+            if (!doc || !doc.__metadata || !doc.__metadata.attachments) {
+                return 0;
+            }
+
+            return doc.__metadata.attachments.length;
+        });
 
         this.document.subscribe(doc => {
             if (doc) {
