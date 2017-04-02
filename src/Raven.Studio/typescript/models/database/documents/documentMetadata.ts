@@ -75,11 +75,14 @@ class documentMetadata {
         return dto;
     }
 
-
-    static filterMetadata(metaDto: documentMetadataDto, removedProps: any[] = null) {
+    static filterMetadata(metaDto: documentMetadataDto, removedProps: any[] = null, isClonedDocument: boolean = false) {
         // We don't want to show certain reserved properties in the metadata text area.
         // Remove them from the DTO, restore them on save.
-        const metaPropsToRemove = ["@id", "@etag", "@last-modified", "@attachments"];
+        let metaPropsToRemove = ["@id", "@etag", "@last-modified", "@attachments"];
+
+        if (isClonedDocument) {
+            metaPropsToRemove.push("@change-vector");
+        }
 
         for (let property in metaDto) {
             if (metaDto.hasOwnProperty(property) && _.includes(metaPropsToRemove, property)) {
@@ -90,7 +93,6 @@ class documentMetadata {
             }
         }
         return metaDto;
-
     }
 }
 

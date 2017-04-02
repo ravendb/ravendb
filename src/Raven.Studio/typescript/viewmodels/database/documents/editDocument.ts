@@ -41,6 +41,7 @@ class editDocument extends viewModelBase {
     latestRevisionUrl: KnockoutComputed<string>;
 
     isCreatingNewDocument = ko.observable(false);
+    isClonedDocument = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
     provideCustomNameForNewDocument = ko.observable(false);
     userIdHasFocus = ko.observable<boolean>(false);   
@@ -212,8 +213,7 @@ class editDocument extends viewModelBase {
                     const metaDto = docDto["@metadata"];
                     if (metaDto) {
                         this.metaPropsToRestoreOnSave.length = 0;
-
-                        documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave);
+                        documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave, this.isClonedDocument());
                     }
 
                     const docText = this.stringify(docDto);
@@ -393,14 +393,18 @@ class editDocument extends viewModelBase {
     }
 
     createClone() {
-        // Show current document as a new document..
+        // 1. Show current document as a new document..
         this.isCreatingNewDocument(true);
+        this.isClonedDocument(true);
 
         this.syncChangeNotification();
 
-        // Clear data..
-        this.userSpecifiedId("");
+        // 2. Trigger re-evaluation of current document in view - so that '@change-vector' metadata is not shown..
+        this.document.valueHasMutated();
+
+        // 3. Clear data..
         this.metadata().etag(null);
+        this.userSpecifiedId("");
     }
 
     saveDocument() {       
@@ -494,6 +498,7 @@ class editDocument extends viewModelBase {
         this.dirtyFlag().reset(); //Resync Changes
 
         this.isCreatingNewDocument(false);
+        this.isClonedDocument(false);
         this.collectionForNewDocument(null);
         
     }
