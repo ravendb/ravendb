@@ -236,7 +236,6 @@ namespace Raven.Server.ServerWide
                     ContextPool
                 };
 
-
                 var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(ServerStore)}.");
 
                 foreach (var disposable in toDispose)
@@ -346,7 +345,7 @@ namespace Raven.Server.ServerWide
                 [nameof(AddDatabaseCommand.Etag)] = etag,
             }, "put-cmd"))
             {
-                return await _engine.PutAsync(putCmd);
+                return await SendToLeaderAsync(putCmd);
             }
         }
 

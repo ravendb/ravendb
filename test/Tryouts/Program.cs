@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Net.Http;
 using System.Threading.Tasks;
+using FastTests.Issues;
 
 namespace Tryouts
 {
@@ -9,8 +9,15 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            var h = new HttpClient();
-            h.GetAsync("http://google.com").Wait();
+            for (int i = 0; i < 100; i++)
+            {
+                Console.WriteLine(i);
+
+                using (var a = new RavenDB_6602())
+                {
+                    a.RequestExecutor_failover_to_database_topology_should_work().Wait();                    
+                }
+            }
         }
     }
 }
