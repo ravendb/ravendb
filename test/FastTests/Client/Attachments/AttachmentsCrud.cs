@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Xunit;
 using Raven.Client;
@@ -129,7 +128,7 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        [Fact(Skip = "WIP")]
+        [Fact]
         public void PutAttachmentAndPutDocument_ShouldHaveHasAttachmentsFlag()
         {
             using (var store = GetDocumentStore())
@@ -143,26 +142,36 @@ namespace FastTests.Client.Attachments
                     {
                         store.Operations.Send(new PutAttachmentOperation("users/1", "pic", profileStream, "image/png"));
                     }
-
-                    var user = session.Load<User>("users/1");
-                    var metadata = session.Advanced.GetMetadataFor(user);
-                    Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
                 }
+
+                ValidateMetadata_PutAttachmentAndPutDocument_ShouldHaveHasAttachmentsFlag(store);
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Fitzchak 2" }, "users/1");
+                    session.Store(new User {Name = "Fitzchak 2"}, "users/1");
                     session.SaveChanges();
                 }
 
-                AssertAttachmentCount(store, 1, 1, 1);
+                ValidateMetadata_PutAttachmentAndPutDocument_ShouldHaveHasAttachmentsFlag(store);
+            }
+        }
 
-                using (var session = store.OpenSession())
-                {
-                    var user = session.Load<User>("users/1");
-                    var metadata = session.Advanced.GetMetadataFor(user);
-                    Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
-                }
+        private static void ValidateMetadata_PutAttachmentAndPutDocument_ShouldHaveHasAttachmentsFlag(DocumentStore store)
+        {
+            AssertAttachmentCount(store, 1, 1, 1);
+
+            // We must create a new session to check the flags, 
+            // since we do not remove the document from the session cache after we put an attachment
+            using (var session = store.OpenSession())
+            {
+                var user = session.Load<User>("users/1");
+                var metadata = session.Advanced.GetMetadataFor(user);
+                Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                var attachment = metadata.GetObjects(Constants.Documents.Metadata.Attachments).Single();
+                Assert.Equal("pic", attachment.GetString(nameof(Attachment.Name)));
+                Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", attachment.GetString(nameof(AttachmentResult.Hash)));
+                Assert.Equal("image/png", attachment.GetString(nameof(AttachmentResult.ContentType)));
+                Assert.Equal(3, attachment.GetNumber(nameof(AttachmentResult.Size)));
             }
         }
 
