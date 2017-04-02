@@ -20,5 +20,9 @@ namespace Raven.Server.Rachis
         public long Index { get; set; }
         public BlittableJsonReaderObject Entry { get; set; }
         public RachisEntryFlags Flags { get; set; }
+        public override string ToString()
+        {
+            return $"RachisEntry:Term={Term},Index={Index},Flags={Flags},Entry={Entry}";
+        }
     }
 }
