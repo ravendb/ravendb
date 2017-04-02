@@ -1479,9 +1479,12 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                    var oldEtag = TableValueToEtag(1, ref oldValue);
-                    if (expectedEtag != null && oldEtag != expectedEtag)
-                        ThrowConcurrentException(key, expectedEtag, oldEtag);
+                    if (expectedEtag != null)
+                    {
+                        var oldEtag = TableValueToEtag(1, ref oldValue);
+                        if (oldEtag != expectedEtag)
+                            ThrowConcurrentException(key, expectedEtag, oldEtag);
+                    }
 
                     int oldSize;
                     oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsTable.Data, out oldSize), oldSize, context);

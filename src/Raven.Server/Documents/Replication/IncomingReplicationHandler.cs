@@ -1198,7 +1198,7 @@ namespace Raven.Server.Documents.Replication
                             if (_incoming._log.IsInfoEnabled)
                                 _incoming._log.Info($"Got incoming attachment tombstone, doing DELETE on attachment {item.Key}");
 
-                            database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, "$fromReplication", null);
+                            database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null);
                         }
                         else
                         {
