@@ -1521,19 +1521,30 @@ namespace Raven.Server.Documents
                         if (oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
                             oldMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray oldAttachments))
                         {
-                            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
+                            // Make sure the user did not changed the value of attachments in the metadata
+                            // In most cases it isn't chagned so we can skip recreating the document
+                            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false ||
+                                attachments.Equals(oldAttachments) == false)
                             {
-                                // Make sure the user did not changed the value of attachments in the metadata
-                                // In most cases it isn't chagned so we can skip recreating the document
-                                if (attachments.Equals(oldAttachments) == false)
+                                document.Modifications = new DynamicJsonValue(document)
                                 {
-                                    metadata.Modifications = new DynamicJsonValue(metadata)
+                                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue(metadata)
                                     {
                                         [Constants.Documents.Metadata.Attachments] = oldAttachments
-                                    };
-                                    document = context.ReadObject(document, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                                    }
+                                };
+#if DEBUG
+                                if (document.DebugHash != documentDebugHash)
+                                {
+                                    throw new InvalidDataException("The incoming document " + key + " has changed _during_ the put process, this is likely because you are trying to save a document that is already stored and was moved");
                                 }
+#endif
+                                document = context.ReadObject(document, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+#if DEBUG
+                                documentDebugHash = document.DebugHash;
+                                document.BlittableValidation();
+#endif
                             }
                         }
                     }
