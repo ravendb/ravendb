@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Util;
 using Raven.Server.Utils.Stats;
 
 namespace Raven.Server.Documents.Replication
@@ -66,7 +68,8 @@ namespace Raven.Server.Documents.Replication
                     DocumentReadCount = Stats.DocumentReadCount,
                     DocumentTombstoneReadCount = Stats.DocumentTombstoneReadCount,
                     AttachmentTombstoneReadCount = Stats.AttachmentTombstoneReadCount
-                }
+                },
+                Errors = Stats.Errors
             };
         }
     }
@@ -132,9 +135,14 @@ namespace Raven.Server.Documents.Replication
         {
             _stats.LastEtag = etag;
         }
+
+        public void AddError(Exception exception)
+        {
+            _stats.AddError(exception);
+        }
     }
 
-    public class IncomingReplicationRunStats
+    public class IncomingReplicationRunStats : ReplicationRunStatsBase
     {
         public int InputCount;
 
