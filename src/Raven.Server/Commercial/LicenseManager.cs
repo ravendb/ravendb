@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
@@ -204,28 +205,13 @@ namespace Raven.Server.Commercial
                 };
 
                 var response = await _httpClient.PostAsync("/api/v1/license/lease",
-                        new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo))).ConfigureAwait(false);
+                        new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"))
+                    .ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode == false)
                 {
-                    var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    if (response.StatusCode == HttpStatusCode.ExpectationFailed)
-                    {
-                        // the license was canceled
-                        _licenseStatus.Attributes = null;
-                        _licenseStatus.Error = true;
-                        _licenseStatus.Message = responseString;
-                    }
-
-                    var alert = AlertRaised.Create(
-                        "Lease license failure",
-                        "Could not lease license",
-                        AlertType.LicenseManager_LeaseLicenseError,
-                        NotificationSeverity.Warning,
-                        details: new ExceptionDetails(
-                            new InvalidOperationException($"Status code: {response.StatusCode}, response: {responseString}")));
-
-                    _notificationCenter.Add(alert);
+                    await HandleLeaseLicenseFailure(response).ConfigureAwait(false);
+                    return;
                 }
 
                 var licenseAsStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
@@ -234,21 +220,73 @@ namespace Raven.Server.Commercial
                     var json = context.Read(licenseAsStream, "leased license");
                     var newLicense = JsonDeserializationServer.License(json);
                     if (newLicense.Name == license.Name && newLicense.Id == license.Id &&
-                        newLicense.Keys.Equals(license.Keys))
+                        newLicense.Keys.SequenceEqual(license.Keys))
                         return;
 
                     Activate(newLicense, skipLeaseLicense: true);
                 }
+
+                var message = "License was updated";
+                object expiration;
+                if (_licenseStatus.Attributes.TryGetValue("expiration", out expiration) &&
+                    expiration is DateTime)
+                {
+                    var expirationDate = ((DateTime)expiration).ToString("yyyy-MMM-dd", CultureInfo.CurrentUICulture);
+                    message += $", new expiration date is {expirationDate}";
+                }
+
+                var alert = AlertRaised.Create(
+                "License updated",
+                message,
+                AlertType.LicenseManager_LicenseUpdated,
+                NotificationSeverity.Info,
+                details: new MessageDetails
+                {
+                    Message = message
+                });
+
+                _notificationCenter.Add(alert);
             }
             catch (Exception e)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info("Error leasing license.", e);
+                    Logger.Info("Error leasing license", e);
+
+                var alert = AlertRaised.Create(
+                    "Error leasing license",
+                    "Could not lease license",
+                    AlertType.LicenseManager_LeaseLicenseError,
+                    NotificationSeverity.Warning,
+                    details: new ExceptionDetails(e));
+
+                _notificationCenter.Add(alert);
             }
             finally
             {
                 _interlockedLock.Exit();
             }
+        }
+
+        private async Task HandleLeaseLicenseFailure(HttpResponseMessage response)
+        {
+            var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            if (response.StatusCode == HttpStatusCode.ExpectationFailed)
+            {
+                // the license was canceled
+                _licenseStatus.Attributes = null;
+                _licenseStatus.Error = true;
+                _licenseStatus.Message = responseString;
+            }
+
+            var alert = AlertRaised.Create(
+                "Lease license failure",
+                "Could not lease license",
+                AlertType.LicenseManager_LeaseLicenseError,
+                NotificationSeverity.Warning,
+                details: new ExceptionDetails(
+                    new InvalidOperationException($"Status code: {response.StatusCode}, response: {responseString}")));
+
+            _notificationCenter.Add(alert);
         }
 
         public void Dispose()
