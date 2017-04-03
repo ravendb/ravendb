@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.ETL.Providers.Raven;
@@ -164,8 +165,7 @@ namespace Raven.Server.Documents.ETL
             if (change.Key.Equals(Constants.Documents.ETL.RavenEtlDocument, StringComparison.OrdinalIgnoreCase) == false)
                 return;
 
-            foreach (var replication in _processes)
-                replication.Dispose();
+            Parallel.ForEach(_processes, x => x.Dispose());
 
             _processes = new EtlProcess[0];
 
@@ -177,6 +177,8 @@ namespace Raven.Server.Documents.ETL
             _database.Changes.OnDocumentChange -= NotifyAboutWork;
             // TODO arek - RavennDB-6555 _serverStore.Cluster.DatabaseChanged += HandleDatabaseRecordChange;
             _database.Changes.OnSystemDocumentChange -= HandleSystemDocumentChange;
+
+            Parallel.ForEach(_processes, x => x.Dispose());
         }
     }
 }
