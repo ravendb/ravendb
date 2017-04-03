@@ -17,6 +17,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
 namespace Raven.Server.Documents
@@ -459,7 +460,7 @@ namespace Raven.Server.Documents
 
             Memory.Copy(keyMem.Ptr, lowerKey, lowerKeySize);
             var pos = lowerKeySize;
-            keyMem.Ptr[pos++] = VersioningStorage.RecordSeperator;
+            keyMem.Ptr[pos++] = SpecialChars.RecordSeperator;
 
             switch (type)
             {
@@ -472,7 +473,7 @@ namespace Raven.Server.Documents
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
-            keyMem.Ptr[pos++] = VersioningStorage.RecordSeperator;
+            keyMem.Ptr[pos++] = SpecialChars.RecordSeperator;
 
             if (type != AttachmentType.Document)
             {
@@ -481,20 +482,20 @@ namespace Raven.Server.Documents
                     Memory.Copy(keyMem.Ptr + pos, (byte*)pChangeVector, changeVectorSize);
                 }
                 pos += changeVectorSize;
-                keyMem.Ptr[pos++] = VersioningStorage.RecordSeperator;
+                keyMem.Ptr[pos++] = SpecialChars.RecordSeperator;
             }
 
             if (keyType != KeyType.Prefix)
             {
                 Memory.Copy(keyMem.Ptr + pos, lowerName, lowerNameSize);
                 pos += lowerNameSize;
-                keyMem.Ptr[pos++] = VersioningStorage.RecordSeperator;
+                keyMem.Ptr[pos++] = SpecialChars.RecordSeperator;
 
                 if (keyType == KeyType.Key)
                 {
                     base64Hash.CopyTo(keyMem.Ptr + pos);
                     pos += base64Hash.Size;
-                    keyMem.Ptr[pos++] = VersioningStorage.RecordSeperator;
+                    keyMem.Ptr[pos++] = SpecialChars.RecordSeperator;
 
                     Memory.Copy(keyMem.Ptr + pos, lowerContentTypePtr, lowerContentTypeSize);
                 }
