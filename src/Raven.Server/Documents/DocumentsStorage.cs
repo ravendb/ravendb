@@ -28,6 +28,7 @@ using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using Voron.Data;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
@@ -1227,7 +1228,7 @@ namespace Raven.Server.Documents
                     using (conflictsTable.Allocate(out tbv))
                     {
                         tbv.Add(lowerKey, lowerSize);
-                        tbv.Add(VersioningStorage.RecordSeperator);
+                        tbv.Add(SpecialChars.RecordSeperator);
                         tbv.Add((byte*)pChangeVector, existingDoc.ChangeVector.Length * sizeof(ChangeVectorEntry));
                         tbv.Add(keyPtr, keySize);
                         tbv.Add(existingDoc.Data.BasePointer, existingDoc.Data.Size);
@@ -1259,7 +1260,7 @@ namespace Raven.Server.Documents
                     using (conflictsTable.Allocate(out tableValueBuilder))
                     {
                         tableValueBuilder.Add(lowerKey, lowerSize);
-                        tableValueBuilder.Add(VersioningStorage.RecordSeperator);
+                        tableValueBuilder.Add(SpecialChars.RecordSeperator);
                         tableValueBuilder.Add((byte*)pChangeVector, existingTombstone.ChangeVector.Length * sizeof(ChangeVectorEntry));
                         tableValueBuilder.Add(keyPtr, keySize);
                         tableValueBuilder.Add(null, 0);
@@ -1329,7 +1330,7 @@ namespace Raven.Server.Documents
                     using (conflictsTable.Allocate(out tvb))
                     {
                         tvb.Add(lowerKey, lowerSize);
-                        tvb.Add(VersioningStorage.RecordSeperator);
+                        tvb.Add(SpecialChars.RecordSeperator);
                         tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * incomingChangeVector.Length);
                         tvb.Add(keyPtr, keySize);
                         tvb.Add(doc, docSize);
