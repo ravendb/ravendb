@@ -474,6 +474,9 @@ namespace Sparrow.Json
 
         public void GetPropertyByIndex(int index, ref PropertyDetails prop, bool addObjectToCache = false)
         {
+            if (_mem == null)
+                ThrowObjectDisposed();
+
             if (index < 0 || index >= _propCount)
                 ThrowOutOfRangeException();
 
@@ -631,14 +634,13 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal object GetObject(BlittableJsonToken type, int position)
         {
-            if (_mem == null)
-                ThrowObjectDisposed();
-
             BlittableJsonToken actualType = type & TypesMask;
             if (actualType == BlittableJsonToken.String)
                 return ReadStringLazily(position);
             if (actualType == BlittableJsonToken.Integer)
                 return ReadVariableSizeLong(position);
+            if (actualType == BlittableJsonToken.StartObject)
+                return new BlittableJsonReaderObject(position, _parent ?? this, type) { NoCache = NoCache };
 
             return GetObjectUnlikely(type, position, actualType);
         }
@@ -649,11 +651,6 @@ namespace Sparrow.Json
             {
                 case BlittableJsonToken.EmbeddedBlittable:
                     return ReadNestedObject(position);
-                case BlittableJsonToken.StartObject:
-                    return new BlittableJsonReaderObject(position, _parent ?? this, type)
-                    {
-                        NoCache = NoCache
-                    };
                 case BlittableJsonToken.StartArray:
                     return new BlittableJsonReaderArray(position, _parent ?? this, type)
                     {
