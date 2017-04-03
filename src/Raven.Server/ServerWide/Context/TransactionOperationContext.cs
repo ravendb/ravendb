@@ -59,25 +59,19 @@ namespace Raven.Server.ServerWide.Context
         public short GetTransactionMarker()
         {
             if (Transaction != null && Transaction.Disposed == false && Transaction.InnerTransaction.LowLevelTransaction.Flags != TransactionFlags.ReadWrite)
-                MustHaveWriteTransactionOpened();
+                ThrowWriteTransactionMustBeOpen();
 
             var value = (short)(CurrentTxMarker + TransactionMarkerOffset);
-            if (value <= 0)
-            {
-                switch (value)
-                {
-                    case short.MaxValue:
-                        return 1;
-                    case 0:
-                        return 2;
-                    default:
-                        return (short)-value;
-                }
-            }
+
+            if (value == 0)
+                return 2;
+            if (value < 0)
+                return (short)-value;
+            
             return value;
         }
 
-        private static void MustHaveWriteTransactionOpened()
+        private static void ThrowWriteTransactionMustBeOpen()
         {
             throw new InvalidOperationException("Write transaction must be opened");
         }
