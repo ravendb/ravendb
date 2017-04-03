@@ -2,115 +2,113 @@
     PRERELEASE SOFTWARE
 </aside>
 
-<nav class="navbar navbar-inverse navbar-fixed-top">
-    <div class="container-fluid">
-        <div class="navbar-header">
-            <a class="navbar-brand hidden-xs" data-bind="attr: { href: appUrls.databases }">RavenDB</a>
-        </div>
-        <div id="navbar">
-            <ul class="nav navbar-nav navbar-right">
-                <li data-bind="with: notificationCenter">
-                    <a title="Notifications center" href="#" id="notification-toggle" class="btn-toggle" data-bind="{ click: showNotifications.toggle.bind(showNotifications), css: { 'active': showNotifications() } }">
-                        <span class="icon-notifications"></span>
-                        <span class="notification-counter show" data-bind="text: totalItemsCount(), attr: { 'data-count': totalItemsCount() }, css: { 'show': alertCountAnimation() }"></span>
-                    </a>
-                </li>
-                <li><a target="_blank" data-bind="attr: { href: currentHelpLink }" class="icon-help"></a></li>
-                <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
-                <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
-            </ul>
-            <div class="inputs-container hidden-xs hidden-sm">
-                <div class="database-switcher-container" data-bind="with: databaseSwitcher">
-                    <div class="form-control btn-toggle database-switcher">
-                        <span class="database" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
-                    </div>
-                    <a data-bind="attr: { href: $root.appUrls.databases }" class="btn btn-primary btn-sm resources-link">All Databases</a>
-                    <div class="box-container">
-                        <div class="database-filter-container">
-                            <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />
-                        </div>
-                        <div class="scroller">
-                            <section>
-                                <ul class="database-list">
-                                    <!-- ko foreach: filteredDatabases-->
-                                    <li data-bind="visible: !disabled()">
-                                        <a href="#" data-bind="click: $parent.selectDatabase.bind($parent)" class="database">
-                                            <span data-bind="text: name"></span>
-                                            <span data-bind="visible: errored" class="badge badge-danger">Errored</span>
-                                        </a>
-                                    </li>
-                                    <!-- /ko -->
-                                    <!-- ko foreach: filteredDatabases-->
-                                    <li data-bind="visible: disabled"> 
-                                        <a class="database disabled">
-                                            <span data-bind="text: name"></span>
-                                            <span class="label label-default">Disabled</span>
-                                            <span data-bind="visible: errored" class="label label-danger">Errored</span>
-                                        </a>
-                                    </li>
-                                    <!-- /ko -->
-                                </ul>
-                            </section>
-                        </div>
-                    </div>
-                </div>
-                <div class="search-prerelease"><i class="icon-search"></i><span>search</span> <span class="text-muted"> | in development</span></div>
-                <!--
-                <div class="search-container">
-                    <input type="search" class="form-control omnisearch" placeholder="search" />
-                    <div class="icon-search"></div>
-                    <div class="autocomplete-list box-container">
-                        <div class="scroller">
-                            <section>
-                                <h4>Menu</h4>
-                                <ul>
-                                    <li><a href="#"><span class="icon-documents"></span>Compact</a></li>
-                                </ul>
-                            </section>
-                            <section>
-                                <h4>Documents</h4>
-                                <ul>
-                                    <li>
-                                        <a href="#"><span class="icon-document-group" style="color:#93278f;"></span>Companies</a>
-                                        <ul>
-                                            <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/1</a></li>
-                                            <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/2</a></li>
-                                            <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/3</a></li>
-                                        </ul>
-                                    </li>
-                                    <li>
-                                        <a href="#"><span class="icon-document-group" style="color:#ff0351;"></span>Computers</a>
-                                        <ul>
-                                            <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Computers/1</a></li>
-                                            <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/2</a></li>
-                                            <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/3</a></li>
-                                        </ul>
-                                    </li>
-                                    <li><a href="#" class="more">MORE</a></li>
-                                </ul>
-                            </section>
-                            <section>
-                                <h4>Indexes</h4>
-                                <ul>
-                                    <li><a href="#"><span class="icon-arrow-filled-right"></span>Orders/ByCompany</a></li>
-                                </ul>
-                            </section>
-                            <section>
-                                <h4>Transformers</h4>
-                                <ul>
-                                    <li><a href="#"><span class="icon-arrow-filled-right"></span>Orders/Company</a></li>
-                                </ul>
-                            </section>
-                            <section class="text-center">
-                                <div class="global-spinner"></div>
-                            </section>
-                        </div>
-                    </div>
-                </div>
-                -->
-            </div>
-        </div><!--/.nav-collapse -->
+<nav class="navbar navbar-inverse">
+    <div class="navbar-header">
+        <a class="navbar-brand hidden-xs" data-bind="attr: { href: appUrls.databases }">RavenDB</a>
     </div>
+    <div id="navbar">
+        <div class="inputs-container hidden-xs hidden-sm">
+            <div class="database-switcher-container" data-bind="with: databaseSwitcher">
+                <div class="form-control btn-toggle database-switcher">
+                    <span class="database" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
+                </div>
+                <a data-bind="attr: { href: $root.appUrls.databases }" class="btn btn-primary btn-sm resources-link">All Databases</a>
+                <div class="box-container">
+                    <div class="database-filter-container">
+                        <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />
+                    </div>
+                    <div class="scroller">
+                        <section>
+                            <ul class="database-list">
+                                <!-- ko foreach: filteredDatabases-->
+                                <li data-bind="visible: !disabled()">
+                                    <a href="#" data-bind="click: $parent.selectDatabase.bind($parent)" class="database">
+                                        <span data-bind="text: name"></span>
+                                        <span data-bind="visible: errored" class="badge badge-danger">Errored</span>
+                                    </a>
+                                </li>
+                                <!-- /ko -->
+                                <!-- ko foreach: filteredDatabases-->
+                                <li data-bind="visible: disabled">
+                                    <a class="database disabled">
+                                        <span data-bind="text: name"></span>
+                                        <span class="label label-default">Disabled</span>
+                                        <span data-bind="visible: errored" class="label label-danger">Errored</span>
+                                    </a>
+                                </li>
+                                <!-- /ko -->
+                            </ul>
+                        </section>
+                    </div>
+                </div>
+            </div>
+            <div class="search-prerelease"><i class="icon-search"></i><span>search</span> <span class="text-muted"> | in development</span></div>
+            <!--
+            <div class="search-container">
+                <input type="search" class="form-control omnisearch" placeholder="search" />
+                <div class="icon-search"></div>
+                <div class="autocomplete-list box-container">
+                    <div class="scroller">
+                        <section>
+                            <h4>Menu</h4>
+                            <ul>
+                                <li><a href="#"><span class="icon-documents"></span>Compact</a></li>
+                            </ul>
+                        </section>
+                        <section>
+                            <h4>Documents</h4>
+                            <ul>
+                                <li>
+                                    <a href="#"><span class="icon-document-group" style="color:#93278f;"></span>Companies</a>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/1</a></li>
+                                        <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/2</a></li>
+                                        <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/3</a></li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <a href="#"><span class="icon-document-group" style="color:#ff0351;"></span>Computers</a>
+                                    <ul>
+                                        <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Computers/1</a></li>
+                                        <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/2</a></li>
+                                        <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/3</a></li>
+                                    </ul>
+                                </li>
+                                <li><a href="#" class="more">MORE</a></li>
+                            </ul>
+                        </section>
+                        <section>
+                            <h4>Indexes</h4>
+                            <ul>
+                                <li><a href="#"><span class="icon-arrow-filled-right"></span>Orders/ByCompany</a></li>
+                            </ul>
+                        </section>
+                        <section>
+                            <h4>Transformers</h4>
+                            <ul>
+                                <li><a href="#"><span class="icon-arrow-filled-right"></span>Orders/Company</a></li>
+                            </ul>
+                        </section>
+                        <section class="text-center">
+                            <div class="global-spinner"></div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+            -->
+        </div>
+        <ul class="nav navbar-nav navbar-right">
+            <li data-bind="with: notificationCenter">
+                <a title="Notifications center" href="#" id="notification-toggle" class="btn-toggle" data-bind="{ click: showNotifications.toggle.bind(showNotifications), css: { 'active': showNotifications() } }">
+                    <span class="icon-notifications"></span>
+                    <span class="notification-counter show" data-bind="text: totalItemsCount(), attr: { 'data-count': totalItemsCount() }, css: { 'show': alertCountAnimation() }"></span>
+                </a>
+            </li>
+            <li><a target="_blank" data-bind="attr: { href: currentHelpLink }" class="icon-help"></a></li>
+            <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
+            <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
+        </ul>
+    </div><!--/.nav-collapse -->
 </nav>
 
 <script type="text/html" id="collectionsMenuItem">
@@ -194,32 +192,66 @@
     </li>
 </script>
 
-<nav id="main-menu" class="main-menu"
-     data-bind="with: mainMenu, attr: { 'data-level': mainMenu.level }">
-    <div class="level-0"
-         data-level="0"
-         data-level-name="Menu"
-         data-bind="click: handleLevelClick">
-        <ul data-bind="foreach: items">
-            <!-- ko template: { name: type + 'MenuItem', data: { item: $data, menu: $parent }} -->
-            <!-- /ko -->
-        </ul>
-    </div>
-</nav>
+<div class="prime-container">
+    <nav id="main-menu" class="main-menu"
+         data-bind="with: mainMenu, attr: { 'data-level': mainMenu.level }">
+        <div class="level-0"
+             data-level="0"
+             data-level-name="Menu"
+             data-bind="click: handleLevelClick">
+            <ul data-bind="foreach: items">
+                <!-- ko template: { name: type + 'MenuItem', data: { item: $data, menu: $parent }} -->
+                <!-- /ko -->
+            </ul>
+        </div>
+    </nav>
 
-<div class="notification-center-container" data-bind="compose: 'notifications/notificationCenter.html'"></div>
-
-<div id="page-host-root" class="container-fluid content-container">
-    <div class="content-container-margin">
+    <div id="page-host-root" class="content-container">
         <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
     </div>
+    <div class="notification-center-container" data-bind="compose: 'notifications/notificationCenter.html'"></div>
 </div>
 
-<div class="prerelease-alert bg-prerelease">
+<footer class="status-footer padding padding-sm bg-info">
+    <div class="footer-left">
+        <div class="footer-item">
+            <a href="#">Dashboard</a>
+        </div>
+        <div class="footer-item">
+            <a href="#" title="Documents"><i class="icon-document"></i> <span>1,059</span></a>
+        </div>
+        <div class="footer-item">
+            <a href="#" title="Indexes">
+                <i class="icon-index"></i>
+                <span>8</span>
+                <span class="label label-warning">3 STALE</span>
+                <span class="label label-danger">2 ERRORS</span>
+            </a>
+        </div>
+    </div>
+    <div class="footer-right">
+        <div class="footer-item">
+            license
+        </div>
+        <div class="footer-item">
+            support
+        </div>
+        <div class="footer-item">
+            server version 4.0.0-custom-40000
+        </div>
+        <div class="footer-item">
+            studio version 4.0.0-custom-40000
+        </div>
+    </div>
+</footer>
+
+
+
+<!--<div class="prerelease-alert bg-prerelease">
     <p>
         PRERELEASE SOFTWARE
     </p>
-</div>
+</div>-->
 
 <div data-bind="if: displayUsageStatsInfo()">
     <div data-bind="compose: 'usageStats.html'"></div>

@@ -1,6 +1,6 @@
-<form class="form-horizontal" role="form" data-bind="submit: $root.save">
-
     <div data-bind="compose: 'common/sectionUnderDevelopment.html'"></div>
+
+    <form class="form-horizontal content-margin" role="form" data-bind="submit: $root.save">
 
     <div class="panel panel-default">
         <div class="panel-heading">
@@ -30,7 +30,7 @@
                             <div class="form-group">
                                 <label class="col-sm-4 control-label">Name</label>
                                 <div class="col-sm-7">
-                                    <input required name="name" class="form-control" type="text" data-bind="value:name, valueUpdate: 'afterkeydown'"/>
+                                    <input required name="name" class="form-control" type="text" data-bind="value:name, valueUpdate: 'afterkeydown'" />
                                 </div>
                             </div>
                             <div class="form-group">
@@ -48,7 +48,7 @@
                             <div class="form-group">
                                 <div class="col-sm-7 col-sm-offset-4">
                                     <button type="button" class="btn btn-default" data-bind="enable: connectionTestState() === CONNECTION_STATE_STAND_BY, click: testConnection.bind($data, $root.activeDatabase)">Test connection</button>
-                                    <br/>
+                                    <br />
                                     <div class="progress progress-striped" data-bind="visible:connectionTestState() !== CONNECTION_STATE_STAND_BY">
                                         <div class="progress-bar progress-bar-info" data-bind="css: {'active':connectionTestState() === CONNECTION_STATE_CONNECTING}" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; float: left;">
                                             <span class="sr-only" data-bind="text:connectionTestState() === CONNECTION_STATE_CONNECTING?'Connecting':'Connected'"></span>
