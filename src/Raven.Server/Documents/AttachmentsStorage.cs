@@ -400,6 +400,8 @@ namespace Raven.Server.Documents
             return GetAttachmentKeyInternal(context, lowerKey, lowerKeySize, lowerName, lowerNameSize, base64Hash, lowerContentTypePtr, lowerContentTypeSize, KeyType.Key, type, changeVector, out keySlice);
         }
 
+        // NOTE: This should be called only when the document's that hold the attachment does not have a conflict.
+        // In this specific case it is ensured that we have a uniuqe partial keys.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReleaseMemory GetAttachmentPartialKey(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, byte* lowerName, int lowerNameSize,
             AttachmentType type, ChangeVectorEntry[] changeVector, out Slice partialKeySlice)
@@ -560,15 +562,13 @@ namespace Raven.Server.Documents
                 }
 
                 using (DocumentKeyWorker.GetSliceFromKey(context, name, out Slice lowerName))
+                using (GetAttachmentPartialKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
+                    AttachmentType.Document, null, out Slice partialKeySlice))
                 {
-                    using (GetAttachmentPartialKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, 
-                        AttachmentType.Document, null, out Slice partialKeySlice))
-                    {
-                        DeleteAttachmentDirect(context, partialKeySlice, true, name, expectedEtag);
-
-                        _documentsStorage.UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, docTvr);
-                    }
+                    DeleteAttachmentDirect(context, partialKeySlice, true, name, expectedEtag);
                 }
+
+                _documentsStorage.UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, docTvr);
             }
         }
 
@@ -590,13 +590,19 @@ namespace Raven.Server.Documents
             }
 
             var etag = DocumentsStorage.TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
-            if (expectedEtag != null && etag != expectedEtag)
+
+            using (isPartialKey ? DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.LoweredDocumentIdAndLoweredNameAndType, ref tvr, out key) : default(ByteStringContext<ByteStringMemoryCache>.ExternalScope))
             {
-                throw new ConcurrencyException($"Attachment {name} with key '{key}' has etag {etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                if (expectedEtag != null && etag != expectedEtag)
                 {
-                    ActualETag = etag,
-                    ExpectedETag = (long)expectedEtag
-                };
+                    throw new ConcurrencyException($"Attachment {name} with key '{key}' has etag {etag}, but Delete was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+                    {
+                        ActualETag = etag,
+                        ExpectedETag = (long)expectedEtag
+                    };
+                }
+
+                CreateTombstone(context, key, etag);
             }
 
             using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out Slice hashSlice))
@@ -605,8 +611,6 @@ namespace Raven.Server.Documents
             }
 
             table.Delete(tvr.Id);
-
-            CreateTombstone(context, key, etag);
         }
 
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag)
