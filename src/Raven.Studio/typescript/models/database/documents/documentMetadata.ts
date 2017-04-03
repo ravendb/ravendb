@@ -1,6 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
-type knownDocumentFlags = "Versioned"; //TODO: add more flags
+type knownDocumentFlags = "Versioned" | "Revision" | "HasAttachments";
 
 class documentMetadata {
     collection: string;

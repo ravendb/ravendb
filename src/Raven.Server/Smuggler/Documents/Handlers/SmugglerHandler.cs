@@ -127,21 +127,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private Stream TryGetRequestFormStream(string itemName)
-        {
-            if (HttpContext.Request.HasFormContentType == false)
-                return null;
-
-            StringValues value;
-            if (HttpContext.Request.Form.TryGetValue(itemName, out value) == false)
-                return null;
-
-            if (value.Count == 0)
-                return null;
-
-            return new MemoryStream(Encoding.UTF8.GetBytes(value[0]));
-        }
-
         private IOperationResult ExportDatabaseInternal(DatabaseSmugglerOptions options, Action<IOperationProgress> onProgress, JsonOperationContext context, OperationCancelToken token)
         {
             using (token)

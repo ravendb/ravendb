@@ -265,8 +265,33 @@ class connectedDocuments {
             name: file.name
         };
 
-        const url = endpoints.databases.attachment.attachments + appUrl.urlEncodeArgs(args);
-        this.downloader.download(this.db(), url);
+        const doc = this.document();
+        if (doc.__metadata.hasFlag("Revision")) {
+            this.downloadAttachmentAtRevision(doc, args);
+        } else {
+            const url = endpoints.databases.attachment.attachments + appUrl.urlEncodeArgs(args);
+            this.downloader.download(this.db(), url);    
+        }
+    }
+
+    private downloadAttachmentAtRevision(doc: document, file: { id: string; name: string }) {
+        //TODO: single auth token ?
+
+        const $form = $("#downloadAttachmentAtRevisionForm");
+        const $changeVector = $("[name=ChangeVectorAndType]", $form);
+        const changeVector = (doc.__metadata as any)['@change-vector'];
+
+        const payload = {
+            ChangeVector: changeVector,
+            Type: "Revision"
+        };
+
+        const url = endpoints.databases.attachment.attachments + appUrl.urlEncodeArgs(file);
+
+        $form.attr("action", appUrl.forDatabaseQuery(this.db()) + url);
+        
+        $changeVector.val(JSON.stringify(payload));
+        $form.submit();
     }
 
     private deleteAttachment(file: attachmentItem) {
