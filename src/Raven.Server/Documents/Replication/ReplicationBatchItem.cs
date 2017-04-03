@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Replication
 
             if (doc.Type == DocumentTombstone.TombstoneType.Document)
             {
-                item.Type = ReplicationItemType.Document;
+                item.Type = ReplicationItemType.DocumentTombstone;
                 item.ChangeVector = doc.ChangeVector;
                 item.Collection = doc.Collection;
                 item.Flags = doc.Flags;
@@ -113,9 +113,10 @@ namespace Raven.Server.Documents.Replication
         public enum ReplicationItemType : byte
         {
             Document = 1,
-            Attachment = 2,
-            AttachmentStream = 3,
-            AttachmentTombstone = 4,
+            DocumentTombstone = 2,
+            Attachment = 3,
+            AttachmentStream = 4,
+            AttachmentTombstone = 5
         }
     }
 }

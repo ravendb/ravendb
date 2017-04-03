@@ -21,9 +21,12 @@ namespace Raven.Server.Documents.ETL
             if (enumerator == null)
                 return;
 
-            if (enumerator.MoveNext())
+            using (_extractionStats.Start())
             {
-                _workEnumerators.Add(enumerator);
+                if (enumerator.MoveNext())
+                {
+                    _workEnumerators.Add(enumerator);
+                }
             }
         }
 

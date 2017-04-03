@@ -414,17 +414,8 @@ namespace FastTests.Server.NotificationCenter
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
                 {
-                    var notification = await actions.TryDequeueAsync(TimeSpan.FromMilliseconds(500));
-                    Assert.True(notification.Item1);
-
-                    var databaseStatsChanged = notification.Item2 as DatabaseStatsChanged;
-
-                    Assert.NotNull(databaseStatsChanged); // initial notification
-
-                    Assert.Equal(0, databaseStatsChanged.CountOfDocuments);
-                    Assert.Equal(0, databaseStatsChanged.CountOfIndexes);
-                    Assert.Equal(0, databaseStatsChanged.CountOfStaleIndexes);
-                    Assert.Equal(0, databaseStatsChanged.ModifiedCollections.Count);
+                    var notification = await actions.TryDequeueAsync(TimeSpan.FromMilliseconds(150));
+                    Assert.False(notification.Item1);
 
                     DocumentsOperationContext context;
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
@@ -447,7 +438,7 @@ namespace FastTests.Server.NotificationCenter
                     notification = await actions.TryDequeueAsync(TimeSpan.FromMilliseconds(500));
                     Assert.True(notification.Item1);
 
-                    databaseStatsChanged = notification.Item2 as DatabaseStatsChanged;
+                    var databaseStatsChanged = notification.Item2 as DatabaseStatsChanged;
 
                     Assert.NotNull(databaseStatsChanged);
 

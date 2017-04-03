@@ -10,6 +10,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Exceptions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
@@ -17,7 +18,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Server.Documents.Replication;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Sdk;
@@ -32,19 +32,6 @@ namespace FastTests.Server.Replication
             using (var commands = store.Commands())
             {
                 var command = new GetRevisionsCommand(id);
-
-                commands.RequestExecutor.Execute(command, commands.Context);
-
-                return command.Result;
-            }
-        }
-
-        protected ReplicationStatistics GetReplicationStats(DocumentStore store)
-        {
-            using (var commands = store.Commands())
-            using (var session = store.OpenSession())
-            {                
-                var command = new GetReplicationStatsCommand((DocumentSession)session);
 
                 commands.RequestExecutor.Execute(command, commands.Context);
 
@@ -111,7 +98,7 @@ namespace FastTests.Server.Replication
 
                 if (sw.ElapsedMilliseconds > timeout)
                 {
-                    var replicationStats = GetReplicationStats(store);
+                    var replicationStats = store.Admin.Send(new GetReplicationPerformanceStatisticsOperation());
 
                     throw new XunitException($"Timed out while waiting for conflicts on {docId} we have {conflicts.Results.Length} conflicts on database {store.DefaultDatabase}{Environment.NewLine}" +
                                              $"{JsonConvert.SerializeObject(replicationStats, Formatting.Indented)}");
@@ -614,34 +601,6 @@ namespace FastTests.Server.Replication
                 }
 
                 Result = result;
-            }
-        }
-
-        private class GetReplicationStatsCommand : RavenCommand<ReplicationStatistics>
-        {
-            private readonly InMemoryDocumentSessionOperations _session;
-            public override bool IsReadRequest => true;
-
-            public GetReplicationStatsCommand(InMemoryDocumentSessionOperations session)
-            {
-                _session = session;
-            }
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
-            {
-                url = $"{node.Url}/databases/{node.Database}/replication/stats";
-
-                return new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get
-                };
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
-                if (response == null)
-                    ThrowInvalidResponse();
-                
-                Result = (ReplicationStatistics)_session.Conventions.DeserializeEntityFromBlittable(typeof(ReplicationStatistics),response);
             }
         }
 

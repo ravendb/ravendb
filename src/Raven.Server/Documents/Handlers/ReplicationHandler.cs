@@ -1,18 +1,24 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.IO;
+using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
+using System.Net.WebSockets;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Documents.Session;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Replication;
+using Raven.Server.Json;
 using Raven.Server.Utils;
+
 namespace Raven.Server.Documents.Handlers
 {
-    public class DocumentReplicationHandler : DatabaseRequestHandler
+    public class ReplicationHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/replication/tombstones", "GET", "/databases/{databaseName:string}/replication/tombstones?start={start:int}&take={take:int}")]
         public Task GetAllTombstones()
@@ -59,7 +65,7 @@ namespace Raven.Server.Documents.Handlers
                         maxEtag = conflict.Etag;
 
                     array.Add(new DynamicJsonValue
-                    {                        
+                    {
                         [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector.ToJson(),
                         [nameof(GetConflictsResult.Conflict.Doc)] = conflict.Doc
                     });
@@ -76,20 +82,103 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/replication/stats", "GET")]
-        public Task GetRepliationStats()
+        [RavenAction("/databases/*/replication/performance", "GET")]
+        public Task Performance()
         {
-            var stats = Database.DocumentReplicationLoader.RepliactionStats;
-            DocumentsOperationContext context;
+            JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                stats.Update();
-                var entityToBlittable = new EntityToBlittable(null);
-                var json = entityToBlittable.ConvertEntityToBlittable(stats, new DocumentConventions(), context);
-                context.Write(writer, json);             
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(ReplicationPerformance.Incoming));
+                writer.WriteArray(context, Database.ReplicationLoader.IncomingHandlers, (w, c, handler) =>
+                {
+                    w.WriteStartObject();
+
+                    w.WritePropertyName(nameof(ReplicationPerformance.IncomingStats.Source));
+                    w.WriteString(handler.SourceFormatted);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(ReplicationPerformance.IncomingStats.Performance));
+                    w.WriteArray(c, handler.GetReplicationPerformance(), (innerWriter, innerContext, performance) =>
+                    {
+                        var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(performance);
+                        innerWriter.WriteObject(context.ReadObject(djv, "replication/performance"));
+                    });
+
+                    w.WriteEndObject();
+                });
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(ReplicationPerformance.Outgoing));
+                writer.WriteArray(context, Database.ReplicationLoader.OutgoingHandlers, (w, c, handler) =>
+                {
+                    w.WriteStartObject();
+
+                    w.WritePropertyName(nameof(ReplicationPerformance.OutgoingStats.Destination));
+                    w.WriteString(handler.DestinationFormatted);
+                    w.WriteComma();
+
+                    w.WritePropertyName(nameof(ReplicationPerformance.OutgoingStats.Performance));
+                    w.WriteArray(c, handler.GetReplicationPerformance(), (innerWriter, innerContext, performance) =>
+                    {
+                        var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(performance);
+                        innerWriter.WriteObject(context.ReadObject(djv, "replication/performance"));
+                    });
+
+                    w.WriteEndObject();
+                });
+
+                writer.WriteEndObject();
             }
+
             return Task.CompletedTask;
+        }
+
+
+        [RavenAction("/databases/*/replication/performance/live", "GET", SkipUsagesCount = true)]
+        public async Task PerformanceLive()
+        {
+            using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            {
+                var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
+                var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
+
+                using (var ms = new MemoryStream())
+                using (var collector = new LiveReplicationPerformanceCollector(Database))
+                {
+                    while (Database.DatabaseShutdown.IsCancellationRequested == false)
+                    {
+                        if (receive.IsCompleted || webSocket.State != WebSocketState.Open)
+                            break;
+
+                        var tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(4));
+                        if (tuple.Item1 == false)
+                        {
+                            await webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                            continue;
+                        }
+
+                        ms.SetLength(0);
+
+                        JsonOperationContext context;
+                        using (ContextPool.AllocateOperationContext(out context))
+                        using (var writer = new BlittableJsonTextWriter(context, ms))
+                        {
+                            writer.WriteArray(context, tuple.Item2, (w, c, p) =>
+                            {
+                                p.Write(c, w);
+                            });
+                        }
+
+                        ArraySegment<byte> bytes;
+                        ms.TryGetBuffer(out bytes);
+
+                        await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                    }
+                }
+            }
         }
 
         [RavenAction("/databases/*/replication/topology", "GET")]
@@ -108,7 +197,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var incoming = new DynamicJsonArray();
-                foreach (var item in Database.DocumentReplicationLoader.IncomingConnections)
+                foreach (var item in Database.ReplicationLoader.IncomingConnections)
                 {
                     incoming.Add(new DynamicJsonValue
                     {
@@ -120,7 +209,7 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 var outgoing = new DynamicJsonArray();
-                foreach (var item in Database.DocumentReplicationLoader.OutgoingConnections)
+                foreach (var item in Database.ReplicationLoader.OutgoingConnections)
                 {
                     outgoing.Add(new DynamicJsonValue
                     {
@@ -150,7 +239,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
-                foreach (var item in Database.DocumentReplicationLoader.OutgoingFailureInfo)
+                foreach (var item in Database.ReplicationLoader.OutgoingFailureInfo)
                 {
                     data.Add(new DynamicJsonValue
                     {
@@ -184,7 +273,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
-                foreach (var item in Database.DocumentReplicationLoader.IncomingLastActivityTime)
+                foreach (var item in Database.ReplicationLoader.IncomingLastActivityTime)
                 {
                     data.Add(new DynamicJsonValue
                     {
@@ -212,7 +301,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
-                foreach (var statItem in Database.DocumentReplicationLoader.IncomingRejectionStats)
+                foreach (var statItem in Database.ReplicationLoader.IncomingRejectionStats)
                 {
                     data.Add(new DynamicJsonValue
                     {
@@ -245,7 +334,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
-                foreach (var queueItem in Database.DocumentReplicationLoader.ReconnectQueue)
+                foreach (var queueItem in Database.ReplicationLoader.ReconnectQueue)
                 {
                     data.Add(new DynamicJsonValue
                     {
@@ -273,7 +362,7 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
-                var advisor = new ConflictResovlerAdvisor(conflicts.Select(c=>c.Doc),context);
+                var advisor = new ConflictResovlerAdvisor(conflicts.Select(c => c.Doc), context);
                 var resovled = advisor.Resolve();
 
                 context.Write(writer, new DynamicJsonValue

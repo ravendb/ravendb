@@ -1,8 +1,6 @@
-﻿using System.IO;
-using System.Linq;
+﻿using System;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Server.Documents.Replication;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -13,6 +11,9 @@ namespace SlowTests.Server.Documents.Replication
         [Fact]
         public void AutomaticResolveWithIdenticalContent()
         {
+            throw new NotImplementedException();
+
+            /*
             DocumentStore store1;
             DocumentStore store2;
 
@@ -20,9 +21,9 @@ namespace SlowTests.Server.Documents.Replication
             CreateSampleDatabase(out store2);
 
             SetupReplication(store1, store2);
-            Assert.Equal(1, WaitForValue(() => GetReplicationStats(store2).IncomingStats.Count, 1));
-            var stats = GetReplicationStats(store2);
-            Assert.True(stats.IncomingStats.Any(o =>
+            Assert.Equal(1, WaitForValue(() => store2.Admin.Send(new GetReplicationPerformanceStatisticsOperation()).Incoming.Length, 1));
+            var stats = store2.Admin.Send(new GetReplicationPerformanceStatisticsOperation());
+            Assert.True(stats.Incoming.Any(o =>
             {
                 var stat = (ReplicationStatistics.IncomingBatchStats)o;
                 if (stat.Exception != null)
@@ -31,6 +32,7 @@ namespace SlowTests.Server.Documents.Replication
                 }
                 return true;
             }));
+            */
         }
 
         public void CreateSampleDatabase(out DocumentStore store)

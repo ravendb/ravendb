@@ -187,7 +187,7 @@ class connectedDocuments {
     fetchAttachments(skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> {
         const doc = this.document();
 
-        const attachments: Raven.Client.Documents.Operations.AttachmentResult[] = (doc.__metadata as any)["@attachments"] || [];
+        const attachments: documentAttachmentDto[] = doc.__metadata.attachments || [];
         const mappedFiles = attachments.map(file => ({
             documentId: doc.getId(),
             name: file.Name,

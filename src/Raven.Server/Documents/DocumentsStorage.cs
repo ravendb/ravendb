@@ -12,8 +12,8 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
@@ -215,7 +215,7 @@ namespace Raven.Server.Documents
             var options = _documentDatabase.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly(
                     _documentDatabase.Configuration.Core.DataDirectory.FullPath,
-                    null, 
+                    null,
                     _documentDatabase.IoChanges,
                     _documentDatabase.CatastrophicFailureNotification)
                 : StorageEnvironmentOptions.ForPath(
@@ -580,7 +580,7 @@ namespace Raven.Server.Documents
             {
                 var doc = Get(context, loweredKey);
                 if (doc != null)
-                    return new DocumentOrTombstone {Document = doc};
+                    return new DocumentOrTombstone { Document = doc };
             }
             catch (DocumentConflictException)
             {
@@ -878,7 +878,7 @@ namespace Raven.Server.Documents
                 if (result != null)
                     return result;
             }
-            
+
             var local = GetDocumentOrTombstone(context, loweredKey, throwOnConflict: false);
 
             if (local.Tombstone != null)
@@ -888,7 +888,7 @@ namespace Raven.Server.Documents
                                                    $"Optimistic concurrency violation, transaction will be aborted.");
 
                 collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
-                
+
                 // we update the tombstone
                 var etag = CreateTombstone(context,
                     loweredKey.Content.Ptr,
@@ -1054,7 +1054,7 @@ namespace Raven.Server.Documents
                         if (deleteOperationResult != null)
                             deleteResults.Add(deleteOperationResult.Value);
                     }
-                    
+
                 }
 
             }
@@ -1154,7 +1154,7 @@ namespace Raven.Server.Documents
             {
                 changeVector = ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(
                     context,
-                    lowerKey, 
+                    lowerKey,
                     lowerSize,
                     newEtag,
                     docChangeVector);
@@ -1505,7 +1505,7 @@ namespace Raven.Server.Documents
                         oldChangeVector, newEtag);
                 }
 
-                
+
                 if (collectionName.IsSystem == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
@@ -1660,7 +1660,7 @@ namespace Raven.Server.Documents
             return ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, loweredKey.Content.Ptr, loweredKey.Size, newEtag);
         }
 
-       
+
 
         public IEnumerable<KeyValuePair<string, long>> GetIdentities(DocumentsOperationContext context)
         {
@@ -2001,7 +2001,7 @@ namespace Raven.Server.Documents
             }
             return name;
         }
-        
+
         private FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer> ReadCollections(Transaction tx)
         {
             var result = new FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer>(OrdinalIgnoreCaseStringStructComparer.Instance);

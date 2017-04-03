@@ -21,8 +21,8 @@ using Raven.Client.Server.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -437,7 +437,7 @@ namespace Raven.Server
                                 SubscriptionConnection.SendSubscriptionDocuments(tcp);
                                 break;
                             case TcpConnectionHeaderMessage.OperationTypes.Replication:
-                                var documentReplicationLoader = tcp.DocumentDatabase.DocumentReplicationLoader;
+                                var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;
                                 documentReplicationLoader.AcceptIncomingConnection(tcp);
                                 break;
                             case TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery:
