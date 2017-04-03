@@ -205,16 +205,24 @@ namespace Raven.Server.Documents.Replication
                                 {
                                     using (var scope = stats.CreateScope())
                                     {
-                                        var didWork = documentSender.ExecuteReplicationOnce(scope);
-                                        if (didWork == false)
-                                            break;
-
-                                        DocumentsSend?.Invoke(this);
-
-                                        if (sp.ElapsedMilliseconds > 60 * 1000)
+                                        try
                                         {
-                                            _waitForChanges.Set();
-                                            break;
+                                            var didWork = documentSender.ExecuteReplicationOnce(scope);
+                                            if (didWork == false)
+                                                break;
+
+                                            DocumentsSend?.Invoke(this);
+
+                                            if (sp.ElapsedMilliseconds > 60 * 1000)
+                                            {
+                                                _waitForChanges.Set();
+                                                break;
+                                            }
+                                        }
+                                        catch (Exception e)
+                                        {
+                                            scope.AddError(e);
+                                            throw;
                                         }
                                     }
                                 }

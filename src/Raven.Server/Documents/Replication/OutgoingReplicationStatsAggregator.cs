@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Utils.Stats;
+using Size = Raven.Server.Config.Settings.Size;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -75,7 +78,8 @@ namespace Raven.Server.Documents.Replication
                     DocumentOutputSizeInBytes = Stats.DocumentOutputSize.GetValue(SizeUnit.Bytes),
                     AttachmentTombstoneOutputCount = Stats.AttachmentTombstoneOutputCount,
                     DocumentTombstoneOutputCount = Stats.DocumentTombstoneOutputCount,
-                }
+                },
+                Errors = Stats.Errors
             };
         }
     }
@@ -158,9 +162,14 @@ namespace Raven.Server.Documents.Replication
 
             return operation;
         }
+
+        public void AddError(Exception exception)
+        {
+            _stats.AddError(exception);
+        }
     }
 
-    public class OutgoingReplicationRunStats
+    public class OutgoingReplicationRunStats : ReplicationRunStatsBase
     {
         public long LastEtag;
 
