@@ -213,18 +213,18 @@
 </div>
 
 <footer class="status-footer padding padding-sm bg-info">
-    <div class="footer-left">
+    <div class="footer-left" data-bind="with: $root.footer.stats()">
         <div class="footer-item">
             <a href="#">Dashboard</a>
         </div>
         <div class="footer-item">
-            <a href="#" title="Documents"><i class="icon-document"></i> <span>1,059</span></a>
+            <a href="#" title="Documents"><i class="icon-document"></i> <span data-bind="text: countOfDocuments"></span></a>
         </div>
         <div class="footer-item">
             <a href="#" title="Indexes">
                 <i class="icon-index"></i>
-                <span>8</span>
-                <span class="label label-warning">3 STALE</span>
+                <span data-bind="text: countOfIndexes"></span>
+                <span class="label label-warning"><span data-bind="text: countOfStaleIndexes"></span> STALE</span>
                 <span class="label label-danger">2 ERRORS</span>
             </a>
         </div>
