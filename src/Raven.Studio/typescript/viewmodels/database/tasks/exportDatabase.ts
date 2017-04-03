@@ -198,7 +198,7 @@ class exportDatabase extends viewModelBase {
 
     private startDownload(args: Raven.Client.Documents.Smuggler.DatabaseSmugglerOptions) {
         const $form = $("#exportDownloadForm");
-        let db = this.activeDatabase();
+        const db = this.activeDatabase();
         const $downloadOptions = $("[name=DownloadOptions]", $form);
 
         $.when<any>(this.getNextOperationId(db), this.getAuthToken(db))
