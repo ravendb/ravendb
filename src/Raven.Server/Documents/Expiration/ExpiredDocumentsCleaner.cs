@@ -140,6 +140,9 @@ namespace Raven.Server.Documents.Expiration
                             {
                                 do
                                 {
+                                    if (_database.DatabaseShutdown.IsCancellationRequested)
+                                        return false;
+
                                     if (sp.ElapsedMilliseconds > 150)
                                     {
                                         earlyExit = true;
