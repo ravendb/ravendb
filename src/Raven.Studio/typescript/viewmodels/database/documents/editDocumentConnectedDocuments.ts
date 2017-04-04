@@ -36,7 +36,6 @@ class connectedDocuments {
 
     // static field to remember current tab between navigation
     static currentTab = ko.observable<connectedDocsTabs>("attachments"); 
-    static readonly currentDocument = 'Current Document';
 
     loadDocumentAction: (docId: string) => void;
     document: KnockoutObservable<document>;
@@ -103,12 +102,7 @@ class connectedDocuments {
 
     private initColumns() {
         this.docsColumns = [
-            new hyperlinkColumn<connectedDocument>(x => x.id, x => x.href, "", "100%",
-            {
-                extraClass: (item) => {
-                    return item.id === connectedDocuments.currentDocument ? 'current-document' : '';
-                }
-            })
+            new hyperlinkColumn<connectedDocument>(x => x.id, x => x.href, "", "100%")
         ];
 
         this.attachmentsColumns = [
@@ -212,23 +206,11 @@ class connectedDocuments {
     }
 
     fetchRevisionDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
-        //TODO: should endpoint return results in different order - newest first?
         const doc = this.document();
 
         if (!doc.__metadata.hasFlag("Versioned")) {
             return connectedDocuments.emptyDocResult<connectedDocument>();
         }
-
-        const includeLatestFakeItem = skip === 0;
-
-        const fakeCurrentItem = {
-            id: connectedDocuments.currentDocument,
-            href: appUrl.forEditDoc(doc.getId(), this.db())
-        } as connectedDocument;
-
-        // shift by one item, to serve fake item properly
-        if (skip > 0) { skip--; }
-        take--;
 
         const fetchTask = $.Deferred<pagedResult<connectedDocument>>();
         new getDocumentRevisionsCommand(doc.getId(), this.db(), skip, take, true)
@@ -236,9 +218,18 @@ class connectedDocuments {
             .done(result => {
                 const mappedResults = result.items.map(x => this.revisionToConnectedDocument(x));
                 fetchTask.resolve({
-                    items: includeLatestFakeItem ? [fakeCurrentItem].concat(...mappedResults) : mappedResults,
-                    totalResultCount: result.totalResultCount + 1 // include latest item
+                    items: mappedResults,
+                    totalResultCount: result.totalResultCount
                 });
+
+                if (doc.__metadata.hasFlag("Revision")) {
+                    const etag = doc.__metadata.etag();
+                    const resultIdx = result.items.findIndex(x => x.__metadata.etag() === etag);
+                    if (resultIdx >= 0) {
+                        this.gridController().setSelectedItems([mappedResults[resultIdx]]);    
+                    }
+                    
+                }
             })
             .fail(xhr => fetchTask.reject(xhr));
 
