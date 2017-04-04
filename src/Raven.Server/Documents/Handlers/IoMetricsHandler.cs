@@ -182,6 +182,15 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
+    public class IOMetricsRecentStatsAdditionalTypes
+    {
+        public long OriginalSize;
+        public string HumanOriginalSize;
+        public long CompressedSize;
+        public string HumanCompressedSize;
+        public string CompressionRatio;
+    }
+
     public class IOMetricsRecentStats
     {
         public string Start { get; set; }
@@ -200,11 +209,11 @@ namespace Raven.Server.Documents.Handlers
                 return new DynamicJsonValue
                 {
                     [nameof(Start)] = Start,
-                    ["OriginalSize"] = Size,
-                    ["HumanOriginalSize"] = HumanSize,
-                    ["CompressedSize"] = FileSize,
-                    ["HumanCompressedSize"] = HumanFileSize,
-                    ["CompressionRatio"] = compressionRatio,
+                    [nameof(IOMetricsRecentStatsAdditionalTypes.OriginalSize)] = Size,
+                    [nameof(IOMetricsRecentStatsAdditionalTypes.HumanOriginalSize)] = HumanSize,
+                    [nameof(IOMetricsRecentStatsAdditionalTypes.CompressedSize)] = FileSize,
+                    [nameof(IOMetricsRecentStatsAdditionalTypes.HumanCompressedSize)] = HumanFileSize,
+                    [nameof(IOMetricsRecentStatsAdditionalTypes.CompressionRatio)] = compressionRatio,
                     [nameof(Duration)] = Duration,
                     [nameof(Type)] = Type
                 };
