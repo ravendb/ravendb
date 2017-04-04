@@ -806,33 +806,32 @@ namespace Sparrow
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static uint CalculateInline(byte* buffer, int len, ulong seed = 0x5D70D359C498B3F8ul)
             {
-                unchecked
+                uint high = (uint)(seed >> 32);
+                uint low = (uint)seed;
+
+                byte* ptr = buffer;
+                byte* bEnd = ptr + len;
+                byte* loopEnd = bEnd - sizeof(uint);        
+                
+                while (ptr <= loopEnd)
                 {
-                    uint high = (uint)(seed >> 32);
-                    uint low = (uint)seed;
-
-                    byte* bEnd = buffer + len;
-                    byte* loopEnd = bEnd - sizeof(uint);
-                    byte* ptr = buffer;
-                    while (ptr <= loopEnd)
-                    {
-                        MarvinMix(ref high, ref low, *(uint*)ptr);
-                        ptr += sizeof(uint);
-                    }
-
-                    uint final = 0x80;
-                    switch ((int)(bEnd - ptr))
-                    {
-                        case 3: final = (final << 8) | ptr[2]; goto case 2;
-                        case 2: final = (final << 8) | ptr[1]; goto case 1;
-                        case 1: final = (final << 8) | ptr[0]; break;
-                    }
-
-                    MarvinMix(ref high, ref low, final);
-                    MarvinMix(ref high, ref low, 0);
-
-                    return low ^ high;
+                    MarvinMix(ref high, ref low, *(uint*)ptr);
+                    ptr += sizeof(uint);
                 }
+
+                uint final = 0x80;
+                int rest = (int)(bEnd - ptr);
+                if (rest == 3)
+                    final = (final << 8) | ptr[2];
+                if (rest >= 2)
+                    final = (final << 8) | ptr[1];
+                if (rest >= 1)
+                    final = (final << 8) | ptr[0];
+
+                MarvinMix(ref high, ref low, final);
+                MarvinMix(ref high, ref low, 0);
+
+                return low ^ high;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

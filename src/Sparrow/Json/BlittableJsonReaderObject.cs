@@ -43,8 +43,8 @@ namespace Sparrow.Json
             _context.Write(stream, this);
         }
 
-        public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context,
-            UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
+        public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context, UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
+            : base(context)
         {
             if (size == 0)
                 ThrowOnZeroSize(size);
@@ -52,7 +52,7 @@ namespace Sparrow.Json
             _buffer = buffer;
             _mem = mem; // get beginning of memory pointer
             _size = size; // get document size
-            _context = context;
+            
             NoCache = NoCache;
 
             byte offset;
@@ -110,12 +110,13 @@ namespace Sparrow.Json
         }
 
         public BlittableJsonReaderObject(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
+            : base (parent._context)
         {
             _parent = parent;
-            _context = parent._context;
             _mem = parent._mem;
             _size = parent._size;
             _propNames = parent._propNames;
+
             NoCache = parent.NoCache;
 
             var propNamesOffsetFlag = (BlittableJsonToken) (*_propNames);
