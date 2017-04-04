@@ -126,12 +126,12 @@ class registration extends dialogViewModelBase {
 
 
     static showRegistrationDialogIfNeeded(license: Raven.Server.Commercial.LicenseStatus) {
-        if (license.LicenseType === "Invalid") {
+        if (license.Type === "Invalid") {
             registration.showRegistrationDialog(license, false);
             return;
         }
 
-        if (license.LicenseType === "None") {
+        if (license.Type === "None") {
             const firstStart = moment(license.FirstServerStartDate);
             const weekAfterFirstStart = firstStart.add("1", "week");
             const treeWeeksAfterFirstStart = firstStart.add("3", "weeks");
