@@ -8,7 +8,7 @@ using System.Collections.Generic;
 
 namespace Raven.Database.Storage
 {
-    public interface IGeneralStorageActions : IDisposable
+    public interface IGeneralStorageActions
     {
         long GetNextIdentityValue(string name, int val = 1);
         void SetIdentityValue(string name, long value);
