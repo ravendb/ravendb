@@ -153,13 +153,43 @@ body {
     display: flex;
     font-size: 12px;
     justify-content: space-between;
+    color: fadeout(@brand-info-light,50%);
+    padding: 3px 0;
 
-    .footer-right {
-        display:flex;
+    a {
+        color: inherit;
+        padding: @grid-gutter-width/8 @grid-gutter-width/2;
+        display: inline-block;
+        transition: color .1s ease;
+
+        .label {
+            opacity: .7;
+            transition: opacity .1s ease;
+        }
+
+        &:hover, &:active, &:focus {
+            text-decoration: none !important;
+            color: @gray-lighter;
+
+            .label {
+                opacity: 1;
+            }
+        }
     }
 
-    .footer-left {
-        display:flex;
+    span {
+        margin-right: @grid-gutter-width/4;
+    }
+
+    .footer-right, .footer-left {
+        display: flex;
+        align-items: center;
+    }
+
+    .footer-item {
+        & + .footer-item {
+            border-left: 1px solid fadeout(@brand-info-light,80%);
+        }
     }
 }
 
