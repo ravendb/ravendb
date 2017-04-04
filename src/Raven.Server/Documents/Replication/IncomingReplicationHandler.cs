@@ -1180,6 +1180,8 @@ namespace Raven.Server.Documents.Replication
                 {
                     using (item)
                     {
+                        Debug.Assert(item.Flags.HasFlag(DocumentFlags.Artificial) == false);
+
                         if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                         {
                             if (_incoming._log.IsInfoEnabled)

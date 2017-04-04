@@ -184,7 +184,8 @@ namespace Raven.Server.Documents.Replication
                                 lastTransactionMarker = item.TransactionMarker;
 
                                 // Include the attachment's document which is right after its latest attachment.
-                                if (item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
+                                if ((item.Type == ReplicationBatchItem.ReplicationItemType.Document ||
+                                     item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone) &&
                                     // We want to limit batch sizes to reasonable limits.
                                     ((maxSizeToSend.HasValue && size > maxSizeToSend.Value) ||
                                      (batchSize.HasValue && numberOfItemsSent > batchSize.Value)))
@@ -268,7 +269,8 @@ namespace Raven.Server.Documents.Replication
             {
                 _replicaAttachmentStreams[item.Base64Hash] = item;
             }
-            else if (item.Type == ReplicationBatchItem.ReplicationItemType.Document)
+            else if (item.Type == ReplicationBatchItem.ReplicationItemType.Document ||
+                     item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
             {
                 if ((item.Flags & DocumentFlags.Artificial) == DocumentFlags.Artificial)
                 {
@@ -300,10 +302,10 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
+            Debug.Assert(item.Flags.HasFlag(DocumentFlags.Artificial) == false);
             _orderedReplicaItems.Add(item.Etag, item);
             return true;
         }
-
 
         private void SendDocumentsBatch(DocumentsOperationContext documentsContext, OutgoingReplicationStatsScope stats)
         {

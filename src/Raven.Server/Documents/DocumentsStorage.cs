@@ -982,6 +982,9 @@ namespace Raven.Server.Documents
                     return null;
                 }
 
+                // ensures that the collection trees will be created
+                collectionName = ExtractCollectionName(context, collectionName.Name);
+
                 var etag = CreateTombstone(context,
                     loweredKey.Content.Ptr,
                     loweredKey.Size,

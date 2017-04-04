@@ -21,9 +21,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Smuggler.SmugglerApiTests())
+                using (var a = new FastTests.Server.Documents.Indexing.MapReduce.RavenDB_4323_Replication())
                 {
-                    a.CanExportAndImportWithVersioingRevisionDocuments().Wait();
+                    a.ReduceOutputShouldNotBeReplicated().Wait();
                 }
             }
         }
