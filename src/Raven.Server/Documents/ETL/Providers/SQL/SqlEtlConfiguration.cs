@@ -1,9 +1,12 @@
 ﻿using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
     public class SqlEtlConfiguration : EtlProcessConfiguration
     {
+        private static readonly Regex LoadAttachmentMethodRegex = new Regex(EtlTransformer<ExtractedItem, object>.LoadAttachment, RegexOptions.Compiled);
+
         public SqlEtlConfiguration()
         {
             SqlTables = new List<SqlEtlTable>();
@@ -21,12 +24,16 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public List<SqlEtlTable> SqlTables { get; set; }
 
+        public bool HasLoadAttachment { get; private set; }
+
         public override bool Validate(out List<string> errors)
         {
             base.Validate(out errors);
 
             if (string.IsNullOrEmpty(Script))
                 errors.Add($"{nameof(Script)} cannot be empty");
+            else
+                HasLoadAttachment = LoadAttachmentMethodRegex.Matches(Script).Count > 0;
 
             if (string.IsNullOrEmpty(ConnectionStringName))
                 errors.Add($"{nameof(ConnectionStringName)} cannot be empty");

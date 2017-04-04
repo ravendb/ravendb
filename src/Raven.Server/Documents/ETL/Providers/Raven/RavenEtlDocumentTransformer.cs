@@ -18,8 +18,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private readonly ScriptInput _script;
         private readonly List<ICommandData> _commands = new List<ICommandData>();
 
-        private RavenEtlItem _currentlyTransformed;
-
         public RavenEtlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, ScriptInput script) : base(database, context)
         {
             _script = script;
@@ -51,13 +49,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 else
                     transformed[Constants.Documents.Metadata.Key] = metadata = new DynamicJsonValue();
 
-                prefixedId = GetPrefixedId(_currentlyTransformed.DocumentKey, collectionName, putUsage: true);
+                prefixedId = GetPrefixedId(Current.DocumentKey, collectionName, putUsage: true);
 
                 metadata[Constants.Documents.Metadata.Collection] = collectionName;
                 metadata[Constants.Documents.Metadata.Id] = prefixedId;
             }
 
-            var id = prefixedId ?? _currentlyTransformed.DocumentKey;
+            var id = prefixedId ?? Current.DocumentKey;
 
             var transformResult = Context.ReadObject(transformed, id);
 
@@ -95,9 +93,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 if (_script.Transformation != null)
                 {
-                    _currentlyTransformed = item;
+                    Current = item;
 
-                    Apply(Context, _currentlyTransformed.Document, _script.Transformation);
+                    Apply(Context, Current.Document, _script.Transformation);
                 }
                 else
                     _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentKey, null, item.Document.Data));

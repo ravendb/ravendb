@@ -292,8 +292,8 @@ namespace FastTests.Sparrow
         [Fact]
         public void Combine()
         {
-            int h1 = Hashing.CombineInline(1991, 13);
-            int h2 = Hashing.CombineInline(1991, 12);
+            int h1 = Hashing.HashCombiner.CombineInline(1991, 13);
+            int h2 = Hashing.HashCombiner.CombineInline(1991, 12);
             Assert.NotEqual(h1, h2);
         }
 

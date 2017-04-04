@@ -11,6 +11,7 @@ import EVENTS = require("common/constants/events");
 
 import databaseDisconnectedEventArgs = require("viewmodels/resources/databaseDisconnectedEventArgs");
 import notificationCenter = require("common/notifications/notificationCenter");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 class changesContext {
     static default = new changesContext();
@@ -82,6 +83,7 @@ class changesContext {
             this.navigateToResourceSpecificPage(db);
         });
 
+        collectionsTracker.default.onDatabaseChanged(db);
         
         this.databaseNotifications(notificationsClient);
     }

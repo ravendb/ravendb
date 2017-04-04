@@ -329,10 +329,7 @@ namespace Raven.Client.Http
                     if (++command.AuthenticationRetries > 1)
                         throw AuthorizationException.Unauthorized(url);
 
-                    string oauthSource = null;
                     IEnumerable<string> values;
-                    if (response.Headers.TryGetValues("OAuth-Source", out values))
-                        oauthSource = values.FirstOrDefault();
 
 #if DEBUG && FIDDLER
 // Make sure to avoid a cross DNS security issue, when running with Fiddler
@@ -340,7 +337,7 @@ namespace Raven.Client.Http
                     oauthSource = oauthSource.Replace("localhost:", "localhost.fiddler:");
 #endif
 
-                    await HandleUnauthorized(oauthSource, choosenNode.Node, context).ConfigureAwait(false);
+                    await HandleUnauthorized(choosenNode.Node, context).ConfigureAwait(false);
                     await ExecuteAsync(choosenNode, context, command).ConfigureAwait(false);
                     return true;
                 case HttpStatusCode.Forbidden:
@@ -523,14 +520,11 @@ namespace Raven.Client.Http
             return await _authenticator.GetAuthenticationTokenAsync(_apiKey, node.Url, context).ConfigureAwait(false);
         }
 
-        private async Task HandleUnauthorized(string oauthSource, ServerNode node, JsonOperationContext context, bool shouldThrow = true)
+        private async Task HandleUnauthorized(ServerNode node, JsonOperationContext context, bool shouldThrow = true)
         {
             try
             {
-                if (string.IsNullOrEmpty(oauthSource))
-                    oauthSource = node.Url + "/OAuth/API-Key";
-
-                var currentToken = await _authenticator.AuthenticateAsync(oauthSource, _apiKey, context).ConfigureAwait(false);
+                var currentToken = await _authenticator.GetAuthenticationTokenAsync(_apiKey, node.Url, context).ConfigureAwait(false);
                 node.CurrentToken = currentToken;
             }
             catch (Exception e)
@@ -559,14 +553,14 @@ namespace Raven.Client.Http
                 if (leaderNode != null)
                 {
 #pragma warning disable 4014
-                    HandleUnauthorized(null, leaderNode, context, shouldThrow: false);
+                    HandleUnauthorized(leaderNode, context, shouldThrow: false);
 #pragma warning restore 4014
                 }
 
                 foreach (var node in topology.Nodes)
                 {
 #pragma warning disable 4014
-                    HandleUnauthorized(null, node, context, shouldThrow: false);
+                    HandleUnauthorized(node, context, shouldThrow: false);
 #pragma warning restore 4014
                 }
             }

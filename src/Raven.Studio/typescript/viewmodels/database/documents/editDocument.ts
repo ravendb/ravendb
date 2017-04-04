@@ -39,6 +39,7 @@ class editDocument extends viewModelBase {
     metadata: KnockoutComputed<documentMetadata>;
     lastModifiedAsAgo: KnockoutComputed<string>;
     latestRevisionUrl: KnockoutComputed<string>;
+    attachmentsCount: KnockoutComputed<number>;
 
     isCreatingNewDocument = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
@@ -203,6 +204,15 @@ class editDocument extends viewModelBase {
             return true;
         });         
 
+        this.attachmentsCount = ko.pureComputed(() => {
+            const doc = this.document();
+            if (!doc || !doc.__metadata || !doc.__metadata.attachments) {
+                return 0;
+            }
+
+            return doc.__metadata.attachments.length;
+        });
+
         this.document.subscribe(doc => {
             if (doc) {
                 if (this.isConflictDocument()) {
@@ -212,7 +222,6 @@ class editDocument extends viewModelBase {
                     const metaDto = docDto["@metadata"];
                     if (metaDto) {
                         this.metaPropsToRestoreOnSave.length = 0;
-
                         documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave);
                     }
 
@@ -393,14 +402,23 @@ class editDocument extends viewModelBase {
     }
 
     createClone() {
-        // Show current document as a new document..
+        // 1. Show current document as a new document..
         this.isCreatingNewDocument(true);
 
         this.syncChangeNotification();
 
-        // Clear data..
-        this.userSpecifiedId("");
+        // 2. Remove the '@change-vector' from metadata view
+        const docDto = this.document().toDto(true);
+        const metaDto = docDto["@metadata"];
+        if (metaDto) {
+            documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave, true);
+            const docText = this.stringify(docDto);
+            this.documentText(docText);
+        }
+
+        // 3. Clear data..
         this.metadata().etag(null);
+        this.userSpecifiedId("");
     }
 
     saveDocument() {       

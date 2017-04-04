@@ -26,12 +26,7 @@ namespace Raven.Server.Documents.Indexes
             UsingDirective(IdentifierName("System.Text.RegularExpressions")),
             UsingDirective(IdentifierName("System.Globalization")),
             UsingDirective(IdentifierName("System.Linq")),
-
-            UsingDirective(IdentifierName("Raven.Abstractions")),
-            UsingDirective(IdentifierName("Raven.Abstractions.Indexing")),
-            UsingDirective(IdentifierName("Raven.Abstractions.Data")),
-            UsingDirective(IdentifierName("Raven.NewClient.Client.Indexes")),
-            UsingDirective(IdentifierName("Raven.NewClient.Client.Indexing"))
+            UsingDirective(IdentifierName("Raven.Client.Documents.Indexes"))
         };
 
         public IndexDefinitionCodeGenerator(IndexDefinition indexDefinition)

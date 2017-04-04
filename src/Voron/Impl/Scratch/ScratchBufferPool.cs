@@ -42,7 +42,7 @@ namespace Voron.Impl.Scratch
         {
             _env = env;
             _options = env.Options;
-            _current = NextFile(_options.InitialLogFileSize, null, null);
+            _current = NextFile(_options.InitialLogFileSize, null);
             UpdateCacheForPagerStatesOfAllScratches();
         }
 
@@ -86,7 +86,7 @@ namespace Voron.Impl.Scratch
             return _scratchBuffers[scratchNumber].File.NumberOfAllocations;
         }
 
-        private ScratchBufferItem NextFile(long minSize, long? requestedSize, LowLevelTransaction tx)
+        private ScratchBufferItem NextFile(long minSize, long? requestedSize)
         {
             var current = _recycleArea.Last;
             while (current != null)
@@ -98,7 +98,7 @@ namespace Voron.Impl.Scratch
                     // so we have to make sure that this is really unused before actually reusing it
                     recycled.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction) == false)
                 {
-                    recycled.File.Reset(tx);
+                    recycled.File.Reset();
                     recycled.RecycledAt = default(DateTime);
                     _recycleArea.Remove(current);
                     AddScratchBufferFile(recycled);
@@ -123,7 +123,7 @@ namespace Voron.Impl.Scratch
                 {
                     // this can fail because of disk space issue, let us just ignore it
                     // we'll allocate the minimum amount in a bit anyway
-                    return NextFile(minSize, null, tx);
+                    return NextFile(minSize, null);
                 }
             }
             else
@@ -168,7 +168,7 @@ namespace Voron.Impl.Scratch
             var minSize = numberOfPages * Constants.Storage.PageSize;
             var requestedSize = Math.Max(minSize, Math.Min(_current.File.Size * 2, _options.MaxScratchBufferSize));
             // We need to ensure that _current stays constant through the codepath until return. 
-            current = NextFile(minSize, requestedSize, tx);
+            current = NextFile(minSize, requestedSize);
 
             try
             {
@@ -184,10 +184,10 @@ namespace Voron.Impl.Scratch
             }
         }
 
-        public void Free(int scratchNumber, long page, LowLevelTransaction tx)
+        public void Free(int scratchNumber, long page, long? txId)
         {
             var scratch = _scratchBuffers[scratchNumber];
-            scratch.File.Free(page, tx);
+            scratch.File.Free(page, txId);
             if (scratch.File.AllocatedPagesCount != 0)
                 return;
 
@@ -220,13 +220,13 @@ namespace Voron.Impl.Scratch
                     // we'll take the chance that no one is using us to reset the memory allocations
                     // and avoid fragmentation, we can only do that if no transaction is looking at us
                     if (scratch.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction) == false)
-                        scratch.File.Reset(tx);
+                        scratch.File.Reset();
 
                     return;
                 }
 
                 // this is the current one, but the size is too big, let us trim it
-                var newCurrent = NextFile(_options.InitialLogFileSize, _options.MaxScratchBufferSize, tx);
+                var newCurrent = NextFile(_options.InitialLogFileSize, _options.MaxScratchBufferSize);
                 newCurrent.File.PagerState.AddRef();
                 _current = newCurrent;
             }

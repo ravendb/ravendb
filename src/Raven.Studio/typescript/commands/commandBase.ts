@@ -181,6 +181,10 @@ class commandBase {
     protected extractEtag(xhr: JQueryXHR) {
         let etag = xhr.getResponseHeader("ETag");
 
+        if (!etag) {
+            return null;
+        }
+
         if (etag.startsWith('"')) {
             etag = etag.substr(1);
         }

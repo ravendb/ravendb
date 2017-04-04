@@ -31,6 +31,7 @@ class index {
     reduceSuccesses?: number;
     type: Raven.Client.Documents.Indexes.IndexType;
 
+    isAutoIndex = ko.observable<boolean>(false);
     filteredOut = ko.observable<boolean>(false); //UI only property
     badgeClass: KnockoutComputed<string>;
     badgeText: KnockoutComputed<string>;
@@ -90,8 +91,10 @@ class index {
             case "MapReduce":
                 return "Map-Reduce";
             case "AutoMap":
+                this.isAutoIndex(true);
                 return "Auto Map";
             case "AutoMapReduce":
+                this.isAutoIndex(true);
                 return "Auto Map-Reduce";
             default:
                 return this.type;

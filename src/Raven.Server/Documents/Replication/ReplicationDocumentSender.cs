@@ -25,6 +25,8 @@ namespace Raven.Server.Documents.Replication
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
         private readonly OutgoingReplicationHandler _parent;
+        private OutgoingReplicationStatsScope _statsInstance;
+        private readonly ReplicationStats _stats = new ReplicationStats();
 
         public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log)
         {
@@ -37,15 +39,46 @@ namespace Raven.Server.Documents.Replication
         {
             private readonly List<IEnumerator<ReplicationBatchItem>> _workEnumerators = new List<IEnumerator<ReplicationBatchItem>>();
             private ReplicationBatchItem _currentItem;
-            public void AddEnumerator(IEnumerator<ReplicationBatchItem> enumerator)
+            private readonly OutgoingReplicationStatsScope _documentRead;
+            private readonly OutgoingReplicationStatsScope _attachmentRead;
+            private readonly OutgoingReplicationStatsScope _tombstoneRead;
+
+            public MergedReplicationBatchEnumerator(OutgoingReplicationStatsScope documentRead, OutgoingReplicationStatsScope attachmentRead, OutgoingReplicationStatsScope tombstoneRead)
             {
-                if(enumerator == null)
+                _documentRead = documentRead;
+                _attachmentRead = attachmentRead;
+                _tombstoneRead = tombstoneRead;
+            }
+
+            public void AddEnumerator(ReplicationBatchItem.ReplicationItemType type, IEnumerator<ReplicationBatchItem> enumerator)
+            {
+                if (enumerator == null)
                     return;
 
                 if (enumerator.MoveNext())
                 {
-                    _workEnumerators.Add(enumerator);
-                }              
+                    using (GetStatsFor(type).Start())
+                    {
+                        _workEnumerators.Add(enumerator);
+                    }
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private OutgoingReplicationStatsScope GetStatsFor(ReplicationBatchItem.ReplicationItemType type)
+            {
+                switch (type)
+                {
+                    case ReplicationBatchItem.ReplicationItemType.Document:
+                        return _documentRead;
+                    case ReplicationBatchItem.ReplicationItemType.Attachment:
+                        return _attachmentRead;
+                    case ReplicationBatchItem.ReplicationItemType.DocumentTombstone:
+                    case ReplicationBatchItem.ReplicationItemType.AttachmentTombstone:
+                        return _tombstoneRead;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
             }
 
             public bool MoveNext()
@@ -61,17 +94,22 @@ namespace Raven.Server.Documents.Replication
                         current = _workEnumerators[index];
                     }
                 }
+
                 _currentItem = current.Current;
-                if (current.MoveNext() == false)
+                using (GetStatsFor(_currentItem.Type).Start())
                 {
-                    _workEnumerators.Remove(current);
+                    if (current.MoveNext() == false)
+                    {
+                        _workEnumerators.Remove(current);
+                    }
+
+                    return true;
                 }
-                return true;
             }
 
             public void Reset()
             {
-                throw new NotImplementedException();
+                throw new NotSupportedException();
             }
 
             public ReplicationBatchItem Current => _currentItem;
@@ -87,8 +125,8 @@ namespace Raven.Server.Documents.Replication
                 _workEnumerators.Clear();
             }
         }
-        
-        private IEnumerable<ReplicationBatchItem> GetDocsConflictsTombstonesRevisionsAndAttachmentsAfter(DocumentsOperationContext ctx, long etag)
+
+        private IEnumerable<ReplicationBatchItem> GetDocsConflictsTombstonesRevisionsAndAttachmentsAfter(DocumentsOperationContext ctx, long etag, ReplicationStats stats)
         {
             var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
             var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
@@ -101,14 +139,14 @@ namespace Raven.Server.Documents.Replication
             using (var conflictsIt = conflicts.GetEnumerator())
             using (var versionsIt = revisions?.GetEnumerator())
             using (var attachmentsIt = attachments.GetEnumerator())
-            using (var mergedInEnumerator = new MergedReplicationBatchEnumerator())
+            using (var mergedInEnumerator = new MergedReplicationBatchEnumerator(stats.DocumentRead, stats.AttachmentRead, stats.TombstoneRead))
             {
-                mergedInEnumerator.AddEnumerator(docsIt);
-                mergedInEnumerator.AddEnumerator(tombsIt);
-                mergedInEnumerator.AddEnumerator(conflictsIt);
-                mergedInEnumerator.AddEnumerator(versionsIt);
-                mergedInEnumerator.AddEnumerator(attachmentsIt);
-                
+                mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Document, docsIt);
+                mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.DocumentTombstone, tombsIt);
+                mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Document, conflictsIt);
+                mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Document, versionsIt);
+                mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Attachment, attachmentsIt);
+
                 while (mergedInEnumerator.MoveNext())
                 {
                     yield return mergedInEnumerator.Current;
@@ -116,8 +154,10 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public bool ExecuteReplicationOnce()
+        public bool ExecuteReplicationOnce(OutgoingReplicationStatsScope stats)
         {
+            EnsureValidStats(stats);
+
             DocumentsOperationContext documentsContext;
             using (_parent._database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
             using (documentsContext.OpenReadTransaction())
@@ -135,29 +175,35 @@ namespace Raven.Server.Documents.Replication
                     long size = 0;
                     int numberOfItemsSent = 0;
                     short lastTransactionMarker = -1;
-                    foreach (var item in GetDocsConflictsTombstonesRevisionsAndAttachmentsAfter(documentsContext, _lastEtag))
+                    using (_stats.Storage.Start())
                     {
-                        if (lastTransactionMarker != item.TransactionMarker)
+                        foreach (var item in GetDocsConflictsTombstonesRevisionsAndAttachmentsAfter(documentsContext, _lastEtag, _stats))
                         {
-                            lastTransactionMarker = item.TransactionMarker;
+                            if (lastTransactionMarker != item.TransactionMarker)
+                            {
+                                lastTransactionMarker = item.TransactionMarker;
 
-                            // Include the attachment's document which is right after its latest attachment.
-                            if (item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
-                                // We want to limit batch sizes to reasonable limits.
-                                ((maxSizeToSend.HasValue && size > maxSizeToSend.Value) ||
-                                 (batchSize.HasValue && numberOfItemsSent > batchSize.Value)))
-                            break;
+                                // Include the attachment's document which is right after its latest attachment.
+                                if ((item.Type == ReplicationBatchItem.ReplicationItemType.Document ||
+                                     item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone) &&
+                                    // We want to limit batch sizes to reasonable limits.
+                                    ((maxSizeToSend.HasValue && size > maxSizeToSend.Value) ||
+                                     (batchSize.HasValue && numberOfItemsSent > batchSize.Value)))
+                                    break;
+                            }
+
+                            _stats.Storage.RecordInputAttempt();
+
+                            _lastEtag = item.Etag;
+
+                            if (item.Data != null)
+                                size += item.Data.Size;
+                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
+                                size += item.Stream.Length;
+
+                            if (AddReplicationItemToBatch(item, _stats.Storage))
+                                numberOfItemsSent++;
                         }
-
-                        _lastEtag = item.Etag;
-
-                        if (item.Data != null)
-                            size += item.Data.Size;
-                        else if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
-                            size += item.Stream.Length;
-
-                        if (AddReplicationItemToBatch(item))
-                            numberOfItemsSent++;
                     }
 
                     if (_log.IsInfoEnabled)
@@ -177,10 +223,13 @@ namespace Raven.Server.Documents.Replication
                     }
 
                     _parent.CancellationToken.ThrowIfCancellationRequested();
-                    
+
                     try
                     {
-                        SendDocumentsBatch(documentsContext);
+                        using (_stats.Network.Start())
+                        {
+                            SendDocumentsBatch(documentsContext, _stats.Network);
+                        }
                     }
                     catch (Exception e)
                     {
@@ -214,16 +263,19 @@ namespace Raven.Server.Documents.Replication
         }
 
 
-        private unsafe bool AddReplicationItemToBatch(ReplicationBatchItem item)
+        private unsafe bool AddReplicationItemToBatch(ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
         {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
             {
                 _replicaAttachmentStreams[item.Base64Hash] = item;
             }
-            else if (item.Type == ReplicationBatchItem.ReplicationItemType.Document)
+            else if (item.Type == ReplicationBatchItem.ReplicationItemType.Document ||
+                     item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
             {
                 if ((item.Flags & DocumentFlags.Artificial) == DocumentFlags.Artificial)
                 {
+                    stats.RecordArtificialDocumentSkip();
+
                     if (_log.IsInfoEnabled)
                         _log.Info($"Skipping replication of {item.Key} because it is an artificial document");
                     return false;
@@ -232,6 +284,8 @@ namespace Raven.Server.Documents.Replication
                 bool isHiLo;
                 if (CollectionName.IsSystemDocument(item.Key.Buffer, item.Key.Size, out isHiLo) && isHiLo == false)
                 {
+                    stats.RecordSystemDocumentSkip();
+
                     if (_log.IsInfoEnabled)
                         _log.Info($"Skipping replication of {item.Key} because it is a system document");
                     return false;
@@ -240,32 +294,24 @@ namespace Raven.Server.Documents.Replication
                 // destination already has it
                 if (item.ChangeVector.GreaterThan(_parent._destinationLastKnownDocumentChangeVector) == false)
                 {
+                    stats.RecordDocumentChangeVectorSkip();
+
                     if (_log.IsInfoEnabled)
                         _log.Info($"Skipping replication of {item.Key} because destination has a higher change vector. Doc: {item.ChangeVector.Format()} < Dest: {_parent._destinationLastKnownDocumentChangeVectorAsString} ");
                     return false;
                 }
             }
 
+            Debug.Assert(item.Flags.HasFlag(DocumentFlags.Artificial) == false);
             _orderedReplicaItems.Add(item.Etag, item);
             return true;
         }
 
-
-        private void SendDocumentsBatch(DocumentsOperationContext documentsContext)
+        private void SendDocumentsBatch(DocumentsOperationContext documentsContext, OutgoingReplicationStatsScope stats)
         {
             if (_log.IsInfoEnabled)
                 _log.Info($"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag}");
 
-            var stats = new ReplicationStatistics.OutgoingBatchStats
-            {
-                Status = ReplicationStatus.Sending,
-                ItemsCount = _orderedReplicaItems.Count,
-                AttachmentStreamsCount = _replicaAttachmentStreams.Count,
-                StartSendingTime = DateTime.UtcNow,
-                SentEtagMin = _parent._lastSentDocumentEtag + 1,
-                SentEtagMax = _lastEtag,
-                Destination = _parent.FromToString
-            };
             var sw = Stopwatch.StartNew();
             var defaultResolver = _parent._parent.ReplicationDocument?.DefaultResolver;
             var headerJson = new DynamicJsonValue
@@ -279,25 +325,28 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageHeader.ResolverVersion)] = defaultResolver?.Version
             };
 
+            stats.RecordLastEtag(_lastEtag);
+
             _parent.WriteToServer(headerJson);
             foreach (var item in _orderedReplicaItems)
             {
                 var value = item.Value;
-                WriteItemToServer(value);
+                WriteItemToServer(value, stats);
             }
+
             foreach (var item in _replicaAttachmentStreams)
             {
                 var value = item.Value;
                 WriteAttachmentStreamToServer(value);
+
+                stats.RecordAttachmentOutput(value.Stream.Length);
             }
+
             // close the transaction as early as possible, and before we wait for reply
             // from other side
             documentsContext.Transaction.Dispose();
             _stream.Flush();
             sw.Stop();
-
-            stats.EndSendingTime = DateTime.UtcNow;
-            _parent.ReplicationStats.Add(stats);
 
             _parent._lastSentDocumentEtag = _lastEtag;
 
@@ -305,23 +354,38 @@ namespace Raven.Server.Documents.Replication
                 _log.Info($"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count:#,#;;0} attachment streams in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
-            _parent.HandleServerResponse();            
-            
+            _parent.HandleServerResponse();
+
         }
 
-        private unsafe void WriteItemToServer(ReplicationBatchItem item)
+        private void WriteItemToServer(ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
         {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
             {
                 WriteAttachmentToServer(item);
                 return;
             }
+
             if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
             {
                 WriteAttachmentTombstoneToServer(item);
+                stats.RecordAttachmentTombstoneOutput();
                 return;
             }
 
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
+            {
+                WriteDocumentToServer(item);
+                stats.RecordDocumentTombstoneOutput();
+                return;
+            }
+
+            WriteDocumentToServer(item);
+            stats.RecordDocumentOutput(item.Data?.Size ?? 0);
+        }
+
+        private unsafe void WriteDocumentToServer(ReplicationBatchItem item)
+        {
             var changeVectorSize = item.ChangeVector.Length * sizeof(ChangeVectorEntry);
             var requiredSize = sizeof(byte) + // type
                                sizeof(int) + // # of change vectors
@@ -332,7 +396,7 @@ namespace Raven.Server.Documents.Replication
                                sizeof(int) + // size of document key
                                item.Key.Size +
                                sizeof(int); // size of document
-                ;
+
             if (requiredSize > _tempBuffer.Length)
                 ThrowTooManyChangeVectorEntries(item.Key, item.ChangeVector);
 
@@ -420,7 +484,7 @@ namespace Raven.Server.Documents.Replication
                                item.Base64Hash.Size;
 
             if (requiredSize > _tempBuffer.Length)
-                throw new ArgumentOutOfRangeException("item",
+                throw new ArgumentOutOfRangeException(nameof(item),
                     $"Attachment name {item.Name} or content type {item.ContentType} or the key ({item.Key.Size} - {item.Key}) " +
                     $"(which might include the change vector for revisions or conflicts) is too big.");
 
@@ -463,7 +527,7 @@ namespace Raven.Server.Documents.Replication
                                item.Key.Size;
 
             if (requiredSize > _tempBuffer.Length)
-                throw new ArgumentOutOfRangeException("item", $"Attachment key ({item.Key.Size} - {item.Key}) " +
+                throw new ArgumentOutOfRangeException(nameof(item), $"Attachment key ({item.Key.Size} - {item.Key}) " +
                                                               "(which might include the change vector for revisions or conflicts) is too big.");
 
             fixed (byte* pTemp = _tempBuffer)
@@ -519,12 +583,35 @@ namespace Raven.Server.Documents.Replication
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ThrowTooManyChangeVectorEntries(LazyStringValue key, ChangeVectorEntry[] changeVector)
+        private static void ThrowTooManyChangeVectorEntries(LazyStringValue key, ChangeVectorEntry[] changeVector)
         {
             throw new ArgumentOutOfRangeException("doc",
                 "Document " + key + " has too many change vector entries to replicate: " +
                 changeVector.Length);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureValidStats(OutgoingReplicationStatsScope stats)
+        {
+            if (_statsInstance == stats)
+                return;
+
+            _statsInstance = stats;
+            _stats.Storage = stats.For(ReplicationOperation.Outgoing.Storage, start: false);
+            _stats.Network = stats.For(ReplicationOperation.Outgoing.Network, start: false);
+
+            _stats.DocumentRead = _stats.Storage.For(ReplicationOperation.Outgoing.DocumentRead, start: false);
+            _stats.TombstoneRead = _stats.Storage.For(ReplicationOperation.Outgoing.TombstoneRead, start: false);
+            _stats.AttachmentRead = _stats.Storage.For(ReplicationOperation.Outgoing.AttachmentRead, start: false);
+        }
+
+        private class ReplicationStats
+        {
+            public OutgoingReplicationStatsScope Network;
+            public OutgoingReplicationStatsScope Storage;
+            public OutgoingReplicationStatsScope DocumentRead;
+            public OutgoingReplicationStatsScope TombstoneRead;
+            public OutgoingReplicationStatsScope AttachmentRead;
+        }
     }
 }

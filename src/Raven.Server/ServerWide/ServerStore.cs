@@ -47,8 +47,7 @@ namespace Raven.Server.ServerWide
         private readonly RavenServer _ravenServer;
         public readonly DatabasesLandlord DatabasesLandlord;
         public readonly NotificationCenter.NotificationCenter NotificationCenter;
-
-        public static LicenseStorage LicenseStorage { get; } = new LicenseStorage();
+        public readonly LicenseManager LicenseManager;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
@@ -65,6 +64,8 @@ namespace Raven.Server.ServerWide
             _notificationsStorage = new NotificationsStorage(resourceName);
 
             NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, resourceName, ServerShutdown);
+
+            LicenseManager = new LicenseManager(NotificationCenter);
 
             DatabaseInfoCache = new DatabaseInfoCache();
 
@@ -108,7 +109,7 @@ namespace Raven.Server.ServerWide
             var path = Configuration.Core.DataDirectory.Combine("System");
 
             var options = Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath)
+                ? StorageEnvironmentOptions.CreateMemoryOnly()
                 : StorageEnvironmentOptions.ForPath(path.FullPath);
 
             options.SchemaVersion = 2;
@@ -148,8 +149,9 @@ namespace Raven.Server.ServerWide
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             _notificationsStorage.Initialize(_env, ContextPool);
             DatabaseInfoCache.Initialize(_env, ContextPool);
-            LicenseStorage.Initialize(_env, ContextPool);
+            
             NotificationCenter.Initialize();
+            LicenseManager.Initialize(_env, ContextPool);
 
             TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -222,20 +224,22 @@ namespace Raven.Server.ServerWide
         {
             if (_shutdownNotification.IsCancellationRequested)
                 return;
+
             lock (this)
             {
                 if (_shutdownNotification.IsCancellationRequested)
                     return;
+
                 _shutdownNotification.Cancel();
                 var toDispose = new List<IDisposable>
                 {
                     _engine,
                     NotificationCenter,
+                    LicenseManager,
                     DatabasesLandlord,
                     _env,
                     ContextPool
                 };
-
 
                 var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(ServerStore)}.");
 

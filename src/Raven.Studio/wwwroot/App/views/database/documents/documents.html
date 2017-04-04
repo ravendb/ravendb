@@ -2,20 +2,6 @@
     <div class="flex-window stretch">
         <div class="flex-window-head">
             <div class="clearfix">
-            <div class="btn-group">
-                <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
-                    <span data-bind="text: tracker.currentCollection().name"></span>
-                    <span class="caret"></span>
-                </button>
-                <ul class="dropdown-menu" data-bind="foreach: tracker.collections">
-                    <li>
-                        <a href="#" data-bind="click: _.partial($root.tracker.currentCollection, $data)">
-                            <span data-bind="text: name"></span>                            
-                            <span class="label label-primary" data-bind="text: documentCount().toLocaleString()"></span>                            
-                        </a>
-                    </li>
-                </ul>
-            </div>
        
             <div class="btn-group">
                 <button type="button" class="btn btn-primary" data-bind="click: newDocument">

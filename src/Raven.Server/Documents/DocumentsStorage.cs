@@ -12,8 +12,8 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
@@ -28,6 +28,7 @@ using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using Voron.Data;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
@@ -213,12 +214,17 @@ namespace Raven.Server.Documents
             }
 
             var options = _documentDatabase.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(_documentDatabase.Configuration.Core.DataDirectory.FullPath, null, _documentDatabase.IoChanges)
+                ? StorageEnvironmentOptions.CreateMemoryOnly(
+                    _documentDatabase.Configuration.Core.DataDirectory.FullPath,
+                    null,
+                    _documentDatabase.IoChanges,
+                    _documentDatabase.CatastrophicFailureNotification)
                 : StorageEnvironmentOptions.ForPath(
                     _documentDatabase.Configuration.Core.DataDirectory.FullPath,
                     _documentDatabase.Configuration.Storage.TempPath?.FullPath,
                     _documentDatabase.Configuration.Storage.JournalsStoragePath?.FullPath,
-                    _documentDatabase.IoChanges
+                    _documentDatabase.IoChanges,
+                    _documentDatabase.CatastrophicFailureNotification
                     );
 
             options.ForceUsing32BitsPager = _documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
@@ -575,7 +581,7 @@ namespace Raven.Server.Documents
             {
                 var doc = Get(context, loweredKey);
                 if (doc != null)
-                    return new DocumentOrTombstone {Document = doc};
+                    return new DocumentOrTombstone { Document = doc };
             }
             catch (DocumentConflictException)
             {
@@ -873,7 +879,7 @@ namespace Raven.Server.Documents
                 if (result != null)
                     return result;
             }
-            
+
             var local = GetDocumentOrTombstone(context, loweredKey, throwOnConflict: false);
 
             if (local.Tombstone != null)
@@ -883,7 +889,7 @@ namespace Raven.Server.Documents
                                                    $"Optimistic concurrency violation, transaction will be aborted.");
 
                 collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
-                
+
                 // we update the tombstone
                 var etag = CreateTombstone(context,
                     loweredKey.Content.Ptr,
@@ -976,6 +982,9 @@ namespace Raven.Server.Documents
                     return null;
                 }
 
+                // ensures that the collection trees will be created
+                collectionName = ExtractCollectionName(context, collectionName.Name);
+
                 var etag = CreateTombstone(context,
                     loweredKey.Content.Ptr,
                     loweredKey.Size,
@@ -1049,7 +1058,7 @@ namespace Raven.Server.Documents
                         if (deleteOperationResult != null)
                             deleteResults.Add(deleteOperationResult.Value);
                     }
-                    
+
                 }
 
             }
@@ -1149,7 +1158,7 @@ namespace Raven.Server.Documents
             {
                 changeVector = ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(
                     context,
-                    lowerKey, 
+                    lowerKey,
                     lowerSize,
                     newEtag,
                     docChangeVector);
@@ -1222,7 +1231,7 @@ namespace Raven.Server.Documents
                     using (conflictsTable.Allocate(out tbv))
                     {
                         tbv.Add(lowerKey, lowerSize);
-                        tbv.Add(VersioningStorage.RecordSeperator);
+                        tbv.Add(SpecialChars.RecordSeperator);
                         tbv.Add((byte*)pChangeVector, existingDoc.ChangeVector.Length * sizeof(ChangeVectorEntry));
                         tbv.Add(keyPtr, keySize);
                         tbv.Add(existingDoc.Data.BasePointer, existingDoc.Data.Size);
@@ -1254,7 +1263,7 @@ namespace Raven.Server.Documents
                     using (conflictsTable.Allocate(out tableValueBuilder))
                     {
                         tableValueBuilder.Add(lowerKey, lowerSize);
-                        tableValueBuilder.Add(VersioningStorage.RecordSeperator);
+                        tableValueBuilder.Add(SpecialChars.RecordSeperator);
                         tableValueBuilder.Add((byte*)pChangeVector, existingTombstone.ChangeVector.Length * sizeof(ChangeVectorEntry));
                         tableValueBuilder.Add(keyPtr, keySize);
                         tableValueBuilder.Add(null, 0);
@@ -1324,7 +1333,7 @@ namespace Raven.Server.Documents
                     using (conflictsTable.Allocate(out tvb))
                     {
                         tvb.Add(lowerKey, lowerSize);
-                        tvb.Add(VersioningStorage.RecordSeperator);
+                        tvb.Add(SpecialChars.RecordSeperator);
                         tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * incomingChangeVector.Length);
                         tvb.Add(keyPtr, keySize);
                         tvb.Add(doc, docSize);
@@ -1396,7 +1405,6 @@ namespace Raven.Server.Documents
 
             var collectionName = ExtractCollectionName(context, key, document);
             var newEtag = GenerateNextEtag();
-            var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
@@ -1475,9 +1483,12 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                    var oldEtag = TableValueToEtag(1, ref oldValue);
-                    if (expectedEtag != null && oldEtag != expectedEtag)
-                        ThrowConcurrentException(key, expectedEtag, oldEtag);
+                    if (expectedEtag != null)
+                    {
+                        var oldEtag = TableValueToEtag(1, ref oldValue);
+                        if (oldEtag != expectedEtag)
+                            ThrowConcurrentException(key, expectedEtag, oldEtag);
+                    }
 
                     int oldSize;
                     oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsTable.Data, out oldSize), oldSize, context);
@@ -1501,7 +1512,7 @@ namespace Raven.Server.Documents
                         oldChangeVector, newEtag);
                 }
 
-                
+
                 if (collectionName.IsSystem == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
@@ -1514,19 +1525,31 @@ namespace Raven.Server.Documents
                         if (oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
                             oldMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray oldAttachments))
                         {
-                            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
+                            // Make sure the user did not changed the value of @attachments in the @metadata
+                            // In most cases it won't be changed so we can use this value 
+                            // instead of recreating the document's blitable from scratch
+                            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false ||
+                                attachments.Equals(oldAttachments) == false)
                             {
-                                // Make sure the user did not changed the value of attachments in the metadata
-                                // In most cases it isn't chagned so we can skip recreating the document
-                                if (attachments.Equals(oldAttachments) == false)
+                                document.Modifications = new DynamicJsonValue(document)
                                 {
-                                    metadata.Modifications = new DynamicJsonValue(metadata)
+                                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue(metadata)
                                     {
                                         [Constants.Documents.Metadata.Attachments] = oldAttachments
-                                    };
-                                    document = context.ReadObject(document, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                                    }
+                                };
+#if DEBUG
+                                if (document.DebugHash != documentDebugHash)
+                                {
+                                    throw new InvalidDataException("The incoming document " + key + " has changed _during_ the put process, this is likely because you are trying to save a document that is already stored and was moved");
                                 }
+#endif
+                                document = context.ReadObject(document, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+#if DEBUG
+                                documentDebugHash = document.DebugHash;
+                                document.BlittableValidation();
+#endif
                             }
                         }
                     }
@@ -1549,7 +1572,7 @@ namespace Raven.Server.Documents
                     using (table.Allocate(out tbv))
                     {
                         tbv.Add(lowerKey, lowerSize);
-                        tbv.Add(newEtagBigEndian);
+                        tbv.Add(Bits.SwapBytes(newEtag));
                         tbv.Add(keyPtr, keySize);
                         tbv.Add(document.BasePointer, document.Size);
                         tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
@@ -1656,7 +1679,7 @@ namespace Raven.Server.Documents
             return ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, loweredKey.Content.Ptr, loweredKey.Size, newEtag);
         }
 
-       
+
 
         public IEnumerable<KeyValuePair<string, long>> GetIdentities(DocumentsOperationContext context)
         {
@@ -1997,7 +2020,7 @@ namespace Raven.Server.Documents
             }
             return name;
         }
-        
+
         private FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer> ReadCollections(Transaction tx)
         {
             var result = new FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer>(OrdinalIgnoreCaseStringStructComparer.Instance);

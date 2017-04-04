@@ -243,7 +243,7 @@ namespace FastTests.Server.Replication
             var mre = new ManualResetEventSlim();
 
             var database2 = GetDocumentDatabaseInstanceFor(store2).Result;
-            database2.DocumentReplicationLoader.ReplicationFailed += (src, ex) =>
+            database2.ReplicationLoader.ReplicationFailed += (src, ex) =>
             {
                 mre.Set();
             };

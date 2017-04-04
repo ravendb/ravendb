@@ -31,9 +31,15 @@ namespace Raven.Server.Commercial
                     return "None";
 
                 object type;
-                if (Attributes != null && Attributes.TryGetValue("type", out type))
-                    return (string)type;
-
+                if (Attributes != null && 
+                    Attributes.TryGetValue("type", out type) &&
+                    type is int)
+                {
+                    var typeAsInt = Convert.ToInt32(type);
+                    if (Enum.IsDefined(typeof(LicenseType), typeAsInt))
+                        return ((LicenseType)typeAsInt).ToString();
+                }
+                
                 return "Unknown";
             }
         }

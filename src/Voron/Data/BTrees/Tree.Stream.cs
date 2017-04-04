@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow;
+using Sparrow.Utils;
 using Voron.Data.Fixed;
 using Voron.Global;
 using Voron.Impl;
@@ -335,7 +336,7 @@ namespace Voron.Data.BTrees
             Slice result;
             using (Slice.From(_tx.Allocator, StreamInfo.GetTagPtr(info), info->TagSize, out result))
             {
-                return result.ToString();
+                return result.ToString().Replace((char)SpecialChars.RecordSeperator, '|');
             }
         }
 

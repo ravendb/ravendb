@@ -10,6 +10,37 @@ namespace FastTests.Server.Documents.Indexing
     {
         [Theory]
         [InlineData(@"
+            from u2 in (
+                from u1 in ( 
+                    from u0 in docs.Users 
+                    select new { u0.Name } 
+                ) 
+                select new {u1.Name}
+            )
+            select new { u2.Name }"
+            , @"foreach (var u0 in docs.Users)
+{
+    var u1 = new
+    {
+    u0.Name
+    }
+
+    ;
+    var u2 = new
+    {
+    u1.Name
+    }
+
+    ;
+    yield return new
+    {
+    u2.Name
+    }
+
+    ;
+}")]
+
+        [InlineData(@"
             from u in docs.Users
             from tag in u.Tags
             select new { tag }
@@ -86,22 +117,17 @@ namespace FastTests.Server.Documents.Indexing
 {
     var p0 = new
     {
-    Name = p.Name, Category = p.Category, Ratings =
-        from x in p.Ratings
-        select x.Rate
-    }
+    Name = p.Name, Category = p.Category, Ratings = p.Ratings.Select(x => x.Rate)}
 
     ;
+    yield return new
     {
-        yield return new
-        {
-        Category = p0.Category, Books = new object[]{new
-        {
-        Name = p0.Name, MinRating = DynamicEnumerable.Min(p0.Ratings), MaxRating = DynamicEnumerable.Max(p0.Ratings)}
-        }}
+    Category = p0.Category, Books = new object[]{new
+    {
+    Name = p0.Name, MinRating = DynamicEnumerable.Min(p0.Ratings), MaxRating = DynamicEnumerable.Max(p0.Ratings)}
+    }}
 
-        ;
-    }
+    ;
 }")]
         [InlineData(@"from doc in docs.Foos
 let a = doc.Aloha
@@ -141,7 +167,7 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
             var result = OptimizeExpression(code);
             Assert.IsType<ForEachStatementSyntax>(result);
 
-            Assert.Equal(result.ToFullString(), optimized);
+            Assert.Equal(optimized, result.ToFullString());
         }
 
         private static SyntaxNode OptimizeExpression(string str)

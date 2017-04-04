@@ -17,6 +17,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Platform;
 
 namespace FastTests
 {
@@ -70,8 +71,9 @@ namespace FastTests
                 {
                     if (_globalServer == null)
                     {
-                        Console.WriteLine("\tTo attach debugger to test process, use process id: {0}", Process.GetCurrentProcess().Id);
+                        Console.WriteLine("\tTo attach debugger to test process ({1}), use process id: {0}", Process.GetCurrentProcess().Id, PlatformDetails.Is32Bits ? "x86" : "x64");
                         var globalServer = GetNewServer();
+                        Console.WriteLine($"Server url is {globalServer.WebUrls[0]}");
                         AssemblyLoadContext.Default.Unloading += UnloadServer;
                         _globalServer = globalServer;
                     }

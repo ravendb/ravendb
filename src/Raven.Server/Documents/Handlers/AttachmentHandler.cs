@@ -50,7 +50,8 @@ namespace Raven.Server.Documents.Handlers
                 ChangeVectorEntry[] changeVector = null;
                 if (isDocument == false)
                 {
-                    var request = context.Read(RequestBodyStream(), "GetAttachment");
+                    var stream = TryGetRequestFormStream("ChangeVectorAndType") ?? RequestBodyStream();
+                    var request = context.Read(stream, "GetAttachment");
 
                     string typeString;
                     if (request.TryGet("Type", out typeString) == false ||

@@ -49,6 +49,14 @@ interface documentMetadataDto {
     '@last-modified'?: string;
     '@etag'?: number;
     '@flags': string;
+    '@attachments': Array<documentAttachmentDto>;
+}
+
+interface documentAttachmentDto {
+    ContentType: string;
+    Hash: string;
+    Name: string;
+    Size: number;
 }
 
 interface connectedDocument {
@@ -76,7 +84,7 @@ interface deleteDatabaseConfirmResult extends confirmDialogResult {
     keepFiles: boolean;
 }
 
-type menuItemType = "separator" | "intermediate" | "leaf";
+type menuItemType = "separator" | "intermediate" | "leaf" | "collections";
 
 interface menuItem {
     type: menuItemType;

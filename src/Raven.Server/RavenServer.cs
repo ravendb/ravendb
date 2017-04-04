@@ -21,14 +21,15 @@ using Raven.Client.Server.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -43,6 +44,7 @@ namespace Raven.Server
 
         public readonly RavenConfiguration Configuration;
 
+        public byte[] PublicKey, SecretKey;
         public ConcurrentDictionary<string, AccessToken> AccessTokensById = new ConcurrentDictionary<string, AccessToken>();
         public ConcurrentDictionary<string, AccessToken> AccessTokensByName = new ConcurrentDictionary<string, AccessToken>();
 
@@ -63,6 +65,7 @@ namespace Raven.Server
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
 
             Configuration = configuration;
+
             if (Configuration.Initialized == false)
                 throw new InvalidOperationException("Configuration must be initialized");
 
@@ -74,6 +77,16 @@ namespace Raven.Server
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
 
             _latestVersionCheck = new LatestVersionCheck(ServerStore);
+
+            PublicKey = new byte[Sodium.crypto_box_publickeybytes()];
+            SecretKey = new byte[Sodium.crypto_box_secretkeybytes()];
+
+            unsafe
+            {
+                fixed (byte* pubKey = PublicKey)
+                fixed (byte* secKey = SecretKey)
+                    Sodium.crypto_box_keypair(pubKey, secKey);
+            }
         }
 
         public async Task<TcpListenerStatus> GetTcpServerStatusAsync()
@@ -176,24 +189,6 @@ namespace Raven.Server
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Could not setup latest version check.", e);
-            }
-
-            try
-            {
-                LicenseManager.Initialize();
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not setup license check.", e);
-
-                var alert = AlertRaised.Create("License manager initialization error",
-                    "Could not intitalize the license manager",
-                    AlertType.LicenseManager_InitializationError,
-                    NotificationSeverity.Info,
-                    details: new ExceptionDetails(e));
-
-                ServerStore.NotificationCenter.Add(alert);
             }
         }
 
@@ -470,7 +465,7 @@ namespace Raven.Server
                     SubscriptionConnection.SendSubscriptionDocuments(tcp);
                     break;
                 case TcpConnectionHeaderMessage.OperationTypes.Replication:
-                    var documentReplicationLoader = tcp.DocumentDatabase.DocumentReplicationLoader;
+                    var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;
                     documentReplicationLoader.AcceptIncomingConnection(tcp);
                     break;
                 case TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery:

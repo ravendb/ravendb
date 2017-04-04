@@ -54,6 +54,8 @@ class sqlReplication extends document {
     constructor(dto: Raven.Server.Documents.ETL.Providers.SQL.SqlEtlConfiguration) {
         super(dto);
 
+        //TODO: bind command timeout + lo
+
         this.name(dto.Name);
         this.disabled(dto.Disabled);
         this.collection(dto.Collection);
@@ -149,7 +151,9 @@ class sqlReplication extends document {
             ConnectionStringSettingName: null,
             SqlTables: [sqlReplicationTable.empty().toDto()],
             ForceSqlServerQueryRecompile: false,
-            QuoteTables: true
+            QuoteTables: true,
+            CommandTimeout: null,
+            HasLoadAttachment: false
         } as Raven.Server.Documents.ETL.Providers.SQL.SqlEtlConfiguration);
     }
 
@@ -171,7 +175,9 @@ class sqlReplication extends document {
             //TODO: ConnectionStringSettingName: this.prepareConnectionString(this.CONNECTION_STRING_SETTING_NAME),
             ForceSqlServerQueryRecompile: this.forceSqlServerQueryRecompile(),
             QuoteTables: this.quoteTables(),
-            SqlTables: this.sqlReplicationTables().map(tab => tab.toDto())
+            SqlTables: this.sqlReplicationTables().map(tab => tab.toDto()),
+            CommandTimeout: null,
+            HasLoadAttachment: false //TODO: assign me!
         };
     }
 

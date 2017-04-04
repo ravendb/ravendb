@@ -14,6 +14,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 
@@ -56,7 +57,6 @@ namespace Raven.Server.Documents.Versioning
             LastModified = 7,
         }
 
-        public const byte RecordSeperator = 30;
         private readonly VersioningConfigurationCollection _emptyConfiguration = new VersioningConfigurationCollection();
 
         private VersioningStorage(DocumentDatabase database, VersioningConfiguration versioningConfiguration)
@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.Versioning
                 {
                     tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
                     tbv.Add(lowerKey, lowerSize);
-                    tbv.Add(RecordSeperator);
+                    tbv.Add(SpecialChars.RecordSeperator);
                     tbv.Add(Bits.SwapBytes(newEtag));
                     tbv.Add(keyPtr, keySize);
                     tbv.Add(data.BasePointer, data.Size);
@@ -352,7 +352,7 @@ namespace Raven.Server.Documents.Versioning
             var keyMem = context.Allocator.Allocate(lowerKeySize + 1);
 
             Memory.Copy(keyMem.Ptr, lowerKey, lowerKeySize);
-            keyMem.Ptr[lowerKeySize] = RecordSeperator;
+            keyMem.Ptr[lowerKeySize] = SpecialChars.RecordSeperator;
 
             prefixSlice = new Slice(SliceOptions.Key, keyMem);
             return new ReleaseMemory(keyMem, context);
@@ -364,7 +364,7 @@ namespace Raven.Server.Documents.Versioning
             var keyMem = context.Allocator.Allocate(lowerKey.Size + 1 + sizeof(long));
 
             Memory.Copy(keyMem.Ptr, lowerKey.Content.Ptr, lowerKey.Size);
-            keyMem.Ptr[lowerKey.Size] = RecordSeperator;
+            keyMem.Ptr[lowerKey.Size] = SpecialChars.RecordSeperator;
 
             var maxValue = Bits.SwapBytes(long.MaxValue);
             Memory.Copy(keyMem.Ptr + lowerKey.Size + 1, (byte*)&maxValue, sizeof(long));

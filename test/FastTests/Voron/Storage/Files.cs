@@ -25,7 +25,7 @@ namespace FastTests.Voron.Storage
         [Fact]
         public void TemporaryPathTest()
         {
-            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir, DataDir + "Temp");
+            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir, DataDir + "Temp", null, null, null);
 
             Assert.Equal(DataDir, options.BasePath);
             Assert.Equal(DataDir + "Temp", options.TempPath);
@@ -45,7 +45,7 @@ namespace FastTests.Voron.Storage
         [Fact]
         public void ScratchLocationWithTemporaryPathSpecified()
         {
-            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir, DataDir + "Temp");
+            var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir, DataDir + "Temp", null, null, null);
             using (var env = new StorageEnvironment(options))
             {
                 var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));

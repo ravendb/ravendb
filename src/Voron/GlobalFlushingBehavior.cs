@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using Sparrow.Logging;
+using Voron.Impl.Journal;
 
 namespace Voron
 {
@@ -21,20 +22,26 @@ namespace Voron
             return flusher;
         });
 
+        private class EnvSyncReq
+        {
+            public StorageEnvironment Env;
+            public long LastKnownSyncCounter;
+        }
+
         private readonly ConcurrentQueue<StorageEnvironment> _maybeNeedToFlush = new ConcurrentQueue<StorageEnvironment>();
         private readonly ManualResetEventSlim _flushWriterEvent = new ManualResetEventSlim();
         private readonly int _lowNumberOfFlushingResources = Math.Max(StorageEnvironment.MaxConcurrentFlushes / 10, 3);
         private readonly SemaphoreSlim _concurrentFlushes = new SemaphoreSlim(StorageEnvironment.MaxConcurrentFlushes);
         private readonly HashSet<StorageEnvironment> _avoidDuplicates = new HashSet<StorageEnvironment>();
-        private readonly ConcurrentQueue<StorageEnvironment> _maybeNeedToSync = new ConcurrentQueue<StorageEnvironment>();
-        private readonly ConcurrentQueue<StorageEnvironment> _syncIsRequired = new ConcurrentQueue<StorageEnvironment>();
+        private readonly ConcurrentQueue<EnvSyncReq> _maybeNeedToSync = new ConcurrentQueue<EnvSyncReq>();
+        private readonly ConcurrentQueue<EnvSyncReq> _syncIsRequired = new ConcurrentQueue<EnvSyncReq>();
         private readonly ConcurrentDictionary<uint, MountPointInfo> _mountPoints = new ConcurrentDictionary<uint, MountPointInfo>();
 
         private readonly Logger _log = LoggingSource.Instance.GetLogger<GlobalFlushingBehavior>("Global Flusher");
 
         private class MountPointInfo
         {
-            public readonly ConcurrentQueue<StorageEnvironment> StorageEnvironments = new ConcurrentQueue<StorageEnvironment>();
+            public readonly ConcurrentQueue<EnvSyncReq> StorageEnvironments = new ConcurrentQueue<EnvSyncReq>();
         }
 
         public bool HasLowNumberOfFlushingResources => _concurrentFlushes.CurrentCount <= _lowNumberOfFlushingResources;
@@ -49,12 +56,12 @@ namespace Voron
                 _avoidDuplicates.Clear();
                 var maybeNeedSync = _maybeNeedToSync.Count;
                 var millisecondsTimeout = 15000 - maybeNeedSync;
-                if (millisecondsTimeout <= 0 || 
+                if (millisecondsTimeout <= 0 ||
                     _flushWriterEvent.Wait(millisecondsTimeout) == false)
                 {
-                    if(_maybeNeedToSync.Count == 0)
+                    if (_maybeNeedToSync.Count == 0)
                         continue;
-                    
+
                     if (_log.IsInfoEnabled)
                     {
                         _log.Info($"Starting desired sync with {_maybeNeedToSync.Count:#,#} items to sync after {millisecondsTimeout:#,#} ms with no activity");
@@ -81,22 +88,22 @@ namespace Voron
         private void SyncDesiredEnvironments()
         {
             _avoidDuplicates.Clear();
-            StorageEnvironment envToSync;
+            EnvSyncReq envToSync;
             var limit = _maybeNeedToSync.Count;
             while (
                 // if there is high traffic into the queue, we want to abort after 
                 // we processed whatever was already in there, to avoid holding up
                 // the rest of the operations
-                limit-- > 0 && 
+                limit-- > 0 &&
                 _maybeNeedToSync.TryDequeue(out envToSync))
             {
-                if (_avoidDuplicates.Add(envToSync) == false)
+                if (_avoidDuplicates.Add(envToSync.Env) == false)
                     continue; // already seen
 
-                if (envToSync.Disposed)
+                if (envToSync.Env.Disposed)
                     continue;
 
-                var mpi = _mountPoints.GetOrAdd(envToSync.Options.DataPager.UniquePhysicalDriveId,
+                var mpi = _mountPoints.GetOrAdd(envToSync.Env.Options.DataPager.UniquePhysicalDriveId,
                     _ => new MountPointInfo());
 
                 mpi.StorageEnvironments.Enqueue(envToSync);
@@ -120,21 +127,21 @@ namespace Voron
         private void SyncRequiredEnvironments()
         {
             _avoidDuplicates.Clear();
-            StorageEnvironment envToSync;
+
             var limit = _syncIsRequired.Count;
             while (
                 // if there is high traffic into the queue, we want to abort after 
                 // we processed whatever was already in there, to avoid holding up
                 // the rest of the operations
                 limit-- > 0 &&
-                _syncIsRequired.TryDequeue(out envToSync))
+                _syncIsRequired.TryDequeue(out EnvSyncReq item))
             {
-                if (_avoidDuplicates.Add(envToSync) == false)
+                if (_avoidDuplicates.Add(item.Env) == false)
                     continue; // avoid duplicates in batch
 
-                if (ThreadPool.QueueUserWorkItem(SyncEnvironment, envToSync) == false)
+                if (ThreadPool.QueueUserWorkItem(state => SyncEnvironment((EnvSyncReq)state), item) == false)
                 {
-                    SyncEnvironment(envToSync);
+                    SyncEnvironment(item);
                 }
             }
         }
@@ -142,36 +149,41 @@ namespace Voron
         private void SyncAllEnvironmentsInMountPoint(object mt)
         {
             var mountPointInfo = (MountPointInfo)mt;
-            StorageEnvironment env;
-            while (mountPointInfo.StorageEnvironments.TryDequeue(out env))
+            EnvSyncReq req;
+            while (mountPointInfo.StorageEnvironments.TryDequeue(out req))
             {
-                SyncEnvironment(env);
+                SyncEnvironment(req);
 
                 // we have mutliple threads racing for this value, no a concern, the last one wins is probably
                 // going to be the latest, or close enough that we don't care
-                Volatile.Write(ref env.LastSyncTimeInTicks, DateTime.UtcNow.Ticks);
+                Volatile.Write(ref req.Env.LastSyncTimeInTicks, DateTime.UtcNow.Ticks);
             }
         }
 
-        private void SyncEnvironment(object state)
+        private void SyncEnvironment(EnvSyncReq req)
         {
-            var env = (StorageEnvironment)state;
-
-            if (env.Disposed)
+            if (req.Env.Disposed)
                 return;
+
+            if (req.Env.LastSyncCounter > req.LastKnownSyncCounter)
+                return; // we already a sync after this was scheduled
+
             try
             {
-                env.Journal.Applicator.SyncDataFile();
+                using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(req.Env.Journal.Applicator))
+                {
+                    operation.SyncDataFile();
+                }
             }
             catch (Exception e)
             {
                 if (_log.IsOperationsEnabled)
-                    _log.Operations($"Failed to sync data file for {env.Options.BasePath}", e);
-                env.CatastrophicFailure = ExceptionDispatchInfo.Capture(e);
+                    _log.Operations($"Failed to sync data file for {req.Env.Options.BasePath}", e);
+                req.Env.CatastrophicFailure = ExceptionDispatchInfo.Capture(e);
             }
         }
 
-      
+
         private void FlushEnvironments()
         {
             _avoidDuplicates.Clear();
@@ -205,7 +217,7 @@ namespace Voron
 
                     // At the same time, we want to avoid excessive flushes, so we'll limit it to once in a while if we don't
                     // have a lot to flush
-                    if((DateTime.UtcNow - envToFlush.LastFlushTime).TotalSeconds < 30)
+                    if ((DateTime.UtcNow - envToFlush.LastFlushTime).TotalSeconds < 30)
                         continue;
                 }
 
@@ -256,12 +268,20 @@ namespace Voron
 
         public void MaybeSyncEnvironment(StorageEnvironment env)
         {
-            _maybeNeedToSync.Enqueue(env);
+            _maybeNeedToSync.Enqueue(new EnvSyncReq
+            {
+                Env = env,
+                LastKnownSyncCounter = env.LastSyncCounter
+            });
         }
 
         public void ForceFlushAndSyncEnvironment(StorageEnvironment env)
         {
-            _syncIsRequired.Enqueue(env);
+            _syncIsRequired.Enqueue(new EnvSyncReq
+            {
+                Env = env,
+                LastKnownSyncCounter = env.LastSyncCounter
+            });
             _flushWriterEvent.Set();
         }
     }

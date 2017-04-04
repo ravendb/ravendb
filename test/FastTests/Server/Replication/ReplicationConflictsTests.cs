@@ -8,7 +8,6 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
-using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Utils;
 using Xunit;

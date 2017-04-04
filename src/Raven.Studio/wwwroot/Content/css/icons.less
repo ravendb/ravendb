@@ -891,15 +891,22 @@
 }
 
 
-/* MENU ICONS */
-#main-menu,
-.inputs-container {
+/* ONLY MENU ICON COLORS */
+#main-menu {
+    .icon-resources:before {
+        color: #f9d291;
+    }
+}
+
+/* MENU AND TOPBAR ICON COLORS*/
+
+#main-menu, .inputs-container, .stats {
     .icon-plus:before {
-        color:#b0d47d;
+        color: #b0d47d;
     }
 
     .icon-list:before {
-        color:#ef5450;
+        color: #ef5450;
     }
 
     .icon-documents:before {
@@ -942,10 +949,6 @@
         color: #7cb82f;
     }
 
-    .icon-resources:before {
-        color: #f9d291;
-    }
-
     .icon-manage-server:before {
         color: #008cc9;
     }
@@ -955,56 +958,66 @@
     }
 
     .icon-import-database:before {
-        color:#e64a19;
+        color: #e64a19;
     }
 
     .icon-export-database:before {
-        color:#ff9900;
+        color: #ff9900;
     }
 
     .icon-create-sample-data:before {
-        color:#b0b42c;
+        color: #b0b42c;
     }
 
     .icon-database {
-        color:@brand-database-color;
+        color: @brand-database-color;
     }
 
     .icon-database-settings:before {
-        color:#ea1e63;
+        color: #ea1e63;
     }
 
     .icon-replication:before {
-        color:#9c28b1;
+        color: #9c28b1;
     }
+
     .icon-sql-replication:before {
-        color:#673bb7;
+        color: #673bb7;
     }
+
     .icon-versioning:before {
-        color:#0277bd;
+        color: #0277bd;
     }
 
     .icon-storage:before {
-        color:#536d7a;
+        color: #536d7a;
     }
 
     .icon-io-test:before {
-        color:#bdbdbd
+        color: #bdbdbd
     }
 
     .icon-index-errors:before {
-        color:#e63935;
+        color: #e63935;
     }
 
     .icon-map-reduce-visualizer:before {
-        color:#9f9d26;
+        color: #9f9d26;
     }
 
     .icon-periodic-export:before {
-        color:#018390;
+        color: #018390;
     }
 
     .icon-dashboard:before {
-        color:#4fc2f8;
+        color: #4fc2f8;
+    }
+
+    .icon-patch:before {
+        color: #ffd782;
+    }
+
+    .icon-subscriptions:before {
+        color: #35f9ff;
     }
 }

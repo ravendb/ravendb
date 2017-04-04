@@ -18,14 +18,18 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Server.Utils;
-using Voron;
-
 
 namespace Raven.Server.Documents.Replication
 {
-    public class DocumentReplicationLoader : IDisposable, IDocumentTombstoneAware
+    public class ReplicationLoader : IDisposable, IDocumentTombstoneAware
     {
         public event Action<string, Exception> ReplicationFailed;
+
+        public event Action<string, IncomingReplicationHandler> IncomingReplicationAdded;
+        public event Action<string> IncomingReplicationRemoved;
+
+        public event Action<OutgoingReplicationHandler> OutgoingReplicationAdded;
+        public event Action<OutgoingReplicationHandler> OutgoingReplicationRemoved;
 
         public readonly DocumentDatabase Database;
         private volatile bool _isInitialized;
@@ -34,8 +38,6 @@ namespace Raven.Server.Documents.Replication
         internal int MinimalHeartbeatInterval;
 
         public ResolveConflictOnReplicationConfigurationChange ConflictResolver { get; }
-
-        internal readonly ReplicationStatistics RepliactionStats;
 
         private readonly ConcurrentSet<OutgoingReplicationHandler> _outgoing =
             new ConcurrentSet<OutgoingReplicationHandler>();
@@ -60,6 +62,9 @@ namespace Raven.Server.Documents.Replication
         {
             public long LastEtag;
         }
+
+
+        private int _replicationStatsId;
 
         private readonly ConcurrentDictionary<ReplicationDestination, LastEtagPerDestination> _lastSendEtagPerDestination =
             new ConcurrentDictionary<ReplicationDestination, LastEtagPerDestination>();
@@ -101,15 +106,14 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks =
             new ConcurrentQueue<TaskCompletionSource<object>>();
 
-        public DocumentReplicationLoader(DocumentDatabase database)
+        public ReplicationLoader(DocumentDatabase database)
         {
             Database = database;
-            _log = LoggingSource.Instance.GetLogger<DocumentReplicationLoader>(Database.Name);
+            _log = LoggingSource.Instance.GetLogger<ReplicationLoader>(Database.Name);
             _reconnectAttemptTimer = new Timer(AttemptReconnectFailedOutgoing,
                 null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
             MinimalHeartbeatInterval =
                (int)Database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
-            RepliactionStats = new ReplicationStatistics(this);
             ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
         }
 
@@ -274,7 +278,10 @@ namespace Raven.Server.Documents.Replication
             // need to safeguard against two concurrent connection attempts
             var newConnection = _incoming.GetOrAdd(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
             if (newConnection == newIncoming)
+            {
                 newIncoming.Start();
+                IncomingReplicationAdded?.Invoke(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
+            }
             else
                 newIncoming.Dispose();
         }
@@ -342,6 +349,9 @@ namespace Raven.Server.Documents.Replication
                     _log.Info(
                         $"Disconnecting existing connection from {value.FromToString} because we got a new connection from the same source db");
                 }
+
+                IncomingReplicationRemoved?.Invoke(connectionInfo.SourceDatabaseId);
+
                 value.Dispose();
             }
         }
@@ -409,6 +419,7 @@ namespace Raven.Server.Documents.Replication
                    NotificationSeverity.Error,
                    "DatabaseMismatch"
                );
+
         private bool ValidateReplicaitonSource()
         {
             var replicationDocument = ReplicationDocument;
@@ -468,25 +479,17 @@ namespace Raven.Server.Documents.Replication
                 Destination = destination
             });
             outgoingReplication.Start();
+
+            OutgoingReplicationAdded?.Invoke(outgoingReplication);
         }
 
         private void OnIncomingReceiveFailed(IncomingReplicationHandler instance, Exception e)
         {
             using (instance)
             {
-                var stats = new ReplicationStatistics.IncomingBatchStats
-                {
-                    Status = ReplicationStatus.Failed,
-                    Message = e.Message,
-                    RecievedTime = DateTime.UtcNow,
-                    Source = instance.FromToString,
-                    Exception = e.ToString()
-                };
-
-                RepliactionStats.Add(stats);
-
                 IncomingReplicationHandler _;
-                _incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _);
+                if (_incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _))
+                    IncomingReplicationRemoved?.Invoke(instance.ConnectionInfo.SourceDatabaseId);
 
                 instance.Failed -= OnIncomingReceiveFailed;
                 instance.DocumentsReceived -= OnIncomingReceiveSucceeded;
@@ -504,18 +507,8 @@ namespace Raven.Server.Documents.Replication
                 instance.Failed -= OnOutgoingSendingFailed;
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
 
-                var stats = new ReplicationStatistics.OutgoingBatchStats
-                {
-                    Status = ReplicationStatus.Failed,
-                    Message = e.Message,
-                    StartSendingTime = DateTime.UtcNow,
-                    Destination = instance.Destination.ToString(),
-                    Exception = e.ToString()
-                };
-
-                RepliactionStats.Add(stats);
-
                 _outgoing.TryRemove(instance);
+                OutgoingReplicationRemoved?.Invoke(instance);
 
                 ConnectionShutdownInfo failureInfo;
                 if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo) == false)
@@ -591,6 +584,9 @@ namespace Raven.Server.Documents.Replication
             {
                 instance.Failed -= OnOutgoingSendingFailed;
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
+
+                OutgoingReplicationRemoved?.Invoke(instance);
+
                 instance.Dispose();
             }
 
@@ -892,6 +888,11 @@ namespace Raven.Server.Documents.Replication
                     count++;
             }
             return count;
+        }
+
+        public int GetNextReplicationStatsId()
+        {
+            return Interlocked.Increment(ref _replicationStatsId);
         }
     }
 }

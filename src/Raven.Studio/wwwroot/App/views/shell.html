@@ -5,7 +5,7 @@
 <nav class="navbar navbar-inverse navbar-fixed-top">
     <div class="container-fluid">
         <div class="navbar-header">
-            <a class="navbar-brand hidden-xs" href="#databases">RavenDB</a>
+            <a class="navbar-brand hidden-xs" data-bind="attr: { href: appUrls.databases }">RavenDB</a>
         </div>
         <div id="navbar">
             <ul class="nav navbar-nav navbar-right">
@@ -24,20 +24,31 @@
                     <div class="form-control btn-toggle database-switcher">
                         <span class="database" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
                     </div>
+                    <a data-bind="attr: { href: $root.appUrls.databases }" class="btn btn-primary btn-sm resources-link">All Databases</a>
                     <div class="box-container">
                         <div class="database-filter-container">
                             <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />
                         </div>
                         <div class="scroller">
                             <section>
-                                <ul class="database-list" data-bind="foreach: filteredDatabases">
-                                    <li>
+                                <ul class="database-list">
+                                    <!-- ko foreach: filteredDatabases-->
+                                    <li data-bind="visible: !disabled()">
                                         <a href="#" data-bind="click: $parent.selectDatabase.bind($parent)" class="database">
-                                            <span data-bind="text: name"></span> 
-                                            <span data-bind="visible: disabled" class="badge badge-info">Disabled</span>
+                                            <span data-bind="text: name"></span>
                                             <span data-bind="visible: errored" class="badge badge-danger">Errored</span>
                                         </a>
                                     </li>
+                                    <!-- /ko -->
+                                    <!-- ko foreach: filteredDatabases-->
+                                    <li data-bind="visible: disabled"> 
+                                        <a class="database disabled">
+                                            <span data-bind="text: name"></span>
+                                            <span class="label label-default">Disabled</span>
+                                            <span data-bind="visible: errored" class="label label-danger">Errored</span>
+                                        </a>
+                                    </li>
+                                    <!-- /ko -->
                                 </ul>
                             </section>
                         </div>
@@ -101,6 +112,45 @@
         </div><!--/.nav-collapse -->
     </div>
 </nav>
+
+<script type="text/html" id="collectionsMenuItem">
+    <li>
+        <!-- ko with: $root.collectionsTracker.getAllDocumentsCollection() -->
+        <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
+            <i class="icon-recent"></i>
+            <span>Recent</span>
+            <span class="label label-primary collection-count" data-bind="text: documentCount().toLocaleString()"></span>
+        </a>
+        <!-- /ko -->
+    </li>
+    <li>
+        <!-- ko with: $root.collectionsTracker.getSystemDocumentsCollection() -->
+        <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
+            <span>System</span>
+            <span class="label label-primary collection-count" data-bind="text: documentCount().toLocaleString()"></span>
+        </a>
+        <!-- /ko -->
+    </li>
+    <li class="separator" data-bind="visible: $root.collectionsTracker.collections().length > 1">
+        <h3>Collections</h3>
+    </li>
+
+    <li>
+        <ul>
+            <!-- ko foreach: $root.collectionsTracker.collections -->
+            <li>
+                <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }, visible: !isAllDocuments && !isSystemDocuments">
+                    <span data-bind="text: name"></span>
+                    <span class="label label-primary collection-count" data-bind="text: documentCount().toLocaleString()"></span>
+                </a>
+            </li>
+            <!-- /ko -->
+        </ul>
+    </li>
+    <li class="separator">
+        <h3></h3>
+    </li>
+</script>
 
 <script type="text/html" id="leafMenuItem">
     <li data-bind="with: item">

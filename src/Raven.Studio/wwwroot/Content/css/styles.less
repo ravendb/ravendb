@@ -266,7 +266,7 @@ a {
 
     .dropdown-menu {
         &.max-height, .max-height {
-            max-height: 50vh;
+            max-height: 40vh;
             overflow:auto;
         }
 
@@ -309,6 +309,14 @@ a {
     }
 }
 
+.control-label {
+    .labelNote {
+        margin-top: -3px;
+        line-height: 12px;
+        font-size: 10px;
+    }
+}
+
 .row.row-sm {
     margin-left: -5px;
     margin-right: -5px;
@@ -322,11 +330,16 @@ a {
 .flex-row {
     @media (min-width: @screen-sm) {
         display: flex;        
-
+        flex-wrap: wrap;
         .flex-bottom {
             align-self: flex-end;
         }
     }
+}
+
+.text-elipsis {
+    overflow:hidden;
+    text-overflow:ellipsis;
 }
 
 .padding {
@@ -828,6 +841,14 @@ input[type=file] + .form-control {
             position: relative;
             top: 2px;
         }
+    }
+
+    .btn:not(.btn-primary):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-danger) {
+        border-color: @gray;
+    }
+
+    .btn-default {
+        background-color:@gray;
     }
 }
 
@@ -1349,6 +1370,12 @@ pre {
     font-weight: normal;
 }
 
+.has-error {
+    .btn {
+        border-color: @brand-danger !important;
+    }
+}
+
 .input-group {
     &.has-error {
         padding-bottom: 25px;
@@ -1487,3 +1514,4 @@ pre {
 @import "pages/patch.less";
 @import "pages/metrics.less";
 @import "pages/export-progress.less";
+@import "pages/stats.less";
