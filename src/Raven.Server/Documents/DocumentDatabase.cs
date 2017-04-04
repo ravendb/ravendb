@@ -264,9 +264,19 @@ namespace Raven.Server.Documents
                     return; // double dispose?
 
                 //before we dispose of the database we take its latest info to be displayed in the studio
-                var databaseInfo = GenerateDatabaseInfo();
-                if (databaseInfo != null)
-                    DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
+                try
+                {
+                    var databaseInfo = GenerateDatabaseInfo();
+                    if (databaseInfo != null)
+                        DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
+                }
+                catch (Exception e)
+                {
+                    // if we encountered a catastrophic failure we might not be able to retrieve database info
+                    
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Failed to generate and store database info", e);
+                }
 
                 _databaseShutdown.Cancel();
 
