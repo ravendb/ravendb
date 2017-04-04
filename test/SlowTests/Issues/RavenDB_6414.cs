@@ -19,6 +19,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Should_unload_db_and_send_notification_on_catastrophic_failure()
         {
+            UseNewLocalServer();
             using (var store = GetDocumentStore())
             {
                 var notifications = new AsyncQueue<Notification>();

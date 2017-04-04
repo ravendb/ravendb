@@ -21,9 +21,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Server.Documents.Indexing.MapReduce.RavenDB_4323_Replication())
+                using (var a = new SlowTests.Issues.RavenDB_6414())
                 {
-                    a.ReduceOutputShouldNotBeReplicated().Wait();
+                    a.Should_unload_db_and_send_notification_on_catastrophic_failure().Wait();
                 }
             }
         }
