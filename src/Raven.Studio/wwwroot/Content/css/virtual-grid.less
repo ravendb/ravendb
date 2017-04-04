@@ -1,6 +1,7 @@
 ﻿.virtual-grid {
-     background-color: @gray-darker;
-     padding: @grid-gutter-width/4;
+    background-color: @gray-darker;
+    padding: @grid-gutter-width/4;
+    overflow-x: hidden;
 
     .viewport-scroller {
         position: relative;
@@ -8,8 +9,8 @@
     }
 
     .loading {
-        z-index:1;
-        pointer-events:none;
+        z-index: 1;
+        pointer-events: none;
     }
 
     .column-container.flex-window-head {
@@ -133,6 +134,8 @@
             display: block;
             margin: 0 -@grid-gutter-width/4;
             padding: 0 @grid-gutter-width/4;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         &:last-of-type {
@@ -140,14 +143,17 @@
         }
 
         &.action-cell {
-            text-align:center;
-
             .btn {
-                border:none;
-                box-shadow:none;
-                padding:0;
-                font-size:20px;
-                height:100%;
+                padding: 0;
+                height: 100%;
+                border: none;
+                box-shadow: none;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .btn.btn-link {
+                text-align: left;
             }
         }
     }
@@ -199,6 +205,8 @@
 
         .column {
             position: relative;
+            overflow:hidden;
+            text-overflow:ellipsis;
 
             + .column {
                 border-left: 1px solid @gray-dark;
@@ -226,5 +234,8 @@
         overflow: auto;
         margin-bottom: 0;
     }
+
+    animation: none;
+    display: none;
 }
 

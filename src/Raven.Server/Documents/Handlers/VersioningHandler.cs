@@ -74,9 +74,10 @@ namespace Raven.Server.Documents.Handlers
 
                 int start = GetStart();
                 int take = GetPageSize(Database.Configuration.Core.MaxPageSize);
-                var revisions = versioningStorage.GetRevisions(context, key, start, take).ToList();
+                var result = versioningStorage.GetRevisions(context, key, start, take);
+                var revisions = result.revisions;
 
-                long actualEtag = revisions.Count == 0 ? int.MinValue : revisions[revisions.Count - 1].Etag;
+                long actualEtag = revisions.Length == 0 ? -1 : revisions[0].Etag;
                 if (GetLongFromHeaders("If-None-Match") == actualEtag)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
@@ -94,7 +95,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
 
                     writer.WritePropertyName("TotalResults");
-                    writer.WriteInteger(versioningStorage.CountOfRevisions(context, key));
+                    writer.WriteInteger(result.count);
                     writer.WriteEndObject();
                 }
             }

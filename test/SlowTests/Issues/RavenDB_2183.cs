@@ -3,18 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Tests.Common;
 
-namespace Raven.Tests.Issues
+using System.Collections.Generic;
+using System.Linq;
+using FastTests;
+using Raven.Server.Documents.Indexes.Static;
+using Xunit;
+
+namespace SlowTests.Issues
 {
-    using System.Collections.Generic;
-    using System.Linq;
-
-    using Raven.Abstractions.Linq;
-
-    using Xunit;
-
-    public class RavenDB_2183 : RavenTest
+    public class RavenDB_2183 : RavenTestBase
     {
         private class Address
         {
@@ -25,7 +23,7 @@ namespace Raven.Tests.Issues
         public void DynamicListShouldContainTakeMethod()
         {
             var list =
-                new DynamicList(
+                new DynamicArray(
                     new List<Address>
                     {
                         new Address { Street = "Street1" },

@@ -82,6 +82,11 @@ namespace Raven.Server.Config.Settings
             _valueInBytes += ConvertToBytes(value, unit);
         }
 
+        public void Add(long value, SizeUnit unit)
+        {
+            _valueInBytes += ConvertToBytes(value, unit);
+        }
+
         public static bool operator <(Size x, Size y)
         {
             return x._valueInBytes < y._valueInBytes;

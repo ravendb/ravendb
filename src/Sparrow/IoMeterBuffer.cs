@@ -96,6 +96,11 @@ namespace Sparrow
             {
                 _fileSize += fileSize;
             }
+
+            public void SetFileSize(long fileSize)
+            {
+                _fileSize = fileSize;
+            }
         }
 
         internal void Mark(long size, DateTime start, DateTime end, IoMetrics.MeterType type, long filesize, Action<MeterItem> onFileChange = null)

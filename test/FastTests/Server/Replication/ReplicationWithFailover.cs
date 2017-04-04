@@ -8,7 +8,7 @@ namespace FastTests.Server.Replication
 {
     public class ReplicationWithFailover : ReplicationTestsBase
     {
-        public class User
+        private class User
         {
             public string Name;
         }
@@ -19,7 +19,6 @@ namespace FastTests.Server.Replication
             using (var master = GetDocumentStore(ignoreDisabledDatabase: true))
             using (var slave = GetDocumentStore(ignoreDisabledDatabase: true))
             {
-
                 SetupReplication(master, slave);
                 EnsureReplicating(master, slave);
 
@@ -52,7 +51,6 @@ namespace FastTests.Server.Replication
                     Assert.NotNull(user2);
                     Assert.Equal("Shalom", user2.Name);
                 }
-
             }
         }
     }

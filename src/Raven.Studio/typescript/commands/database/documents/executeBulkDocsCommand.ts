@@ -8,7 +8,7 @@ class executeBulkDocsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Raven.Server.Documents.Handlers.CommandData[]> {
-        return this.post(endpoints.databases.batch.bulk_docs, JSON.stringify(this.docs), this.db);
+        return this.post<Raven.Server.Documents.Handlers.CommandData[]>(endpoints.databases.batch.bulk_docs, JSON.stringify(this.docs), this.db);
     }
 }
 

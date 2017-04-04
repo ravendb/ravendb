@@ -72,6 +72,7 @@ class virtualGrid<T> {
             reset: (hard: boolean = true) => this.resetItems(hard),
             selection: this.selection,
             getSelectedItems: () => this.getSelectedItems(),
+            setSelectedItems: (selection: Array<T>) => this.setSelectedItems(selection),
             dirtyResults: this.dirtyResults,
             resultEtag: () => this.previousResultsEtag()
         }
@@ -613,6 +614,16 @@ class virtualGrid<T> {
 
             return this.items.filter(x => !_.includes(excluded, x));
         }
+    }
+
+    private setSelectedItems(selection: Array<T>) {
+        this.inIncludeSelectionMode = true;
+        this.selectionDiff = selection.map(x => this.items.indexOf(x)).filter(x => x !== -1);
+
+        this.syncSelectAll();
+        this.refreshSelection();
+        this.render();
+        this.shiftSelection.lastShiftIndex(null);
     }
 
     private getSelectionCount() {

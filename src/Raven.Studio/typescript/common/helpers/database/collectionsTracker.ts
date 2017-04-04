@@ -1,23 +1,44 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 import collection = require("models/database/documents/collection");
 import database = require("models/resources/database");
-import messagePublisher = require("common/messagePublisher");
+import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
+import collectionsStats = require("models/database/documents/collectionsStats");
 
 class collectionsTracker {
 
-    collections = ko.observableArray<collection>();
-    currentCollection = ko.observable<collection>();
-    private readonly db: database;
-    private readonly resultEtagProvider: () => string;
+    static default = new collectionsTracker();
 
-    constructor(db: database, resultEtagProvider: () => string) {
-        this.db = db;
-        this.resultEtagProvider = resultEtagProvider;
+    loadStatsTask: JQueryPromise<collectionsStats>;
+
+    collections = ko.observableArray<collection>();
+    private db: database;
+
+    private events = {
+        created: [] as Array<(coll: collection) => void>,
+        changed: [] as Array<(coll: collection, etag: string) => void>,
+        removed: [] as Array<(coll: collection) => void>,
+        globalEtag: [] as Array<(etag: string) => void>
     }
 
-    dirtyCurrentCollection = ko.observable<boolean>(false);
+    onDatabaseChanged(db: database) {
+        this.db = db;
+        this.loadStatsTask = new getCollectionsStatsCommand(db)
+            .execute()
+            .done(stats => this.collectionsLoaded(stats, db));
 
-    onDatabaseStatsChanged(notification: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged) {
+        return this.loadStatsTask;
+    }
+
+    private collectionsLoaded(collectionsStats: collectionsStats, db: database) {
+        let collections = collectionsStats.collections;
+        collections = _.sortBy(collections, x => x.name.toLocaleLowerCase());
+
+        //TODO: starred
+        const allDocsCollection = collection.createAllDocumentsCollection(db, collectionsStats.numberOfDocuments());
+        this.collections([allDocsCollection].concat(collections));
+    }
+
+    onDatabaseStatsChanged(notification: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged, db: database) {
         const removedCollections = notification.ModifiedCollections.filter(x => x.Count === -1);
         const changedCollections = notification.ModifiedCollections.filter(x => x.Count !== -1);
         const totalCount = notification.CountOfDocuments;
@@ -31,24 +52,16 @@ class collectionsTracker {
             this.onCollectionRemoved(toRemove);
         });
 
-        if (this.currentCollection().isAllDocuments) {
-            if (this.resultEtagProvider() !== notification.GlobalDocumentsEtag) {
-                this.dirtyCurrentCollection(true);
-            }
-        }
+        this.events.globalEtag.forEach(handler => handler(notification.GlobalDocumentsEtag));
 
         changedCollections.forEach(c => {
-            const existingCollection = this.collections().find(x => x.name.toLowerCase() == c.Name.toLocaleLowerCase());
+            const existingCollection = this.collections().find(x => x.name.toLowerCase() === c.Name.toLocaleLowerCase());
             if (existingCollection) {
                 this.onCollectionChanged(existingCollection, c);
             } else {
-                this.onCollectionCreated(c);
+                this.onCollectionCreated(c, db);
             }
         });
-    }
-
-    setCurrentAsNotDirty() {
-        this.dirtyCurrentCollection(false);
     }
 
     getCollectionNames() {
@@ -61,40 +74,59 @@ class collectionsTracker {
         return this.collections().find(x => x.isAllDocuments);
     }
 
-    private onCollectionCreated(incomingItem: Raven.Server.NotificationCenter.Notifications.ModifiedCollection) {
-        //TODO: animate incoming db in future
+    getSystemDocumentsCollection() {
+        return this.collections().find(x => x.isSystemDocuments);
+    }
 
-        const newCollection = new collection(incomingItem.Name, this.db, incomingItem.Count);
-        const insertIndex = _.sortedIndexBy<collection>(this.collections().slice(1), newCollection, x => x.name.toLocaleLowerCase()) + 1;
-        this.collections.splice(insertIndex, 0, newCollection);
+    registerOnCollectionCreatedHandler(handler: (collection: collection) => void): disposable {
+        this.events.created.push(handler);
 
-        if (this.currentCollection().isAllDocuments) {
-            this.dirtyCurrentCollection(true);
+        return {
+            dispose: () => _.pull(this.events.created, handler)
         }
     }
 
-    private onCollectionRemoved(item: collection) {
-        //TODO: animate removed collection in future
+    registerOnCollectionRemovedHandler(handler: (collection: collection) => void): disposable {
+        this.events.removed.push(handler);
 
-        if (item === this.currentCollection()) {
-            // removed current collection - go to all docs
-            messagePublisher.reportWarning(item.name + " was removed");
-            this.currentCollection(this.getAllDocumentsCollection());
-        } else if (this.currentCollection().isAllDocuments) {
-            this.dirtyCurrentCollection(true);
+        return {
+            dispose: () => _.pull(this.events.removed, handler)
         }
+    }
 
+    registerOnCollectionUpdatedHandler(handler: (collection: collection, etag: string) => void): disposable {
+        this.events.changed.push(handler);
+
+        return {
+            dispose: () => _.pull(this.events.changed, handler)
+        }
+    }
+
+    registerOnGlobalEtagUpdatedHandler(handler: (etag: string) => void): disposable {
+        this.events.globalEtag.push(handler);
+
+        return {
+            dispose: () => _.pull(this.events.globalEtag, handler)    
+        }
+    }
+
+    private onCollectionCreated(incomingItem: Raven.Server.NotificationCenter.Notifications.ModifiedCollection, db: database) {
+        const newCollection = new collection(incomingItem.Name, db, incomingItem.Count);
+        const insertIndex = _.sortedIndexBy<collection>(this.collections().slice(1), newCollection, x => x.name.toLocaleLowerCase()) + 1;
+        this.collections.splice(insertIndex, 0, newCollection);
+
+        this.events.created.forEach(handler => handler(newCollection));
+    }
+
+    private onCollectionRemoved(item: collection) {
         this.collections.remove(item);
+        this.events.removed.forEach(handler => handler(item));
     }
 
     private onCollectionChanged(item: collection, incomingData: Raven.Server.NotificationCenter.Notifications.ModifiedCollection) {
         item.documentCount(incomingData.Count);
 
-        if (item.name === this.currentCollection().name) {
-            if (incomingData.CollectionEtag !== this.resultEtagProvider()) {
-                this.dirtyCurrentCollection(true);
-            }
-        }
+        this.events.changed.forEach(handler => handler(item, incomingData.CollectionEtag));
     }
     
 }

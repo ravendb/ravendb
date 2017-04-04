@@ -266,7 +266,7 @@ a {
 
     .dropdown-menu {
         &.max-height, .max-height {
-            max-height: 50vh;
+            max-height: 40vh;
             overflow:auto;
         }
 
@@ -309,6 +309,14 @@ a {
     }
 }
 
+.control-label {
+    .labelNote {
+        margin-top: -3px;
+        line-height: 12px;
+        font-size: 10px;
+    }
+}
+
 .row.row-sm {
     margin-left: -5px;
     margin-right: -5px;
@@ -322,11 +330,16 @@ a {
 .flex-row {
     @media (min-width: @screen-sm) {
         display: flex;        
-
+        flex-wrap: wrap;
         .flex-bottom {
             align-self: flex-end;
         }
     }
+}
+
+.text-elipsis {
+    overflow:hidden;
+    text-overflow:ellipsis;
 }
 
 .padding {
@@ -471,6 +484,7 @@ hr {
 }
 
 .file-input input[type='file'] {
+    width:100%;
     visibility: hidden;
     height: 0;
 }
@@ -708,7 +722,7 @@ input[type=file] + .form-control {
     right: -10px;
     width: 130px;
     height: 130px;
-    z-index: 9990;
+    z-index: @zindex-processing-spinner;
     transition: transform 0.5s cubic-bezier(0.70, -0.40, 0.40, 1.30);
     @processing-color-1: rgba(0,0,0,0);
     @processing-color-2: @brand-primary;
@@ -725,6 +739,7 @@ input[type=file] + .form-control {
     -ms-transition: transform 0.3s cubic-bezier(0.57, 1.68, 0.68, 1.05);
     -o-transition: transform 0.3s cubic-bezier(0.57, 1.68, 0.68, 1.05);
     transition: transform 0.3s cubic-bezier(0.57, 1.68, 0.68, 1.05);
+    pointer-events: none;
 
     &:before {
         content: '';
@@ -827,6 +842,14 @@ input[type=file] + .form-control {
             top: 2px;
         }
     }
+
+    .btn:not(.btn-primary):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-danger) {
+        border-color: @gray;
+    }
+
+    .btn-default {
+        background-color:@gray;
+    }
 }
 
 .loading-overlay {
@@ -834,7 +857,7 @@ input[type=file] + .form-control {
     width: 100%;
     height: 100%;
     position: relative;
-    z-index: 9989;
+    z-index: @zindex-loading-overlay;
     -webkit-transition: opacity 0.3s 0.2s ease-in;
     -moz-transition: opacity 0.3s 0.2s ease-in;
     -ms-transition: opacity 0.3s 0.2s ease-in;
@@ -1347,6 +1370,12 @@ pre {
     font-weight: normal;
 }
 
+.has-error {
+    .btn {
+        border-color: @brand-danger !important;
+    }
+}
+
 .input-group {
     &.has-error {
         padding-bottom: 25px;
@@ -1409,7 +1438,7 @@ pre {
     right: 0;
     bottom: 0;
     left: 0;
-    z-index: 1040;
+    z-index: @zindex-modal-background;
     opacity: 0;
 
     &.show {
@@ -1432,11 +1461,11 @@ pre {
 
 .ace_editor {
     &.has-error {
-        border-color:@brand-danger;
+        border-color: @brand-danger;
     }
 
     .fullScreenModeLabel {
-        z-index:950 !important;
+        z-index: @zindex-ace-fullScreenModeLabel !important;
     }
 }
 
@@ -1450,15 +1479,19 @@ pre {
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 10000;
+    z-index: @zindex-ace-fullScreen;
 }
 
 .fullScreen {
     overflow: hidden;
 }
 
-.autocomplete-list {
-    top: 37px !important; 
+.autocomplete-list:not(.box-container) {
+    top: 37px !important;
+}
+
+.input-group-sm .autocomplete-list {
+    top: 29px !important;
 }
 
 
@@ -1480,3 +1513,5 @@ pre {
 @import "pages/query.less";
 @import "pages/patch.less";
 @import "pages/metrics.less";
+@import "pages/export-progress.less";
+@import "pages/stats.less";

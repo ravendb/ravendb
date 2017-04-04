@@ -11,6 +11,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Utils;
+using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
@@ -24,6 +25,7 @@ namespace Voron
     public abstract class StorageEnvironmentOptions : IDisposable
     {
         public string TempPath { get; }
+        public CatastrophicFailureNotification CatastrophicFailureNotification { get; }
         public IoMetrics IoMetrics { get; set; }
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
@@ -140,7 +142,7 @@ namespace Voron
 
         public Func<string, bool> ShouldUseKeyPrefix { get; set; }
 
-        protected StorageEnvironmentOptions(string tempPath, IoChangesNotifications ioChangesNotifications)
+        protected StorageEnvironmentOptions(string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
         {
             SafePosixOpenFlags = SafePosixOpenFlags | DefaultPosixFlags;
 
@@ -169,6 +171,12 @@ namespace Voron
 
             _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(tempPath);
 
+            CatastrophicFailureNotification = catastrophicFailureNotification ?? new CatastrophicFailureNotification((e) =>
+            {
+                if (_log.IsOperationsEnabled)
+                    _log.Operations($"Catastrophic failure in {this}", e);
+            });
+
             var shouldForceEnvVar = Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager");
 
             bool result;
@@ -176,23 +184,32 @@ namespace Voron
                 ForceUsing32BitsPager = result;
         }
 
-
-        public static StorageEnvironmentOptions CreateMemoryOnly(string name = null, string tempPath = null, IoChangesNotifications ioChangesNotifications = null)
+        public static StorageEnvironmentOptions CreateMemoryOnly(string name, string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
         {
             if (tempPath == null)
                 tempPath = Path.GetTempPath();
 
-            return new PureMemoryStorageEnvironmentOptions(name, tempPath, ioChangesNotifications);
+            return new PureMemoryStorageEnvironmentOptions(name, tempPath, ioChangesNotifications, catastrophicFailureNotification);
         }
 
-        public static StorageEnvironmentOptions ForPath(string path, string tempPath = null, string journalPath = null, IoChangesNotifications ioChangesNotifications = null)
+        public static StorageEnvironmentOptions CreateMemoryOnly()
+        {
+            return CreateMemoryOnly(null, null, null, null);
+        }
+
+        public static StorageEnvironmentOptions ForPath(string path, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
         {
             if (RunningOnPosix)
             {
                 path = PosixHelper.FixLinuxPath(path);
                 tempPath = PosixHelper.FixLinuxPath(tempPath);
             }
-            return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath, ioChangesNotifications);
+            return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath, ioChangesNotifications, catastrophicFailureNotification);
+        }
+
+        public static StorageEnvironmentOptions ForPath(string path)
+        {
+            return ForPath(path, null, null, null, null);
         }
 
         public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
@@ -205,8 +222,10 @@ namespace Voron
             private readonly ConcurrentDictionary<string, Lazy<IJournalWriter>> _journals =
                 new ConcurrentDictionary<string, Lazy<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
 
-            public DirectoryStorageEnvironmentOptions(string basePath, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications)
-                : base(string.IsNullOrEmpty(tempPath) == false ? Path.GetFullPath(tempPath) : Path.GetFullPath(basePath), ioChangesNotifications)
+            public DirectoryStorageEnvironmentOptions(string basePath, string tempPath, string journalPath, 
+                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
+                : base(string.IsNullOrEmpty(tempPath) == false ? Path.GetFullPath(tempPath) : Path.GetFullPath(basePath), 
+                      ioChangesNotifications, catastrophicFailureNotification)
             {
                 _basePath = Path.GetFullPath(basePath);
                 _journalPath = !string.IsNullOrEmpty(journalPath) ? Path.GetFullPath(journalPath) : _basePath;
@@ -613,7 +632,9 @@ namespace Voron
                 PosixOpenFlags = DefaultPosixFlags;
             }
 
-            public PureMemoryStorageEnvironmentOptions(string name, string tempPath, IoChangesNotifications ioChangesNotifications) : base(tempPath, ioChangesNotifications)
+            public PureMemoryStorageEnvironmentOptions(string name, string tempPath, 
+                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification) 
+                : base(tempPath, ioChangesNotifications, catastrophicFailureNotification)
             {
                 _name = name;
                 _instanceId = Interlocked.Increment(ref _counter);

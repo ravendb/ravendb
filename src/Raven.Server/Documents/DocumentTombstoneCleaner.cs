@@ -4,8 +4,6 @@ using System.Threading;
 using Raven.Client;
 using Sparrow.Logging;
 
-using Sparrow.Collections;
-
 namespace Raven.Server.Documents
 {
     public class DocumentTombstoneCleaner : IDisposable
@@ -70,8 +68,6 @@ namespace Raven.Server.Documents
                     {
                         tombstones[tombstoneCollection] = long.MaxValue;
                     }
-
-                    tombstones[AttachmentsStorage.AttachmentsTombstones] = long.MaxValue;
                 }
 
                 if (tombstones.Count == 0)

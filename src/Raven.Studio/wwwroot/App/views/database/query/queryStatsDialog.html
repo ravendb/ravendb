@@ -27,13 +27,17 @@
                         <p class="form-control-static" data-bind="text: ((typeof (DurationMilliseconds) !== 'undefined') ? DurationMilliseconds : '??? ') + 'ms'"></p>
                     </div>
                 </div>
-                <!-- TODO
+                
                 <div class="form-group">
                     <label class="col-md-3 control-label">Index:</label>
                     <div class="col-md-9">
-                        <p class="form-control-static"><a target="_blank" data-bind="text: IndexName, attr: { href: $root.selectedIndexEditUrl}">Click Here</a></p>
+                        <p class="form-control-static">
+                            <a target="_blank" data-bind="text: IndexName, attr: { href: $root.selectedIndexEditUrl}, visible: $root.canNavigateToIndex"></a>
+                            <span data-bind="text: IndexName, visible: !$root.canNavigateToIndex"></span>
+                        </p>
                     </div>
                 </div>
+                <!-- TODO
                 <div class="form-group" data-bind="visible: $root.didDynamicChangeIndex">
                     <label class="col-md-3 control-label">Index Explain:</label>
                     <div class="col-md-9">

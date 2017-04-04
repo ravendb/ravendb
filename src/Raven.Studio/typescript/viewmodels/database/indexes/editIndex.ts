@@ -3,6 +3,7 @@ import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
 import document = require("models/database/documents/document");
 import indexDefinition = require("models/database/index/indexDefinition");
+import autoIndexDefinition = require("models/database/index/autoIndexDefinition");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import getCSharpIndexDefinitionCommand = require("commands/database/index/getCSharpIndexDefinitionCommand");
 import appUrl = require("common/appUrl");
@@ -33,6 +34,8 @@ class editIndex extends viewModelBase {
 
     isEditingExistingIndex = ko.observable<boolean>(false);
     editedIndex = ko.observable<indexDefinition>();
+    isAutoIndex = ko.observable<boolean>(false);
+
     originalIndexName: string;
     isSaveEnabled: KnockoutComputed<boolean>;
     saveInProgress = ko.observable<boolean>(false);
@@ -82,7 +85,7 @@ class editIndex extends viewModelBase {
         this.editedIndex.subscribe(indexDef => {
             const firstMap = indexDef.maps()[0].map;
 
-            firstMap.throttle(1000).subscribe(map => {
+            firstMap.throttle(1000).subscribe(() => {
                 this.updateIndexFields();
             });
         });
@@ -204,7 +207,7 @@ class editIndex extends viewModelBase {
                 this.additionalStoragePaths(additionalPaths);
                 this.defaultIndexPath(indexStoragePath || editIndex.DefaultIndexStoragePath);
             })
-            .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to load database settings.", response.responseText, response.statusText))
+            .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to load database settings.", response.responseText, response.statusText));
     }
 
     private updateIndexFields() {
@@ -388,12 +391,21 @@ class editIndex extends viewModelBase {
         return new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
             .done(result => {
-                this.editedIndex(new indexDefinition(result));
+
+                if (result.Type.startsWith("Auto")) {
+                    // Auto Index
+                    this.isAutoIndex(true);
+                    this.editedIndex(new autoIndexDefinition(result));
+                } else {
+                    // Regular Index
+                    this.editedIndex(new indexDefinition(result));
+                }
+               
                 this.originalIndexName = this.editedIndex().name();
                 this.editedIndex().hasReduce(!!this.editedIndex().reduce());
                 this.updateIndexFields();
                 this.updateIndexPaths();
-            })
+            });
     }
 
     private validate(): boolean {

@@ -27,7 +27,7 @@ class commandBase {
     }
 
     query<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
-        const ajax = this.ajax(relativeUrl, args, "GET", db, options, timeToAlert);
+        const ajax = this.ajax<T>(relativeUrl, args, "GET", db, options, timeToAlert);
         if (resultsSelector) {
             var task = $.Deferred<T>();
             ajax.done((results, status, xhr) => {
@@ -44,7 +44,7 @@ class commandBase {
     }
 
     protected head<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T): JQueryPromise<T> {
-        var ajax = this.ajax(relativeUrl, args, "HEAD", db);
+        var ajax = this.ajax<T>(relativeUrl, args, "HEAD", db);
         if (resultsSelector) {
             var task = $.Deferred();
             ajax.done((results, status, xhr) => {
@@ -71,31 +71,27 @@ class commandBase {
         }
     }
 
-    protected put(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "PUT", db, options, timeToAlert);
+    protected put<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
+        return this.ajax<T>(relativeUrl, args, "PUT", db, options, timeToAlert);
     }
 
-    protected reset(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "RESET", db, options);
+    protected reset<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings): JQueryPromise<T> {
+        return this.ajax<T>(relativeUrl, args, "RESET", db, options);
     }
 
     protected del<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
-        return this.ajax(relativeUrl, args, "DELETE", db, options, timeToAlert);
+        return this.ajax<T>(relativeUrl, args, "DELETE", db, options, timeToAlert);
     }
 
-    protected post(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "POST", db, options, timeToAlert);
+    protected post<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+        return this.ajax<T>(relativeUrl, args, "POST", db, options, timeToAlert);
     }
 
-    protected patch(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "PATCH", db, options);
+    protected patch<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings): JQueryPromise<T> {
+        return this.ajax<T>(relativeUrl, args, "PATCH", db, options);
     }
 
-    protected evalJs(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings): JQueryPromise<any> {
-        return this.ajax(relativeUrl, args, "EVAL", db, options);
-    }
-
-    protected ajax(relativeUrl: string, args: any, method: string, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+    protected ajax<T>(relativeUrl: string, args: any, method: string, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
         var originalArguments = arguments;
 
         const requestExecution = protractedCommandsDetector.instance.requestStarted(4000, timeToAlert);
@@ -185,6 +181,10 @@ class commandBase {
     protected extractEtag(xhr: JQueryXHR) {
         let etag = xhr.getResponseHeader("ETag");
 
+        if (!etag) {
+            return null;
+        }
+
         if (etag.startsWith('"')) {
             etag = etag.substr(1);
         }
@@ -220,7 +220,7 @@ class commandBase {
     }
 }
 
-class oauthHandler { //TODO: we use web socket now for doing this
+class oauthHandler {
     handleOAuth(task: JQueryDeferred<any>, request: JQueryXHR, retry: Function) {
         var oauthSource = request.getResponseHeader('OAuth-Source');
 

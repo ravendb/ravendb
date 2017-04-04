@@ -211,9 +211,8 @@ namespace Voron.Impl.Journal
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
 
-        public void FreeScratchPagesOlderThan(LowLevelTransaction tx, long lastSyncedTransactionId)
+        public void FreeScratchPagesOlderThan(long lastSyncedTransactionId)
         {
-            if (tx == null) throw new ArgumentNullException(nameof(tx));
             var unusedPages = new List<PagePosition>();
 
             List<PagePosition> unusedAndFree;
@@ -231,7 +230,7 @@ namespace Voron.Impl.Journal
                 if (unusedScratchPage.IsFreedPageMarker)
                     continue;
 
-                tx.Environment.ScratchBufferPool.Free(unusedScratchPage.ScratchNumber, unusedScratchPage.ScratchPos, tx);
+                _env.ScratchBufferPool.Free(unusedScratchPage.ScratchNumber, unusedScratchPage.ScratchPos, lastSyncedTransactionId);
             }
 
             foreach (var page in unusedPages)
@@ -247,7 +246,7 @@ namespace Voron.Impl.Journal
                     continue;
                 }
 
-                tx.Environment.ScratchBufferPool.Free(page.ScratchNumber, page.ScratchPos, tx);
+                _env.ScratchBufferPool.Free(page.ScratchNumber, page.ScratchPos, lastSyncedTransactionId);
             }
         }
     }

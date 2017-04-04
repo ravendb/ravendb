@@ -688,6 +688,10 @@ namespace Raven.Server.Json
             writer.WriteInteger(statistics.CountOfAttachments);
             writer.WriteComma();
 
+            writer.WritePropertyName((nameof(statistics.CountOfUniqueAttachments)));
+            writer.WriteInteger(statistics.CountOfUniqueAttachments);
+            writer.WriteComma();
+
             writer.WritePropertyName((nameof(statistics.CountOfTransformers)));
             writer.WriteInteger(statistics.CountOfTransformers);
             writer.WriteComma();
@@ -1073,7 +1077,6 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 first = false;
 
-
                 if (document == null)
                 {
                     writer.WriteNull();
@@ -1175,12 +1178,6 @@ namespace Raven.Server.Json
                 writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.Flags);
                 writer.WriteString(document.Flags.ToString());
-
-                if ((document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
-                {
-                    writer.WriteComma();
-                    writer.WriteAttachments(document.Attachments);
-                }
             }
             if (document.Etag != 0)
             {
@@ -1208,34 +1205,6 @@ namespace Raven.Server.Json
                 writer.WriteString(document.LastModified.GetDefaultRavenFormat());
             }
             writer.WriteEndObject();
-        }
-
-        private static unsafe void WriteAttachments(this BlittableJsonTextWriter writer, IEnumerable<Attachment> attachments)
-        {
-            writer.WritePropertyName(Constants.Documents.Metadata.Attachments);
-
-            writer.WriteStartArray();
-
-            var first = true;
-            foreach (var attachment in attachments)
-            {
-                if (first == false)
-                    writer.WriteComma();
-                first = false;
-
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(nameof(AttachmentResult.Name));
-                writer.WriteString(attachment.Name);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(AttachmentResult.Hash));
-                writer.WriteRawStringWhichMustBeWithoutEscapeChars(attachment.Base64Hash.Content.Ptr, attachment.Base64Hash.Size);
-
-                writer.WriteEndObject();
-            }
-
-            writer.WriteEndArray();
         }
 
         private static readonly StringSegment MetadataKeySegment = new StringSegment(Constants.Documents.Metadata.Key);

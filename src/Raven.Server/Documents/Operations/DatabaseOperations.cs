@@ -59,12 +59,15 @@ namespace Raven.Server.Documents.Operations
         {
             Operation operation;
             if (_active.TryGetValue(id, out operation) == false)
-                return;
-            
+                throw new ArgumentException($"Operation {id} was not registered");
+      
             if (operation?.Token != null && operation.Task.IsCompleted == false)
             {
                 operation.Token.Cancel();
             }
+
+            if(operation?.Killable == false)
+                throw new ArgumentException($"Operation {id} is unkillable");
         }
 
         public Operation GetOperation(long id)
@@ -86,6 +89,7 @@ namespace Raven.Server.Documents.Operations
         public Task<IOperationResult> AddOperation(string description, OperationType operationType, Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
             long id, OperationCancelToken token = null)
         {
+
             var operationState = new OperationState
             {
                 Status = OperationStatus.InProgress
@@ -210,6 +214,9 @@ namespace Raven.Server.Documents.Operations
                 {
                     try
                     {
+                        if (active.Killable)
+                            active.Token.Cancel();
+
                         active.Task.Wait();
                     }
                     catch (Exception)
@@ -351,7 +358,11 @@ namespace Raven.Server.Documents.Operations
             DeleteByCollection,
 
             [Description("Update by collection")]
-            UpdateByCollection
+            UpdateByCollection,
+
+            [Description("Bulk Insert")]
+            BulkInsert,
+
 
         }
     }

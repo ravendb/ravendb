@@ -16,6 +16,9 @@ namespace Sparrow.Platform.Win32
         }
 
         [DllImport(LIB_SODIUM)]
+        public static extern int crypto_kx_keypair(byte* pk, byte* sk);
+
+        [DllImport(LIB_SODIUM)]
         public static extern int crypto_kdf_keybytes();
 
         [DllImport(LIB_SODIUM)]
@@ -93,5 +96,51 @@ namespace Sparrow.Platform.Win32
 
         [DllImport(LIB_SODIUM)]
         public static extern int crypto_box_publickeybytes();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_kx_publickeybytes();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_kx_secretkeybytes();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern IntPtr crypto_box_macbytes();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern IntPtr crypto_box_noncebytes();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_kx_client_session_keys(
+            byte* rx,
+            byte* tx,
+            byte* client_pk,
+            byte* client_sk,
+            byte* server_pk);
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_kx_server_session_keys(
+            byte* rx,
+            byte* tx,
+            byte* server_pk,
+            byte* server_sk,
+            byte* client_pk);
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_box_easy(
+           byte* c,
+           byte* m,
+           long mlen,
+           byte* n,
+           byte* pk,
+           byte* sk);
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_box_open_easy(
+            byte* m,
+            byte* c,
+            long clen,
+            byte* n,
+            byte* pk,
+            byte* sk);
     }
 }

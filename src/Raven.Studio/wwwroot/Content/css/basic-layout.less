@@ -3,7 +3,6 @@
 @navbar-height: 70px;
 @navbar-height-xs: 51px;
 @top-alert-height: 21px;
-@notification-center-z-index: 1035;
 
 @menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
 @layout-border: @gray-dark;
@@ -36,6 +35,26 @@
 
 .tooltip {
     .slidein-style;
+}
+
+.flex-vertical, .flex-horizontal {
+    .flex-noshrink {
+        flex-shrink: 0;
+    }
+
+    .flex-content {
+        flex-grow: 1;
+        position: relative;
+    }
+}
+
+.flex-horizontal {
+    display:flex;
+    align-items:center;
+
+    div + div {
+        margin-left:@grid-gutter-width/4;
+    }
 }
 
 .flex-vertical {
@@ -139,7 +158,7 @@
                     position: absolute;
                     width: 70%;
                     margin: -10% 15%;
-                    padding-top: 75%;
+                    padding-top: 70%;
                     border-radius: 50%;
                     background-color: @gray-lighter;
                     z-index: 0;
@@ -189,7 +208,7 @@
                         width: 100%;
                         height: 100%;
                         border-radius: 50%;
-                        z-index: 9999;
+                        z-index: @zindex-navbar;
                         border: 1px solid @brand-primary;
                         //background-color: @brand-primary;
                         .fadeoutzoom-style;
@@ -255,12 +274,17 @@
             position: relative;
             top: 2px;
 
-            a {
+            .box-container a {
                 color: @gray-lighter;
                 text-decoration: none;
                 display: block;
                 margin: 0 (@grid-gutter-width / -4);
                 padding: 1px (@grid-gutter-width / 2);
+
+                &.disabled {
+                    cursor: not-allowed;
+                    opacity: .5;
+                }
 
                 strong {
                     color: #FFF;
@@ -282,6 +306,12 @@
                         margin-right: 3px;
                         top: 1px;
                     }
+                }
+
+                .label {
+                    float: right;
+                    margin-top: 5px;
+                    margin-left: 5px;
                 }
             }
 
@@ -317,10 +347,10 @@
                 position: relative;
 
                 .database-filter {
-                    background-color: @gray !important;
-                    //border-color: @gray !important;
+                    background-color: transparent !important;
+                    border-color: @gray !important;
                     padding: 2px (@grid-gutter-width / 2);
-                    height: 34px;
+                    height: 28px;
                     margin-bottom: (@grid-gutter-width / 4);
 
                     &:focus {
@@ -336,7 +366,7 @@
                 display: none;
                 width: 100%;
                 position: absolute;
-                top: 5px;
+                top: @grid-gutter-width / 4;
 
                 .scroller {
                     max-height: 0;
@@ -377,6 +407,21 @@
         }
 
         .database-switcher-container {
+            .resources-link {
+                .slidein-style;
+                position: absolute;
+                top: @grid-gutter-width/4;
+                right: @grid-gutter-width/4;
+                z-index: 21;
+                display: none;
+            }
+
+            &.active {
+                .resources-link {
+                    display: block;
+                }
+            }
+
             .database {
                 &:before {
                     margin-right: 10px;
@@ -395,9 +440,9 @@
             }
 
             .database-filter {
-                background-color:@gray-base;
-                border-color:@gray-base;
-                margin-bottom:5px;
+                background-color: @gray-base;
+                border-color: @gray-base;
+                margin-bottom: 5px;
             }
         }
 
@@ -429,21 +474,21 @@
         @media (min-width: @screen-md) {
             clear: none;
             background-color: transparent;
-            margin-right: 120px;
+            margin-right: 90px;
             margin-left: @menu-width;
             max-height: none;
             position: relative;
 
             .database-switcher-container {
                 position: absolute;
-                right: @grid-gutter-width / 2;
-                left: 51%;
+                left: @grid-gutter-width / 2;
+                right: 51%;
             }
 
             .search-container {
                 position: absolute;
-                left: @grid-gutter-width / 2;
-                right: 51%;
+                right: @grid-gutter-width / 2;
+                left: 51%;
 
                 input:focus {
                     & + .search-autocomplete {
@@ -606,7 +651,7 @@ body.show-top-alert {
             padding: @grid-gutter-width/4 @grid-gutter-width/4 0;
 
             .form-control {
-                background-color: @gray;
+                background-color: transparent;
                 font-size: 13px;
                 padding: 4px 8px 4px @grid-gutter-width;
                 height: auto;
@@ -615,7 +660,7 @@ body.show-top-alert {
 
             .icon-search {
                 position: absolute;
-                top: 14px;
+                top: 12px;
                 left: @grid-gutter-width/2;
             }
         }
@@ -636,7 +681,7 @@ body.show-top-alert {
     -o-transform: translateX(100%);
     -ms-transform: translateX(100%);
     transform: translateX(100%);
-    z-index: @notification-center-z-index;
+    z-index: @zindex-notification-center;
     background-color: @gray-base;
     border-left: 1px solid @gray-dark;
     -webkit-transition: transform @menu-transition-ease;
@@ -748,7 +793,7 @@ body.show-top-alert {
     @media (max-width:@screen-sm-max) {
         -webkit-transform: translateX(-100%);
         transform: translateX(-100%);
-        z-index: 9970;
+        z-index: @zindex-menu-xs;
         background-color: @gray-base;
 
         &.show-menu {
@@ -951,6 +996,7 @@ body.show-top-alert {
 
             .level-1:not(:hover) {
                 transform: translateX(@menu-width - 55);
+
                 a {
                     opacity: 0;
                     transition-delay: 0;
@@ -965,7 +1011,6 @@ body.show-top-alert {
                 a {
                     transition-delay: 0;
                     opacity: 1;
-
                 }
             }
         }

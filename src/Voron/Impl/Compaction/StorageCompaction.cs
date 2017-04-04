@@ -11,6 +11,7 @@ using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Global;
 using Voron.Impl.FreeSpace;
+using Voron.Impl.Journal;
 
 namespace Voron.Impl.Compaction
 {
@@ -48,7 +49,10 @@ namespace Voron.Impl.Compaction
 
                 compactedEnv.FlushLogToDataFile();
 
-                compactedEnv.Journal.Applicator.SyncDataFile();
+                using (var op = new WriteAheadJournal.JournalApplicator.SyncOperation(compactedEnv.Journal.Applicator))
+                {
+                    op.SyncDataFile();
+                }
                 compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();
 
                 minimalCompactedDataFileSize = compactedEnv.NextPageNumber * Constants.Storage.PageSize;
@@ -164,7 +168,11 @@ namespace Voron.Impl.Compaction
 
                 using (var txw = compactedEnv.WriteTransaction(context))
                 {
-                    txw.CreateTree(treeName);
+                    if (existingTree.IsLeafCompressionSupported)
+                        txw.CreateTree(treeName, flags: TreeFlags.LeafsCompressed);
+                    else
+                        txw.CreateTree(treeName);
+
                     txw.Commit();
                 }
 
@@ -195,6 +203,39 @@ namespace Voron.Impl.Compaction
                                         newTree.MultiAdd(key, multiValue);
                                         transactionSize += multiValue.Size;
                                     } while (multiTreeIterator.MoveNext());
+                                }
+                            }
+                            else if (existingTree.IsLeafCompressionSupported)
+                            {
+                                if (newTree.State.NumberOfEntries == 170)
+                                {
+
+                                }
+
+                                using (var read = existingTree.ReadDecompressed(key))
+                                {
+                                    var value = read.Reader.AsStream();
+
+                                    newTree.Add(key, value);
+                                    transactionSize += value.Length;
+                                }
+                            }
+                            else if (existingTree.State.Flags == (TreeFlags.FixedSizeTrees | TreeFlags.Streams))
+                            {
+                                var tag = existingTree.GetStreamTag(key);
+
+                                using (var stream = existingTree.ReadStream(key))
+                                {
+                                    if (tag != null)
+                                    {
+                                        Slice tagStr;
+                                        using (Slice.From(txw.Allocator, tag, out tagStr))
+                                            newTree.AddStream(key, stream, tagStr);
+                                    }
+                                    else
+                                        newTree.AddStream(key, stream);
+
+                                    transactionSize += stream.Length;
                                 }
                             }
                             else

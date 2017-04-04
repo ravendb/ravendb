@@ -1,8 +1,10 @@
 ﻿using Sparrow;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow.Platform;
+using Voron.Data.Compression;
 using Voron.Impl;
 
 namespace Voron.Data.BTrees
@@ -16,6 +18,8 @@ namespace Voron.Data.BTrees
         private TreeCursor _cursor;
         private TreePage _currentPage;
         private bool _disposed;
+
+        private DecompressedLeafPage _decompressedPage;
 
         public event Action<IIterator> OnDisposal;
 
@@ -45,7 +49,14 @@ namespace Voron.Data.BTrees
 
             TreeNodeHeader* node;
             TreeCursorConstructor constructor;
-            _currentPage = _tree.FindPageFor(key, node: out node, cursor: out constructor, allowCompressed: false);
+            _currentPage = _tree.FindPageFor(key, node: out node, cursor: out constructor, allowCompressed: _tree.IsLeafCompressionSupported);
+
+            if (_currentPage.IsCompressed)
+            {
+                DecompressedCurrentPage();
+                node = _currentPage.Search(_tx, key);
+            }
+            
             _cursor = constructor.Build(key);
             _cursor.Pop();
 
@@ -118,6 +129,10 @@ namespace Voron.Data.BTrees
                         _cursor.Push(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
                         _currentPage = _tree.GetReadOnlyTreePage(node->PageNumber);
+
+                        if (_currentPage.IsCompressed)
+                            DecompressedCurrentPage();
+
                         _currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
 
                         if (_prefetch && _currentPage.IsLeaf)
@@ -166,6 +181,9 @@ namespace Voron.Data.BTrees
                         _cursor.Push(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
                         _currentPage = _tree.GetReadOnlyTreePage(node->PageNumber);
+
+                        if (_currentPage.IsCompressed)
+                            DecompressedCurrentPage();
 
                         _currentPage.LastSearchPosition = 0;
                     }
@@ -219,6 +237,7 @@ namespace Voron.Data.BTrees
                 MaxKey.Release(_tx.Allocator);
             _prevKeyScope.Dispose();
             _cursor.Dispose();
+            _decompressedPage?.Dispose();
             OnDisposal?.Invoke(this);
         }
 
@@ -256,7 +275,14 @@ namespace Voron.Data.BTrees
             get { return  this._tree.State.RootPageNumber; }
         }
 
+        private void DecompressedCurrentPage()
+        {
+            Debug.Assert(_tree.IsLeafCompressionSupported);
 
+            _decompressedPage?.Dispose();
+
+            _currentPage = _decompressedPage = _tree.DecompressPage(_currentPage);
+        }
     }
 
     public static class IteratorExtensions

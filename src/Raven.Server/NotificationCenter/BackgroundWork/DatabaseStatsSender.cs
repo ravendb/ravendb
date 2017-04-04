@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
@@ -63,15 +62,16 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                             .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentEtag(context, x.Name)));
                     }
 
-                    if (_latest != null && _latest.Equals(current))
-                        continue;
+                    if (_latest != null)
+                    {
+                        if (_latest.Equals(current)) 
+                            continue;
 
-                    var modifiedCollections = _latest == null
-                        ? current.Collections.Values.ToList()
-                        : ExtractModifiedCollections(current);
+                        var modifiedCollections = ExtractModifiedCollections(current);
 
-                    _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfDocuments, current.CountOfIndexes,
-                        current.CountOfStaleIndexes, current.LastEtag, modifiedCollections));
+                        _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfDocuments, current.CountOfIndexes,
+                            current.CountOfStaleIndexes, current.LastEtag, modifiedCollections));
+                    }
 
                     _latest = current;
                 }
@@ -103,7 +103,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                     continue;
                 }
 
-                if (collection.Value.Count != stats.Count)
+                if (collection.Value.Count != stats.Count || collection.Value.LastDocumentEtag != stats.LastDocumentEtag)
                     result.Add(current.Collections[collection.Key]);
             }
 

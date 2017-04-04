@@ -11,7 +11,9 @@
                         <span data-bind="text: selectedIndexLabel"></span>
                         <span class="caret"></span>
                     </button>
-                    <ul class="dropdown-menu">
+                    <div class="dropdown-menu">
+                        <ul class="menu max-height">
+
                         <!-- ko foreach: indexes -->
                         <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
                         <!-- /ko -->
@@ -29,9 +31,11 @@
                                 <span>dynamic/All Documents</span>
                             </a>
                         </li>
-                    </ul>
+                        </ul>
+                    </div>
                 </div>
-                <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }"><i class="icon-edit"></i><span>Edit index</span></a>
+                <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }, visible: !isAutoIndex()" title="Edit index"><i class="icon-edit"></i><span>Edit index</span></a>
+                <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }, visible: isAutoIndex" title="View index fields"><i class="icon-preview"></i><span>View index</span></a>
                 <a class="btn btn-default" data-bind="attr: { href: indexPerformanceUrl }" title="Navigate to index performance"><i class="icon-traffic-watch"></i><span>Index performance</span></a>
                 <a class="btn btn-default" data-bind="attr: { href: termsUrl }" title="Navigate to index terms"><i class="icon-terms"></i><span>Index terms</span></a>
                 <div class="btn-group has-disable-reason"  data-bind="attr: { 'data-original-title': isIndexMapReduce() ? '' : 'Available only for map/reduce indexes' }">
@@ -43,7 +47,8 @@
                             <i class="icon-recent"></i><span>Recent</span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu" role="menu" data-bind="foreach: recentQueries">
+                        <div class="dropdown-menu" role="menu" >
+                            <ul class="menu max-height" data-bind="foreach: recentQueries">
                             <li>
                                 <a href="#" data-bind="click: _.partial($root.runRecentQuery, $data)">
                                     <span data-bind="text: indexName === 'dynamic' ? 'All Documents' : indexName"></span>
@@ -73,7 +78,8 @@
                                     </span>
                                 </a>
                             </li>
-                        </ul>
+                            </ul>
+                        </div>
                     </div>
                     <div class="dropdown dropdown-right">
                         <button class="btn btn-default query-settings dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
@@ -89,7 +95,7 @@
 
         <div class="row margin-bottom">
             <div class="col-sm-2">
-                <h2 class="query-title">Query <small><i class="icon-info"></i></small></h2>
+                <h2 class="query-title">Query <small><i class="icon-info text-info"></i></small></h2>
             </div>
             <div class="col-sm-10">
                 <div class="query-container">
@@ -111,10 +117,10 @@
                             <i class="icon-play2 icon-lg"></i><br />
                             <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
                         </button>
+                        <div class="flex-separator"></div>
                         <button class="btn btn-default btn-block text-center" data-bind="click: openAddFilter">
                             <i class="icon-plus"></i><span>Add filter</span>
                         </button>
-                        <div class="flex-separator"></div>
                     </div>
                 </div>
 
@@ -173,11 +179,12 @@
                                 </div>
                             </div>
                             
-                            <div class="row row-sm">
-                                <div class="col-xs-12 text-right">
-                                    <button class="btn btn-primary" data-bind="click: addSortBy"><span class="icon-plus"></span><span>Add</span></button>
-                                </div>
-                            </div>
+                            
+                           <div class="clearfix">
+                               <span data-bind="visible: criteria().sorts().length === 0">No sorting specified</span>
+                                <button class="btn btn-primary btn-sm pull-right" data-bind="click: addSortBy"><span class="icon-plus"></span><span>Add</span></button>
+                           </div>
+                           
                         </div>
                     </div>
                     <div class="btn-group dropdown-right">
@@ -229,7 +236,7 @@
                             <i class="icon-table"></i><span>Display</span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu colselect-dropdown slidein-style padding padding-sm" role="menu" data-bind="dropdownPanel: true">
+                        <ul class="dropdown-menu colselect-dropdown colselect-sm slidein-style" role="menu" data-bind="dropdownPanel: true">
                             <div data-bind="compose: $root.columnsSelector"></div>
                         </ul>
                     </div>
@@ -337,20 +344,24 @@
                 <div data-bind="visible: $root.isDateFilter()">
                     <div class="form-group">
                         <label for="rangeFromInputDate" class="col-sm-4 col-md-3 control-label">From</label>
-                        <div class="col-sm-8 col-md-9 input-group date" id="rangeFromInputDate" data-bind="datePicker: rangeDateFrom, datepickerOptions: { endDateElement: 'rangeToInputDate'}" >
-                            <input type="text" class="form-control" data-bind="textInput: rangeFrom" />
-                            <span class="input-group-addon">
-                                <span class="icon-calendar"></span>
-                            </span>
+                        <div class="col-sm-8 col-md-9">
+                            <div class="input-group date" id="rangeFromInputDate" data-bind="datePicker: rangeDateFrom, datepickerOptions: { endDateElement: 'rangeToInputDate'}" >
+                                <input type="text" class="form-control" data-bind="textInput: rangeFrom" />
+                                <span class="input-group-addon">
+                                    <span class="icon-calendar"></span>
+                                </span>
+                            </div>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="rangeToInputDate" class="col-sm-4 col-md-3 control-label">To</label>
-                        <div class="col-sm-8 col-md-9 input-group date" id="rangeToInputDate" data-bind="datePicker: rangeDateTo, datepickerOptions: { startDateElement: 'rangeFromInputDate'}">
-                            <input type="text" class="form-control" data-bind="textInput: rangeTo" />
-                            <span class="input-group-addon">
-                                <span class="icon-calendar"></span>
-                            </span>
+                        <div class="col-sm-8 col-md-9">
+                            <div class="input-group date" id="rangeToInputDate" data-bind="datePicker: rangeDateTo, datepickerOptions: { startDateElement: 'rangeFromInputDate'}">
+                                <input type="text" class="form-control" data-bind="textInput: rangeTo" />
+                                <span class="input-group-addon">
+                                    <span class="icon-calendar"></span>
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -371,7 +382,9 @@
                 </div>
 
                 <div class="form-group" data-bind="visible: $root.isInFilter, validationElement: inValues">
-                    <label for="inValuesInput" class="col-sm-4 col-md-3 control-label">Values <br /><small>(comma separated)</small></label>
+                    <label for="inValuesInput" class="col-sm-4 col-md-3 control-label">Values
+                        <div class="labelNote">(comma separated)</div>
+                    </label>
                     <div class="col-sm-8 col-md-9">
                         <input type="text" id="inValuesInput" class="form-control" data-bind="textInput: inValues" />
                     </div>

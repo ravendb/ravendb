@@ -1,4 +1,5 @@
 ﻿using Voron;
+using Voron.Impl.Journal;
 using Voron.Impl.Scratch;
 using Xunit;
 
@@ -24,7 +25,7 @@ namespace FastTests.Voron
 
             using (var tx = Env.WriteTransaction())
             {
-                Env.ScratchBufferPool.Free(allocate.ScratchFileNumber, allocate.PositionInScratchBuffer, tx.LowLevelTransaction);
+                Env.ScratchBufferPool.Free(allocate.ScratchFileNumber, allocate.PositionInScratchBuffer, tx.LowLevelTransaction.Id);
                 tx.Commit();
             }
 
@@ -58,7 +59,10 @@ namespace FastTests.Voron
 
             // and now we force them to sync
             Env.FlushLogToDataFile();
-            Env.Journal.Applicator.SyncDataFile();
+            using (var op = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
+            {
+                op.SyncDataFile();
+            }
         }
     }
 

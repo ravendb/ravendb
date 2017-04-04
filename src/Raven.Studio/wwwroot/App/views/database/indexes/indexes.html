@@ -9,7 +9,7 @@
         </div>
     </div>
 
-    <div class="flex-vertical absolute-fill">
+    <div class="flex-vertical absolute-fill" data-bind="visible: sortedGroups().length">
     <div class="flex-header">
     <div class="clearfix toolbar" data-bind="if: sortedGroups().length">
         <div class="pull-left">
@@ -169,7 +169,8 @@
                                         <a class="btn btn-default" data-bind="attr: { href: queryUrl() }"><i class="icon-search"></i><span>Query</span></a>
                                     </div>
                                     <div class="btn-group" role="group" data-bind="if: !isFaulty()">
-                                        <a class="btn btn-default" data-bind="attr: { href: editUrl() }" title="Edit index"><i class="icon-edit"></i></a>
+                                        <a class="btn btn-default" data-bind="attr: { href: editUrl() }, visible: !isAutoIndex()" title="Edit index"><i class="icon-edit"></i></a>
+                                        <a class="btn btn-default" data-bind="attr: { href: editUrl() }, visible: isAutoIndex" title="View index fields"><i class="icon-preview"></i></a>
                                         <button class="btn btn-default" data-bind="click: $root.resetIndex" title="Reset index"><i class="icon-reset"></i></button>
                                     </div>
                                     <div class="btn-group" role="group">

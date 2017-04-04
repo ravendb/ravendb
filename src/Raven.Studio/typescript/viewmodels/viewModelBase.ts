@@ -32,7 +32,7 @@ class viewModelBase {
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
     private notifications: Array<changeSubscription> = [];
-    private disposableActions: Array<Function> = [];
+    private disposableActions: Array<disposable> = [];
     appUrls: computedAppUrls;
     private postboxSubscriptions: Array<KnockoutSubscription> = [];
     static showSplash = ko.observable<boolean>(false);
@@ -151,7 +151,7 @@ class viewModelBase {
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
 
-        this.disposableActions.forEach(f => f());
+        this.disposableActions.forEach(f => f.dispose());
         this.disposableActions = [];
 
         this.isAttached = true;
@@ -161,7 +161,13 @@ class viewModelBase {
     protected registerDisposableHandler($element: JQuery, event: string, handler: Function) {
         $element.on(event as any, handler);
 
-        this.disposableActions.push(() => $element.off(event as any, handler as any));
+        this.disposableActions.push({
+             dispose: () => $element.off(event as any, handler as any)
+        });
+    }
+
+    protected registerDisposable(disposable: disposable) {
+        this.disposableActions.push(disposable);
     }
 
     protected afterClientApiConnected(): void {

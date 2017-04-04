@@ -17,9 +17,11 @@ class periodicExport extends viewModelBase {
     
     showOnDiskExportRow: KnockoutComputed<boolean>;
 
+    activeDatabaseSubscription: KnockoutSubscription;
+
     constructor() {
         super();
-        this.activeDatabase.subscribe((db: database) => this.isForbidden(!db.isAdminCurrentTenant()));
+        this.activeDatabaseSubscription = this.activeDatabase.subscribe((db: database) => this.isForbidden(!db || !db.isAdminCurrentTenant()));
         this.showOnDiskExportRow = ko.computed(() => this.backupSetup() && this.backupSetup().onDiskExportEnabled());
     }
 
@@ -84,6 +86,12 @@ class periodicExport extends viewModelBase {
             var isDirty = this.dirtyFlag().isDirty();
             return hasAnyOption && isDirty;
         });
+    }
+
+    detached() {
+        super.detached();
+
+        this.activeDatabaseSubscription.dispose();
     }
 
     fetchPeriodicExportSetup(db: database): JQueryPromise<any> {

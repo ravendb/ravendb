@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly AsyncManualResetEvent _indexingBatchCompleted = new AsyncManualResetEvent();
 
-        private CancellationTokenSource _cancellationTokenSource;
+        private CancellationTokenSource _cts;
 
         protected DocumentDatabase DocumentDatabase;
 
@@ -178,7 +178,8 @@ namespace Raven.Server.Documents.Indexes
 
             var journalPath = documentDatabase.Configuration.Indexing.JournalsStoragePath?.Combine(name);
 
-            var options = StorageEnvironmentOptions.ForPath(indexPath, indexTempPath?.FullPath, journalPath?.FullPath, documentDatabase.IoChanges);
+            var options = StorageEnvironmentOptions.ForPath(indexPath, indexTempPath?.FullPath, journalPath?.FullPath,
+                documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
             try
             {
                 options.SchemaVersion = 1;
@@ -287,8 +288,10 @@ namespace Raven.Server.Documents.Indexes
                 var journalPath = configuration.JournalsStoragePath?.Combine(name);
 
                 var options = configuration.RunInMemory
-                    ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath.FullPath, indexTempPath?.FullPath, documentDatabase.IoChanges)
-                    : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, journalPath?.FullPath, documentDatabase.IoChanges);
+                    ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath.FullPath, indexTempPath?.FullPath,
+                        documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification)
+                    : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, journalPath?.FullPath,
+                        documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
 
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
@@ -415,8 +418,8 @@ namespace Raven.Server.Documents.Indexes
                     return;
 
                 SetState(IndexState.Normal);
-
-                _cancellationTokenSource = new CancellationTokenSource();
+                
+                _cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
 
                 _indexingThread = new Thread(ExecuteIndexing)
                 {
@@ -441,7 +444,7 @@ namespace Raven.Server.Documents.Indexes
                 if (_indexingThread == null)
                     return;
 
-                _cancellationTokenSource.Cancel();
+                _cts.Cancel();
 
                 var indexingThread = _indexingThread;
                 _indexingThread = null;
@@ -488,7 +491,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _disposed = true;
 
-                _cancellationTokenSource?.Cancel();
+                _cts?.Cancel();
 
                 DocumentDatabase.DocumentTombstoneCleaner.Unsubscribe(this);
 
@@ -528,8 +531,7 @@ namespace Raven.Server.Documents.Indexes
 
                 exceptionAggregator.Execute(() =>
                 {
-                    _cancellationTokenSource?.Dispose();
-                    _cancellationTokenSource = null;
+                    _cts?.Dispose();
                 });
 
                 exceptionAggregator.ThrowIfNeeded();
@@ -632,8 +634,6 @@ namespace Raven.Server.Documents.Indexes
             _priorityChanged = true;
 
             using (CultureHelper.EnsureInvariantCulture())
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown,
-                _cancellationTokenSource.Token))
             {
                 // if we are starting indexing e.g. manually after failure
                 // we need to reset errors to give it a chance
@@ -666,13 +666,13 @@ namespace Raven.Server.Documents.Indexes
                         {
                             try
                             {
-                                cts.Token.ThrowIfCancellationRequested();
+                                _cts.Token.ThrowIfCancellationRequested();
 
                                 bool didWork;
                                 try
                                 {
                                     TimeSpentIndexing.Start();
-                                    didWork = DoIndexingWork(scope, cts.Token);
+                                    didWork = DoIndexingWork(scope, _cts.Token);
                                 }
                                 finally
                                 {
@@ -696,7 +696,7 @@ namespace Raven.Server.Documents.Indexes
                                     // this can fail if the indexes lock is currently held, so we'll retry
                                     // however, we might be requested to shutdown, so we want to skip replacing
                                     // in this case, worst case scenario we'll handle this in the next batch
-                                    while (_cancellationTokenSource.IsCancellationRequested == false)
+                                    while (_cts.IsCancellationRequested == false)
                                     {
                                         if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name))
                                             break;
@@ -783,7 +783,7 @@ namespace Raven.Server.Documents.Indexes
                                     new Size(NativeMemory.ThreadAllocations.Value.Allocations, SizeUnit.Bytes));
                             }
 
-                            if (_mre.Wait(timeToWaitForMemoryCleanup, cts.Token) == false)
+                            if (_mre.Wait(timeToWaitForMemoryCleanup, _cts.Token) == false)
                             {
                                 _allocationCleanupNeeded = false;
 
@@ -794,7 +794,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 var numberOfSetEvents =
                                     WaitHandle.WaitAny(new[]
-                                        {_mre.WaitHandle, _logsAppliedEvent.WaitHandle, cts.Token.WaitHandle});
+                                        {_mre.WaitHandle, _logsAppliedEvent.WaitHandle, _cts.Token.WaitHandle});
 
                                 if (numberOfSetEvents == 1 && _logsAppliedEvent.IsSet)
                                 {
@@ -2181,7 +2181,8 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var environmentOptions =
                         (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)_environment.Options;
-                    var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath, null, null, DocumentDatabase.IoChanges);
+                    var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath, null, null, DocumentDatabase.IoChanges,
+                        DocumentDatabase.CatastrophicFailureNotification);
                     srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
                     var wasRunning = _indexingThread != null;
@@ -2190,7 +2191,8 @@ namespace Raven.Server.Documents.Indexes
 
                     compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(IndexId, Name) + "_Compact");
 
-                    using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges))
+                    using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+                        StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification))
                     {
                         compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 

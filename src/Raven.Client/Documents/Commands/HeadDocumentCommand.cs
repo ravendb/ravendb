@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -59,7 +60,12 @@ namespace Raven.Client.Documents.Commands
 
         public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
-            ThrowInvalidResponse();
+            Debug.Assert(fromCache == false);
+
+            if (response != null)
+                ThrowInvalidResponse();
+
+            Result = null;
         }
     }
 }

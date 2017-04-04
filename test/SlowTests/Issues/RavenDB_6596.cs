@@ -88,6 +88,8 @@ namespace SlowTests.Issues
             var builder = new StringBuilder();
             foreach (var test in _syncTests)
             {
+                Console.WriteLine($"Test: {test.DeclaringType.FullName}.{test.Name}");
+
                 try
                 {
                     CultureInfo.CurrentCulture = culture;
@@ -123,6 +125,8 @@ namespace SlowTests.Issues
 
             foreach (var test in _asyncTests)
             {
+                Console.WriteLine($"Test: {test.DeclaringType.FullName}.{test.Name}");
+
                 try
                 {
                     CultureInfo.CurrentCulture = culture;
@@ -133,7 +137,7 @@ namespace SlowTests.Issues
                     try
                     {
                         var @class = Activator.CreateInstance(test.DeclaringType);
-                        using ((IDisposable)@class)
+                        using (@class as IDisposable)
                         {
                             await (Task)test.Invoke(@class, null);
                         }

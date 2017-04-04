@@ -5,15 +5,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
-using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.ETL;
-using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
@@ -25,6 +22,7 @@ using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
+using Voron.Exceptions;
 using Voron.Impl.Backup;
 using DatabaseInfo = Raven.Client.Server.Operations.DatabaseInfo;
 using Size = Raven.Client.Util.Size;
@@ -66,7 +64,7 @@ namespace Raven.Server.Documents
             IndexStore = new IndexStore(this, _indexAndTransformerLocker);
             TransformerStore = new TransformerStore(this, _indexAndTransformerLocker);
             EtlLoader = new EtlLoader(this);
-            DocumentReplicationLoader = new DocumentReplicationLoader(this);
+            ReplicationLoader = new ReplicationLoader(this);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
             SubscriptionStorage = new SubscriptionStorage(this);
             Operations = new DatabaseOperations(this);
@@ -78,6 +76,10 @@ namespace Raven.Server.Documents
             ConfigurationStorage = new ConfigurationStorage(this);
             NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
+            CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
+            {
+                serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailue(name, e);
+            });
         }
 
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
@@ -112,7 +114,10 @@ namespace Raven.Server.Documents
 
         public IoChangesNotifications IoChanges { get; }
 
+        public CatastrophicFailureNotification CatastrophicFailureNotification { get;}
+
         public NotificationCenter.NotificationCenter NotificationCenter { get; private set; }
+
         public DatabaseOperations Operations { get; private set; }
 
         public HugeDocuments HugeDocuments { get; }
@@ -127,7 +132,7 @@ namespace Raven.Server.Documents
 
         public IndexesEtagsStorage IndexMetadataPersistence => ConfigurationStorage.IndexesEtagsStorage;
 
-        public DocumentReplicationLoader DocumentReplicationLoader { get; private set; }
+        public ReplicationLoader ReplicationLoader { get; private set; }
 
         public EtlLoader EtlLoader { get; private set; }
 
@@ -243,7 +248,7 @@ namespace Raven.Server.Documents
             //so replication of both documents and indexes/transformers can be made within one transaction
             ConfigurationStorage.Initialize(IndexStore, TransformerStore);
 
-            DocumentReplicationLoader.Initialize();
+            ReplicationLoader.Initialize();
 
             NotificationCenter.Initialize(this);
         }
@@ -259,9 +264,19 @@ namespace Raven.Server.Documents
                     return; // double dispose?
 
                 //before we dispose of the database we take its latest info to be displayed in the studio
-                var databaseInfo = GenerateDatabaseInfo();
-                if (databaseInfo != null)
-                    DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
+                try
+                {
+                    var databaseInfo = GenerateDatabaseInfo();
+                    if (databaseInfo != null)
+                        DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
+                }
+                catch (Exception e)
+                {
+                    // if we encountered a catastrophic failure we might not be able to retrieve database info
+                    
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Failed to generate and store database info", e);
+                }
 
                 _databaseShutdown.Cancel();
 
@@ -331,8 +346,8 @@ namespace Raven.Server.Documents
 
                 exceptionAggregator.Execute(() =>
                 {
-                    DocumentReplicationLoader?.Dispose();
-                    DocumentReplicationLoader = null;
+                    ReplicationLoader?.Dispose();
+                    ReplicationLoader = null;
                 });
 
                 exceptionAggregator.Execute(() =>

@@ -9,17 +9,19 @@
 
     .query-error {
         display: none;
+
         .help-block {
             margin-bottom: 0;
         }
     }
 
     .query-main {
-        width:100%;
+        width: 100%;
         position: relative;
     }
+
     .query-controls {
-        margin-left:@line-height-computed/2;
+        margin-left: @line-height-computed/2;
         flex-basis: @controls-width;
         flex-shrink: 0;
         display: flex;
@@ -38,12 +40,24 @@
         display: none;
         .slidein-style;
         padding: @grid-gutter-width/2;
-
-
         background-color: @gray-darker;
         width: 100%;
         position: absolute;
         top: 100%;
+    }
+}
+
+#queryContainer {
+    .virtual-grid {
+        .cell {
+            &.action-cell {
+                text-align: center;
+
+                .btn {
+                    font-size: 20px;
+                }
+            }
+        }
     }
 }
 
@@ -60,11 +74,10 @@
 .show-add-filter {
     .query-error {
         position: absolute;
-        bottom:100%;
-        width:100%;
+        bottom: 100%;
+        width: 100%;
         display: block;
-        z-index: 1049;
-
+        z-index: @zindex-modal;
     }
 
     .backdrop {
@@ -73,19 +86,19 @@
 
     .query-title, .run-query, .query-editor {
         position: relative;
-        z-index: 1049;
+        z-index: @zindex-modal;
     }
 
-    .query-source {
-        border-color: @brand-primary;
+    .query-source {        
         background-color: @gray-base;
         position: relative;
-        z-index: 1051;
+        z-index: @zindex-modal;
         margin-bottom: 0;
         .shadow-style;
     }
+
     .add-filter {
-        z-index: 1052;
+        z-index: @zindex-modal;
         display: block;
         .shadow-style;
     }

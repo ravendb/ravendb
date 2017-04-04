@@ -89,7 +89,13 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         int IEqualityComparer<Slice>.GetHashCode(Slice obj)
         {
-            return obj.GetHashCode();
+            unsafe
+            {
+                byte* ptr = obj.Content.Ptr;
+                int size = obj.Content.Length;
+
+                return (int)Hashing.Marvin32.CalculateInline(ptr, size);
+            }
         }
 
         public static unsafe bool StartWith(Slice value, Slice prefix)
@@ -153,7 +159,13 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(Slice obj)
         {
-            return obj.GetHashCode();
+            unsafe
+            {
+                byte* ptr = obj.Content.Ptr;
+                int size = obj.Content.Length;
+
+                return (int)Hashing.Marvin32.CalculateInline(ptr, size);
+            }
         }
     }
 }

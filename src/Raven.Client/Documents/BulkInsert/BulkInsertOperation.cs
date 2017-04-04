@@ -1,11 +1,20 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Net.WebSockets;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.BulkInsert;
 using Raven.Client.Documents.Identity;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
+using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Client.Util;
 using Sparrow.Json;
@@ -15,85 +24,146 @@ namespace Raven.Client.Documents.BulkInsert
 {
     public class BulkInsertOperation : IDisposable
     {
-        private readonly IDocumentStore _store;
+        private readonly CancellationToken _token;
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
-        private readonly ClientWebSocket _client;
-        private readonly JsonOperationContext _context;
-        private Task _previousOperation;
-        private readonly MemoryStream _stream = new MemoryStream();
-        private readonly BlittableJsonTextWriter _jsonWriter;
-        private readonly StreamWriter _entityWriter;
-        private readonly DocumentConventions _documentConventions = new DocumentConventions();
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-        private readonly Task<WebSocketReceiveResult> _answerFromServer;
-        private readonly JsonOperationContext.ManagedPinnedBuffer _recieveBuffer;
-        private JsonOperationContext.ReturnBuffer _returnReceiveBuffer;
-        private readonly IDisposable _releaseOperationContext;
-
-        public BulkInsertOperation(string database, IDocumentStore store, bool isSecure = false)
+        private class StreamExposerContent : HttpContent
         {
-            _store = store;
-            database = database ?? MultiDatabase.GetDatabaseName(store.Url);
-            _client = new ClientWebSocket();
-            
-            var replaceTerm = isSecure ? "wss" : "ws";
-            Init($"{store.Url.Replace("http", replaceTerm)}/databases/{database}/bulk_insert");
+            public readonly Task<Stream> OutputStream;
+            private readonly TaskCompletionSource<Stream> _outputStreamTcs;
+            private readonly TaskCompletionSource<object> _done;
 
-            _releaseOperationContext = store.GetRequestExecuter(database).ContextPool.AllocateOperationContext(out _context);
-            _returnReceiveBuffer = _context.GetManagedBuffer(out _recieveBuffer);
-            _answerFromServer = _client.ReceiveAsync(_recieveBuffer.Buffer, _cts.Token);
-         
-            _entityWriter = new StreamWriter(_stream);
-            _jsonWriter = new BlittableJsonTextWriter(_context,_stream);
+            public StreamExposerContent()
+            {
+                _outputStreamTcs = new TaskCompletionSource<Stream>();
+                OutputStream = _outputStreamTcs.Task;
+                _done = new TaskCompletionSource<object>();
+            }
+
+            public void Done()
+            {
+                if (_done.TrySetResult(null) == false)
+                {
+                    throw new BulkInsertProtocolViolationException("Unable to close the stream");
+                }
+            }
+
+            protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
+            {
+                // run the completion asynchronously to ensure that continuations (await WaitAsync()) won't happen as part of a call to TrySetResult
+                // http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266920.aspx
+
+                var currentTcs = _outputStreamTcs;
+
+                Task.Factory.StartNew(s => ((TaskCompletionSource<Stream>)s).TrySetResult(stream), currentTcs, CancellationToken.None, TaskCreationOptions.PreferFairness | TaskCreationOptions.RunContinuationsAsynchronously, TaskScheduler.Default);
+
+                currentTcs.Task.Wait();
+
+                return _done.Task;
+            }
+
+            protected override bool TryComputeLength(out long length)
+            {
+                length = -1;
+                return false;
+            }
+
+            public void ErrorOnRequestStart(Exception exception)
+            {
+                _outputStreamTcs.TrySetException(exception);
+            }
+
+            public void ErrorOnProcessingRequest(Exception exception)
+            {
+                _done.TrySetException(exception);
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                _done.TrySetCanceled();
+            }
+        }
+
+        private class BulkInsertCommand : RavenCommand<HttpResponseMessage>
+        {
+            public override bool IsReadRequest => false;
+            private readonly StreamExposerContent _stream;
+            private readonly long _id;
+            public BulkInsertCommand(long id, StreamExposerContent stream)
+            {
+                _stream = stream;
+                _id = id;
+                Timeout = TimeSpan.FromHours(12); // global max timeout
+            }
+
+            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/bulk_insert?id={_id}";
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post
+                };
+            }
+
+            public override async Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationToken token)
+            {
+                try
+                {
+                    return await client.PostAsync(request.RequestUri, _stream, token).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    _stream.ErrorOnRequestStart(e);
+                    throw;
+                }
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            {
+                throw new NotImplementedException();
+            }
+        }
+        private readonly RequestExecutor _requestExecuter;
+        private Task _bulkInsertExecuteTask;
+
+        private readonly JsonOperationContext _context;
+        private readonly EntityToBlittable _convertor = new EntityToBlittable(null);
+        private readonly IDisposable _resetContext;
+
+        private BlittableJsonTextWriter _jsonWriter;
+        private Stream _stream;
+        private readonly StreamExposerContent _streamExposerContent;
+
+        private bool _first = true;
+        private long _operationId = -1;
+        private readonly DocumentConventions _conventions;
+
+        public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default(CancellationToken))
+        {
+            _token = token;
+            database = database ?? MultiDatabase.GetDatabaseName(store.Url);
+            _conventions = store.Conventions;
+            _requestExecuter = store.GetRequestExecuter(database);
+            _resetContext = _requestExecuter.ContextPool.AllocateOperationContext(out _context);
+            _streamExposerContent = new StreamExposerContent();
+
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(store.Conventions, entity =>
                 AsyncHelpers.RunSync(() => store.Conventions.GenerateDocumentIdAsync(database, entity)));
         }
 
-        public void Init(string url)
+        private async Task WaitForId()
         {
-            AsyncHelpers.RunSync(async () =>
-            {
-                _previousOperation = _client.ConnectAsync(new Uri(url), _cts.Token);
-                // wait for the establishment of the connection, so we have the correct state.
-                await _previousOperation;
-            });
+            if (_operationId != -1)
+                return;
+
+            var bulkInsertGetIdRequest = new GetNextOperationIdCommand();
+            await _requestExecuter.ExecuteAsync(bulkInsertGetIdRequest, _context, _token).ConfigureAwait(false);
+            _operationId = bulkInsertGetIdRequest.Result;
         }
 
-        public async Task DisposeAsync()
+        public void Store(object entity, string id)
         {
-            try
-            {
-                if (_cts.IsCancellationRequested == false)
-                {
-                    await _previousOperation.ConfigureAwait(false);
-                    await _client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Bulk-Insert", _cts.Token).ConfigureAwait(false);
-                    ThrowIfServerStatusFaulted();
-                    var ans = await _answerFromServer; // wait for operation to complete.
-                    if (ans.CloseStatus == null)
-                    {
-                        await ThrowAnswerFromServer();
-                    }
-                }
-            }
-            finally
-            {
-                _client.Dispose();
-                _jsonWriter?.Dispose();
-                _entityWriter?.Dispose();
-                _stream?.Dispose();
-                _releaseOperationContext?.Dispose();
-            }
-        }
-
-        public void Dispose()
-        {
-            AsyncHelpers.RunSync(DisposeAsync);
-        }
-
-        public string Store(object entity, string id)
-        {
-            return Store(entity);
+            AsyncHelpers.RunSync(() => StoreAsync(entity, id));
         }
 
         public string Store(object entity)
@@ -110,67 +180,154 @@ namespace Raven.Client.Documents.BulkInsert
 
         public async Task StoreAsync(object entity, string id)
         {
-            if (_answerFromServer.IsCompleted)
+            if (_stream == null)
             {
-                await ThrowAnswerFromServer();
+                await WaitForId().ConfigureAwait(false);
+                await EnsureStream().ConfigureAwait(false);
             }
-            await _previousOperation.ConfigureAwait(false);
 
-            var tag = _store.Conventions.GetCollectionName(entity);
-            var clrType = _store.Conventions.GetClrTypeName(entity.GetType());
-        
-            _stream.SetLength(0);
-            _jsonWriter.WriteStartObject();
-            _jsonWriter.WritePropertyName(Constants.Documents.BulkInsert.Content);
-            _jsonWriter.Flush();
-            _documentConventions.SerializeEntityToJsonStream(entity, _entityWriter);            
-            _entityWriter.Flush();
-            _jsonWriter.WriteComma();
-            _jsonWriter.WritePropertyName(Constants.Documents.Metadata.Key);
-            _jsonWriter.WriteStartObject();
-            _jsonWriter.WritePropertyName(Constants.Documents.Metadata.Id);
-            _jsonWriter.WriteString(id);
-            if (tag != null)
+            JsonOperationContext tempContext;
+            using (_requestExecuter.ContextPool.AllocateOperationContext(out tempContext))
+            using (var doc = _convertor.ConvertEntityToBlittable(entity, _conventions, tempContext, new DocumentInfo
             {
-                _jsonWriter.WritePropertyName(Constants.Documents.Metadata.Collection);
-                _jsonWriter.WriteString(tag);
-            }
-            if (clrType != null)
+                Collection = _conventions.GetCollectionName(entity)
+            }))
             {
-                _jsonWriter.WritePropertyName(Constants.Documents.Metadata.RavenClrType);
-                _jsonWriter.WriteString(clrType);
-            }
-            _jsonWriter.WriteEndObject();
-            _jsonWriter.WriteEndObject();
-            _jsonWriter.Flush();
+                if (_first == false)
+                {
+                    _jsonWriter.WriteComma();
+                }
+                _first = false;
 
-            ArraySegment<byte> bytes;
-            _stream.TryGetBuffer(out bytes);
-            _previousOperation = _client.SendAsync(bytes, WebSocketMessageType.Text, false, _cts.Token);
+                var cmd = new DynamicJsonValue
+                {
+                    [nameof(PutCommandDataWithBlittableJson.Method)] = "PUT",
+                    [nameof(PutCommandDataWithBlittableJson.Key)] = id,
+                    [nameof(PutCommandDataWithBlittableJson.Document)] = doc,
+                };
+
+                try
+                {
+                    tempContext.Write(_jsonWriter, cmd);
+                }
+                catch (Exception e)
+                {
+                    var error = await GetExceptionFromOperation().ConfigureAwait(false);
+                    if (error != null)
+                    {
+                        throw error;
+                    }
+                    await ThrowOnUnavailableStream(id, e).ConfigureAwait(false);
+                }
+            }
         }
 
-        private async Task ThrowAnswerFromServer()
+        private async Task<BulkInsertAbortedException> GetExceptionFromOperation()
         {
-            ThrowIfServerStatusFaulted();
+            var stateRequest = new GetOperationStateCommand(_conventions, _operationId);
+            await _requestExecuter.ExecuteAsync(stateRequest, _context, _token).ConfigureAwait(false);
+            var error = stateRequest.Result.Result as OperationExceptionResult;
 
-            var result = _answerFromServer.Result;
-            _recieveBuffer.Valid = result.Count;
-            var msg = await _context.ParseToMemoryAsync(
-                _client,
-                "bulk insert error",
-                BlittableJsonDocumentBuilder.UsageMode.None,
-                _recieveBuffer);
-            string str;
-            msg.TryGet("Exception", out str);
-            throw new BulkInsertAbortedException(str);
+            if (error == null)
+                return null;
+            return new BulkInsertAbortedException(error.Error);
         }
 
-        private void ThrowIfServerStatusFaulted()
+        private async Task EnsureStream()
         {
-            if (_answerFromServer.IsFaulted)
+            var bulkCommand = new BulkInsertCommand(_operationId, _streamExposerContent);
+            _bulkInsertExecuteTask = _requestExecuter.ExecuteAsync(bulkCommand, _context, _token);
+
+            _stream = await _streamExposerContent.OutputStream.ConfigureAwait(false);
+            _jsonWriter = new BlittableJsonTextWriter(_context, _stream);
+            _jsonWriter.WriteStartArray();
+        }
+
+        private async Task ThrowOnUnavailableStream(string id, Exception innerEx)
+        {
+            _streamExposerContent.ErrorOnProcessingRequest(
+                new BulkInsertAbortedException($"Write to stream failed at document with id {id}.", innerEx));
+            await _bulkInsertExecuteTask.ConfigureAwait(false);
+        }
+
+        public async Task AbortAsync()
+        {
+            if (_operationId == -1)
+                return; // nothing was done, nothing to kill
+            await WaitForId().ConfigureAwait(false);
+            try
             {
-                _cts.Cancel();
-                throw new BulkInsertProtocolViolationException("Could not read from server, it status is faulted");
+                await _requestExecuter.ExecuteAsync(new KillOperationCommand(_operationId), _context, _token).ConfigureAwait(false);
+            }
+            catch (RavenException)
+            {
+                throw new BulkInsertAbortedException("Unable to kill this bulk insert operation, because it was not found on the server.");
+            }
+        }
+
+        public void Abort()
+        {
+            AsyncHelpers.RunSync(AbortAsync);
+        }
+
+        public void Dispose()
+        {
+            AsyncHelpers.RunSync(DisposeAsync);
+        }
+
+        public async Task DisposeAsync()
+        {
+            try
+            {
+                Exception flushEx = null;
+                if (_stream != null)
+                {
+                    try
+                    {
+                        _jsonWriter.WriteEndArray();
+                        _jsonWriter.Flush();
+                        await _stream.FlushAsync(_token).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        flushEx = e;
+                    }
+                }
+
+                _streamExposerContent.Done();
+
+                if (_operationId == -1)
+                {
+                    // closing without calling a single store. 
+                    return;
+                }
+
+                if (_bulkInsertExecuteTask != null)
+                {
+                    try
+                    {
+                        await _bulkInsertExecuteTask.ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        var errors = new List<Exception>(3) { e };
+                        if (flushEx != null)
+                            errors.Add(flushEx);
+                        var error = await GetExceptionFromOperation().ConfigureAwait(false);
+                        if (error != null)
+                        {
+                            errors.Add(error);
+                        }
+                        errors.Reverse();
+                        throw new BulkInsertAbortedException("Failed to execute bulk insert", new AggregateException(errors));
+
+                    }
+                }
+            }
+            finally
+            {
+                _streamExposerContent?.Dispose();
+                _resetContext.Dispose();
             }
         }
 

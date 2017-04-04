@@ -29,7 +29,9 @@ namespace Raven.Server.Documents.Handlers
                 stats.LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
                 stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
                 stats.CountOfRevisionDocuments = Database.BundleLoader.VersioningStorage?.GetNumberOfRevisionDocuments(context);
-                stats.CountOfAttachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
+                var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
+                stats.CountOfAttachments = attachments.AttachmentCount;
+                stats.CountOfUniqueAttachments = attachments.StreamsCount;
                 stats.CountOfIndexes = indexes.Count;
                 stats.CountOfTransformers = transformersCount;
                 stats.DatabaseId = Database.DocumentsStorage.Environment.DbId;
@@ -86,7 +88,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["DocsPutsPerSec"] = Database.Metrics.DocPutsPerSecond.CreateMeterData(true),
+                    ["DocsPutsPerSec"] = Database.Metrics.DocPutsPerSecond.CreateMeterData(true, GetBoolValueQueryString("empty", required:false) ?? true),
                 });
             }
 
@@ -102,7 +104,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["BytesPutsPerSecond"] = Database.Metrics.BytesPutsPerSecond.CreateMeterData(true),
+                    ["BytesPutsPerSecond"] = Database.Metrics.BytesPutsPerSecond.CreateMeterData(true, GetBoolValueQueryString("empty", required: false) ?? true),
                 });
             }
 

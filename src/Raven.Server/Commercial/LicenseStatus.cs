@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -20,7 +21,56 @@ namespace Raven.Server.Commercial
 
         public string Status => Attributes == null ? "AGPL - Open Source" : "Commercial";
 
-        public string LicenseType
+        public string ShortDescription
+        {
+            get
+            {
+                if (Attributes == null)
+                    return null;
+
+                int? cores = null;
+                if (Attributes.TryGetValue("cores", out object coresObject) &&
+                    coresObject is int)
+                {
+                    cores = (int)coresObject;
+                }
+
+                int? ram = null;
+                if (Attributes.TryGetValue("RAM", out object memoryObject) &&
+                    memoryObject is int)
+                {
+                    ram = (int)memoryObject;
+                }
+
+                var list = new List<string>();
+                if (cores != null)
+                    list.Add($"{cores} CPUs");
+                if (ram != null)
+                    list.Add($"{(ram.Value == 0 ? "Unlimited" : $"{ram.Value}GB")} RAM");
+
+                return string.Join(", ", list);
+            }
+        }
+
+        public string FormattedExpiration
+        {
+            get
+            {
+                if (Attributes == null)
+                    return null;
+
+                if (Attributes.TryGetValue("expiration", out object expirationObject) &&
+                    expirationObject is DateTime)
+                {
+                    var date = (DateTime)expirationObject;
+                    return date.ToString("d", CultureInfo.CurrentCulture);
+                }
+
+                return null;
+            }
+        }
+
+        public string Type
         {
             get
             {
@@ -30,9 +80,14 @@ namespace Raven.Server.Commercial
                 if (Attributes == null)
                     return "None";
 
-                object type;
-                if (Attributes != null && Attributes.TryGetValue("type", out type))
-                    return (string)type;
+                if (Attributes != null &&
+                    Attributes.TryGetValue("type", out object type) &&
+                    type is int)
+                {
+                    var typeAsInt = (int)type;
+                    if (Enum.IsDefined(typeof(LicenseType), typeAsInt))
+                        return ((LicenseType)typeAsInt).ToString();
+                }
 
                 return "Unknown";
             }
@@ -48,7 +103,9 @@ namespace Raven.Server.Commercial
                 [nameof(Error)] = Error,
                 [nameof(Message)] = Message,
                 [nameof(Status)] = Status,
-                [nameof(LicenseType)] = LicenseType,
+                [nameof(ShortDescription)] = ShortDescription,
+                [nameof(FormattedExpiration)] = FormattedExpiration,
+                [nameof(Type)] = Type,
                 [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes)
             };
         }

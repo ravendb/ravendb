@@ -345,7 +345,7 @@ namespace Raven.Client.Documents.Conventions
                 ObjectCreationHandling = ObjectCreationHandling.Auto,
                 ContractResolver = JsonContractResolver,
                 TypeNameHandling = TypeNameHandling.Auto,
-                TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple,
+                TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
                 ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 FloatParseHandling = FloatParseHandling.Double
             };

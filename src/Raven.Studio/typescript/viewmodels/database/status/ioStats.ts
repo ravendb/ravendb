@@ -224,13 +224,13 @@ class ioStats extends viewModelBase {
         closedTrackArrow: "#98a7b7"        
     }
 
-    static readonly eventsColors = {       
-        "LowSizeColorJW": "#38761d",       // JW - Journal Write
-        "HighSizeColorJW": "#93c47d",
-        "LowSizeColorDF": "#085394",       // DF - Data Flush
-        "HighSizeColorDF": "#6fa8dc",
-        "LowSizeColorDS": "#b45f06",       // DS - Data Sync
-        "HighSizeColorDS": "#f6b26b"
+    static readonly eventsColors = {
+        "LowSizeColorJW": "#93c47d",       // JW - Journal Write
+        "HighSizeColorJW": "#38761d",
+        "LowSizeColorDF": "#6fa8dc",       // DF - Data Flush
+        "HighSizeColorDF": "#085394",
+        "LowSizeColorDS": "#f6b26b",       // DS - Data Sync
+        "HighSizeColorDS": "#b45f06"
     }
    
     private static readonly trackHeight = 18; 
@@ -244,6 +244,7 @@ class ioStats extends viewModelBase {
     private static readonly itemHeight = 19;
     private static readonly itemMargin = 1;    
     private static readonly minItemWidth = 1;
+    private static readonly charWidthApproximation = 5.2;
 
     private static readonly initialOffset = 100;
     private static readonly step = 200;
@@ -975,6 +976,8 @@ class ioStats extends viewModelBase {
                     yStartPerTypeCache.set(ioStats.dataSyncString, yStart + ioStats.closedTrackHeight + ioStats.itemMargin * 3 + ioStats.itemHeight * 2);
 
                     // 3.3 Draw item in main canvas area (but only if item is inside the visible/selected area from the brush section..)
+                    context.save();
+
                     for (let fileIdx = 0; fileIdx < env.Files.length; fileIdx++) {
                         const file = env.Files[fileIdx];
                        
@@ -1000,11 +1003,14 @@ class ioStats extends viewModelBase {
                                 // 3.6 Draw the human size text on the item if there is enough space.. but don't draw on closed indexes track 
                                 // Logic: Don't draw if: [closed && isIndexTrack] ==> [!(closed && isIndexTrack)] ==> [open || !isIndexTrack]
                                 if (indexesExpanded || !isIndexTrack) {
-                                    const humanSizeTextWidth = context.measureText(recentItem.HumanSize).width;
-                                    if (dx > humanSizeTextWidth) {
-                                        context.fillStyle = 'black';
-                                        context.fillText(generalUtils.formatBytesToSize(recentItem.Size), x1 + dx / 2 - humanSizeTextWidth / 2, yStartItem + ioStats.trackHeight / 2 + 4);
-                                        // Note: there is a slight difference between Server side calculated 'HumanSize' &  the generalUtils calculation ....
+
+                                    // Calc text size:
+                                    const itemSizeText = generalUtils.formatBytesToSize(recentItem.Size);
+                                    if (dx > itemSizeText.length * ioStats.charWidthApproximation) {
+                                            context.fillStyle = 'black';
+                                            context.textAlign = "center"; 
+                                            context.font = "bold 10px Lato";
+                                            context.fillText(itemSizeText, x1 + dx / 2, yStartItem + ioStats.trackHeight / 2 + 4);
                                     }
 
                                     // 3.7 Register track item for tooltip (but not for the 'closed' indexes track)
@@ -1028,10 +1034,12 @@ class ioStats extends viewModelBase {
                             }
                         }
                     }
+
+                    context.restore();
                 };
             };
 
-            // 4. Comact closed index track StartEnd durations array
+            // 4. Compact closed index track StartEnd durations array
             this.indexesItemsStartEndJW = this.compactDurationsInfo(this.indexesItemsStartEndJW);
             this.indexesItemsStartEndDF = this.compactDurationsInfo(this.indexesItemsStartEndDF);
             this.indexesItemsStartEndDS = this.compactDurationsInfo(this.indexesItemsStartEndDS);

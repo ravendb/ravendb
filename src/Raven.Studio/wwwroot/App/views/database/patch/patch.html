@@ -47,8 +47,9 @@
                                     </a>
                                 </li>
                             </ul>
-                            <span class="input-group-btn">
-                                <button class="btn" type="button" data-bind="click: $root.previewDocument, css: { 'btn-spinner': $root.spinners.preview }, disable: $root.spinners.preview" title="Show preview"><i class="icon-preview"></i></button>
+                            <span class="input-group-btn" style="vertical-align:top">
+                                <button class="btn" type="button" data-bind="click: $root.previewDocument, css: { 'btn-spinner': $root.spinners.preview }, disable: $root.spinners.preview" title="Show preview">
+                                <i class="icon-preview"></i></button>
                             </span>
                         </div>
                     </div>
@@ -85,9 +86,11 @@
                                 <span data-bind="text: patchDocument().selectedItem() || 'Select collection...'"></span>
                                 <span class="caret"></span>
                             </button>
-                            <ul class="dropdown-menu" data-bind="foreach: collections">
-                                <li><a href="#" data-bind="text: name, click: _.partial($parent.useCollection, $data)"></a></li>
-                            </ul>
+                            <div class="dropdown-menu">
+                                <ul class="menu max-height" data-bind="foreach: collections">
+                                    <li><a href="#" data-bind="text: name, click: _.partial($parent.useCollection, $data)"></a></li>
+                                </ul>
+                            </div>
                         </div>
                         <span class="help-block" data-bind="validationMessage: patchDocument().selectedItem"></span>
                     </div>
@@ -105,7 +108,7 @@
                     </div>
                 </div>
                 <div class="row" data-bind="visible: isIndexMode">
-                    <label class="control-label col-sm-3 col-lg-2 query-label">Query <small><i class="icon-info"></i></small></label>
+                    <label class="control-label col-sm-3 col-lg-2 query-label">Query <small><i class="icon-info text-info"></i></small></label>
 
                     <div class="col-sm-9 col-lg-10 margin-bottom">
                         <div class="patch-container">
@@ -146,7 +149,7 @@
         </div>
 
         <div class="row form-horizontal" id="patch-script">
-            <label class="control-label col-sm-3 col-lg-2 patch-title">Patch script <small><i class="icon-info"></i></small></label>
+            <label class="control-label col-sm-3 col-lg-2 patch-title">Patch script <small><i class="icon-info text-info"></i></small></label>
             <div class="col-sm-9 col-lg-10">
                 <div class="patch-container">
                     <div class="patch-main">

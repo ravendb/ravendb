@@ -13,10 +13,8 @@ namespace Raven.Server.Commercial
 
         private static readonly string[] Terms =
         {
-            "id","expiration","type","version","maxRamUtilization","maxParallelism",
-            "allowWindowsClustering","OEM","numberOfDatabases","fips","periodicBackup",
-            "quotas","authorization","documentExpiration","replication","versioning",
-            "maxSizeInGb","ravenfs","encryption","compression","updatesExpiration",
+            "type", "version", "expiration", "updatesExpiration",
+            "RAM", "cores", "ISV", "encryption", "fips", "monitoring", "hotSpare"
         };
 
         private enum ValueType : byte
@@ -43,14 +41,13 @@ namespace Raven.Server.Commercial
 
         public static Dictionary<string, object> Validate(License licenseKey, RSAParameters rsAParameters)
         {
-            if (licenseKey.Keys.Count != 2)
-                throw new InvalidDataException("Wrong number of keys");
+            var keys = ExtractKeys(licenseKey.Keys);
 
             var result = new Dictionary<string, object>();
             using (var ms = new MemoryStream())
             using (var br = new BinaryReader(ms))
             {
-                var buffer = GetBytesFromBase64String(licenseKey.Keys.First());
+                var buffer = keys.Attributes;
                 ms.Write(buffer, 0, buffer.Length);
                 ms.Position = 0;
 
@@ -90,11 +87,12 @@ namespace Raven.Server.Commercial
                 var attributesLen = ms.Position;
                 ms.SetLength(attributesLen);
 
-                new BinaryWriter(ms).Write(licenseKey.Id.ToByteArray());
-                new BinaryWriter(ms).Write(licenseKey.Name);
-
+                using (var binaryWriter = new BinaryWriter(ms))
                 using (var rsa = new RSACryptoServiceProvider())
                 {
+                    binaryWriter.Write(licenseKey.Id.ToByteArray());
+                    binaryWriter.Write(licenseKey.Name);
+
                     rsa.ImportParameters(rsAParameters);
 
                     using (var sha1 = SHA1.Create())
@@ -102,14 +100,34 @@ namespace Raven.Server.Commercial
                         ms.Position = 0;
                         var hash = sha1.ComputeHash(ms);
 
-                        var signature = licenseKey.Keys.Last();
-                        if (rsa.VerifyHash(hash, GetBytesFromBase64String(signature), HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1) == false)
+                        if (rsa.VerifyHash(hash, keys.Signature, HashAlgorithmName.SHA1, RSASignaturePadding.Pkcs1) == false)
                             throw new InvalidDataException("Could not validate signature on license");
                     }
                 }
 
                 return result;
             }
+        }
+
+        private class Keys
+        {
+            public byte[] Attributes { get; set; }
+
+            public byte[] Signature { get; set; }
+        }
+
+        private static Keys ExtractKeys(IEnumerable<string> keys)
+        {
+            var keysArray = keys.ToArray();
+            var stringKey = string.Join("", keysArray);
+            var keysByteArray = GetBytesFromBase64String(stringKey);
+            var attributes = keysByteArray.Skip(128).Take(keysByteArray.Length - 128).ToArray();
+            Array.Resize(ref keysByteArray, 128);
+            return new Keys
+            {
+                Signature = keysByteArray,
+                Attributes = attributes
+            };
         }
     }
 }

@@ -9,6 +9,8 @@ import getDocumentRevisionsCommand = require("commands/database/documents/getDoc
 import deleteAttachmentCommand = require("commands/database/documents/attachments/deleteAttachmentCommand");
 
 import appUrl = require("common/appUrl");
+import endpoints = require("endpoints");
+import generalUtils = require("common/generalUtils");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
@@ -17,7 +19,6 @@ import documentHelpers = require("common/helpers/database/documentHelpers");
 import starredDocumentsStorage = require("common/storage/starredDocumentsStorage");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import downloader = require("common/downloader");
-import endpoints = require("endpoints");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import messagePublisher = require("common/messagePublisher");
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
@@ -39,22 +40,14 @@ class connectedDocuments {
     loadDocumentAction: (docId: string) => void;
     document: KnockoutObservable<document>;
     db: KnockoutObservable<database>;
+    inReadOnlyMode: KnockoutObservable<boolean>;
     searchInput = ko.observable<string>(""); //TODO: not yet working!
 
-    docsColumns: virtualColumn[] = [
-        new hyperlinkColumn<connectedDocument>(x => x.id, x => x.href, "", "100%")
-    ];
-
-    attachmentsColumns: virtualColumn[] = [
-        new textColumn<attachmentItem>(x => x.name, "Name", "145px"),
-        new textColumn<attachmentItem>(x => x.size, "Size", "50px"),
-        new actionColumn<attachmentItem>(x => this.downloadAttachment(x), "Download", `<i class="icon-export"></i>`, "35px"), //TODO: use extra class if needed, verify icon
-        new actionColumn<attachmentItem>(x => this.deleteAttachment(x), "Delete", `<i class="icon-trash"></i>`, "35px") //TODO: use extra class if needed, verify icon
-        //TODO: icon
-    ];
+    docsColumns: virtualColumn[];
+    attachmentsColumns: virtualColumn[];
+    attachmentsInReadOnlyModeColumns: virtualColumn[];
 
     private downloader = new downloader();
-
     currentDocumentIsStarred = ko.observable<boolean>(false);
 
     recentDocuments = new recentDocumentsCtr();
@@ -62,6 +55,8 @@ class connectedDocuments {
     isAttachmentsActive = ko.pureComputed(() => connectedDocuments.currentTab() === "attachments");
     isRecentActive = ko.pureComputed(() => connectedDocuments.currentTab() === "recent");
     isRevisionsActive = ko.pureComputed(() => connectedDocuments.currentTab() === "revisions");
+    isUploaderActive: KnockoutComputed<boolean>;
+    showUploadNotAvailable: KnockoutComputed<boolean>;
 
     gridController = ko.observable<virtualGridController<connectedDocument | attachmentItem>>();
     uploader: editDocumentUploader;
@@ -75,20 +70,74 @@ class connectedDocuments {
         return doc.__metadata.hasFlag("Versioned");
     });
 
-    constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, loadDocument: (docId: string) => void) {
+    constructor(document: KnockoutObservable<document>,
+        db: KnockoutObservable<database>,
+        loadDocument: (docId: string) => void,
+        isCreatingNewDocument: KnockoutObservable<boolean>,
+        inReadOnlyMode: KnockoutObservable<boolean>) {
+
         _.bindAll(this, "toggleStar" as keyof this);
 
         this.document = document;
         this.db = db;
+        this.inReadOnlyMode = inReadOnlyMode;
         this.document.subscribe((doc) => this.onDocumentLoaded(doc));
         this.loadDocumentAction = loadDocument;
         this.uploader = new editDocumentUploader(document, db, () => this.afterUpload());
+
+        this.initColumns();
+
+        this.isUploaderActive = ko.pureComputed(() => {
+            const onAttachmentsPane = this.isAttachmentsActive();
+            const newDoc = isCreatingNewDocument();
+            const readOnly = inReadOnlyMode();
+            return onAttachmentsPane && !newDoc && !readOnly;
+        });
+        this.showUploadNotAvailable = ko.pureComputed(() => {
+            const onAttachmentsPane = this.isAttachmentsActive();
+            const readOnly = inReadOnlyMode();
+            return onAttachmentsPane && readOnly;
+        });
+    }
+
+    private initColumns() {
+        this.docsColumns = [
+            new hyperlinkColumn<connectedDocument>(x => x.id, x => x.href, "", "100%")
+        ];
+
+        this.attachmentsColumns = [
+            new actionColumn<attachmentItem>(x => this.downloadAttachment(x), "Name", x => x.name, "160px",
+                {
+                    extraClass: () => 'btn-link',
+                    title: (item: attachmentItem) => "Download file: " + item.name
+                }),
+            new textColumn<attachmentItem>(x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
+            new actionColumn<attachmentItem>(x => this.deleteAttachment(x),
+                "Delete",
+                `<i class="icon-trash"></i>`,
+                "35px",
+                { title: () => 'Delete attachment', extraClass: () => 'file-trash' })
+        ];
+
+        this.attachmentsInReadOnlyModeColumns = [
+            new actionColumn<attachmentItem>(x => this.downloadAttachment(x), "Name", x => x.name, "195px",
+                {
+                    extraClass: () => 'btn-link',
+                    title: () => "Download attachment"
+                }),
+            new textColumn<attachmentItem>(x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' })
+        ];
     }
 
     compositionComplete() {
         const grid = this.gridController();
         grid.headerVisible(false);
-        grid.init((s, t) => this.fetchCurrentTabItems(s, t), () => connectedDocuments.currentTab() === "attachments" ? this.attachmentsColumns : this.docsColumns);
+        grid.init((s, t) => this.fetchCurrentTabItems(s, t), () => {
+            if (connectedDocuments.currentTab() === "attachments") {
+                return this.inReadOnlyMode() ? this.attachmentsInReadOnlyModeColumns : this.attachmentsColumns;
+            }
+            return this.docsColumns;
+        });
 
         connectedDocuments.currentTab.subscribe(() => this.gridController().reset());
     }
@@ -129,18 +178,15 @@ class connectedDocuments {
         return deferred.promise();
     }
 
-    fetchAttachments(skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> { //TOOD: don't use connected document here
-        //TODO: it is temporary impl which used metadata, in future we have to use dedicated endpoint as document metadata
-        // doesn't contain information about size and content type
-
+    fetchAttachments(skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> {
         const doc = this.document();
 
-        const attachments: any[] = (doc.__metadata as any)["@attachments"] || [];
+        const attachments: documentAttachmentDto[] = doc.__metadata.attachments || [];
         const mappedFiles = attachments.map(file => ({
             documentId: doc.getId(),
             name: file.Name,
-            contentType: "image/png", //TODO:
-            size: undefined //TODO: update proper value + format as humane
+            contentType: file.ContentType,
+            size: file.Size
         } as attachmentItem));
 
         return $.Deferred<pagedResult<attachmentItem>>().resolve({
@@ -160,7 +206,6 @@ class connectedDocuments {
     }
 
     fetchRevisionDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
-        //TODO: should endpoint return results in different order - newest first?
         const doc = this.document();
 
         if (!doc.__metadata.hasFlag("Versioned")) {
@@ -171,10 +216,20 @@ class connectedDocuments {
         new getDocumentRevisionsCommand(doc.getId(), this.db(), skip, take, true)
             .execute()
             .done(result => {
+                const mappedResults = result.items.map(x => this.revisionToConnectedDocument(x));
                 fetchTask.resolve({
-                    items: result.items.map(x => this.revisionToConnectedDocument(x)),
+                    items: mappedResults,
                     totalResultCount: result.totalResultCount
                 });
+
+                if (doc.__metadata.hasFlag("Revision")) {
+                    const etag = doc.__metadata.etag();
+                    const resultIdx = result.items.findIndex(x => x.__metadata.etag() === etag);
+                    if (resultIdx >= 0) {
+                        this.gridController().setSelectedItems([mappedResults[resultIdx]]);    
+                    }
+                    
+                }
             })
             .fail(xhr => fetchTask.reject(xhr));
 
@@ -201,8 +256,33 @@ class connectedDocuments {
             name: file.name
         };
 
-        const url = endpoints.databases.attachment.attachments + appUrl.urlEncodeArgs(args);
-        this.downloader.download(this.db(), url);
+        const doc = this.document();
+        if (doc.__metadata.hasFlag("Revision")) {
+            this.downloadAttachmentAtRevision(doc, args);
+        } else {
+            const url = endpoints.databases.attachment.attachments + appUrl.urlEncodeArgs(args);
+            this.downloader.download(this.db(), url);    
+        }
+    }
+
+    private downloadAttachmentAtRevision(doc: document, file: { id: string; name: string }) {
+        //TODO: single auth token ?
+
+        const $form = $("#downloadAttachmentAtRevisionForm");
+        const $changeVector = $("[name=ChangeVectorAndType]", $form);
+        const changeVector = (doc.__metadata as any)['@change-vector'];
+
+        const payload = {
+            ChangeVector: changeVector,
+            Type: "Revision"
+        };
+
+        const url = endpoints.databases.attachment.attachments + appUrl.urlEncodeArgs(file);
+
+        $form.attr("action", appUrl.forDatabaseQuery(this.db()) + url);
+        
+        $changeVector.val(JSON.stringify(payload));
+        $form.submit();
     }
 
     private deleteAttachment(file: attachmentItem) {
@@ -220,7 +300,6 @@ class connectedDocuments {
     }
 
     private afterUpload() {
-        // TODO: verify
         this.loadDocumentAction(this.document().getId());
     }
 
@@ -259,7 +338,6 @@ class connectedDocuments {
     private onAttachmentDeleted(file: attachmentItem) {
         // refresh document, as it contains information about attachments in metadata
         this.loadDocumentAction(file.documentId);
-        this.gridController().reset(true);
     }
 
     private onDocumentLoaded(document: document) {
@@ -268,7 +346,12 @@ class connectedDocuments {
             this.currentDocumentIsStarred(starredDocumentsStorage.isStarred(this.db(), this.document().getId()));
 
             if (connectedDocuments.currentTab() === "revisions" && !document.__metadata.hasFlag("Versioned")) {
+                // this will also reset grid
                 connectedDocuments.currentTab("attachments");
+            } else {
+                if (this.gridController()) {
+                    this.gridController().reset(true);
+                }
             }
         }
     }

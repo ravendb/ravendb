@@ -26,14 +26,13 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out ctx))
             {
                 var cmds = await BatchRequestParser.ParseAsync(ctx, RequestBodyStream());
-
+               
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
 
                 using (var mergedCmd = new MergedBatchCommand
                 {
                     Database = Database,
                     ParsedCommands = cmds,
-                    Reply = new DynamicJsonArray(),
                 })
                 {
                     if (waitForIndexesTimeout != null)
@@ -76,13 +75,11 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task WaitForReplicationAsync(TimeSpan waitForReplicasTimeout, MergedBatchCommand mergedCmd)
         {
-
-
             int numberOfReplicasToWaitFor;
             var numberOfReplicasStr = GetStringQueryString("numberOfReplicasToWaitFor", required: false) ?? "1";
             if (numberOfReplicasStr == "majority")
             {
-                numberOfReplicasToWaitFor = Database.DocumentReplicationLoader.GetSizeOfMajority();
+                numberOfReplicasToWaitFor = Database.ReplicationLoader.GetSizeOfMajority();
             }
             else
             {
@@ -91,7 +88,7 @@ namespace Raven.Server.Documents.Handlers
             }
             var throwOnTimeoutInWaitForReplicas = GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas") ?? true;
 
-            var waitForReplicationAsync = Database.DocumentReplicationLoader.WaitForReplicationAsync(
+            var waitForReplicationAsync = Database.ReplicationLoader.WaitForReplicationAsync(
                 numberOfReplicasToWaitFor,
                 waitForReplicasTimeout,
                 mergedCmd.LastEtag);
@@ -201,7 +198,7 @@ namespace Raven.Server.Documents.Handlers
             return indexesToCheck;
         }
 
-        private class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+        public class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             public DynamicJsonArray Reply;
             public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
@@ -226,6 +223,7 @@ namespace Raven.Server.Documents.Handlers
 
             public override void Execute(DocumentsOperationContext context)
             {
+                Reply = new DynamicJsonArray();
                 for (int i = ParsedCommands.Offset; i < ParsedCommands.Count; i++)
                 {
                     var cmd = ParsedCommands.Array[ParsedCommands.Offset + i];

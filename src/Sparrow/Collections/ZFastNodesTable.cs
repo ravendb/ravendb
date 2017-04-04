@@ -721,7 +721,7 @@ namespace Sparrow.Collections
                         uint hash = Hashing.Iterative.XXHash32.CalculateInline((byte*)bitsPtr, words * sizeof(ulong), state, lcp / BitVector.BitsPerByte);
 
                         remainingWord = ((remainingWord) >> shift) << shift;
-                        ulong intermediate = Hashing.CombineInline(remainingWord, ((ulong)remaining) << 32 | (ulong)hash);
+                        ulong intermediate = Hashing.Combine(remainingWord, ((ulong)remaining) << 32 | (ulong)hash);
 
                         hash = (uint)intermediate ^ (uint)(intermediate >> 32);
 

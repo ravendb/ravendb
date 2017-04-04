@@ -48,6 +48,11 @@ type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<doc
 
 class query extends viewModelBase {
 
+    static readonly autoPrefix = "auto/";
+
+    // TODO: use a static dynamic prefix with the slash. Note: the index name of 'dynamic/All Documents is actually 'dynamic'
+    //static readonly dynamicPrefix = "dynamic/"; 
+
     static readonly ContainerSelector = "#queryContainer";
     static readonly $body = $("body");
 
@@ -114,6 +119,7 @@ class query extends viewModelBase {
     csvUrl = ko.observable<string>();
 
     isIndexMapReduce: KnockoutComputed<boolean>;
+    isAutoIndex = ko.observable<boolean>(false);
     isStaticIndexSelected: KnockoutComputed<boolean>;
     isLoading = ko.observable<boolean>(false);
     containsAsterixQuery: KnockoutComputed<boolean>; // query contains: *.* ?
@@ -427,6 +433,7 @@ class query extends viewModelBase {
     }
 
     setSelectedIndex(indexName: string) {
+        this.isAutoIndex(indexName.toLowerCase().startsWith(query.autoPrefix));
         this.criteria().setSelectedIndex(indexName);
         this.resetFilterSettings();
         this.uiTransformer(null);
@@ -561,9 +568,9 @@ class query extends viewModelBase {
     }
 
     openQueryStats() {
-        //TODO: work on explain in dialog + on index name
+        //TODO: work on explain in dialog
         eventsCollector.default.reportEvent("query", "show-stats");
-        const viewModel = new queryStatsDialog(this.queryStats(), this.requestedIndexForQuery());
+        const viewModel = new queryStatsDialog(this.queryStats(), this.requestedIndexForQuery(), this.activeDatabase());
         app.showBootstrapDialog(viewModel);
     }
 

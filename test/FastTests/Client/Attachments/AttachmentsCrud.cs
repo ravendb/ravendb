@@ -1,11 +1,10 @@
 ﻿using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Xunit;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Server.Documents;
-using Raven.Server.ServerWide.Context;
 
 namespace FastTests.Client.Attachments
 {
@@ -85,10 +84,7 @@ namespace FastTests.Client.Attachments
                     }
                 }
 
-                var statistics = store.Admin.Send(new GetStatisticsOperation());
-                Assert.Equal(3, statistics.CountOfAttachments);
-                Assert.Equal(1, statistics.CountOfDocuments);
-                Assert.Equal(0, statistics.CountOfIndexes);
+                AssertAttachmentCount(store, 3, 3, 1);
 
                 using (var session = store.OpenSession())
                 {
@@ -129,6 +125,53 @@ namespace FastTests.Client.Attachments
                         Assert.Null(notExistsAttachment);
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public void PutAttachmentAndPutDocument_ShouldHaveHasAttachmentsFlag()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Fitzchak"}, "users/1");
+                    session.SaveChanges();
+
+                    using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
+                    {
+                        store.Operations.Send(new PutAttachmentOperation("users/1", "pic", profileStream, "image/png"));
+                    }
+                }
+
+                ValidateMetadata_PutAttachmentAndPutDocument_ShouldHaveHasAttachmentsFlag(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Fitzchak 2"}, "users/1");
+                    session.SaveChanges();
+                }
+
+                ValidateMetadata_PutAttachmentAndPutDocument_ShouldHaveHasAttachmentsFlag(store);
+            }
+        }
+
+        private static void ValidateMetadata_PutAttachmentAndPutDocument_ShouldHaveHasAttachmentsFlag(DocumentStore store)
+        {
+            AssertAttachmentCount(store, 1, 1, 1);
+
+            // We must create a new session to check the flags, 
+            // since we do not remove the document from the session cache after we put an attachment
+            using (var session = store.OpenSession())
+            {
+                var user = session.Load<User>("users/1");
+                var metadata = session.Advanced.GetMetadataFor(user);
+                Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                var attachment = metadata.GetObjects(Constants.Documents.Metadata.Attachments).Single();
+                Assert.Equal("pic", attachment.GetString(nameof(Attachment.Name)));
+                Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", attachment.GetString(nameof(AttachmentResult.Hash)));
+                Assert.Equal("image/png", attachment.GetString(nameof(AttachmentResult.ContentType)));
+                Assert.Equal(3, attachment.GetNumber(nameof(AttachmentResult.Size)));
             }
         }
 
@@ -185,7 +228,7 @@ namespace FastTests.Client.Attachments
         }
 
         [Fact]
-        public async Task DeleteAttachments()
+        public void DeleteAttachments()
         {
             using (var store = GetDocumentStore())
             {
@@ -200,10 +243,10 @@ namespace FastTests.Client.Attachments
                     using (var profileStream = new MemoryStream(Enumerable.Range(1, 3 * i).Select(x => (byte) x).ToArray()))
                         store.Operations.Send(new PutAttachmentOperation("users/1", "file" + i, profileStream, "image/png"));
                 }
-                Assert.Equal(3, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AssertAttachmentCount(store, 3);
 
                 store.Operations.Send(new DeleteAttachmentOperation("users/1", "file2"));
-                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AssertAttachmentCount(store, 2);
 
                 using (var session = store.OpenSession())
                 {
@@ -243,14 +286,18 @@ namespace FastTests.Client.Attachments
 
                 // Delete document should delete all the attachments
                 store.Commands().Delete("users/1", null);
-                var database = await GetDocumentDatabaseInstanceFor(store);
-                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
-                using (context.OpenReadTransaction())
-                {
-                    database.DocumentsStorage.AttachmentsStorage.AssertNoAttachmentsForDocument(context, "users/1");
-                }
-                Assert.Equal(0, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AssertAttachmentCount(store, 0);
             }
+        }
+
+        public static void AssertAttachmentCount(DocumentStore store, long uniqueAttachmentCount, long? attachmentCount = null, long? documentsCount = null)
+        {
+            var statistics = store.Admin.Send(new GetStatisticsOperation());
+            Assert.Equal(attachmentCount ?? uniqueAttachmentCount, statistics.CountOfAttachments);
+            Assert.Equal(uniqueAttachmentCount, statistics.CountOfUniqueAttachments);
+
+            if (documentsCount != null)
+                Assert.Equal(documentsCount.Value, statistics.CountOfDocuments);
         }
 
         [Fact]
@@ -272,7 +319,7 @@ namespace FastTests.Client.Attachments
                 }
                 using (var stream2 = new MemoryStream(Enumerable.Range(1, 999 * 1024).Select(x => (byte) x).ToArray()))
                     store.Operations.Send(new PutAttachmentOperation("users/1", "big-file", stream2, "image/png"));
-                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AssertAttachmentCount(store, 2, 4);
 
                 using (var session = store.OpenSession())
                 {
@@ -298,16 +345,16 @@ namespace FastTests.Client.Attachments
                 }
 
                 store.Operations.Send(new DeleteAttachmentOperation("users/1", "file1"));
-                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AssertAttachmentCount(store, 2, 3);
 
                 store.Operations.Send(new DeleteAttachmentOperation("users/2", "file2"));
-                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AssertAttachmentCount(store, 2);
 
                 store.Operations.Send(new DeleteAttachmentOperation("users/3", "file3"));
-                Assert.Equal(1, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AssertAttachmentCount(store, 1);
 
                 store.Operations.Send(new DeleteAttachmentOperation("users/1", "big-file"));
-                Assert.Equal(0, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AssertAttachmentCount(store, 0);
             }
         }
 
@@ -329,22 +376,17 @@ namespace FastTests.Client.Attachments
                 }
                 using (var profileStream = new MemoryStream(Enumerable.Range(1, 17).Select(x => (byte)x).ToArray()))
                     store.Operations.Send(new PutAttachmentOperation("users/1", "second-file", profileStream, "image/png"));
-                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AssertAttachmentCount(store, 2, 4);
 
                 store.Commands().Delete("users/2", null);
-                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AssertAttachmentCount(store, 2, 3);
 
                 store.Commands().Delete("users/1", null);
-                Assert.Equal(1, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AssertAttachmentCount(store, 1);
 
                 store.Commands().Delete("users/3", null);
-                Assert.Equal(0, store.Admin.Send(new GetStatisticsOperation()).CountOfAttachments);
+                AssertAttachmentCount(store, 0);
             }
-        }
-
-        private class User
-        {
-            public string Name { get; set; }
         }
     }
 }

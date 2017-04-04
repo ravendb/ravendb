@@ -8,14 +8,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
 using FastTests.Voron.FixedSize;
-using Lucene.Net.Search;
 using Sparrow;
 using Xunit;
 using Voron;
-using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl.Compaction;
 

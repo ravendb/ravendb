@@ -305,7 +305,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     var dailyInvoicesTombstones = database.DocumentsStorage.GetTombstonesFrom(context, "DailyInvoices", 0, 0, 128).Count();
                     Assert.Equal(0, dailyInvoicesTombstones);
                     var collections = database.DocumentsStorage.GetTombstoneCollections(tx.InnerTransaction).ToList();
-                    Assert.Equal(3, collections.Count);
+                    Assert.Equal(4, collections.Count);
                     Assert.DoesNotContain("DailyInvoices", collections, StringComparer.OrdinalIgnoreCase);
                 }
             }

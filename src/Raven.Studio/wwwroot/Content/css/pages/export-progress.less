@@ -1,0 +1,86 @@
+﻿#exportModal {
+    .export-messages {
+        height: 300px;
+        overflow: auto;
+    }
+
+    .export-list {
+        .export-legend {
+            text-transform:uppercase;
+            font-size:10px;
+        }
+
+        .export-item, .export-legend {
+            display: flex;
+            align-items: center;
+            margin-bottom: @grid-gutter-width/4;
+            padding: 0 @grid-gutter-width/2; 
+
+            .name {
+                width: 200px;
+            }
+
+            .status {
+                flex-grow: 1;
+            }
+
+            .read:not(.text-muted) {
+                color: @brand-success;
+            }
+
+            .skipped:not(.text-muted) {
+                color: @brand-warning;
+            }
+
+            .errors:not(.text-muted) {
+                color: @brand-danger;
+            }
+
+            .read, .skipped, .errors {
+                width: 100px;
+                text-align: center;
+            }
+        }
+
+        .export-item {            
+            padding: @grid-gutter-width/4 @grid-gutter-width/2;            
+            background-color: @gray-dark;
+
+            .name {
+                h3 {
+                    margin: 0;
+                }
+            }
+
+            .global-spinner {
+                &:before {
+                    position: relative;
+                    top: 4px;
+                }
+
+                & + span {
+                    margin-left: 5px;
+                }
+            }
+
+            .status {
+                font-size: 12px;
+
+                &.status-processed {
+                    color: @brand-success;
+                }
+
+                &.status-skipped {
+                    color: @brand-warning;
+                }
+
+                &.status-processing {
+                    color: @brand-primary;
+                }
+
+                &.status-waiting {
+                }
+            }            
+        }
+    }
+}

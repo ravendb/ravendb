@@ -223,7 +223,7 @@ namespace Sparrow.Json
             int hash = 0;
             for (int i = 0; i < count; i++)
             {
-                hash = Hashing.CombineInline(hash, properties[i].Property.HashCode);
+                hash = Hashing.HashCombiner.CombineInline(hash, properties[i].Property.HashCode);
             }
 
             Debug.Assert(_cachedSorts.Length == CachedSortsSize && Bits.NextPowerOf2(CachedSortsSize) == CachedSortsSize); 

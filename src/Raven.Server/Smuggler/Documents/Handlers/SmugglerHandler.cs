@@ -127,21 +127,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private Stream TryGetRequestFormStream(string itemName)
-        {
-            if (HttpContext.Request.HasFormContentType == false)
-                return null;
-
-            StringValues value;
-            if (HttpContext.Request.Form.TryGetValue(itemName, out value) == false)
-                return null;
-
-            if (value.Count == 0)
-                return null;
-
-            return new MemoryStream(Encoding.UTF8.GetBytes(value[0]));
-        }
-
         private IOperationResult ExportDatabaseInternal(DatabaseSmugglerOptions options, Action<IOperationProgress> onProgress, JsonOperationContext context, OperationCancelToken token)
         {
             using (token)
@@ -215,7 +200,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         }
                         using (ContextPool.AllocateOperationContext(out context))
                         using (var file = await getFile())
-                        using (var stream = new GZipStream(file, CompressionMode.Decompress))
+                        using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                         {
                             var source = new StreamSource(stream, context);
                             var destination = new DatabaseDestination(Database);
@@ -298,7 +283,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext, context);
                 var token = CreateOperationToken();
 
-                using (var stream = new GZipStream(await GetImportStream(), CompressionMode.Decompress))
+                using (var stream = new GZipStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                 using (token)
                 {
                     var source = new StreamSource(stream, context);

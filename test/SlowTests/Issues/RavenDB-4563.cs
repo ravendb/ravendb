@@ -7,6 +7,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_4563 : RavenTestBase
     {
+        
         [Fact]
         public void bulk_insert_throws_when_server_is_down()
         {
@@ -15,20 +16,23 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 Exception exp = null;
-                for (var run = 0; run < 4; run++)
+                for (var run = 0; run < 5; run++)
                 {
                     try
                     {
                         using (var bulkInsert = store.BulkInsert())
                         {
+                            if (run == 0)
+                                continue;
+
                             for (var j = 0; j < 10000; j++)
                             {
                                 bulkInsert.Store(new Sample());
 
-                                if (j == 500 && run == 1)
+                                if (j == 5000 && run == 2)
                                 {
                                     Server.Dispose();
-                                    Thread.Sleep(1000);
+                                    Thread.Sleep(100);
                                 }
                             }
                         }
@@ -45,13 +49,12 @@ namespace SlowTests.Issues
                                 Assert.Equal(null, exp);
                                 break;
                             case 1:
-                                Assert.Equal("Could not read from server, it status is faulted",exp.Message);
+                                Assert.Equal(null, exp);
                                 break;
                             case 2:
-                                Assert.Equal("Unable to connect to the remote server", exp.Message);
-                                break;
                             case 3:
-                                Assert.Equal("Unable to connect to the remote server", exp.Message);
+                            case 4:
+                                Assert.Equal("An error occurred while sending the request.", exp.InnerException.Message);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();

@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Xml.Linq;
 
 namespace Sparrow
 {
+    /// <summary>
+    /// The struct compared is optimized for small strings that come from the outside of the controlled fence, 
+    /// the hash function used is compact (making it suitable for inlining) and also flood resistant. 
+    /// </summary>
     public struct OrdinalStringStructComparer : IEqualityComparer<string>
     {
         public static readonly OrdinalStringStructComparer Instance = default(OrdinalStringStructComparer);
@@ -33,18 +34,14 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(string x)
         {
-            int xSize = x.Length;
-            uint hash = 0;
-
-            for (int i = 0; i < xSize; i++)
-            {
-                hash = Hashing.CombineInline(hash, x[i]);
-            }
-
-            return (int)hash;
+            return (int)Hashing.Marvin32.CalculateInline<Hashing.OrdinalModifier>(x);
         }
     }
 
+    /// <summary>
+    /// The struct compared is optimized for small strings that come from the outside of the controlled fence, 
+    /// the hash function used is compact (making it suitable for inlining) and also flood resistant. 
+    /// </summary>
     public struct OrdinalIgnoreCaseStringStructComparer : IEqualityComparer<string>
     {        
         public static readonly OrdinalIgnoreCaseStringStructComparer Instance = default(OrdinalIgnoreCaseStringStructComparer);
@@ -79,19 +76,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(string x)
         {
-            int xSize = x.Length;
-            uint hash = 0;
-
-            for (int i = 0; i < xSize; i++)
-            {
-                char ch = x[i];
-                if ((ch >= 65) && (ch <= 90))
-                    ch = (char)(ch | 0x0020);
-
-                hash = Hashing.CombineInline(hash, ch);
-            }
-
-            return (int)hash;
+            return (int)Hashing.Marvin32.CalculateInline<Hashing.OrdinalIgnoreCaseModifier>(x);
         }
     }
 }

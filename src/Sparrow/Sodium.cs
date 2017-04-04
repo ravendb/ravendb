@@ -5,23 +5,29 @@ namespace Sparrow
 {
     public static unsafe class Sodium
     {
-            private static int crypto_kdf_keybytes()
+        private static int crypto_kdf_keybytes()
         {
-          
-            if (_kdfbytes == null)
-            {
-                _kdfbytes = 
-                    Platform.PlatformDetails.RunningOnPosix ? 
-                    Platform.Posix.PosixSodium.crypto_kdf_keybytes() : Platform.Win32.WinSodium.crypto_kdf_keybytes();
-            }
-            return _kdfbytes.Value;
+            return
+                Platform.PlatformDetails.RunningOnPosix
+                    ? Platform.Posix.PosixSodium.crypto_kdf_keybytes()
+                    : Platform.Win32.WinSodium.crypto_kdf_keybytes();
         }
+
+        public static int crypto_kx_keypair(byte* pk, byte* sk)
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_kx_keypair(pk, sk)
+                : Platform.Win32.WinSodium.crypto_kx_keypair(pk, sk);
+
+        }
+
         public static int randombytes_buf(
             byte* buffer,
             int size)
         {
-            return Platform.PlatformDetails.RunningOnPosix ? 
-                Platform.Posix.PosixSodium.randombytes_buf(buffer, size) : Platform.Win32.WinSodium.randombytes_buf(buffer, size);
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.randombytes_buf(buffer, size)
+                : Platform.Win32.WinSodium.randombytes_buf(buffer, size);
         }
 
         private static void crypto_kdf_keygen(
@@ -91,7 +97,7 @@ namespace Sparrow
         }
 
         public static int crypto_box_seal_open(byte* m, byte* c,
-                         ulong clen, byte* pk, byte* sk)
+            ulong clen, byte* pk, byte* sk)
         {
             if (Platform.PlatformDetails.RunningOnPosix)
                 return Platform.Posix.PosixSodium.crypto_box_seal_open(m, c, clen, pk, sk);
@@ -100,50 +106,44 @@ namespace Sparrow
 
         public static int crypto_box_sealbytes()
         {
-            if (_sealbytes == null)
-            {
-                if (Platform.PlatformDetails.RunningOnPosix)
-                    _sealbytes = Platform.Posix.PosixSodium.crypto_box_sealbytes();
-                else
-                    _sealbytes = Platform.Win32.WinSodium.crypto_box_sealbytes();
-            }
-            return _sealbytes.Value;
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_box_sealbytes()
+                : Platform.Win32.WinSodium.crypto_box_sealbytes();
         }
 
         public static int crypto_box_secretkeybytes()
         {
-            if (_secretkeybytes == null)
-            {
-                if (Platform.PlatformDetails.RunningOnPosix)
-                    _secretkeybytes = Platform.Posix.PosixSodium.crypto_box_secretkeybytes();
-                else
-                    _secretkeybytes = Platform.Win32.WinSodium.crypto_box_secretkeybytes();
-            }
-            return _secretkeybytes.Value;
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_box_secretkeybytes()
+                : Platform.Win32.WinSodium.crypto_box_secretkeybytes();
+        }
+
+        public static int crypto_kx_publickeybytes()
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_kx_publickeybytes()
+                : Platform.Win32.WinSodium.crypto_kx_publickeybytes();
+        }
+
+        public static int crypto_kx_secretkeybytes()
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_kx_secretkeybytes()
+                : Platform.Win32.WinSodium.crypto_kx_secretkeybytes();
         }
 
         public static int crypto_box_publickeybytes()
         {
-            if (_publickeybytes == null)
-            {
-                if (Platform.PlatformDetails.RunningOnPosix)
-                    _publickeybytes = Platform.Posix.PosixSodium.crypto_box_publickeybytes();
-                else
-                    _publickeybytes = Platform.Win32.WinSodium.crypto_box_publickeybytes();
-            }
-            return _publickeybytes.Value;
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_box_publickeybytes()
+                : Platform.Win32.WinSodium.crypto_box_publickeybytes();
         }
 
         public static int crypto_generichash_bytes_max()
         {
-            if (_generichashBytesMax == null)
-            {
-                if (Platform.PlatformDetails.RunningOnPosix)
-                    _generichashBytesMax = Platform.Posix.PosixSodium.crypto_generichash_bytes_max();
-                else
-                    _generichashBytesMax = Platform.Win32.WinSodium.crypto_generichash_bytes_max();
-            }
-            return _generichashBytesMax.Value;
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_generichash_bytes_max()
+                : Platform.Win32.WinSodium.crypto_generichash_bytes_max();
         }
 
         public static byte[] GenerateMasterKey()
@@ -157,12 +157,6 @@ namespace Sparrow
         }
 
         public static readonly byte[] Context = Encoding.UTF8.GetBytes("Raven DB");
-
-        private static int? _sealbytes;
-        private static int? _kdfbytes;
-        private static int? _generichashBytesMax;
-        private static int? _secretkeybytes;
-        private static int? _publickeybytes;
 
         public static byte[] DeriveKey(byte[] masterKey, long num)
         {
@@ -290,6 +284,72 @@ namespace Sparrow
             if (Platform.PlatformDetails.RunningOnPosix)
                 return Platform.Posix.PosixSodium.sodium_memcmp(b, vh, verifiedHashLength);
             return Platform.Win32.WinSodium.sodium_memcmp(b, vh, verifiedHashLength);
+        }
+
+        public static int crypto_box_macbytes()
+        {
+            return (int)(Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_box_macbytes()
+                : Platform.Win32.WinSodium.crypto_box_macbytes());
+        }
+
+        public static int crypto_box_noncebytes()
+        {
+            return (int)(Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_box_noncebytes()
+                : Platform.Win32.WinSodium.crypto_box_noncebytes());
+        }
+
+        public static int crypto_kx_client_session_keys(
+            byte* rx,
+            byte* tx,
+            byte* client_pk,
+            byte* client_sk,
+            byte* server_pk)
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_kx_client_session_keys(rx, tx, client_pk, client_sk, server_pk)
+                : Platform.Win32.WinSodium.crypto_kx_client_session_keys(rx, tx, client_pk, client_sk, server_pk);
+        }
+
+
+        public static int crypto_kx_server_session_keys(
+            byte* rx,
+            byte* tx,
+            byte* server_pk,
+            byte* server_sk,
+            byte* client_pk)
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_kx_server_session_keys(rx, tx, server_pk, server_sk, client_pk)
+                : Platform.Win32.WinSodium.crypto_kx_server_session_keys(rx, tx, server_pk, server_sk, client_pk);
+        }
+
+        public static int crypto_box_easy(
+            byte* c,
+            byte* m,
+            long mlen,
+            byte* n,
+            byte* pk,
+            byte* sk)
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_box_easy(c, m, mlen, n, pk, sk)
+                : Platform.Win32.WinSodium.crypto_box_easy(c, m, mlen, n, pk, sk);
+
+        }
+
+        public static int crypto_box_open_easy(
+            byte* m,
+            byte* c,
+            long clen,
+            byte* n,
+            byte* pk,
+            byte* sk)
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_box_open_easy(m, c, clen, n, pk, sk)
+                : Platform.Win32.WinSodium.crypto_box_open_easy(m, c, clen, n, pk, sk);
         }
     }
 }

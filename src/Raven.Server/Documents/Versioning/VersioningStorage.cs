@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
@@ -11,8 +12,8 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 
@@ -50,9 +51,9 @@ namespace Raven.Server.Documents.Versioning
             Key = 4,
             Document = 5,
             Flags = 6,
+            LastModified = 7,
         }
 
-        public const byte RecordSeperator = 30;
         private readonly VersioningConfigurationCollection _emptyConfiguration = new VersioningConfigurationCollection();
 
         private VersioningStorage(DocumentDatabase database, VersioningConfiguration versioningConfiguration)
@@ -145,7 +146,7 @@ namespace Raven.Server.Documents.Versioning
         }
 
         public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags, 
-            DocumentsOperationContext context, ref TableValueReader oldDocument, BlittableJsonReaderObject document,
+            BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document,
             ref DocumentFlags documentFlags, out VersioningConfigurationCollection configuration)
         {
             configuration = GetVersioningConfiguration(collectionName);
@@ -157,7 +158,7 @@ namespace Raven.Server.Documents.Versioning
                 if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler)
                     return true;
 
-                if (oldDocument.Pointer == null)
+                if (existingDocument == null)
                 {
                     // we are not going to create a revision if it's an import from v3
                     // (since this import is going to import revisions as well)
@@ -165,8 +166,7 @@ namespace Raven.Server.Documents.Versioning
                 }
 
                 // compare the contents of the existing and the new document
-                var existingDocument = _documentsStorage.TableValueToDocument(context, ref oldDocument);
-                if (existingDocument.IsMetadataEqualTo(document) && existingDocument.IsEqualTo(document))
+                if (Document.IsEqualTo(existingDocument, document))
                 {
                     // no need to create a new revision, both documents have identical content
                     return false;
@@ -181,13 +181,13 @@ namespace Raven.Server.Documents.Versioning
         }
 
         public void PutFromDocument(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, 
-            DocumentFlags flags, ChangeVectorEntry[] changeVector, VersioningConfigurationCollection configuration = null)
+            DocumentFlags flags, ChangeVectorEntry[] changeVector, long lastModifiedTicks, VersioningConfigurationCollection configuration = null)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
 
             byte* lowerKey;
             int lowerKeySize;
-            PutInternal(context, key, document, flags, table, changeVector, out lowerKey, out lowerKeySize);
+            PutInternal(context, key, document, flags, lastModifiedTicks, table, changeVector, out lowerKey, out lowerKeySize);
 
             if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
@@ -201,7 +201,7 @@ namespace Raven.Server.Documents.Versioning
             }
 
             Slice prefixSlice;
-            using (DocumentKeyWorker.GetSliceFromKey(context, key, out prefixSlice))
+            using (GetKeyPrefix(context, lowerKey, lowerKeySize, out prefixSlice))
             {
                 // We delete the old revisions after we put the current one, 
                 // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
@@ -211,17 +211,17 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        public void PutDirect(DocumentsOperationContext context, string key, BlittableJsonReaderObject document,
-            DocumentFlags flags, ChangeVectorEntry[] changeVector)
+        public void PutDirect(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, DocumentFlags flags, 
+            ChangeVectorEntry[] changeVector, long lastModifiedTicks)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
             byte* lowerKey;
             int lowerKeySize;
-            PutInternal(context, key, document, flags, table, changeVector, out lowerKey, out lowerKeySize);
+            PutInternal(context, key, document, flags, lastModifiedTicks, table, changeVector, out lowerKey, out lowerKeySize);
         }
 
         private void PutInternal(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, 
-            DocumentFlags flags, Table table, ChangeVectorEntry[] changeVector, out byte* lowerKey, out int lowerSize)
+            DocumentFlags flags, long lastModifiedTicks, Table table, ChangeVectorEntry[] changeVector, out byte* lowerKey, out int lowerSize)
         {
             BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
 
@@ -254,11 +254,12 @@ namespace Raven.Server.Documents.Versioning
                 {
                     tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
                     tbv.Add(lowerKey, lowerSize);
-                    tbv.Add(RecordSeperator);
+                    tbv.Add(SpecialChars.RecordSeperator);
                     tbv.Add(Bits.SwapBytes(newEtag));
                     tbv.Add(keyPtr, keySize);
                     tbv.Add(data.BasePointer, data.Size);
                     tbv.Add((int)flags);
+                    tbv.Add(lastModifiedTicks);
                     table.Set(tbv);
                 }
             }
@@ -278,8 +279,7 @@ namespace Raven.Server.Documents.Versioning
             IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
         }
 
-        private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice,
-            long numberOfRevisionsToDelete)
+        private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, long numberOfRevisionsToDelete)
         {
             long maxEtagDeleted = 0;
 
@@ -287,7 +287,7 @@ namespace Raven.Server.Documents.Versioning
                 numberOfRevisionsToDelete,
                 deleted =>
                 {
-                    var revision = TableValueToDocument(context, ref deleted.Reader);
+                    var revision = TableValueToRevision(context, ref deleted.Reader);
                     maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
                     if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                     {
@@ -331,41 +331,65 @@ namespace Raven.Server.Documents.Versioning
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ReleaseMemory GetKeyPrefix(DocumentsOperationContext context, Slice loweredKey, out Slice prefixSlice)
         {
-            var keyMem = context.Allocator.Allocate(loweredKey.Size + 1);
+            return GetKeyPrefix(context, loweredKey.Content.Ptr, loweredKey.Size, out prefixSlice);
+        }
 
-            loweredKey.CopyTo(0, keyMem.Ptr, 0, loweredKey.Size);
-            keyMem.Ptr[loweredKey.Size] = RecordSeperator;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ReleaseMemory GetKeyPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, out Slice prefixSlice)
+        {
+            var keyMem = context.Allocator.Allocate(lowerKeySize + 1);
+
+            Memory.Copy(keyMem.Ptr, lowerKey, lowerKeySize);
+            keyMem.Ptr[lowerKeySize] = SpecialChars.RecordSeperator;
 
             prefixSlice = new Slice(SliceOptions.Key, keyMem);
             return new ReleaseMemory(keyMem, context);
         }
 
-        public long CountOfRevisions(DocumentsOperationContext context, string key)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ReleaseMemory GetLastKey(DocumentsOperationContext context, Slice lowerKey, out Slice prefixSlice)
+        {
+            var keyMem = context.Allocator.Allocate(lowerKey.Size + 1 + sizeof(long));
+
+            Memory.Copy(keyMem.Ptr, lowerKey.Content.Ptr, lowerKey.Size);
+            keyMem.Ptr[lowerKey.Size] = SpecialChars.RecordSeperator;
+
+            var maxValue = Bits.SwapBytes(long.MaxValue);
+            Memory.Copy(keyMem.Ptr + lowerKey.Size + 1, (byte*)&maxValue, sizeof(long));
+
+            prefixSlice = new Slice(SliceOptions.Key, keyMem);
+            return new ReleaseMemory(keyMem, context);
+        }
+
+        private long CountOfRevisions(DocumentsOperationContext context, Slice prefix)
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
-            Slice loweredKey;
-            using (DocumentKeyWorker.GetSliceFromKey(context, key, out loweredKey))
+            return numbers.Read(prefix)?.Reader.ReadLittleEndianInt64() ?? 0;
+        }
+
+        public (Document[] revisions, long count) GetRevisions(DocumentsOperationContext context, string key, int start, int take)
+        {
+            Slice lowerKey, prefixSlice, lastKey;
+            using (DocumentKeyWorker.GetSliceFromKey(context, key, out lowerKey))
+            using (GetKeyPrefix(context, lowerKey, out prefixSlice))
+            using (GetLastKey(context, lowerKey, out lastKey))
             {
-                return numbers.Read(loweredKey)?.Reader.ReadLittleEndianInt64() ?? 0;
+                var revisions = GetRevisions(context, prefixSlice, lastKey, start, take).ToArray();
+                var count = CountOfRevisions(context, prefixSlice);
+                return (revisions, count);
             }
         }
 
-        public IEnumerable<Document> GetRevisions(DocumentsOperationContext context, string key, int start, int take)
+        private IEnumerable<Document> GetRevisions(DocumentsOperationContext context, Slice prefixSlice, Slice lastKey, int start, int take)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
-
-            Slice prefixSlice;
-            using (DocumentKeyWorker.GetSliceFromKey(context, key, out prefixSlice))
+            foreach (var tvr in table.SeekBackwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, lastKey, start))
             {
-                // ReSharper disable once LoopCanBeConvertedToQuery
-                foreach (var tvr in table.SeekForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, start, startsWith: true))
-                {
-                    if (take-- <= 0)
-                        yield break;
+                if (take-- <= 0)
+                    yield break;
 
-                    var document = TableValueToDocument(context, ref tvr.Result.Reader);
-                    yield return document;
-                }
+                var document = TableValueToRevision(context, ref tvr.Result.Reader);
+                yield return document;
             }
         }
 
@@ -375,7 +399,7 @@ namespace Raven.Server.Documents.Versioning
 
             foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice], etag, 0))
             {
-                var document = TableValueToDocument(context, ref tvr.Reader);
+                var document = TableValueToRevision(context, ref tvr.Reader);
                 yield return document;
 
                 if (take-- <= 0)
@@ -389,22 +413,23 @@ namespace Raven.Server.Documents.Versioning
 
             foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[RevisionsEtagsSlice], etag, 0))
             {
-                yield return ReplicationBatchItem.From(TableValueToDocument(context, ref tvr.Reader));
+                yield return ReplicationBatchItem.From(TableValueToRevision(context, ref tvr.Reader));
             }
         }
 
-        private Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
+        private Document TableValueToRevision(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var result = new Document
             {
-                StorageId = tvr.Id
+                StorageId = tvr.Id,
+                LoweredKey = DocumentsStorage.TableValueToString(context, (int)Columns.LoweredKey, ref tvr),
+                Key = DocumentsStorage.TableValueToKey(context, (int)Columns.Key, ref tvr),
+                Etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr)
             };
-            result.LoweredKey = DocumentsStorage.TableValueToString(context, (int)Columns.LoweredKey, ref tvr);
-            result.Key = DocumentsStorage.TableValueToKey(context, (int)Columns.Key, ref tvr);
-            result.Etag = DocumentsStorage.TableValueToEtag((int)Columns.Etag, ref tvr);
 
             int size;
             result.Data = new BlittableJsonReaderObject(tvr.Read((int)Columns.Document, out size), size, context);
+            result.LastModified = new DateTime(*(long*)tvr.Read((int)Columns.LastModified, out size));
 
             var ptr = tvr.Read((int)Columns.ChangeVector, out size);
             int changeVecotorCount = size / sizeof(ChangeVectorEntry);
@@ -415,15 +440,6 @@ namespace Raven.Server.Documents.Versioning
             }
 
             result.Flags = *(DocumentFlags*)tvr.Read((int)Columns.Flags, out size);
-            if ((result.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
-            {
-                Slice prefixSlice;
-                using (_documentsStorage.AttachmentsStorage.GetAttachmentPrefix(context, result.LoweredKey.Buffer, result.LoweredKey.Size,
-                    AttachmentType.Revision, result.ChangeVector, out prefixSlice))
-                {
-                    result.Attachments = _documentsStorage.AttachmentsStorage.GetAttachmentsForDocument(context, prefixSlice.Clone(context.Allocator));
-                }
-            }
 
             return result;
         }
