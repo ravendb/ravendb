@@ -10,8 +10,10 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Raven.Client.Server.Commands;
 using Raven.Server;
 using Raven.Server.Rachis;
+using Sparrow.Json;
 using Xunit;
 using Constants = Raven.Client.Constants;
 
@@ -38,6 +40,25 @@ namespace Tests.Infrastructure
         protected void NoTimeouts()
         {
             TimeoutEvent.Disable = true;
+        }
+
+        protected async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, bool isLoaded, string databaseName = null)
+        {
+            var requestExecutor = store.GetRequestExecuter();
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var shouldContinue = true;
+                var timeoutTask = Task.Delay(timeout);
+                while (shouldContinue && timeoutTask.IsCompleted == false)
+                {
+                    var databaseIsLoadedCommand = new IsDatabaseLoadedCommand();
+                    await requestExecutor.ExecuteAsync(databaseIsLoadedCommand, context);
+                    shouldContinue = databaseIsLoadedCommand.Result.IsLoaded != isLoaded;
+                    await Task.Delay(100);
+                }
+
+                return timeoutTask.IsCompleted == false;
+            }
         }
 
         protected async Task<bool> WaitForDocumentInClusterAsync<T>(IReadOnlyList<ServerNode> topology,string docId, Func<T, bool> predicate, TimeSpan timeout)
@@ -160,7 +181,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes)
+        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true)
         {
             var leaderIndex = _random.Next(0, numberOfNodes);
             RavenServer leader = null;
@@ -171,7 +192,7 @@ namespace Tests.Infrastructure
                 var server = GetNewServer(new Dictionary<string, string>()
                 {                    
                     {"Raven/ServerUrl", serverUrl}
-                });
+                },runInMemory:shouldRunInMemory);
                 serversToPorts.Add(server, serverUrl);
                 Servers.Add(server);
                 if (i == leaderIndex)

@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Sparrow.Json;
 
@@ -15,7 +15,7 @@ namespace Raven.Client.Http
     public abstract class RavenCommand<TResult>
     {
         public CancellationToken CancellationToken = CancellationToken.None;
-        public HashSet<ServerNode> FailedNodes;
+        public Dictionary<ServerNode, ExceptionDispatcher.ExceptionSchema> FailedNodes;
 
         public TResult Result;
         public int AuthenticationRetries;
@@ -60,7 +60,7 @@ namespace Raven.Client.Http
 
         public bool IsFailedWithNode(ServerNode node)
         {
-            return FailedNodes != null && FailedNodes.Contains(node);
+            return FailedNodes != null && FailedNodes.ContainsKey(node);
         }
 
         public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)

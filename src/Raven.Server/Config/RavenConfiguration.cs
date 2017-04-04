@@ -213,7 +213,8 @@ namespace Raven.Server.Config
                 ServerWideSettings = parent.Settings,
                 Settings = new ConfigurationRoot(new List<IConfigurationProvider> { new MemoryConfigurationProvider(new MemoryConfigurationSource()) })
                 {
-                    [GetKey(x => x.Core.RunInMemory)] = parent.Core.RunInMemory.ToString()
+                    [GetKey(x => x.Core.RunInMemory)] = parent.Core.RunInMemory.ToString(),
+                    [GetKey(x => x.Core.DataDirectory)] = parent.Core.DataDirectory.Combine(name).ToFullPath()
                 }
             };
 

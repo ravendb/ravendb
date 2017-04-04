@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace Raven.Client.Server.Operations
+﻿namespace Raven.Client.Server.Operations
 {
     /// <summary>
     /// The result of a disable or enable database
@@ -22,5 +17,10 @@ namespace Raven.Client.Server.Operations
         ///  If request succeed.
         /// </summary>
         public bool Success;
+
+        /// <summary>
+        /// The reason for success or failure.
+        /// </summary>
+        public string Reason;
     }
 }

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Issues;
+using FastTests.Server.Replication;
 
 namespace Tryouts
 {
@@ -13,9 +14,9 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new RavenDB_6602())
+                using (var a = new DisableDatabasePropagationInRaftCluster())
                 {
-                    a.RequestExecutor_failover_to_database_topology_should_work().Wait();                    
+                    a.DisableDatabaseToggleOperation_should_propagate_through_raft_cluster().Wait();                    
                 }
             }
         }

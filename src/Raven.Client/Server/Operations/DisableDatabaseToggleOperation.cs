@@ -14,10 +14,7 @@ namespace Raven.Client.Server.Operations
 
         public DisableDatabaseToggleOperation(string databaseName, bool ifDisableRequest)
         {
-            if(databaseName == null)
-                throw new ArgumentNullException(nameof(databaseName));
-
-            _databaseName = databaseName;
+            _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
             _ifDisableRequest = ifDisableRequest;
         }
 

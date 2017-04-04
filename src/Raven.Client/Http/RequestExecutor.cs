@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http.OAuth;
+using Raven.Client.Json.Converters;
 using Raven.Client.Server.Commands;
 using Raven.Client.Util;
 using Sparrow.Json;
@@ -168,10 +169,10 @@ namespace Raven.Client.Http
                     }
                     catch (HttpRequestException)
                     {
-                        command.FailedNodes.Add(node);
+                        command.FailedNodes.Add(node,null);
 
                         _nodeSelector.OnFailedRequest();
-                        while (command.FailedNodes.Contains(_nodeSelector.CurrentNode) == false)
+                        while (command.FailedNodes.ContainsKey(_nodeSelector.CurrentNode) == false)
                         {
                             try
                             {
@@ -261,7 +262,7 @@ namespace Raven.Client.Http
                 }
 
                 var sp = Stopwatch.StartNew();
-                HttpResponseMessage response;
+                HttpResponseMessage response = null;
                 try
                 {
                     var client = GetHttpClientForCommand(command);
@@ -287,7 +288,7 @@ namespace Raven.Client.Http
                     if (shouldRetry == false)
                         throw;
 
-                    if (await HandleServerDown(choosenNode, context, command, request, e) == false)
+                    if (await HandleServerDown(choosenNode, context, command, request,response, e) == false)
                         throw new AllTopologyNodesDownException("Tried to send request to all configured nodes in the topology, all of them seem to be down or not responding.", _nodeSelector.Topology,e);
 
                     return;
@@ -304,7 +305,14 @@ namespace Raven.Client.Http
                 if (response.IsSuccessStatusCode == false)
                 {
                     if (await HandleUnsuccessfulResponse(choosenNode, context, command, request, response, url).ConfigureAwait(false) == false)
-                        throw new InvalidOperationException("Received unsuccessful resonse and couldn't recover from it.");
+                    {
+                        if (command.FailedNodes.Count == 0) //precaution, should never happen at this point
+                            throw new InvalidOperationException("Received unsuccessful resonse and couldn't recover from it. Also, no record of exceptions per failed nodes. This is weird and should not happen.");
+
+//not sure how to treat multiple exceptions here, probably they should be written in a log
+                        throw new InvalidOperationException("Received unsuccessful resonse and couldn't recover from it.",
+                            new UnsuccessfulRequestException(command.FailedNodes.Last().Value));
+                    }
                 }
 
                 await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
@@ -377,7 +385,7 @@ namespace Raven.Client.Http
                 case HttpStatusCode.RequestTimeout:
                 case HttpStatusCode.BadGateway:
                 case HttpStatusCode.ServiceUnavailable:
-                    await HandleServerDown(choosenNode, context, command, request, null).ConfigureAwait(false);
+                    await HandleServerDown(choosenNode, context, command, request,response,  null).ConfigureAwait(false);
                     break;
                 case HttpStatusCode.Conflict:
                     await HandleConflict(context, response).ConfigureAwait(false);
@@ -421,24 +429,46 @@ namespace Raven.Client.Http
             }
         }
 
-        private async Task<bool> HandleServerDown<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpRequestException e)
+        private async Task<bool> HandleServerDown<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, HttpRequestException e)
         {
             if (command.AvoidFailover)
                 return false;
 
             if (command.FailedNodes == null)
-                command.FailedNodes = new HashSet<ServerNode>();
+                command.FailedNodes = new Dictionary<ServerNode, ExceptionDispatcher.ExceptionSchema>();
 
             chosenNode.IsFailed = true;
-            command.FailedNodes.Add(chosenNode);
+            await AddFailedResponseToCommand(chosenNode, context, command, request, response, e);
 
             _nodeSelector.OnFailedRequest();
-            if (command.FailedNodes.Contains(_nodeSelector.CurrentNode)) //we tried all the nodes...nothing left to do
+            if (command.FailedNodes.ContainsKey(_nodeSelector.CurrentNode)) //we tried all the nodes...nothing left to do
                 return false;
 
             await ExecuteAsync(_nodeSelector.CurrentNode, context, command);
 
             return true;
+        }
+
+        private static async Task AddFailedResponseToCommand<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, HttpRequestException e)
+        {
+            if (response != null)
+            {
+                using (var responseJson = await context.ReadForMemoryAsync(await response.Content.ReadAsStreamAsync(),
+                    "RequestExecutor/HandleServerDown/ReadResponseContent"))
+                {
+                    command.FailedNodes.Add(chosenNode, JsonDeserializationClient.ExceptionSchema(responseJson));
+                }
+            }
+            else //this would be connections that didn't have response, such as "couldn't connect to remote server"
+            {
+                command.FailedNodes.Add(chosenNode, new ExceptionDispatcher.ExceptionSchema
+                {
+                    Url = request.RequestUri.ToString(),
+                    Message = e.Message,
+                    Error = e.ToString(),
+                    Type = e.GetType().FullName
+                });
+            }
         }
 
         public string UrlFor(string documentKey)

@@ -32,7 +32,7 @@ namespace Raven.Server.Documents
 {
     public class DatabasesLandlord : IDisposable
     {
-        private ReaderWriterLockSlim _disposing = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim _disposing = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
 
@@ -54,6 +54,7 @@ namespace Raven.Server.Documents
         {
             // response to changed database.
             // if disabled, unload
+            Debug.Assert(_serverStore.Disposed == false);
 
             TransactionOperationContext context;
             using (_serverStore.ContextPool.AllocateOperationContext(out context))
@@ -197,7 +198,7 @@ namespace Raven.Server.Documents
                                     _logger.Info("Failure in deferred disposal of a database", e);
                             }
                         });
-                    else if (dbTask.Status == TaskStatus.RanToCompletion)
+                    else if (dbTask.Status == TaskStatus.RanToCompletion && dbTask.Result != null)
                         exceptionAggregator.Execute(((IDisposable)dbTask.Result).Dispose);
                     // there is no else, the db is probably faulted
                 });
@@ -223,6 +224,15 @@ namespace Raven.Server.Documents
 
         public event Action<string> OnDatabaseLoaded = delegate { };
 
+        public bool IsDatabaseLoaded(StringSegment databaseName)
+        {
+            if (DatabasesCache.TryGetValue(databaseName, out Task<DocumentDatabase> databaseTask))
+            {
+                return databaseTask.IsCanceled == false && databaseTask.IsFaulted == false;
+            }
+
+            return false;
+        }
 
         public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, bool ignoreDisabledDatabase = false)
         {
@@ -306,6 +316,13 @@ namespace Raven.Server.Documents
         {
             try
             {
+                if (_serverStore.Disposed)
+                    return null;
+
+                //if false, this means we have started disposing, so we shouldn't create a database now
+                if (_disposing.TryEnterReadLock(0) == false)
+                    return null;
+
                 var db = CreateDocumentsStorage(databaseName, config);
                 _serverStore.NotificationCenter.Add(
                     DatabaseChanged.Create(databaseName, DatabaseChangeType.Load));
@@ -321,6 +338,12 @@ namespace Raven.Server.Documents
                     Task<DocumentDatabase> val;
                     DatabasesCache.TryRemove(databaseName, out val);
                 }
+
+                if (_logger.IsInfoEnabled && e.InnerException is UnauthorizedAccessException)
+                {
+                    _logger.Info("Failed to load database because couldn't access certain file. Please check permissions, and make sure that nothing locks that file (an antivirus is a good example of something that can lock the file)");
+                }
+
                 throw;
             }
             finally
@@ -332,6 +355,9 @@ namespace Raven.Server.Documents
                 catch (ObjectDisposedException)
                 {
                 }
+
+                if(_disposing.IsReadLockHeld)
+                    _disposing.ExitReadLock();
             }
         }
 
@@ -375,6 +401,7 @@ namespace Raven.Server.Documents
                 throw new ArgumentNullException(nameof(databaseName),
                     "Database name cannot be <system>. Using of <system> database indicates outdated code that was targeted RavenDB 3.5.");
 
+            Debug.Assert(_serverStore.Disposed == false);
 
             TransactionOperationContext context;
             using (_serverStore.ContextPool.AllocateOperationContext(out context))
@@ -413,6 +440,7 @@ namespace Raven.Server.Documents
 
         protected RavenConfiguration CreateConfiguration(StringSegment databaseName, DatabaseRecord record)
         {
+            Debug.Assert(_serverStore.Disposed == false);
             var config = RavenConfiguration.CreateFrom(_serverStore.Configuration, databaseName, ResourceType.Database);
 
             foreach (var setting in record.Settings)

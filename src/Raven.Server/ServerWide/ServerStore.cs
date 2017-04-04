@@ -81,8 +81,11 @@ namespace Raven.Server.ServerWide
 
         public string NodeTag => _engine.Tag;
 
+        public bool Disposed => _disposed;
+
         private Timer _timer;
         private RachisConsensus<ClusterStateMachine> _engine;
+        private bool _disposed;
 
         public ClusterTopology GetClusterTopology(TransactionOperationContext context)
         {
@@ -222,11 +225,15 @@ namespace Raven.Server.ServerWide
 
         public void Dispose()
         {
-            if (_shutdownNotification.IsCancellationRequested)
+            if (_shutdownNotification.IsCancellationRequested || _disposed)
                 return;
 
             lock (this)
             {
+                if (_disposed)
+                    return;
+
+                _disposed = true;
                 if (_shutdownNotification.IsCancellationRequested)
                     return;
 
