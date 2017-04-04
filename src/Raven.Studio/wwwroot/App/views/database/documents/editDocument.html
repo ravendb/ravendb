@@ -112,7 +112,8 @@
                     <div class="btn-group" role="group">
                         <button type="button" class="btn btn-xs btn-default doc-attachments" data-bind="css: { active: isAttachmentsActive() }, click: activateAttachments">
                             <div class="icon-attachment"></div>
-                            Attachments <span data-bind="text: $root.attachmentsCount() || ''"></span>
+                            Attachments
+                            <div class="badge" data-bind="text: $root.attachmentsCount() || ''"></div>
                         </button>
                     </div>
                     <div class="btn-group" role="group" data-bind="visible: revisionsEnabled">

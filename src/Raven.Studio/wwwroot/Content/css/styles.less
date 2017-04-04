@@ -563,7 +563,19 @@ hr {
     .btn {
         box-shadow: none;
         border: none;
+        position: relative;
 
+        .badge {
+            position: absolute;
+            right: 4px;
+            top: 4px;
+            font-size: 12px;
+            color: @gray-lighter;
+            padding: 2px 5px;
+            background-color: @brand-primary;
+            opacity:.6;
+        }
+        
         [class*=" icon-"],
         [class^="icon-"] {
             color: inherit;
@@ -575,6 +587,10 @@ hr {
 
         &.active {
             background-color: @gray-darker;
+
+            .badge {
+                opacity:1;
+            }
         }
 
         &:not(.active) {
