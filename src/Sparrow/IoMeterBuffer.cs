@@ -146,7 +146,10 @@ namespace Sparrow
                     newSummary.MaxTime = newSummary.MaxTime > oldVal.Duration ? newSummary.MaxTime : oldVal.Duration;
                     newSummary.MinTime = newSummary.MinTime > oldVal.Duration ? oldVal.Duration : newSummary.MinTime;
                     newSummary.TotalSize += oldVal.Size;
-                    newSummary.TotalFileSize = oldVal.FileSize; // take last size to history
+                    if (oldVal.Type == IoMetrics.MeterType.Compression)
+                        newSummary.TotalFileSize += oldVal.FileSize;
+                    else
+                        newSummary.TotalFileSize = oldVal.FileSize; // take last size to history
                     newSummary.TotalTime += oldVal.Duration;
                 }
             }

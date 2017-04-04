@@ -1326,11 +1326,19 @@ namespace Voron.Impl.Journal
 
             var compressionBuffer = fullTxBuffer + sizeof(TransactionHeader);
 
-            var compressedLen = LZ4.Encode64LongBuffer(
-                outputBuffer,
-                compressionBuffer,
-                totalSizeWritten,
-                outputBufferSize);
+            var number = CurrentFile?.Number ?? 0;
+            long compressedLen;
+            using (var metrics = _env.Options.IoMetrics.MeterIoRate(StorageEnvironmentOptions.JournalName(number), // TODO : it might be the last journal as if CurrentFile will be replaced later then this is misleading info, however it doesn't affect web graph
+                IoMetrics.MeterType.Compression, totalSizeWritten)) // Size stands for original size in compression meter
+            {
+                compressedLen = LZ4.Encode64LongBuffer(
+                    outputBuffer,
+                    compressionBuffer,
+                    totalSizeWritten,
+                    outputBufferSize);
+
+                metrics.SetFileSize(compressedLen); // FileSize stands for compressed size in compression meter
+            }
 
             // We need to account for the transaction header as part of the total length.
             var totalLength = compressedLen + sizeof(TransactionHeader);
