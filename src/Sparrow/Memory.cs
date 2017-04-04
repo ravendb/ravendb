@@ -188,6 +188,18 @@ namespace Sparrow
             BulkCopy(dest, src, n);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Set(byte* dest, byte value, uint n)
+        {
+            Unsafe.InitBlock(dest, value, n);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Set(byte* dest, byte value, int n)
+        {
+            Unsafe.InitBlock(dest, value, (uint)n);
+        }
+
         public static void Set(byte* dest, byte value, long n)
         {
             SetInline(dest, value, n);
@@ -200,31 +212,20 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetInline(byte* dest, byte value, long n)
         {
-            if (n == 0) 
+            if (n == 0)
                 goto Finish;
 
-            if (n < 16 * Constants.Size.Kilobyte)
+            if (n < int.MaxValue)
             {
-                long block = 32, index = 0;
-                long length = Math.Min(block, n);
-
-                //Fill the initial array
-                while (index < length)
-                    dest[index++] = value;
-
-                length = n;
-                while (index < length)
-                {
-                    long size = Math.Min(block, length - index);
-                    Unsafe.CopyBlock(dest + index, dest, (uint)size);
-                    index += block;
-                    block *= 2;
-                }
+                Unsafe.InitBlock(dest, value, (uint)n);
             }
-            else UnmanagedMemory.Set(dest, value, n);
+            else
+            {
+                UnmanagedMemory.Set(dest, value, n);
+            }
 
             Finish:
-            return;
+            ;
         }
     }
 }
