@@ -248,10 +248,19 @@ namespace Raven.Server.Documents.Replication
                         {
                             using (var scope = stats.CreateScope())
                             {
-                                scope.RecordLastEtag(_lastDocumentEtag);
+                                try
+                                {
+                                    scope.RecordLastEtag(_lastDocumentEtag);
 
-                                HandleReceivedDocumentsAndAttachmentsBatch(documentsContext, message, _lastDocumentEtag, scope);
-                                break;
+                                    HandleReceivedDocumentsAndAttachmentsBatch(documentsContext, message, _lastDocumentEtag, scope);
+                                    break;
+
+                                }
+                                catch (Exception e)
+                                {
+                                    scope.AddError(e);
+                                    throw;
+                                }
                             }
                         }
                         finally
@@ -1198,7 +1207,7 @@ namespace Raven.Server.Documents.Replication
                             if (_incoming._log.IsInfoEnabled)
                                 _incoming._log.Info($"Got incoming attachment tombstone, doing DELETE on attachment {item.Key}");
 
-                            database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, "$fromReplication", null);
+                            database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null);
                         }
                         else
                         {
@@ -1245,7 +1254,7 @@ namespace Raven.Server.Documents.Replication
                                             if (_incoming._log.IsInfoEnabled)
                                                 _incoming._log.Info(
                                                     $"Conflict check resolved to Update operation, doing PUT on doc = {item.Id}, with change vector = {_changeVector.Format()}");
-                                            database.DocumentsStorage.Put(context, item.Id, null, document, item.LastModifiedTicks, _changeVector, 
+                                            database.DocumentsStorage.Put(context, item.Id, null, document, item.LastModifiedTicks, _changeVector,
                                                 item.Flags, NonPersistentDocumentFlags.FromReplication);
                                         }
                                         else

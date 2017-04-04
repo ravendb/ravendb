@@ -152,6 +152,13 @@
     </div>
 </form>
 
+<div class="hidden">
+    <form method="post" download target="hidden-form" id="downloadAttachmentAtRevisionForm">
+        <input type="hidden" name="ChangeVectorAndType" />
+        <input type="hidden" name="Type" value="Document" />
+    </form>
+</div>
+
 <script type="text/html" id="uploader-template">
     <div class="padding padding-xs margin-bottom" data-bind="with: uploader">
         <div class="input-group file-input">

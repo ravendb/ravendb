@@ -214,6 +214,9 @@ namespace Raven.Server.Documents.Operations
                 {
                     try
                     {
+                        if (active.Killable)
+                            active.Token.Cancel();
+
                         active.Task.Wait();
                     }
                     catch (Exception)

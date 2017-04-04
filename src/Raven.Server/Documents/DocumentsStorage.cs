@@ -28,6 +28,7 @@ using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using Voron.Data;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
@@ -1227,7 +1228,7 @@ namespace Raven.Server.Documents
                     using (conflictsTable.Allocate(out tbv))
                     {
                         tbv.Add(lowerKey, lowerSize);
-                        tbv.Add(VersioningStorage.RecordSeperator);
+                        tbv.Add(SpecialChars.RecordSeperator);
                         tbv.Add((byte*)pChangeVector, existingDoc.ChangeVector.Length * sizeof(ChangeVectorEntry));
                         tbv.Add(keyPtr, keySize);
                         tbv.Add(existingDoc.Data.BasePointer, existingDoc.Data.Size);
@@ -1259,7 +1260,7 @@ namespace Raven.Server.Documents
                     using (conflictsTable.Allocate(out tableValueBuilder))
                     {
                         tableValueBuilder.Add(lowerKey, lowerSize);
-                        tableValueBuilder.Add(VersioningStorage.RecordSeperator);
+                        tableValueBuilder.Add(SpecialChars.RecordSeperator);
                         tableValueBuilder.Add((byte*)pChangeVector, existingTombstone.ChangeVector.Length * sizeof(ChangeVectorEntry));
                         tableValueBuilder.Add(keyPtr, keySize);
                         tableValueBuilder.Add(null, 0);
@@ -1329,7 +1330,7 @@ namespace Raven.Server.Documents
                     using (conflictsTable.Allocate(out tvb))
                     {
                         tvb.Add(lowerKey, lowerSize);
-                        tvb.Add(VersioningStorage.RecordSeperator);
+                        tvb.Add(SpecialChars.RecordSeperator);
                         tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * incomingChangeVector.Length);
                         tvb.Add(keyPtr, keySize);
                         tvb.Add(doc, docSize);
@@ -1479,9 +1480,12 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                    var oldEtag = TableValueToEtag(1, ref oldValue);
-                    if (expectedEtag != null && oldEtag != expectedEtag)
-                        ThrowConcurrentException(key, expectedEtag, oldEtag);
+                    if (expectedEtag != null)
+                    {
+                        var oldEtag = TableValueToEtag(1, ref oldValue);
+                        if (oldEtag != expectedEtag)
+                            ThrowConcurrentException(key, expectedEtag, oldEtag);
+                    }
 
                     int oldSize;
                     oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsTable.Data, out oldSize), oldSize, context);
@@ -1518,19 +1522,30 @@ namespace Raven.Server.Documents
                         if (oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
                             oldMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray oldAttachments))
                         {
-                            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
+                            // Make sure the user did not changed the value of attachments in the metadata
+                            // In most cases it isn't chagned so we can skip recreating the document
+                            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false ||
+                                attachments.Equals(oldAttachments) == false)
                             {
-                                // Make sure the user did not changed the value of attachments in the metadata
-                                // In most cases it isn't chagned so we can skip recreating the document
-                                if (attachments.Equals(oldAttachments) == false)
+                                document.Modifications = new DynamicJsonValue(document)
                                 {
-                                    metadata.Modifications = new DynamicJsonValue(metadata)
+                                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue(metadata)
                                     {
                                         [Constants.Documents.Metadata.Attachments] = oldAttachments
-                                    };
-                                    document = context.ReadObject(document, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                                    }
+                                };
+#if DEBUG
+                                if (document.DebugHash != documentDebugHash)
+                                {
+                                    throw new InvalidDataException("The incoming document " + key + " has changed _during_ the put process, this is likely because you are trying to save a document that is already stored and was moved");
                                 }
+#endif
+                                document = context.ReadObject(document, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+#if DEBUG
+                                documentDebugHash = document.DebugHash;
+                                document.BlittableValidation();
+#endif
                             }
                         }
                     }

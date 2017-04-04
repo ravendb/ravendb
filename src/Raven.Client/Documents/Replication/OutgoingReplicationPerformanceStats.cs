@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Replication
 {
@@ -19,6 +20,8 @@ namespace Raven.Client.Documents.Replication
         public StorageStats Storage { get; set; }
 
         public NetworkStats Network { get; set; }
+
+        public List<ReplicationError> Errors { get; set; }
 
         public class NetworkStats
         {
