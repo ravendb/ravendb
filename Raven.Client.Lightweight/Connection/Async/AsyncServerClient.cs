@@ -1430,7 +1430,7 @@ namespace Raven.Client.Connection.Async
                 {
                     if (json == null) throw new InvalidOperationException("Got empty response from the server for the following request: " + request.Url);
 
-                    var queryResult = SerializationHelper.ToQueryResult(json, request.ResponseHeaders.GetEtagHeader(), request.ResponseHeaders.Get("Temp-Request-Time"), request.Size);
+                    var queryResult = SerializationHelper.ToQueryResult(json, request.ResponseHeaders.Get("Temp-Request-Time"), request.Size);
 
                     if (request.ResponseStatusCode == HttpStatusCode.NotModified)
                         queryResult.DurationMilliseconds = -1;
@@ -1492,7 +1492,7 @@ namespace Raven.Client.Connection.Async
                     }, token).ConfigureAwait(false);
                 res = result[0];
                 var json = (RavenJObject)result[0].Result;
-                var queryResult = SerializationHelper.ToQueryResult(json, result[0].GetEtagHeader(), result[0].Headers["Temp-Request-Time"], -1);
+                var queryResult = SerializationHelper.ToQueryResult(json, result[0].Headers["Temp-Request-Time"], -1);
 
                 var docResults = queryResult.Results.Concat(queryResult.Includes);
                 return await RetryOperationBecauseOfConflict(operationMetadata, requestTimeMetric, docResults, queryResult,
