@@ -21,7 +21,7 @@ using Raven.Storage.Esent;
 namespace Raven.Database.Storage.Esent.StorageActions
 {
     [CLSCompliant(false)]
-    public partial class DocumentStorageActions : IDisposable, IGeneralStorageActions
+    public partial class DocumentStorageActions : IGeneralStorageActions
     {
         public event Action OnStorageCommit = delegate { };
         public event Action BeforeStorageCommit;

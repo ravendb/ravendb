@@ -154,5 +154,11 @@ namespace Raven.Database.Storage.Voron.StorageActions
         {
             return MaybePulseTransaction(null, addToPulseCount, beforePulseTransaction);
         }
+
+        public void Dispose()
+        {
+            if (snapshot.Value != null)
+                snapshot.Value.Dispose();
+        }
     }
 }
