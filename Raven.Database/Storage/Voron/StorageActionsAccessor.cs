@@ -44,6 +44,7 @@ namespace Raven.Database.Storage.Voron
 
         public void Dispose()
         {
+            General.Dispose();
             var onDispose = OnDispose;
             if (onDispose != null)
                 onDispose();
