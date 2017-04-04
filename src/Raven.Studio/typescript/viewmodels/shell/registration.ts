@@ -39,7 +39,8 @@ class registrationModel {
             FirstName: this.firstName(),
             LastName: this.lastName(),
             Email: this.email(),
-            Company: this.company()
+            Company: this.company(),
+            BuildInfo: null
         }
     }
 }
