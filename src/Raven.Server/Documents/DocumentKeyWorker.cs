@@ -73,10 +73,8 @@ namespace Raven.Server.Documents
 
         private static readonly UTF8Encoding Encoding = new UTF8Encoding();
 
-        public static void GetLowerKeySliceAndStorageKey(JsonOperationContext context, string str, out byte* lowerKey,
-            out int lowerSize,
-            out byte* key,
-            out int keySize)
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLowerKeySliceAndStorageKey<TTransaction>(TransactionOperationContext<TTransaction> context, string str, out Slice lowerKeySlice, out Slice keySlice)
+            where TTransaction : RavenTransaction
         {
             // Because we need to also store escape positions for the key when we store it
             // we need to store it as a lazy string value.
@@ -96,24 +94,28 @@ namespace Raven.Server.Documents
 
             _jsonParserState.Reset();
 
-            keySize = JsonParserState.VariableSizeIntSize(str.Length);
+            int strLength = str.Length;
+
+            int keySize = JsonParserState.VariableSizeIntSize(strLength);
 
             int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str);
 
-            var buffer = context.GetMemory(
-                str.Length // lower key
-                + keySize // the size of var int for the len of the key
-                + str.Length // actual key
-                + escapePositionsSize);
+            ByteString buffer;
+            var scope = context.Allocator.Allocate(strLength // lower key
+                                                   + keySize // the size of var int for the len of the key
+                                                   + strLength // actual key
+                                                   + escapePositionsSize, out buffer);
 
+
+            byte* ptr = buffer.Ptr;
             fixed (char* pChars = str)
             {
-                int size = Encoding.GetMaxByteCount(str.Length);
-                var strSize = Encoding.GetBytes(pChars, str.Length, buffer.Address, size);
-                _jsonParserState.FindEscapePositionsIn(buffer.Address, strSize, escapePositionsSize);
+                int size = Encoding.GetMaxByteCount(strLength);
+                var strSize = Encoding.GetBytes(pChars, strLength, ptr, size);
+                _jsonParserState.FindEscapePositionsIn(ptr, strSize, escapePositionsSize);
             }
 
-            for (var i = 0; i < str.Length; i++)
+            for (var i = 0; i < strLength; i++)
             {
                 var ch = str[i];
                 if ((ch < 65) || (ch > 90))
@@ -121,69 +123,70 @@ namespace Raven.Server.Documents
                     if (ch > 127) // not ASCII, use slower mode
                         goto UnlikelyUnicode;
 
-                    buffer.Address[i] = (byte)ch;
+                    ptr[i] = (byte)ch;
                 }
                 else
                 {
-                    buffer.Address[i] = (byte)(ch | 0x20);
+                    ptr[i] = (byte)(ch | 0x20);
                 }
 
 
-                buffer.Address[i + keySize + str.Length] = (byte)ch;
+                ptr[i + keySize + strLength] = (byte)ch;
             }
 
-            var writePos = buffer.Address + str.Length;
+            var writePos = ptr + strLength;
 
-            JsonParserState.WriteVariableSizeInt(ref writePos, str.Length);
-            _jsonParserState.WriteEscapePositionsTo(writePos + str.Length);
-            keySize = escapePositionsSize + str.Length + keySize;
-            key = buffer.Address + str.Length;
-            lowerKey = buffer.Address;
-            lowerSize = str.Length;
-            return;
+            JsonParserState.WriteVariableSizeInt(ref writePos, strLength);
+            _jsonParserState.WriteEscapePositionsTo(writePos + strLength);
+            keySize = escapePositionsSize + strLength + keySize;
 
+            Slice.External(context.Allocator, ptr + strLength, keySize, out keySlice);
+            Slice.External(context.Allocator, ptr, str.Length, out lowerKeySlice);
+            return scope;
 
             UnlikelyUnicode:
-            UnicodeGetLowerKeySliceAndStorageKey(context, str, out lowerKey, out lowerSize, out key, out keySize);
+            return UnicodeGetLowerKeySliceAndStorageKey(context, str, out lowerKeySlice, out keySlice);
         }
 
-        private static void UnicodeGetLowerKeySliceAndStorageKey(JsonOperationContext context, string str,
-            out byte* lowerKey, out int lowerSize,
-            out byte* key, out int keySize)
+        private static ByteStringContext.InternalScope UnicodeGetLowerKeySliceAndStorageKey<TTransaction>(TransactionOperationContext<TTransaction> context, string str,
+            out Slice lowerKeySlice, out Slice keySlice)
+            where TTransaction : RavenTransaction
         {
             // See comment in GetLowerKeySliceAndStorageKey for the format
             _jsonParserState.Reset();
             var byteCount = Encoding.GetMaxByteCount(str.Length);
             var maxKeyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
 
+            int strLength = str.Length;
             int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str);
 
-            var buffer = context.GetMemory(
-                sizeof(char) * str.Length // for the lower calls
+            ByteString buffer;
+            var scope = context.Allocator.Allocate(
+                sizeof(char) * strLength // for the lower calls
                 + byteCount // lower key
                 + maxKeyLenSize // the size of var int for the len of the key
                 + byteCount // actual key
-                + escapePositionsSize);
+                + escapePositionsSize, out buffer);
 
             fixed (char* pChars = str)
             {
-                var size = Encoding.GetBytes(pChars, str.Length, buffer.Address, byteCount);
-                _jsonParserState.FindEscapePositionsIn(buffer.Address, size, escapePositionsSize);
+                var size = Encoding.GetBytes(pChars, strLength, buffer.Ptr, byteCount);
+                _jsonParserState.FindEscapePositionsIn(buffer.Ptr, size, escapePositionsSize);
 
-                var destChars = (char*)buffer.Address;
-                for (var i = 0; i < str.Length; i++)
+                var destChars = (char*)buffer.Ptr;
+                for (var i = 0; i < strLength; i++)
                     destChars[i] = char.ToLowerInvariant(pChars[i]);
 
-                lowerKey = buffer.Address + str.Length * sizeof(char);
+                byte* lowerKey = buffer.Ptr + strLength * sizeof(char);
 
-                lowerSize = Encoding.GetBytes(destChars, str.Length, lowerKey, byteCount);
+                int lowerSize = Encoding.GetBytes(destChars, strLength, lowerKey, byteCount);
 
                 if (lowerSize > 512)
                     ThrowKeyTooBig(str);
 
-                key = buffer.Address + str.Length * sizeof(char) + byteCount;
-                var writePos = key;
-                keySize = Encoding.GetBytes(pChars, str.Length, writePos + maxKeyLenSize, byteCount);
+                byte* key = buffer.Ptr + strLength * sizeof(char) + byteCount;
+                byte* writePos = key;
+                int keySize = Encoding.GetBytes(pChars, strLength, writePos + maxKeyLenSize, byteCount);
 
                 var actualKeyLenSize = JsonParserState.VariableSizeIntSize(keySize);
                 if (actualKeyLenSize < maxKeyLenSize)
@@ -196,6 +199,10 @@ namespace Raven.Server.Documents
                 JsonParserState.WriteVariableSizeInt(ref writePos, keySize);
                 _jsonParserState.WriteEscapePositionsTo(writePos + keySize);
                 keySize += escapePositionsSize + maxKeyLenSize;
+
+                Slice.External(context.Allocator, key, keySize, out keySlice);
+                Slice.External(context.Allocator, lowerKey, lowerSize, out lowerKeySlice);
+                return scope;
             }
         }
 
@@ -208,14 +215,8 @@ namespace Raven.Server.Documents
 
         public static ByteStringContext.InternalScope GetStringPreserveCase(DocumentsOperationContext context, string str, out Slice strSlice)
         {
-            byte* lowerKey;
-            int lowerKeySize;
-            byte* key;
-            int keySize;
             // TODO: Optimize this
-            GetLowerKeySliceAndStorageKey(context, str, out lowerKey, out lowerKeySize, out key, out keySize);
-
-            return Slice.From(context.Allocator, key, keySize, out strSlice);
+            return GetLowerKeySliceAndStorageKey(context, str, out var _, out strSlice);
         }
     }
 }

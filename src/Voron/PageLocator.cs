@@ -55,7 +55,7 @@ namespace Voron
 
             _tx = tx;
 
-            _cacheMemory = tx.Allocator.Allocate(cacheSize * sizeof(PageData));
+            tx.Allocator.Allocate(cacheSize * sizeof(PageData), out _cacheMemory);
             _cache = (PageData*)_cacheMemory.Ptr;
 
             for (var i = 0; i < cacheSize; i++)

@@ -53,7 +53,6 @@ namespace Raven.Server.Documents.Versioning
             Flags = 6,
             LastModified = 7,
         }
-
         private readonly VersioningConfigurationCollection _emptyConfiguration = new VersioningConfigurationCollection();
 
         private VersioningStorage(DocumentDatabase database, VersioningConfiguration versioningConfiguration)
@@ -183,13 +182,12 @@ namespace Raven.Server.Documents.Versioning
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
 
-            byte* lowerKey;
-            int lowerKeySize;
-            PutInternal(context, key, document, flags, lastModifiedTicks, table, changeVector, out lowerKey, out lowerKeySize);
+            Slice lowerKey;
+            PutInternal(context, key, document, flags, lastModifiedTicks, table, changeVector, out lowerKey);
 
             if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
-                _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerKey, lowerKeySize, changeVector);
+                _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerKey, changeVector);
             }
 
             if (configuration == null)
@@ -199,7 +197,7 @@ namespace Raven.Server.Documents.Versioning
             }
 
             Slice prefixSlice;
-            using (GetKeyPrefix(context, lowerKey, lowerKeySize, out prefixSlice))
+            using (GetKeyPrefix(context, lowerKey, out prefixSlice))
             {
                 // We delete the old revisions after we put the current one, 
                 // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
@@ -213,21 +211,18 @@ namespace Raven.Server.Documents.Versioning
             ChangeVectorEntry[] changeVector, long lastModifiedTicks)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
-            byte* lowerKey;
-            int lowerKeySize;
-            PutInternal(context, key, document, flags, lastModifiedTicks, table, changeVector, out lowerKey, out lowerKeySize);
+            PutInternal(context, key, document, flags, lastModifiedTicks, table, changeVector, out var _);
         }
 
         private void PutInternal(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, 
-            DocumentFlags flags, long lastModifiedTicks, Table table, ChangeVectorEntry[] changeVector, out byte* lowerKey, out int lowerSize)
+            DocumentFlags flags, long lastModifiedTicks, Table table, ChangeVectorEntry[] changeVector, out Slice lowerKey)
         {
             BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
 
             flags |= DocumentFlags.Revision;
 
-            byte* keyPtr;
-            int keySize;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            Slice keyPtr;
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out keyPtr);
 
             var data = context.ReadObject(document, key);
 
@@ -251,10 +246,10 @@ namespace Raven.Server.Documents.Versioning
                 using (table.Allocate(out tbv))
                 {
                     tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
-                    tbv.Add(lowerKey, lowerSize);
+                    tbv.Add(lowerKey);
                     tbv.Add(SpecialChars.RecordSeperator);
                     tbv.Add(Bits.SwapBytes(newEtag));
-                    tbv.Add(keyPtr, keySize);
+                    tbv.Add(keyPtr);
                     tbv.Add(data.BasePointer, data.Size);
                     tbv.Add((int)flags);
                     tbv.Add(lastModifiedTicks);
@@ -327,27 +322,29 @@ namespace Raven.Server.Documents.Versioning
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ReleaseMemory GetKeyPrefix(DocumentsOperationContext context, Slice loweredKey, out Slice prefixSlice)
+        private ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, Slice loweredKey, out Slice prefixSlice)
         {
             return GetKeyPrefix(context, loweredKey.Content.Ptr, loweredKey.Size, out prefixSlice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ReleaseMemory GetKeyPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, out Slice prefixSlice)
+        private ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, out Slice prefixSlice)
         {
-            var keyMem = context.Allocator.Allocate(lowerKeySize + 1);
+            ByteString keyMem;
+            var scope = context.Allocator.Allocate(lowerKeySize + 1, out keyMem);
 
             Memory.Copy(keyMem.Ptr, lowerKey, lowerKeySize);
             keyMem.Ptr[lowerKeySize] = SpecialChars.RecordSeperator;
 
             prefixSlice = new Slice(SliceOptions.Key, keyMem);
-            return new ReleaseMemory(keyMem, context);
+            return scope;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ReleaseMemory GetLastKey(DocumentsOperationContext context, Slice lowerKey, out Slice prefixSlice)
+        private ByteStringContext.InternalScope GetLastKey(DocumentsOperationContext context, Slice lowerKey, out Slice prefixSlice)
         {
-            var keyMem = context.Allocator.Allocate(lowerKey.Size + 1 + sizeof(long));
+            ByteString keyMem;
+            var scope = context.Allocator.Allocate(lowerKey.Size + 1 + sizeof(long), out keyMem);
 
             Memory.Copy(keyMem.Ptr, lowerKey.Content.Ptr, lowerKey.Size);
             keyMem.Ptr[lowerKey.Size] = SpecialChars.RecordSeperator;
@@ -356,7 +353,7 @@ namespace Raven.Server.Documents.Versioning
             Memory.Copy(keyMem.Ptr + lowerKey.Size + 1, (byte*)&maxValue, sizeof(long));
 
             prefixSlice = new Slice(SliceOptions.Key, keyMem);
-            return new ReleaseMemory(keyMem, context);
+            return scope;
         }
 
         private long CountOfRevisions(DocumentsOperationContext context, Slice prefix)

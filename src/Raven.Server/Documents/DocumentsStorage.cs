@@ -892,8 +892,7 @@ namespace Raven.Server.Documents
 
                 // we update the tombstone
                 var etag = CreateTombstone(context,
-                    loweredKey.Content.Ptr,
-                    loweredKey.Size,
+                    loweredKey,
                     local.Tombstone.Etag,
                     collectionName,
                     local.Tombstone.ChangeVector,
@@ -933,15 +932,11 @@ namespace Raven.Server.Documents
                 var tvr = new TableValueReader(ptr, size);
                 var flags = *(DocumentFlags*)tvr.Read((int)DocumentsTable.Flags, out size);
 
-                var etag = CreateTombstone(context,
-                    tvr.Read((int)DocumentsTable.LoweredKey, out size),
-                    size,
-                    doc.Etag,
-                    collectionName,
-                    doc.ChangeVector,
-                    lastModifiedTicks,
-                    changeVector,
-                    doc.Flags);
+                byte* lowerKeyPtr = tvr.Read((int)DocumentsTable.LoweredKey, out size);
+                Slice tombstone;
+                Slice.External(context.Allocator, lowerKeyPtr, size, out tombstone);
+
+                var etag = CreateTombstone(context, tombstone, doc.Etag, collectionName, doc.ChangeVector, lastModifiedTicks, changeVector, doc.Flags);
 
                 if (collectionName.IsSystem == false)
                 {
@@ -986,8 +981,7 @@ namespace Raven.Server.Documents
                 collectionName = ExtractCollectionName(context, collectionName.Name);
 
                 var etag = CreateTombstone(context,
-                    loweredKey.Content.Ptr,
-                    loweredKey.Size,
+                    loweredKey,
                     -1, // delete etag is not relevant
                     collectionName,
                     changeVector,
@@ -1085,8 +1079,7 @@ namespace Raven.Server.Documents
             {
                 //note that CreateTombstone is also deleting conflicts
                 etag = CreateTombstone(context,
-                    lowerKey.Content.Ptr,
-                    lowerKey.Size,
+                    lowerKey,
                     latestConflict.Etag,
                     collectionName,
                     mergedChangeVector,
@@ -1144,7 +1137,7 @@ namespace Raven.Server.Documents
 
         private long CreateTombstone(
             DocumentsOperationContext context,
-            byte* lowerKey, int lowerSize,
+            Slice lowerKey,
             long documentEtag,
             CollectionName collectionName,
             ChangeVectorEntry[] docChangeVector,
@@ -1159,13 +1152,12 @@ namespace Raven.Server.Documents
                 changeVector = ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(
                     context,
                     lowerKey,
-                    lowerSize,
                     newEtag,
                     docChangeVector);
             }
             else
             {
-                ConflictsStorage.DeleteConflictsFor(context, lowerKey, lowerSize);
+                ConflictsStorage.DeleteConflictsFor(context, lowerKey);
             }
 
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
@@ -1180,7 +1172,7 @@ namespace Raven.Server.Documents
                     TableValueBuilder tbv;
                     using (table.Allocate(out tbv))
                     {
-                        tbv.Add(lowerKey, lowerSize);
+                        tbv.Add(lowerKey);
                         tbv.Add(Bits.SwapBytes(newEtag));
                         tbv.Add(Bits.SwapBytes(documentEtag));
                         tbv.Add(context.GetTransactionMarker());
@@ -1212,11 +1204,7 @@ namespace Raven.Server.Documents
 
             CollectionName collectionName;
 
-            byte* lowerKey;
-            int lowerSize;
-            byte* keyPtr;
-            int keySize;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out Slice lowerKey, out Slice keyPtr);
             // ReSharper disable once ArgumentsStyleLiteral
             var existing = GetDocumentOrTombstone(context, key, throwOnConflict: false);
             if (existing.Document != null)
@@ -1230,10 +1218,10 @@ namespace Raven.Server.Documents
                     TableValueBuilder tbv;
                     using (conflictsTable.Allocate(out tbv))
                     {
-                        tbv.Add(lowerKey, lowerSize);
+                        tbv.Add(lowerKey);
                         tbv.Add(SpecialChars.RecordSeperator);
                         tbv.Add((byte*)pChangeVector, existingDoc.ChangeVector.Length * sizeof(ChangeVectorEntry));
-                        tbv.Add(keyPtr, keySize);
+                        tbv.Add(keyPtr);
                         tbv.Add(existingDoc.Data.BasePointer, existingDoc.Data.Size);
                         tbv.Add(Bits.SwapBytes(GenerateNextEtag()));
                         tbv.Add(lazyCollectionName.Buffer, lazyCollectionName.Size);
@@ -1262,10 +1250,10 @@ namespace Raven.Server.Documents
                     TableValueBuilder tableValueBuilder;
                     using (conflictsTable.Allocate(out tableValueBuilder))
                     {
-                        tableValueBuilder.Add(lowerKey, lowerSize);
+                        tableValueBuilder.Add(lowerKey);
                         tableValueBuilder.Add(SpecialChars.RecordSeperator);
                         tableValueBuilder.Add((byte*)pChangeVector, existingTombstone.ChangeVector.Length * sizeof(ChangeVectorEntry));
-                        tableValueBuilder.Add(keyPtr, keySize);
+                        tableValueBuilder.Add(keyPtr);
                         tableValueBuilder.Add(null, 0);
                         tableValueBuilder.Add(Bits.SwapBytes(GenerateNextEtag()));
                         tableValueBuilder.Add(existingTombstone.Collection.Buffer, existingTombstone.Collection.Size);
@@ -1289,7 +1277,7 @@ namespace Raven.Server.Documents
                 collectionName = ExtractCollectionName(context, key, incomingDoc);
 
                 Slice prefixSlice;
-                using (ConflictsStorage.GetConflictsKeyPrefix(context, lowerKey, lowerSize, out prefixSlice))
+                using (ConflictsStorage.GetConflictsKeyPrefix(context, lowerKey, out prefixSlice))
                 {
                     var conflicts = ConflictsStorage.GetConflictsFor(context, prefixSlice);
                     foreach (var conflict in conflicts)
@@ -1332,10 +1320,10 @@ namespace Raven.Server.Documents
                     TableValueBuilder tvb;
                     using (conflictsTable.Allocate(out tvb))
                     {
-                        tvb.Add(lowerKey, lowerSize);
+                        tvb.Add(lowerKey);
                         tvb.Add(SpecialChars.RecordSeperator);
                         tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * incomingChangeVector.Length);
-                        tvb.Add(keyPtr, keySize);
+                        tvb.Add(keyPtr);
                         tvb.Add(doc, docSize);
                         tvb.Add(Bits.SwapBytes(GenerateNextEtag()));
                         tvb.Add(lazyCollectionName.Buffer, lazyCollectionName.Size);
@@ -1428,12 +1416,7 @@ namespace Raven.Server.Documents
                     break;
             }
 
-
-            byte* lowerKey;
-            int lowerSize;
-            byte* keyPtr;
-            int keySize;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out Slice lowerKey, out Slice keyPtr);
 
             if (ConflictsStorage.ConflictsCount != 0)
             {
@@ -1441,7 +1424,7 @@ namespace Raven.Server.Documents
                 // This way we avoid another replication back to the source
                 if (expectedEtag.HasValue)
                 {
-                    ConflictsStorage.ThrowConcurrencyExceptionOnConflict(context, lowerKey, lowerSize, expectedEtag);
+                    ConflictsStorage.ThrowConcurrencyExceptionOnConflict(context, lowerKey.Content.Ptr, lowerKey.Size, expectedEtag);
                 }
 
                 bool fromReplication = (flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication;
@@ -1458,174 +1441,168 @@ namespace Raven.Server.Documents
             // delete a tombstone if it exists, if it known that it is a new key, no need, so we can skip it
             if (knownNewKey == false)
             {
-                DeleteTombstoneIfNeeded(context, collectionName, lowerKey, lowerSize);
+                DeleteTombstoneIfNeeded(context, collectionName, lowerKey.Content.Ptr, lowerKey.Size);
             }
 
             var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
 
-            Slice loweredKey;
-            using (Slice.External(context.Allocator, lowerKey, (ushort)lowerSize, out loweredKey))
+            var oldValue = default(TableValueReader);
+            if (knownNewKey == false)
             {
-                var oldValue = default(TableValueReader);
-                if (knownNewKey == false)
+                table.ReadByKey(lowerKey, out oldValue);
+            }
+
+            BlittableJsonReaderObject oldDoc = null;
+            if (oldValue.Pointer == null)
+            {
+                if (expectedEtag != null && expectedEtag != 0)
                 {
-                    table.ReadByKey(loweredKey, out oldValue);
+                    ThrowConcurrentExceptionOnMissingDoc(key, expectedEtag.Value);
+                }
+            }
+            else
+            {
+                if (expectedEtag != null)
+                {
+                    var oldEtag = TableValueToEtag(1, ref oldValue);
+                    if (oldEtag != expectedEtag)
+                        ThrowConcurrentException(key, expectedEtag, oldEtag);
                 }
 
-                BlittableJsonReaderObject oldDoc = null;
-                if (oldValue.Pointer == null)
+                int oldSize;
+                oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsTable.Data, out oldSize), oldSize, context);
+                var oldCollectionName = ExtractCollectionName(context, key, oldDoc);
+                if (oldCollectionName != collectionName)
+                    ThrowInvalidCollectionNameChange(key, oldCollectionName, collectionName);
+
+                int size;
+                var oldFlags = *(DocumentFlags*)oldValue.Read((int)DocumentsTable.Flags, out size);
+                if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments || 
+                    (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
                 {
-                    if (expectedEtag != null && expectedEtag != 0)
-                    {
-                        ThrowConcurrentExceptionOnMissingDoc(key, expectedEtag.Value);
-                    }
+                    flags |= DocumentFlags.HasAttachments;
                 }
-                else
+            }
+
+            if (changeVector == null)
+            {
+                var oldChangeVector = oldValue.Pointer != null ? GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)DocumentsTable.ChangeVector) : null;
+                changeVector = SetDocumentChangeVectorForLocalChange(context, lowerKey, oldChangeVector, newEtag);
+            }
+
+
+            if (collectionName.IsSystem == false &&
+                (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
+            {
+                var shouldRecreateAttachment = false;
+                BlittableJsonReaderObject metadata = null;
+                if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
+                    (nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
+                    (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
                 {
-                    if (expectedEtag != null)
+                    Debug.Assert(oldDoc != null, "Can be null when it comes from replication, but we checked for this.");
+
+                    if (oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
+                        oldMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray oldAttachments))
                     {
-                        var oldEtag = TableValueToEtag(1, ref oldValue);
-                        if (oldEtag != expectedEtag)
-                            ThrowConcurrentException(key, expectedEtag, oldEtag);
-                    }
-
-                    int oldSize;
-                    oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsTable.Data, out oldSize), oldSize, context);
-                    var oldCollectionName = ExtractCollectionName(context, key, oldDoc);
-                    if (oldCollectionName != collectionName)
-                        ThrowInvalidCollectionNameChange(key, oldCollectionName, collectionName);
-
-                    int size;
-                    var oldFlags = *(DocumentFlags*)oldValue.Read((int)DocumentsTable.Flags, out size);
-                    if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments || 
-                        (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
-                    {
-                        flags |= DocumentFlags.HasAttachments;
-                    }
-                }
-
-                if (changeVector == null)
-                {
-                    var oldChangeVector = oldValue.Pointer != null ? GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)DocumentsTable.ChangeVector) : null;
-                    changeVector = SetDocumentChangeVectorForLocalChange(context,
-                        loweredKey,
-                        oldChangeVector, newEtag);
-                }
-
-
-                if (collectionName.IsSystem == false &&
-                    (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
-                {
-                    var shouldRecreateAttachment = false;
-                    BlittableJsonReaderObject metadata = null;
-                    if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
-                        (nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
-                        (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
-                    {
-                        Debug.Assert(oldDoc != null, "Can be null when it comes from replication, but we checked for this.");
-
-                        if (oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
-                            oldMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray oldAttachments))
+                        // Make sure the user did not changed the value of @attachments in the @metadata
+                        // In most cases it won't be changed so we can use this value 
+                        // instead of recreating the document's blitable from scratch
+                        if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
+                            metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false ||
+                            attachments.Equals(oldAttachments) == false)
                         {
-                            // Make sure the user did not changed the value of @attachments in the @metadata
-                            // In most cases it won't be changed so we can use this value 
-                            // instead of recreating the document's blitable from scratch
-                            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
-                                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false ||
-                                attachments.Equals(oldAttachments) == false)
-                            {
-                                shouldRecreateAttachment = true;
-                            }
+                            shouldRecreateAttachment = true;
                         }
                     }
+                }
 
-                    if (shouldRecreateAttachment || 
-                        (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
+                if (shouldRecreateAttachment || 
+                    (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
+                {
+                    if (shouldRecreateAttachment == false)
+                        document.TryGet(Constants.Documents.Metadata.Key, out metadata);
+
+                    var actualAttachments = AttachmentsStorage.GetAttachmentsMetadataForDocument(context, lowerKey);
+                    if (metadata == null)
                     {
-                        if (shouldRecreateAttachment == false)
-                            document.TryGet(Constants.Documents.Metadata.Key, out metadata);
-
-                        var actualAttachments = AttachmentsStorage.GetAttachmentsMetadataForDocument(context, loweredKey);
-                        if (metadata == null)
+                        document.Modifications = new DynamicJsonValue(document)
                         {
-                            document.Modifications = new DynamicJsonValue(document)
-                            {
-                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                                {
-                                    [Constants.Documents.Metadata.Attachments] = actualAttachments
-                                }
-                            };
-                        }
-                        else
-                        {
-                            metadata.Modifications = new DynamicJsonValue(metadata)
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                             {
                                 [Constants.Documents.Metadata.Attachments] = actualAttachments
-                            };
-                            document.Modifications = new DynamicJsonValue(document)
-                            {
-                                [Constants.Documents.Metadata.Key] = metadata
-                            };
-                        }
-#if DEBUG
-                        if (document.DebugHash != documentDebugHash)
-                        {
-                            throw new InvalidDataException("The incoming document " + key + " has changed _during_ the put process, this is likely because you are trying to save a document that is already stored and was moved");
-                        }
-#endif
-                        document = context.ReadObject(document, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-#if DEBUG
-                        documentDebugHash = document.DebugHash;
-                        document.BlittableValidation();
-#endif
+                            }
+                        };
                     }
-
-                    if (_documentDatabase.BundleLoader.VersioningStorage != null)
+                    else
                     {
-                        VersioningConfigurationCollection configuration;
-                        if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document, ref flags, out configuration, context, key))
+                        metadata.Modifications = new DynamicJsonValue(metadata)
                         {
-                            _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, modifiedTicks, configuration);
-                        }
+                            [Constants.Documents.Metadata.Attachments] = actualAttachments
+                        };
+                        document.Modifications = new DynamicJsonValue(document)
+                        {
+                            [Constants.Documents.Metadata.Key] = metadata
+                        };
                     }
-                }
-
-                fixed (ChangeVectorEntry* pChangeVector = changeVector)
-                {
-                    var transactionMarker = context.GetTransactionMarker();
-
-                    TableValueBuilder tbv;
-                    using (table.Allocate(out tbv))
+#if DEBUG
+                    if (document.DebugHash != documentDebugHash)
                     {
-                        tbv.Add(lowerKey, lowerSize);
-                        tbv.Add(Bits.SwapBytes(newEtag));
-                        tbv.Add(keyPtr, keySize);
-                        tbv.Add(document.BasePointer, document.Size);
-                        tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
-                        tbv.Add(modifiedTicks);
-                        tbv.Add((int)flags);
-                        tbv.Add(transactionMarker);
+                        throw new InvalidDataException("The incoming document " + key + " has changed _during_ the put process, this is likely because you are trying to save a document that is already stored and was moved");
+                    }
+#endif
+                    document = context.ReadObject(document, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+#if DEBUG
+                    documentDebugHash = document.DebugHash;
+                    document.BlittableValidation();
+#endif
+                }
 
-                        if (oldValue.Pointer == null)
-                        {
-                            table.Insert(tbv);
-                        }
-                        else
-                        {
-                            table.Update(oldValue.Id, tbv);
-                        }
+                if (_documentDatabase.BundleLoader.VersioningStorage != null)
+                {
+                    VersioningConfigurationCollection configuration;
+                    if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document, ref flags, out configuration, context, key))
+                    {
+                        _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, modifiedTicks, configuration);
                     }
                 }
-
-                if (collectionName.IsSystem == false)
-                {
-                    _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context,
-                        loweredKey, document);
-                }
-
-                _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
-                _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Size);
             }
+
+            fixed (ChangeVectorEntry* pChangeVector = changeVector)
+            {
+                var transactionMarker = context.GetTransactionMarker();
+
+                TableValueBuilder tbv;
+                using (table.Allocate(out tbv))
+                {
+                    tbv.Add(lowerKey);
+                    tbv.Add(Bits.SwapBytes(newEtag));
+                    tbv.Add(keyPtr);
+                    tbv.Add(document.BasePointer, document.Size);
+                    tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
+                    tbv.Add(modifiedTicks);
+                    tbv.Add((int)flags);
+                    tbv.Add(transactionMarker);
+
+                    if (oldValue.Pointer == null)
+                    {
+                        table.Insert(tbv);
+                    }
+                    else
+                    {
+                        table.Update(oldValue.Id, tbv);
+                    }
+                }
+            }
+
+            if (collectionName.IsSystem == false)
+            {
+                _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context, lowerKey, document);
+            }
+
+            _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
+            _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Size);
+
 
             context.Transaction.AddAfterCommitNotification(new DocumentChange
             {
@@ -1702,7 +1679,7 @@ namespace Raven.Server.Documents
             if (oldChangeVector != null)
                 return ReplicationUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, newEtag, oldChangeVector);
 
-            return ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, loweredKey.Content.Ptr, loweredKey.Size, newEtag);
+            return ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, loweredKey, newEtag);
         }
 
 
