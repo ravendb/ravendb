@@ -1402,7 +1402,6 @@ namespace Raven.Server.Documents
 
             var collectionName = ExtractCollectionName(context, key, document);
             var newEtag = GenerateNextEtag();
-            var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
@@ -1569,7 +1568,7 @@ namespace Raven.Server.Documents
                     using (table.Allocate(out tbv))
                     {
                         tbv.Add(lowerKey, lowerSize);
-                        tbv.Add(newEtagBigEndian);
+                        tbv.Add(Bits.SwapBytes(newEtag));
                         tbv.Add(keyPtr, keySize);
                         tbv.Add(document.BasePointer, document.Size);
                         tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
