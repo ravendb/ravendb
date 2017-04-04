@@ -337,13 +337,20 @@ namespace Raven.Server.Documents
                 var title = $"Critical error in '{databaseName}'";
                 var message = "Database is about to be unloaded due to an encountered error";
 
-                _serverStore.NotificationCenter.Add(AlertRaised.Create(
-                    title,
-                    message,
-                    AlertType.CatastrophicDatabaseFailue,
-                    NotificationSeverity.Error,
-                    key: databaseName,
-                    details: new ExceptionDetails(e)));
+                try
+                {
+                    _serverStore.NotificationCenter.Add(AlertRaised.Create(
+                        title,
+                        message,
+                        AlertType.CatastrophicDatabaseFailue,
+                        NotificationSeverity.Error,
+                        key: databaseName,
+                        details: new ExceptionDetails(e)));
+                }
+                catch (Exception)
+                {
+                    // exception in raising an alert can't prevent us from unloading a database
+                }
 
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations($"{title}. {message}", e);
