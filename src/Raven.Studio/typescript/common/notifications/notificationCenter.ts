@@ -296,7 +296,7 @@ class notificationCenter {
 
         if (notification instanceof alert) {
             const currentAlert = notification as alert;
-            const text = JSON.stringify(currentAlert.details, null, 4);
+            const text = JSON.stringify(currentAlert.details(), null, 4);
 
             app.showBootstrapDialog(new showDataDialog("Alert", text, "javascript"))
                 .done(() => {
