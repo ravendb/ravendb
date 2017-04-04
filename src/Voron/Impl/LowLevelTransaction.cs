@@ -305,8 +305,9 @@ namespace Voron.Impl
 
         private void InitTransactionHeader()
         {
-            _txHeaderMemory = Allocator.Allocate(sizeof(TransactionHeader));
+            Allocator.Allocate(sizeof(TransactionHeader), out _txHeaderMemory);
             UnmanagedMemory.Set(_txHeaderMemory.Ptr, 0, sizeof(TransactionHeader));
+
             _txHeader = (TransactionHeader*)_txHeaderMemory.Ptr;
             _txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 

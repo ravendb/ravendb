@@ -610,9 +610,10 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteString Allocate(int length)
+        public InternalScope Allocate(int length, out ByteString output)
         {
-            return AllocateInternal(length, ByteStringType.Mutable);
+            output = AllocateInternal(length, ByteStringType.Mutable);
+            return new InternalScope(this, output);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -809,7 +810,7 @@ namespace Sparrow
                     // provided, so we must allocate a new string here
                     byteCount > str._pointer->Size)
                 {
-                    str = Allocate(byteCount);
+                    Allocate(byteCount, out str);
                 }
                 str._pointer->Length = Encoding.GetBytes(pChars, charCount, str._pointer->Ptr, str._pointer->Size);
             }
@@ -1241,6 +1242,7 @@ namespace Sparrow
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ExternalScope FromPtr(byte* valuePtr, int size,
             ByteStringType type,
             out ByteString str)

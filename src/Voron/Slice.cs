@@ -147,9 +147,23 @@ namespace Voron
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext.ExternalScope External(ByteStringContext context, ByteString value, int offset, int size, out Slice slice)
+        {
+            Debug.Assert(offset + size <= value.Length);
+            return External(context, value.Ptr + offset, size, ByteStringType.Mutable | ByteStringType.External, out slice);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext.ExternalScope External(ByteStringContext context, ByteString value, int size, out Slice slice)
+        {
+            Debug.Assert(size <= value.Length);
+            return External(context, value.Ptr, size, ByteStringType.Mutable | ByteStringType.External, out slice);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.ExternalScope External(ByteStringContext context, byte* value, int size, out Slice slice)
         {
-            return External(context, value, size,  ByteStringType.Mutable | ByteStringType.External, out slice);
+            return External(context, value, size, ByteStringType.Mutable | ByteStringType.External, out slice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

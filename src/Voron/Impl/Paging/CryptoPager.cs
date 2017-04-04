@@ -31,8 +31,8 @@ namespace Voron.Impl.Paging
         {
             var num = page->PageNumber;
 
-            var subKey = allocator.Allocate(32);
-            try
+            ByteString subKey;
+            using (allocator.Allocate(32, out subKey))
             {
                 fixed (byte* ctx = _context)
                 fixed (byte* mk = _masterKey)
@@ -65,18 +65,14 @@ namespace Voron.Impl.Paging
                         throw new InvalidOperationException("Unable to decrypt page " + num);
                 }
             }
-            finally
-            {
-                allocator.Release(ref subKey);
-            }
         }
 
         private void DecryptPage(ByteStringContext allocator, PageHeader* page, byte* destination)
         {
             var num = page->PageNumber;
 
-            var subKey = allocator.Allocate(32);
-            try
+            ByteString subKey;
+            using (allocator.Allocate(32, out subKey))
             {
                 fixed (byte* ctx = _context)
                 fixed (byte* mk = _masterKey)
@@ -100,10 +96,6 @@ namespace Voron.Impl.Paging
                     if (rc != 0)
                         throw new InvalidOperationException("Unable to decrypt page " + num);
                 }
-            }
-            finally
-            {
-                allocator.Release(ref subKey);
             }
         }
     }

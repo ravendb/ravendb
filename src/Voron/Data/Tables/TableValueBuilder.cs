@@ -78,6 +78,13 @@ namespace Voron.Data.Tables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Add(Slice buffer)
+        {
+            var ptr = PtrSize.Create(buffer.Content.Ptr, buffer.Content.Length);
+            Add(ref ptr);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Add(void* pointer, int size)
         {
             var ptr = PtrSize.Create(pointer, size);
