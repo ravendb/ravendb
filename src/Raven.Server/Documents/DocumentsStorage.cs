@@ -1522,7 +1522,7 @@ namespace Raven.Server.Documents
                             oldMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray oldAttachments))
                         {
                             // Make sure the user did not changed the value of @attachments in the @metadata
-                            // In most cases it won't be chagned so we can use this value 
+                            // In most cases it won't be changed so we can use this value 
                             // instead of recreating the document's blitable from scratch
                             if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
                                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false ||
