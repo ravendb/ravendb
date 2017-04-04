@@ -212,7 +212,7 @@
     <div class="notification-center-container" data-bind="compose: 'notifications/notificationCenter.html'"></div>
 </div>
 
-<footer class="status-footer padding padding-sm bg-info">
+<footer class="status-footer bg-info">
     <div class="footer-left" data-bind="with: $root.footer.stats()">
         <div class="footer-item">
             <a href="#">Dashboard</a>
@@ -224,23 +224,31 @@
             <a href="#" title="Indexes">
                 <i class="icon-index"></i>
                 <span data-bind="text: countOfIndexes"></span>
-                <span class="label label-warning"><span data-bind="text: countOfStaleIndexes"></span> STALE</span>
+                <span class="label label-warning" data-bind="visible: countOfStaleIndexes"><span data-bind="text: countOfStaleIndexes"></span> STALE</span>
                 <span class="label label-danger">2 ERRORS</span>
             </a>
         </div>
     </div>
-    <div class="footer-right">
+    <div class="footer-right">        
         <div class="footer-item">
-            license
+            <a href="#about" title="server version">
+                <i class="icon-server"></i> <span>4.0.0-custom-40000</span>
+            </a>
         </div>
         <div class="footer-item">
-            support
+            <a href="#about" title="server version">
+                <i class="icon-client"></i> <span>4.0.0-custom-40000</span>
+            </a>
         </div>
         <div class="footer-item">
-            server version 4.0.0-custom-40000
+            <a href="#about" class="btn btn-success btn-sm">
+                <i class="icon-license-information"></i>
+            </a>
         </div>
         <div class="footer-item">
-            studio version 4.0.0-custom-40000
+            <a href="#about" class="btn btn-warning btn-sm">
+                <i class="icon-support"></i>
+            </a>
         </div>
     </div>
 </footer>
