@@ -36,17 +36,15 @@ namespace Raven.Client.Connection
 
         public static Etag GetEtagHeader(this GetResponse response)
         {
-            string value;
-            if (response.Headers.TryGetValue(Constants.MetadataEtagField, out value) == false || value == null)
-                return Etag.Empty;
-
-            return EtagHeaderToEtag(value);
+            string etag;
+            response.Headers.TryGetValue(Constants.MetadataEtagField, out etag);
+            return EtagHeaderToEtag(etag);
         }
 
         internal static Etag EtagHeaderToEtag(string responseHeader)
         {
             if (string.IsNullOrEmpty(responseHeader))
-                throw new InvalidOperationException("Response didn't had an ETag header");
+                throw new InvalidOperationException("Response didn't have an ETag header");
 
             if (responseHeader[0] == '\"')
                 return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
