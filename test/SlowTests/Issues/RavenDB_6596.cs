@@ -137,7 +137,7 @@ namespace SlowTests.Issues
                     try
                     {
                         var @class = Activator.CreateInstance(test.DeclaringType);
-                        using ((IDisposable)@class)
+                        using (@class as IDisposable)
                         {
                             await (Task)test.Invoke(@class, null);
                         }
