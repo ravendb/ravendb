@@ -50,7 +50,15 @@ namespace Raven.Client.Documents.BulkInsert
 
             protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
             {
-                _outputStreamTcs.SetResult(stream);
+                // run the completion asynchronously to ensure that continuations (await WaitAsync()) won't happen as part of a call to TrySetResult
+                // http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266920.aspx
+
+                var currentTcs = _outputStreamTcs;
+
+                Task.Factory.StartNew(s => ((TaskCompletionSource<Stream>)s).TrySetResult(stream), currentTcs, CancellationToken.None, TaskCreationOptions.PreferFairness | TaskCreationOptions.RunContinuationsAsynchronously, TaskScheduler.Default);
+
+                currentTcs.Task.Wait();
+
                 return _done.Task;
             }
 
@@ -75,7 +83,7 @@ namespace Raven.Client.Documents.BulkInsert
                 _done.TrySetCanceled();
             }
         }
-        
+
         private class BulkInsertCommand : RavenCommand<HttpResponseMessage>
         {
             public override bool IsReadRequest => false;
@@ -129,7 +137,7 @@ namespace Raven.Client.Documents.BulkInsert
         private bool _first = true;
         private long _operationId = -1;
         private readonly DocumentConventions _conventions;
-        
+
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default(CancellationToken))
         {
             _token = token;
@@ -140,7 +148,7 @@ namespace Raven.Client.Documents.BulkInsert
             _streamExposerContent = new StreamExposerContent();
 
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(store.Conventions, entity =>
-                AsyncHelpers.RunSync(() => store.Conventions.GenerateDocumentIdAsync(database, entity)));           
+                AsyncHelpers.RunSync(() => store.Conventions.GenerateDocumentIdAsync(database, entity)));
         }
 
         private async Task WaitForId()
@@ -179,7 +187,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
 
             JsonOperationContext tempContext;
-            using(_requestExecuter.ContextPool.AllocateOperationContext(out tempContext))
+            using (_requestExecuter.ContextPool.AllocateOperationContext(out tempContext))
             using (var doc = _convertor.ConvertEntityToBlittable(entity, _conventions, tempContext, new DocumentInfo
             {
                 Collection = _conventions.GetCollectionName(entity)
@@ -209,17 +217,17 @@ namespace Raven.Client.Documents.BulkInsert
                     {
                         throw error;
                     }
-                    await ThrowOnUnavailableStream(id,e).ConfigureAwait(false);
+                    await ThrowOnUnavailableStream(id, e).ConfigureAwait(false);
                 }
             }
         }
 
         private async Task<BulkInsertAbortedException> GetExceptionFromOperation()
         {
-            var stateRequest = new GetOperationStateCommand(_conventions,_operationId);
+            var stateRequest = new GetOperationStateCommand(_conventions, _operationId);
             await _requestExecuter.ExecuteAsync(stateRequest, _context, _token).ConfigureAwait(false);
             var error = stateRequest.Result.Result as OperationExceptionResult;
-           
+
             if (error == null)
                 return null;
             return new BulkInsertAbortedException(error.Error);
@@ -227,7 +235,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task EnsureStream()
         {
-            var bulkCommand = new BulkInsertCommand(_operationId,_streamExposerContent);
+            var bulkCommand = new BulkInsertCommand(_operationId, _streamExposerContent);
             _bulkInsertExecuteTask = _requestExecuter.ExecuteAsync(bulkCommand, _context, _token);
 
             _stream = await _streamExposerContent.OutputStream.ConfigureAwait(false);
@@ -238,8 +246,8 @@ namespace Raven.Client.Documents.BulkInsert
         private async Task ThrowOnUnavailableStream(string id, Exception innerEx)
         {
             _streamExposerContent.ErrorOnProcessingRequest(
-                new BulkInsertAbortedException($"Write to stream failed at document with id {id}.", innerEx));           
-            await _bulkInsertExecuteTask.ConfigureAwait(false);                       
+                new BulkInsertAbortedException($"Write to stream failed at document with id {id}.", innerEx));
+            await _bulkInsertExecuteTask.ConfigureAwait(false);
         }
 
         public async Task AbortAsync()
@@ -300,10 +308,10 @@ namespace Raven.Client.Documents.BulkInsert
                     {
                         await _bulkInsertExecuteTask.ConfigureAwait(false);
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
-                        var errors = new List<Exception>(3) {e};
-                        if(flushEx != null)
+                        var errors = new List<Exception>(3) { e };
+                        if (flushEx != null)
                             errors.Add(flushEx);
                         var error = await GetExceptionFromOperation().ConfigureAwait(false);
                         if (error != null)
@@ -314,7 +322,7 @@ namespace Raven.Client.Documents.BulkInsert
                         throw new BulkInsertAbortedException("Failed to execute bulk insert", new AggregateException(errors));
 
                     }
-                }                 
+                }
             }
             finally
             {
