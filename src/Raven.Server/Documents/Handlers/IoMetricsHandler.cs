@@ -194,6 +194,21 @@ namespace Raven.Server.Documents.Handlers
 
         public DynamicJsonValue ToJson()
         {
+            if (Type == IoMetrics.MeterType.Compression)
+            {
+                var compressionRatio = $"{FileSize * 100 / Size}%";
+                return new DynamicJsonValue
+                {
+                    [nameof(Start)] = Start,
+                    ["OriginalSize"] = Size,
+                    ["HumanOriginalSize"] = HumanSize,
+                    ["CompressedSize"] = FileSize,
+                    ["HumanCompressedSize"] = HumanFileSize,
+                    ["CompressionRatio"] = compressionRatio,
+                    [nameof(Duration)] = Duration,
+                    [nameof(Type)] = Type
+                };
+            }
             return new DynamicJsonValue
             {
                 [nameof(Start)] = Start,
