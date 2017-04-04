@@ -11,8 +11,14 @@ namespace Sparrow.Json
         protected int _propNamesDataOffsetSize;
         protected internal JsonOperationContext _context;
 
+        protected BlittableJsonReaderBase(JsonOperationContext context)
+        {
+            this._context = context;
+        }
+
         public bool NoCache { get; set; }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int ProcessTokenPropertyFlags(BlittableJsonToken currentType)
         {
             // process part of byte flags that responsible for property ids sizes
@@ -22,19 +28,22 @@ namespace Sparrow.Json
                 BlittableJsonToken.PropertyIdSizeInt;
 
             // PERF: Switch for this case will create if-then-else anyways. 
-            //       So we order them explicitely based on knowledge.
+            //       So we order them explicitly based on knowledge.
             BlittableJsonToken current = currentType & mask;
+            int size; // PERF: We assign to a variable instead to have smaller code for inlining.
             if (current == BlittableJsonToken.PropertyIdSizeByte)
-                return sizeof(byte);
-            if (current == BlittableJsonToken.PropertyIdSizeShort)
-                return sizeof(short);
-            if (current == BlittableJsonToken.PropertyIdSizeInt)
-                return sizeof(int);
-
-            ThrowInvalidOfsetSize(currentType);
-            return -1;//will never happen
+                size = sizeof(byte); 
+            else if (current == BlittableJsonToken.PropertyIdSizeShort)
+                size = sizeof(short);
+            else if (current == BlittableJsonToken.PropertyIdSizeInt)
+                size = sizeof(int);
+            else
+                size = ThrowInvalidOfsetSize(currentType);
+                
+            return size;                        
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int ProcessTokenOffsetFlags(BlittableJsonToken currentType)
         {
             // process part of byte flags that responsible for offset sizes
@@ -44,20 +53,22 @@ namespace Sparrow.Json
                 BlittableJsonToken.OffsetSizeInt;
 
             // PERF: Switch for this case will create if-then-else anyways. 
-            //       So we order them explicitely based on knowledge.
+            //       So we order them explicitly based on knowledge.
             BlittableJsonToken current = currentType & mask;
+            int size; // PERF: We assign to a variable instead to have smaller code for inlining.
             if (current == BlittableJsonToken.OffsetSizeByte)
-                return sizeof(byte);
-            if (current == BlittableJsonToken.OffsetSizeShort)
-                return sizeof(short);
-            if (current == BlittableJsonToken.OffsetSizeInt)
-                return sizeof(int);
+                size = sizeof(byte);
+            else if (current == BlittableJsonToken.OffsetSizeShort)
+                size = sizeof(short);
+            else if (current == BlittableJsonToken.OffsetSizeInt)
+                size = sizeof(int);
+            else
+                size = ThrowInvalidOfsetSize(currentType);
 
-            ThrowInvalidOfsetSize(currentType);
-            return -1; // will never happen
+            return size;
         }
 
-        private static void ThrowInvalidOfsetSize(BlittableJsonToken currentType)
+        private static int ThrowInvalidOfsetSize(BlittableJsonToken currentType)
         {
             throw new ArgumentException($"Illegal offset size {currentType}");
         }
@@ -132,6 +143,7 @@ namespace Sparrow.Json
             };
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue ReadStringLazily(int pos)
         {
             byte offset;
@@ -140,6 +152,7 @@ namespace Sparrow.Json
             return _context.AllocateStringValue(null, _mem + pos + offset, size);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyCompressedStringValue ReadCompressStringLazily(int pos)
         {
             byte offset;

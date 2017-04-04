@@ -1,14 +1,10 @@
 ﻿using Sparrow.Binary;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Sparrow.Collections;
 using Sparrow.Global;
 using Sparrow.Json;
@@ -487,7 +483,7 @@ namespace Sparrow
         }
     }
 
-    public class ByteStringContext : ByteStringContext<ByteStringMemoryCache>
+    public sealed class ByteStringContext : ByteStringContext<ByteStringMemoryCache>
     {
         public const int MinBlockSizeInBytes = 64 * 1024; // If this is changed, we need to change also LogMinBlockSize.
         public const int MaxAllocationBlockSizeInBytes = 256 * MinBlockSizeInBytes;
@@ -496,7 +492,6 @@ namespace Sparrow
 
         public ByteStringContext(int allocationBlockSize = DefaultAllocationBlockSizeInBytes) : base(allocationBlockSize)
         { }
-
     }
 
     public unsafe class ByteStringContext<TAllocator> : IDisposable where TAllocator : struct, IByteStringAllocator
@@ -505,13 +500,31 @@ namespace Sparrow
 
         private class SegmentInformation
         {
-            public bool CanDispose;
+            public readonly UnmanagedGlobalSegment Memory;
+            public readonly byte* Start;
+            public readonly byte* End;
+            public readonly bool CanDispose;
 
-            public UnmanagedGlobalSegment Memory;
-
-            public byte* Start;
             public byte* Current;
-            public byte* End;
+
+            public SegmentInformation(UnmanagedGlobalSegment memory, byte* start, byte* end, bool canDispose)
+            {
+                this.Memory = memory;
+                this.Start = start;
+                this.End = end;
+
+                this.Current = start;
+                this.CanDispose = canDispose;
+            }
+
+            public SegmentInformation(byte* start, byte* end, bool canDispose)
+            {
+                this.Start = start;
+                this.End = end;
+
+                this.Current = start;
+                this.CanDispose = canDispose;
+            }
 
             public int Size
             {
@@ -685,7 +698,7 @@ namespace Sparrow
             // allocate it directly. When released (if released) this will be reused as a segment, ensuring that the context
             // could handle that.
             if (allocationSize > _allocationBlockSize)
-                return AllocateWholeSegment(length, type); // We will pass the length because this is a whole allocated segment able to hold a length size ByteString.
+                goto AllocateWhole;
 
             int reusablePoolIndex = GetPoolIndexForReuse(allocationSize);
             int allocationUnit = Bits.NextPowerOf2(allocationSize);
@@ -711,70 +724,82 @@ namespace Sparrow
 
                 return Create(ptr, length, allocationUnit, type);
             }
-            else
+
+            // We will allocate from the current segment.
+            if (allocationUnit <= _internalCurrent.SizeLeft)
             {
-                int currentSizeLeft = _internalCurrent.SizeLeft;
-                if (allocationUnit > currentSizeLeft) // This shouldn't happen that much, if it does you should increase your default allocation block. 
-                {
-                    SegmentInformation segment = null;
-
-                    // We will try to find a hot segment with enough space if available.
-                    // Older (colder) segments are at the front of the list. That's why we would start scanning backwards.
-                    for (int i = _internalReadyToUseMemorySegments.Count - 1; i >= 0; i--)
-                    {
-                        var segmentValue = _internalReadyToUseMemorySegments[i];
-                        if (segmentValue.SizeLeft >= allocationUnit)
-                        {
-                            // Put the last where this one is (if it is the same, this is a no-op) and remove it from the list.
-                            _internalReadyToUseMemorySegments[i] = _internalReadyToUseMemorySegments[_internalReadyToUseMemorySegments.Count - 1];
-                            _internalReadyToUseMemorySegments.RemoveAt(_internalReadyToUseMemorySegments.Count - 1);
-
-                            segment = segmentValue;
-                            break;
-                        }
-                    }
-
-                    // If the size left is bigger than MinBlockSize, we release current as a reusable segment
-                    if (currentSizeLeft > ByteStringContext.MinBlockSizeInBytes)
-                    {
-                        byte* start = _internalCurrent.Current;
-                        byte* end = start + currentSizeLeft;
-
-                        _internalReadyToUseMemorySegments.Add(new SegmentInformation { Start = start, Current = start, End = end, CanDispose = false });
-                    }
-                    else if (currentSizeLeft > sizeof(ByteStringType) + ByteStringContext.MinReusableBlockSizeInBytes)
-                    {
-                        // The memory chunk left is big enough to make sense to reuse it.
-                        reusablePoolIndex = GetPoolIndexForReservation(currentSizeLeft);
-
-                        FastStack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
-                        if (pool == null)
-                        {
-                            pool = new FastStack<IntPtr>();
-                            this._internalReusableStringPool[reusablePoolIndex] = pool;
-                        }
-
-                        pool.Push(new IntPtr(_internalCurrent.Current));
-                        this._internalReusableStringPoolCount[reusablePoolIndex]++;
-                    }
-
-                    // Use the segment and if there is no segment available that matches the request, just get a new one.
-                    if (segment != null)
-                    {
-                        _internalCurrent = segment;
-                    }
-                    else
-                    {
-                        _allocationBlockSize = Math.Min(16 * Constants.Size.Megabyte, _allocationBlockSize * 2);
-                        _internalCurrent = AllocateSegment(_allocationBlockSize);
-                    }
-                }
-
                 var byteString = Create(_internalCurrent.Current, length, allocationUnit, type);
                 _internalCurrent.Current += byteString._pointer->Size;
 
                 return byteString;
             }
+
+            return AllocateInternalUnlikely(length, allocationUnit, type); // We will allocate also allocating a segment. 
+
+            AllocateWhole:
+            return AllocateWholeSegment(length, type); // We will pass the length because this is a whole allocated segment able to hold a length size ByteString.
+        }
+
+        private ByteString AllocateInternalUnlikely(int length, int allocationUnit, ByteStringType type)
+        {
+            SegmentInformation segment = null;
+
+            // We will try to find a hot segment with enough space if available.
+            // Older (colder) segments are at the front of the list. That's why we would start scanning backwards.
+            for (int i = _internalReadyToUseMemorySegments.Count - 1; i >= 0; i--)
+            {
+                var segmentValue = _internalReadyToUseMemorySegments[i];
+                if (segmentValue.SizeLeft >= allocationUnit)
+                {
+                    // Put the last where this one is (if it is the same, this is a no-op) and remove it from the list.
+                    _internalReadyToUseMemorySegments[i] = _internalReadyToUseMemorySegments[_internalReadyToUseMemorySegments.Count - 1];
+                    _internalReadyToUseMemorySegments.RemoveAt(_internalReadyToUseMemorySegments.Count - 1);
+
+                    segment = segmentValue;
+                    break;
+                }
+            }
+
+            // If the size left is bigger than MinBlockSize, we release current as a reusable segment
+            int currentSizeLeft = _internalCurrent.SizeLeft;
+            if (currentSizeLeft > ByteStringContext.MinBlockSizeInBytes)
+            {
+                byte* start = _internalCurrent.Current;
+                byte* end = start + currentSizeLeft;
+
+                _internalReadyToUseMemorySegments.Add(new SegmentInformation(start, end, false));
+            }
+            else if (currentSizeLeft > sizeof(ByteStringType) + ByteStringContext.MinReusableBlockSizeInBytes)
+            {
+                // The memory chunk left is big enough to make sense to reuse it.
+                int reusablePoolIndex = GetPoolIndexForReservation(currentSizeLeft);
+
+                FastStack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
+                if (pool == null)
+                {
+                    pool = new FastStack<IntPtr>();
+                    this._internalReusableStringPool[reusablePoolIndex] = pool;
+                }
+
+                pool.Push(new IntPtr(_internalCurrent.Current));
+                this._internalReusableStringPoolCount[reusablePoolIndex]++;
+            }
+
+            // Use the segment and if there is no segment available that matches the request, just get a new one.
+            if (segment != null)
+            {
+                _internalCurrent = segment;
+            }
+            else
+            {
+                _allocationBlockSize = Math.Min(16 * Constants.Size.Megabyte, _allocationBlockSize * 2);
+                _internalCurrent = AllocateSegment(_allocationBlockSize);
+            }
+
+            var byteString = Create(_internalCurrent.Current, length, allocationUnit, type);
+            _internalCurrent.Current += byteString._pointer->Size;
+
+            return byteString;
         }
 
         [ThreadStatic]
@@ -796,6 +821,7 @@ namespace Sparrow
             {
                 ToLowerTempBuffer = new char[Bits.NextPowerOf2(charCount)];
             }
+
             fixed (char* pChars = ToLowerTempBuffer)
             {
                 charCount = Encoding.GetChars(str._pointer->Ptr, str.Length, pChars, ToLowerTempBuffer.Length);
@@ -919,7 +945,7 @@ namespace Sparrow
                 byte* end = start + value._pointer->Size;
 
                 // Given that this is put into a reuse queue, we are not providing the Segment because it has no ownership of it.
-                var segment = new SegmentInformation { Start = start, Current = start, End = end, CanDispose = false };
+                var segment = new SegmentInformation (start, end, false );
                 _internalReadyToUseMemorySegments.Add(segment);
             }
 
@@ -948,7 +974,7 @@ namespace Sparrow
             byte* start = memorySegment.Segment;
             byte* end = start + memorySegment.Size;
 
-            var segment = new SegmentInformation { Memory = memorySegment, Start = start, Current = start, End = end, CanDispose = true };
+            var segment = new SegmentInformation( memorySegment, start, end, true );
             _wholeSegments.Add(segment);
 
             return segment;
@@ -969,7 +995,7 @@ namespace Sparrow
             byte* start = memorySegment.Segment;
             byte* end = start + memorySegment.Size;
 
-            _externalCurrent = new SegmentInformation { Memory = memorySegment, Start = start, Current = start, End = end, CanDispose = true };
+            _externalCurrent = new SegmentInformation ( memorySegment, start, end, true );
             _externalAlignedSize = (sizeof(ByteStringStorage) + (sizeof(long) - sizeof(ByteStringStorage) % sizeof(long)));
             _externalCurrentLeft = (int)(_externalCurrent.End - _externalCurrent.Start) / _externalAlignedSize;
 
@@ -1207,6 +1233,7 @@ namespace Sparrow
                 _str = str;
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Dispose()
             {
                 _parent?.Release(ref _str);
@@ -1230,6 +1257,7 @@ namespace Sparrow
                 _str = str;
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Dispose()
             {
                 _parent?.ReleaseExternal(ref _str);
