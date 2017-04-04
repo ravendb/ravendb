@@ -35,7 +35,7 @@ namespace Raven.Server.Commercial
         private Timer _leaseLicenseTimer;
         private RSAParameters? _rsaParameters;
         private readonly NotificationCenter.NotificationCenter _notificationCenter;
-        private readonly InterlockedLock _interlockedLock = new InterlockedLock();
+        private readonly SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1);
         private readonly HttpClient _httpClient = new HttpClient
         {
             BaseAddress = new Uri(ApiRavenDbNet)
@@ -187,9 +187,9 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private async Task LeaseLicense() 
+        private async Task LeaseLicense()
         {
-            if (_interlockedLock.TryEnter() == false)
+            if (semaphoreSlim.Wait(0) == false)
                 return;
 
             try
@@ -236,14 +236,14 @@ namespace Raven.Server.Commercial
                 }
 
                 var alert = AlertRaised.Create(
-                "License updated",
-                message,
-                AlertType.LicenseManager_LicenseUpdated,
-                NotificationSeverity.Info,
-                details: new MessageDetails
-                {
-                    Message = message
-                });
+                    "License updated",
+                    message,
+                    AlertType.LicenseManager_LicenseUpdated,
+                    NotificationSeverity.Info,
+                    details: new MessageDetails
+                    {
+                        Message = message
+                    });
 
                 _notificationCenter.Add(alert);
             }
@@ -263,7 +263,7 @@ namespace Raven.Server.Commercial
             }
             finally
             {
-                _interlockedLock.Exit();
+                semaphoreSlim.Release();
             }
         }
 
