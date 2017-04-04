@@ -33,7 +33,9 @@ namespace Raven.Client.Connection
 
         public static Etag GetEtagHeader(this GetResponse response)
         {
-            return EtagHeaderToEtag(response.Headers[Constants.MetadataEtagField]);
+            string etag;
+            response.Headers.TryGetValue(Constants.MetadataEtagField, out etag);
+            return EtagHeaderToEtag(etag);
         }
 
         public static Etag GetEtagHeader(this HttpJsonRequest request)
@@ -44,7 +46,7 @@ namespace Raven.Client.Connection
         internal static Etag EtagHeaderToEtag(string responseHeader)
         {
             if (string.IsNullOrEmpty(responseHeader))
-                throw new InvalidOperationException("Response didn't had an ETag header");
+                throw new InvalidOperationException("Response didn't have an ETag header");
 
             if (responseHeader[0] == '\"')
                 return Etag.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
