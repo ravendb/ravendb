@@ -21,9 +21,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new CanAuthenticate())
+                using (var a = new SlowTests.Issues.RavenDB_3207())
                 {
-                    a.CanGetTokenFromServer().Wait();
+                    a.Test_paralel_operations_with_multiple_EmbeddableDocumentStores();
                 }
             }
         }

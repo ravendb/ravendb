@@ -132,9 +132,22 @@ namespace Raven.Server.Documents
             if (config == null)
                 return null;
 
-            if (!_resourceSemaphore.Wait(_concurrentResourceLoadTimeout))
-                throw new DatabaseConcurrentLoadTimeoutException(
-                    "Too much databases loading concurrently, timed out waiting for them to load.");
+            if (!_resourceSemaphore.Wait(0))
+                return UnlikelyCreateDatabaseUnderContention(databaseName, config);
+
+            return CreateDatabaseUnderResourceSemaphore(databaseName, config);
+        }
+
+        private async Task<DocumentDatabase> UnlikelyCreateDatabaseUnderContention(StringSegment databaseName, RavenConfiguration config)
+        {
+            if(await _resourceSemaphore.WaitAsync(_concurrentResourceLoadTimeout) == false)
+                throw new DatabaseConcurrentLoadTimeoutException("Too many databases loading concurrently, timed out waiting for them to load.");
+
+            return await CreateDatabaseUnderResourceSemaphore(databaseName, config);
+        }
+
+        private Task<DocumentDatabase> CreateDatabaseUnderResourceSemaphore(StringSegment databaseName, RavenConfiguration config)
+        {
             try
             {
                 var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config));
