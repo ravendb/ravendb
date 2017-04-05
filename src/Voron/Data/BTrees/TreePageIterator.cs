@@ -31,6 +31,10 @@ namespace Voron.Data.BTrees
         {
             _disposed = true;
             _prevScopeDispose.Dispose();
+
+            if (RequiredPrefix.HasValue)
+                RequiredPrefix.Release(_tx.Allocator);
+
             OnDisposal?.Invoke(this);
         }
 
@@ -96,11 +100,13 @@ namespace Voron.Data.BTrees
         public Slice RequiredPrefix
         {
             get { return _requiredPrefix; }
-            set
-            {
-                _requiredPrefix = value;
-                _requireValidation = _maxKey.HasValue || _requiredPrefix.HasValue;
-            }
+            
+        }
+
+        public void SetRequiredPrefix(Slice prefix)
+        {
+            _requiredPrefix = prefix.Clone(_tx.Allocator); // make sure the prefix slice won't become invalid during iterator usage
+            _requireValidation = _maxKey.HasValue || _requiredPrefix.HasValue;
         }
 
         private Slice _maxKey;

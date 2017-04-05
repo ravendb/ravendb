@@ -249,14 +249,16 @@ namespace Voron.Data.BTrees
         }
 
         private Slice _requiredPrefix;
+
         public Slice RequiredPrefix
         {
             get { return _requiredPrefix; }
-            set
-            {
-                _requiredPrefix = value;
-                _requireValidation = _maxKey.HasValue || _requiredPrefix.HasValue;
-            }
+        }
+
+        public void SetRequiredPrefix(Slice prefix)
+        {
+            _requiredPrefix = prefix.Clone(_tx.Allocator); // make sure the prefix slice won't become invalid during iterator usage
+            _requireValidation = _maxKey.HasValue || _requiredPrefix.HasValue;
         }
 
         private Slice _maxKey;

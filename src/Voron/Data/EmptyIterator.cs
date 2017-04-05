@@ -57,7 +57,10 @@ namespace Voron.Data
         public Slice RequiredPrefix
         {
             get;
-            set;
+        }
+
+        public void SetRequiredPrefix(Slice prefix)
+        {
         }
 
         public bool MoveNext()
