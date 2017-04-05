@@ -63,8 +63,6 @@ namespace Raven.Client.Http
         //note: the condition for non empty nodes is precaution, should never happen..
         public string Url => _nodeSelector.CurrentNode?.Url;
         
-        public event Action TopologyUpdate;
-
         public bool HasUpdatedTopologyOnce { get; private set; }
 
         private RequestExecutor(string url, string databaseName, string apiKey, bool requiresTopologyUpdates)
@@ -327,7 +325,7 @@ namespace Raven.Client.Http
 
 //not sure how to treat multiple exceptions here, probably they should be written in a log
                         throw new InvalidOperationException("Received unsuccessful resonse and couldn't recover from it.",
-                            new UnsuccessfulRequestException(command.FailedNodes.Last().Value));
+                            new AggregateException(command.FailedNodes.Select(x=> new UnsuccessfulRequestException(x.Key.Url, x.Value))));
                     }
                 }
 
@@ -582,7 +580,6 @@ namespace Raven.Client.Http
         protected void OnTopologyChange()
         {
             HasUpdatedTopologyOnce = true;
-            TopologyUpdate?.Invoke();
         }
 
         private class NodeSelector

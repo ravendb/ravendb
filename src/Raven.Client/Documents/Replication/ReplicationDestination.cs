@@ -53,11 +53,6 @@ namespace Raven.Client.Documents.Replication
         public string Domain { get; set; }
 
         /// <summary>
-        /// The replication server api key to use
-        /// </summary>
-        public string ApiKey { get; set; }
-
-        /// <summary>
         /// The database to use
         /// </summary>
         public string Database { get; set; }
@@ -85,6 +80,8 @@ namespace Raven.Client.Documents.Replication
         public bool Disabled { get; set; }
 
         public string AuthenticationScheme { get; set; }
+
+        public string ApiKey; // TODO: remove me
 
         /// <summary>
         /// Gets or sets the Client URL of the replication destination
@@ -123,7 +120,7 @@ namespace Raven.Client.Documents.Replication
         public bool IsEqualTo(ReplicationDestination other)
         {
             return string.Equals(Username, other.Username) && string.Equals(Password, other.Password) &&
-                   string.Equals(Domain, other.Domain) && string.Equals(ApiKey, other.ApiKey) &&
+                   string.Equals(Domain, other.Domain)&&
                    string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase) &&
                    TransitiveReplicationBehavior == other.TransitiveReplicationBehavior &&
                    IgnoredClient.Equals(other.IgnoredClient) && Disabled.Equals(other.Disabled) &&
@@ -147,7 +144,6 @@ namespace Raven.Client.Documents.Replication
                 var hashCode = Username?.GetHashCode() ?? 0;
                 hashCode = (hashCode * 397) ^ (Password?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Domain?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (ApiKey?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Database?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (int)TransitiveReplicationBehavior;
                 hashCode = (hashCode * 397) ^ IgnoredClient.GetHashCode();
@@ -161,7 +157,6 @@ namespace Raven.Client.Documents.Replication
         {
             var json = new DynamicJsonValue
             {
-                [nameof(ApiKey)] = ApiKey,
                 [nameof(AuthenticationScheme)] = AuthenticationScheme,
                 [nameof(ClientVisibleUrl)] = ClientVisibleUrl,
                 [nameof(Database)] = Database,

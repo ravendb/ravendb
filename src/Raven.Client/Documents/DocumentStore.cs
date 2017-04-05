@@ -199,12 +199,7 @@ namespace Raven.Client.Documents
             if (_requestExecuters.TryGetValue(databaseName, out lazy))
                 return lazy.Value;
 
-            lazy = new Lazy<RequestExecutor>(() =>
-            {
-                var newRequestExecutor = RequestExecutor.Create(Url, databaseName, ApiKey);
-                newRequestExecutor.TopologyUpdate += () => OnTopologyUpdatedInternal(databaseName);
-                return newRequestExecutor;
-            });
+            lazy = new Lazy<RequestExecutor>(() => RequestExecutor.Create(Url, databaseName, ApiKey));
 
             lazy = _requestExecuters.GetOrAdd(databaseName, lazy);
 
