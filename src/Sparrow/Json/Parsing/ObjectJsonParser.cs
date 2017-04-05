@@ -22,7 +22,7 @@ namespace Sparrow.Json.Parsing
         public readonly Queue<Tuple<string, object>> Properties = new Queue<Tuple<string, object>>();
         public HashSet<int> Removals;
         public bool AlreadySeen;
-        private readonly BlittableJsonReaderObject _source;
+        internal readonly BlittableJsonReaderObject _source;
 
         public DynamicJsonValue()
         {
@@ -36,6 +36,15 @@ namespace Sparrow.Json.Parsing
         public DynamicJsonValue(BlittableJsonReaderObject source)
         {
             _source = source;
+
+            if (_source != null)
+            {
+#if DEBUG
+                if (_source.Modifications != null)
+                    throw new InvalidOperationException("The source already has modifications");
+#endif
+                _source.Modifications = this;
+            }
         }
 
         public void Remove(string property)
@@ -175,6 +184,10 @@ namespace Sparrow.Json.Parsing
                 {
                     if (value.AlreadySeen == false)
                     {
+#if DEBUG
+                        if(value._source != null)
+                            throw new InvalidOperationException("Trying to directly modify a DynamicJsonValue with a source, but you need to place the source (blittable), not the json value in the parent.");
+#endif
                         value.AlreadySeen = true;
                         _state.CurrentTokenType = JsonParserToken.StartObject;
                         _elements.Push(value);

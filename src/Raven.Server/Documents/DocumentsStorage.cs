@@ -1531,13 +1531,27 @@ namespace Raven.Server.Documents
                                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false ||
                                 attachments.Equals(oldAttachments) == false)
                             {
-                                document.Modifications = new DynamicJsonValue(document)
+                                if (metadata == null)
                                 {
-                                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue(metadata)
+                                    document.Modifications = new DynamicJsonValue(document)
+                                    {
+                                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                                        {
+                                            [Constants.Documents.Metadata.Attachments] = oldAttachments
+                                        }
+                                    };
+                                }
+                                else
+                                {
+                                    metadata.Modifications = new DynamicJsonValue(metadata)
                                     {
                                         [Constants.Documents.Metadata.Attachments] = oldAttachments
-                                    }
-                                };
+                                    };
+                                    document.Modifications = new DynamicJsonValue(document)
+                                    {
+                                        [Constants.Documents.Metadata.Key] = metadata
+                                    };
+                                }
 #if DEBUG
                                 if (document.DebugHash != documentDebugHash)
                                 {
@@ -2074,14 +2088,42 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
-                metadata.Modifications = new DynamicJsonValue(metadata)
+                var flags = DocumentFlags.None;
+                data.Modifications = new DynamicJsonValue(data);
+                if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
                 {
-                    [Constants.Documents.Metadata.Attachments] = attachments
-                };
-                data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    metadata.Modifications = new DynamicJsonValue(metadata);
 
-                Put(context, documentId, null, data, null, null, DocumentFlags.HasAttachments, NonPersistentDocumentFlags.ByAttachmentUpdate);
+                    if (attachments.Count > 0)
+                    {
+                        flags = DocumentFlags.HasAttachments;
+                        metadata.Modifications[Constants.Documents.Metadata.Attachments] = attachments;
+                    }
+                    else
+                    {
+                        metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
+                    }
+
+                    data.Modifications[Constants.Documents.Metadata.Key] = metadata;
+                }
+                else
+                {
+                    if (attachments.Count > 0)
+                    {
+                        flags = DocumentFlags.HasAttachments;
+                        data.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                        {
+                            [Constants.Documents.Metadata.Attachments] = attachments
+                        };
+                    }
+                    else
+                    {
+                        Debug.Assert(false, "Cannot remove an attachment and not have @attachments in @metadata");
+                    }
+                }
+
+                data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                Put(context, documentId, null, data, null, null, flags, NonPersistentDocumentFlags.ByAttachmentUpdate);
             }
             finally
             {
