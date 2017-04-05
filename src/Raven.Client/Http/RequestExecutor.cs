@@ -295,10 +295,6 @@ namespace Raven.Client.Http
                     else
                     {
                         response = await command.SendAsync(client, request, token).ConfigureAwait(false);
-                        if (response.Headers.Contains(Constants.Headers.ForceTopologyUpdate))
-#pragma warning disable 4014
-                            UpdateTopologyAsync();
-#pragma warning restore 4014
                     }
                     sp.Stop();
                 }
