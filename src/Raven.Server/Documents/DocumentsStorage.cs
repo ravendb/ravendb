@@ -1929,7 +1929,7 @@ namespace Raven.Server.Documents
 
             using (var it = transaction.LowLevelTransaction.RootObjects.Iterate(false))
             {
-                it.RequiredPrefix = TombstonesPrefix;
+                it.RequiredPrefix = TombstonesPrefix.Clone(transaction.Allocator);
 
                 if (it.Seek(TombstonesPrefix) == false)
                     yield break;
