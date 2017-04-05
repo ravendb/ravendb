@@ -38,6 +38,7 @@ import licensingStatus = require("viewmodels/common/licensingStatus");
 import enterApiKey = require("viewmodels/common/enterApiKey");
 import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import footer = require("common/shell/footer");
 
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import requestExecution = require("common/notifications/requestExecution");
@@ -55,6 +56,7 @@ class shell extends viewModelBase {
     
     notificationCenter = notificationCenter.instance;
     collectionsTracker = collectionsTracker.default;
+    footer = footer.default;
 
     static clusterMode = ko.observable<boolean>(false); //TODO: extract from shell
     isInCluster = ko.computed(() => shell.clusterMode()); //TODO: extract from shell
@@ -118,6 +120,8 @@ class shell extends viewModelBase {
         shell.serverBuildVersion.subscribe(buildVersionDto => {
             this.initAnalytics({ SendUsageStats: true }, [ buildVersionDto ]);
         });
+
+        activeDatabaseTracker.default.database.subscribe(newDatabase => footer.default.forDatabase(newDatabase));
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
