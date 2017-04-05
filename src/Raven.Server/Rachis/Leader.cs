@@ -227,10 +227,6 @@ namespace Raven.Server.Rachis
                     {
                         case 0: // new entry
                             _newEntry.Reset();
-                            if (_engine.Log.IsInfoEnabled)
-                            {
-                                _engine.Log.Info($"Leader {_engine.Tag}: Got new entry");
-                            }
                             // release any waiting ambassadors to send immediately
                             var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>());
                             ThreadPool.QueueUserWorkItem(o => ((TaskCompletionSource<object>)o).TrySetResult(null), old);
@@ -238,21 +234,12 @@ namespace Raven.Server.Rachis
                                 goto case 1;
                             break;
                         case 1: // voter responded
-                            if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
-                            {
-                                _engine.Log.Info($"Leader {_engine.Tag}: voter responded");
-                            }
                             _voterResponded.Reset();
                             OnVoterConfirmation();
                             break;
                         case 2: // promotable updated
-                            if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
-                            {
-                                _engine.Log.Info($"Leader {_engine.Tag}: promotable updated");
-                            }
                             _promotableUpdated.Reset();
                             CheckPromotables();
-
                             break;
                         case WaitHandle.WaitTimeout:
                             break;

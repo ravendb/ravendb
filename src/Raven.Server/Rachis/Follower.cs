@@ -227,17 +227,28 @@ namespace Raven.Server.Rachis
 
             using (context.OpenWriteTransaction())
             {
-                if (InstallSnapshot(context))
+                var lastCommitIndex = _engine.GetLastCommitIndex(context);
+                if (snapshot.LastIncludedIndex < lastCommitIndex)
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"Follower {_engine.Tag}: Installed snapshot with last index={snapshot.LastIncludedIndex} with LastIncludedTerm={snapshot.LastIncludedTerm} ");
+                        _engine.Log.Info($"Follower {_engine.Tag}: Got installed snapshot with last index={snapshot.LastIncludedIndex} while our lastCommitIndex={lastCommitIndex}, will just ignore it");
+                    }
+                    //This is okay to ignore because we will just get the commited entries again and skip them
+                    ReadInstallSnapshotAndIgnoreContent(context);
+                }
+                else if (InstallSnapshot(context))
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info(
+                            $"Follower {_engine.Tag}: Installed snapshot with last index={snapshot.LastIncludedIndex} with LastIncludedTerm={snapshot.LastIncludedTerm} ");
                     }
                     _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
-                    _engine.TruncateLogBefore(context, snapshot.LastIncludedIndex);
+                    _engine.ClearLogEntriesAndSetLastTrancate(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
                 }
                 else
-                {                    
+                {
                     var lastEntryIndex = _engine.GetLastEntryIndex(context);
                     if (lastEntryIndex < snapshot.LastIncludedIndex)
                     {
@@ -250,7 +261,7 @@ namespace Raven.Server.Rachis
                         throw new InvalidOperationException(message);
                     }
                 }
-
+                                
                 // snapshot always has the latest topology
                 if (snapshot.Topology == null)
                 {
@@ -272,6 +283,8 @@ namespace Raven.Server.Rachis
 
                 context.Transaction.Commit();
             }
+            //Here we send the LastIncludedIndex as our matched index even for the case where our lastCommitIndex is greater
+            //So we could validate that the entries sent by the leader are indeed the same as the ones we have.
             _connection.Send(context, new InstallSnapshotResponse
             {
                 Done = true,
@@ -393,6 +406,64 @@ namespace Raven.Server.Rachis
             }
         }
 
+        private bool ReadInstallSnapshotAndIgnoreContent(TransactionOperationContext context)
+        {
+            var sp = Stopwatch.StartNew();
+            var reader = _connection.CreateReader();
+            while (true)
+            {
+                var type = reader.ReadInt32();
+                if (type == -1)
+                    return false;
+
+                int size;
+                long entries;
+                switch ((RootObjectType)type)
+                {
+                    case RootObjectType.None:
+                        return true;
+                    case RootObjectType.VariableSizeTree:
+
+                        size = reader.ReadInt32();
+                        reader.ReadExactly(size);
+
+                        entries = reader.ReadInt64();
+                        for (long i = 0; i < entries; i++)
+                        {
+                            MaybeNotifyLeaderThatWeAreSillAlive(context, i, sp);
+
+                            size = reader.ReadInt32();
+                            reader.ReadExactly(size);
+                            Slice valKey;
+                            using (
+                                Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable,
+                                    out valKey))
+                            {
+                                size = reader.ReadInt32();
+                                reader.ReadExactly(size);
+                            }
+                        }
+                        break;
+                    case RootObjectType.Table:
+
+                        size = reader.ReadInt32();
+                        reader.ReadExactly(size);
+
+                        entries = reader.ReadInt64();
+                        for (long i = 0; i < entries; i++)
+                        {
+                            MaybeNotifyLeaderThatWeAreSillAlive(context, i, sp);
+
+                            size = reader.ReadInt32();
+                            reader.ReadExactly(size);
+                        }
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
+                }
+            }
+        }
+
         private void MaybeNotifyLeaderThatWeAreSillAlive(TransactionOperationContext context, long count, Stopwatch sp)
         {
             if (count % 100 != 0)
@@ -468,7 +539,21 @@ namespace Raven.Server.Rachis
                 var response = connection.Read<LogLengthNegotiation>(context);
 
                 _engine.Timeout.Defer(_connection.Source);
-
+                if (response.Truncated)
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Follower {_engine.Tag}: Got a truncated response from the leader will request all entries");
+                    }
+                    connection.Send(context, new LogLengthNegotiationResponse
+                    {
+                        Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
+                        Message = $"We have entries that are already truncated at the leader, will ask for full snapshot",
+                        CurrentTerm = _engine.CurrentTerm,
+                        LastLogIndex = 0
+                    });
+                    break;
+                }
                 using (context.OpenReadTransaction())
                 {
                     if (_engine.GetTermFor(context, response.PrevLogIndex) == response.PrevLogTerm)
