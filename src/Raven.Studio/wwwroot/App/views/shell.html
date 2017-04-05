@@ -214,9 +214,10 @@
 
 <footer class="status-footer bg-info">
     <div class="footer-left" data-bind="with: $root.footer.stats()">
+        <!-- TODO 
         <div class="footer-item">
             <a href="#">Dashboard</a>
-        </div>
+        </div>-->
         <div class="footer-item">
             <a href="#" title="Documents"><i class="icon-document"></i> <span data-bind="text: countOfDocuments"></span></a>
         </div>
@@ -225,11 +226,12 @@
                 <i class="icon-index"></i>
                 <span data-bind="text: countOfIndexes"></span>
                 <span class="label label-warning" data-bind="visible: countOfStaleIndexes"><span data-bind="text: countOfStaleIndexes"></span> STALE</span>
-                <span class="label label-danger">2 ERRORS</span>
+                <!--TODO: <span class="label label-danger">2 ERRORS</span>-->
             </a>
         </div>
     </div>
-    <div class="footer-right">        
+    <div class="footer-right">
+        <!-- TODO:
         <div class="footer-item">
             <a href="#about" title="server version">
                 <i class="icon-server"></i> <span>4.0.0-custom-40000</span>
@@ -249,7 +251,7 @@
             <a href="#about" class="btn btn-warning btn-sm">
                 <i class="icon-support"></i>
             </a>
-        </div>
+        </div>-->
     </div>
 </footer>
 

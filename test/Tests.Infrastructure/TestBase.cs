@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -25,7 +23,9 @@ namespace FastTests
     {
         public const string ServerName = "Raven.Tests.Core.Server";
 
-        private static readonly ConcurrentSet<string> PathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+        private static readonly ConcurrentSet<string> GlobalPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly ConcurrentSet<string> _localPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private static RavenServer _globalServer;
         private RavenServer _localServer;
@@ -34,7 +34,7 @@ namespace FastTests
 
         private bool _doNotReuseServer;
 
-        private IDictionary<string, string> _customServerSettings = null;
+        private IDictionary<string, string> _customServerSettings;
 
         public void DoNotReuseServer(IDictionary<string, string> customSettings = null)
         {
@@ -93,13 +93,12 @@ namespace FastTests
                     return;
                 copyGlobalServer.Dispose();
 
-
                 GC.Collect(2);
                 GC.WaitForPendingFinalizers();
 
                 var exceptionAggregator = new ExceptionAggregator("Failed to cleanup test databases");
 
-                RavenTestHelper.DeletePaths(PathsToDelete, exceptionAggregator);
+                RavenTestHelper.DeletePaths(GlobalPathsToDelete, exceptionAggregator);
 
                 exceptionAggregator.ThrowIfNeeded();
             }
@@ -185,7 +184,9 @@ namespace FastTests
                 prefix += suffix;
             var path = RavenTestHelper.NewDataPath(prefix, _serverCounter, forceCreateDir);
 
-            PathsToDelete.Add(path);
+            GlobalPathsToDelete.Add(path);
+            _localPathsToDelete.Add(path);
+
             return path;
         }
 
@@ -206,9 +207,11 @@ namespace FastTests
                     _localServer.Dispose();
                     _localServer = null;
                 });
-
-                exceptionAggregator.ThrowIfNeeded();
             }
+
+            RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
+
+            exceptionAggregator.ThrowIfNeeded();
         }
     }
 }

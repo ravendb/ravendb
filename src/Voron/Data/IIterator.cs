@@ -7,13 +7,14 @@ namespace Voron.Data
         bool DoRequireValidation { get; }
 
         Slice CurrentKey { get; }
-        Slice RequiredPrefix { get; set; }
+        Slice RequiredPrefix { get; }
         Slice MaxKey { get; set; }
 
         bool Seek(Slice key);
         bool MoveNext();
         bool MovePrev();
         bool Skip(int count);
+        void SetRequiredPrefix(Slice prefix);
 
         ValueReader CreateReaderForCurrent();
         int GetCurrentDataSize();

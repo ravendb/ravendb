@@ -117,39 +117,38 @@ namespace Raven.Client.Http.OAuth
             var apiSecret = apiKeyParts[1].Trim();
 
             var nonce = new byte[Sodium.crypto_box_noncebytes()];
-            HttpRequestMessage request;
-            unsafe
+            var hashLen = Sodium.crypto_generichash_bytes_max();
+            var apiSecretBytes = Encoding.UTF8.GetBytes(apiSecret);
+            var buffer = new byte[hashLen + Sodium.crypto_box_macbytes()];
+
+            fixed (byte* server_pk = serverPk)
+            fixed (byte* client_sk = privateKey)
+            fixed (byte* client_pk = publicKey)
+            fixed (byte* n = nonce)
+            fixed (byte* c = buffer)
+            fixed (byte* bytes = apiSecretBytes)
             {
-                var byteCount = Encoding.UTF8.GetByteCount(apiSecret);
-                var secretSizePadded = byteCount + (64 - (byteCount % 64));
-                var buffer = new byte[secretSizePadded + Sodium.crypto_box_macbytes()];
-                fixed (byte* server_pk = serverPk)
-                fixed (byte* client_sk = privateKey)
-                fixed (byte* client_pk = publicKey)
-                fixed (byte* n = nonce)
-                fixed (byte* c = buffer)
+                Sodium.crypto_box_keypair(client_pk, client_sk);
+                Sodium.randombytes_buf(n, nonce.Length);
+
+
+                if (Sodium.crypto_generichash(c, (IntPtr)hashLen, bytes, (ulong)apiSecretBytes.Length, client_pk, (IntPtr)publicKey.Length) != 0)
+                    throw new InvalidOperationException("Unable ot generate hash");
+
+                if (Sodium.crypto_box_easy(
+                        c,
+                        c,
+                        hashLen,
+                        n,
+                        server_pk,
+                        client_sk
+                    ) != 0)
                 {
-                    Sodium.crypto_box_keypair(client_pk, client_sk);
-                    Sodium.randombytes_buf(n, nonce.Length);
-
-                    Sodium.randombytes_buf(c, buffer.Length);
-                    Encoding.UTF8.GetBytes(apiSecret, 0, apiSecret.Length, buffer, 0);
-
-                    if (Sodium.crypto_box_easy(
-                            c,
-                            c,
-                            secretSizePadded,
-                            n,
-                            server_pk,
-                            client_sk
-                        ) != 0)
-                    {
-                        throw new AuthenticationException("Failed to generate crypt secret of apikey name=" + apiKeyName);
-                    }
+                    throw new AuthenticationException("Failed to generate crypt secret of apikey name=" + apiKeyName);
                 }
-
-                request = CreateRequest(buffer, publicKey, serverPk, nonce, context);
             }
+
+            var request = CreateRequest(buffer, publicKey, serverPk, nonce, context);
             request.RequestUri = new Uri($"{url}?apiKey={apiKeyName}");
             request.Headers.Add("Raven-Client-Version", RequestExecutor.ClientVersion);
             return request;

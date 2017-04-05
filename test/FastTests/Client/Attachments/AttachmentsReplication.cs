@@ -751,12 +751,21 @@ namespace FastTests.Client.Attachments
             Assert.Equal(size, actualSize);
         }
 
-        [Fact(Skip = "WIP")]
+        private void AssertConflictNoAttachment(GetConflictsResult.Conflict conflict)
+        {
+            Assert.True(conflict.Doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata));
+            Assert.False(metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray _));
+        }
+
+        [Fact]
         public async Task PutAndDeleteAttachmentsShouldConflict()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
+                await SetDatabaseId(store1, new Guid("00000000-48c4-421e-9466-000000000000"));
+                await SetDatabaseId(store2, new Guid("99999999-48c4-421e-9466-999999999999"));
+
                 using (var session = store1.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
@@ -787,10 +796,70 @@ namespace FastTests.Client.Attachments
 
                 SetupReplication(store1, store2);
                 SetupReplication(store2, store1);
-                Assert.True(WaitForDocument(store1, "marker 1"));
-                Assert.True(WaitForDocument(store2, "marker 2"));
 
-                // TODO:
+                Assert.True(WaitForDocument(store2, "marker 1"));
+                Assert.True(WaitForDocument(store1, "marker 2"));
+
+                var conflicts = GetConflicts(store1, "users/1");
+                Assert.Equal(2, conflicts.Results.Length);
+                AssertConflict(conflicts.Results[0], "a1", "JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", "a1/png", 3);
+                AssertConflictNoAttachment(conflicts.Results[1]);
+
+                conflicts = GetConflicts(store2, "users/1");
+                Assert.Equal(2, conflicts.Results.Length);
+                AssertConflict(conflicts.Results[0], "a1", "JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", "a1/png", 3);
+                AssertConflictNoAttachment(conflicts.Results[1]);
+            }
+        }
+
+        [Fact]
+        public async Task PutAndDeleteAttachmentsShouldConflict_OnDocumentWithoutMetadata()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await SetDatabaseId(store1, new Guid("00000000-48c4-421e-9466-000000000000"));
+                await SetDatabaseId(store2, new Guid("99999999-48c4-421e-9466-999999999999"));
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await PutCommandAsync(session, new User {Name = "Fitzchak"}, "users/1", true);
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
+                    }
+
+                    await session.StoreAsync(new User { Name = "Marker 1" }, "marker 1");
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await PutCommandAsync(session, new User { Name = "Fitzchak" }, "users/1", true);
+                    using (var a2 = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                    {
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a2, "a1/png"));
+                    }
+                    store2.Operations.Send(new DeleteAttachmentOperation("users/1", "a1"));
+
+                    await session.StoreAsync(new User {Name = "Marker 2"}, "marker 2");
+                    await session.SaveChangesAsync();
+                }
+
+                SetupReplication(store1, store2);
+                SetupReplication(store2, store1);
+
+                Assert.True(WaitForDocument(store2, "marker 1"));
+                Assert.True(WaitForDocument(store1, "marker 2"));
+
+                var conflicts = GetConflicts(store1, "users/1");
+                Assert.Equal(2, conflicts.Results.Length);
+                AssertConflict(conflicts.Results[0], "a1", "JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", "a1/png", 3);
+                AssertConflictNoAttachment(conflicts.Results[1]);
+
+                conflicts = GetConflicts(store2, "users/1");
+                Assert.Equal(2, conflicts.Results.Length);
+                AssertConflict(conflicts.Results[0], "a1", "JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", "a1/png", 3);
+                AssertConflictNoAttachment(conflicts.Results[1]);
             }
         }
     }

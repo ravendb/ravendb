@@ -260,26 +260,24 @@ namespace FastTests
             return document;
         }
 
-        /// <summary>
-        /// Put command for new client tests
-        /// </summary>
-        /// <param name="session"></param>
-        /// <param name="entity"></param>
-        /// <param name="id"></param>
-        protected void PutCommand(IDocumentSession session, object entity, string id)
+        protected void PutCommand(IDocumentSession session, object entity, string id, bool skipMetadata = false)
         {
             var documentInfo = new DocumentInfo
             {
                 Entity = entity,
                 Id = id
             };
-            var tag = session.Advanced.DocumentStore.Conventions.GetCollectionName(entity);
 
-            var metadata = new DynamicJsonValue();
-            if (tag != null)
-                metadata[Constants.Documents.Metadata.Collection] = tag;
+            if (skipMetadata == false)
+            {
+                var tag = session.Advanced.DocumentStore.Conventions.GetCollectionName(entity);
 
-            documentInfo.Metadata = session.Advanced.Context.ReadObject(metadata, id);
+                var metadata = new DynamicJsonValue();
+                if (tag != null)
+                    metadata[Constants.Documents.Metadata.Collection] = tag;
+
+                documentInfo.Metadata = session.Advanced.Context.ReadObject(metadata, id);
+            }
 
             documentInfo.Document = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
 
@@ -291,6 +289,38 @@ namespace FastTests
                 Context = session.Advanced.Context
             };
             session.Advanced.RequestExecutor.Execute(putCommand, session.Advanced.Context);
+        }
+
+        protected Task PutCommandAsync(IAsyncDocumentSession session, object entity, string id, 
+            bool skipMetadata = false, CancellationToken token = default(CancellationToken))
+        {
+            var documentInfo = new DocumentInfo
+            {
+                Entity = entity,
+                Id = id
+            };
+
+            if (skipMetadata == false)
+            {
+                var tag = session.Advanced.DocumentStore.Conventions.GetCollectionName(entity);
+
+                var metadata = new DynamicJsonValue();
+                if (tag != null)
+                    metadata[Constants.Documents.Metadata.Collection] = tag;
+
+                documentInfo.Metadata = session.Advanced.Context.ReadObject(metadata, id);
+            }
+
+            documentInfo.Document = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo);
+
+            var putCommand = new PutDocumentCommand
+            {
+                Id = id,
+                Etag = documentInfo.ETag,
+                Document = documentInfo.Document,
+                Context = session.Advanced.Context
+            };
+            return session.Advanced.RequestExecutor.ExecuteAsync(putCommand, session.Advanced.Context, token);
         }
 
         protected override void Dispose(ExceptionAggregator exceptionAggregator)

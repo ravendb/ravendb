@@ -129,7 +129,7 @@ namespace FastTests.Client.Attachments
         }
 
         [Fact]
-        public void PutAttachmentAndPutDocument_ShouldHaveHasAttachmentsFlag()
+        public void PreserveAttachmentsInMetadataAfterPutDocument()
         {
             using (var store = GetDocumentStore())
             {
@@ -150,6 +150,31 @@ namespace FastTests.Client.Attachments
                 {
                     session.Store(new User {Name = "Fitzchak 2"}, "users/1");
                     session.SaveChanges();
+                }
+
+                ValidateMetadata_PutAttachmentAndPutDocument_ShouldHaveHasAttachmentsFlag(store);
+            }
+        }
+
+        [Fact]
+        public void PreserveAttachmentsInMetadataAfterPutDocumentWithoutMetadata()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    PutCommand(session, new User { Name = "Fitzchak" }, "users/1", true);
+                    using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        store.Operations.Send(new PutAttachmentOperation("users/1", "pic", profileStream, "image/png"));
+                    }
+                }
+
+                ValidateMetadata_PutAttachmentAndPutDocument_ShouldHaveHasAttachmentsFlag(store);
+
+                using (var session = store.OpenSession())
+                {
+                    PutCommand(session, new User { Name = "Fitzchak 2" }, "users/1", true);
                 }
 
                 ValidateMetadata_PutAttachmentAndPutDocument_ShouldHaveHasAttachmentsFlag(store);
