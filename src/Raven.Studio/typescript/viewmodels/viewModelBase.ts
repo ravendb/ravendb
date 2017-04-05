@@ -104,14 +104,7 @@ class viewModelBase {
         viewModelBase.showSplash(false);
     }
 
-    private rightPanelSetup() {
-        const $pageHostRoot = $("#page-host-root");
-        const hasRightPanel = !!$("#right-options-panel", $pageHostRoot).length;
-        $pageHostRoot.toggleClass("enable-right-options-panel", hasRightPanel);
-    }
-
-    compositionComplete() {
-        this.rightPanelSetup();
+    compositionComplete() {        
         this.dirtyFlag().reset(); //Resync Changes
     }
 

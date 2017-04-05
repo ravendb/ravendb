@@ -28,8 +28,6 @@ namespace Voron.Impl.Journal
 {
     public unsafe class WriteAheadJournal : IDisposable
     {
-        private static readonly TimeSpan Infinity = TimeSpan.FromMilliseconds(-1);
-
         private readonly StorageEnvironment _env;
         private readonly AbstractPager _dataPager;
 
@@ -574,8 +572,8 @@ namespace Voron.Impl.Journal
 
                     var unusedJournals = GetUnusedJournalFiles(jrnls, lastProcessedJournal, lastFlushedTransactionId);
 
-                    var needImmediateFsync = 
-                    
+                    var needImmediateFsync =
+
                         Interlocked.Exchange(ref _forceDataSync, 0) != 0 ||
                         _totalWrittenButUnsyncedBytes > 32 * Constants.Size.Megabyte;
 
@@ -592,7 +590,7 @@ namespace Voron.Impl.Journal
 
                     ApplyJournalStateAfterFlush(token, lastProcessedJournal, lastFlushedTransactionId, unusedJournals);
 
-                    if(needImmediateFsync == false)
+                    if (needImmediateFsync == false)
                         _waj._env.QueueForSyncDataFile();
                 }
                 finally
@@ -810,15 +808,15 @@ namespace Voron.Impl.Journal
             // 2) Take a snapshot of the current status of this env flushing status
             // 3) Release the lock & sync the file (take a long time)
             // 4) Re-take the lock, update the sync status in the header with the values we snapshotted
-            public class SyncOperation  : IDisposable
+            public class SyncOperation : IDisposable
             {
                 private readonly JournalApplicator _parent;
-                bool _fsyncLockTaken ;
+                bool _fsyncLockTaken;
                 long _lastSyncedJournal;
                 long _currentTotalWrittenBytes;
                 long _lastSyncedTransactionId;
                 private readonly List<KeyValuePair<long, JournalFile>> journalsToDelete;
-                bool _flushLockTaken ;
+                bool _flushLockTaken;
                 private TransactionHeader _transactionHeader;
                 private TaskCompletionSource<object> _tcs = new TaskCompletionSource<object>();
 
@@ -885,7 +883,7 @@ namespace Voron.Impl.Journal
 
                 private void CallPagerSync()
                 {
-// danger mode assumes that no OS crashes can happen, in order to get best performance
+                    // danger mode assumes that no OS crashes can happen, in order to get best performance
 
                     if (_parent._waj._env.Options.TransactionsMode != TransactionsMode.Danger)
                     {
@@ -1223,6 +1221,9 @@ namespace Voron.Impl.Journal
 
                 sp.Restart();
                 CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer);
+                sp.Stop();
+                _lastCompressionAccelerationInfo.WriteDuration = sp.Elapsed;
+                _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Writing {journalEntry.NumberOf4Kbs * 4:#,#} kb to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
@@ -1326,11 +1327,28 @@ namespace Voron.Impl.Journal
 
             var compressionBuffer = fullTxBuffer + sizeof(TransactionHeader);
 
-            var compressedLen = LZ4.Encode64LongBuffer(
-                outputBuffer,
-                compressionBuffer,
-                totalSizeWritten,
-                outputBufferSize);
+            var number = CurrentFile?.Number ?? 0;
+            long compressedLen;
+            var compressionDuration = Stopwatch.StartNew();
+            using (var metrics = _env.Options.IoMetrics.MeterIoRate(
+                // Note that the last journal may be replaced if we switch journals, however it doesn't affect web graph
+                StorageEnvironmentOptions.JournalName(number),
+                IoMetrics.MeterType.Compression, 0))
+            {
+                var compressionAcceleration = _lastCompressionAccelerationInfo.LastAcceleration;
+
+                compressedLen = LZ4.Encode64LongBuffer(
+                    outputBuffer,
+                    compressionBuffer,
+                    totalSizeWritten,
+                    outputBufferSize,
+                    compressionAcceleration);
+
+                metrics.SetCompressionResults(totalSizeWritten, compressedLen, compressionAcceleration);
+            }
+            compressionDuration.Stop();
+
+            _lastCompressionAccelerationInfo.CompressionDuration = compressionDuration.Elapsed;
 
             // We need to account for the transaction header as part of the total length.
             var totalLength = compressedLen + sizeof(TransactionHeader);
@@ -1362,6 +1380,51 @@ namespace Voron.Impl.Journal
             return prepreToWriteToJournal;
         }
 
+        private class CompressionAccelerationStats
+        {
+            public TimeSpan CompressionDuration;
+            public TimeSpan WriteDuration;
+
+            private int _lastAcceleration = 1;
+            private int _flux; // allow us to ignore fluctuations by requiring several consecutive operations to change 
+
+            public int LastAcceleration => _lastAcceleration;
+
+            public void CalculateOptimalAcceleration()
+            {
+                // if comression is _much_ higher than write time, increase acceleration
+                if (CompressionDuration > WriteDuration.Add(WriteDuration))
+                {
+                    if (_lastAcceleration < 99)
+                    {
+                        _lastAcceleration = Math.Min(99, _lastAcceleration + 2);
+                        _flux = -4;
+                    }
+                    return;
+                }
+
+                if (CompressionDuration <= WriteDuration)
+                {
+                    // write time is higher than compression time, so compression is worth it
+                    if (++_flux > 5)
+                    {
+                        _lastAcceleration = Math.Max(1, _lastAcceleration - 1);
+                        _flux = 3;
+                    }
+
+                    return;
+                }
+
+                // compression time is _higher_ than write time. Probably fast I/O system, so we can 
+                // afford to reduce the compression rate and try to get higher speeds
+                if (--_flux < -5)
+                {
+                    _lastAcceleration = Math.Min(99, _lastAcceleration + 1);
+                    _flux = -2;
+                }
+            }
+        }
+
         public void TruncateJournal()
         {
             // switching transactions modes requires to close jounal,
@@ -1377,6 +1440,7 @@ namespace Voron.Impl.Journal
         }
 
         private DateTime _lastCompressionBufferReduceCheck = DateTime.UtcNow;
+        private CompressionAccelerationStats _lastCompressionAccelerationInfo = new CompressionAccelerationStats();
 
         public void ReduceSizeOfCompressionBufferIfNeeded()
         {
@@ -1445,3 +1509,4 @@ namespace Voron.Impl.Journal
     }
 
 }
+

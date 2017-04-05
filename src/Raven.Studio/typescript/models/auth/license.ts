@@ -7,7 +7,6 @@ class license {
     static supportCoverage = ko.observable<supportCoverageDto>();
     static hotSpare = ko.observable<HotSpareDto>();
 
-
     static fetchLicenseStatus(): JQueryPromise<Raven.Server.Commercial.LicenseStatus> {
         return new getLicenseStatusCommand()
             .execute()
@@ -25,7 +24,7 @@ class license {
         if (hotSpare) {
             return 'hot-spare';
         }
-        if (status == null || status.LicenseType !== "Commercial") {
+        if (status == null || status.Type !== "Commercial") {
             return 'dev-only';
         }
         if (status.Status.includes("Expired")) {

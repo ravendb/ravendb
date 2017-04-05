@@ -1,4 +1,4 @@
-<div id="about-page">
+<div id="about-page" class="content-margin">
     <div class="row">
         <div class="col-sm-10 col-sm-offset-1 col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3">
             <div class="row">
@@ -18,7 +18,14 @@
                         <h4 data-bind="text: licenseType"></h4>
                     </div>
    
-                    <p data-bind="visible: expiration" class="expire-date"><small>EXPIRES: <span data-bind="text: expiration"></span></small></p>
+                    <div>
+                        <div data-bind="visible: formattedExpiration">
+                            Expires on: <span data-bind="text: formattedExpiration"></span>
+                        </div>
+                        <div data-bind="visible: shortDescription">
+                            <span data-bind="text: shortDescription"></span>
+                        </div>
+                    </div>
                     <button class="btn btn-lg" data-bind="click: register, visible: !registered()">Register</button>
                 </div>
                 <div class="col-sm-6 text-center">                   
@@ -28,7 +35,8 @@
                             </div>
                             <h3>SUPPORT</h3>
                             <h4>Upcoming in final release</h4>
-                            <p data-bind="visible: expiration">&nbsp;</p>
+                            <!--<p data-bind="visible: formattedExpiration">&nbsp;</p>-->
+                            <!--<p data-bind="visible: shortDescription">&nbsp;</p>-->
                         </div>
                     <a href="mailto:support@ravendb.net" class="btn btn-lg">Feedback</a>
                 </div>
