@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
             Slice prefixSlice;
             scope = Slice.From(context.Transaction.InnerTransaction.Allocator, prefix, out prefixSlice);
 
-            it.RequiredPrefix = prefixSlice;
+            it.SetRequiredPrefix(prefixSlice);
 
             if (it.Seek(prefixSlice))
                 return true;
@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
             scope.Value.Dispose();
             scope = null;
 
-            it.RequiredPrefix = default(Slice);
+            it.SetRequiredPrefix(Slices.Empty);
 
             if (it.Seek(Slices.BeforeAllKeys) == false)
                 return false;
@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
             scope = Slice.From(context.Transaction.InnerTransaction.Allocator, prefix, out prefixSlice);
 
-            it.RequiredPrefix = prefixSlice;
+            it.SetRequiredPrefix(prefixSlice);
 
             if (it.Seek(prefixSlice) == false)
             {
