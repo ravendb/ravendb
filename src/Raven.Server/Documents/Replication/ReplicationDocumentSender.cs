@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Replication
                     }
 
                     if (_log.IsInfoEnabled)
-                        _log.Info($"Found {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count} attachment's streams to replicate to {_parent.Destination.Database} @ {_parent.Destination.Url}.");
+                        _log.Info($"Found {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count} attachment's streams to replicate to {_parent.Node.NodeTag} @ {_parent.Node.Url}.");
 
                     if (_orderedReplicaItems.Count == 0)
                     {
@@ -267,16 +267,13 @@ namespace Raven.Server.Documents.Replication
                 Destination = _parent.FromToString
             };
             var sw = Stopwatch.StartNew();
-            var defaultResolver = _parent._parent.ReplicationConfig?.Senator;
             var headerJson = new DynamicJsonValue
             {
                 [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
                 [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
                 [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _parent._lastSentIndexOrTransformerEtag,
                 [nameof(ReplicationMessageHeader.ItemsCount)] = _orderedReplicaItems.Count,
-                [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = _replicaAttachmentStreams.Count,
-                [nameof(ReplicationMessageHeader.ResolverId)] = defaultResolver?.ResolvingDatabaseId,
-                [nameof(ReplicationMessageHeader.ResolverVersion)] = defaultResolver?.Version
+                [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = _replicaAttachmentStreams.Count
             };
 
             _parent.WriteToServer(headerJson);

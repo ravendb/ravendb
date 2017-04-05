@@ -62,9 +62,8 @@ namespace Raven.Server.Documents.Replication
 
             _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
-
-            var replicationDoc = _parent.ReplicationConfig;
-            _conflictManager = new ConflictManager(_database, replicationDoc, _parent.ConflictResolver);
+            
+            _conflictManager = new ConflictManager(_database, _parent.MyDatabaseRecord.ConflictSolverConfig, _parent.ConflictResolver);
         }
 
         public void Start()

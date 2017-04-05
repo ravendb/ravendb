@@ -29,10 +29,6 @@ namespace Raven.Client.Documents.Replication.Messages
         public ChangeVectorEntry[] IndexTransformerChangeVector { get; set; }
 
         public string DatabaseId { get; set; }
-
-        public string ResolverId { get; set; }
-
-        public int? ResolverVersion { get; set; }
     }
 
     public static class ChangeVectorExtensions

@@ -51,7 +51,7 @@ namespace FastTests.Issues
                         session.Load<ReplicationDocument>(Constants.Documents.Replication.ReplicationConfigurationDocument);
 
                     //add non-etl destination
-                    replicationDocument.Destinations.Add(new ReplicationDestination
+                    replicationDocument.Destinations.Add(new ReplicationNode
                     {
                         Database = storeD.DefaultDatabase,
                         Url = storeD.Url

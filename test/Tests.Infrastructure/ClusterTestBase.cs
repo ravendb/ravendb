@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -10,8 +11,11 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 using Raven.Server;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Context;
 using Xunit;
 using Constants = Raven.Client.Constants;
 
@@ -104,17 +108,6 @@ namespace Tests.Infrastructure
             mre.Wait();
         }
 
-        protected void SetupReplicationOnDatabaseTopology(IReadOnlyList<ServerNode> topologyNodes)
-        {
-            var stores = GetStoresFromTopology(topologyNodes);
-
-            //setup replication -> all nodes to all nodes
-            foreach (var store in stores)
-            {
-                SetupReplication_TEMP(store, new ReplicationDocument(), stores.Except(new[] { store }).ToArray());
-            }
-        }
-
         protected List<DocumentStore> GetStoresFromTopology(IReadOnlyList<ServerNode> topologyNodes)
         {
             var stores = new List<DocumentStore>();
@@ -139,26 +132,44 @@ namespace Tests.Infrastructure
             return stores;
         }
 
-        protected void SetupReplication_TEMP(DocumentStore fromStore, ReplicationDocument configOptions, params DocumentStore[] toStores)
+        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(RavenServer leader, params RavenServer[] serverNodes)
         {
-            using (var session = fromStore.OpenSession())
+            var serversToPorts = new Dictionary<RavenServer, string>();
+            leader.ServerStore.EnsureNotPassive();
+            Servers.Add(leader);
+            serversToPorts.Add(leader, leader.WebUrls[0]);
+            foreach (var ravenServer in serverNodes)
             {
-                var destinations = new List<ReplicationDestination>();
-                foreach (var store in toStores)
-                {
-                    var replicationDestination = new ReplicationDestination
-                    {
-                        Database = store.DefaultDatabase,
-                        Url = store.Url
-                    };
-                    destinations.Add(replicationDestination);
-                }
-
-                configOptions.Destinations = destinations;
-                session.Store(configOptions, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                session.SaveChanges();
+                serversToPorts.Add(ravenServer, ravenServer.WebUrls[0]);
+                Servers.Add(ravenServer);
             }
+
+            var numberOfNodes = serverNodes.Length + 1;
+            if (numberOfNodes % 2 == 0) // ensure odd number of nodes
+            {
+                numberOfNodes++;
+                var serverUrl = $"http://localhost:{GetPort()}";
+                var server = GetNewServer(new Dictionary<string, string>()
+                {
+                    {"Raven/ServerUrl", serverUrl}
+                });
+                serversToPorts.Add(server, serverUrl);
+                Servers.Add(server);
+            }
+            // starts from 1 to skip the leader
+            for (var index = 1; index < Servers.Count; index++)
+            {
+                RavenServer server = Servers[index];
+                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[server]);
+                await server.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
+            }
+
+            // ReSharper disable once PossibleNullReferenceException
+            Assert.True(leader.ServerStore.WaitForState(RachisConsensus.State.Leader).Wait(numberOfNodes * ElectionTimeoutInMs),
+                "The leader has changed while waiting for cluster to become stable");
+            return leader;
         }
+
 
         protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes)
         {
@@ -195,6 +206,32 @@ namespace Tests.Infrastructure
             Assert.True(leader.ServerStore.WaitForState(RachisConsensus.State.Leader).Wait(numberOfNodes* ElectionTimeoutInMs),
                 "The leader has changed while waiting for cluster to become stable");
             return leader;
+        }
+
+        protected async Task<IDocumentStore> CreateRaftClusterWithDatabaseAndGetLeaderStore(int numberOfNodes, int replicationFactor = 2, [CallerMemberName] string callerName = null)
+        {
+            var leader = await CreateRaftClusterAndGetLeader(numberOfNodes);
+            string databaseName = callerName ?? "Test";
+            var store = new DocumentStore
+            {
+                DefaultDatabase = databaseName,
+                Url = leader.WebUrls[0]
+            }.Initialize();
+
+            var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+            var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+
+            Assert.True((databaseResult.ETag ?? 0) > 0); //sanity check                
+            await WaitForEtagInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+            await ((DocumentStore)store).ForceUpdateTopologyFor(databaseName);
+
+            TransactionOperationContext context;
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenReadTransaction();
+                var record = leader.ServerStore.Cluster.ReadDatabase(context,databaseName);             
+            }
+            return store;
         }
 
         public async Task WaitForLeader(TimeSpan timeout)

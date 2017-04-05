@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Replication
             public DateTime StartTime;
             public DateTime EndTime;
             public long ConflictsLeft;
-            public DatabaseResolver DefaultResolver;
+            public ReplicationNode DefaultResolver;
             internal Dictionary<string, int> ResolvedBy;
 
             public void AddResolvedBy(string by, int count)

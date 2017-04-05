@@ -51,9 +51,9 @@ namespace FastTests.Issues
         {
             using (var session = storeA.OpenSession())
             {
-                var destinations = new List<ReplicationDestination>
+                var destinations = new List<ReplicationNode>
                 {
-                    new ReplicationDestination
+                    new ReplicationNode
                     {
                         Database = storeB.DefaultDatabase,
                         Url = url, //whitespace at the start of url

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -75,10 +74,7 @@ namespace FastTests.Issues
 
                 await ((DocumentStore)store).ForceUpdateTopologyFor(databaseName);
                 var requestExecutor = ((DocumentStore)store).GetRequestExecuter(databaseName);
-
-                //TODO for Karmel: refactor this test so it uses replication when raft based topology replication is implemented
-                SetupReplicationOnDatabaseTopology(requestExecutor.TopologyNodes);
-
+              
                 using (var session = store.OpenSession(databaseName))
                 {
                     session.Store(new User { Name = "John Doe" }, "users/1");
@@ -89,7 +85,7 @@ namespace FastTests.Issues
                     requestExecutor.TopologyNodes,
                     "users/1",
                     u => u.Name.Equals("John Doe"),
-                    TimeSpan.FromSeconds(10)));
+                    TimeSpan.FromSeconds(30)));
 
                 using (var session = store.OpenSession(databaseName))
                 {

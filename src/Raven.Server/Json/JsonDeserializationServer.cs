@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
@@ -72,6 +73,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, SubscriptionCriteria> SubscriptionCriteria = GenerateJsonDeserializationRoutine<SubscriptionCriteria>();
 
         public static readonly Func<BlittableJsonReaderObject, VersioningConfiguration> VersioningConfiguration = GenerateJsonDeserializationRoutine<VersioningConfiguration>();
+        //public static readonly Func<BlittableJsonReaderObject, ReplicationTopologyConfiguration> ReplicationTopologyConfiguration = GenerateJsonDeserializationRoutine<ReplicationTopologyConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, ExpirationConfiguration> ExpirationConfiguration = GenerateJsonDeserializationRoutine<ExpirationConfiguration>();
 

@@ -145,8 +145,7 @@ namespace Raven.Server.Documents.Handlers
                 destinations[index] = new DynamicJsonValue
                 {
                     [nameof(ServerNode.Url)] = des.Url,
-                    [nameof(ServerNode.ApiKey)] = des.ApiKey,
-                    [nameof(ServerNode.Database)] = des.Database
+                //    [nameof(ServerNode.Database)] = des.Database
                 };
             }
 

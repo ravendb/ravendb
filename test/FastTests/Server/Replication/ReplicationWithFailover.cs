@@ -48,7 +48,7 @@ namespace FastTests.Server.Replication
                 await Task.WhenAny(requestExecutor.UpdateTopologyAsync(), Task.Delay(TimeSpan.FromSeconds(10)));
 
                 //TODO for Karmel: refactor this test so it uses replication when raft based topology replication is implemented
-                SetupReplicationOnDatabaseTopology(requestExecutor.TopologyNodes);
+                //SetupReplicationOnDatabaseTopology(requestExecutor.TopologyNodes);
               
                 using (var session = master.OpenSession())
                 {

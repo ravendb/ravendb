@@ -86,7 +86,6 @@ namespace Raven.Server.Documents
 
                     NotifyLeaderAboutRemoval(dbName);
 
-
                     return;
                 }
 

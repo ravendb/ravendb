@@ -17,12 +17,12 @@ namespace Raven.Server.Documents.Replication
         private readonly DocumentDatabase _database;
 
         private readonly Logger _log;
-        private readonly ReplicationTopologyConfiguration _replicationConfig;
+        private readonly ConflictSolver _conflictSolver;
         private readonly ResolveConflictOnReplicationConfigurationChange _conflictResolver;
 
-        public ConflictManager(DocumentDatabase database, ReplicationTopologyConfiguration replicationConfig, ResolveConflictOnReplicationConfigurationChange conflictResolver)
+        public ConflictManager(DocumentDatabase database, ConflictSolver conflictSolver, ResolveConflictOnReplicationConfigurationChange conflictResolver)
         {
-            _replicationConfig = replicationConfig;
+            _conflictSolver = conflictSolver;
             _conflictResolver = conflictResolver;
             _database = database;
             _log = LoggingSource.Instance.GetLogger<ConflictManager>(_database.Name);
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Replication
                 doc))
                 return;
 
-            if (_replicationConfig.ResolveToLatest)
+            if (_conflictSolver.ResolveToLatest)
             {
                 if (otherChangeVector == null) //precaution
                     throw new InvalidOperationException(
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Replication
             ChangeVectorEntry[] incomingChangeVector,
             BlittableJsonReaderObject doc)
         {
-            if (_replicationConfig?.Senator?.ResolvingDatabaseId == null)
+            if (_conflictSolver?.Senator == null)
                 return false;
 
             var conflicts = new List<DocumentConflict>(_database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id));
@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Replication
 
             return _conflictResolver.TryResolveUsingDefaultResolverInternal(
                 context,
-                _replicationConfig?.Senator,
+                _conflictSolver.Senator,
                 conflicts);
         }
 

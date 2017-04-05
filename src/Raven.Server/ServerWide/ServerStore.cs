@@ -6,6 +6,8 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Replication;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
@@ -172,6 +174,35 @@ namespace Raven.Server.ServerWide
                 [nameof(DeleteDatabaseCommand.HardDelete)] = hardDelete,
                 [nameof(DeleteDatabaseCommand.FromNode)] = fromNode
             }, "del-cmd"))
+            {
+                return await SendToLeaderAsync(putCmd);
+            }
+        }
+
+        public async Task<long> UpdateDatabaseTopology(
+            JsonOperationContext context, 
+            string key, 
+            BlittableJsonReaderObject val)
+        {
+            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            {
+                ["Type"] = nameof(UpdateTopologyCommand),
+                [nameof(UpdateTopologyCommand.DatabaseName)] = key,
+                [nameof(UpdateTopologyCommand.Value)] = val,
+            }, "update-cmd"))
+            {
+                return await SendToLeaderAsync(putCmd);
+            }
+        }
+
+        public async Task<long> ModifyConflictSolverAsync(JsonOperationContext context, string key, ConflictSolver solver)
+        {
+            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            {
+                ["Type"] = nameof(ModifyConflictSolverCommand),
+                [nameof(ModifyConflictSolverCommand.DatabaseName)] = key,
+                [nameof(ModifyConflictSolverCommand.Solver)] = solver
+            }, "update-conflict-resolver-cmd"))
             {
                 return await SendToLeaderAsync(putCmd);
             }

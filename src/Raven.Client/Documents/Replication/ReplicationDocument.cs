@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Replication
     /// This class represent the list of replication destinations for the server
     /// </summary>
     public abstract class ReplicationDocument<TClass>
-        where TClass : ReplicationDestination
+        where TClass : ReplicationNode
     {
 
         public StraightforwardConflictResolution DocumentConflictResolution { get; set; }
@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Replication
     /// <summary>
     /// This class represent the list of replication destinations for the server
     /// </summary>
-    public class ReplicationDocument : ReplicationDocument<ReplicationDestination>
+    public class ReplicationDocument : ReplicationDocument<ReplicationNode>
     {
         public Dictionary<string, ScriptResolver> ResolveByCollection { get; set; }
         public DatabaseResolver DefaultResolver { get; set; }

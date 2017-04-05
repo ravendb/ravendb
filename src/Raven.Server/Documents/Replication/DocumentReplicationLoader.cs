@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,15 +36,15 @@ namespace Raven.Server.Documents.Replication
         private readonly Timer _reconnectAttemptTimer;
         internal int MinimalHeartbeatInterval;
 
-        public ResolveConflictOnReplicationConfigurationChange ConflictResolver { get; }
+        public ResolveConflictOnReplicationConfigurationChange ConflictResolver;
 
         internal readonly ReplicationStatistics RepliactionStats;
 
         private readonly ConcurrentSet<OutgoingReplicationHandler> _outgoing =
             new ConcurrentSet<OutgoingReplicationHandler>();
 
-        private readonly ConcurrentDictionary<ReplicationDestination, ConnectionShutdownInfo> _outgoingFailureInfo =
-            new ConcurrentDictionary<ReplicationDestination, ConnectionShutdownInfo>();
+        private readonly ConcurrentDictionary<ReplicationNode, ConnectionShutdownInfo> _outgoingFailureInfo =
+            new ConcurrentDictionary<ReplicationNode, ConnectionShutdownInfo>();
 
         private readonly ConcurrentDictionary<string, IncomingReplicationHandler> _incoming =
             new ConcurrentDictionary<string, IncomingReplicationHandler>();
@@ -63,8 +64,8 @@ namespace Raven.Server.Documents.Replication
             public long LastEtag;
         }
 
-        private readonly ConcurrentDictionary<ReplicationDestination, LastEtagPerDestination> _lastSendEtagPerDestination =
-            new ConcurrentDictionary<ReplicationDestination, LastEtagPerDestination>();
+        private readonly ConcurrentDictionary<ReplicationNode, LastEtagPerDestination> _lastSendEtagPerDestination =
+            new ConcurrentDictionary<ReplicationNode, LastEtagPerDestination>();
 
         public long MinimalEtagForReplication
         {
@@ -93,12 +94,8 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private int _numberOfSiblings;
 
-        internal ReplicationTopologyConfiguration ReplicationConfig;
-        public IEnumerable<ReplicationDestination> Destinations => ReplicationConfig.OutgoingConnections[Database.DbId];
-
-
         public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Values.Select(x => x.ConnectionInfo);
-        public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Select(x => x.Destination);
+        public IEnumerable<ReplicationNode> OutgoingConnections => _outgoing.Select(x => x.Node);
         public IEnumerable<OutgoingReplicationHandler> OutgoingHandlers => _outgoing;
         public IEnumerable<IncomingReplicationHandler> IncomingHandlers => _incoming.Values;
 
@@ -106,6 +103,9 @@ namespace Raven.Server.Documents.Replication
             new ConcurrentQueue<TaskCompletionSource<object>>();
 
         public ServerStore Server;
+        public DatabaseRecord MyDatabaseRecord;
+        internal DatabaseTopology ReplicationTopology => MyDatabaseRecord.Topology;
+        public IEnumerable<ReplicationNode> Destinations => ReplicationTopology?.GetDestinations(Server.NodeTag,Database.Name);
 
         public DocumentReplicationLoader(DocumentDatabase database, ServerStore server)
         {
@@ -116,11 +116,32 @@ namespace Raven.Server.Documents.Replication
                 null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
             MinimalHeartbeatInterval =
                (int)Database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
+
             RepliactionStats = new ReplicationStatistics(this);
-            ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
+                                 
         }
 
-        public IReadOnlyDictionary<ReplicationDestination, ConnectionShutdownInfo> OutgoingFailureInfo
+        private DatabaseRecord LoadDatabaseRecord()
+        {
+            TransactionOperationContext context;
+            using (Server.ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenReadTransaction();
+                var databaseRecord = Server.Cluster.ReadDatabase(context, Database.Name);
+                if (databaseRecord == null)
+                {
+                    return null;
+                    //throw new FileNotFoundException("Database record is missing!");
+                }
+                if (MyDatabaseRecord == null)
+                {
+                    MyDatabaseRecord = databaseRecord;
+                }
+                return databaseRecord;
+            }
+        }
+
+        public IReadOnlyDictionary<ReplicationNode, ConnectionShutdownInfo> OutgoingFailureInfo
             => _outgoingFailureInfo;
 
         public IReadOnlyDictionary<IncomingConnectionInfo, DateTime> IncomingLastActivityTime
@@ -129,13 +150,13 @@ namespace Raven.Server.Documents.Replication
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>
             IncomingRejectionStats => _incomingRejectionStats;
 
-        public IEnumerable<ReplicationDestination> ReconnectQueue => _reconnectQueue.Select(x => x.Destination);
+        public IEnumerable<ReplicationNode> ReconnectQueue => _reconnectQueue.Select(x => x.Node);
 
-        public long? GetLastReplicatedEtagForDestination(ReplicationDestination dest)
+        public long? GetLastReplicatedEtagForDestination(ReplicationNode dest)
         {
             foreach (var replicationHandler in _outgoing)
             {
-                if (replicationHandler.Destination.IsMatch(dest))
+                if (replicationHandler.Node.IsMatch(dest))
                     return replicationHandler._lastSentDocumentEtag;
             }
             return null;
@@ -238,11 +259,6 @@ namespace Raven.Server.Documents.Replication
                             getLatestEtagMessage.SourceDatabaseId),
                         [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentsChangeVector,
                         [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVector,
-                        [nameof(ReplicationMessageReply.ResolverId)] =
-                        ReplicationConfig?.Senator?.ResolvingDatabaseId,
-                        [nameof(ReplicationMessageReply.ResolverVersion)] =
-                        ReplicationConfig?.Senator?.Version,
-                        [nameof(ReplicationMessageReply.DatabaseId)] = Database.DbId.ToString()
                     };
 
                     documentsOperationContext.Write(writer, response);
@@ -294,13 +310,13 @@ namespace Raven.Server.Documents.Replication
                     try
                     {
                         _reconnectQueue.TryRemove(failure);
-                        AddAndStartOutgoingReplication(failure.Destination);
+                        AddAndStartOutgoingReplication(failure.Node);
                     }
                     catch (Exception e)
                     {
                         if (_log.IsInfoEnabled)
                         {
-                            _log.Info($"Failed to start outgoing replication to {failure.Destination}", e);
+                            _log.Info($"Failed to start outgoing replication to {failure.Node}", e);
                         }
                     }
                 }
@@ -354,13 +370,17 @@ namespace Raven.Server.Documents.Replication
         {
             if (_isInitialized) //precaution -> probably not necessary, but still...
                 return;
-
+            
             _isInitialized = true;
 
             Server.Cluster.DatabaseChanged += OnDatabaseRecordChange;
 
+            MyDatabaseRecord = LoadDatabaseRecord();
+            ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
             InitializeOutgoingReplications();
             ConflictResolver.RunConflictResolversOnce();
+
+            
         }
 
         private void OnDatabaseRecordChange(object sender, string changedDatabase)
@@ -368,22 +388,21 @@ namespace Raven.Server.Documents.Replication
 
             if (Server == null)
                 return;
+
             if (string.Equals(changedDatabase, Database.Name, StringComparison.OrdinalIgnoreCase) == false)
                 return;
 
-            ReplicationTopologyConfiguration newConfig;
-            TransactionOperationContext context;
-            using (Server.ContextPool.AllocateOperationContext(out context))
-            {
-                context.OpenReadTransaction();
-                var databaseRecord = Server.Cluster.ReadDatabase(context, Database.Name);
-                if (databaseRecord == null)
-                    return;
+            var newRecord = LoadDatabaseRecord();
 
-                newConfig = databaseRecord.ReplicationTopology;
-            }
+            if(newRecord == null)
+                return;
 
-            if (ReplicationConfig.MyConnectionChanged(Database.DbId, newConfig))
+            var connectionChanged = ReplicationTopology.MyConnectionChanged(newRecord.Topology, Server.NodeTag, Database.Name);
+            var conflictSolverChanged = MyDatabaseRecord.ConflictSolverConfig.ConflictResolutionChanged(newRecord.ConflictSolverConfig);
+
+            MyDatabaseRecord = newRecord;
+
+            if (connectionChanged)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info("Replication connection were changed. Starting and stopping outgoing replication threads.");
@@ -405,16 +424,14 @@ namespace Raven.Server.Documents.Replication
                 InitializeOutgoingReplications();
             }
 
-            if (ReplicationConfig.ConflictResolutionChanged(newConfig))
+            if (conflictSolverChanged)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info("Conflict resolution was change.");
 
                 ConflictResolver.RunConflictResolversOnce();
             }
-
-            ReplicationConfig = newConfig;
-                      
+                                 
         }
 
         private void InitializeOutgoingReplications()
@@ -450,7 +467,7 @@ namespace Raven.Server.Documents.Replication
 
                 AddAndStartOutgoingReplication(destination);
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Initialized outgoing replication for [{destination.Database}/{destination.Url}]");
+                    _log.Info($"Initialized outgoing replication for [{destination.NodeTag}/{destination.Url}]");
             }
 
             _numberOfSiblings = countOfDestinations;
@@ -458,27 +475,19 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
                 _log.Info("Finished initialization of outgoing replications..");
         }
-
-        private readonly AlertRaised _databaseMismatchAlert = AlertRaised.Create(
-                   "Replication source mismatch",
-                   $"Replication source does not match this database, outgoing replication is disabled until this will be fixed at {Constants.Documents.Replication.ReplicationConfigurationDocument}.",
-                   AlertType.Replication,
-                   NotificationSeverity.Error,
-                   "DatabaseMismatch"
-               );
-
-        private void AddAndStartOutgoingReplication(ReplicationDestination destination)
+        
+        private void AddAndStartOutgoingReplication(ReplicationNode node)
         {
-            var outgoingReplication = new OutgoingReplicationHandler(this, Database, destination);
+            var outgoingReplication = new OutgoingReplicationHandler(this, Database, node);
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
 
-            destination.Url = destination.Url.Trim();
+            node.Url = node.Url.Trim();
 
-            _outgoingFailureInfo.TryAdd(destination, new ConnectionShutdownInfo
+            _outgoingFailureInfo.TryAdd(node, new ConnectionShutdownInfo
             {
-                Destination = destination
+                Node = node
             });
             outgoingReplication.Start();
         }
@@ -522,7 +531,7 @@ namespace Raven.Server.Documents.Replication
                     Status = ReplicationStatus.Failed,
                     Message = e.Message,
                     StartSendingTime = DateTime.UtcNow,
-                    Destination = instance.Destination.ToString(),
+                    Destination = instance.Node.ToString(),
                     Exception = e.ToString()
                 };
 
@@ -531,7 +540,7 @@ namespace Raven.Server.Documents.Replication
                 _outgoing.TryRemove(instance);
 
                 ConnectionShutdownInfo failureInfo;
-                if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo) == false)
+                if (_outgoingFailureInfo.TryGetValue(instance.Node, out failureInfo) == false)
                     return;
 
                 UpdateLastEtag(instance);
@@ -545,17 +554,17 @@ namespace Raven.Server.Documents.Replication
                 _reconnectQueue.Add(failureInfo);
 
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Document replication connection ({instance.Destination}) failed, and the connection will be retried later.",
+                    _log.Info($"Document replication connection ({instance.Node}) failed, and the connection will be retried later.",
                         e);
 
-                ReplicationFailed?.Invoke(instance.Destination.ToString(), e);
+                ReplicationFailed?.Invoke(instance.Node.ToString(), e);
             }
         }
 
         private void UpdateLastEtag(OutgoingReplicationHandler instance)
         {
             var etagPerDestination = _lastSendEtagPerDestination.GetOrAdd(
-                instance.Destination,
+                instance.Node,
                 _ => new LastEtagPerDestination());
 
             if (etagPerDestination.LastEtag == instance._lastSentDocumentEtag)
@@ -569,7 +578,7 @@ namespace Raven.Server.Documents.Replication
             UpdateLastEtag(instance);
 
             ConnectionShutdownInfo failureInfo;
-            if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo))
+            if (_outgoingFailureInfo.TryGetValue(instance.Node, out failureInfo))
                 failureInfo.Reset();
             TaskCompletionSource<object> result;
             while (_waitForReplicationTasks.TryDequeue(out result))
@@ -588,37 +597,7 @@ namespace Raven.Server.Documents.Replication
                     handler.OnReplicationFromAnotherSource();
             }
         }
-
-        private void OnSystemDocumentChange(DocumentChange change)
-        {
-            if (!change.Key.Equals(Constants.Documents.Replication.ReplicationConfigurationDocument, StringComparison.OrdinalIgnoreCase))
-                return;
-
-            if (_log.IsInfoEnabled)
-                _log.Info("System document change detected. Starting and stopping outgoing replication threads.");
-
-            //prevent reconnecting to a destination that we shouldn't in case we have flaky network
-            _reconnectQueue.Clear();
-
-            foreach (var instance in _outgoing)
-            {
-                instance.Failed -= OnOutgoingSendingFailed;
-                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
-                instance.Dispose();
-            }
-
-            _outgoing.Clear();
-            _outgoingFailureInfo.Clear();
-            _lastSendEtagPerDestination.Clear();
-
-            InitializeOutgoingReplications();
-
-            ConflictResolver.RunConflictResolversOnce();
-
-            if (_log.IsInfoEnabled)
-                _log.Info($"Replication configuration was changed: {change.Key}");
-        }
-
+        
         public void Dispose()
         {
             var ea = new ExceptionAggregator("Failed during dispose of document replication loader");
@@ -642,8 +621,7 @@ namespace Raven.Server.Documents.Replication
 
             ea.ThrowIfNeeded();
         }
-
-
+        
         public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
             var minEtag = MinimalEtagForReplication;
@@ -654,13 +632,13 @@ namespace Raven.Server.Documents.Replication
 
             if (Destinations == null)
                 return result;
-            ReplicationDestination disabledReplicationDestination = null;
+            ReplicationNode disabledReplicationNode = null;
             bool hasDisabled = false;
             foreach (var replicationDocumentDestination in Destinations)
             {
                 if (replicationDocumentDestination.Disabled)
                 {
-                    disabledReplicationDestination = replicationDocumentDestination;
+                    disabledReplicationNode = replicationDocumentDestination;
                     hasDisabled = true;
                     break;
                 }
@@ -686,12 +664,12 @@ namespace Raven.Server.Documents.Replication
                 PerformanceHint.Create(
                     title: "Large number of tombstones because of disabled replication destination",
                     msg:
-                        $"The disabled replication destination {disabledReplicationDestination.Database} on " +
-                        $"{disabledReplicationDestination.Url} prevents from cleaning large number of tombstones.",
+                        $"The disabled replication destination {disabledReplicationNode.NodeTag} on " +
+                        $"{disabledReplicationNode.Url} prevents from cleaning large number of tombstones.",
 
                     type: PerformanceHintType.Replication,
                     notificationSeverity: NotificationSeverity.Warning,
-                    source: $"{disabledReplicationDestination.Database} on {disabledReplicationDestination.Url}"
+                    source: $"{disabledReplicationNode.NodeTag} on {disabledReplicationNode.Url}"
                 ));
 
             return result;
@@ -720,7 +698,7 @@ namespace Raven.Server.Documents.Replication
 
             public DateTime RetryOn { get; set; }
 
-            public ReplicationDestination Destination { get; set; }
+            public ReplicationNode Node { get; set; }
 
             public void Reset()
             {
