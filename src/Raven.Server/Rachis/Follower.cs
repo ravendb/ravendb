@@ -49,7 +49,11 @@ namespace Raven.Server.Rachis
                         }
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info($"Follower {_engine.Tag}: Got non empty append entries request: [{string.Join(" ,", entries.Select(x=>x.ToString()))}]");
+                            _engine.Log.Info($"Follower {_engine.Tag}: Got non empty append entries request with {entries.Count} entries. "
+#if DEBUG
+                                + $"[{string.Join(" ,", entries.Select(x=>x.ToString()))}]"
+#endif
+                                );
                         }
                     }
 
@@ -434,14 +438,8 @@ namespace Raven.Server.Rachis
 
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
-                            Slice valKey;
-                            using (
-                                Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable,
-                                    out valKey))
-                            {
-                                size = reader.ReadInt32();
-                                reader.ReadExactly(size);
-                            }
+                            size = reader.ReadInt32();
+                            reader.ReadExactly(size);
                         }
                         break;
                     case RootObjectType.Table:

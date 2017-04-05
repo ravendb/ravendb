@@ -167,8 +167,11 @@ namespace Raven.Server.Rachis
                                     );
                                     if (_engine.Log.IsInfoEnabled && entries.Count > 0)
                                     {
-                                        _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending {entries.Count} entries to {_tag}" +
-                                                         $"[{string.Join(" ,", entries.Select(x => x.ToString()))}]");
+                                        _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending {entries.Count} entries to {_tag}"
+#if DEBUG
+                                            + $" [{string.Join(" ,", entries.Select(x => x.ToString()))}]"
+#endif
+                                            );
                                     }
                                     _connection.Send(context, appendEntries, entries);
                                     var aer = _connection.Read<AppendEntriesResponse>(context);
