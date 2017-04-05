@@ -37,8 +37,7 @@ namespace FastTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                var conflicts = WaitUntilHasConflict(slave, "users/1", 1);
-                Assert.Equal(2, conflicts["users/1"].Count);
+                Assert.Equal(2, WaitUntilHasConflict(slave, "users/1", 1).Results.Length);
             }
         }
 
@@ -79,8 +78,7 @@ namespace FastTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                var conflicts = WaitUntilHasConflict(slave, "users/1", 1);
-                Assert.Equal(2, conflicts["users/1"].Count);
+                Assert.Equal(2, WaitUntilHasConflict(slave, "users/1", 1).Results.Length);
             }
         }
 
@@ -111,8 +109,7 @@ namespace FastTests.Server.Replication
                     }, "users/1");
                     session.SaveChanges();
                 }
-                var conflicts = WaitUntilHasConflict(slave, "users/1", 1);
-                Assert.Equal(1, conflicts.Count);
+                Assert.Equal(2, WaitUntilHasConflict(slave, "users/1", 1).Results.Length);
 
                 using (var session = master.OpenSession())
                 {
@@ -123,8 +120,7 @@ namespace FastTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                conflicts = WaitUntilHasConflict(slave, "users/1", 1);
-                Assert.Equal(2, conflicts["users/1"].Count);
+                Assert.Equal(2, WaitUntilHasConflict(slave, "users/1", 1).Results.Length);
             }
         }
     }

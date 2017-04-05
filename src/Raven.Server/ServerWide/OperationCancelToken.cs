@@ -1,40 +1,96 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 
 namespace Raven.Server.ServerWide
 {
     public class OperationCancelToken : IDisposable
     {
+        private static readonly TimeSpan Infinity = TimeSpan.FromMilliseconds(-1);
+
         public static OperationCancelToken None = new OperationCancelToken(CancellationToken.None);
 
         private readonly CancellationTokenSource _cts;
-        private readonly CancellationTokenSource _linkedCts;
-
-        public OperationCancelToken(TimeSpan cancelAfter, CancellationToken resourceShutdown)
-        {
-            _cts = new CancellationTokenSource(cancelAfter);
-            _linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, resourceShutdown);
-
-            Token = _linkedCts.Token;
-        }
-
-        public OperationCancelToken(CancellationToken token)
-        {
-            _cts = new CancellationTokenSource();
-            _linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, token);
-            Token = _linkedCts.Token;
-        }
+        private readonly object _locker = new object();
+        private bool _disposed;
+        private Stopwatch _sw;
+        private readonly TimeSpan _cancelAfter;
 
         public readonly CancellationToken Token;
 
+        public OperationCancelToken(TimeSpan cancelAfter, CancellationToken shutdown)
+        {
+            if (cancelAfter != Infinity && cancelAfter < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(cancelAfter));
+
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(shutdown);
+            _cancelAfter = cancelAfter;
+            Token = _cts.Token;
+
+            _cts.CancelAfter(cancelAfter);
+        }
+
+        public OperationCancelToken(CancellationToken shutdown)
+            : this(Infinity, shutdown)
+        {
+        }
+
+        ~OperationCancelToken()
+        {
+            DisposeInternal();
+        }
+
+        public void Delay()
+        {
+            if (_disposed)
+                return;
+
+            if (_cancelAfter == Infinity)
+                throw new InvalidOperationException("Cannot delay cancellation without timeout set.");
+
+            if (_sw?.ElapsedMilliseconds < 500)
+                return;
+
+            lock (_locker)
+            {
+                if (_disposed)
+                    return;
+                if (_sw?.ElapsedMilliseconds < 500)
+                    return;
+
+                if (_sw == null)
+                    _sw = Stopwatch.StartNew();
+                else
+                    _sw.Restart();
+
+                _cts.CancelAfter(_cancelAfter);
+            }
+        }
+
         public void Cancel()
         {
-            _linkedCts.Cancel();
+            _cts.Cancel();
         }
 
         public void Dispose()
         {
-            _linkedCts?.Dispose();
+            GC.SuppressFinalize(this);
+            DisposeInternal();
+        }
+
+        private void DisposeInternal()
+        {
+            if (_disposed)
+                return;
+
+            lock (_locker)
+            {
+                if (_disposed)
+                    return;
+
+                _disposed = true;
+            }
+
             _cts?.Dispose();
         }
     }

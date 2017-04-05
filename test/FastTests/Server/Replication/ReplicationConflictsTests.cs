@@ -223,7 +223,7 @@ namespace FastTests.Server.Replication
                 SetupReplication(store1, store2);
 
                 var conflicts = WaitUntilHasConflict(store2, "foo/bar");
-                Assert.Equal(2, conflicts["foo/bar"].Count);
+                Assert.Equal(2, conflicts.Results.Length);
             }
         }
 
@@ -255,10 +255,8 @@ namespace FastTests.Server.Replication
 
                 SetupReplication(store1, store2);
 
-                var conflicts = WaitUntilHasConflict(store2, "users/3");
-                Assert.Equal(2, conflicts["users/3"].Count);
-                conflicts = WaitUntilHasConflict(store2, "users/2");
-                Assert.Equal(2, conflicts["users/2"].Count);
+                Assert.Equal(2, WaitUntilHasConflict(store2, "users/3").Results.Length);
+                Assert.Equal(2, WaitUntilHasConflict(store2, "users/2").Results.Length);
                 // conflict between two tombstones, resolved automaticlly to tombstone.
                 var tombstones = WaitUntilHasTombstones(store2);
                 Assert.Equal("users/1", tombstones.Single());
@@ -464,9 +462,7 @@ namespace FastTests.Server.Replication
                 SetupReplication(store1, store3);
                 SetupReplication(store2, store3);
 
-                var conflicts = WaitUntilHasConflict(store3, "foo/bar", 3);
-
-                Assert.Equal(3, conflicts["foo/bar"].Count);
+                Assert.Equal(3, WaitUntilHasConflict(store3, "foo/bar", 3).Results.Length);
             }
         }
 
@@ -491,9 +487,7 @@ namespace FastTests.Server.Replication
 
                 SetupReplication(store1, store2);
 
-                var conflicts = WaitUntilHasConflict(store2, "foo/bar", 2);
-
-                Assert.Equal(2, conflicts["foo/bar"].Count);
+                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
             }
         }
 

@@ -217,8 +217,8 @@ namespace FastTests.Server.Replication
             SetupReplication(store1,store2);
             SetupReplication(store2,store1);
 
-            Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar")["foo/bar"].Count);
-            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar")["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
+            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
 
             using (var sessoin = store1.OpenSession())
             {

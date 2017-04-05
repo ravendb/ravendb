@@ -929,7 +929,7 @@ namespace Voron.Data.Tables
             var tree = GetTree(pk);
             using (var it = tree.Iterate(false))
             {
-                it.RequiredPrefix = slice;
+                it.RequiredPrefix = slice.Clone(_tx.Allocator);
 
                 if (it.Seek(slice) == false)
                 {

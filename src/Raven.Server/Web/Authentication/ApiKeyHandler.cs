@@ -18,10 +18,8 @@ namespace Raven.Server.Web.Authentication
 {
     public class ApiKeyHandler : RequestHandler
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ApiKeyHandler>("Raven/Server");
-
         [RavenAction("/api-key/public-key", "GET", "/api-key/public-key", NoAuthorizationRequired = true)]
-        public unsafe Task GetPublicKey()
+        public Task GetPublicKey()
         {
 
             JsonOperationContext context;
@@ -106,19 +104,29 @@ namespace Raven.Server.Web.Authentication
                 }
             }
 
+            var localSecretAsBytes = Encoding.UTF8.GetBytes(localSecret);
+            var hashLen = Sodium.crypto_generichash_bytes_max();
+            var hashBuffer = new byte[hashLen];
+
+            fixed (byte* hash = hashBuffer)
             fixed (byte* server_sk = Server.SecretKey)
             fixed (byte* server_pk = Server.PublicKey)
             fixed (byte* client_pk = clientPublicKey)
             fixed (byte* m = remoteCryptedSecret)
             fixed (byte* n = remoteNonce)
             fixed (byte* serverKeyFromClient = serverKey)
+            fixed (byte* pLocalSecret = localSecretAsBytes)
             {
-
-
-                if (Server.PublicKey.Length != serverKey.Length || 
+                if (Server.PublicKey.Length != serverKey.Length ||
                     Sodium.sodium_memcmp(serverKeyFromClient, server_pk, (IntPtr)Server.PublicKey.Length) != 0)
                 {
                     GenerateError("The server public key is not valid", context, (int)HttpStatusCode.ExpectationFailed);
+                    return Task.CompletedTask;
+                }
+
+                if (remoteCryptedSecret.Length != hashLen + Sodium.crypto_box_macbytes())
+                {
+                    GenerateError("Unable to authenticate api key. Invalid secret size", context, (int)HttpStatusCode.Forbidden);
                     return Task.CompletedTask;
                 }
 
@@ -128,55 +136,53 @@ namespace Raven.Server.Web.Authentication
                     return Task.CompletedTask;
                 }
 
-                var localSecretAsBytes = Encoding.UTF8.GetBytes(localSecret);
-                fixed (byte* secret = localSecretAsBytes)
+                if (Sodium.crypto_generichash(hash, (IntPtr)hashBuffer.Length, pLocalSecret, (ulong)localSecretAsBytes.Length, client_pk, (IntPtr)clientPublicKey.Length) != 0)
                 {
-                    var cryptoBoxMacbytes = Sodium.crypto_box_macbytes();
-                    if (localSecretAsBytes.Length > remoteCryptedSecret.Length - cryptoBoxMacbytes ||
-                        Sodium.sodium_memcmp(secret, m, (IntPtr)localSecretAsBytes.Length) != 0)
+                    GenerateError("Unable to authenticate api key. Cannot generate hash", context, (int)HttpStatusCode.Forbidden);
+                    return Task.CompletedTask;
+                }
+
+                if (Sodium.sodium_memcmp(hash, m, (IntPtr)hashLen) != 0)
+                {
+                    GenerateError("Unable to authenticate api key. Cannot verify hash", context, (int)HttpStatusCode.Forbidden);
+                    return Task.CompletedTask;
+                }
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                AccessToken old;
+                if (Server.AccessTokensByName.TryGetValue(accessToken.Name, out old))
+                {
+                    AccessToken value;
+                    Server.AccessTokensByName.TryRemove(old.Name, out value);
+                }
+
+                Server.AccessTokensById[accessToken.Token] = accessToken;
+                Server.AccessTokensByName[accessToken.Name] = accessToken;
+
+
+                var token = new byte[Encoding.UTF8.GetByteCount(accessToken.Token) + Sodium.crypto_box_macbytes()];
+                var tokenLen = Encoding.UTF8.GetBytes(accessToken.Token, 0, accessToken.Token.Length, token, 0);
+                fixed (byte* c = token)
+                {
+                    Sodium.randombytes_buf(n, remoteNonce.Length);
+                    if (Sodium.crypto_box_easy(c, c, tokenLen, n, client_pk, server_sk) != 0)
                     {
-                        GenerateError("Unable to authenticate api key. Cannot verify hash", context, (int)HttpStatusCode.Forbidden);
+                        GenerateError("Unable to crypt token", context, (int)HttpStatusCode.Forbidden);
                         return Task.CompletedTask;
                     }
 
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-                    AccessToken old;
-                    if (Server.AccessTokensByName.TryGetValue(accessToken.Name, out old))
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        AccessToken value;
-                        Server.AccessTokensByName.TryRemove(old.Name, out value);
+                        writer.WriteStartObject();
+                        writer.WritePropertyName("Token");
+                        writer.WriteString(Convert.ToBase64String(token));
+                        writer.WriteComma();
+                        writer.WritePropertyName("Nonce");
+                        writer.WriteString(Convert.ToBase64String(remoteNonce));
+                        writer.WriteEndObject();
+                        writer.Flush();
                     }
-
-                    Server.AccessTokensById[accessToken.Token] = accessToken;
-                    Server.AccessTokensByName[accessToken.Name] = accessToken;
-
-
-                    var token = new byte[Encoding.UTF8.GetByteCount(accessToken.Token) + cryptoBoxMacbytes];
-                    var tokenLen = Encoding.UTF8.GetBytes(accessToken.Token, 0, accessToken.Token.Length, token, 0);
-                    fixed (byte* c = token)
-                    {
-                        Sodium.randombytes_buf(n, remoteNonce.Length);
-                        if (Sodium.crypto_box_easy(c, c, tokenLen, n, client_pk, server_sk) != 0)
-                        {
-                            GenerateError("Unable to crypt token", context, (int)HttpStatusCode.Forbidden);
-                            return Task.CompletedTask;
-                        }
-
-                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                        {
-                            writer.WriteStartObject();
-                            writer.WritePropertyName("Token");
-                            writer.WriteString(Convert.ToBase64String(token));
-                            writer.WriteComma();
-                            writer.WritePropertyName("Nonce");
-                            writer.WriteString(Convert.ToBase64String(remoteNonce));
-                            writer.WriteEndObject();
-                            writer.Flush();
-                        }
-                    }
-
-
                 }
             }
 
