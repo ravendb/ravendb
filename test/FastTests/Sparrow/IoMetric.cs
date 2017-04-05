@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.Documents.Indexes.Static.Extensions;
 using Sparrow;
 using Xunit;
 
@@ -18,8 +19,13 @@ namespace FastTests.Sparrow
             for (var i = 0; i < 6; i++)
             {
                 var now = DateTime.UtcNow;
-                metrics.MeterIoRate("file1.txt", IoMetrics.MeterType.JournalWrite, i + 1)
-                    .Parent.Mark(i + 1, now, now.AddMilliseconds(2), IoMetrics.MeterType.JournalWrite, 0);
+                var meterIoRate = metrics.MeterIoRate("file1.txt", IoMetrics.MeterType.JournalWrite, i + 1);
+                var durationMeasurement = new IoMeterBuffer.DurationMeasurement(meterIoRate.Parent, IoMetrics.MeterType.JournalWrite, i + 1, 0, null)
+                {
+                    Start = now,
+                    End = now.AddMilliseconds(2)
+                };
+                meterIoRate.Parent.Mark(ref durationMeasurement);
             }
 
             int filesCount = 0;
