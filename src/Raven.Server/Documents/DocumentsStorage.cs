@@ -2088,28 +2088,39 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                // TODO: Test for metadata null
-                data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
-                metadata.Modifications = new DynamicJsonValue(metadata);
-
-                DocumentFlags flags;
-                if (attachments.Count > 0)
+                var flags = DocumentFlags.None;
+                data.Modifications = new DynamicJsonValue(data);
+                if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
                 {
-                    flags = DocumentFlags.HasAttachments;
+                    metadata.Modifications = new DynamicJsonValue(metadata);
 
-                    metadata.Modifications[Constants.Documents.Metadata.Attachments] = attachments;
+                    if (attachments.Count > 0)
+                    {
+                        flags = DocumentFlags.HasAttachments;
+                        metadata.Modifications[Constants.Documents.Metadata.Attachments] = attachments;
+                    }
+                    else
+                    {
+                        metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
+                    }
+
+                    data.Modifications[Constants.Documents.Metadata.Key] = metadata;
                 }
                 else
                 {
-                    flags = DocumentFlags.None;
-
-                    metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
+                    if (attachments.Count > 0)
+                    {
+                        flags = DocumentFlags.HasAttachments;
+                        data.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                        {
+                            [Constants.Documents.Metadata.Attachments] = attachments
+                        };
+                    }
+                    else
+                    {
+                        Debug.Assert(false, "Cannot remove an attachment and not have @attachments in @metadata");
+                    }
                 }
-
-                data.Modifications = new DynamicJsonValue(data)
-                {
-                    [Constants.Documents.Metadata.Key] = metadata
-                };
 
                 data = context.ReadObject(data, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 Put(context, documentId, null, data, null, null, flags, NonPersistentDocumentFlags.ByAttachmentUpdate);

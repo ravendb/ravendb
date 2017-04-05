@@ -36,11 +36,15 @@ namespace Sparrow.Json.Parsing
         public DynamicJsonValue(BlittableJsonReaderObject source)
         {
             _source = source;
+
+            if (_source != null)
+            {
 #if DEBUG
-            if(_source.Modifications != null)
-                throw new InvalidOperationException("The source already has modifications");
+                if (_source.Modifications != null)
+                    throw new InvalidOperationException("The source already has modifications");
 #endif
-            _source.Modifications = this;
+                _source.Modifications = this;
+            }
         }
 
         public void Remove(string property)
