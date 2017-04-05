@@ -509,6 +509,12 @@ namespace Raven.Server.Documents
         {
             BackupMethods.Incremental.ToFile(GetAllStoragesEnvironmentInformation(), backupPath);
         }
+
+        public IEnumerable<DatabasePerformanceMetrics> GetAllPerformanceMetrics()
+        {
+            yield return TxMerger.GeneralWaitPerformanceMetrics;
+            yield return TxMerger.TransactionPerformanceMetrics;
+        }
     }
 
     public class StorageEnvironmentWithType

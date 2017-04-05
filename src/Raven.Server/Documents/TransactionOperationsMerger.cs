@@ -7,8 +7,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Logging;
 using Voron.Global;
+using static Sparrow.DatabasePerformanceMetrics;
 
 namespace Raven.Server.Documents
 {
@@ -36,6 +38,10 @@ namespace Raven.Server.Documents
             _log = LoggingSource.Instance.GetLogger<TransactionOperationsMerger>(_parent.Name);
             _shutdown = shutdown;
         }
+
+        public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.GeneralWait, 256, 256);
+        public DatabasePerformanceMetrics TransactionPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.Transaction, 256, 256);
+
 
         public void Start()
         {
@@ -91,7 +97,11 @@ namespace Raven.Server.Documents
                 {
                     if (_operations.Count == 0)
                     {
-                        _waitHandle.Wait(_shutdown);
+                        using (var meter = GeneralWaitPerformanceMetrics.MeterPerformanceRate())
+                        {
+                            meter.IncreamentCounter(999);
+                            _waitHandle.Wait(_shutdown);
+                        }
                         _waitHandle.Reset();
                     }
 
