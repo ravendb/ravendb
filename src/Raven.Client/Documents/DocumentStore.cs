@@ -32,7 +32,7 @@ namespace Raven.Client.Documents
 
         private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> _observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
 
-        private readonly ConcurrentDictionary<string, RequestExecutor> _requestExecuters = new ConcurrentDictionary<string, RequestExecutor>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, Lazy<RequestExecutor>> _requestExecuters = new ConcurrentDictionary<string, Lazy<RequestExecutor>>(StringComparer.OrdinalIgnoreCase);
 
         private AsyncMultiDatabaseHiLoKeyGenerator _asyncMultiDbHiLo;
 
@@ -143,7 +143,10 @@ namespace Raven.Client.Documents
 
             foreach (var kvp in _requestExecuters)
             {
-                kvp.Value?.Dispose();
+                if(kvp.Value.IsValueCreated == false)
+                    continue;
+                ;
+                kvp.Value.Value.Dispose();
             }
         }
 
@@ -192,14 +195,20 @@ namespace Raven.Client.Documents
             if (databaseName == null)
                 databaseName = DefaultDatabase;
 
-            var executor = _requestExecuters.GetOrAdd(databaseName, dbName => 
+            Lazy<RequestExecutor> lazy;
+            if (_requestExecuters.TryGetValue(databaseName, out lazy))
+                return lazy.Value;
+
+            lazy = new Lazy<RequestExecutor>(() =>
             {
-                var newRequestExecutor = RequestExecutor.Create(Url, dbName, ApiKey);
-                newRequestExecutor.TopologyUpdate += () => OnTopologyUpdatedInternal(dbName);
+                var newRequestExecutor = RequestExecutor.Create(Url, databaseName, ApiKey);
+                newRequestExecutor.TopologyUpdate += () => OnTopologyUpdatedInternal(databaseName);
                 return newRequestExecutor;
             });
-            
-            return executor;
+
+            lazy = _requestExecuters.GetOrAdd(databaseName, lazy);
+
+            return lazy.Value;
         }
 
         public override IDocumentStore Initialize()
