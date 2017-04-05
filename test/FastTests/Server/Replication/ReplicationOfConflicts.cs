@@ -30,13 +30,11 @@ namespace FastTests.Server.Replication
 
             SetupReplication(store1,store2);
 
-            var conflicts = WaitUntilHasConflict(store2, "foo/bar");
-            Assert.Equal(2, conflicts["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
 
             SetupReplication(store2, store1);
 
-            conflicts = WaitUntilHasConflict(store1, "foo/bar");
-            Assert.Equal(2, conflicts["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
 
             // adding new document, resolve the conflict
             using (var session = store2.OpenSession())
@@ -128,16 +126,12 @@ namespace FastTests.Server.Replication
 
             SetupReplication(store1, store2, store3);
 
-            var conflicts = WaitUntilHasConflict(store2, "foo/bar");
-            Assert.Equal(2, conflicts["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
 
             SetupReplication(store2, store1);
 
-            conflicts = WaitUntilHasConflict(store1, "foo/bar");
-            Assert.Equal(2, conflicts["foo/bar"].Count);
-
-            conflicts = WaitUntilHasConflict(store3, "foo/bar");
-            Assert.Equal(2, conflicts["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
+            Assert.Equal(2, WaitUntilHasConflict(store3, "foo/bar").Results.Length);
 
             using (var session = store2.OpenSession())
             {
@@ -177,14 +171,11 @@ namespace FastTests.Server.Replication
                 session.SaveChanges();
             }
 
-            var conflicts = WaitUntilHasConflict(store2, "foo/bar");
-            Assert.Equal(2, conflicts["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
 
             SetupReplication(store2, store1);
          
-
-            conflicts = WaitUntilHasConflict(store1, "foo/bar");
-            Assert.Equal(2, conflicts["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
         }
     }
 }
