@@ -262,6 +262,8 @@ namespace Raven.Server.Documents.Queries
             {
                 foreach (var document in resultKeys)
                 {
+                    token.Delay();
+
                     if (rateGate != null && rateGate.WaitToProceed(0) == false)
                     {
                         using (tx)

@@ -56,13 +56,15 @@ namespace Raven.Server.Documents
                 while (startEtag <= lastEtag)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    bool wait = false;
+                    var wait = false;
 
                     using (var tx = context.OpenWriteTransaction())
                     {
                         var documents = GetDocuments(context, collectionName, startEtag, batchSize);
                         foreach (var document in documents)
                         {
+                            token.Delay();
+
                             cancellationToken.ThrowIfCancellationRequested();
 
                             if (document.Etag > lastEtag)// we don't want to go over the documents that we have patched
