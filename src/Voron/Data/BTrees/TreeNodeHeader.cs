@@ -58,7 +58,10 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.ExternalScope ToSlicePtr(ByteStringContext context, TreeNodeHeader* node, out Slice slice)
         {
-            return ToSlicePtr(context, node, ByteStringType.Mutable | (ByteStringType) SliceOptions.Key, out slice);
+            ByteString str;
+            var scope = context.FromPtr((byte*)node + Constants.Tree.NodeHeaderSize, node->KeySize, ByteStringType.Mutable | (ByteStringType)SliceOptions.Key, out str);
+            slice = new Slice(str);
+            return scope;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

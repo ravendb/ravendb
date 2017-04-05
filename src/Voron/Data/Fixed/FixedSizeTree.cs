@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Collections;
 using Voron.Data.BTrees;
@@ -716,36 +717,38 @@ namespace Voron.Data.Fixed
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void BinarySearch(FixedSizeTreePage page, long val)
         {
-            page.LastSearchPosition = BinarySearch(page.Pointer + page.StartPosition,
-                page.NumberOfEntries, val,
-                page.IsLeaf ? _entrySize : BranchEntrySize);
+            page.LastSearchPosition = BinarySearch(page.Pointer + page.StartPosition, page.NumberOfEntries, val, page.IsLeaf ? _entrySize : BranchEntrySize);
             page.LastMatch = _lastMatch;
         }
 
         private int _lastMatch;
         private int _directAddUsage;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int BinarySearch(byte* p, int len, long val, int size)
         {
             int low = 0;
             int high = len - 1;
 
             int position = 0;
+            int lastMatch = _lastMatch;
             while (low <= high)
             {
                 position = (low + high) >> 1;
                 var curKey = FixedSizeTreePage.GetEntry(p, position, size)->Key;
-                _lastMatch = val.CompareTo(curKey);
-                if (_lastMatch == 0)
+                lastMatch = val.CompareTo(curKey);
+                if (lastMatch == 0)
                     break;
 
-                if (_lastMatch > 0)
+                if (lastMatch > 0)
                     low = position + 1;
                 else
                     high = position - 1;
             }
+            _lastMatch = lastMatch;
             return position;
         }
 
