@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var collectionName = GetStringQueryString("name");
 
-            var token = CreateOperationToken();
+            var token = CreateTimeLimitedOperationToken();
 
             var collectionRunner = new CollectionRunner(Database, context);
 
