@@ -152,8 +152,7 @@ return out;
                     session.SaveChanges();
                 }
 
-                var conflicts = WaitUntilHasConflict(slave, "users/1");
-                Assert.Equal(2, conflicts["users/1"].Count);
+                Assert.Equal(2, WaitUntilHasConflict(slave, "users/1").Results.Length);
             }
         }
 

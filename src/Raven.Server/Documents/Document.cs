@@ -143,16 +143,15 @@ namespace Raven.Server.Documents
             {
                 if (property[0] == '@')
                 {
-                    switch (isMetadata)
+                    if (isMetadata)
                     {
-                        case true:
-                            if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false)
-                                continue;
-                            break;
-                        default:
-                            if (property.Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
-                                continue;
-                            break;
+                        if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false &&
+                            property.Equals(Constants.Documents.Metadata.Attachments, StringComparison.OrdinalIgnoreCase) == false)
+                            continue;
+                    }
+                    else if (property.Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
                     }
                 }
 
