@@ -93,8 +93,8 @@ namespace FastTests.Server.Replication
             {
                 await GenerateConflict(storeA, storeB);
 
-                Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar")["foo/bar"].Count);
-                Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar")["foo/bar"].Count);
+                Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Results.Length);
+                Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Results.Length);
 
                 Assert.Equal(2, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 2));
                 Assert.Equal(2, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 2));
@@ -109,8 +109,8 @@ namespace FastTests.Server.Replication
             {
                 await GenerateConflict(storeA, storeB);
 
-                Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar")["foo/bar"].Count);
-                Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar")["foo/bar"].Count);
+                Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Results.Length);
+                Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Results.Length);
 
                 Assert.Equal(2, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 2));
                 Assert.Equal(2, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 2));
