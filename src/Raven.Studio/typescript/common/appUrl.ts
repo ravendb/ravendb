@@ -167,10 +167,6 @@ class appUrl {
         return "#admin/settings/hotSpare";
     }
 
-    static forTempManageServer(): string {
-        return "#admin/settings/manage";
-    }
-
     static forCompact(): string {
         return "#admin/settings/compact";
     }

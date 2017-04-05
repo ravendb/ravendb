@@ -3,7 +3,6 @@ import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import messagePublisher = require("common/messagePublisher");
-import topology = require("models/database/replication/topology");
 import nodeConnectionInfo = require("models/database/cluster/nodeConnectionInfo");
 import editNodeConnectionInfoDialog = require("viewmodels/manage/editNodeConnectionInfoDialog");
 import app = require("durandal/app");
@@ -21,15 +20,67 @@ import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBin
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import changeNodeVotingModeCommand = require("commands/database/cluster/changeNodeVotingModeCommand");
 import eventsCollector = require("common/eventsCollector");
+import addNodeToClusterCommand = require("commands/database/cluster/addNodeToClusterCommand");
+import removeNodeFromClusterCommand = require("commands/database/cluster/removeNodeFromClusterCommand");
+
+import clusterTopology = require("models/database/cluster/clusterTopology");
+import clusterNode = require("models/database/cluster/clusterNode");
 
 class cluster extends viewModelBase {
 
+    topology = ko.observable<clusterTopology>();
+
+    constructor() {
+        super();
+        this.bindToCurrentInstance("deleteNode");
+    }
+
+    addAnotherServerToCluster() {
+        const serverUrl = prompt("Enter server URL:");
+        if (serverUrl) {
+            new addNodeToClusterCommand(serverUrl)
+                .execute()
+                .done(() => this.refresh());
+        }
+    }
+
+    activate(args: any) {
+        super.activate(args);
+
+        return this.fetchTopology();
+    }
+
+    fetchTopology() {
+        return new getClusterTopologyCommand()
+            .execute()
+            .done(topology => {
+                this.topology(topology);
+            });
+        //TODO: handle failure
+    }
+
+    refresh() {
+        this.fetchTopology();
+    }
+
+    deleteNode(node: clusterNode) {
+        this.confirmationMessage("Are you sure?", `Do you want to remove ${node.serverUrl()} from cluster?`, ["Cancel", "Delete"])
+            .done(result => {
+                if (result.can) {
+                    new removeNodeFromClusterCommand(node.tag())
+                        .execute()
+                        .done(() => this.refresh());
+                }
+            });
+    }
+
+    /* TODO
     topology = ko.observable<topology>();
     systemDatabaseId = ko.observable<string>();
     serverUrl = ko.observable<string>(); 
-    /* TODO
+    
     canCreateCluster = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true");
-    developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);*/
+    developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
     clusterMode: KnockoutComputed<boolean>;
 
     constructor() {
@@ -209,7 +260,7 @@ class cluster extends viewModelBase {
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
         });
-    }
+    }*/
 }
 
 export = cluster;

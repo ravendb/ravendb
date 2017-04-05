@@ -1,8 +1,29 @@
 
-import nodeConnectionInfo = require("models/database/cluster/nodeConnectionInfo");
+import clusterNode = require("models/database/cluster/clusterNode");
 
-class topology {
+class clusterTopology {
 
+    leader = ko.observable<string>();
+
+    nodes = ko.observableArray<clusterNode>([]);
+
+    constructor(dto: clusterTopologyDto) {
+        this.leader(dto.Leader);
+
+        const topologyDto = dto.Topology;
+
+        const members = this.mapNodes("Member", topologyDto.Members);
+        const promotables = this.mapNodes("Promotable", topologyDto.Promotables);
+        const watchers = this.mapNodes("Watcher", topologyDto.Watchers);
+
+        this.nodes(_.concat<clusterNode>(members, promotables, watchers));
+    }
+
+    private mapNodes(type: clusterNodeType, dict: System.Collections.Generic.Dictionary<string, string>): Array<clusterNode> {
+        return _.map(dict, (v, k) => clusterNode.for(k, v, type));
+    }
+
+    /*TODO:
     currentLeader = ko.observable<string>();
     currentTerm = ko.observable<number>();
     state = ko.observable<string>();
@@ -57,8 +78,8 @@ class topology {
         }
         
         this.topologyId(dto.TopologyId);
-    }
+    }*/
 
 }
 
-export = topology;
+export = clusterTopology;

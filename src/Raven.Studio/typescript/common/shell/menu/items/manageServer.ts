@@ -9,6 +9,7 @@ export = getManageServerMenuItem;
 function getManageServerMenuItem() {
     let canReadOrWrite = settingsAccessAuthorizer.canReadOrWrite;
     var items: menuItem[] = [
+        /* TODO
         new intermediateMenuItem("Global config", [
             new leafMenuItem({
                 route: "admin/settings/globalConfig",
@@ -64,7 +65,8 @@ function getManageServerMenuItem() {
                 css: 'icon-versioning',
                 dynamicHash: appUrl.forGlobalConfigVersioning
             })     
-        ]),
+        ]),*/
+        /* TODO
         new leafMenuItem({
             route: ['admin/settings', 'admin/settings/apiKeys'],
             moduleId: 'viewmodels/manage/apiKeys',
@@ -73,7 +75,7 @@ function getManageServerMenuItem() {
             css: 'icon-api-keys',
             dynamicHash: appUrl.forApiKeys,
             enabled: canReadOrWrite
-        }),
+        }),*/
         new leafMenuItem({
             route: 'admin/settings/cluster',
             moduleId: "viewmodels/manage/cluster",
@@ -83,6 +85,7 @@ function getManageServerMenuItem() {
             dynamicHash: appUrl.forCluster,
             enabled: canReadOrWrite
         }),
+        /* TODO
         new leafMenuItem({
             route: "admin/settings/serverSmuggling",
             moduleId: "viewmodels/manage/serverSmuggling",
@@ -208,19 +211,9 @@ function getManageServerMenuItem() {
             css: 'icon-hot-spare',
             dynamicHash: appUrl.forHotSpare,
             enabled: accessHelper.isGlobalAdmin
-        })
+        })*/
     ];
 
-
-    return new leafMenuItem({
-        route: 'admin/settings/manage',
-        moduleId: 'viewmodels/manage/manageServer',
-        title: 'Manage server',
-        nav: true,
-        css: 'icon-manage-server',
-        dynamicHash: appUrl.forTempManageServer
-        
-    });
-    //TODO: return new intermediateMenuItem('Manage server', items, 'icon-manage-server');
+    return new intermediateMenuItem('Manage server', items, 'icon-manage-server');
 }
 
