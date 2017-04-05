@@ -51,10 +51,17 @@ namespace Tests.Infrastructure
                 var timeoutTask = Task.Delay(timeout);
                 while (shouldContinue && timeoutTask.IsCompleted == false)
                 {
-                    var databaseIsLoadedCommand = new IsDatabaseLoadedCommand();
-                    await requestExecutor.ExecuteAsync(databaseIsLoadedCommand, context);
-                    shouldContinue = databaseIsLoadedCommand.Result.IsLoaded != isLoaded;
-                    await Task.Delay(100);
+                    try
+                    {
+                        var databaseIsLoadedCommand = new IsDatabaseLoadedCommand();
+                        await requestExecutor.ExecuteAsync(databaseIsLoadedCommand, context);
+                        shouldContinue = databaseIsLoadedCommand.Result.IsLoaded != isLoaded;
+                        await Task.Delay(100);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        //OperationCanceledException is thrown if the database is currently shutting down
+                    }
                 }
 
                 return timeoutTask.IsCompleted == false;
@@ -143,7 +150,7 @@ namespace Tests.Infrastructure
             foreach (var node in topologyNodes)
             {
                 string url;
-                if(!tokenToUrl.TryGetValue(node.ClusterToken,out url)) //precaution
+                if(!tokenToUrl.TryGetValue(node.ClusterTag, out url)) //precaution
                     continue;
 
                 var store = new DocumentStore

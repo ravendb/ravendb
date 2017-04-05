@@ -201,8 +201,6 @@ namespace Raven.Client.Documents
 
         public abstract RequestExecutor GetRequestExecuter(string databaseName = null);
 
-        internal abstract void RedirectRequestExecuterTo(string url, string databaseName = null);
-
         /// <summary>
         /// Setup the context for aggressive caching.
         /// </summary>

@@ -107,7 +107,7 @@ namespace Raven.Server.Web.System
             return new DynamicJsonValue
             {
                 [nameof(ServerNode.Url)] = clusterTopology.GetUrlFromTag(tag),
-                [nameof(ServerNode.ClusterToken)] = tag,
+                [nameof(ServerNode.ClusterTag)] = tag,
                 [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
             };
         }
@@ -124,7 +124,7 @@ namespace Raven.Server.Web.System
                     dbRecord.Topology.AllNodes.OrderBy(x => x) //temporary, until Senators are implemented. Then the first here would be a Senator
                                               .Select(x => GetServerNodeFromClusterTag(x,clusterTopology,dbRecord))),
                 [nameof(Topology.ReadBehavior)] =
-                    ReadBehavior.ConversationNodeWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
+                    ReadBehavior.CurrentNodeWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
                 [nameof(Topology.WriteBehavior)] = WriteBehavior.LeaderOnly.ToString(),
                 [nameof(Topology.SLA)] = new DynamicJsonValue
                 {

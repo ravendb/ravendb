@@ -15,6 +15,7 @@ using Raven.Client.Http.OAuth;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server.Commands;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -29,8 +30,8 @@ namespace Raven.Client.Http
         private static readonly Lazy<HttpClient> GlobalHttpClient = new Lazy<HttpClient>(() => CreateClient(GlobalHttpClientTimeout));
 
         //Monitor.TryEnter/Monitor.Exit won't work here because we need a mutex without thread affinity
-        private readonly SemaphoreSlim _updateTopologySemaphore = new SemaphoreSlim(1,1);
-
+        private readonly SemaphoreSlim _updateTopologySemaphore = new SemaphoreSlim(1,1);        
+        private readonly AsyncManualResetEvent _firstTimeTopologyUpdateFlag = new AsyncManualResetEvent();
         private readonly string _initialUrl;
         private readonly string _apiKey;
         private readonly bool _requiresTopologyUpdates;
@@ -49,7 +50,7 @@ namespace Raven.Client.Http
 
         public readonly HttpCache Cache = new HttpCache();
 
-        private int _hasUpdatedTopologyAtLeastOnce = 0;
+        private int _hasUpdatedTopologyAtLeastOnce;
 
         public IReadOnlyList<ServerNode> TopologyNodes => _nodeSelector.Topology.Nodes;
 
@@ -79,7 +80,7 @@ namespace Raven.Client.Http
                     {
                         Url = url,
                         Database = databaseName,
-                        ClusterToken = "N/A" //initial topology before an update, so cluster token is not applicable here...
+                        ClusterTag = "N/A" //initial topology before an update, so cluster token is not applicable here...
                     }
                 },
                 Etag = int.MinValue,
@@ -95,10 +96,6 @@ namespace Raven.Client.Http
                 return;
 
             _updateTopologyTimer = new Timer(UpdateTopologyCallback, null, 0, Timeout.Infinite);
-
-            //this would be handled by heartbeats between cluster nodes (that are not yet implemented)
-            //_updateFailingNodesStatus = new Timer(UpdateFailingNodesStatusCallback, null, TimeSpan.FromMinutes(1),
-            //    TimeSpan.FromMinutes(1));
 
             JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -138,21 +135,20 @@ namespace Raven.Client.Http
             if (_disposed)
                 return false;
             
+            //prevent double topology updates if execution takes too much time
+            // --> in cases with transient issues
             var lockTaken = _updateTopologySemaphore.Wait(0);
-            if (lockTaken == false) //we are already doing an update, so nevermind
+            if (lockTaken == false)
                 return false;
             try
             {
                 if (_disposed)
                     return false;
+
                 JsonOperationContext context;
                 var operationContext = ContextPool.AllocateOperationContext(out context);
                 try
                 {
-
-                    lockTaken = false;
-                    _updateTopologySemaphore.Release();
-
                     var node = _nodeSelector.CurrentNode;
                     var serverHash = ServerHash.GetServerHash(node.Url, node.Database);
                     
@@ -216,8 +212,7 @@ namespace Raven.Client.Http
             }
             finally
             {
-                if (lockTaken) //just in case, if we didn't release the lock because of exception
-                    _updateTopologySemaphore.Release();
+                _updateTopologySemaphore.Release();
             }
             return true;
         }       
@@ -229,14 +224,37 @@ namespace Raven.Client.Http
 
         public async Task ExecuteAsync<TResult>(RavenCommand<TResult> command, JsonOperationContext context, CancellationToken token = default(CancellationToken))
         {
-            //run it only the first time we execute this function
-            if (_requiresTopologyUpdates && Interlocked.CompareExchange(ref _hasUpdatedTopologyAtLeastOnce, 1, 0) == 0)
+            if (Interlocked.CompareExchange(ref _hasUpdatedTopologyAtLeastOnce, 1, 0) == 0)
             {
-                if (await UpdateTopologyAsync())
-                    _nodeSelector.TrySetToUrl(_initialUrl);
+                await RunTopologyUpdateForFirstTimeIfRelevant();
+            }
+
+            if (!_firstTimeTopologyUpdateFlag.IsSet)
+            {
+                await _firstTimeTopologyUpdateFlag.WaitAsync();
             }
 
             await ExecuteAsync(_nodeSelector.CurrentNode, context, command, token).ConfigureAwait(false);
+        }
+
+        private async Task RunTopologyUpdateForFirstTimeIfRelevant()
+        {
+            if (_requiresTopologyUpdates)
+            {
+                try
+                {
+                    if (await UpdateTopologyAsync())
+                        _nodeSelector.TrySetToUrl(_initialUrl);
+                }
+                finally
+                {
+                    _firstTimeTopologyUpdateFlag.Set();
+                }
+            }
+            else
+            {
+                _firstTimeTopologyUpdateFlag.Set(); //no topology updates --> no need to wait for first topology updates
+            }
         }
 
         public async Task ExecuteAsync<TResult>(ServerNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command, CancellationToken token = default(CancellationToken), bool shouldRetry = true)
@@ -278,7 +296,9 @@ namespace Raven.Client.Http
                     {
                         response = await command.SendAsync(client, request, token).ConfigureAwait(false);
                         if (response.Headers.Contains(Constants.Headers.ForceTopologyUpdate))
-                            await UpdateTopologyAsync();
+#pragma warning disable 4014
+                            UpdateTopologyAsync();
+#pragma warning restore 4014
                     }
                     sp.Stop();
                 }
@@ -341,8 +361,8 @@ namespace Raven.Client.Http
 
             request.RequestUri = new Uri(url);
 
-            if (node.ClusterToken != null)
-                request.Headers.Add("Raven-Authorization", node.ClusterToken);
+            if (node.ClusterTag != null && !string.Equals(node.ClusterTag, "N/A", StringComparison.OrdinalIgnoreCase))
+                request.Headers.Add("Raven-Authorization", node.ClusterTag);
 
             if (!request.Headers.Contains("Raven-Client-Version"))
                 request.Headers.Add("Raven-Client-Version", ClientVersion);

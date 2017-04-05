@@ -187,23 +187,6 @@ namespace Raven.Client.Documents
             await requestExecutor.UpdateTopologyAsync();
         }
 
-        internal override void RedirectRequestExecuterTo(string url, string databaseName = null)
-        {
-            var lazy = _requestExecuters.AddOrUpdate(databaseName, 
-                newKey =>
-                {
-                    var newRequestExecutor = RequestExecutor.Create(url, newKey, ApiKey);
-                    newRequestExecutor.TopologyUpdate += () => OnTopologyUpdatedInternal(newKey);
-                    return newRequestExecutor;
-                }, 
-                (existingKey, existingLazy) =>
-                {
-                    var newRequestExecutor = RequestExecutor.Create(url, existingKey, ApiKey);
-                    newRequestExecutor.TopologyUpdate += () => OnTopologyUpdatedInternal(existingKey);
-                    return newRequestExecutor;
-                });
-        }
-
         public override RequestExecutor GetRequestExecuter(string databaseName = null)
         {
             if (databaseName == null)

@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using FastTests.Issues;
 using FastTests.Server.Replication;
 
 namespace Tryouts

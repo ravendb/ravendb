@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Handlers
             {                
                 [nameof(Topology.Nodes)] = (nodes == null)? new DynamicJsonArray(): new DynamicJsonArray(nodes),
                 [nameof(Topology.ReadBehavior)] =
-                    ReadBehavior.ConversationNodeWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
+                    ReadBehavior.CurrentNodeWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
                 [nameof(Topology.WriteBehavior)] = WriteBehavior.LeaderOnly.ToString(),
                 [nameof(Topology.SLA)] = new DynamicJsonValue
                 {
