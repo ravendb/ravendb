@@ -177,6 +177,7 @@ namespace TypingsGenerator
             // io metrics stats
             scripter.AddType(typeof(IOMetricsHistoryStats));
             scripter.AddType(typeof(IOMetricsRecentStats));
+            scripter.AddType(typeof(IOMetricsRecentStatsAdditionalTypes));
             scripter.AddType(typeof(IOMetricsFileStats));
             scripter.AddType(typeof(IOMetricsEnvironment));
             scripter.AddType(typeof(IOMetricsResponse));

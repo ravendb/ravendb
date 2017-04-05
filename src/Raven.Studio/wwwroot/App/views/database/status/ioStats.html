@@ -37,29 +37,15 @@
             </div>
         </div>
     </div>
-
     <div class="col-xl-7 col-xs-12" data-bind="visible: hasAnyData">
         <div id="IOMetricsLegend">
-            <div class="legend-container">
-                <div class="legend-start-range">0</div>
-                <div class="arrow-down" data-bind="style: {left: itemSizePositionJW()}, visible: itemHoveredJW"></div>
-                <div class="legend-end-range" data-bind="text: $root.computedHumanSize(legendJW().maxSize)"></div>
-                <img data-bind="attr: { src: legendJW().imageStr }" />
-                <div class="legend-title">Journal Write</div>
+            <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'Compression', text: 'Compression' }}">
             </div>
-            <div class="legend-container">
-                <div class="legend-start-range">0</div>
-                <div class="arrow-down" data-bind="style: {left: itemSizePositionDF()}, visible: itemHoveredDF"></div>
-                <div class="legend-end-range" data-bind="text: $root.computedHumanSize(legendDF().maxSize)"></div>
-                <img data-bind="attr: { src: legendDF().imageStr }" />
-                <div class="legend-title">Data Flush</div>
+            <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'JournalWrite', text: 'Journal Write' }}">
             </div>
-            <div class="legend-container">
-                <div class="legend-start-range">0</div>
-                <div class="arrow-down" data-bind="style: {left: itemSizePositionDS()}, visible: itemHoveredDS"></div>
-                <div class="legend-end-range" data-bind="text: $root.computedHumanSize(legendDS().maxSize)"></div>
-                <img data-bind="attr: { src: legendDS().imageStr }" />
-                <div class="legend-title">Data Sync</div>
+            <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'DataFlush', text: 'Data Flush' }}">
+            </div>
+            <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'DataSync', text: 'Data Sync' }}">
             </div>
         </div>
     </div>
@@ -80,3 +66,11 @@
     </section>
 </div>
 </div>
+
+<script type="text/html" id="legend-template">
+    <div class="legend-start-range">0</div>
+    <div class="arrow-down" data-bind="style: { left: $root.itemSizePositions.get(type)}, visible: $root.itemHovered.get(type)"></div>
+    <div class="legend-end-range" data-bind="text: $root.computedItemValue($root.legends.get(type))"></div>
+    <img data-bind="attr: { src: $root.legends.get(type)().imageStr }" />
+    <div class="legend-title" data-bind="text: text"></div>
+</script>

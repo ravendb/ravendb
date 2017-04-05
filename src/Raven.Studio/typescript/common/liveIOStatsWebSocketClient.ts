@@ -59,7 +59,7 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
                 file.Recent.forEach(x => liveIOStatsWebSocketClient.fillCache(x));
             });
 
-            let existingEnv = this.mergedData.Environments.find(x => x.Path === env.Path);
+            const existingEnv = this.mergedData.Environments.find(x => x.Path === env.Path);
           
             if (!existingEnv) {
                 // A new 'environment', add it to mergedData

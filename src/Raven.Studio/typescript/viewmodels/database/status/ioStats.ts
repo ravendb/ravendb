@@ -14,7 +14,7 @@ type rTreeLeaf = {
     maxX: number;
     maxY: number;
     actionType: "toggleIndexes" | "trackItem" | "closedTrackItem" | "gapItem";
-    arg: any;
+    arg?: any;
 }
 
 class hitTest {
@@ -153,21 +153,23 @@ class hitTest {
 
 class legend {
     imageStr = ko.observable<string>();
-    maxSize = ko.observable<number>(0);   
+    maxSize = ko.observable<number>(0);
+    type: string;
 
     sizeScale: d3.scale.Linear<number, number>;  // domain: legend pixels, range: item size
     colorScale: d3.scale.Linear<string, string>; // domain: item size,     range: item color    
 
-    private lowSizeColor: string;
-    private highSizeColor: string;
+    private readonly lowSizeColor: string;
+    private readonly highSizeColor: string;
         
     static readonly imageWidth = 150;
     static readonly imageHeight = 20;   
     static readonly legendArrowBorderSize = 6;
 
-    constructor(lowSizeColor: string, highSizeColor: string) {        
+    constructor(lowSizeColor: string, highSizeColor: string, type: Sparrow.MeterType) {
         this.lowSizeColor = lowSizeColor;
-        this.highSizeColor = highSizeColor;        
+        this.highSizeColor = highSizeColor;
+        this.type = type;
     }  
 
     setLegendScales() {
@@ -216,30 +218,36 @@ class ioStats extends viewModelBase {
 
     static readonly colors = {
         axis: "#546175",
-        gaps: "#ca1c59",              
-        trackBackground: "#2c343a",       
+        gaps: "#ca1c59",
+        trackBackground: "#2c343a",
         trackNameBg: "rgba(57, 67, 79, 0.8)",
         trackNameFg: "#98a7b7",
         openedTrackArrow: "#ca1c59",
-        closedTrackArrow: "#98a7b7"        
+        closedTrackArrow: "#98a7b7"
     }
 
-    static readonly eventsColors = {
-        "LowSizeColorJW": "#93c47d",       // JW - Journal Write
-        "HighSizeColorJW": "#38761d",
-        "LowSizeColorDF": "#6fa8dc",       // DF - Data Flush
-        "HighSizeColorDF": "#085394",
-        "LowSizeColorDS": "#f6b26b",       // DS - Data Sync
-        "HighSizeColorDS": "#b45f06"
+    static readonly eventsColors: { [typeName in Sparrow.MeterType]: { Low: string; High: string } } = {
+        "Compression": {
+            Low: "#d64a97", High: "#8a024b"
+        },
+        "DataFlush": {
+            Low: "#6fa8dc", High: "#085394"
+        },
+        "DataSync": {
+            Low: "#f6b26b", High: "#b45f06"
+        },
+        "JournalWrite": {
+            Low: "#93c47d", High: "#38761d"
+        }
     }
-   
-    private static readonly trackHeight = 18; 
+
+    private static readonly trackHeight = 18;
     private static readonly trackMargin = 4;
     private static readonly closedTrackPadding = 2;
     private static readonly openedTrackPadding = 4;
     private static readonly closedTrackHeight = ioStats.closedTrackPadding + ioStats.trackHeight + ioStats.closedTrackPadding;
     private static readonly openedTrackHeight = ioStats.closedTrackHeight * 4;
-    static readonly brushSectionHeight = ioStats.openedTrackHeight;       
+    static readonly brushSectionHeight = ioStats.openedTrackHeight;
 
     private static readonly itemHeight = 19;
     private static readonly itemMargin = 1;    
@@ -248,14 +256,12 @@ class ioStats extends viewModelBase {
 
     private static readonly initialOffset = 100;
     private static readonly step = 200;
-    private static readonly minGapSize = 10 * 1000; // 10 seconds      
+    private static readonly minGapSize = 10 * 1000; // 10 seconds
     private static readonly axisHeight = 35; 
 
     private static readonly indexesString = "Indexes";
-    private static readonly documentsString = "Documents";
-    private static readonly journalWriteString = "JournalWrite";  
-    private static readonly dataFlushString = "DataFlush";      
-    private static readonly dataSyncString = "DataSync"; 
+
+    private static readonly meterTypes: Array<Sparrow.MeterType> = [ "JournalWrite", "DataFlush", "DataSync", "Compression" ];
 
     /* private observables */
 
@@ -272,17 +278,9 @@ class ioStats extends viewModelBase {
     private allIndexesAreFiltered = ko.observable<boolean>(false);
     private indexesVisible: KnockoutComputed<boolean>; 
 
-    private legendJW = ko.observable<legend>();
-    private legendDF = ko.observable<legend>();
-    private legendDS = ko.observable<legend>(); 
-
-    private itemSizePositionJW = ko.observable<string>(); 
-    private itemSizePositionDF = ko.observable<string>(); 
-    private itemSizePositionDS = ko.observable<string>(); 
-
-    private itemHoveredJW = ko.observable<boolean>(false); 
-    private itemHoveredDF = ko.observable<boolean>(false); 
-    private itemHoveredDS = ko.observable<boolean>(false); 
+    private legends = new Map<Sparrow.MeterType, KnockoutObservable<legend>>();
+    private itemSizePositions = new Map<Sparrow.MeterType, KnockoutObservable<string>>();
+    private itemHovered = new Map<Sparrow.MeterType, KnockoutObservable<boolean>>();
 
     /* private */
 
@@ -299,9 +297,7 @@ class ioStats extends viewModelBase {
     private brushSection: HTMLCanvasElement; // a virtual canvas for brush section
     private brushAndZoomCallbacksDisabled = false;    
 
-    private indexesItemsStartEndJW: Array<[number, number]>; // Start & End times for joined duration times for closed index track items
-    private indexesItemsStartEndDF: Array<[number, number]>; 
-    private indexesItemsStartEndDS: Array<[number, number]>; 
+    private indexesItemsStartEnds = new Map<Sparrow.MeterType, Array<[number, number]>>(); // Start & End times for joined duration times for closed index track items
 
     /* d3 */
 
@@ -321,6 +317,12 @@ class ioStats extends viewModelBase {
         super();
         this.searchText.throttle(200).subscribe(() => this.filterTracks());
 
+        ioStats.meterTypes.forEach(type => {
+            this.legends.set(type, ko.observable<legend>());
+            this.itemSizePositions.set(type, ko.observable<string>());
+            this.itemHovered.set(type, ko.observable<boolean>(false));
+        });
+
         this.autoScroll.subscribe(v => {
             if (v) {
                 this.scrollToRight();
@@ -335,9 +337,9 @@ class ioStats extends viewModelBase {
         super.activate(args);        
         this.indexesVisible = ko.pureComputed(() => this.hasIndexes() && !this.allIndexesAreFiltered());    
 
-        this.legendJW(new legend(ioStats.eventsColors.LowSizeColorJW, ioStats.eventsColors.HighSizeColorJW));
-        this.legendDF(new legend(ioStats.eventsColors.LowSizeColorDF, ioStats.eventsColors.HighSizeColorDF));
-        this.legendDS(new legend(ioStats.eventsColors.LowSizeColorDS, ioStats.eventsColors.HighSizeColorDS));
+        ioStats.meterTypes.forEach(meterType => {
+            this.legends.get(meterType)(new legend(ioStats.eventsColors[meterType].Low, ioStats.eventsColors[meterType].High, meterType));
+        });
     }
 
     deactivate() {
@@ -367,36 +369,27 @@ class ioStats extends viewModelBase {
         this.enableLiveView();
     }
 
-    private initLegendImages() {     
-        this.legendJW().createLegendImage();
-        this.legendDF().createLegendImage();
-        this.legendDS().createLegendImage();
+    private initLegendImages() {
+        this.legends.forEach(x => x().createLegendImage());
     }  
   
     private setLegendScales() {
-        this.legendJW().setLegendScales();
-        this.legendDF().setLegendScales();
-        this.legendDS().setLegendScales();               
+        this.legends.forEach(x => x().setLegendScales());
     }
 
-    private initViewData() {        
+    private initViewData() {
         this.hasIndexes(false);
 
         // 1. Find common paths prefix
         this.commonPathsPrefix = this.findPrefix(this.data.Environments.map(env => env.Path));
 
-        // 1.1 Init max size (for legend scale)       
-        this.legendJW().maxSize(0);
-        this.legendDF().maxSize(0);
-        this.legendDS().maxSize(0);
+        // 1.1 Init max size (for legend scale)
+        this.legends.forEach(x => x().maxSize(0));
 
-        // 2. Loop on info from EndPoint        
-        this.data.Environments.forEach(env => {           
+        // 2. Loop on info from EndPoint
+        this.data.Environments.forEach(env => {
 
-            // 2.0 Set the track name for the database path
-            let trackName = env.Path.substring(this.commonPathsPrefix.length);           
-
-            // 2.1 Check if indexes exist        
+            // 2.1 Check if indexes exist
             if (env.Path.substring(this.commonPathsPrefix.length).startsWith(ioStats.indexesString)) {              
                 this.hasIndexes(true);
             } 
@@ -406,25 +399,18 @@ class ioStats extends viewModelBase {
                 file.Recent.forEach(recentItem => {
                    
                     // 2.3 Calc highest batch size for each type
-                    if (recentItem.Type === ioStats.journalWriteString) {
-                        this.legendJW().maxSize(recentItem.Size > this.legendJW().maxSize() ? recentItem.Size : this.legendJW().maxSize());
-                    }
-                    if (recentItem.Type === ioStats.dataFlushString) {
-                        this.legendDF().maxSize(recentItem.Size > this.legendDF().maxSize() ? recentItem.Size : this.legendDF().maxSize());
-
-                    }
-                    if (recentItem.Type === ioStats.dataSyncString) {
-                        this.legendDS().maxSize(recentItem.Size > this.legendDS().maxSize() ? recentItem.Size : this.legendDS().maxSize());
-                    }
+                    const legend = this.legends.get(recentItem.Type)();
+                    const itemValue = ioStats.extractItemValue(recentItem);
+                    legend.maxSize(itemValue > legend.maxSize() ? itemValue : legend.maxSize());
 
                     this.hasAnyData(true);
                 });
             });
         });
-   
-        this.legendJW().maxSize(this.legendJW().maxSize() === 0 ? 1 : this.legendJW().maxSize());
-        this.legendDF().maxSize(this.legendDF().maxSize() === 0 ? 1 : this.legendDF().maxSize());
-        this.legendDS().maxSize(this.legendDS().maxSize() === 0 ? 1 : this.legendDS().maxSize());         
+
+        this.legends.forEach(legend => {
+            legend().maxSize(legend().maxSize() === 0 ? 1 : legend().maxSize());
+        });
     }
 
     private initCanvas() {
@@ -522,7 +508,7 @@ class ioStats extends viewModelBase {
         this.allIndexesAreFiltered(false);
 
         const indexesTracks = this.data.Environments.filter((x) => {               
-            let temp = x.Path.substring(this.commonPathsPrefix.length);
+            const temp = x.Path.substring(this.commonPathsPrefix.length);
             return temp.startsWith(ioStats.indexesString);
         });                 
        
@@ -681,13 +667,14 @@ class ioStats extends viewModelBase {
                     context.fillStyle = this.calcItemColor(recentItem, false);
 
                     switch (recentItem.Type) {
-                        case ioStats.journalWriteString:
+                        case "JournalWrite":
+                        case "Compression":
                             yStartItem = ioStats.closedTrackHeight;
                             break;
-                        case ioStats.dataFlushString:
+                        case "DataFlush":
                             yStartItem = ioStats.closedTrackHeight * 2;
                             break;
-                        case ioStats.dataSyncString:
+                        case "DataSync":
                             yStartItem = ioStats.closedTrackHeight * 3;       
                             break;                        
                     }
@@ -737,7 +724,7 @@ class ioStats extends viewModelBase {
     }
 
     private prepareMainSection(resetFilteredIndexNames: boolean) {
-        this.trackNames(this.findTrackNamesWithoutCommonPrefix());             
+        this.trackNames(this.findTrackNamesWithoutCommonPrefix());
         if (resetFilteredIndexNames) {
             this.filteredIndexesTracksNames([]); 
         }
@@ -750,8 +737,8 @@ class ioStats extends viewModelBase {
     private constructYScale() {              
         let currentOffset = ioStats.axisHeight - this.currentYOffset;  
       
-        let domain = [] as Array<string>;
-        let range = [] as Array<number>;
+        const domain = [] as Array<string>;
+        const range = [] as Array<number>;
         let firstIndex = true;        
 
         // TODO: Maybe refactor this method so it can handle any incoming number of environments,
@@ -833,7 +820,7 @@ class ioStats extends viewModelBase {
         const result = new Set<string>();              
 
         this.data.Environments.forEach(track => {                  
-            let trackName = track.Path.substring(this.commonPathsPrefix.length);           
+            const trackName = track.Path.substring(this.commonPathsPrefix.length);           
             result.add(trackName);
         });
 
@@ -917,12 +904,7 @@ class ioStats extends viewModelBase {
         const canvas = this.canvas.node() as HTMLCanvasElement;
         const context = canvas.getContext("2d");
 
-        let yStartItem: number;
-        let firstIndexTrack = true;
-
-        this.indexesItemsStartEndJW = []; 
-        this.indexesItemsStartEndDF = [];
-        this.indexesItemsStartEndDS = []; 
+        ioStats.meterTypes.forEach(type => this.indexesItemsStartEnds.set(type, []));
 
         try {
             context.save();
@@ -970,10 +952,11 @@ class ioStats extends viewModelBase {
                     const yStart = this.yScale(env.Path);
                     this.drawTrackName(context, trackName, yStart);
 
-                    const yStartPerTypeCache = new Map<Sparrow.IoMetrics.MeterType, number>();
-                    yStartPerTypeCache.set(ioStats.journalWriteString, yStart + ioStats.closedTrackHeight + ioStats.itemMargin);
-                    yStartPerTypeCache.set(ioStats.dataFlushString, yStart + ioStats.closedTrackHeight + ioStats.itemMargin * 2 + ioStats.itemHeight);
-                    yStartPerTypeCache.set(ioStats.dataSyncString, yStart + ioStats.closedTrackHeight + ioStats.itemMargin * 3 + ioStats.itemHeight * 2);
+                    const yStartPerTypeCache = new Map<Sparrow.MeterType, number>();
+                    yStartPerTypeCache.set("JournalWrite", yStart + ioStats.closedTrackHeight + ioStats.itemMargin);
+                    yStartPerTypeCache.set("Compression", yStart + ioStats.closedTrackHeight + ioStats.itemMargin);
+                    yStartPerTypeCache.set("DataFlush", yStart + ioStats.closedTrackHeight + ioStats.itemMargin * 2 + ioStats.itemHeight);
+                    yStartPerTypeCache.set("DataSync", yStart + ioStats.closedTrackHeight + ioStats.itemMargin * 3 + ioStats.itemHeight * 2);
 
                     // 3.3 Draw item in main canvas area (but only if item is inside the visible/selected area from the brush section..)
                     context.save();
@@ -1001,16 +984,18 @@ class ioStats extends viewModelBase {
                                 context.fillRect(x1, yStartItem, dx, ioStats.itemHeight);
                                 
                                 // 3.6 Draw the human size text on the item if there is enough space.. but don't draw on closed indexes track 
-                                // Logic: Don't draw if: [closed && isIndexTrack] ==> [!(closed && isIndexTrack)] ==> [open || !isIndexTrack]
+                                // Logic: Don't draw if: [closed && isIndexTrack] ==> [!(closed && isIndexTrack)] ==> [open || !isIndexTrack] or it is compression item
                                 if (indexesExpanded || !isIndexTrack) {
 
-                                    // Calc text size:
-                                    const itemSizeText = generalUtils.formatBytesToSize(recentItem.Size);
-                                    if (dx > itemSizeText.length * ioStats.charWidthApproximation) {
+                                    if (recentItem.Type !== "Compression") {
+                                        // Calc text size:
+                                        const itemSizeText = generalUtils.formatBytesToSize(recentItem.Size);
+                                        if (dx > itemSizeText.length * ioStats.charWidthApproximation) {
                                             context.fillStyle = 'black';
-                                            context.textAlign = "center"; 
+                                            context.textAlign = "center";
                                             context.font = "bold 10px Lato";
                                             context.fillText(itemSizeText, x1 + dx / 2, yStartItem + ioStats.trackHeight / 2 + 4);
+                                        }
                                     }
 
                                     // 3.7 Register track item for tooltip (but not for the 'closed' indexes track)
@@ -1025,11 +1010,7 @@ class ioStats extends viewModelBase {
                                     this.hitTest.registerClosedTrackItem(x1 - 2, yStartItem, dx + 2, ioStats.itemHeight, recentItem);
 
                                     // Update closed index track StartEnd array (durations array), used in the tooltip on closed index track items
-                                    switch (recentItem.Type) {
-                                        case ioStats.journalWriteString: this.indexesItemsStartEndJW.push([itemStartDateAsInt, itemEndDateAsInt]); break;
-                                        case ioStats.dataFlushString: this.indexesItemsStartEndDF.push([itemStartDateAsInt, itemEndDateAsInt]); break;
-                                        case ioStats.dataSyncString: this.indexesItemsStartEndDS.push([itemStartDateAsInt, itemEndDateAsInt]); break;
-                                    }
+                                    this.indexesItemsStartEnds.get(recentItem.Type).push([itemStartDateAsInt, itemEndDateAsInt]);
                                 }
                             }
                         }
@@ -1040,10 +1021,10 @@ class ioStats extends viewModelBase {
             };
 
             // 4. Compact closed index track StartEnd durations array
-            this.indexesItemsStartEndJW = this.compactDurationsInfo(this.indexesItemsStartEndJW);
-            this.indexesItemsStartEndDF = this.compactDurationsInfo(this.indexesItemsStartEndDF);
-            this.indexesItemsStartEndDS = this.compactDurationsInfo(this.indexesItemsStartEndDS);
-
+            ioStats.meterTypes.forEach(type => {
+                this.indexesItemsStartEnds.set(type, this.compactDurationsInfo(this.indexesItemsStartEnds.get(type)));
+            });
+            
             // 5. Draw gaps   
             this.drawGaps(context, xScale);
         }
@@ -1054,7 +1035,7 @@ class ioStats extends viewModelBase {
 
     private compactDurationsInfo(durationsInfo: Array<[number, number]>): Array<[number, number]>{
 
-        let joinedDurations: Array<[number, number]> = [];
+        const joinedDurations: Array<[number, number]> = [];
         let joinedIndex = 0;
 
         // 1. Sort array (by start time, a[0] is start time, a[1] is end time)
@@ -1112,7 +1093,7 @@ class ioStats extends viewModelBase {
         const yTextShift = 14.5;
         const xTextShift = 0.5;
         let xTextStart = 5;
-        let rectWidth;             
+        let rectWidth: number;
         let addedWidth = 8;
         let drawArrow = false;       
         let skipDrawing = false;
@@ -1215,10 +1196,10 @@ class ioStats extends viewModelBase {
 
         const file = fileInput.files[0];
         const reader = new FileReader();
-        reader.onload = function () {            
+        reader.onload = function () {
             self.dataImported(this.result);
         };
-        reader.onerror = function (error: any) {
+        reader.onerror = (error: any) => {
             alert(error);
         };
         reader.readAsText(file);
@@ -1226,7 +1207,7 @@ class ioStats extends viewModelBase {
         this.importFileName(fileInput.files[0].name);
 
         // Must clear the filePicker element value so that user will be able to import the -same- file after closing the imported view...
-        let $input = $("#importFilePicker");
+        const $input = $("#importFilePicker");
         $input.val(null);
     }
 
@@ -1295,7 +1276,7 @@ class ioStats extends viewModelBase {
     }
 
     exportAsJson() {
-        let exportFileName;
+        let exportFileName: string;
 
         if (this.isImport()) {
             exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));
@@ -1333,36 +1314,15 @@ class ioStats extends viewModelBase {
     }
 
     private calcItemColor(recentItem: Raven.Server.Documents.Handlers.IOMetricsRecentStats, calcColorBasedOnSize: boolean): string {
-        let color: string;
-
-        switch (recentItem.Type) {
-            case ioStats.journalWriteString: {
-                if (calcColorBasedOnSize) {                
-                    color = this.legendJW().colorScale(recentItem.Size);
-                }
-                else {
-                    color = ioStats.eventsColors.HighSizeColorJW;
-                }
-            } break;
-            case ioStats.dataFlushString: {
-                if (calcColorBasedOnSize) {   
-                    color = this.legendDF().colorScale(recentItem.Size);
-                }
-                else {
-                    color = ioStats.eventsColors.HighSizeColorDF;
-                }
-            } break;
-            case ioStats.dataSyncString: {
-                if (calcColorBasedOnSize) {
-                    color = this.legendDS().colorScale(recentItem.Size);            
-                }
-                else {
-                    color = ioStats.eventsColors.HighSizeColorDS;
-                }
-            } break;           
+        if (calcColorBasedOnSize) {
+            return this.legends.get(recentItem.Type)().colorScale(ioStats.extractItemValue(recentItem));
+        } else {
+            return ioStats.eventsColors[recentItem.Type].High;
         }
+    }
 
-        return color;
+    private static extractItemValue(item: Raven.Server.Documents.Handlers.IOMetricsRecentStats) {
+        return item.Type === "Compression" ? (item as Raven.Server.Documents.Handlers.IOMetricsRecentStatsAdditionalTypes).CompressionRatio : item.Size;
     }
 
     private extractTimeRanges(): Array<[Date, Date]>{        
@@ -1379,9 +1339,14 @@ class ioStats extends viewModelBase {
         return result;      
     }
 
-    private computedHumanSize(input: KnockoutObservable<number>): KnockoutComputed<string> {
+    private computedItemValue(legendWrapped: KnockoutObservable<legend>): KnockoutComputed<string> {
         return ko.pureComputed(() => {
-            return generalUtils.formatBytesToSize(input());
+            const legend = legendWrapped();
+            if (legend.type === "Compression") {
+                return (legend.maxSize() * 100).toFixed(2) + '%';
+            } else {
+                return generalUtils.formatBytesToSize(legend.maxSize());
+            }
         });
     }
 
@@ -1403,27 +1368,13 @@ class ioStats extends viewModelBase {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== element) {
-            let typeString;
-            let duration;
+            const typeString = ioStats.getMeterTypeFriendlyName(element.Type);
+            const duration = this.getJoinedDuration(this.indexesItemsStartEnds.get(element.Type), element);
 
-            switch (element.Type) {
-                case ioStats.journalWriteString:
-                    typeString = "Journal Write";
-                    duration = this.getJoinedDuration(this.indexesItemsStartEndJW, element);
-                    break;
-                case ioStats.dataFlushString:
-                    typeString = "Voron Data Flush";
-                    duration = this.getJoinedDuration(this.indexesItemsStartEndDF, element);
-                    break;
-                case ioStats.dataSyncString:
-                    typeString = "Voron Data Sync";
-                    duration = this.getJoinedDuration(this.indexesItemsStartEndDS, element);
-                    break;
-            }
             let tooltipHtml = `*** ${typeString} ***<br/>`;       
-            duration = (duration === 0) ? "0" : generalUtils.formatMillis(duration);                                      
-            tooltipHtml += `Duration: ${duration}<br/>`;
-            tooltipHtml += `Click for details`;           
+            const durationFormatted = (duration === 0) ? "0" : generalUtils.formatMillis(duration);
+            tooltipHtml += `Duration: ${durationFormatted}<br/>`;
+            tooltipHtml += `Click for details`;
 
             this.handleTooltip(element, x, y, tooltipHtml);
         }
@@ -1434,49 +1385,55 @@ class ioStats extends viewModelBase {
         const elementEnd = new Date(elementStart + element.Duration).getTime();
        
         // Find containing part from the joined durations array
-        let joinedDuration = joinedDurationInfo.find(duration => (duration[0] <= elementStart) && (elementEnd <= duration[1]));
-        let duration = joinedDuration[1] - joinedDuration[0];       
+        const  joinedDuration = joinedDurationInfo.find(duration => (duration[0] <= elementStart) && (elementEnd <= duration[1]));
+        const duration = joinedDuration[1] - joinedDuration[0];       
         return duration;
+    }
+
+    private static getMeterTypeFriendlyName(type: Sparrow.MeterType) {
+        switch (type) {
+            case "JournalWrite": 
+                return "Journal Write"; 
+            case "DataFlush":
+                return "Voron Data Flush";
+            case "DataSync":
+                return "Voron Data Sync";
+            case "Compression":
+                return "Compression Ratio";
+        }
     }
 
     private handleTrackTooltip(element: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) {     
         const currentDatum = this.tooltip.datum();
 
         // 1. Show item size position in the legend (in addition to showing the tooltip)
-        this.itemHoveredJW(false);
-        this.itemHoveredDF(false);
-        this.itemHoveredDS(false);
-               
-        switch (element.Type) {           
-            case ioStats.journalWriteString: {
-                this.itemHoveredJW(true);
-                this.itemSizePositionJW(this.legendJW().sizeScale.invert(element.Size).toString() + "px");
-            } break;
-            case ioStats.dataFlushString: {
-                this.itemHoveredDF(true);
-                this.itemSizePositionDF(this.legendDF().sizeScale.invert(element.Size).toString() + "px");
-            } break;
-            case ioStats.dataSyncString: {
-                this.itemHoveredDS(true);               
-                this.itemSizePositionDS(this.legendDS().sizeScale.invert(element.Size).toString() + "px");
-            } break;
-        }
+        this.itemHovered.forEach(x => x(false));
+
+        this.itemHovered.get(element.Type)(true);
+
+        this.itemSizePositions.get(element.Type)(this.legends.get(element.Type)().sizeScale.invert(ioStats.extractItemValue(element)).toString() + "px");
 
         // 2. Show tooltip
         if (currentDatum !== element) {
-            let typeString;
-            switch (element.Type) {
-                case ioStats.journalWriteString: typeString = "Journal Write"; break;               
-                case ioStats.dataFlushString: typeString = "Voron Data Flush"; break;
-                case ioStats.dataSyncString: typeString = "Voron Data Sync"; break;
-            }
+            const typeString = ioStats.getMeterTypeFriendlyName(element.Type);
+
             let tooltipHtml = `*** ${typeString} ***<br/>`;
-            let duration = (element.Duration === 0) ? "0" : generalUtils.formatMillis((element).Duration);
+            const duration = (element.Duration === 0) ? "0" : generalUtils.formatMillis((element).Duration);
             tooltipHtml += `Duration: ${duration}<br/>`;
-            tooltipHtml += `Size: ${generalUtils.formatBytesToSize(element.Size)}<br/>`; 
-            tooltipHtml += `Size (bytes): ${element.Size.toLocaleString()}<br/>`;
-            tooltipHtml += `Allocated Size: ${generalUtils.formatBytesToSize(element.FileSize)}<br/>`; 
-            tooltipHtml += `Allocated Size (bytes): ${element.FileSize.toLocaleString()}<br/>`;
+
+            if (element.Type !== "Compression") {
+                tooltipHtml += `Size: ${generalUtils.formatBytesToSize(element.Size)}<br/>`;
+                tooltipHtml += `Size (bytes): ${element.Size.toLocaleString()}<br/>`;
+                tooltipHtml += `Allocated Size: ${generalUtils.formatBytesToSize(element.FileSize)}<br/>`;
+                tooltipHtml += `Allocated Size (bytes): ${element.FileSize.toLocaleString()}<br/>`;
+            } else {
+                const compressionElement = element as Raven.Server.Documents.Handlers.IOMetricsRecentStatsAdditionalTypes;
+                tooltipHtml += `Original Size: ${generalUtils.formatBytesToSize(compressionElement.OriginalSize)}<br />`;
+                tooltipHtml += `Original Size (bytes): ${compressionElement.OriginalSize.toLocaleString()}<br />`;
+                tooltipHtml += `Compressed Size: ${generalUtils.formatBytesToSize(compressionElement.CompressedSize)}<br />`;
+                tooltipHtml += `Compressed Size (bytes): ${compressionElement.CompressedSize.toLocaleString()}<br />`;
+                tooltipHtml += `Compression Ratio: ${(compressionElement.CompressionRatio * 100).toFixed(2)}%<br />`;
+            }
 
             this.handleTooltip(element, x, y, tooltipHtml);
         }
@@ -1524,9 +1481,7 @@ class ioStats extends viewModelBase {
         this.tooltip.datum(null);
 
         // No need to show arrow position in legend any more..
-        this.itemHoveredJW(false);
-        this.itemHoveredDF(false);
-        this.itemHoveredDS(false);
+        this.itemHovered.forEach(x => x(false));
     }   
 }
 
