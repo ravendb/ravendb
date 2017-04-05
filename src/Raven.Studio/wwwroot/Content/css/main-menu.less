@@ -136,8 +136,16 @@
         background-color: @gray-darker;
         width: @menu-width - 40;
 
+        &>ul {
+            display:flex;
+            flex-direction:column;
+            flex: 1 1 auto;
+            overflow-y:auto;
+        }
+
         &.level-show {
-            display: block;
+            display: flex;
+            flex-direction: column;
         }
 
         a {
@@ -172,7 +180,8 @@
         padding: 0;
 
         a {
-            display: block;
+            display: flex;
+            align-items:center;
             color: @gray-light;
             text-decoration: none;
             padding-left: 15px;
@@ -194,6 +203,14 @@
                 -ms-transition: opacity @menu-transition-ease;
                 -o-transition: opacity @menu-transition-ease;
                 transition: opacity @menu-transition-ease;
+            }
+
+            span {
+                flex-grow:1;
+            }
+
+            .icon-style, [class*=" icon-"], [class^="icon-"] {
+                top:0;
             }
         }
     }
@@ -250,6 +267,7 @@
 
                     span {
                         transition: opacity 0.1s linear;
+                        margin-left:11px;
                     }
 
                     i {
@@ -268,8 +286,7 @@
         }
     }
 
-    .level-1,
-    .level-2 {
+    .level-1 {
         display: none;
 
         &:before {
@@ -295,14 +312,8 @@
         }
     }
 
-    .level-2 {
-        a:hover {
-            background-color: @gray;
-        }
-    }
     // STYLE OPEN SUBMENU (LEVEL 1 OR 2)
-    &[data-level="1"],
-    &[data-level="2"] {
+    &[data-level="1"] {
         .level-0 {
             & > ul {
                 & > li {
@@ -313,21 +324,8 @@
             }
         }
     }
-    //STYLE LEVEL 2 OPEN SUBMENU
-    &[data-level="2"] {
-        .level-1 {
-            &:before {
-                display: inline-block;
-            }
-
-            & > .back,
-            & > h2,
-            & > ul > li > a {
-                visibility: hidden;
-            }
-        }
-    }
 }
+
 .main-menu {
     .collection-count {
         float: right;
