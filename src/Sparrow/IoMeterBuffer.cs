@@ -100,7 +100,7 @@ namespace Sparrow
 
             public void Dispose()
             {
-                End = DateTime.Now;
+                End = DateTime.UtcNow;
                 Parent.Mark(ref this);
             }
 
