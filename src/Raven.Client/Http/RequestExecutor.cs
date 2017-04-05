@@ -287,7 +287,7 @@ namespace Raven.Client.Http
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
                         {
                             cts.CancelAfter(command.Timeout.Value);
-                            response = await command.SendAsync(client, request, cts.Token).ConfigureAwait(false);                          
+                            response = await command.SendAsync(client, request, cts.Token).ConfigureAwait(false);
                         }
                     }
                     else
@@ -302,11 +302,11 @@ namespace Raven.Client.Http
                     if (shouldRetry == false)
                         throw;
 
-                    if (await HandleServerDown(choosenNode, context, command, request,response, e) == false)
-                        throw new AllTopologyNodesDownException("Tried to send request to all configured nodes in the topology, all of them seem to be down or not responding.", _nodeSelector.Topology,e);
+                    if (await HandleServerDown(choosenNode, context, command, request, response, e) == false)
+                        throw new AllTopologyNodesDownException("Tried to send request to all configured nodes in the topology, all of them seem to be down or not responding.", _nodeSelector.Topology, e);
 
                     return;
-                }               
+                }
 
                 command.StatusCode = response.StatusCode;
 
@@ -325,10 +325,10 @@ namespace Raven.Client.Http
 
 //not sure how to treat multiple exceptions here, probably they should be written in a log
                         throw new InvalidOperationException("Received unsuccessful resonse and couldn't recover from it.",
-                            new AggregateException(command.FailedNodes.Select(x=> new UnsuccessfulRequestException(x.Key.Url, x.Value))));
+                            new AggregateException(command.FailedNodes.Select(x => new UnsuccessfulRequestException(x.Key.Url, x.Value))));
                     }
+                    return; // we either handled this already in the unsuccessul response or we are throwing
                 }
-
                 await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
             }
         }      
@@ -355,8 +355,8 @@ namespace Raven.Client.Http
 
             request.RequestUri = new Uri(url);
 
-            if (node.ClusterTag != null && !string.Equals(node.ClusterTag, "N/A", StringComparison.OrdinalIgnoreCase))
-                request.Headers.Add("Raven-Authorization", node.ClusterTag);
+            if (node.ClusterToken != null)
+                request.Headers.Add("Raven-Authorization", node.ClusterToken);
 
             if (!request.Headers.Contains("Raven-Client-Version"))
                 request.Headers.Add("Raven-Client-Version", ClientVersion);

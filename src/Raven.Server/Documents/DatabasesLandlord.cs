@@ -341,7 +341,7 @@ namespace Raven.Server.Documents
 
                 if (_logger.IsInfoEnabled && e.InnerException is UnauthorizedAccessException)
                 {
-                    _logger.Info("Failed to load database because couldn't access certain file. Please check permissions, and make sure that nothing locks that file (an antivirus is a good example of something that can lock the file)");
+                    _logger.Info("Failed to load database because couldn't access certain file. Please check permissions, and make sure that nothing locks that file (an antivirus is a good example of something that can lock the file)", e);
                 }
 
                 throw;

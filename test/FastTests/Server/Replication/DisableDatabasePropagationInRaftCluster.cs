@@ -91,7 +91,10 @@ namespace FastTests.Server.Replication
                     //thus, session.Load() operation would fail now
 
                     var e = Assert.Throws<InvalidOperationException>(() => session.Load<User>("users/1"));
-                    Assert.IsType<UnsuccessfulRequestException>(e.InnerException);
+                    Assert.IsType<AggregateException>(e.InnerException);
+                    var ae = e.InnerException as AggregateException;
+                    foreach (var ie in ae.InnerExceptions)
+                        Assert.IsType<UnsuccessfulRequestException>(ie);
                 }
 
                 //now we enable all databases, so it should propagate as well and make them available for requests

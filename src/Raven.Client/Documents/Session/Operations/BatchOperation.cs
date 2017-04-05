@@ -35,6 +35,12 @@ namespace Raven.Client.Documents.Session.Operations
 
         public void SetResult(BlittableArrayResult result)
         {
+            if (result.Results == null) //precaution
+            {
+                ThrowOnNullResults();
+                return;
+            }
+
             for (var i = _deferredCommandsCount; i < result.Results.Length; i++)
             {
                 var batchResult = result.Results[i] as BlittableJsonReaderObject;
@@ -88,6 +94,11 @@ namespace Raven.Client.Documents.Session.Operations
                 var afterStoreEventArgs = new AfterStoreEventArgs(_session, documentInfo.Id, documentInfo.Entity);
                 _session.OnAfterStoreInvoke(afterStoreEventArgs);
             }
+        }
+
+        private static void ThrowOnNullResults()
+        {
+            throw new InvalidOperationException("Received empty response from the server. This is not supposed to happen and is likely a bug.");
         }
     }
 }

@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Sparrow.Json;
@@ -22,7 +23,7 @@ namespace Raven.Client.Http
         public abstract bool IsReadRequest { get; }
         public HttpStatusCode StatusCode;
 
-        public bool AvoidFailover;
+        public bool AvoidFailover;        
 
         public RavenCommandResponseType ResponseType { get; protected set; } = RavenCommandResponseType.Object;
 
