@@ -314,91 +314,99 @@ namespace Raven.Server.Documents.ETL
         {
             while (CancellationToken.IsCancellationRequested == false)
             {
-                _waitForChanges.Reset();
-
-                var startTime = Database.Time.GetUtcNow();
-
-                if (FallbackTime != null)
-                {
-                    Thread.Sleep(FallbackTime.Value);
-                    FallbackTime = null;
-                }
-
-                DocumentsOperationContext context;
-                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-                {
-                    var didWork = false;
-
-                    var statsAggregator = _lastStats = new EtlStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
-
-                    AddPerformanceStats(statsAggregator);
-
-                    using (var stats = statsAggregator.CreateScope())
-                    {
-                        try
-                        {
-                            EnsureThreadAllocationStats();
-
-                            using (context.OpenReadTransaction())
-                            {
-                                LoadLastProcessedEtag(context);
-
-                                var extracted = Extract(context, stats);
-
-                                var transformed = Transform(extracted, context, stats);
-
-                                Load(transformed, context, stats);
-
-                                if (stats.LastLoadedEtag > Statistics.LastProcessedEtag)
-                                {
-                                    didWork = true;
-                                    Statistics.LastProcessedEtag = stats.LastLoadedEtag;
-                                }
-
-                                if (didWork)
-                                    UpdateMetrics(startTime, stats);
-                            }
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            return;
-                        }
-                        catch (Exception e)
-                        {
-                            var message = $"Exception in ETL process named '{Name}'";
-
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info($"{Tag} {message}", e);
-                        }
-                    }
-
-                    statsAggregator.Complete();
-
-                    if (didWork)
-                    {
-                        using (var tx = context.OpenWriteTransaction())
-                        {
-                            StoreLastProcessedEtag(context);
-                            tx.Commit();
-                        }
-                        
-                        if (CancellationToken.IsCancellationRequested == false)
-                        {
-                            var batchCompleted = Database.EtlLoader.BatchCompleted;
-                            batchCompleted?.Invoke(Name, Statistics);
-                        }
-
-                        continue;
-                    }
-                }
-
                 try
                 {
-                    _waitForChanges.Wait(CancellationToken);
+                    _waitForChanges.Reset();
+
+                    var startTime = Database.Time.GetUtcNow();
+
+                    if (FallbackTime != null)
+                    {
+                        Thread.Sleep(FallbackTime.Value);
+                        FallbackTime = null;
+                    }
+
+                    DocumentsOperationContext context;
+                    using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                    {
+                        var didWork = false;
+
+                        var statsAggregator = _lastStats = new EtlStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
+
+                        AddPerformanceStats(statsAggregator);
+
+                        using (var stats = statsAggregator.CreateScope())
+                        {
+                            try
+                            {
+                                EnsureThreadAllocationStats();
+
+                                using (context.OpenReadTransaction())
+                                {
+                                    LoadLastProcessedEtag(context);
+
+                                    var extracted = Extract(context, stats);
+
+                                    var transformed = Transform(extracted, context, stats);
+
+                                    Load(transformed, context, stats);
+
+                                    if (stats.LastLoadedEtag > Statistics.LastProcessedEtag)
+                                    {
+                                        didWork = true;
+                                        Statistics.LastProcessedEtag = stats.LastLoadedEtag;
+                                    }
+
+                                    if (didWork)
+                                        UpdateMetrics(startTime, stats);
+                                }
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                return;
+                            }
+                            catch (Exception e)
+                            {
+                                var message = $"Exception in ETL process named '{Name}'";
+
+                                if (Logger.IsInfoEnabled)
+                                    Logger.Info($"{Tag} {message}", e);
+                            }
+                        }
+
+                        statsAggregator.Complete();
+
+                        if (didWork)
+                        {
+                            using (var tx = context.OpenWriteTransaction())
+                            {
+                                StoreLastProcessedEtag(context);
+                                tx.Commit();
+                            }
+                        
+                            if (CancellationToken.IsCancellationRequested == false)
+                            {
+                                var batchCompleted = Database.EtlLoader.BatchCompleted;
+                                batchCompleted?.Invoke(Name, Statistics);
+                            }
+
+                            continue;
+                        }
+                    }
+
+                    try
+                    {
+                        _waitForChanges.Wait(CancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
                 }
-                catch (OperationCanceledException)
+                catch (Exception e)
                 {
-                    return;
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Unexpected error in {Tag} process: '{Name}'", e);
                 }
             }
         }
