@@ -93,9 +93,9 @@ namespace Raven.Server.Rachis
 
         public void StepDown()
         {
-            if(_voters.Count == 0)
+            if (_voters.Count == 0)
                 throw new InvalidOperationException("Cannot step down when I'm the only voter int he cluster");
-            var nextLeader = _voters.Values.OrderByDescending(x => x.FollowerMatchIndex).ThenByDescending(x=>x.LastReplyFromFollower).First();
+            var nextLeader = _voters.Values.OrderByDescending(x => x.FollowerMatchIndex).ThenByDescending(x => x.LastReplyFromFollower).First();
             nextLeader.ForceElectionsNow = true;
             var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>());
             old.TrySetResult(null);
@@ -221,7 +221,7 @@ namespace Raven.Server.Rachis
                     tx.Commit();
                 }
                 _newEntry.Set(); //This is so the noop would register right away
-                while (true)
+                while (_running)
                 {
                     switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeoutMs))
                     {
@@ -286,17 +286,22 @@ namespace Raven.Server.Rachis
         }
 
         private void VoteOfNoConfidence()
-        {            
+        {
             if (TimeoutEvent.Disable)
                 return;
 
             var sb = new StringBuilder();
             var now = DateTime.UtcNow;
+            sb.AppendLine("Triggered because of:");
+            foreach (var timeoutsForVoter in _timeoutsForVoters)
+            {
+                sb.Append($"\t{timeoutsForVoter.voter.Tag} - {Math.Round(timeoutsForVoter.time, 3)} ms").AppendLine();
+            }
             foreach (var ambassador in _voters)
             {
                 var followerAmbassador = ambassador.Value;
                 var sinceLastReply = (long)(now - followerAmbassador.LastReplyFromFollower).TotalMilliseconds;
-                var sinceLastSend = (long) (now - followerAmbassador.LastSendToFollower).TotalMilliseconds;
+                var sinceLastSend = (long)(now - followerAmbassador.LastSendToFollower).TotalMilliseconds;
                 var lastMsg = followerAmbassador.LastSendMsg;
                 sb.AppendLine(
                     $"{followerAmbassador.Tag}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.Status}");
@@ -308,7 +313,7 @@ namespace Raven.Server.Rachis
             throw new TimeoutException(
                 "Too long has passed since we got a confirmation from the majority of the cluster that this node is still the leader." +
                 Environment.NewLine +
-                "Assuming that I'm not the leader and stepping down." + 
+                "Assuming that I'm not the leader and stepping down." +
                 Environment.NewLine +
                 sb
                 );
@@ -385,13 +390,17 @@ namespace Raven.Server.Rachis
             }
         }
 
+        private readonly List<(FollowerAmbassador voter, double time)> _timeoutsForVoters = new List<(FollowerAmbassador, double)>();
         private void EnsureThatWeHaveLeadership(int majority)
         {
             var now = DateTime.UtcNow;
             var peersHeardFromInElectionTimeout = 1; // we count as a node :-)
+            _timeoutsForVoters.Clear();
             foreach (var voter in _voters.Values)
             {
-                if ((now - voter.LastReplyFromFollower).TotalMilliseconds < _engine.ElectionTimeoutMs)
+                var time = (now - voter.LastReplyFromFollower).TotalMilliseconds;
+                _timeoutsForVoters.Add((voter, time));
+                if (time < _engine.ElectionTimeoutMs)
                     peersHeardFromInElectionTimeout++;
             }
             if (peersHeardFromInElectionTimeout < majority)
@@ -414,7 +423,7 @@ namespace Raven.Server.Rachis
 
         private bool _running;
         private readonly Stopwatch _leadership = Stopwatch.StartNew();
-        private int VotersMajority => (_voters.Count + 1) / 2 + 1;
+        private int VotersMajority => _voters.Count / 2 + 1;
 
         public long LeaderShipDuration => _leadership.ElapsedMilliseconds;
 
@@ -561,7 +570,7 @@ namespace Raven.Server.Rachis
             {
                 ae.Execute(ambasaddor.Value.Dispose);
             }
-        
+
 
             _newEntry.Dispose();
             _voterResponded.Dispose();
@@ -603,7 +612,7 @@ namespace Raven.Server.Rachis
                 var clusterTopology = _engine.GetTopology(context);
 
                 //We need to validate that the node doesn't exists before we generate the nodeTag
-                if (validateNotInTopology && (nodeTag!= null && clusterTopology.Contains(nodeTag) || clusterTopology.HasUrl(nodeUrl).hasUrl))
+                if (validateNotInTopology && (nodeTag != null && clusterTopology.Contains(nodeTag) || clusterTopology.HasUrl(nodeUrl).hasUrl))
                 {
                     throw new InvalidOperationException($"Was requested to modify the topology for node={nodeTag} " +
                                                         $"with validation that it is not contained by the topology but current topology contains it.");
@@ -613,7 +622,7 @@ namespace Raven.Server.Rachis
                 {
                     nodeTag = GenerateNodeTag(clusterTopology);
                 }
-               
+
                 var newVotes = new Dictionary<string, string>(clusterTopology.Members);
                 newVotes.Remove(nodeTag);
                 var newPromotables = new Dictionary<string, string>(clusterTopology.Promotables);
@@ -621,7 +630,7 @@ namespace Raven.Server.Rachis
                 var newNonVotes = new Dictionary<string, string>(clusterTopology.Watchers);
                 newNonVotes.Remove(nodeTag);
 
-                var highestNodeId = newVotes.Keys.Concat(newPromotables.Keys).Concat(newNonVotes.Keys).Concat(new [] {nodeTag}).Max();
+                var highestNodeId = newVotes.Keys.Concat(newPromotables.Keys).Concat(newNonVotes.Keys).Concat(new[] { nodeTag }).Max();
 
                 switch (modification)
                 {
@@ -659,7 +668,7 @@ namespace Raven.Server.Rachis
 
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
                 var tcs = new TaskCompletionSource<long>();
-                _entries[index] =new CommandState
+                _entries[index] = new CommandState
                 {
                     TaskCompletionSource = tcs,
                     CommandIndex = index
