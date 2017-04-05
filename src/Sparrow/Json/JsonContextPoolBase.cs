@@ -13,9 +13,11 @@ namespace Sparrow.Json
         /// Indexing thread will adjust their contexts to their needs, and request processing threads will tend to
         /// average to the same overall type of contexts
         /// </summary>
-        private readonly ThreadLocal<MutliReaderSingleWriterStack> _contextPool = new ThreadLocal<MutliReaderSingleWriterStack>(() => new MutliReaderSingleWriterStack(), trackAllValues: true);
+        private readonly ThreadLocal<MutliReaderSingleWriterStack> _contextPool;
         private readonly Timer _timer;
         private bool _disposed;
+
+        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
         /// <summary>
         /// This class is meant to be read from the timer callback
@@ -24,15 +26,22 @@ namespace Sparrow.Json
         /// </summary>
         private class MutliReaderSingleWriterStack : IEnumerable<T>
         {
+            private CancellationToken _token;
             private T _fastPath;
             private T[] _stack;
             private int _stackUsage;
             public int Count;
 
+            public MutliReaderSingleWriterStack(CancellationToken token)
+            {
+                _token = token;
+            }
+
             public T Pop()
             {
+                _token.ThrowIfCancellationRequested();
                 if (Count == 0)
-                    throw new InvalidOperationException("Attempt to pop an empty stack");
+                    ThrowEmptyStack();
 
                 Count--;
                 if (_fastPath != null)
@@ -44,8 +53,18 @@ namespace Sparrow.Json
                 return _stack[--_stackUsage];
             }
 
+            private static void ThrowEmptyStack()
+            {
+                throw new InvalidOperationException("Attempt to pop an empty stack");
+            }
+
             public void Push(T context)
             {
+                if (_token.IsCancellationRequested)
+                {
+                    context.Dispose();
+                    return;
+                }
                 Count++;
                 if (Count == 1)
                 {
@@ -73,6 +92,7 @@ namespace Sparrow.Json
 
             public void Clear()
             {
+                _token.ThrowIfCancellationRequested();
                 _stackUsage = 0;
                 _fastPath = null;
                 Count = 0;
@@ -106,6 +126,7 @@ namespace Sparrow.Json
 
         protected JsonContextPoolBase()
         {
+            _contextPool = new ThreadLocal<MutliReaderSingleWriterStack>(() => new MutliReaderSingleWriterStack(_cts.Token), trackAllValues: true);
             _timer = new Timer(TimerCallback, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }
 
@@ -173,6 +194,7 @@ namespace Sparrow.Json
 
         public IDisposable AllocateOperationContext(out T context)
         {
+            _cts.Token.ThrowIfCancellationRequested();
             var stack = _contextPool.Value;
             while (stack.Count > 0)
             {
@@ -237,13 +259,13 @@ namespace Sparrow.Json
             {
                 if (_disposed)
                     return;
+                _cts.Cancel();
                 _disposed = true;
                 _timer.Dispose();
                 foreach (var stack in _contextPool.Values)
                 {
-                    while (stack.Count > 0)
+                    foreach (var ctx in stack)
                     {
-                        var ctx = stack.Pop();
                         if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
                             continue;
                         ctx.Dispose();

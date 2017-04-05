@@ -27,6 +27,8 @@ namespace Tests.Infrastructure
 
         protected Logger Log = LoggingSource.Instance.GetLogger<RachisConsensusTestBase>("RachisConsensusTest");
 
+        protected int LongWaitTime = 15000; //under stress the thread pool may take time to schedule the task to complete the set of the TCS
+
         protected async Task<RachisConsensus<CountingStateMachine>> CreateNetworkAndGetLeader(int nodeCount, [CallerMemberName] string caller = null)
         {
             var initialCount = RachisConsensuses.Count;
@@ -259,6 +261,7 @@ namespace Tests.Infrastructure
 
             foreach (var mustBeSuccessfulTask in _mustBeSuccessfulTasks)
             {
+
                 Assert.True(mustBeSuccessfulTask.Wait(250));
             }
         }
