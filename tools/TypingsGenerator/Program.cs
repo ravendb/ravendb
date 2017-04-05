@@ -29,6 +29,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.Rachis;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow;
 using Sparrow.Json;
@@ -127,6 +128,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexPerformanceStats));
             scripter.AddType(typeof(IndexDefinition));
             scripter.AddType(typeof(TermsQueryResult));
+
+            // cluster 
+            scripter.AddType(typeof(ClusterTopology));
 
             // query 
             scripter.AddType(typeof(QueryResult<>));

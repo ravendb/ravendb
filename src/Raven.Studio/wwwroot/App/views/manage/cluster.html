@@ -1,4 +1,34 @@
 <section>
+    
+    <button data-bind="click: addAnotherServerToCluster" class="btn btn-default"><i class="icon-plus"></i> <span>Add another server to cluster</span></button>
+    
+    <button data-bind="click: refresh" class="btn btn-default"><i class="icon-refresh"></i> <span>Refresh</span></button>
+    
+    
+    <table class="table table-condensed table-striped">
+        <thead>
+            <tr>
+                <th>Tag</th>
+                <th>Server Url</th>
+                <th>Type</th>
+                <th>Delete</th>
+            </tr>
+        </thead>
+        <tbody data-bind="foreach: topology().nodes">
+            <tr>
+                <td>
+                    <div data-bind="text: tag"></div>
+                </td>
+                <td>
+                    <div data-bind="text: serverUrl"></div>
+                </td>
+                <td data-bind="text: type"></td>
+                <td><button class="btn btn-default" data-bind="click: _.partial($parent.deleteNode, $data)">Delete</button></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- TODO:
     <div data-bind="visible: settingsAccess.isForbidden" class="text-center">
         <h4 class="page-header text-info">You are not authorized to view this page!</h4>
     </div>
@@ -35,7 +65,7 @@
         <div data-bind="if: clusterMode()">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    <button data-bind="click: addAnotherServerToCluster.bind($root, false), disable: settingsAccess.isReadOnly()" class="btn btn-default"><i class="icon-plus"></i> Add another server to cluster</button>
+                    
                     <button class="btn btn-default" data-bind="autoRefresh: { duration: 5000, onRefresh: $root.refresh.bind($root), active:false }"></button>
                     <div class="btn-group">
                         <button id="operationType" type="button" class="btn btn-danger dropdown-toggle" data-bind="visible: !settingsAccess.isReadOnly()" data-toggle="dropdown">
@@ -50,39 +80,10 @@
                     </div>
                 </div>
                 <div class="panel-body">
-                    <table class="table table-condensed table-striped">
-                        <thead>
-                            <tr>
-                                <th>State</th>
-                                <th>Status</th>
-                                <th>Server Url</th>
-                                <th data-bind="visible: !$root.settingsAccess.isReadOnly()">Edit</th>
-                                <th data-bind="visible: !$root.settingsAccess.isReadOnly()">Delete</th>
-                            </tr>
-                        </thead>
-                        <tbody data-bind="foreach: topology().allNodes">
-                            <tr>
-                                <td>
-                                    <label data-bind="text: state"></label>
-                                </td>
-                                <td>
-                                    <div data-bind="visible: status() === 'Online'" class=" text-success"><span class="fa fa-check"></span> Online</div>
-                                    <div data-bind="visible: status() === 'Offline'" class=" text-danger"><span class="icon-cancel"></span> Offline</div>
-                                    <div data-bind="visible: status() === 'WrongCredentials'" class="text-danger"><span class="fa fa-exclamation-circle"></span> Wrong Credentials</div>
-                                    <div data-bind="visible: status() === 'Loading'"><span class="fa fa-spin fa-spinner"></span> Loading...</div>
-                                </td>
-                                <td data-bind="text: uri"></td>
-                                <td data-bind="visible: !$root.settingsAccess.isReadOnly()">
-                                    <button data-bind="click: $root.editNode.bind($root)" class="btn btn-default"><i class="fa fa-edit"></i> Edit</button>
-                                    <button data-bind="visible: state() === 'non-voting', click: $root.promoteNodeToVoter.bind($root)" class="btn btn-default"><i class="fa fa-arrow-up"></i> Promote</button> 
-                                </td>
-                                <td data-bind="visible: !$root.settingsAccess.isReadOnly()"><button data-bind="click: $root.leaveCluster.bind($root)" class="btn btn-danger"><i class="fa fa-trash"></i> Leave cluster</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    
                 </div>
             </div>
         </div>
-    </div>
+    </div>-->
     
 </section>

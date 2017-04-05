@@ -256,6 +256,13 @@ interface pagedResultWithAvailableColumns<T> extends pagedResult<T> {
     availableColumns: string[];
 }
 
+interface clusterTopologyDto {
+    Topology: Raven.Server.Rachis.ClusterTopology;
+    Leader: string;
+}
+
+type clusterNodeType = "Member" | "Promotable" | "Watcher";
+
 type patchOption = "Document" | "Collection" | "Index";
 
 interface patchDto extends documentDto {
