@@ -784,18 +784,14 @@ namespace Raven.Server.Rachis
 
                     firstIndexInEntriesThatWeHaveNotSeen++;
                 }
+                if (firstIndexInEntriesThatWeHaveNotSeen >= entries.Count)
+                    return null; // we have all of those entires in our log, so we can safely ignore them
+
                 var firstEntry = entries[firstIndexInEntriesThatWeHaveNotSeen];
                 //While we do support the case where we get the same entries, we expect them to have the same index/term up to the commit index.
                 if (firstEntry.Index < lastCommitIndex)
                 {
-                    var message =
-                        $"FATAL ERROR: got an append entries request with index={firstEntry.Index} term={firstEntry.Term} " +
-                        $"while my commit index={lastCommitIndex} with term={lastCommitTerm}, this means something went wrong badly.";
-                    if (Log.IsInfoEnabled)
-                    {
-                        Log.Info(message);
-                    }
-                    throw new InvalidOperationException(message);
+                    ThrowFatalError(firstEntry, lastCommitIndex, lastCommitTerm);
                 }
                 var prevIndex = lastEntryIndex;
 
@@ -855,6 +851,18 @@ namespace Raven.Server.Rachis
                 }
             }
             return lastTopology;
+        }
+
+        private void ThrowFatalError(RachisEntry firstEntry, long lastCommitIndex, long lastCommitTerm)
+        {
+            var message =
+                $"FATAL ERROR: got an append entries request with index={firstEntry.Index} term={firstEntry.Term} " +
+                $"while my commit index={lastCommitIndex} with term={lastCommitTerm}, this means something went wrong badly.";
+            if (Log.IsInfoEnabled)
+            {
+                Log.Info(message);
+            }
+            throw new InvalidOperationException(message);
         }
 
         private static void GetLastTruncated(TransactionOperationContext context, out long lastTruncatedIndex,
