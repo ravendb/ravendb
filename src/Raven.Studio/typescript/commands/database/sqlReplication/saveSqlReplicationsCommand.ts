@@ -5,12 +5,12 @@ import database = require("models/resources/database");
 class saveSqlReplicationsCommand extends executeBulkDocsCommand {
 
     constructor(onScreenReplications: sqlReplication[], deletedReplications: sqlReplication[], db: database) {
-        var bulkPutReplications: Raven.Server.Documents.Handlers.CommandData[] = onScreenReplications.map(sr => sr.toBulkDoc("PUT"));
-        var bulkDeleteReplications: Raven.Server.Documents.Handlers.CommandData[] = deletedReplications.map(sr => sr.toBulkDoc("DELETE"));
+        var bulkPutReplications: Raven.Server.Documents.Handlers.BatchRequestParser.CommandData[] = onScreenReplications.map(sr => sr.toBulkDoc("PUT"));
+        var bulkDeleteReplications: Raven.Server.Documents.Handlers.BatchRequestParser.CommandData[] = deletedReplications.map(sr => sr.toBulkDoc("DELETE"));
         super(bulkPutReplications.concat(bulkDeleteReplications), db);
     }
 
-    execute(): JQueryPromise<Raven.Server.Documents.Handlers.CommandData[]> {
+    execute(): JQueryPromise<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData[]> {
         this.reportInfo("Saving SQL replications...");
 
         return super.execute()

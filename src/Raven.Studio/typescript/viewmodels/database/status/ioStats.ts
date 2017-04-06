@@ -970,7 +970,7 @@ class ioStats extends viewModelBase {
                     const yStart = this.yScale(env.Path);
                     this.drawTrackName(context, trackName, yStart);
 
-                    const yStartPerTypeCache = new Map<Sparrow.MeterType, number>();
+                    const yStartPerTypeCache = new Map<Sparrow.IoMetrics.MeterType, number>();
                     yStartPerTypeCache.set(ioStats.journalWriteString, yStart + ioStats.closedTrackHeight + ioStats.itemMargin);
                     yStartPerTypeCache.set(ioStats.dataFlushString, yStart + ioStats.closedTrackHeight + ioStats.itemMargin * 2 + ioStats.itemHeight);
                     yStartPerTypeCache.set(ioStats.dataSyncString, yStart + ioStats.closedTrackHeight + ioStats.itemMargin * 3 + ioStats.itemHeight * 2);

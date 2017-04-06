@@ -48,7 +48,7 @@ namespace TypingsGenerator
         {
             Directory.CreateDirectory(TargetDirectory);
 
-            var scripter = new Scripter()
+            var scripter = new CustomScripter()
                 .UsingFormatter(new TsFormatter
                 {
                     EnumsAsString = true
