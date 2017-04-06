@@ -48,14 +48,16 @@ namespace Raven.Server.ServerWide
             if (_cancelAfter == Infinity)
                 throw new InvalidOperationException("Cannot delay cancellation without timeout set.");
 
-            if (_sw?.ElapsedMilliseconds < 500)
+            const int minimumDelayTime = 25;
+
+            if (_sw?.ElapsedMilliseconds < minimumDelayTime)
                 return;
 
             lock (_locker)
             {
                 if (_disposed)
                     return;
-                if (_sw?.ElapsedMilliseconds < 500)
+                if (_sw?.ElapsedMilliseconds < minimumDelayTime)
                     return;
 
                 if (_sw == null)
