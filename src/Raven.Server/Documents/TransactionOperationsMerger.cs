@@ -99,7 +99,7 @@ namespace Raven.Server.Documents
                     {
                         using (var generalMeter = GeneralWaitPerformanceMetrics.MeterPerformanceRate())
                         {
-                            generalMeter.IncreamentCounter(999);
+                            generalMeter.IncreamentCounter(1);
                             _waitHandle.Wait(_shutdown);
                         }
                         _waitHandle.Reset();
