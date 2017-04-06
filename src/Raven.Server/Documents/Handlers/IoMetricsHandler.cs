@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.Handlers
                         [nameof(IOMetricsRecentStatsAdditionalTypes.CompressedSize)] = CompressedSize,
                         [nameof(IOMetricsRecentStatsAdditionalTypes.HumanCompressedSize)] = HumanCompressedSize,
                         [nameof(IOMetricsRecentStatsAdditionalTypes.Acceleration)] = Acceleration,
-                        [nameof(IOMetricsRecentStatsAdditionalTypes.CompressionRatio)] = FileSize * 1.0 / Size,
+                        [nameof(IOMetricsRecentStatsAdditionalTypes.CompressionRatio)] = CompressedSize * 1.0 / Size,
                         [nameof(Duration)] = Duration,
                         [nameof(Type)] = Type
                     };

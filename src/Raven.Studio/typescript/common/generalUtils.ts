@@ -196,7 +196,7 @@ class genUtils {
 
     static findLongestLine(htmlText: string, lineSeparator: string = "<br/>") : string {
         // Find and return the longest line in an html text
-        const textLines = htmlText.split(lineSeparator);       
+        const textLines = htmlText.split(lineSeparator);
         return textLines.reduce((a, b) => (a.length > b.length) ? a : b, "");
     }
 

@@ -122,7 +122,7 @@ class hitTest {
 
         const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Server.Documents.Handlers.IOMetricsRecentStats)[0];
         if (currentItem) {
-            this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);          
+            this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
         }
         else {
             const currentItem = items.filter(x => x.actionType === "closedTrackItem").map(x => x.arg as Raven.Server.Documents.Handlers.IOMetricsRecentStats)[0];
@@ -166,7 +166,7 @@ class legend {
     static readonly imageHeight = 20;   
     static readonly legendArrowBorderSize = 6;
 
-    constructor(lowSizeColor: string, highSizeColor: string, type: Sparrow.MeterType) {
+    constructor(lowSizeColor: string, highSizeColor: string, type: Sparrow.IoMetrics.MeterType) {
         this.lowSizeColor = lowSizeColor;
         this.highSizeColor = highSizeColor;
         this.type = type;
@@ -226,7 +226,7 @@ class ioStats extends viewModelBase {
         closedTrackArrow: "#98a7b7"
     }
 
-    static readonly eventsColors: { [typeName in Sparrow.MeterType]: { Low: string; High: string } } = {
+    static readonly eventsColors: { [typeName in Sparrow.IoMetrics.MeterType]: { Low: string; High: string } } = {
         "Compression": {
             Low: "#d64a97", High: "#8a024b"
         },
@@ -261,13 +261,13 @@ class ioStats extends viewModelBase {
 
     private static readonly indexesString = "Indexes";
 
-    private static readonly meterTypes: Array<Sparrow.MeterType> = [ "JournalWrite", "DataFlush", "DataSync", "Compression" ];
+    private static readonly meterTypes: Array<Sparrow.IoMetrics.MeterType> = [ "JournalWrite", "DataFlush", "DataSync", "Compression" ];
 
     /* private observables */
 
     private autoScroll = ko.observable<boolean>(false);
-    private hasAnyData = ko.observable<boolean>(false);    
-    private importFileName = ko.observable<string>();   
+    private hasAnyData = ko.observable<boolean>(false);
+    private importFileName = ko.observable<string>();
     private isImport = ko.observable<boolean>(false);
     private trackNames = ko.observableArray<string>();
 
@@ -278,9 +278,9 @@ class ioStats extends viewModelBase {
     private allIndexesAreFiltered = ko.observable<boolean>(false);
     private indexesVisible: KnockoutComputed<boolean>; 
 
-    private legends = new Map<Sparrow.MeterType, KnockoutObservable<legend>>();
-    private itemSizePositions = new Map<Sparrow.MeterType, KnockoutObservable<string>>();
-    private itemHovered = new Map<Sparrow.MeterType, KnockoutObservable<boolean>>();
+    private legends = new Map<Sparrow.IoMetrics.MeterType, KnockoutObservable<legend>>();
+    private itemSizePositions = new Map<Sparrow.IoMetrics.MeterType, KnockoutObservable<string>>();
+    private itemHovered = new Map<Sparrow.IoMetrics.MeterType, KnockoutObservable<boolean>>();
 
     /* private */
 
@@ -297,7 +297,7 @@ class ioStats extends viewModelBase {
     private brushSection: HTMLCanvasElement; // a virtual canvas for brush section
     private brushAndZoomCallbacksDisabled = false;    
 
-    private indexesItemsStartEnds = new Map<Sparrow.MeterType, Array<[number, number]>>(); // Start & End times for joined duration times for closed index track items
+    private indexesItemsStartEnds = new Map<Sparrow.IoMetrics.MeterType, Array<[number, number]>>(); // Start & End times for joined duration times for closed index track items
 
     /* d3 */
 
@@ -334,7 +334,7 @@ class ioStats extends viewModelBase {
     }
 
     activate(args: { indexName: string, database: string }): void {
-        super.activate(args);        
+        super.activate(args);
         this.indexesVisible = ko.pureComputed(() => this.hasIndexes() && !this.allIndexesAreFiltered());    
 
         ioStats.meterTypes.forEach(meterType => {
@@ -364,7 +364,7 @@ class ioStats extends viewModelBase {
             (trackItem, x, y) => this.handleTrackTooltip(trackItem, x, y),
             (closedTrackItem, x, y) => this.handleClosedTrackTooltip(closedTrackItem, x, y),
             (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
-            () => this.hideTooltip());                    
+            () => this.hideTooltip());
          
         this.enableLiveView();
     }
@@ -507,7 +507,7 @@ class ioStats extends viewModelBase {
         const criteria = this.searchText().toLowerCase();
         this.allIndexesAreFiltered(false);
 
-        const indexesTracks = this.data.Environments.filter((x) => {               
+        const indexesTracks = this.data.Environments.filter((x) => {
             const temp = x.Path.substring(this.commonPathsPrefix.length);
             return temp.startsWith(ioStats.indexesString);
         });                 
@@ -734,12 +734,12 @@ class ioStats extends viewModelBase {
         this.currentYOffset = Math.min(Math.max(0, this.currentYOffset), this.maxYOffset);
     }
 
-    private constructYScale() {              
+    private constructYScale() {
         let currentOffset = ioStats.axisHeight - this.currentYOffset;  
       
         const domain = [] as Array<string>;
         const range = [] as Array<number>;
-        let firstIndex = true;        
+        let firstIndex = true;
 
         // TODO: Maybe refactor this method so it can handle any incoming number of environments,
         // But, as discussed, this will be left out for now in order to avoid extra string comparisons
@@ -800,13 +800,13 @@ class ioStats extends viewModelBase {
             .range(range);
     }
 
-    private calcMaxYOffset() {    
-        let offset = ioStats.axisHeight;       
+    private calcMaxYOffset() {
+        let offset = ioStats.axisHeight;
 
         if (this.isIndexesExpanded()) {
             offset += ioStats.openedTrackHeight * this.data.Environments.length + ioStats.closedTrackHeight;
         }
-        else {                      
+        else {
             offset += ioStats.openedTrackHeight * 4; // * 4 because I have 4 tracks: Data|Indexes|Subscriptions|Configurations
         }        
 
@@ -834,10 +834,10 @@ class ioStats extends viewModelBase {
 
     private drawXaxisTimeLines(context: CanvasRenderingContext2D, ticks: Date[], yStart: number, yEnd: number) {
         try {
-            context.save();                                      
+            context.save();
             context.beginPath();
 
-            context.setLineDash([4, 2]);           
+            context.setLineDash([4, 2]);
             context.strokeStyle = ioStats.colors.axis;    
 
             ticks.forEach((x, i) => {
@@ -952,7 +952,7 @@ class ioStats extends viewModelBase {
                     const yStart = this.yScale(env.Path);
                     this.drawTrackName(context, trackName, yStart);
 
-                    const yStartPerTypeCache = new Map<Sparrow.MeterType, number>();
+                    const yStartPerTypeCache = new Map<Sparrow.IoMetrics.MeterType, number>();
                     yStartPerTypeCache.set("JournalWrite", yStart + ioStats.closedTrackHeight + ioStats.itemMargin);
                     yStartPerTypeCache.set("Compression", yStart + ioStats.closedTrackHeight + ioStats.itemMargin);
                     yStartPerTypeCache.set("DataFlush", yStart + ioStats.closedTrackHeight + ioStats.itemMargin * 2 + ioStats.itemHeight);
@@ -1390,7 +1390,7 @@ class ioStats extends viewModelBase {
         return duration;
     }
 
-    private static getMeterTypeFriendlyName(type: Sparrow.MeterType) {
+    private static getMeterTypeFriendlyName(type: Sparrow.IoMetrics.MeterType) {
         switch (type) {
             case "JournalWrite": 
                 return "Journal Write"; 
@@ -1428,11 +1428,11 @@ class ioStats extends viewModelBase {
                 tooltipHtml += `Allocated Size (bytes): ${element.FileSize.toLocaleString()}<br/>`;
             } else {
                 const compressionElement = element as Raven.Server.Documents.Handlers.IOMetricsRecentStatsAdditionalTypes;
-                tooltipHtml += `Original Size: ${generalUtils.formatBytesToSize(compressionElement.OriginalSize)}<br />`;
-                tooltipHtml += `Original Size (bytes): ${compressionElement.OriginalSize.toLocaleString()}<br />`;
-                tooltipHtml += `Compressed Size: ${generalUtils.formatBytesToSize(compressionElement.CompressedSize)}<br />`;
-                tooltipHtml += `Compressed Size (bytes): ${compressionElement.CompressedSize.toLocaleString()}<br />`;
-                tooltipHtml += `Compression Ratio: ${(compressionElement.CompressionRatio * 100).toFixed(2)}%<br />`;
+                tooltipHtml += `Original Size: ${generalUtils.formatBytesToSize(compressionElement.OriginalSize)}<br/>`;
+                tooltipHtml += `Original Size (bytes): ${compressionElement.OriginalSize.toLocaleString()}<br/>`;
+                tooltipHtml += `Compressed Size: ${generalUtils.formatBytesToSize(compressionElement.CompressedSize)}<br/>`;
+                tooltipHtml += `Compressed Size (bytes): ${compressionElement.CompressedSize.toLocaleString()}<br/>`;
+                tooltipHtml += `Compression Ratio: ${(compressionElement.CompressionRatio * 100).toFixed(2)}%<br/>`;
             }
 
             this.handleTooltip(element, x, y, tooltipHtml);
@@ -1445,7 +1445,7 @@ class ioStats extends viewModelBase {
             const context = canvas.getContext("2d");
             context.font = this.tooltip.style("font"); 
           
-            const longestLine = generalUtils.findLongestLine(tooltipHtml);               
+            const longestLine = generalUtils.findLongestLine(tooltipHtml);
             const tooltipWidth = context.measureText(longestLine).width + 60;
           
             const numberOfLines = generalUtils.findNumberOfLines(tooltipHtml);
