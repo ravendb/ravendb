@@ -17,7 +17,7 @@ RUN sh -c 'echo "deb [arch=amd64] https://apt-mo.trafficmanager.net/repos/dotnet
     && apt-get update \
     && apt-get install dotnet-dev-1.0.1 -y
 
-ADD http://hibernatingrhinos.com/downloads/RavenDB%20for%20Ubuntu%2016.04%20x64/40010-Alpha /home/Raven.tar.bz2
+ADD http://hibernatingrhinos.com/downloads/RavenDB%20for%20Ubuntu%2016.04%20x64/40012-Alpha /home/Raven.tar.bz2
 
 RUN mkdir /home/ravendb \
     && cd /home/ravendb \
@@ -26,4 +26,4 @@ RUN mkdir /home/ravendb \
 
 WORKDIR /home/ravendb/Server
 
-ENTRYPOINT ./Raven.Server /Raven/AllowEverybodyToAccessTheServerAsAdmin=$AllowEverybodyToAccessTheServerAsAdmin /Raven/DataDir=$DataDir
+CMD ./Raven.Server /Raven/AllowEverybodyToAccessTheServerAsAdmin=$AllowEverybodyToAccessTheServerAsAdmin /Raven/DataDir=$DataDir
