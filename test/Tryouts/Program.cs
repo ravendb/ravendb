@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests.Issues;
 using FastTests.Server.Replication;
+using SlowTests.Server.Rachis;
 
 namespace Tryouts
 {
@@ -13,11 +14,11 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                Parallel.For(0, 1, _ =>
+                Parallel.For(0, 10, _ =>
                 {
-                    using (var a = new FastTests.Issues.RavenDB_6602())
+                    using (var a = new CommandsTests())
                     {
-                        a.RequestExecutor_failover_with_only_one_database_should_properly_fail().Wait();
+                        a.Command_not_committed_after_timeout_CompletionTaskSource_is_notified().Wait();
                     }
                 });
             }
