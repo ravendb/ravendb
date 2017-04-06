@@ -299,6 +299,7 @@ namespace Raven.Server
                 case "+":
                     return new[] { IPAddress.Any };
                 case "localhost":
+                case "localhost.fiddler":
                     return new[] { IPAddress.Loopback };
                 default:
                     try

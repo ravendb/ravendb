@@ -57,12 +57,12 @@ namespace Raven.Server
         {
             if (_server.Configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.None)
                 return true;
-            if (_server.Configuration.Server.AllowEverybodyToAccessTheServerAsAdmin == true)
+            if (_server.Configuration.Server.AllowEverybodyToAccessTheServerAsAdmin)
                 return true;
             var url = _server.Configuration.Core.ServerUrl.ToLowerInvariant();
             var uri = new Uri(url);
             //url isn't set to localhost 
-            return uri.IsLoopback;
+            return uri.IsLoopback || uri.Host == "localhost.fiddler";
         }
 
         public static bool SkipHttpLogging;
