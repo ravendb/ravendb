@@ -15,9 +15,9 @@ namespace Tryouts
 
                 Parallel.For(0, 1, _ =>
                 {
-                    using (var a = new SlowTests.Issues.RavenDB_5500())
+                    using (var a = new FastTests.Issues.RavenDB_6602())
                     {
-                        a.WillNotLoadTwoIndexesWithTheSameId().Wait();
+                        a.RequestExecutor_failover_with_only_one_database_should_properly_fail().Wait();
                     }
                 });
             }

@@ -98,7 +98,7 @@ namespace FastTests.Issues
                 }
 
                 var serverToDispose = Servers.FirstOrDefault(
-                    srv => srv.ServerStore.NodeTag.Equals(requestExecutor.TopologyNodes[0].ClusterToken, StringComparison.OrdinalIgnoreCase));
+                    srv => srv.ServerStore.NodeTag.Equals(requestExecutor.TopologyNodes[0].ClusterTag, StringComparison.OrdinalIgnoreCase));
                 Assert.NotNull(serverToDispose); //precaution
 
                 //dispose the first topology node, forcing the requestExecutor to failover to the next one                

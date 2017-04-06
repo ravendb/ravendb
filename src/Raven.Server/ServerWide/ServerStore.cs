@@ -493,7 +493,7 @@ namespace Raven.Server.ServerWide
 
         public string ClusterStatus()
         {
-            return _engine.CurrentState + " " + _engine.LastStateChangeReason;
+            return _engine.CurrentState + ", " + _engine.LastStateChangeReason;
         }
     }
 }
