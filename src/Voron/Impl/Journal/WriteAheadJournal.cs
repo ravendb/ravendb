@@ -1331,7 +1331,7 @@ namespace Voron.Impl.Journal
             long compressedLen;
 
             // Note that the last journal may be replaced if we switch journals, however it doesn't affect web graph
-            var journalPath = Path.Combine(_env.Options.JournalPath, StorageEnvironmentOptions.JournalName(number));
+            var journalPath = Path.Combine(_env.Options.JournalPath ?? string.Empty, StorageEnvironmentOptions.JournalName(number));
             var compressionDuration = Stopwatch.StartNew();
             using (var metrics = _env.Options.IoMetrics.MeterIoRate(
                 journalPath,
