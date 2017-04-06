@@ -24,9 +24,7 @@ namespace Raven.Client.Documents
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress;
 
         public string DataDirectory;
-
-        //public ReplicationTopologyConfiguration ReplicationTopology;
-
+        
         public DatabaseTopology Topology;
 
         public ConflictSolver ConflictSolverConfig = new ConflictSolver();

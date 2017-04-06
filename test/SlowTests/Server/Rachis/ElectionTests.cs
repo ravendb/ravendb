@@ -10,13 +10,13 @@ namespace SlowTests.Server.Rachis
     public class ElectionTests : RachisConsensusTestBase
     {
         [Fact]
-        public void Follower_as_a_single_node_becomes_leader_automatically()
+        public async Task Follower_as_a_single_node_becomes_leader_automatically()
         {
             var node = SetupServer(true);
             var nodeCurrentState = node.CurrentState;
             Assert.True(nodeCurrentState == RachisConsensus.State.LeaderElect ||
                         nodeCurrentState == RachisConsensus.State.Leader);
-            Assert.True(node.WaitForState(RachisConsensus.State.Leader).Wait(node.ElectionTimeoutMs), "Node didn't become leader although he is alone in his cluster.");
+            Assert.True(await node.WaitForState(RachisConsensus.State.Leader).WaitAsync(node.ElectionTimeoutMs), "Node didn't become leader although he is alone in his cluster.");
         }
 
         /// <summary>

@@ -40,6 +40,7 @@ namespace Raven.Server.Rachis
                 {
                     var appendEntries = _connection.Read<AppendEntries>(context);
                     _engine.Timeout.Defer(_connection.Source);
+                    var sp = Stopwatch.StartNew();
                     if (appendEntries.EntriesCount != 0)
                     {
                         for (int i = 0; i < appendEntries.EntriesCount; i++)
@@ -49,7 +50,7 @@ namespace Raven.Server.Rachis
                         }
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info($"Follower {_engine.Tag}: Got non empty append entries request with {entries.Count} entries. "
+                            _engine.Log.Info($"Follower {_engine.Tag}: Got non empty append entries request with {entries.Count} entries. Last: ({entries[entries.Count-1].Index} - {entries[entries.Count - 1].Flags})"
 #if DEBUG
                                 + $"[{string.Join(" ,", entries.Select(x=>x.ToString()))}]"
 #endif
@@ -66,8 +67,16 @@ namespace Raven.Server.Rachis
                     {
                         bool removedFromTopology = false;
                         // we start the tx after we finished reading from the network
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"Follower {_engine.Tag}: Ready to start tx in {sp.Elapsed}");
+                        }
                         using (var tx = context.OpenWriteTransaction())
                         {
+                            if (_engine.Log.IsInfoEnabled)
+                            {
+                                _engine.Log.Info($"Follower {_engine.Tag}: Tx running in {sp.Elapsed}");
+                            }
                             if (entries.Count > 0)
                             {
                                 using (var lastTopology = _engine.AppendToLog(context, entries))
@@ -112,8 +121,16 @@ namespace Raven.Server.Rachis
                             lastTruncate = Math.Min(appendEntries.TruncateLogBefore, lastEntryIndexToCommit);
                             _engine.TruncateLogBefore(context, lastTruncate);
                             lastCommit = lastEntryIndexToCommit;
-
+                            if (_engine.Log.IsInfoEnabled)
+                            {
+                                _engine.Log.Info($"Follower {_engine.Tag}: Ready to commit in {sp.Elapsed}");
+                            }
                             tx.Commit();
+                        }
+
+                        if (_engine.Log.IsInfoEnabled && entries.Count > 0)
+                        {
+                            _engine.Log.Info($"Follower {_engine.Tag}: Processing entries request with {entries.Count} entries took {sp.Elapsed}");
                         }
 
                         if (removedFromTopology)
@@ -334,7 +351,7 @@ namespace Raven.Server.Rachis
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
                         {
-                            MaybeNotifyLeaderThatWeAreSillAlive(context, i, sp);
+                            MaybeNotifyLeaderThatWeAreSillAlive(context, sp);
 
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
@@ -387,13 +404,13 @@ namespace Raven.Server.Rachis
                                 break;
                             table.Delete(tvr.Id);
 
-                            MaybeNotifyLeaderThatWeAreSillAlive(context, table.NumberOfEntries, sp);
+                            MaybeNotifyLeaderThatWeAreSillAlive(context, sp);
                         }
 
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
                         {
-                            MaybeNotifyLeaderThatWeAreSillAlive(context, i, sp);
+                            MaybeNotifyLeaderThatWeAreSillAlive(context, sp);
 
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
@@ -434,7 +451,7 @@ namespace Raven.Server.Rachis
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
                         {
-                            MaybeNotifyLeaderThatWeAreSillAlive(context, i, sp);
+                            MaybeNotifyLeaderThatWeAreSillAlive(context, sp);
 
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
@@ -450,7 +467,7 @@ namespace Raven.Server.Rachis
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
                         {
-                            MaybeNotifyLeaderThatWeAreSillAlive(context, i, sp);
+                            MaybeNotifyLeaderThatWeAreSillAlive(context,  sp);
 
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
@@ -462,12 +479,9 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void MaybeNotifyLeaderThatWeAreSillAlive(TransactionOperationContext context, long count, Stopwatch sp)
+        private void MaybeNotifyLeaderThatWeAreSillAlive(TransactionOperationContext context, Stopwatch sp)
         {
-            if (count % 100 != 0)
-                return;
-
-            if (sp.ElapsedMilliseconds <= _engine.ElectionTimeoutMs / 2)
+            if (sp.ElapsedMilliseconds <= _engine.ElectionTimeoutMs / 4)
                 return;
 
             sp.Restart();

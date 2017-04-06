@@ -12,8 +12,8 @@ using Xunit;
 
 namespace SlowTests.Server.Rachis
 {
-    public class CommandsTests: RachisConsensusTestBase
-    {        
+    public class CommandsTests : RachisConsensusTestBase
+    {
         [Fact]
         public async Task When_command_committed_CompletionTaskSource_is_notified()
         {
@@ -38,7 +38,7 @@ namespace SlowTests.Server.Rachis
                     lastIndex = leader.GetLastEntryIndex(context);
             }
             var waitForAllCommits = nonLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
-            
+
             Assert.True(await Task.WhenAny(waitForAllCommits, Task.Delay(LongWaitTime)) == waitForAllCommits, "didn't commit in time");
             var waitForNotificationsOnTasks = Task.WhenAll(tasks);
             Assert.True(await Task.WhenAny(waitForNotificationsOnTasks, Task.Delay(LongWaitTime)) == waitForNotificationsOnTasks, "Some commands didn't complete");
@@ -68,23 +68,30 @@ namespace SlowTests.Server.Rachis
                     lastIndex = leader.GetLastEntryIndex(context);
             }
             var waitForAllCommits = nonLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
-            Assert.True(await Task.WhenAny(waitForAllCommits, Task.Delay(LongWaitTime)) == waitForAllCommits, "didn't commit in time");
+            Assert.True(await waitForAllCommits.WaitAsync(LongWaitTime), "didn't commit in time");
 
             Assert.True(tasks.All(t => t.Status == TaskStatus.RanToCompletion), "Some commands didn't complete");
             DisconnectFromNode(leader);
             using (leader.ContextPool.AllocateOperationContext(out context))
             {
-                var e = Assert.Throws<AggregateException>(() =>
+                try
                 {
                     var task = leader.PutAsync(context.ReadObject(new DynamicJsonValue
                     {
                         ["Name"] = "test",
                         ["Value"] = commandCount
                     }, "test"));
-                    task.Wait(leader.ElectionTimeoutMs * 5);
-                }).InnerException;
-
-                Assert.True(e is NotLeadingException || e is TimeoutException);
+                    Assert.True(await task.WaitAsync(leader.ElectionTimeoutMs * 5));
+                    await task;
+                    Assert.True(false, "We should have gotten an error");
+                }
+                // expecting either one of those
+                catch (TimeoutException)
+                {
+                }
+                catch (NotLeadingException)
+                {
+                }
             }
         }
     }
