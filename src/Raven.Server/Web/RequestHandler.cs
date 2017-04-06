@@ -137,35 +137,18 @@ namespace Raven.Server.Web
             throw new ArgumentException("Could not parse header '" + name + "' header as int, value was: " + etag);
         }
 
-        protected int GetStart(int defaultValue = 0)
+        protected int GetStart(int defaultStart = 0)
         {
-            return GetIntValueQueryString(StartParameter, required: false) ?? defaultValue;
+            return GetIntValueQueryString(StartParameter, required: false) ?? defaultStart;
         }
 
-        protected int GetPageSize(int maxPageSize)
+        protected int GetPageSize()
         {
             var pageSize = GetIntValueQueryString(PageSizeParameter, required: false);
             if (pageSize.HasValue == false)
-                return maxPageSize;
-
-            if (pageSize.Value > maxPageSize)
-            {
-                ThrowInvalidPageSize(maxPageSize, pageSize);
-            }
+                return int.MaxValue;
 
             return pageSize.Value;
-        }
-
-        private void ThrowInvalidPageSize(int maxPageSize, int? pageSize)
-        {
-            var message = $"Your page size ({pageSize}) is more than the max page size which is {maxPageSize}.";
-            if (RouteMatch.Url.StartsWith("/admin/", StringComparison.OrdinalIgnoreCase) == false)
-            {
-                message +=
-                    $"{Environment.NewLine}You can use the streaming feature in order to get all of the results of a query in a performant way. " +
-                    $"See the use of session.Advanced.Stream(query) in the client API for more details.";
-            }
-            throw new InvalidOperationException(message);
         }
 
         protected int? GetIntValueQueryString(string name, bool required = true)
@@ -353,7 +336,7 @@ namespace Raven.Server.Web
         protected void NoContentStatus()
         {
             HttpContext.Response.Headers.Remove("Content-Type");
-            HttpContext.Response.StatusCode = (int) HttpStatusCode.NoContent;
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
         }
     }
 }

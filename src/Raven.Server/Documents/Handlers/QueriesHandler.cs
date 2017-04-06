@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task FacetedQuery(DocumentsOperationContext context, string indexName, OperationCancelToken token)
         {
-            var query = FacetQuery.Parse(HttpContext.Request.Query, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), DocumentConventions.Default);
+            var query = FacetQuery.Parse(HttpContext.Request.Query, GetStart(), GetPageSize(), DocumentConventions.Default);
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
             long? facetsEtag = null;
@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Handlers
 
         private IndexQueryServerSide GetIndexQuery(DocumentsOperationContext context, HttpMethod method)
         {
-            var indexQuery = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), context);
+            var indexQuery = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
 
             if (method == HttpMethod.Post && string.IsNullOrWhiteSpace(indexQuery.Query))
             {
@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var query = MoreLikeThisQueryServerSide.Create(HttpContext, GetPageSize(Database.Configuration.Core.MaxPageSize), context);
+            var query = MoreLikeThisQueryServerSide.Create(HttpContext, GetPageSize(), context);
             var runner = new QueryRunner(Database, context);
 
             var result = runner.ExecuteMoreLikeThisQuery(indexName, query, context, existingResultEtag, token);
@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Handlers
 
         private void Explain(DocumentsOperationContext context, string indexName)
         {
-            var indexQuery = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), context);
+            var indexQuery = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
             var runner = new QueryRunner(Database, context);
 
             var explanations = runner.ExplainDynamicIndexSelection(indexName, indexQuery);
@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
-            var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(int.MaxValue), context);
+            var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
             var options = GetQueryOperationOptions();
             var token = CreateTimeLimitedOperationToken();
 

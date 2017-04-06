@@ -224,7 +224,7 @@ namespace Raven.Server.Documents.Handlers
                 if (string.Equals(operation, "source-doc-ids", StringComparison.OrdinalIgnoreCase))
                 {
                     IEnumerable<string> ids;
-                    using (index.GetIdentifiersOfMappedDocuments(GetStringQueryString("startsWith", required: false), GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), out ids))
+                    using (index.GetIdentifiersOfMappedDocuments(GetStringQueryString("startsWith", required: false), GetStart(), GetPageSize(), out ids))
                     {
                         writer.WriteArrayOfResultsAndCount(ids);
                     }
@@ -264,7 +264,7 @@ namespace Raven.Server.Documents.Handlers
             var name = GetStringQueryString("name", required: false);
 
             var start = GetStart();
-            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
+            var pageSize = GetPageSize();
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
             DocumentsOperationContext context;
@@ -609,7 +609,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var runner = new QueryRunner(Database, context);
 
-                var result = runner.ExecuteGetTermsQuery(name, field, fromValue, existingResultEtag, GetPageSize(Database.Configuration.Core.MaxPageSize), context, token);
+                var result = runner.ExecuteGetTermsQuery(name, field, fromValue, existingResultEtag, GetPageSize(), context, token);
 
                 if (result.NotModified)
                 {

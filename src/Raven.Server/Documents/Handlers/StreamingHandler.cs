@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var transformerName = GetStringQueryString("transformer", required: false);
             var start = GetStart();
-            var pageSize = GetPageSize(int.MaxValue);
+            var pageSize = GetPageSize();
 
             Transformer transformer = null;
             if (string.IsNullOrEmpty(transformerName) == false)
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Handlers
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
-                var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(int.MaxValue), context);
+                var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
                 if (string.IsNullOrWhiteSpace(query.Query))
                     query.Query = _postQuery;
 

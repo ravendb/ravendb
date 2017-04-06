@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Handlers
                 var versioningStorage = Database.BundleLoader.VersioningStorage;
 
                 int start = GetStart();
-                int take = GetPageSize(Database.Configuration.Core.MaxPageSize);
+                int take = GetPageSize();
                 var result = versioningStorage.GetRevisions(context, key, start, take);
                 var revisions = result.revisions;
 

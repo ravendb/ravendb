@@ -80,7 +80,7 @@ namespace Raven.Server.Web.Authentication
             var name = GetStringQueryString("name", required: false);
 
             var start = GetStart();
-            var pageSize = GetPageSize(Server.Configuration.Core.MaxPageSize);
+            var pageSize = GetPageSize();
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
