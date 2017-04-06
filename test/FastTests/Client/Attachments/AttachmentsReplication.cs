@@ -607,7 +607,7 @@ namespace FastTests.Client.Attachments
                 {
                     Assert.Equal(names[i], attachments[i].GetString(nameof(Attachment.Name)));
                 }
-            };
+            }
         }
 
         [Fact]
@@ -697,8 +697,8 @@ namespace FastTests.Client.Attachments
                 Assert.True(WaitForDocument(store2, "marker 1"));
                 Assert.True(WaitForDocument(store1, "marker 2"));
 
-                Assert.Equal(0, GetConflicts(store1, "users/1").Results.Length);
-                Assert.Equal(0, GetConflicts(store2, "users/1").Results.Length);
+                await AssertAttachments(store1, new[] { "a1" });
+                await AssertAttachments(store2, new[] { "a1" });
             }
         }
 
