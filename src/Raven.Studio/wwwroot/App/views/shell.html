@@ -124,20 +124,19 @@
     <li>
         <!-- ko with: $root.collectionsTracker.getSystemDocumentsCollection() -->
         <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
-            <span>System</span>
+            <i class="icon-system"></i> <span>System</span>
             <div class="label label-primary collection-count" data-bind="text: documentCount().toLocaleString()"></div>
         </a>
         <!-- /ko -->
     </li>
-    <li class="separator" data-bind="visible: $root.collectionsTracker.collections().length > 1">
-        <h3>Collections</h3>
-    </li>
+    <hr data-bind="visible: $root.collectionsTracker.collections().length > 1" />
+    <h3>Collections</h3>
 
-    <li class="scroll">
+    <li class="scroll collections-list">
         <ul>
             <!-- ko foreach: $root.collectionsTracker.collections -->
             <li>
-                <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }, visible: !isAllDocuments && !isSystemDocuments">
+                <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data), title: name }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }, visible: !isAllDocuments && !isSystemDocuments">
                     <span data-bind="text: name"></span>
                     <div class="label label-primary collection-count" data-bind="text: documentCount().toLocaleString()"></div>
                 </a>
@@ -145,9 +144,7 @@
             <!-- /ko -->
         </ul>
     </li>
-    <li class="separator">
-        <h3></h3>
-    </li>
+    <hr />    
 </script>
 
 <script type="text/html" id="leafMenuItem">
