@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Handlers
 
             var etag = GetLongQueryString("etag", false);
             var start = GetStart();
-            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
+            var pageSize = GetPageSize();
 
             IEnumerable<Document> documents;
             if (etag != null)

@@ -1,9 +1,7 @@
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Server.Config;
 using Xunit;
 
 namespace SlowTests.SlowTests.Bugs
@@ -18,7 +16,7 @@ namespace SlowTests.SlowTests.Bugs
         [Fact]
         public void WouldBeIndexedProperly()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.MaxPageSize)] = "10000"))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {

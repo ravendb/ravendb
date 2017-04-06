@@ -38,7 +38,7 @@ namespace Raven.Server.Web.System
                     writer.WriteStartObject();
 
                     writer.WritePropertyName(nameof(DatabasesInfo.Databases));
-                    writer.WriteArray(context, ServerStore.StartingWith(context, Constants.Documents.Prefix, GetStart(), GetPageSize(int.MaxValue)), (w, c, dbDoc) =>
+                    writer.WriteArray(context, ServerStore.StartingWith(context, Constants.Documents.Prefix, GetStart(), GetPageSize()), (w, c, dbDoc) =>
                     {
                         var databaseName = dbDoc.Key.Substring(Constants.Documents.Prefix.Length);
                         if (namesOnly)

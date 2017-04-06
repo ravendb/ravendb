@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Handlers
             var name = GetStringQueryString("name", required: false);
 
             var start = GetStart();
-            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
+            var pageSize = GetPageSize();
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
             DocumentsOperationContext context;
