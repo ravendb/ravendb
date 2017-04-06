@@ -9,6 +9,131 @@ namespace FastTests.Server.Documents.Indexing
     public class RavenLinqOptimizerTests : NoDisposalNeeded
     {
         [Theory]
+        [InlineData(@"docs.SelectMany(match => match.Teams, (match, team) => new { match = match, team = team })
+                          .SelectMany(this0 => this0.team.Series, (this0, serie) => new { this0 = this0, serie = serie })
+                          .SelectMany(this1 => this1.serie.Games, (this1, game) => new { Player = game.Player,
+                                                                                         Pins = game.Pins,
+                                                                                         Series = 1, Score = game.Score,
+                                                                                         BestGame = game.Pins,
+                                                                                         GamesWithStats = game.Strikes != null ? 1 : 0,
+                                                                                         Strikes = game.Strikes,
+                                                                                         Misses = game.Misses,
+                                                                                         OnePinMisses = game.OnePinMisses,
+                                                                                         Splits = game.Splits,
+                                                                                         CoveredAll = game.CoveredAll ? 1 : 0 }
+
+)", @"foreach (var match in docs)
+{
+    foreach (var team in match.Teams)
+    {
+        var this0 = new
+        {
+        match = match, team = team
+        }
+
+        ;
+        foreach (var serie in this0.team.Series)
+        {
+            var this1 = new
+            {
+            this0 = this0, serie = serie
+            }
+
+            ;
+            foreach (var game in this1.serie.Games)
+            {
+                yield return new
+                {
+                Player = game.Player, Pins = game.Pins, Series = 1, Score = game.Score, BestGame = game.Pins, GamesWithStats = game.Strikes != null ? 1 : 0, Strikes = game.Strikes, Misses = game.Misses, OnePinMisses = game.OnePinMisses, Splits = game.Splits, CoveredAll = game.CoveredAll ? 1 : 0
+                }
+
+                ;
+            }
+        }
+    }
+}")]
+        [InlineData(@"docs.SelectMany(barn => barn.Households, 
+					                  (barn, household) => new { barn = barn, household = household })
+		                  .SelectMany(this0 => this0.household.Members,
+					                  (this0, member) => new 
+                                                         {
+											                  InternalId = this0.barn.InternalId,
+											                  Name = this0.barn.Name,
+											                  HouseholdId = this0.household.InternalId,
+											                  MemberId = member.InternalId,
+											                  MembersName = member.Name 
+                                                          })"
+, @"foreach (var barn in docs)
+{
+    foreach (var household in barn.Households)
+    {
+        var this0 = new
+        {
+        barn = barn, household = household
+        }
+
+        ;
+        foreach (var member in this0.household.Members)
+        {
+            yield return new
+            {
+            InternalId = this0.barn.InternalId, Name = this0.barn.Name, HouseholdId = this0.household.InternalId, MemberId = member.InternalId, MembersName = member.Name
+            }
+
+            ;
+        }
+    }
+}")]
+        [InlineData(@"docs.SelectMany((Func<dynamic, IEnumerable<dynamic>>)
+					                        (user => (IEnumerable<dynamic>)user.Aliases)
+				                      ,(Func<dynamic, dynamic, dynamic>)
+					                        ((user, alias) => new {user = user, alias = alias}))
+	                      .Where((Func<dynamic, bool>)(this0 => this0.alias.Length > 3))
+                          .Select((Func<dynamic, dynamic>)(this0 => new
+                          {
+                              Length = this0.alias.Length,
+                              Aliases = this0.alias
+                          }))"
+, @"foreach (var user in docs)
+{
+    foreach (var alias in user.Aliases)
+    {
+        var this0 = new
+        {
+        user = user, alias = alias
+        }
+
+        ;
+        if ((this0.alias.Length > 3) == false)
+            continue;
+        yield return new
+        {
+        Length = this0.alias.Length, Aliases = this0.alias
+        }
+
+        ;
+    }
+}")]
+        [InlineData(@"e1.SelectMany(x1 => e2, (x1, x2) => x2.v)", @"foreach (var x1 in e1)
+{
+    foreach (var x2 in e2)
+    {
+        yield return x2.v;
+    }
+}")]
+        [InlineData(@"docs.Customers.SelectMany(c => c.Orders, (customer, order) => new {Date = order.Date, Product = order.Product})"
+, @"foreach (var customer in docs.Customers)
+{
+    foreach (var order in customer.Orders)
+    {
+        yield return new
+        {
+        Date = order.Date, Product = order.Product
+        }
+
+        ;
+    }
+}")]
         [InlineData(@"
             from u2 in (
                 from u1 in ( 
