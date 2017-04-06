@@ -115,10 +115,10 @@ namespace Raven.Server.Documents
             targetDocument.TryGet(Constants.Documents.Metadata.Key, out objMetadata);
 
             if (myMetadata == null && objMetadata == null)
-                return DocumentCompareResult.MetadataEqual;
+                return DocumentCompareResult.Equal;
 
             if (myMetadata == null)
-                return DocumentCompareResult.MetadataEqual;
+                return DocumentCompareResult.Equal;
 
             if (objMetadata == null)
             {
@@ -126,7 +126,7 @@ namespace Raven.Server.Documents
                 {
                     [Constants.Documents.Metadata.Key] = myMetadata
                 };
-                return DocumentCompareResult.MetadataEqual | DocumentCompareResult.ShouldRecreateDocument;
+                return DocumentCompareResult.Equal | DocumentCompareResult.ShouldRecreateDocument;
             }
 
             return ComparePropertiesExceptionStartingWithAt(myMetadata, objMetadata, true, skipAttachment);
@@ -140,10 +140,10 @@ namespace Raven.Server.Documents
 
             var result = IsMetadataEqualTo(currentDocument, targetDocument, tryMergeAttachmentsConflict);
             if (result == DocumentCompareResult.DifferenceDetected)
-                return result;
+                return DocumentCompareResult.DifferenceDetected;
 
             if (ComparePropertiesExceptionStartingWithAt(currentDocument, targetDocument) == DocumentCompareResult.DifferenceDetected)
-                return result;
+                return DocumentCompareResult.DifferenceDetected;
 
             return result;
         }
@@ -161,14 +161,30 @@ namespace Raven.Server.Documents
 
             foreach (var property in properties)
             {
-                var isAttachments = property.Equals(Constants.Documents.Metadata.Attachments, StringComparison.OrdinalIgnoreCase);
-
                 if (property[0] == '@')
                 {
                     if (isMetadata)
                     {
-                        if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false &&
-                            isAttachments == false)
+                        if (property.Equals(Constants.Documents.Metadata.Attachments, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (tryMergeAttachmentsConflict)
+                            {
+                                if (myObject.TryGetMember(property, out object myAttachments) == false ||
+                                    otherObject.TryGetMember(property, out object otherAttachments) == false)
+                                {
+                                    // Resolve when just 1 document have attachments
+                                    resolvedAttachmetConflict = true;
+                                    continue;
+                                }
+
+                                resolvedAttachmetConflict = AttachmentsStorage.ShouldResolveAttachmentsConflict(myObject, otherObject);
+                                if (resolvedAttachmetConflict)
+                                    continue;
+
+                                return DocumentCompareResult.DifferenceDetected;
+                            }
+                        }
+                        else if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false)
                             continue;
                     }
                     else if (property.Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
@@ -180,30 +196,16 @@ namespace Raven.Server.Documents
                 if (myObject.TryGetMember(property, out object myProperty) == false ||
                     otherObject.TryGetMember(property, out object otherPropery) == false)
                 {
-                    if (isAttachments && tryMergeAttachmentsConflict)
-                    {
-                        // Resolve when just 1 document have attachments
-                        resolvedAttachmetConflict = true;
-                        continue;
-                    }
-
                     return DocumentCompareResult.DifferenceDetected;
                 }
 
                 if (Equals(myProperty, otherPropery) == false)
                 {
-                    if (isAttachments && tryMergeAttachmentsConflict)
-                    {
-                        resolvedAttachmetConflict = AttachmentsStorage.ShouldResolveAttachmentsConflict(myObject, otherObject);
-                        if (resolvedAttachmetConflict)
-                            continue;
-                    }
-
                     return DocumentCompareResult.DifferenceDetected;
                 }
             }
 
-            return DocumentCompareResult.MetadataEqual | (resolvedAttachmetConflict ? DocumentCompareResult.ShouldRecreateDocument : DocumentCompareResult.None);
+            return DocumentCompareResult.Equal | (resolvedAttachmetConflict ? DocumentCompareResult.ShouldRecreateDocument : DocumentCompareResult.None);
         }
     }
 
@@ -212,9 +214,9 @@ namespace Raven.Server.Documents
     {
         None = 0,
 
-        MetadataEqual = 0x1,
-        DifferenceDetected = 0x2,
+        DifferenceDetected = 0x1,
+        Equal = 0x2,
 
-        ShouldRecreateDocument = 0x4
+        ShouldRecreateDocument = 0x8,
     }
 }

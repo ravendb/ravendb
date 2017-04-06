@@ -1497,7 +1497,8 @@ namespace Raven.Server.Documents
 
                     int size;
                     var oldFlags = *(DocumentFlags*)oldValue.Read((int)DocumentsTable.Flags, out size);
-                    if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                    if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments || 
+                        (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
                     {
                         flags |= DocumentFlags.HasAttachments;
                     }
