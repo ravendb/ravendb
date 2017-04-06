@@ -472,8 +472,8 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 return new WildcardQuery(new Term(configuration.FieldName, "*"));
             }
             return new TermRangeQuery(configuration.FieldName,
-                        RangeMin.Type == TermLuceneASTNode.TermType.Null ? null : RangeMin.Term,
-                        RangeMax.Type == TermLuceneASTNode.TermType.Null ? null : RangeMax.Term,
+                        RangeMin.Type == TermLuceneASTNode.TermType.Null || RangeMin.Term.Equals("*") ? null : RangeMin.Term,
+                        RangeMax.Type == TermLuceneASTNode.TermType.Null || RangeMax.Term.Equals("*") ? null : RangeMax.Term,
                         InclusiveMin, InclusiveMax);
         }
 
