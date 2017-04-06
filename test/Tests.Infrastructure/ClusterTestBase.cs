@@ -221,7 +221,7 @@ namespace Tests.Infrastructure
             }
             // ReSharper disable once PossibleNullReferenceException
             Assert.True(leader.ServerStore.WaitForState(RachisConsensus.State.Leader).Wait(numberOfNodes* ElectionTimeoutInMs),
-                "The leader has changed while waiting for cluster to become stable");
+                "The leader has changed while waiting for cluster to become stable " + leader.ServerStore.ClusterStatus());
             return leader;
         }
 

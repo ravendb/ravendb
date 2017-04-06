@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading.Tasks;
+using FastTests.Issues;
 using FastTests.Server.Replication;
 
 namespace Tryouts
@@ -11,10 +13,13 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new DisableDatabasePropagationInRaftCluster())
+                Parallel.For(0, 1, _ =>
                 {
-                    a.DisableDatabaseToggleOperation_should_propagate_through_raft_cluster().Wait();                    
-                }
+                    using (var a = new SlowTests.Issues.RavenDB_5500())
+                    {
+                        a.WillNotLoadTwoIndexesWithTheSameId().Wait();
+                    }
+                });
             }
         }
     }
