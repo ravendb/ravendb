@@ -64,14 +64,10 @@ namespace SlowTests.Issues
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = otherPath;
                 indexDefinition.Name = index.IndexName;
                 store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition}));
-            }
 
-            using (var store = GetDocumentStore(
-                path: path,
-                modifyDatabaseRecord: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths)] = otherPath,
-                modifyName: n => name))
-            {
-                var indexDefinition = store.Admin.Send(new GetIndexOperation(index.IndexName));
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(name);
+
+                indexDefinition = store.Admin.Send(new GetIndexOperation(index.IndexName));
 
                 Assert.NotNull(indexDefinition);
             }

@@ -507,7 +507,7 @@ namespace Raven.Server.Documents
             });
         }
 
-        public void UnloadDatabase(string dbName, TimeSpan? skipIfActiveInDuration, Func<DocumentDatabase, bool> shouldSkip = null)
+        public void UnloadDatabase(string dbName, TimeSpan? skipIfActiveInDuration = null, Func<DocumentDatabase, bool> shouldSkip = null)
         {
             DateTime time;
             Task<DocumentDatabase> dbTask;
