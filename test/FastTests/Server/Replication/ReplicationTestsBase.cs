@@ -92,11 +92,8 @@ namespace FastTests.Server.Replication
 
                 if (sw.ElapsedMilliseconds > timeout)
                 {
-                    var replicationStats = store.Admin.Send(new GetReplicationPerformanceStatisticsOperation());
-
                     throw new XunitException($"Timed out while waiting for conflicts on {docId} we have {conflicts.Results.Length} conflicts " +
-                                             $"on database {store.DefaultDatabase}{Environment.NewLine}" +
-                                             $"{JsonConvert.SerializeObject(replicationStats, Formatting.Indented)}");
+                                             $"on database {store.DefaultDatabase}");
                 }
             } while (true);
 

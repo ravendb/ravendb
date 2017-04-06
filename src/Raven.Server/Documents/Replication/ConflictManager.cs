@@ -245,17 +245,16 @@ namespace Raven.Server.Documents.Replication
                 if (compareResult == DocumentCompareResult.DifferenceDetected)
                     return false;
 
-                var resolveDoc = incomingDoc;
-                if (resolveDoc.Modifications != null)
+                if (incomingDoc.Modifications != null)
                     // TODO: Improve. No need to ReadObject and build a new metadata, 
                     // since we can just put and it will fill out the attachments from the disk - as it will be different
-                    resolveDoc = context.ReadObject(incomingDoc, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    incomingDoc = context.ReadObject(incomingDoc, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                 // no real conflict here, both documents have identical content
                 var mergedChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
                 var nonPersistnetFlags = (compareResult & DocumentCompareResult.ShouldRecreateDocument) == DocumentCompareResult.ShouldRecreateDocument 
                     ? NonPersistentDocumentFlags.ResolvedAttachmentConflict : NonPersistentDocumentFlags.None;
-                _database.DocumentsStorage.Put(context, key, null, resolveDoc, lastModifiedTicks, mergedChangeVector, nonPersistentFlags: nonPersistnetFlags);
+                _database.DocumentsStorage.Put(context, key, null, incomingDoc, lastModifiedTicks, mergedChangeVector, nonPersistentFlags: nonPersistnetFlags);
                 return true;
             }
 
