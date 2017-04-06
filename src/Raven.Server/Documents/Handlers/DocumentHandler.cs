@@ -571,7 +571,7 @@ namespace Raven.Server.Documents.Handlers
             public ExceptionDispatchInfo ExceptionDispatchInfo;
             public DocumentsStorage.PutOperationResults PutResult;
 
-            public override void Execute(DocumentsOperationContext context)
+            public override int Execute(DocumentsOperationContext context)
             {
                 try
                 {
@@ -581,6 +581,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
                 }
+                return 1;
             }
         }
 
@@ -591,7 +592,7 @@ namespace Raven.Server.Documents.Handlers
             public DocumentDatabase Database;
             public ExceptionDispatchInfo ExceptionDispatchInfo;
 
-            public override void Execute(DocumentsOperationContext context)
+            public override int Execute(DocumentsOperationContext context)
             {
                 try
                 {
@@ -601,6 +602,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
                 }
+                return 1;
             }
         }
     }

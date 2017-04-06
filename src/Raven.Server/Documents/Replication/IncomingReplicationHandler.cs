@@ -1166,8 +1166,10 @@ namespace Raven.Server.Documents.Replication
                 _lastEtag = lastEtag;
             }
 
-            public override void Execute(DocumentsOperationContext context)
+            public override int Execute(DocumentsOperationContext context)
             {
+                var operationsCount = 0;
+
                 var database = _incoming._database;
 
                 var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
@@ -1178,6 +1180,7 @@ namespace Raven.Server.Documents.Replication
 
                 foreach (var item in _incoming._replicatedItems)
                 {
+                    ++operationsCount;
                     using (item)
                     {
                         Debug.Assert(item.Flags.HasFlag(DocumentFlags.Artificial) == false);
@@ -1304,6 +1307,8 @@ namespace Raven.Server.Documents.Replication
 
                 database.DocumentsStorage.SetDatabaseChangeVector(context, maxReceivedChangeVectorByDatabase);
                 database.DocumentsStorage.SetLastReplicateEtagFrom(context, _incoming.ConnectionInfo.SourceDatabaseId, _lastEtag);
+
+                return operationsCount;
             }
 
             private void ReadChangeVector(int changeVectorCount, int position,

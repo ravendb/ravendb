@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 public BlittableJsonReaderObject Document;
             }
 
-            public override void Execute(DocumentsOperationContext context)
+            public override int Execute(DocumentsOperationContext context)
             {
                 foreach (var reduceDocument in _reduceDocuments)
                 {
@@ -103,6 +103,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(key, document.Size);
                     }
                 }
+                return _reduceDocuments.Count;
             }
 
             public void AddReduce(string reduceKeyHash, object reduceObject)

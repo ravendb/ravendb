@@ -273,7 +273,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public JsonOperationContext Context => _context;
 
-            public override void Execute(DocumentsOperationContext context)
+            public override int Execute(DocumentsOperationContext context)
             {
                 if(_log.IsInfoEnabled)
                     _log.Info($"Importing {Documents.Count:#,#} documents");
@@ -308,6 +308,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     _database.DocumentsStorage.Put(context, key, null, document.Data, nonPersistentFlags: document.NonPersistentFlags);
                 }
+                return Documents.Count;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

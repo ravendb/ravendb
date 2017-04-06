@@ -39,8 +39,8 @@ namespace Raven.Server.Documents
             _shutdown = shutdown;
         }
 
-        public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.GeneralWait, 256, 256);
-        public DatabasePerformanceMetrics TransactionPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.Transaction, 256, 256);
+        public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.GeneralWait, 256, 1);
+        public DatabasePerformanceMetrics TransactionPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.Transaction, 256, 8);
 
 
         public void Start()
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents
 
         public abstract class MergedTransactionCommand
         {
-            public abstract void Execute(DocumentsOperationContext context);
+            public abstract int Execute(DocumentsOperationContext context);
             public readonly TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>();
             public Exception Exception;
         }
@@ -97,9 +97,9 @@ namespace Raven.Server.Documents
                 {
                     if (_operations.Count == 0)
                     {
-                        using (var meter = GeneralWaitPerformanceMetrics.MeterPerformanceRate())
+                        using (var generalMeter = GeneralWaitPerformanceMetrics.MeterPerformanceRate())
                         {
-                            meter.IncreamentCounter(999);
+                            generalMeter.IncreamentCounter(999);
                             _waitHandle.Wait(_shutdown);
                         }
                         _waitHandle.Reset();
@@ -191,7 +191,7 @@ namespace Raven.Server.Documents
             DocumentsOperationContext context;
             using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
-                DocumentsTransaction tx = null; ;
+                DocumentsTransaction tx = null;
                 try
                 {
                     try
@@ -211,7 +211,15 @@ namespace Raven.Server.Documents
                     PendingOperations result;
                     try
                     {
-                        result = ExecutePendingOperationsInTransaction(pendingOps, context, null);
+                        var transactionMeter = TransactionPerformanceMetrics.MeterPerformanceRate();
+                        try
+                        {
+                                result = ExecutePendingOperationsInTransaction(pendingOps, context, null, ref transactionMeter);
+                        }
+                        finally
+                        {
+                            transactionMeter.Dispose();
+                        }
                     }
                     catch (Exception e)
                     {
@@ -307,9 +315,18 @@ namespace Raven.Server.Documents
                         PendingOperations result;
                         try
                         {
-                            result = ExecutePendingOperationsInTransaction(
-                                currentPendingOps, context,
-                                previous.InnerTransaction.LowLevelTransaction.AsyncCommit);
+                            var transactionMeter = TransactionPerformanceMetrics.MeterPerformanceRate();
+                            try
+                            {
+
+                                result = ExecutePendingOperationsInTransaction(
+                                    currentPendingOps, context,
+                                    previous.InnerTransaction.LowLevelTransaction.AsyncCommit, ref transactionMeter);
+                            }
+                            finally
+                            {
+                                transactionMeter.Dispose();
+                            }
                             CompletePreviousTransction(previous, previousPendingOps, throwOnError: true);
                         }
                         catch (Exception e)
@@ -370,7 +387,7 @@ namespace Raven.Server.Documents
                 previous.Dispose();
             }
         }
-
+       
         private void CompletePreviousTransction(
             RavenTransaction previous,
             List<MergedTransactionCommand> previousPendingOps,
@@ -411,18 +428,20 @@ namespace Raven.Server.Documents
         private PendingOperations ExecutePendingOperationsInTransaction(
             List<MergedTransactionCommand> pendingOps,
             DocumentsOperationContext context,
-            Task previousOperation)
+            Task previousOperation, ref PerformanceMetrics.DurationMeasurement meter)
         {
             _alreadyListeningToPreviousOperationEnd = false;
             var sp = Stopwatch.StartNew();
             do
             {
                 MergedTransactionCommand op;
-                if (TryGetNextOperation(previousOperation, out op) == false)
+                if (TryGetNextOperation(previousOperation, out op, ref meter) == false)
                     break;
 
                 pendingOps.Add(op);
-                op.Execute(context);
+                meter.IncreamentCounter(1);
+                meter.IncreamentCommands(op.Execute(context));
+
 
                 if (previousOperation != null && previousOperation.IsCompleted)
                 {
@@ -453,7 +472,7 @@ namespace Raven.Server.Documents
                     var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
                     if (modifiedSize > 4 * Constants.Size.Megabyte)
                     {
-                        return PendingOperations.CompletedAll;
+                        return GetPendingOperationsStatus(context);
                     }
                 }
 
@@ -462,13 +481,13 @@ namespace Raven.Server.Documents
             {
                 _log.Info($"Merged {pendingOps.Count} operations in {sp.Elapsed} and there is no more work");
             }
-            if(context.Transaction.ModifiedSystemDocuments)
+            if (context.Transaction.ModifiedSystemDocuments)
                 return PendingOperations.ModifiedsSystemDocuments;
 
             return GetPendingOperationsStatus(context, pendingOps.Count == 0);
         }
 
-        private bool TryGetNextOperation(Task previousOperation, out MergedTransactionCommand op)
+        private bool TryGetNextOperation(Task previousOperation, out MergedTransactionCommand op, ref PerformanceMetrics.DurationMeasurement meter)
         {
             if (_operations.TryDequeue(out op))
                 return true;
@@ -476,11 +495,11 @@ namespace Raven.Server.Documents
             if (previousOperation == null || previousOperation.IsCompleted)
                 return false;
 
-            return UnlikelyWaitForNextOperationOrPreviousTransactionComplete(previousOperation, out op);
+            return UnlikelyWaitForNextOperationOrPreviousTransactionComplete(previousOperation, out op, ref meter);
         }
 
         private bool UnlikelyWaitForNextOperationOrPreviousTransactionComplete(Task previousOperation,
-            out MergedTransactionCommand op)
+            out MergedTransactionCommand op, ref PerformanceMetrics.DurationMeasurement meter)
         {
             if (_alreadyListeningToPreviousOperationEnd == false)
             {
@@ -489,15 +508,23 @@ namespace Raven.Server.Documents
             }
             while (true)
             {
-                _waitHandle.Wait(_shutdown);
-                _waitHandle.Reset();
-                if (previousOperation.IsCompleted)
+                try
                 {
-                    op = null;
-                    return false;
+                    meter.MarkInternalWindowStart();
+                    _waitHandle.Wait(_shutdown);
+                    _waitHandle.Reset();
+                    if (previousOperation.IsCompleted)
+                    {
+                        op = null;
+                        return false;
+                    }
+                    if (_operations.TryDequeue(out op))
+                        return true;
                 }
-                if (_operations.TryDequeue(out op))
-                    return true;
+                finally
+                {
+                    meter.MarkInternalWindowEnd();
+                }
             }
         }
 
