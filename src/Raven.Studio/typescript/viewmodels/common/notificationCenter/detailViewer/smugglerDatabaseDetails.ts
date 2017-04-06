@@ -102,7 +102,7 @@ class smugglerDatabaseDetails extends dialogViewModelBase {
         this.detailsVisible(!this.detailsVisible());
     }
 
-    private mapToExportListItem(name: string, item: Raven.Server.Smuggler.Documents.Data.Counts): smugglerListItem {
+    private mapToExportListItem(name: string, item: Raven.Server.Smuggler.Documents.Data.SmugglerProgressBase.Counts): smugglerListItem {
         let stage: smugglerListItemStatus = "processing";
         if (item.Skipped) {
             stage = "skipped";
@@ -116,7 +116,7 @@ class smugglerDatabaseDetails extends dialogViewModelBase {
             hasReadCount: true, // it will be reassigned in post-processing
             readCount: item.ReadCount.toLocaleString(),
             hasSkippedCount: name === "Documents",
-            skippedCount: name === "Documents" ? (item as Raven.Server.Smuggler.Documents.Data.CountsWithSkippedCountAndLastEtag).SkippedCount.toLocaleString() : "-",
+            skippedCount: name === "Documents" ? (item as Raven.Server.Smuggler.Documents.Data.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag).SkippedCount.toLocaleString() : "-",
             hasErroredCount: true, // it will be reassigned in post-processing
             erroredCount: item.ErroredCount.toLocaleString()
         } as smugglerListItem;
