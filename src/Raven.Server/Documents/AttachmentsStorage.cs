@@ -719,14 +719,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        public bool ResolveAttachmentsWhichShouldNotConflict(BlittableJsonReaderObject myObject, BlittableJsonReaderObject otherObject, 
-            DocumentsOperationContext context, string documentId)
+        public static bool ShouldResolveAttachmentsConflict(BlittableJsonReaderObject myMetadata, BlittableJsonReaderObject otherMetadata)
         {
-            if (myObject.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject myMetadata) == false)
-                Debug.Assert(false, "Cannot happen. We verified that we have a conflict in @attachments.");
-            if (otherObject.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject otherMetadata) == false)
-                Debug.Assert(false, "Cannot happen. We verified that we have a conflict in @attachments.");
-
             myMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray myAttachments);
             otherMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray otherAttachments);
             Debug.Assert(myAttachments != null || otherAttachments != null, "Cannot happen. We verified that we have a conflict in @attachments.");
@@ -761,77 +755,18 @@ namespace Raven.Server.Documents
                 }
             }
 
-            // TODO: Should use a dictionary and order by name
-            var attachments = new DynamicJsonArray();
             foreach (var attachment in myAttachmentNames)
             {
                 if (otherAttachmentNames.TryGetValue(attachment.Key, out var otherAttachment))
                 {
-                    if (Document.ComparePropertiesExceptionStartingWithAt(attachment.Value, otherAttachment).resolved == false)
+                    if (Document.ComparePropertiesExceptionStartingWithAt(attachment.Value, otherAttachment) == DocumentCompareResult.DifferenceDetected)
                         return false;
 
-                    attachments.Add(attachment.Value);
                     otherAttachmentNames.Remove(attachment.Key);
                 }
-                else
-                {
-                    if (IsAttachmentExist(context, documentId, attachment.Key, attachment.Value))
-                    {
-                        attachments.Add(attachment.Value);
-                    }
-                }
             }
-
-            foreach (var attachment in otherAttachmentNames)
-            {
-                Debug.Assert(myAttachmentNames.ContainsKey(attachment.Key) == false);
-
-                if (IsAttachmentExist(context, documentId, attachment.Key, attachment.Value))
-                {
-                    attachments.Add(attachment.Value);
-                }
-            }
-
-            if (otherMetadata.Modifications == null)
-                otherMetadata.Modifications = new DynamicJsonValue(otherMetadata)
-                {
-                    [Constants.Documents.Metadata.Attachments] = attachments
-                };
-            otherObject.Modifications = new DynamicJsonValue(otherObject)
-            {
-                [Constants.Documents.Metadata.Key] = otherMetadata
-            };
+            
             return true;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool IsAttachmentExist(DocumentsOperationContext context, string documentId, string name, BlittableJsonReaderObject attachment)
-        {
-            if (attachment.TryGet(nameof(AttachmentResult.Hash), out string hash) == false)
-                Debug.Assert(false, "Cannot happen. Attachment must have an hash.");
-            if (attachment.TryGet(nameof(AttachmentResult.ContentType), out string contentType) == false)
-                Debug.Assert(false, "Cannot happen. Attachment must have a ContentType.");
-
-            return IsAttachmentExist(context, documentId, name, hash, contentType);
-        }
-
-        private bool IsAttachmentExist(DocumentsOperationContext context, string documentId, string name, string hash, string contentType)
-        {
-            DocumentKeyWorker.GetSliceFromKey(context, documentId, out Slice lowerDocumentId);
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, name, out byte* lowerName, out int lowerNameSize, out byte* namePtr, out int nameSize);
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, contentType, out byte* lowerContentTypePtr, out int lowerContentTypeSize, out byte* contentTypePtr, out int contentTypeSize);
-
-            using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
-            using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName, lowerNameSize, base64Hash, lowerContentTypePtr, lowerContentTypeSize, AttachmentType.Document, null, out Slice keySlice))
-            {
-                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                var a =  table.ReadByKey(keySlice, out TableValueReader tvr);
-                if (a)
-                {
-                    return a;
-                }
-                throw new InvalidOperationException();
-            }
         }
     }
 }

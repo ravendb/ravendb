@@ -241,7 +241,8 @@ namespace Raven.Server.Documents.Replication
 
             if (existingDoc != null)
             {
-                if (Document.IsEqualTo(existingDoc.Data, incomingDoc, true, _database, context, key) == false)
+                var compareResult = Document.IsEqualTo(existingDoc.Data, incomingDoc, true);
+                if (compareResult == DocumentCompareResult.DifferenceDetected)
                     return false;
 
                 var resolveDoc = incomingDoc;
@@ -252,7 +253,9 @@ namespace Raven.Server.Documents.Replication
 
                 // no real conflict here, both documents have identical content
                 var mergedChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
-                _database.DocumentsStorage.Put(context, key, null, resolveDoc, lastModifiedTicks, mergedChangeVector);
+                var nonPersistnetFlags = (compareResult & DocumentCompareResult.ShouldRecreateDocument) == DocumentCompareResult.ShouldRecreateDocument 
+                    ? NonPersistentDocumentFlags.ResolvedAttachmentConflict : NonPersistentDocumentFlags.None;
+                _database.DocumentsStorage.Put(context, key, null, resolveDoc, lastModifiedTicks, mergedChangeVector, nonPersistentFlags: nonPersistnetFlags);
                 return true;
             }
 
