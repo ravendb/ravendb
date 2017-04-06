@@ -145,9 +145,7 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-        public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags, 
-            BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document,
-            ref DocumentFlags documentFlags, out VersioningConfigurationCollection configuration)
+        public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags, BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document, ref DocumentFlags documentFlags, out VersioningConfigurationCollection configuration, DocumentsOperationContext context, string key)
         {
             configuration = GetVersioningConfiguration(collectionName);
             if (configuration.Active == false)
@@ -166,7 +164,7 @@ namespace Raven.Server.Documents.Versioning
                 }
 
                 // compare the contents of the existing and the new document
-                if (Document.IsEqualTo(existingDocument, document))
+                if (Document.IsEqualTo(existingDocument, document, false, _database, context, key))
                 {
                     // no need to create a new revision, both documents have identical content
                     return false;

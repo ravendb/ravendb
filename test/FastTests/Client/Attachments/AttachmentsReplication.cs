@@ -550,12 +550,75 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        [Fact(Skip = "WIP")]
+        [Fact]
         public async Task PutDifferentAttachmentsShouldNotConflict()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] {1, 2, 3}))
+                    {
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
+                    }
+
+                    await session.StoreAsync(new User {Name = "Marker 1"}, "marker 1");
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a2 = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                    {
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a2", a2, "a2/jpeg"));
+                    }
+
+                    await session.StoreAsync(new User {Name = "Marker 2"}, "marker 2");
+                    await session.SaveChangesAsync();
+                }
+
+                SetupReplication(store1, store2);
+                SetupReplication(store2, store1);
+
+                Assert.True(WaitForDocument(store2, "marker 1"));
+                Assert.True(WaitForDocument(store1, "marker 2"));
+
+                await AssertAttachments(store1, new[] {"a1", "a2"});
+                await AssertAttachments(store2, new[] {"a1", "a2"});
+            }
+        }
+
+        private async Task AssertAttachments(DocumentStore store, string[] names)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = await session.LoadAsync<User>("users/1");
+                var metadata = session.Advanced.GetMetadataFor(user);
+                Assert.Contains(DocumentFlags.HasAttachments.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                Assert.Equal(names.Length, attachments.Length);
+                for (int i = 0; i < names.Length; i++)
+                {
+                    Assert.Equal(names[i], attachments[i].GetString(nameof(Attachment.Name)));
+                }
+            };
+        }
+
+        [Fact]
+        public async Task PutAndDeleteDifferentAttachmentsShouldNotConflict()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await SetDatabaseId(store1, new Guid("00000000-48c4-421e-9466-000000000000"));
+                await SetDatabaseId(store2, new Guid("99999999-48c4-421e-9466-999999999999"));
+
                 using (var session = store1.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
@@ -576,23 +639,26 @@ namespace FastTests.Client.Attachments
 
                     using (var a2 = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                     {
-                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a2", a2, "a2/jpeg"));
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a2", a2, "a1/png"));
                     }
+                    store2.Operations.Send(new DeleteAttachmentOperation("users/1", "a2"));
 
                     await session.StoreAsync(new User { Name = "Marker 2" }, "marker 2");
                     await session.SaveChangesAsync();
                 }
-                
+
                 SetupReplication(store1, store2);
                 SetupReplication(store2, store1);
-                Assert.True(WaitForDocument(store1, "marker 1"));
-                Assert.True(WaitForDocument(store2, "marker 2"));
 
-                // TODO:
+                Assert.True(WaitForDocument(store2, "marker 1"));
+                Assert.True(WaitForDocument(store1, "marker 2"));
+
+                await AssertAttachments(store1, new[] { "a1" });
+                await AssertAttachments(store2, new[] { "a1" });
             }
         }
 
-        [Fact(Skip = "WIP")]
+        [Fact]
         public async Task PutSameAttachmentsShouldNotConflict()
         {
             using (var store1 = GetDocumentStore())
@@ -627,10 +693,12 @@ namespace FastTests.Client.Attachments
                 
                 SetupReplication(store1, store2);
                 SetupReplication(store2, store1);
-                Assert.True(WaitForDocument(store1, "marker 1"));
-                Assert.True(WaitForDocument(store2, "marker 2"));
 
-                // TODO:
+                Assert.True(WaitForDocument(store2, "marker 1"));
+                Assert.True(WaitForDocument(store1, "marker 2"));
+
+                Assert.Equal(0, GetConflicts(store1, "users/1").Results.Length);
+                Assert.Equal(0, GetConflicts(store2, "users/1").Results.Length);
             }
         }
 

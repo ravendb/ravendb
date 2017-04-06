@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using Raven.Client;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -102,10 +104,10 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private static bool IsMetadataEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument)
+        private static (bool resolved, bool hasConflictOnAttachment) IsMetadataEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument, bool skipAttachment)
         {
             if (targetDocument == null)
-                return false;
+                return (false, false);
 
             BlittableJsonReaderObject myMetadata;
             BlittableJsonReaderObject objMetadata;
@@ -113,26 +115,50 @@ namespace Raven.Server.Documents
             targetDocument.TryGet(Constants.Documents.Metadata.Key, out objMetadata);
 
             if (myMetadata == null && objMetadata == null)
-                return true;
+                return (true, false);
 
-            if (myMetadata == null || objMetadata == null)
-                return false;
+            if (myMetadata == null)
+            {
+                return (true, false);
+            }
 
-            return ComparePropertiesExceptionStartingWithAt(myMetadata, objMetadata, isMetadata: true);
+            if (objMetadata == null)
+            {
+                targetDocument.Modifications = new DynamicJsonValue(targetDocument)
+                {
+                    [Constants.Documents.Metadata.Key] = myMetadata
+                };
+                return (true, false);
+            }
+
+            return ComparePropertiesExceptionStartingWithAt(myMetadata, objMetadata, true, skipAttachment);
         }
 
-        public static bool IsEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument)
+        public static bool IsEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument, bool skipAttachment, 
+            DocumentDatabase database, DocumentsOperationContext context, string documentId)
         {
             // Performance improvemnt: We compare the metadata first 
             // because that most of the time the metadata itself won't be the equal, so no need to compare all values
 
-            return IsMetadataEqualTo(currentDocument, targetDocument) &&
-                   ComparePropertiesExceptionStartingWithAt(currentDocument, targetDocument);
+            var result = IsMetadataEqualTo(currentDocument, targetDocument, skipAttachment);
+            if (result.resolved == false)
+                return false;
+
+            if (ComparePropertiesExceptionStartingWithAt(currentDocument, targetDocument).resolved == false)
+                return false;
+
+            if (result.hasConflictOnAttachment)
+                return database.DocumentsStorage.AttachmentsStorage.ResolveAttachmentsWhichShouldNotConflict(currentDocument, targetDocument, context, documentId);
+
+            return true;
         }
 
-        private static bool ComparePropertiesExceptionStartingWithAt(BlittableJsonReaderObject myObject,
-            BlittableJsonReaderObject otherObject, bool isMetadata = false)
+        public static (bool resolved, bool hasConflictOnAttachment) ComparePropertiesExceptionStartingWithAt(
+            BlittableJsonReaderObject myObject, BlittableJsonReaderObject otherObject, 
+            bool isMetadata = false, bool skipConflictOnAttachment = false)
         {
+            var hasConflictOnAttachment = false;
+
             var properties = new HashSet<string>(myObject.GetPropertyNames());
             foreach (var propertyName in otherObject.GetPropertyNames())
             {
@@ -141,12 +167,14 @@ namespace Raven.Server.Documents
 
             foreach (var property in properties)
             {
+                var isAttachments = property.Equals(Constants.Documents.Metadata.Attachments, StringComparison.OrdinalIgnoreCase);
+
                 if (property[0] == '@')
                 {
                     if (isMetadata)
                     {
                         if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false &&
-                            property.Equals(Constants.Documents.Metadata.Attachments, StringComparison.OrdinalIgnoreCase) == false)
+                            isAttachments == false)
                             continue;
                     }
                     else if (property.Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
@@ -155,20 +183,31 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                object myProperty;
-                object otherPropery;
+                if (myObject.TryGetMember(property, out object myProperty) == false ||
+                    otherObject.TryGetMember(property, out object otherPropery) == false)
+                {
+                    if (isAttachments && skipConflictOnAttachment)
+                    {
+                        hasConflictOnAttachment = true;
+                        continue;
+                    }
 
-                if (myObject.TryGetMember(property, out myProperty) == false)
-                    return false;
-
-                if (otherObject.TryGetMember(property, out otherPropery) == false)
-                    return false;
+                    return (false, hasConflictOnAttachment);
+                }
 
                 if (Equals(myProperty, otherPropery) == false)
-                    return false;
+                {
+                    if (isAttachments && skipConflictOnAttachment)
+                    {
+                        hasConflictOnAttachment = true;
+                        continue;
+                    }
+
+                    return (false, hasConflictOnAttachment);
+                }
             }
 
-            return true;
+            return (true, hasConflictOnAttachment);
         }
     }
 }

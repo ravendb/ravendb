@@ -6,6 +6,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 
@@ -238,11 +239,20 @@ namespace Raven.Server.Documents.Replication
             var existingDoc = existing.Document;
             var existingTombstone = existing.Tombstone;
 
-            if (existingDoc != null && Document.IsEqualTo(existingDoc.Data, incomingDoc))
+            if (existingDoc != null)
             {
+                if (Document.IsEqualTo(existingDoc.Data, incomingDoc, true, _database, context, key) == false)
+                    return false;
+
+                var resolveDoc = incomingDoc;
+                if (resolveDoc.Modifications != null)
+                    // TODO: Improve. No need to ReadObject and build a new metadata, 
+                    // since we can just put and it will fill out the attachments from the disk - as it will be different
+                    resolveDoc = context.ReadObject(incomingDoc, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
                 // no real conflict here, both documents have identical content
                 var mergedChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
-                _database.DocumentsStorage.Put(context, key, null, incomingDoc, lastModifiedTicks, mergedChangeVector);
+                _database.DocumentsStorage.Put(context, key, null, resolveDoc, lastModifiedTicks, mergedChangeVector);
                 return true;
             }
 
