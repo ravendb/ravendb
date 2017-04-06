@@ -823,7 +823,11 @@ namespace FastTests.Client.Attachments
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await PutCommandAsync(session, new User {Name = "Fitzchak"}, "users/1", true);
+                    using (var commands = store1.Commands())
+                    {
+                        await commands.PutAsync("users/1", null, new User {Name = "Fitzchak"});
+                    }
+
                     using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
                     {
                         await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
@@ -834,7 +838,11 @@ namespace FastTests.Client.Attachments
                 }
                 using (var session = store2.OpenAsyncSession())
                 {
-                    await PutCommandAsync(session, new User { Name = "Fitzchak" }, "users/1", true);
+                    using (var commands = store2.Commands())
+                    {
+                        await commands.PutAsync("users/1", null, new User { Name = "Fitzchak" });
+                    }
+
                     using (var a2 = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
                     {
                         store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a2, "a1/png"));
