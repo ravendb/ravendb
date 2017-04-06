@@ -42,76 +42,80 @@ namespace FastTests.Server.Replication
         [Fact]
         public void ResolveWhenScriptAdded()
         {
-            var store1 = GetDocumentStore();
-            var store2 = GetDocumentStore();
-            GenerateConflicts(store1,store2);
-            var config = new ConflictSolver
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
             {
-                ResolveByCollection = new Dictionary<string, ScriptResolver>
+                GenerateConflicts(store1, store2);
+                var config = new ConflictSolver
                 {
+                    ResolveByCollection = new Dictionary<string, ScriptResolver>
                     {
-                        "Users" , new ScriptResolver
                         {
-                         Script = "return {'Name':'Resolved'}"
+                            "Users", new ScriptResolver
+                            {
+                                Script = "return {'Name':'Resolved'}"
+                            }
                         }
                     }
-                }
-            };
-            SetupReplication(store1,config,store2);
+                };
+                SetupReplication(store1, config, store2);
 
-            Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Resolved"));
-            Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Resolved"));
+                Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Resolved"));
+                Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Resolved"));
+            }
         }
 
         [Fact]
         public void ResolveWhenChangeToLatest()
         {
-            var store1 = GetDocumentStore();
-            var store2 = GetDocumentStore();
-            GenerateConflicts(store1, store2);
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                GenerateConflicts(store1, store2);
 
-            SetReplicationConflictResolution(store1,StraightforwardConflictResolution.ResolveToLatest);
-     
-            Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Store2"));
-            Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store2"));
+                SetReplicationConflictResolution(store1, StraightforwardConflictResolution.ResolveToLatest);
+
+                Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Store2"));
+                Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store2"));
+            }
         }
 
         [Fact]
         public void ResolveWhenSettingDatabaseResolver()
         {
-            var store1 = GetDocumentStore();
-            var store2 = GetDocumentStore();
-            GenerateConflicts(store1, store2);
-            var config = new ConflictSolver
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
             {
-                DatabaseResovlerId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString()
-            };
-            SetupReplication(store1, config, store2);
+                GenerateConflicts(store1, store2);
+                var config = new ConflictSolver
+                {
+                    DatabaseResovlerId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString()
+                };
+                SetupReplication(store1, config, store2);
 
-            Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Store1"));
-            Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store1"));
+                Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Store1"));
+                Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store1"));
+            }
         }
 
         [Fact]
-        public void ResolveManyConflicts()
+        public async Task ResolveManyConflicts()
         {
-            var store1 = GetDocumentStore();
-            var store2 = GetDocumentStore();
-            GenerateConflicts(store1, store2,"users/1");
-            SetupReplication(store1);
-            SetupReplication(store2);
-            GenerateConflicts(store1, store2,"users/2");
-
-            var config = new ConflictSolver
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
             {
-                DatabaseResovlerId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString()
-            };
-            SetupReplication(store1, config, store2);
+                GenerateConflicts(store1, store2, "users/1");
+                await SetupReplicationAsync(store1);
+                await SetupReplicationAsync(store2);
+                GenerateConflicts(store1, store2, "users/2");
+                
+                await UpdateConflictResolver(store1, GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString());
 
-            Assert.True(WaitForDocument<User>(store1, "users/1", u => u.Name == "Store1"));
-            Assert.True(WaitForDocument<User>(store2, "users/1", u => u.Name == "Store1"));
-            Assert.True(WaitForDocument<User>(store1, "users/2", u => u.Name == "Store1"));
-            Assert.True(WaitForDocument<User>(store2, "users/2", u => u.Name == "Store1"));
+                Assert.True(WaitForDocument<User>(store1, "users/1", u => u.Name == "Store1"));
+                Assert.True(WaitForDocument<User>(store2, "users/1", u => u.Name == "Store1"));
+                Assert.True(WaitForDocument<User>(store1, "users/2", u => u.Name == "Store1"));
+                Assert.True(WaitForDocument<User>(store2, "users/2", u => u.Name == "Store1"));
+            }
         }
     }
 }

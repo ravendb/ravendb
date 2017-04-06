@@ -591,7 +591,7 @@ namespace Raven.Server.Documents.Replication
 
             Server.Cluster.DatabaseChanged -= OnDatabaseRecordChange;
 
-            ea.Execute(() => ConflictResolver.ResolveConflictsTask.Wait());
+            ea.Execute(() => ConflictResolver?.ResolveConflictsTask.Wait());
 
             if (_log.IsInfoEnabled)
                 _log.Info("Closing and disposing document replication connections.");

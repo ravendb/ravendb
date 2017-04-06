@@ -18,7 +18,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [Fact(Skip = "wait for implementing etl over raft")]
         public async Task Topology_should_fetch_ETL_destinations_properly()
         {
             using (var storeA = GetDocumentStore())

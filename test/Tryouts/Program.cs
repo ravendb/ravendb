@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests.Issues;
+using FastTests.Server.Replication;
 
 namespace Tryouts
 {
@@ -11,9 +12,18 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new RavenDB_6602())
+                using (var a = new ReplicationResolveToDatabase())
+                using (var b = new ReplicationCleanTombstones())
                 {
-                    a.RequestExecutor_failover_to_database_topology_should_work().Wait();                    
+                    try
+                    {
+                        b.DontCleanTombstones();
+                    }
+                    catch
+                    {
+                        //
+                    }
+                    a.ResovleToDatabase();                                      
                 }
             }
         }

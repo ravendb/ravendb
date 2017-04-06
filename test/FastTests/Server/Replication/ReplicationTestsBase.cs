@@ -337,8 +337,7 @@ namespace FastTests.Server.Replication
                 watchers.Add(new DatabaseWatcher
                 {
                     Database = store.DefaultDatabase,
-                    Url = store.Url,
-                    
+                    Url = store.Url,                  
                 });
             }
             var result = await UpdateReplicationTopology(fromStore, null,watchers);
@@ -356,12 +355,12 @@ namespace FastTests.Server.Replication
                     }
                 }
             };
-            UpdateConflictResolver(store, null, resolveByCollection).Wait();
+            UpdateConflictResolver(store, null, resolveByCollection).ConfigureAwait(false);
         }
 
         protected static void SetReplicationConflictResolution(DocumentStore store, StraightforwardConflictResolution conflictResolution)
-        {           
-            UpdateConflictResolver(store, null, null, conflictResolution == StraightforwardConflictResolution.ResolveToLatest).Wait();
+        {
+            UpdateConflictResolver(store, null, null, conflictResolution == StraightforwardConflictResolution.ResolveToLatest).ConfigureAwait(false);
         }
 
                
@@ -388,7 +387,7 @@ namespace FastTests.Server.Replication
 
         protected void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
         {
-            SetupReplicationAsync(fromStore, toStores).Wait();
+            SetupReplicationAsync(fromStore, toStores).ConfigureAwait(false);
         }
 
         protected async Task SetupReplicationAsync(DocumentStore fromStore, ConflictSolver conflictSolver, params DocumentStore[] toStores)
@@ -399,7 +398,7 @@ namespace FastTests.Server.Replication
 
         protected void SetupReplication(DocumentStore fromStore, ConflictSolver conflictSolver, params DocumentStore[] toStores)
         {
-            SetupReplicationAsync(fromStore, conflictSolver, toStores).Wait();
+            SetupReplicationAsync(fromStore, conflictSolver, toStores).ConfigureAwait(false);
         }
         
                 protected static void DeleteReplication(DocumentStore fromStore, DocumentStore deletedStoreDestination)
