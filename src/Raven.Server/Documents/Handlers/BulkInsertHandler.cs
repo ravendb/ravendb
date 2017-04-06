@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Handlers
             public DocumentDatabase Database;
             public List<BatchRequestParser.CommandData> Commands;
             public long TotalSize;
-            public override void Execute(DocumentsOperationContext context)
+            public override int Execute(DocumentsOperationContext context)
             {
                 foreach (var cmd in Commands)
                 {
@@ -152,6 +152,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     Logger.Info($"Merged {Commands.Count:#,#;;0} operations and {Math.Round(TotalSize / 1024d, 1):#,#.#;;0} kb");
                 }
+                return Commands.Count;
             }
         }
     }

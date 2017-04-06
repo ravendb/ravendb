@@ -134,7 +134,6 @@ namespace Sparrow
                 CompressedSize = item.CompressedSize,
                 Acceleration = item.Acceleration,
             };
-            
 
             item.OnFileChange?.Invoke(meterItem);
 
@@ -170,8 +169,6 @@ namespace Sparrow
                     newSummary.Count++;
                     newSummary.MaxAcceleration = Math.Max(newSummary.MaxAcceleration, oldVal.Acceleration);
                     newSummary.MinAcceleration = Math.Min(newSummary.MinAcceleration, oldVal.Acceleration);
-                    newSummary.TotalCompressedSize += oldVal.CompressedSize;
-                    newSummary.MaxTime = newSummary.MaxTime > oldVal.Duration ? newSummary.MaxTime : oldVal.Duration;
                     newSummary.MaxTime = newSummary.MaxTime > oldVal.Duration ? newSummary.MaxTime : oldVal.Duration;
                     newSummary.MinTime = newSummary.MinTime > oldVal.Duration ? oldVal.Duration : newSummary.MinTime;
                     newSummary.TotalSize += oldVal.Size;

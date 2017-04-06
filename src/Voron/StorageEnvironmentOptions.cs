@@ -129,6 +129,8 @@ namespace Voron
 
         public abstract string BasePath { get; }
 
+        internal string JournalPath;
+
         /// <summary>
         /// This mode is used in the Voron recovery tool and is not intended to be set otherwise.
         /// </summary>
@@ -229,6 +231,8 @@ namespace Voron
             {
                 _basePath = Path.GetFullPath(basePath);
                 _journalPath = !string.IsNullOrEmpty(journalPath) ? Path.GetFullPath(journalPath) : _basePath;
+
+                JournalPath = _journalPath;
 
                 if (Directory.Exists(_basePath) == false)
                     Directory.CreateDirectory(_basePath);

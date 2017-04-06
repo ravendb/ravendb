@@ -1329,10 +1329,12 @@ namespace Voron.Impl.Journal
 
             var number = CurrentFile?.Number ?? 0;
             long compressedLen;
+
+            // Note that the last journal may be replaced if we switch journals, however it doesn't affect web graph
+            var journalPath = Path.Combine(_env.Options.JournalPath, StorageEnvironmentOptions.JournalName(number));
             var compressionDuration = Stopwatch.StartNew();
             using (var metrics = _env.Options.IoMetrics.MeterIoRate(
-                // Note that the last journal may be replaced if we switch journals, however it doesn't affect web graph
-                StorageEnvironmentOptions.JournalName(number),
+                journalPath,
                 IoMetrics.MeterType.Compression, 0))
             {
                 var compressionAcceleration = _lastCompressionAccelerationInfo.LastAcceleration;
