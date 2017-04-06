@@ -1085,7 +1085,7 @@ namespace Voron.Impl.Journal
                         break;
                     if (lastReadTxHeader.TransactionId > readTxHeader->TransactionId)
                         // we got to a trasaction that is smaller than the previous one, this is very 
-                        // likely a reused jouranl with old transaction, which we can ignore
+                        // likely a reused journal with old transaction, which we can ignore
                         break;
 
                     lastReadTxHeader = *readTxHeader;
@@ -1203,7 +1203,7 @@ namespace Voron.Impl.Journal
                 var journalEntry = PrepareToWriteToJournal(tx);
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Preparing to write tx {tx.Id} to jouranl with {journalEntry.NumberOfUncompressedPages:#,#} pages ({(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte:#,#} kb) in {sp.Elapsed} with {Math.Round(journalEntry.NumberOf4Kbs * 4d, 1):#,#.#;;0} kb compressed.");
+                    _logger.Info($"Preparing to write tx {tx.Id} to journal with {journalEntry.NumberOfUncompressedPages:#,#} pages ({(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte:#,#} kb) in {sp.Elapsed} with {Math.Round(journalEntry.NumberOf4Kbs * 4d, 1):#,#.#;;0} kb compressed.");
                 }
 
                 if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
