@@ -17,12 +17,10 @@ namespace Raven.Server.Documents.Replication
         private readonly DocumentDatabase _database;
 
         private readonly Logger _log;
-        private readonly ConflictSolver _conflictSolver;
         private readonly ResolveConflictOnReplicationConfigurationChange _conflictResolver;
 
-        public ConflictManager(DocumentDatabase database, ConflictSolver conflictSolver, ResolveConflictOnReplicationConfigurationChange conflictResolver)
+        public ConflictManager(DocumentDatabase database, ResolveConflictOnReplicationConfigurationChange conflictResolver)
         {
-            _conflictSolver = conflictSolver;
             _conflictResolver = conflictResolver;
             _database = database;
             _log = LoggingSource.Instance.GetLogger<ConflictManager>(_database.Name);
@@ -66,7 +64,7 @@ namespace Raven.Server.Documents.Replication
                 doc))
                 return;
 
-            if (_conflictSolver.ResolveToLatest)
+            if (_conflictResolver.ConflictSolver.ResolveToLatest)
             {
                 if (otherChangeVector == null) //precaution
                     throw new InvalidOperationException(
@@ -164,7 +162,7 @@ namespace Raven.Server.Documents.Replication
             ChangeVectorEntry[] incomingChangeVector,
             BlittableJsonReaderObject doc)
         {
-            if (_conflictSolver?.Senator == null)
+            if (_conflictResolver.ConflictSolver?.DatabaseResovlerId == null)
                 return false;
 
             var conflicts = new List<DocumentConflict>(_database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id));
@@ -185,7 +183,7 @@ namespace Raven.Server.Documents.Replication
 
             return _conflictResolver.TryResolveUsingDefaultResolverInternal(
                 context,
-                _conflictSolver.Senator,
+                _conflictResolver.ConflictSolver.DatabaseResovlerId,
                 conflicts);
         }
 

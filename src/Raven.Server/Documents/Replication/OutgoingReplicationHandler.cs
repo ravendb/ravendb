@@ -457,10 +457,10 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public string FromToString => $"from {_database.ResourceName} to {_destination.NodeTag} at {_destination.Url}";
+        public string FromToString => $"from {_database.ResourceName} to {_destination.NodeTag}({_destination.Database}) at {_destination.Url}";
 
         public ReplicationNode Node => _destination;
-        public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";
+        public string DestinationFormatted => $"{_destination.Url}/databases/{_destination.Database}";
 
         internal void SendHeartbeat()
         {

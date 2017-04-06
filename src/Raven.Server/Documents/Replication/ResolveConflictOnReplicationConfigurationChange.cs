@@ -25,12 +25,13 @@ namespace Raven.Server.Documents.Replication
         public Task ResolveConflictsTask = Task.CompletedTask;
 
         internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
-        private readonly ConflictSolver _conflictSolver;
+        public ConflictSolver ConflictSolver => _replicationLoader?.MyDatabaseRecord?.ConflictSolverConfig;
 
         public ResolveConflictOnReplicationConfigurationChange(ReplicationLoader replicationLoader, Logger log)
         {
             _replicationLoader = replicationLoader;
-            _database = _replicationLoader.Database;            _log = log;
+            _database = _replicationLoader.Database;
+            _log = log;
         }
 
         public long ConflictsCount => _database.DocumentsStorage.ConflictsStorage.ConflictsCount;
@@ -39,7 +40,7 @@ namespace Raven.Server.Documents.Replication
         {
             UpdateScriptResolvers();
 
-            if (ConflictsCount > 0)
+            if (ConflictsCount > 0 && ConflictSolver.IsEmpty() == false)
             {
                 try
                 {
@@ -161,13 +162,14 @@ namespace Raven.Server.Documents.Replication
 
             if (TryResolveUsingDefaultResolverInternal(
                 context,
-_conflictSolver?.Senator,                conflictList))
+                ConflictSolver?.DatabaseResovlerId,                
+                conflictList))
             {
                 //stats.AddResolvedBy("DatabaseResolver", conflictList.Count);
                 return true;
             }
 
-if (_conflictSolver?.ResolveToLatest ?? false)            {
+            if (ConflictSolver?.ResolveToLatest ?? false)            {
                 ResolveToLatest(context, conflictList);
                 //stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
                 return true;
@@ -178,13 +180,14 @@ if (_conflictSolver?.ResolveToLatest ?? false)            {
 
         private void UpdateScriptResolvers()
         {
- if (_conflictSolver?.ResolveByCollection == null)            {
+            if (ConflictSolver?.ResolveByCollection == null)            {
                 if (ScriptConflictResolversCache.Count > 0)
                     ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
                 return;
             }
             var copy = new Dictionary<string, ScriptResolver>();
-foreach (var kvp in _conflictSolver.ResolveByCollection)            {
+            foreach (var kvp in ConflictSolver.ResolveByCollection)
+            {
                 var collection = kvp.Key;
                 var script = kvp.Value.Script;
                 if (string.IsNullOrEmpty(script.Trim()))
@@ -201,7 +204,7 @@ foreach (var kvp in _conflictSolver.ResolveByCollection)            {
 
         public bool TryResolveUsingDefaultResolverInternal(
             DocumentsOperationContext context,
-            ReplicationNode resolver,
+            string resolver,
             IReadOnlyList<DocumentConflict> conflicts)
         {
             if (resolver == null)
@@ -215,7 +218,7 @@ foreach (var kvp in _conflictSolver.ResolveByCollection)            {
             {
                 foreach (var changeVectorEntry in documentConflict.ChangeVector)
                 {
-                    if (changeVectorEntry.DbId.Equals(new Guid(resolver.NodeTag)))
+                    if (changeVectorEntry.DbId.Equals(new Guid(resolver)))
                     {
                         if (changeVectorEntry.Etag == maxEtag)
                         {

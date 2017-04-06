@@ -15,7 +15,6 @@ namespace FastTests.Server.Replication
             using (var slave = GetDocumentStore())
             {
 
-                SetReplicationConflictResolution(slave, StraightforwardConflictResolution.None);
                 SetupReplication(master, slave);
 
                 using (var session = slave.OpenSession())
@@ -48,7 +47,6 @@ namespace FastTests.Server.Replication
             using (var slave = GetDocumentStore())
             {
 
-                SetReplicationConflictResolution(slave, StraightforwardConflictResolution.None);
                 SetupReplication(master, slave);
 
                 using (var session = slave.OpenSession())
@@ -89,7 +87,6 @@ namespace FastTests.Server.Replication
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                SetReplicationConflictResolution(slave, StraightforwardConflictResolution.None);
                 SetupReplication(master, slave);
 
                 using (var session = slave.OpenSession())

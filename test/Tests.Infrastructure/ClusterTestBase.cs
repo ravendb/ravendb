@@ -132,17 +132,6 @@ namespace Tests.Infrastructure
             mre.Wait();
         }
 
-        protected void SetupReplicationOnDatabaseTopology(IReadOnlyList<ServerNode> topologyNodes)
-        {
-            var stores = GetStoresFromTopology(topologyNodes);
-
-            //setup replication -> all nodes to all nodes
-            foreach (var store in stores)
-            {
-                SetupReplication_TEMP(store, new ReplicationDocument(), stores.Except(new[] { store }).ToArray());
-            }
-        }
-
         protected List<DocumentStore> GetStoresFromTopology(IReadOnlyList<ServerNode> topologyNodes)
         {
             var stores = new List<DocumentStore>();
@@ -165,27 +154,6 @@ namespace Tests.Infrastructure
                 stores.Add(store);
             }
             return stores;
-        }
-
-        protected void SetupReplication_TEMP(DocumentStore fromStore, ReplicationDocument configOptions, params DocumentStore[] toStores)
-        {
-            using (var session = fromStore.OpenSession())
-            {
-                var destinations = new List<ReplicationDestination>();
-                foreach (var store in toStores)
-                {
-                    var replicationDestination = new ReplicationDestination
-                    {
-                        Database = store.DefaultDatabase,
-                        Url = store.Url
-                    };
-                    destinations.Add(replicationDestination);
-                }
-
-                configOptions.Destinations = destinations;
-                session.Store(configOptions, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                session.SaveChanges();
-            }
         }
 
         protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true)

@@ -17,15 +17,15 @@ namespace Raven.Client.Server.Operations
     public class ModifyConflictSolver : IServerOperation<ModifySolverResult>
     {
         private readonly string _database;
-        public ReplicationNode Senator;
+        public string ResolverDbId;
         public Dictionary<string, ScriptResolver> CollectionByScript;
         public bool ResolveToLatest;
 
-        public ModifyConflictSolver(string database,ReplicationNode senator = null, Dictionary<string,ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
+        public ModifyConflictSolver(string database,string resolverDbId = null, Dictionary<string,ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
         {
             MultiDatabase.AssertValidName(database);
             _database = database;
-            Senator = senator;
+            ResolverDbId = resolverDbId;
             CollectionByScript = collectionByScript;
             ResolveToLatest = resolveToLatest;
         }
@@ -67,7 +67,7 @@ namespace Raven.Client.Server.Operations
                         {
                             ResolveByCollection = _solver.CollectionByScript,
                             ResolveToLatest = _solver.ResolveToLatest,
-                            Senator = _solver.Senator
+                            DatabaseResovlerId = _solver.ResolverDbId
                         }, _conventions, _context);
                         _context.Write(stream, solver);
                     })

@@ -45,7 +45,7 @@ namespace FastTests.Server.Replication
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
             GenerateConflicts(store1,store2);
-            var config = new ReplicationDocument
+            var config = new ConflictSolver
             {
                 ResolveByCollection = new Dictionary<string, ScriptResolver>
                 {
@@ -69,12 +69,9 @@ namespace FastTests.Server.Replication
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
             GenerateConflicts(store1, store2);
-            var config = new ReplicationDocument
-            {
-                 DocumentConflictResolution = StraightforwardConflictResolution.ResolveToLatest
-            };
-            SetupReplication(store1, config, store2);
 
+            SetReplicationConflictResolution(store1,StraightforwardConflictResolution.ResolveToLatest);
+     
             Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Store2"));
             Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store2"));
         }
@@ -85,13 +82,9 @@ namespace FastTests.Server.Replication
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
             GenerateConflicts(store1, store2);
-            var config = new ReplicationDocument
+            var config = new ConflictSolver
             {
-                DefaultResolver = new DatabaseResolver
-                {
-                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString(),
-                    Version = 0
-                }
+                DatabaseResovlerId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString()
             };
             SetupReplication(store1, config, store2);
 
@@ -108,15 +101,11 @@ namespace FastTests.Server.Replication
             SetupReplication(store1);
             SetupReplication(store2);
             GenerateConflicts(store1, store2,"users/2");
-            var config = new ReplicationDocument
-            {
-                DefaultResolver = new DatabaseResolver
-                {
-                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString(),
-                    Version = 0
-                }
-            };
 
+            var config = new ConflictSolver
+            {
+                DatabaseResovlerId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString()
+            };
             SetupReplication(store1, config, store2);
 
             Assert.True(WaitForDocument<User>(store1, "users/1", u => u.Name == "Store1"));

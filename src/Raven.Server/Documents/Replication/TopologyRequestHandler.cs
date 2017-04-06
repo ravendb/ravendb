@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
 
-                var localTopology = ReplicationUtils.GetLocalTopology(tcp.DocumentDatabase, tcp.DocumentDatabase.DocumentReplicationLoader.Destinations);
+                var localTopology = ReplicationUtils.GetLocalTopology(tcp.DocumentDatabase, tcp.DocumentDatabase.ReplicationLoader.Destinations);
 
                 using (var topologyDiscoverer = new ClusterTopologyExplorer(
                     tcp.DocumentDatabase,

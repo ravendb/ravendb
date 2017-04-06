@@ -62,6 +62,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionOptions> SubscriptionConnectionOptions = GenerateJsonDeserializationRoutine<SubscriptionConnectionOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationDocument> ReplicationDocument = GenerateJsonDeserializationRoutine<ReplicationDocument>();
+        public static readonly Func<BlittableJsonReaderObject, ConflictSolver> ConflictSolver = GenerateJsonDeserializationRoutine<ConflictSolver>();
 
         public static readonly Func<BlittableJsonReaderObject, EtlConfiguration> EtlConfiguration = GenerateJsonDeserializationRoutine<EtlConfiguration>();
         public static readonly Func<BlittableJsonReaderObject, EtlProcessStatus> EtlProcessStatus = GenerateJsonDeserializationRoutine<EtlProcessStatus>();

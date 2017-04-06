@@ -9,7 +9,7 @@ namespace Raven.Client.Documents
 {
     public class ConflictSolver
     {
-        public ReplicationNode Senator;
+        public string DatabaseResovlerId;
         public Dictionary<string, ScriptResolver> ResolveByCollection;
         public bool ResolveToLatest;
 
@@ -22,11 +22,16 @@ namespace Raven.Client.Documents
                    (ResolveByCollection?.SequenceEqual(other.ResolveByCollection) ?? true);
         }
 
+        public bool IsEmpty()
+        {
+            return ResolveToLatest == false && DatabaseResovlerId == null && ResolveByCollection?.Count == 0;
+        }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Senator)] = Senator,
+                [nameof(DatabaseResovlerId)] = DatabaseResovlerId,
                 [nameof(ResolveToLatest)] = ResolveToLatest,
                 [nameof(ResolveByCollection)] = new DynamicJsonArray
                 {

@@ -17,21 +17,19 @@ namespace Raven.Client.Server.Operations
     {
         private readonly Dictionary<string, string> _updateBlockedConnections;
         private readonly List<DatabaseWatcher> _newWatchers;
-        private readonly List<int> _removeWatchers;
         private readonly string _database;
 
-        public UpdateDatabaseTopology(string database, Dictionary<string,string> updateUpdateBlockedConnections, List<DatabaseWatcher> newWatchers = null, List<int> removeWatchers = null)
+        public UpdateDatabaseTopology(string database, Dictionary<string,string> updateUpdateBlockedConnections, List<DatabaseWatcher> newWatchers = null)
         {
             MultiDatabase.AssertValidName(database);
             _database = database;
             _updateBlockedConnections = updateUpdateBlockedConnections;
             _newWatchers = newWatchers;
-            _removeWatchers = removeWatchers;
         }
 
         public RavenCommand<UpdateTopologyResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new UpdateTopologyCommand(conventions, context, _database, _updateBlockedConnections, _newWatchers, _removeWatchers);
+            return new UpdateTopologyCommand(conventions, context, _database, _updateBlockedConnections, _newWatchers);
         }
 
         private class UpdateTopologyCommand : RavenCommand<UpdateTopologyResult>
@@ -41,15 +39,14 @@ namespace Raven.Client.Server.Operations
             private readonly string _databaseName;
             private readonly Dictionary<string, string> _blockedConnections;
             private readonly List<DatabaseWatcher> _newWatchers;
-            private readonly List<int> _removeWatchers;
-
+          
             public UpdateTopologyCommand(
                 DocumentConventions conventions, 
                 JsonOperationContext context, 
                 string database,
                 Dictionary<string, string> blockedConnections,
-                List<DatabaseWatcher> newWatchers, 
-                List<int> removeWatchers
+                List<DatabaseWatcher> newWatchers
+               
                 )
             {
                 _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -57,7 +54,6 @@ namespace Raven.Client.Server.Operations
                 _databaseName = database ?? throw new ArgumentNullException(nameof(database));
                 _blockedConnections = blockedConnections;
                 _newWatchers = newWatchers;
-                _removeWatchers = removeWatchers;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -73,7 +69,6 @@ namespace Raven.Client.Server.Operations
                         {
                             ["BlockedConnections"] = DynamicJsonValue.Convert(_blockedConnections),
                             ["NewWatchers"] = new DynamicJsonArray(_newWatchers?.Select( w=> w.ToJson())),
-                            ["RemoveWatchers"] = _removeWatchers
                         };
 
                         _context.Write(stream, _context.ReadObject(json, "updated-topology"));

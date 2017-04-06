@@ -65,7 +65,8 @@ namespace Raven.Server.Documents
             IndexStore = new IndexStore(this, _indexAndTransformerLocker);
             TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
             EtlLoader = new EtlLoader(this);
-			DocumentReplicationLoader = new DocumentReplicationLoader(this, serverStore);            DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
+			ReplicationLoader = new ReplicationLoader(this, serverStore);
+            DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
             SubscriptionStorage = new SubscriptionStorage(this);
             Operations = new DatabaseOperations(this);
             Metrics = new MetricsCountersManager();

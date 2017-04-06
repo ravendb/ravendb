@@ -142,9 +142,7 @@ namespace Raven.Server.Web.System
                 
                 var index = await ServerStore.WriteDbAsync(context, name, topologyJson, etag);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
-
-var index = await ServerStore.WriteDbAsync(context, name, topologyJson, etag);
-                await ServerStore.Cluster.WaitForIndexNotification(index);                ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
+                ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -286,11 +284,10 @@ var index = await ServerStore.WriteDbAsync(context, name, topologyJson, etag);
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "read-conflict-resolver");
-                var solver = JsonDeserializationRachis<ConflictSolver>.Deserialize(json);
                 context.OpenReadTransaction();
                 long etag;
                 var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
-                var index = await ServerStore.ModifyConflictSolverAsync(context, name, solver);
+                var index = await ServerStore.ModifyConflictSolverAsync(context, name, json);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));

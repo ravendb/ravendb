@@ -66,7 +66,8 @@ namespace Raven.Server.Documents.Replication
             public long LastEtag;
         }
 
-            new ConcurrentDictionary<ReplicationDestination, LastEtagPerDestination>(); private int _replicationStatsId; private readonly ConcurrentDictionary<ReplicationNode, LastEtagPerDestination> _lastSendEtagPerDestination =
+        private int _replicationStatsId;
+        private readonly ConcurrentDictionary<ReplicationNode, LastEtagPerDestination> _lastSendEtagPerDestination =
             new ConcurrentDictionary<ReplicationNode, LastEtagPerDestination>();
         public long MinimalEtagForReplication
         {
@@ -107,7 +108,7 @@ namespace Raven.Server.Documents.Replication
         public DatabaseRecord MyDatabaseRecord;
         internal DatabaseTopology ReplicationTopology => MyDatabaseRecord.Topology;
         public IEnumerable<ReplicationNode> Destinations => ReplicationTopology?.GetDestinations(Server.NodeTag,Database.Name);
-public ReplicationLoader(DocumentDatabase database)        {
+        public ReplicationLoader(DocumentDatabase database, ServerStore server)        {
             Server = server;
             Database = database;
             _log = LoggingSource.Instance.GetLogger<ReplicationLoader>(Database.Name);
@@ -478,7 +479,9 @@ public ReplicationLoader(DocumentDatabase database)        {
             if (_log.IsInfoEnabled)
                 _log.Info("Finished initialization of outgoing replications..");
         }
-private void AddAndStartOutgoingReplication(ReplicationNode node)        {
+
+        private void AddAndStartOutgoingReplication(ReplicationNode node)
+        {
             var outgoingReplication = new OutgoingReplicationHandler(this, Database, node);
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;

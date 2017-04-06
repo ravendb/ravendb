@@ -1,7 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -29,15 +31,11 @@ namespace FastTests.Server.Replication
             SetupReplication(store1,store2);
 
             Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
-
-            SetupReplication(store2, new ReplicationDocument
+            var config = new ConflictSolver
             {
-                DefaultResolver = new DatabaseResolver
-                {
-                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store2).Result.DbId.ToString(),
-                    Version = 0
-                }
-            }, store1);
+                DatabaseResovlerId = GetDocumentDatabaseInstanceFor(store2).Result.DbId.ToString()
+            };
+            SetupReplication(store2,config, store1);
 
             Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Oren"));
             Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Oren"));
@@ -74,23 +72,19 @@ namespace FastTests.Server.Replication
             Assert.Equal(3,WaitUntilHasConflict(store3,"foo/bar", 3).Results.Length);
 
             // store2 <--> store1 <--> store3*
-            SetupReplication(store3, new ReplicationDocument
+            var config = new ConflictSolver
             {
-                DefaultResolver = new DatabaseResolver
-                {
-                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store3).Result.DbId.ToString(),
-                    Version = 0
-                }
-            },store1);
-
+                DatabaseResovlerId = GetDocumentDatabaseInstanceFor(store3).Result.DbId.ToString()
+            };
+            SetupReplication(store3, config, store1);
 
             Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Leader"));
             Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Leader"));
             Assert.True(WaitForDocument<User>(store3, "foo/bar", u => u.Name == "Leader"));
         }
 
-        [Fact]
-        public void ChangeDatabaseAndResolve()
+        [Fact(Skip = "The scenario as it played here should and will resolve in error")]
+        public async Task ChangeDatabaseAndResolve()
         {           
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
@@ -112,22 +106,17 @@ namespace FastTests.Server.Replication
                 session.SaveChanges();
             }
             // store2 <-- store1 --> store3
-            SetupReplication(store1, store2, store3);
+            await SetupReplicationAsync(store1, store2, store3);
            
             Assert.Equal(2, WaitUntilHasConflict(store3, "foo/bar").Results.Length);
             Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
 
             // store2* <--> store1 --> store3
-            
-            SetupReplication(store2, new ReplicationDocument
+            var config = new ConflictSolver
             {
-                DefaultResolver = new DatabaseResolver
-                {
-                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store2).Result.DbId.ToString(),
-                    Version = 0
-                }
-            }, store1);
-
+                DatabaseResovlerId = GetDocumentDatabaseInstanceFor(store2).Result.DbId.ToString()
+            };
+            await SetupReplicationAsync(store2, config, store1);
 
             Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Oren"));
             Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Oren"));
@@ -135,15 +124,9 @@ namespace FastTests.Server.Replication
 
 
             // store2 <--> store1 --> store3*
-            SetupReplication(store3, new ReplicationDocument
-            {
-                DefaultResolver = new DatabaseResolver
-                {
-                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store3).Result.DbId.ToString(),
-                    Version = 1
-                }
-            });
-
+            var databaseResovlerId = GetDocumentDatabaseInstanceFor(store3).Result.DbId.ToString();
+            await UpdateConflictResolver(store3, databaseResovlerId);
+            
             using (var session = store3.OpenSession())
             {
                 session.Store(new User { Name = "Leader" }, "foo/bar");
@@ -157,22 +140,18 @@ namespace FastTests.Server.Replication
             }
 
             // store2 <--> store1 --> store3*
-            SetupReplication(store3, new ReplicationDocument
+            config = new ConflictSolver
             {
-                DefaultResolver = new DatabaseResolver
-                {
-                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store3).Result.DbId.ToString(),
-                    Version = 2
-                }
-            },store1);
-
+                DatabaseResovlerId = GetDocumentDatabaseInstanceFor(store3).Result.DbId.ToString()
+            };
+            await SetupReplicationAsync(store3, config, store1);
             Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Leader"));
             Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Leader"));
             Assert.True(WaitForDocument<User>(store3, "foo/bar", u => u.Name == "Leader"));
         }
 
         [Fact]
-        public void UnsetDatabaseResolver()
+        public async Task UnsetDatabaseResolver()
         {
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
@@ -187,26 +166,12 @@ namespace FastTests.Server.Replication
                 session.SaveChanges();
             }
             // store1* --> store2
-            SetupReplication(store1, new ReplicationDocument
-            {
-                DefaultResolver = new DatabaseResolver
-                {
-                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString(),
-                    Version = 0
-                }
-            }, store2);
-
+            var databaseResovlerId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString();
+            await UpdateConflictResolver(store2, databaseResovlerId);
+            await SetupReplicationAsync(store1, store2);
             Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Karmel"));
 
-            SetupReplication(store1, new ReplicationDocument
-            {
-                DefaultResolver = new DatabaseResolver
-                {
-                    ResolvingDatabaseId = null,
-                    Version = 1
-                }
-            }, store2);
-            
+            await UpdateConflictResolver(store2); // reset the conflict resovler
             using (var session = store2.OpenSession())
             {
                 session.Store(new User { Name = "NewKarmel" }, "foo/bar");
@@ -220,8 +185,8 @@ namespace FastTests.Server.Replication
             Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
         }
 
-        [Fact]
-        public void SetDatabaseResolverAtTwoNodes()
+        [Fact(Skip="With raft this test is no longer relevant")]
+        public async Task SetDatabaseResolverAtTwoNodes()
         {
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
@@ -247,24 +212,14 @@ namespace FastTests.Server.Replication
                 mre.Set();
             };
 
-            SetupReplication(store1, new ReplicationDocument
+            var databaseResovlerId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString();
+            await UpdateConflictResolver(store1, databaseResovlerId);
+            // store2* --> store1*
+            var config = new ConflictSolver
             {
-                DefaultResolver = new DatabaseResolver
-                {
-                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString(),
-                    Version = 0
-                }
-            });
-
-             // store2* --> store1*
-             SetupReplication(store2, new ReplicationDocument
-            {
-                DefaultResolver = new DatabaseResolver
-                {
-                    ResolvingDatabaseId = database2.DbId.ToString(),
-                    Version = 0
-                }
-            }, store1);
+                DatabaseResovlerId = GetDocumentDatabaseInstanceFor(store2).Result.DbId.ToString()
+            };
+            await SetupReplicationAsync(store2, config, store1);
 
             var millisecondsTimeout = 1500;
             if (Debugger.IsAttached)
@@ -300,16 +255,12 @@ namespace FastTests.Server.Replication
             SetupReplication(store1, store2);
 
             Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
-
-            SetupReplication(store2, new ReplicationDocument
+            var config = new ConflictSolver
             {
-                DefaultResolver = new DatabaseResolver
-                {
-                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store2).Result.DbId.ToString(),
-                    Version = 0
-                }
-            }, store1);
-            
+                DatabaseResovlerId = GetDocumentDatabaseInstanceFor(store2).Result.DbId.ToString()
+            };
+            SetupReplication(store2, config, store1);
+
             Assert.Equal(1,WaitUntilHasTombstones(store1).Count);
             Assert.Equal(1,WaitUntilHasTombstones(store2).Count);
         }

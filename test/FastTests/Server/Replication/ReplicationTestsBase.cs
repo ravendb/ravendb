@@ -315,19 +315,19 @@ namespace FastTests.Server.Replication
         protected static async Task<UpdateTopologyResult> UpdateReplicationTopology(
             DocumentStore store, 
             Dictionary<string,string> dictionary,
-            List<DatabaseWatcher> watchers,
-            List<int> removeWatchers)
+            List<DatabaseWatcher> watchers)
         {
-            var cmd = new UpdateDatabaseTopology(store.DefaultDatabase, dictionary, watchers, removeWatchers);
+            var cmd = new UpdateDatabaseTopology(store.DefaultDatabase, dictionary, watchers);
             return await store.Admin.Server.SendAsync(cmd);
         }
 
-        protected static async Task<ModifySolverResult> UpdateConflictResolver(DocumentStore store, ReplicationNode senator = null, Dictionary<string, ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
+        protected static async Task<ModifySolverResult> UpdateConflictResolver(DocumentStore store, string resovlerDbId = null, Dictionary<string, ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
         {
-            var cmd = new ModifyConflictSolver(store.DefaultDatabase, senator, collectionByScript, resolveToLatest);
+            var cmd = new ModifyConflictSolver(store.DefaultDatabase, resovlerDbId, collectionByScript, resolveToLatest);
             return await store.Admin.Server.SendAsync(cmd);
         }
 
+        public DatabaseTopology CurrentDatabaseTopology;
 
         public async Task SetupReplicationAsync(DocumentStore fromStore, params DocumentStore[] toStores)
         {
@@ -341,7 +341,8 @@ namespace FastTests.Server.Replication
                     
                 });
             }
-            await UpdateReplicationTopology(fromStore, null,watchers,null);
+            var result = await UpdateReplicationTopology(fromStore, null,watchers);
+            CurrentDatabaseTopology = result.Topology;
         }
 
         public static void SetScriptResolution(DocumentStore store, string script, string collection)
@@ -389,28 +390,17 @@ namespace FastTests.Server.Replication
         {
             SetupReplicationAsync(fromStore, toStores).Wait();
         }
-        
-                protected void SetupReplication(DocumentStore fromStore, ReplicationDocument configOptions, params DocumentStore[] toStores)
-                {
-                    using (var session = fromStore.OpenSession())
-                    {
-                        var destinations = new List<ReplicationNode>();
-                        foreach (var store in toStores)
-                        {
-                            var replicationDestination = new ReplicationNode
-                            {
-                                Database = store.DefaultDatabase,
-                                Url = store.Url
-                            };
-                            ModifyReplicationDestination(replicationDestination);
-                            destinations.Add(replicationDestination);
-                        }
-        
-                        configOptions.Destinations = destinations;
-                        session.Store(configOptions, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                        session.SaveChanges();
-                    }
-                }
+
+        protected async Task SetupReplicationAsync(DocumentStore fromStore, ConflictSolver conflictSolver, params DocumentStore[] toStores)
+        {
+            await UpdateConflictResolver(fromStore, conflictSolver.DatabaseResovlerId, conflictSolver.ResolveByCollection, conflictSolver.ResolveToLatest);
+            await SetupReplicationAsync(fromStore, toStores);
+        }
+
+        protected void SetupReplication(DocumentStore fromStore, ConflictSolver conflictSolver, params DocumentStore[] toStores)
+        {
+            SetupReplicationAsync(fromStore, conflictSolver, toStores).Wait();
+        }
         
                 protected static void DeleteReplication(DocumentStore fromStore, DocumentStore deletedStoreDestination)
                 {

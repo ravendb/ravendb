@@ -667,17 +667,14 @@ namespace Raven.Server.ServerWide
 
         public Dictionary<string,string> UpdateBlockedConnections;
         public List<DatabaseWatcher> NewWatchers;
-        public List<int> RemoveWatchers;
-
+        
         public void Deserialize()
         {
             BlittableJsonReaderObject blockedConnectionsBlittable;
             BlittableJsonReaderArray newWatchersBlittable;
-            BlittableJsonReaderArray removeWatchersBlittable;
             Value.TryGet("BlockedConnections", out blockedConnectionsBlittable);
             Value.TryGet("NewWatchers", out newWatchersBlittable);
-            Value.TryGet("RemoveWatchers", out removeWatchersBlittable);
-
+            
             if (blockedConnectionsBlittable != null)
             {
                 UpdateBlockedConnections = JsonDeserializationRachis<Dictionary<string, string>>.Deserialize(blockedConnectionsBlittable);
@@ -687,12 +684,6 @@ namespace Raven.Server.ServerWide
                 NewWatchers = new List<DatabaseWatcher>();
                 NewWatchers.AddRange(newWatchersBlittable.Items.
                     Select(i => JsonDeserializationRachis<DatabaseWatcher>.Deserialize((BlittableJsonReaderObject)i)));
-            }
-            if (removeWatchersBlittable != null)
-            {
-                RemoveWatchers = new List<int>();
-                RemoveWatchers.AddRange(removeWatchersBlittable.Items.
-                    Select(i => JsonDeserializationRachis<int>.Deserialize((BlittableJsonReaderObject)i)));
             }
         }
 
@@ -711,22 +702,18 @@ namespace Raven.Server.ServerWide
                 }
                 record.Topology.CustomConnectionBlocker[key] = value;
             }
-            foreach (var databaseWatcher in RemoveWatchers)
-            {
-                record.Topology.Watchers.RemoveAt(databaseWatcher);
-            }
-            record.Topology.Watchers.AddRange(NewWatchers);
+            record.Topology.Watchers = NewWatchers;
         }
     }
 
     public class ModifyConflictSolverCommand : IUpdateDatabaseCommand
     {
         public string DatabaseName;
-        public ConflictSolver Solver;
+        public BlittableJsonReaderObject Value;
 
         public void UpdateDatabaseRecord(DatabaseRecord record)
         {
-            record.ConflictSolverConfig = Solver;
+            record.ConflictSolverConfig = JsonDeserializationServer.ConflictSolver(Value);
         }
     }
 
