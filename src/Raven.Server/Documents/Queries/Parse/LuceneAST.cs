@@ -50,6 +50,7 @@ namespace Raven.Server.Documents.Queries.Parse
 
         public abstract Query ToQuery(LuceneASTQueryConfiguration configuration);
 
+        protected static string Asterisk = "*";
 
         public virtual void AddQueryToBooleanQuery(BooleanQuery b, LuceneASTQueryConfiguration configuration, Occur o)
         {
@@ -224,9 +225,9 @@ namespace Raven.Server.Documents.Queries.Parse
             if (terms.Count == 1)
             {
                 var firstTerm = terms.First();
-                if (Term.StartsWith("*") && !firstTerm.StartsWith("*")) sb.Append('*');
+                if (Term.StartsWith(Asterisk) && !firstTerm.StartsWith(Asterisk)) sb.Append('*');
                 sb.Append(firstTerm);
-                if (Term.EndsWith("*") && !firstTerm.EndsWith("*")) sb.Append('*');
+                if (Term.EndsWith(Asterisk) && !firstTerm.EndsWith(Asterisk)) sb.Append('*');
                 var res = sb.ToString();
                 expectedLength = (qouted ? 2 : 0) + res.Length;
                 Debug.Assert(expectedLength  == Term.Length,
@@ -420,7 +421,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
     public class RangeLuceneASTNode : LuceneASTNodeBase
     {
         private bool _maxIsNull;
-        private bool _minIsNull;
+        private bool _minIsNull;        
         public override IEnumerable<LuceneASTNodeBase> Children
         {
             get { yield break; }
@@ -430,13 +431,15 @@ This edge-case has a very slim chance of happening, but still we should not igno
             switch (configuration.FieldName.Type)
             {
                 case FieldName.FieldType.String:
-                    if (RangeMin.Type == TermLuceneASTNode.TermType.Null && RangeMax.Type == TermLuceneASTNode.TermType.Null)
+                    var minTermIsNullOrStar = RangeMin.Type == TermLuceneASTNode.TermType.Null || RangeMin.Term.Equals(Asterisk);
+                    var maxTermIsNullOrStar = RangeMax.Type == TermLuceneASTNode.TermType.Null || RangeMax.Term.Equals(Asterisk);
+                    if (minTermIsNullOrStar && maxTermIsNullOrStar)
                     {
-                        return new WildcardQuery(new Term(configuration.FieldName.Field, "*"));
+                        return new WildcardQuery(new Term(configuration.FieldName.Field, Asterisk));
                     }
                     return new TermRangeQuery(configuration.FieldName.Field,
-                                RangeMin.Type == TermLuceneASTNode.TermType.Null ? null : RangeMin.Term,
-                                RangeMax.Type == TermLuceneASTNode.TermType.Null ? null : RangeMax.Term,
+                                minTermIsNullOrStar ? null : RangeMin.Term,
+                                maxTermIsNullOrStar ? null : RangeMax.Term,
                                 InclusiveMin, InclusiveMax);
                 case FieldName.FieldType.Long:
                     OverideInclusiveForKnownNumericRange();
@@ -466,12 +469,12 @@ This edge-case has a very slim chance of happening, but still we should not igno
         /// </summary>
         private void OverideInclusiveForKnownNumericRange()
         {
-            if (RangeMax.Type == TermLuceneASTNode.TermType.Null || RangeMax.Term == "*")
+            if (RangeMax.Type == TermLuceneASTNode.TermType.Null || RangeMax.Term == Asterisk)
             {
                 _maxIsNull = true;
                 InclusiveMax = true;
             }
-            if (RangeMin.Type == TermLuceneASTNode.TermType.Null || RangeMin.Term == "*")
+            if (RangeMin.Type == TermLuceneASTNode.TermType.Null || RangeMin.Term == Asterisk)
             {
                 _minIsNull = true;
                 InclusiveMin = true;
