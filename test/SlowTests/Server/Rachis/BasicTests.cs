@@ -35,7 +35,14 @@ namespace SlowTests.Server.Rachis
 
             foreach (var r in RachisConsensuses)
             {
-                Assert.True(r.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex).Wait(5000));   
+                var condition = await r.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex).WaitAsync(5000);
+                TransactionOperationContext context;
+                using (r.ContextPool.AllocateOperationContext(out context))
+                using (context.OpenReadTransaction())
+                {
+                    var commitIndex = r.GetLastCommitIndex(context);
+                    Assert.True(condition, $"Last commit is {commitIndex} wanted {lastIndex}");
+                }
             }
             
         }
