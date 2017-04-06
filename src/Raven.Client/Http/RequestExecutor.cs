@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
@@ -161,19 +162,21 @@ namespace Raven.Client.Http
                             TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, _nodeSelector.Topology, context);
                         }
                     }
-                    catch (HttpRequestException)
+                    catch (HttpRequestException e)
                     {
                         command.FailedNodes.Add(node,null);
 
                         _nodeSelector.OnFailedRequest();
+                        var errors = new List<Exception> {e};
                         while (command.FailedNodes.ContainsKey(_nodeSelector.CurrentNode) == false)
                         {
                             try
                             {
                                 await ExecuteAsync(_nodeSelector.CurrentNode, context, command, shouldRetry:false);
                             }
-                            catch (Exception)
+                            catch (Exception e2)
                             {
+                                errors.Add(e2);
                                 _nodeSelector.OnFailedRequest();
                                 continue;
                             }
@@ -189,7 +192,7 @@ namespace Raven.Client.Http
                         }
 
                         //if we are here, we went through all nodes and failed everywhere
-                        throw new InvalidOperationException("Tried to update topology from all nodes but failed. Cannot continue.");
+                        throw new AggregateException("Tried to update topology from all nodes but failed. Cannot continue.", errors);
                     }
                     catch (Exception ex)
                     {
@@ -323,8 +326,7 @@ namespace Raven.Client.Http
                         if (command.FailedNodes.Count == 0) //precaution, should never happen at this point
                             throw new InvalidOperationException("Received unsuccessful resonse and couldn't recover from it. Also, no record of exceptions per failed nodes. This is weird and should not happen.");
 
-//not sure how to treat multiple exceptions here, probably they should be written in a log
-                        throw new InvalidOperationException("Received unsuccessful resonse and couldn't recover from it.",
+                        throw new AllTopologyNodesDownException("Received unsuccessful resonse and couldn't recover from it.",
                             new AggregateException(command.FailedNodes.Select(x => new UnsuccessfulRequestException(x.Key.Url, x.Value))));
                     }
                     return; // we either handled this already in the unsuccessul response or we are throwing
@@ -467,22 +469,39 @@ namespace Raven.Client.Http
         {
             if (response != null)
             {
-                using (var responseJson = await context.ReadForMemoryAsync(await response.Content.ReadAsStreamAsync(),
-                    "RequestExecutor/HandleServerDown/ReadResponseContent"))
+                var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                var ms = new MemoryStream();
+                await stream.CopyToAsync(ms).ConfigureAwait(false);
+                try
                 {
-                    command.FailedNodes.Add(chosenNode, JsonDeserializationClient.ExceptionSchema(responseJson));
+                    ms.Position = 0;
+                    using (var responseJson = context.ReadForMemory(ms,"RequestExecutor/HandleServerDown/ReadResponseContent"))
+                    {
+                        command.FailedNodes.Add(chosenNode, JsonDeserializationClient.ExceptionSchema(responseJson));
+                    }
+               }
+                catch
+                {
+                    // we failed to parse the error
+                    ms.Position = 0;
+                    command.FailedNodes.Add(chosenNode, new ExceptionDispatcher.ExceptionSchema
+                    {
+                        Url = request.RequestUri.ToString(),
+                        Message = "Got unrecognized response from the server",
+                        Error = new StreamReader(ms).ReadToEnd(),
+                        Type = "Unparsable Server Response"
+                    });
                 }
+                return;
             }
-            else //this would be connections that didn't have response, such as "couldn't connect to remote server"
+            //this would be connections that didn't have response, such as "couldn't connect to remote server"
+            command.FailedNodes.Add(chosenNode, new ExceptionDispatcher.ExceptionSchema
             {
-                command.FailedNodes.Add(chosenNode, new ExceptionDispatcher.ExceptionSchema
-                {
-                    Url = request.RequestUri.ToString(),
-                    Message = e.Message,
-                    Error = e.ToString(),
-                    Type = e.GetType().FullName
-                });
-            }
+                Url = request.RequestUri.ToString(),
+                Message = e.Message,
+                Error = e.ToString(),
+                Type = e.GetType().FullName
+            });
         }
 
         public string UrlFor(string documentKey)
