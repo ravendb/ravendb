@@ -826,7 +826,7 @@ namespace FastTests.Client.Attachments
         }
 
         [Fact]
-        public async Task PutAndDeleteAttachmentsShouldConflict()
+        public async Task PutAndDeleteAttachmentsShouldNotConflict()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
@@ -836,15 +836,15 @@ namespace FastTests.Client.Attachments
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
+                    await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
                     await session.SaveChangesAsync();
 
-                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    using (var a1 = new MemoryStream(new byte[] {1, 2, 3}))
                     {
                         await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
                     }
 
-                    await session.StoreAsync(new User { Name = "Marker 1" }, "marker 1");
+                    await session.StoreAsync(new User {Name = "Marker 1"}, "marker 1");
                     await session.SaveChangesAsync();
                 }
                 using (var session = store2.OpenAsyncSession())
@@ -868,20 +868,13 @@ namespace FastTests.Client.Attachments
                 Assert.True(WaitForDocument(store2, "marker 1"));
                 Assert.True(WaitForDocument(store1, "marker 2"));
 
-                var conflicts = GetConflicts(store1, "users/1");
-                Assert.Equal(2, conflicts.Results.Length);
-                AssertConflict(conflicts.Results[0], "a1", "JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", "a1/png", 3);
-                AssertConflictNoAttachment(conflicts.Results[1]);
-
-                conflicts = GetConflicts(store2, "users/1");
-                Assert.Equal(2, conflicts.Results.Length);
-                AssertConflict(conflicts.Results[0], "a1", "JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", "a1/png", 3);
-                AssertConflictNoAttachment(conflicts.Results[1]);
+                await AssertAttachments(store1, new[] {"a1"});
+                await AssertAttachments(store2, new[] {"a1"});
             }
         }
 
         [Fact]
-        public async Task PutAndDeleteAttachmentsShouldConflict_OnDocumentWithoutMetadata()
+        public async Task PutAndDeleteAttachmentsShouldNotConflict_OnDocumentWithoutMetadata()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
@@ -927,15 +920,8 @@ namespace FastTests.Client.Attachments
                 Assert.True(WaitForDocument(store2, "marker 1"));
                 Assert.True(WaitForDocument(store1, "marker 2"));
 
-                var conflicts = GetConflicts(store1, "users/1");
-                Assert.Equal(2, conflicts.Results.Length);
-                AssertConflict(conflicts.Results[0], "a1", "JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", "a1/png", 3);
-                AssertConflictNoAttachment(conflicts.Results[1]);
-
-                conflicts = GetConflicts(store2, "users/1");
-                Assert.Equal(2, conflicts.Results.Length);
-                AssertConflict(conflicts.Results[0], "a1", "JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", "a1/png", 3);
-                AssertConflictNoAttachment(conflicts.Results[1]);
+                await AssertAttachments(store1, new[] { "a1" });
+                await AssertAttachments(store2, new[] { "a1" });
             }
         }
     }
