@@ -35,10 +35,8 @@ namespace FastTests.Server.Replication
             SetupReplication(store1,store2);
             SetupReplication(store2,store1);
 
-            var conflicts = WaitUntilHasConflict(store1, id, 2);
-            Assert.Equal(2,conflicts[id].Count);
-            conflicts = WaitUntilHasConflict(store2, id, 2);
-            Assert.Equal(2, conflicts[id].Count);
+            Assert.Equal(2, WaitUntilHasConflict(store1, id).Results.Length);
+            Assert.Equal(2, WaitUntilHasConflict(store2, id).Results.Length);
         }
 
         [Fact]

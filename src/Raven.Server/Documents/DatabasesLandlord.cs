@@ -15,6 +15,8 @@ using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -30,7 +32,7 @@ namespace Raven.Server.Documents
 {
     public class DatabasesLandlord : IDisposable
     {
-        private ReaderWriterLockSlim _disposing = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim _disposing = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
 
@@ -52,6 +54,7 @@ namespace Raven.Server.Documents
         {
             // response to changed database.
             // if disabled, unload
+            Debug.Assert(_serverStore.Disposed == false);
 
             TransactionOperationContext context;
             using (_serverStore.ContextPool.AllocateOperationContext(out context))
@@ -194,7 +197,7 @@ namespace Raven.Server.Documents
                                     _logger.Info("Failure in deferred disposal of a database", e);
                             }
                         });
-                    else if (dbTask.Status == TaskStatus.RanToCompletion)
+                    else if (dbTask.Status == TaskStatus.RanToCompletion && dbTask.Result != null)
                         exceptionAggregator.Execute(((IDisposable)dbTask.Result).Dispose);
                     // there is no else, the db is probably faulted
                 });
@@ -220,6 +223,15 @@ namespace Raven.Server.Documents
 
         public event Action<string> OnDatabaseLoaded = delegate { };
 
+        public bool IsDatabaseLoaded(StringSegment databaseName)
+        {
+            if (DatabasesCache.TryGetValue(databaseName, out Task<DocumentDatabase> databaseTask))
+            {
+                return databaseTask.IsCanceled == false && databaseTask.IsFaulted == false;
+            }
+
+            return false;
+        }
 
         public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, bool ignoreDisabledDatabase = false)
         {
@@ -264,9 +276,22 @@ namespace Raven.Server.Documents
             if (config == null)
                 return null;
 
-            if (!_resourceSemaphore.Wait(_concurrentResourceLoadTimeout))
-                throw new DatabaseConcurrentLoadTimeoutException(
-                    "Too much databases loading concurrently, timed out waiting for them to load.");
+            if (!_resourceSemaphore.Wait(0))
+                return UnlikelyCreateDatabaseUnderContention(databaseName, config);
+
+            return CreateDatabaseUnderResourceSemaphore(databaseName, config);
+        }
+
+        private async Task<DocumentDatabase> UnlikelyCreateDatabaseUnderContention(StringSegment databaseName, RavenConfiguration config)
+        {
+            if(await _resourceSemaphore.WaitAsync(_concurrentResourceLoadTimeout) == false)
+                throw new DatabaseConcurrentLoadTimeoutException("Too many databases loading concurrently, timed out waiting for them to load.");
+
+            return await CreateDatabaseUnderResourceSemaphore(databaseName, config);
+        }
+
+        private Task<DocumentDatabase> CreateDatabaseUnderResourceSemaphore(StringSegment databaseName, RavenConfiguration config)
+        {
             try
             {
                 var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config));
@@ -290,6 +315,13 @@ namespace Raven.Server.Documents
         {
             try
             {
+                if (_serverStore.Disposed)
+                    return null;
+
+                //if false, this means we have started disposing, so we shouldn't create a database now
+                if (_disposing.TryEnterReadLock(0) == false)
+                    return null;
+
                 var db = CreateDocumentsStorage(databaseName, config);
                 _serverStore.NotificationCenter.Add(
                     DatabaseChanged.Create(databaseName, DatabaseChangeType.Load));
@@ -305,6 +337,12 @@ namespace Raven.Server.Documents
                     Task<DocumentDatabase> val;
                     DatabasesCache.TryRemove(databaseName, out val);
                 }
+
+                if (_logger.IsInfoEnabled && e.InnerException is UnauthorizedAccessException)
+                {
+                    _logger.Info("Failed to load database because couldn't access certain file. Please check permissions, and make sure that nothing locks that file (an antivirus is a good example of something that can lock the file)", e);
+                }
+
                 throw;
             }
             finally
@@ -316,6 +354,9 @@ namespace Raven.Server.Documents
                 catch (ObjectDisposedException)
                 {
                 }
+
+                if(_disposing.IsReadLockHeld)
+                    _disposing.ExitReadLock();
             }
         }
 
@@ -359,6 +400,7 @@ namespace Raven.Server.Documents
                 throw new ArgumentNullException(nameof(databaseName),
                     "Database name cannot be <system>. Using of <system> database indicates outdated code that was targeted RavenDB 3.5.");
 
+            Debug.Assert(_serverStore.Disposed == false);
 
             TransactionOperationContext context;
             using (_serverStore.ContextPool.AllocateOperationContext(out context))
@@ -397,6 +439,7 @@ namespace Raven.Server.Documents
 
         protected RavenConfiguration CreateConfiguration(StringSegment databaseName, DatabaseRecord record)
         {
+            Debug.Assert(_serverStore.Disposed == false);
             var config = RavenConfiguration.CreateFrom(_serverStore.Configuration, databaseName, ResourceType.Database);
 
             foreach (var setting in record.Settings)
@@ -429,6 +472,38 @@ namespace Raven.Server.Documents
             }
 
             return maxLastWork + TimeSpan.FromMilliseconds(dbSize / 1024L);
+        }
+
+
+        public void UnloadResourceOnCatastrophicFailue(string databaseName, Exception e)
+        {
+            Task.Run(async () =>
+            {
+                var title = $"Critical error in '{databaseName}'";
+                var message = "Database is about to be unloaded due to an encountered error";
+
+                try
+                {
+                    _serverStore.NotificationCenter.Add(AlertRaised.Create(
+                        title,
+                        message,
+                        AlertType.CatastrophicDatabaseFailue,
+                        NotificationSeverity.Error,
+                        key: databaseName,
+                        details: new ExceptionDetails(e)));
+                }
+                catch (Exception)
+                {
+                    // exception in raising an alert can't prevent us from unloading a database
+                }
+
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"{title}. {message}", e);
+
+                await Task.Delay(2000); // let it propagate the exception to the client first
+
+                UnloadDatabase(databaseName, null);
+            });
         }
 
         public void UnloadDatabase(string dbName, TimeSpan? skipIfActiveInDuration, Func<DocumentDatabase, bool> shouldSkip = null)

@@ -1,6 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
-type knownDocumentFlags = "Versioned"; //TODO: add more flags
+type knownDocumentFlags = "Versioned" | "Revision" | "HasAttachments";
 
 class documentMetadata {
     collection: string;
@@ -11,9 +11,11 @@ class documentMetadata {
     flags: string;
     lastModified = ko.observable<string>();
     nonStandardProps: Array<keyof documentMetadataDto>;
-   
+
     etag = ko.observable<number>(null);
     lastModifiedFullDate: KnockoutComputed<string>;
+
+    attachments: Array<documentAttachmentDto>;
 
     constructor(dto?: documentMetadataDto) {
         if (dto) {
@@ -34,6 +36,8 @@ class documentMetadata {
 
             this.etag(dto['@etag']);
 
+            this.attachments = dto['@attachments'];
+
             for (let property in dto) {
                 if (property.toUpperCase() !== '@collection'.toUpperCase() &&
                     property.toUpperCase() !== '@flags'.toUpperCase() &&
@@ -42,6 +46,7 @@ class documentMetadata {
                     property.toUpperCase() !== '@id'.toUpperCase() &&
                     property.toUpperCase() !== 'Temp-Index-Score'.toUpperCase() &&
                     property.toUpperCase() !== '@last-modified'.toUpperCase() &&
+                    property.toUpperCase() !== '@attachments'.toUpperCase() &&
                     property.toUpperCase() !== '@etag'.toUpperCase() &&
                     property.toUpperCase() !== 'toDto'.toUpperCase()) {
                     this.nonStandardProps = this.nonStandardProps || [];
@@ -65,7 +70,8 @@ class documentMetadata {
             '@id': this.id,
             'Temp-Index-Score': this.tempIndexScore,
             '@last-modified': this.lastModified(),
-            '@etag': this.etag()
+            '@etag': this.etag(),
+            '@attachments': this.attachments
         };
 
         if (this.nonStandardProps) {
@@ -75,11 +81,14 @@ class documentMetadata {
         return dto;
     }
 
-
-    static filterMetadata(metaDto: documentMetadataDto, removedProps: any[] = null) {
+    static filterMetadata(metaDto: documentMetadataDto, removedProps: any[] = null, isClonedDocument: boolean = false) {
         // We don't want to show certain reserved properties in the metadata text area.
         // Remove them from the DTO, restore them on save.
         const metaPropsToRemove = ["@id", "@etag", "@last-modified", "@attachments"];
+
+        if (isClonedDocument) {
+            metaPropsToRemove.push("@change-vector");
+        }
 
         for (let property in metaDto) {
             if (metaDto.hasOwnProperty(property) && _.includes(metaPropsToRemove, property)) {
@@ -90,7 +99,6 @@ class documentMetadata {
             }
         }
         return metaDto;
-
     }
 }
 

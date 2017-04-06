@@ -14,7 +14,7 @@ namespace Raven.Server.Web.Studio
             using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                context.Write(writer, LicenseManager.GetLicenseStatus().ToJson());
+                context.Write(writer, ServerStore.LicenseManager.GetLicenseStatus().ToJson());
             }
 
             return Task.CompletedTask;
@@ -31,8 +31,8 @@ namespace Raven.Server.Web.Studio
                 userInfo = JsonDeserializationServer.UserRegistrationInfo(json);
             }
 
-            await LicenseManager.RegisterForFreeLicense(userInfo).ConfigureAwait(false);
-            
+            await ServerStore.LicenseManager.RegisterForFreeLicense(userInfo).ConfigureAwait(false);
+
             NoContentStatus();
         }
 
@@ -47,7 +47,7 @@ namespace Raven.Server.Web.Studio
                 license = JsonDeserializationServer.License(json);
             }
 
-            LicenseManager.Activate(license);
+            ServerStore.LicenseManager.Activate(license, skipLeaseLicense: false);
 
             return NoContent();
         }

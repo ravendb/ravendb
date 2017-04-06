@@ -181,7 +181,7 @@ class connectedDocuments {
     fetchAttachments(skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> {
         const doc = this.document();
 
-        const attachments: Raven.Client.Documents.Operations.AttachmentResult[] = (doc.__metadata as any)["@attachments"] || [];
+        const attachments: documentAttachmentDto[] = doc.__metadata.attachments || [];
         const mappedFiles = attachments.map(file => ({
             documentId: doc.getId(),
             name: file.Name,
@@ -206,23 +206,11 @@ class connectedDocuments {
     }
 
     fetchRevisionDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
-        //TODO: should endpoint return results in different order - newest first?
         const doc = this.document();
 
         if (!doc.__metadata.hasFlag("Versioned")) {
             return connectedDocuments.emptyDocResult<connectedDocument>();
         }
-
-        const includeLatestFakeItem = skip === 0;
-
-        const fakeCurrentItem = {
-            id: 'Current document',
-            href: appUrl.forEditDoc(doc.getId(), this.db())
-        } as connectedDocument;
-
-        // shift by one item, to serve fake item properly
-        if (skip > 0) { skip--; }
-        take--;
 
         const fetchTask = $.Deferred<pagedResult<connectedDocument>>();
         new getDocumentRevisionsCommand(doc.getId(), this.db(), skip, take, true)
@@ -230,9 +218,18 @@ class connectedDocuments {
             .done(result => {
                 const mappedResults = result.items.map(x => this.revisionToConnectedDocument(x));
                 fetchTask.resolve({
-                    items: includeLatestFakeItem ? [fakeCurrentItem].concat(...mappedResults) : mappedResults,
-                    totalResultCount: result.totalResultCount + 1 // include latest item
+                    items: mappedResults,
+                    totalResultCount: result.totalResultCount
                 });
+
+                if (doc.__metadata.hasFlag("Revision")) {
+                    const etag = doc.__metadata.etag();
+                    const resultIdx = result.items.findIndex(x => x.__metadata.etag() === etag);
+                    if (resultIdx >= 0) {
+                        this.gridController().setSelectedItems([mappedResults[resultIdx]]);    
+                    }
+                    
+                }
             })
             .fail(xhr => fetchTask.reject(xhr));
 
@@ -259,8 +256,33 @@ class connectedDocuments {
             name: file.name
         };
 
-        const url = endpoints.databases.attachment.attachments + appUrl.urlEncodeArgs(args);
-        this.downloader.download(this.db(), url);
+        const doc = this.document();
+        if (doc.__metadata.hasFlag("Revision")) {
+            this.downloadAttachmentAtRevision(doc, args);
+        } else {
+            const url = endpoints.databases.attachment.attachments + appUrl.urlEncodeArgs(args);
+            this.downloader.download(this.db(), url);    
+        }
+    }
+
+    private downloadAttachmentAtRevision(doc: document, file: { id: string; name: string }) {
+        //TODO: single auth token ?
+
+        const $form = $("#downloadAttachmentAtRevisionForm");
+        const $changeVector = $("[name=ChangeVectorAndType]", $form);
+        const changeVector = (doc.__metadata as any)['@change-vector'];
+
+        const payload = {
+            ChangeVector: changeVector,
+            Type: "Revision"
+        };
+
+        const url = endpoints.databases.attachment.attachments + appUrl.urlEncodeArgs(file);
+
+        $form.attr("action", appUrl.forDatabaseQuery(this.db()) + url);
+        
+        $changeVector.val(JSON.stringify(payload));
+        $form.submit();
     }
 
     private deleteAttachment(file: attachmentItem) {

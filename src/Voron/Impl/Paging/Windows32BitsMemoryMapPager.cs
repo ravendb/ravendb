@@ -533,7 +533,7 @@ namespace Voron.Impl.Paging
             using (var metric = Options.IoMetrics.MeterIoRate(FileName, IoMetrics.MeterType.DataSync, 0))
             {
                 metric.IncrementSize(totalUnsynced);
-                metric.IncrementFileSize(_totalAllocationSize);
+                metric.SetFileSize(_totalAllocationSize);
 
                 if (Win32MemoryMapNativeMethods.FlushFileBuffers(_handle) == false)
                 {

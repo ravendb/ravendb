@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.PeriodicExport
             _configuration = configuration;
             _status = status;
             _logger = LoggingSource.Instance.GetLogger<PeriodicExportRunner>(_database.Name);
-            _cancellationToken = new CancellationTokenSource();
+            _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
 
             if (configuration.IntervalMilliseconds.HasValue && configuration.IntervalMilliseconds.Value > 0)
             {
@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.PeriodicExport
 
         private void LongPeriodTimerCallback(object fullExport)
         {
-            if (_database.DatabaseShutdown.IsCancellationRequested)
+            if (_cancellationToken.IsCancellationRequested)
                 return;
 
             lock (this)
@@ -188,13 +188,13 @@ namespace Raven.Server.Documents.PeriodicExport
 
         private void TimerCallback(object fullExport)
         {
-            if (_runningTask != null || _database.DatabaseShutdown.IsCancellationRequested)
+            if (_runningTask != null || _cancellationToken.IsCancellationRequested)
                 return;
 
             // we have shared lock for both incremental and full backup.
             lock (this)
             {
-                if (_runningTask != null || _database.DatabaseShutdown.IsCancellationRequested)
+                if (_runningTask != null || _cancellationToken.IsCancellationRequested)
                     return;
                 _runningTask = Task.Run(async () =>
                 {
@@ -209,7 +209,7 @@ namespace Raven.Server.Documents.PeriodicExport
                             _runningTask = null;
                         }
                     }
-                });
+                }, _database.DatabaseShutdown);
             }
         }
 
@@ -511,7 +511,7 @@ namespace Raven.Server.Documents.PeriodicExport
         public void Dispose()
         {
             _cancellationToken.Cancel();
-            _cancellationToken.Dispose();
+            
             _incrementalExportTimer?.Dispose();
             _fullExportTimer?.Dispose();
             var task = _runningTask;
@@ -524,15 +524,17 @@ namespace Raven.Server.Documents.PeriodicExport
             {
                 // shutting down, probably
             }
-            catch (OperationCanceledException)
+            catch (AggregateException e) when (e.InnerException is OperationCanceledException)
             {
-                // shutting down, probably
+                // shutting down
             }
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Error when disposing periodic export runner task", e);
             }
+
+            _cancellationToken.Dispose();
         }
 
         public static PeriodicExportRunner LoadConfigurations(DocumentDatabase database)

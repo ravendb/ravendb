@@ -18,6 +18,7 @@ import dismissNotificationCommand = require("commands/operations/dismissNotifica
 import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
 import killOperationCommand = require("commands/operations/killOperationCommand");
 import showDataDialog = require("viewmodels/common/showDataDialog");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 import smugglerDatabaseDetails = require("viewmodels/common/notificationCenter/detailViewer/smugglerDatabaseDetails");
 
@@ -131,7 +132,8 @@ class notificationCenter {
             client.watchAllAlerts(e => this.onAlertReceived(e, this.databaseNotifications, db)),
             client.watchAllPerformanceHints(e => this.onPerformanceHintReceived(e, this.databaseNotifications, db)),
             client.watchAllOperations(e => this.onOperationChangeReceived(e, this.databaseNotifications, db)),
-            client.watchAllNotificationUpdated(e => this.onNotificationUpdated(e, this.databaseNotifications, db))
+            client.watchAllNotificationUpdated(e => this.onNotificationUpdated(e, this.databaseNotifications, db)),
+            client.watchAllDatabaseStatsChanged(e => collectionsTracker.default.onDatabaseStatsChanged(e, db))
         ];
     }
 
@@ -294,7 +296,7 @@ class notificationCenter {
 
         if (notification instanceof alert) {
             const currentAlert = notification as alert;
-            const text = JSON.stringify(currentAlert.details, null, 4);
+            const text = JSON.stringify(currentAlert.details(), null, 4);
 
             app.showBootstrapDialog(new showDataDialog("Alert", text, "javascript"))
                 .done(() => {

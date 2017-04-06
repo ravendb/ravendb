@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Exceptions;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Tests.Infrastructure;
@@ -10,20 +10,22 @@ using Xunit;
 
 namespace FastTests.Server.Replication
 {
-    public class ReplicationWithFailover : ClusterTestBase
+    public class DisableDatabasePropagationInRaftCluster : ClusterTestBase
     {
         private class User
         {
             public string Name;
         }
 
-        [Fact(Skip = "WIP RavenDB-6602")]
-        public async Task LoadDocumentsWithFailOver()
+        [Fact]
+        public async Task DisableDatabaseToggleOperation_should_propagate_through_raft_cluster()
         {
-            var leaderServer = await CreateRaftClusterAndGetLeader(2);
+            NoTimeouts();
+
+            var leaderServer = await CreateRaftClusterAndGetLeader(2, shouldRunInMemory:false);
             var slaveServer = Servers.First(srv => ReferenceEquals(srv, leaderServer) == false);
 
-            const string databaseName = "LoadDocumentsWithFailOver";
+            const string databaseName = "DisableDatabaseToggleOperation_should_propagate_through_raft_cluster";
             using (var master = new DocumentStore
             {
                 Url = leaderServer.WebUrls[0],
@@ -48,15 +50,18 @@ namespace FastTests.Server.Replication
                 await Task.WhenAny(requestExecutor.UpdateTopologyAsync(), Task.Delay(TimeSpan.FromSeconds(10)));
 
                 //TODO for Karmel: refactor this test so it uses replication when raft based topology replication is implemented
-                //SetupReplicationOnDatabaseTopology(requestExecutor.TopologyNodes);
-              
+                SetupReplicationOnDatabaseTopology(requestExecutor.TopologyNodes);
+
                 using (var session = master.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges();
-                    session.Store(new User { Name = "Idan" }, "users/1");
-                    session.Store(new User { Name = "Shalom" }, "users/2");
+                    session.Store(new User {Name = "Idan"}, "users/1");
+                    session.Store(new User {Name = "Shalom"}, "users/2");
                     session.SaveChanges();
                 }
+
+                Assert.True(await WaitForDocumentInClusterAsync<User>(requestExecutor.TopologyNodes, "users/1", user => true, TimeSpan.FromSeconds(10)));
+                Assert.True(await WaitForDocumentInClusterAsync<User>(requestExecutor.TopologyNodes, "users/2", user => true, TimeSpan.FromSeconds(10)));
 
                 using (var session = master.OpenSession())
                 {
@@ -69,10 +74,35 @@ namespace FastTests.Server.Replication
                 }
 
                 var result = master.Admin.Server.Send(new DisableDatabaseToggleOperation(master.DefaultDatabase, true));
-                
+
+                Assert.True(result.Success);
                 Assert.True(result.Disabled);
                 Assert.Equal(master.DefaultDatabase, result.Name);
 
+                //wait until disabled databases unload, this is an immediate operation
+                Assert.True(await WaitUntilDatabaseHasState(master, TimeSpan.FromSeconds(10), isLoaded: false));
+                Assert.True(await WaitUntilDatabaseHasState(slave, TimeSpan.FromSeconds(10), isLoaded: false));
+
+                using (var session = master.OpenSession())
+                {
+                    //disable database is propagated through cluster, so both master and slave would be disabled after 
+                    //sending DisableDatabaseToggleOperation
+                    //note: the handler that receives DisableDatabaseToggleOperation "waits" until the cluster has a quorum
+                    //thus, session.Load() operation would fail now
+
+                    var e = Assert.Throws<InvalidOperationException>(() => session.Load<User>("users/1"));
+                    Assert.IsType<AggregateException>(e.InnerException);
+                    var ae = e.InnerException as AggregateException;
+                    foreach (var ie in ae.InnerExceptions)
+                        Assert.IsType<UnsuccessfulRequestException>(ie);
+                }
+
+                //now we enable all databases, so it should propagate as well and make them available for requests
+                result = master.Admin.Server.Send(new DisableDatabaseToggleOperation(master.DefaultDatabase, false));
+                
+                Assert.True(result.Success);
+                Assert.False(result.Disabled);
+                Assert.Equal(master.DefaultDatabase, result.Name);
                 using (var session = master.OpenSession())
                 {
                     var user1 = session.Load<User>("users/1");
@@ -83,6 +113,6 @@ namespace FastTests.Server.Replication
                     Assert.Equal("Shalom", user2.Name);
                 }
             }
-        }
+        }     
     }
 }

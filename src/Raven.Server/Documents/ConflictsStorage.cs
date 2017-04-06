@@ -16,6 +16,7 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using Voron.Util;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
@@ -122,7 +123,7 @@ namespace Raven.Server.Documents
             var keyMem = context.Allocator.Allocate(lowerKeySize + 1);
 
             Memory.Copy(keyMem.Ptr, lowerKey, lowerKeySize);
-            keyMem.Ptr[lowerKeySize] = VersioningStorage.RecordSeperator;
+            keyMem.Ptr[lowerKeySize] = SpecialChars.RecordSeperator;
 
             prefixSlice = new Slice(SliceOptions.Key, keyMem);
             return new ReleaseMemory(keyMem, context);

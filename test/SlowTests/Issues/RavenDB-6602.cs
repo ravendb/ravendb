@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -74,7 +75,7 @@ namespace FastTests.Issues
 
                 await ((DocumentStore)store).ForceUpdateTopologyFor(databaseName);
                 var requestExecutor = ((DocumentStore)store).GetRequestExecuter(databaseName);
-              
+
                 using (var session = store.OpenSession(databaseName))
                 {
                     session.Store(new User { Name = "John Doe" }, "users/1");
@@ -85,7 +86,7 @@ namespace FastTests.Issues
                     requestExecutor.TopologyNodes,
                     "users/1",
                     u => u.Name.Equals("John Doe"),
-                    TimeSpan.FromSeconds(30)));
+                    TimeSpan.FromSeconds(10)));
 
                 using (var session = store.OpenSession(databaseName))
                 {

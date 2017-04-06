@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Handlers
             }
             return Task.CompletedTask;
         }
-       
+
         [RavenAction("/databases/*/debug/io-metrics/live", "GET", SkipUsagesCount = true)]
         public async Task IoMetricsLive()
         {
@@ -58,13 +58,13 @@ namespace Raven.Server.Documents.Handlers
                         // New info, Send data 
                         ms.SetLength(0);
                         JsonOperationContext context;
-                        
+
                         using (ContextPool.AllocateOperationContext(out context))
                         using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
                             context.Write(writer, tuple.Item2.ToJson());
                         }
-                        
+
                         ArraySegment<byte> bytes;
                         ms.TryGetBuffer(out bytes);
                         await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Handlers
 
             return ioMetrics;
         }
-       
+
         private static IOMetricsFileStats GetFileMetrics(IoMetrics.FileIoMetrics fileMetric)
         {
             var fileMetrics = new IOMetricsFileStats
@@ -127,10 +127,14 @@ namespace Raven.Server.Documents.Handlers
                     ActiveDuration = Math.Round(historyMetric.TotalTime.TotalMilliseconds, 2),
                     MaxDuration = Math.Round(historyMetric.MaxTime.TotalMilliseconds, 2),
                     MinDuration = Math.Round(historyMetric.MinTime.TotalMilliseconds, 2),
+                    MaxAcceleration = historyMetric.MaxAcceleration,
+                    MinAcceleration = historyMetric.MinAcceleration,
+                    CompressedSize = historyMetric.TotalCompressedSize,
+                    HumanCompressedSize = Sizes.Humane(historyMetric.TotalCompressedSize),
                     Type = historyMetric.Type
                 });
             }
-            
+
             return fileMetrics;
         }
 
@@ -140,11 +144,14 @@ namespace Raven.Server.Documents.Handlers
             {
                 Start = recentMetric.Start.GetDefaultRavenFormat(),
                 Size = recentMetric.Size,
+                Acceleration = recentMetric.Acceleration,
+                CompressedSize = recentMetric.CompressedSize,
+                HumanCompressedSize = Sizes.Humane(recentMetric.CompressedSize),
                 HumanSize = Sizes.Humane(recentMetric.Size),
                 FileSize = recentMetric.FileSize,
                 HumanFileSize = Sizes.Humane(recentMetric.FileSize),
                 Duration = Math.Round(recentMetric.Duration.TotalMilliseconds, 2),
-                Type = recentMetric.Type
+                Type = recentMetric.Type,
             };
         }
     }
@@ -161,6 +168,10 @@ namespace Raven.Server.Documents.Handlers
         public double ActiveDuration { get; set; }
         public double MaxDuration { get; set; }
         public double MinDuration { get; set; }
+        public int MaxAcceleration { get; set; }
+        public int MinAcceleration { get; set; }
+        public long CompressedSize { get; set; }
+        public string HumanCompressedSize { get; set; }
         public IoMetrics.MeterType Type { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -177,9 +188,23 @@ namespace Raven.Server.Documents.Handlers
                 [nameof(ActiveDuration)] = ActiveDuration,
                 [nameof(MaxDuration)] = MaxDuration,
                 [nameof(MinDuration)] = MinDuration,
+                [nameof(MaxAcceleration)] = MaxAcceleration,
+                [nameof(MinAcceleration)] = MinAcceleration,
+                [nameof(CompressedSize)] = CompressedSize,
+                [nameof(HumanCompressedSize)] = HumanCompressedSize,
                 [nameof(Type)] = Type,
             };
         }
+    }
+
+    public class IOMetricsRecentStatsAdditionalTypes
+    {
+        public long OriginalSize;
+        public string HumanOriginalSize;
+        public long CompressedSize;
+        public string HumanCompressedSize;
+        public string CompressionRatio;
+        public int Acceleration;
     }
 
     public class IOMetricsRecentStats
@@ -187,6 +212,12 @@ namespace Raven.Server.Documents.Handlers
         public string Start { get; set; }
         public long Size { get; set; }
         public string HumanSize { get; set; }
+
+        public long CompressedSize { get; set; }
+        public string HumanCompressedSize { get; set; }
+
+        public int Acceleration { get; set; }
+
         public long FileSize { get; set; }
         public string HumanFileSize { get; set; }
         public double Duration { get; set; }
@@ -194,16 +225,35 @@ namespace Raven.Server.Documents.Handlers
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
+            switch (Type)
             {
-                [nameof(Start)] = Start,
-                [nameof(Size)] = Size,
-                [nameof(HumanSize)] = HumanSize,
-                [nameof(FileSize)] = FileSize,
-                [nameof(HumanFileSize)] = HumanFileSize,
-                [nameof(Duration)] = Duration,
-                [nameof(Type)] = Type
-            };
+                case IoMetrics.MeterType.Compression:
+                    var compressionRatio = $"{CompressedSize / (double)Size:P1}";
+                    return new DynamicJsonValue
+                    {
+                        [nameof(Start)] = Start,
+                        [nameof(IOMetricsRecentStatsAdditionalTypes.OriginalSize)] = Size,
+                        [nameof(IOMetricsRecentStatsAdditionalTypes.HumanOriginalSize)] = HumanSize,
+                        [nameof(IOMetricsRecentStatsAdditionalTypes.CompressedSize)] = CompressedSize,
+                        [nameof(IOMetricsRecentStatsAdditionalTypes.HumanCompressedSize)] = HumanCompressedSize,
+                        [nameof(IOMetricsRecentStatsAdditionalTypes.Acceleration)] = Acceleration,
+                        [nameof(IOMetricsRecentStatsAdditionalTypes.CompressionRatio)] = compressionRatio,
+                        [nameof(Duration)] = Duration,
+                        [nameof(Type)] = Type
+                    };
+                default:
+                    return new DynamicJsonValue
+                    {
+                        [nameof(Start)] = Start,
+                        [nameof(Size)] = Size,
+                        [nameof(HumanSize)] = HumanSize,
+                        [nameof(FileSize)] = FileSize,
+                        [nameof(HumanFileSize)] = HumanFileSize,
+                        [nameof(Duration)] = Duration,
+                        [nameof(Type)] = Type
+                    };
+            }
+
         }
     }
 

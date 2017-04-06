@@ -14,7 +14,7 @@ namespace Raven.Client.Exceptions
 {
     public static class ExceptionDispatcher
     {
-        internal class ExceptionSchema
+        public class ExceptionSchema
         {
             public string Url { get; set; }
 
@@ -118,7 +118,7 @@ namespace Raven.Client.Exceptions
             throw new ConcurrencyException(schema.Message);
         }
 
-        private static Type GetType(string typeAsString)
+        public static Type GetType(string typeAsString)
         {
             var type = Type.GetType(typeAsString, throwOnError: false) ??
                        Type.GetType(typeAsString.Replace("Raven.Client", "Raven.NewClient.Client"), throwOnError: false); // temporary!

@@ -17,6 +17,7 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Raven.Client.Server.Commands;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Json;
@@ -32,6 +33,28 @@ namespace Raven.Server.Web.System
 {
     public class AdminDatabasesHandler : RequestHandler
     {
+        [RavenAction("/admin/databases/is-loaded", "GET", "/admin/databases/is-loaded?name={databaseName:string}")]
+        public Task IsDatabaseLoaded()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            var isLoaded = ServerStore.DatabasesLandlord.IsDatabaseLoaded(name);
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(IsDatabaseLoadedCommand.CommandResult.DatabaseName)] = name,
+                        [nameof(IsDatabaseLoadedCommand.CommandResult.IsLoaded)] = isLoaded
+                    });
+                    writer.Flush();
+                }
+            }
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/databases", "GET", "/admin/databases/{databaseName:string}")]
         public Task Get()
         {
@@ -120,7 +143,8 @@ namespace Raven.Server.Web.System
                 var index = await ServerStore.WriteDbAsync(context, name, topologyJson, etag);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
-                ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
+var index = await ServerStore.WriteDbAsync(context, name, topologyJson, etag);
+                await ServerStore.Cluster.WaitForIndexNotification(index);                ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -142,14 +166,12 @@ namespace Raven.Server.Web.System
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            TransactionOperationContext context;
             string errorMessage;
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
             ServerStore.EnsureNotPassive();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 context.OpenReadTransaction();
 
@@ -381,13 +403,12 @@ namespace Raven.Server.Web.System
                         context.Write(writer, new DynamicJsonValue
                         {
                             ["Name"] = name,
-                            ["Success"] = false,
+                            ["Success"] = true, //even if we have nothing to do, no reason to return failure status
                             ["Disabled"] = disableRequested,
                             ["Reason"] = $"Database already {state}",
                         });
                         continue;
                     }
-
 
                     dbDoc.Disabled = disableRequested;
 
@@ -403,6 +424,7 @@ namespace Raven.Server.Web.System
                         ["Name"] = name,
                         ["Success"] = true,
                         ["Disabled"] = disableRequested,
+                        ["Reason"] = $"Database state={dbDoc.Disabled} was propagated on the cluster"
                     });
                 }
 
@@ -410,8 +432,6 @@ namespace Raven.Server.Web.System
             }
         }
     }
-
-
 
     public class DatabaseDeleteResult
     {

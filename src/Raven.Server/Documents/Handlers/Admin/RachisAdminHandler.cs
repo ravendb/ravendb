@@ -68,8 +68,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/add-node", "GET", "/admin/cluster/add-node?url={nodeUrl:string}")]
-        //[RavenAction("/rachis/add-node", "POST", "/rachis/add-node?url={nodeUrl:string}")]
+        [RavenAction("/admin/cluster/add-node", "POST", "/admin/cluster/add-node?url={nodeUrl:string}")]
         public async Task AddNode()
         {
             var serverUrl = GetStringQueryString("url");
@@ -77,8 +76,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             await ServerStore.AddNodeToClusterAsync(serverUrl);
         }
 
-        [RavenAction("/admin/cluster/remove-node", "GET", "/admin/cluster/remove-node?nodeTag={nodeTag:string}")]
-        //[RavenAction("/rachis/remove-node", "DELETE", "/rachis/remove-node?url={nodeUrl:string}")]
+        [RavenAction("/admin/cluster/remove-node", "DELETE", "/admin/cluster/remove-node?nodeTag={nodeTag:string}")]
         public async Task DeleteNode()
         {
             var serverUrl = GetStringQueryString("nodeTag");

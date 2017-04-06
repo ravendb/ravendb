@@ -27,6 +27,8 @@ namespace Sparrow
             return _tcs.Task;
         }
 
+        public bool IsSet => _tcs.Task.IsCompleted;
+
         public Task<bool> WaitAsync(TimeSpan timeout)
         {
             return new FrozenAwaiter(_tcs, this).WaitAsync(timeout);

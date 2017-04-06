@@ -167,10 +167,6 @@ class appUrl {
         return "#admin/settings/hotSpare";
     }
 
-    static forTempManageServer(): string {
-        return "#admin/settings/manage";
-    }
-
     static forCompact(): string {
         return "#admin/settings/compact";
     }
@@ -465,9 +461,12 @@ class appUrl {
         return "#databases/settings/databaseStudioConfig?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forDocuments(collection: string, db: database): string {
-        var collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
-        var databasePart = appUrl.getEncodedDbPart(db);
+    static forDocuments(collectionName: string, db: database): string {
+        if (collectionName === "All Documents")
+            collectionName = null;
+
+        const collectionPart = collectionName ? "collection=" + encodeURIComponent(collectionName) : "";
+        const  databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/documents?" + collectionPart + databasePart;
     }
 

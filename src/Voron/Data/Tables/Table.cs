@@ -761,7 +761,7 @@ namespace Voron.Data.Tables
             using (var it = tree.Iterate(false))
             {
                 if (startsWith)
-                    it.RequiredPrefix = value.Clone(_tx.Allocator);
+                    it.SetRequiredPrefix(value);
 
                 if (it.Seek(value) == false)
                     yield break;
@@ -797,7 +797,7 @@ namespace Voron.Data.Tables
                 if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
                     yield break;
 
-                it.RequiredPrefix = prefix.Clone(_tx.Allocator);
+                it.SetRequiredPrefix(prefix);
                 if (SliceComparer.StartWith(it.CurrentKey, it.RequiredPrefix) == false)
                 {
                     if (it.MovePrev() == false)
@@ -858,7 +858,7 @@ namespace Voron.Data.Tables
             var tree = GetTree(pk);
             using (var it = tree.Iterate(false))
             {
-                it.RequiredPrefix = requiredPrefix.Clone(_tx.Allocator);
+                it.SetRequiredPrefix(requiredPrefix);
 
                 var seekValue = isStartAfter ? startAfter : requiredPrefix;
                 if (it.Seek(seekValue) == false)
@@ -910,6 +910,27 @@ namespace Voron.Data.Tables
             var tree = GetTree(pk);
             using (var it = tree.Iterate(false))
             {
+                if (it.Seek(slice) == false)
+                {
+                    reader = default(TableValueReader);
+                    return false;
+                }
+
+                GetTableValueReader(it, out reader);
+                return true;
+            }
+        }
+
+        public bool SeekOnePrimaryKeyPrefix(Slice slice, out TableValueReader reader)
+        {
+            Debug.Assert(slice.Options == SliceOptions.Key, "Should be called with Key only");
+
+            var pk = _schema.Key;
+            var tree = GetTree(pk);
+            using (var it = tree.Iterate(false))
+            {
+                it.SetRequiredPrefix(slice);
+
                 if (it.Seek(slice) == false)
                 {
                     reader = default(TableValueReader);
@@ -1087,7 +1108,7 @@ namespace Voron.Data.Tables
             {
                 using (var it = tree.Iterate(false))
                 {
-                    it.RequiredPrefix = startSlice.Clone(_tx.Allocator);
+                    it.SetRequiredPrefix(startSlice);
                     if (it.Seek(it.RequiredPrefix) == false)
                         return;
 
@@ -1124,7 +1145,7 @@ namespace Voron.Data.Tables
                 using (var it = tree.Iterate(false))
                 {
                     if (startsWith)
-                        it.RequiredPrefix = value.Clone(_tx.Allocator);
+                        it.SetRequiredPrefix(value);
                     if (it.Seek(value) == false)
                         return deleted;
 

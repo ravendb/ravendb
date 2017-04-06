@@ -30,11 +30,17 @@
     <EmbeddedResource Include="Documents\Patch\*.js;Web\Studio\EmbeddedData\*.ravendbdump;Web\Studio\EmbeddedData\*.cs;Commercial\RavenDB.public.json" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\libs\libsodium.dll" Link="libsodium.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <None Include="..\..\libs\libsodium\x64\libsodium.dll" Link="libsodium.dll" Condition="$(Platform) == 'x64' OR $(Platform) == 'AnyCPU'">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\libsodium.so" Link="libsodium.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <None Include="..\..\libs\libsodium\x86\libsodium.dll" Link="libsodium.dll" Condition="$(Platform) == 'x86'">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\libs\libsodium\x64\libsodium.so" Link="libsodium.so" Condition="$(Platform) == 'x64' OR $(Platform) == 'AnyCPU'">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\libs\libsodium\x86\libsodium.so" Link="libsodium.so" Condition="$(Platform) == 'x86'">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -66,4 +72,8 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DebugType>portable</DebugType>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'" />
 </Project>

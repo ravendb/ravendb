@@ -660,6 +660,26 @@ namespace Raven.Server.Rachis
             return lastIndex;
         }
 
+        public unsafe void ClearLogEntriesAndSetLastTrancate(TransactionOperationContext context, long index, long term)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
+            while (true)
+            {
+                TableValueReader reader;
+                if (table.SeekOnePrimaryKey(Slices.BeforeAllKeys, out reader) == false)
+                    break;
+
+                table.Delete(reader.Id);
+            }
+            var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+            byte* ptr;
+            using (state.DirectAdd(LastTruncatedSlice, sizeof(long) * 2, out ptr))
+            {
+                var data = (long*)ptr;
+                data[0] = index;
+                data[1] = term;
+            }
+        }
         public unsafe void TruncateLogBefore(TransactionOperationContext context, long upto)
         {
             long lastIndex;
@@ -733,13 +753,39 @@ namespace Raven.Server.Rachis
                     out key))
             {
                 var lastEntryIndex = GetLastEntryIndex(context);
+                GetLastCommitIndex(context, out var lastCommitIndex, out var lastCommitTerm);
                 var firstIndexInEntriesThatWeHaveNotSeen = 0;
                 foreach (var entry in entries)
                 {
+                    var entryTerm = GetTermFor(context, entry.Index);
+                    if (entryTerm!= null && entry.Term != entryTerm)
+                    {
+                        //rewind entries with mismatched term
+                        lastEntryIndex = Math.Min(entry.Index - 1, lastEntryIndex);
+                        if (Log.IsInfoEnabled)
+                        {
+                            Log.Info($"Got an entry with index={entry.Index} and term={entry.Term} while our term for that index is {entryTerm}," +
+                                     $"will rewind last entry index to {lastEntryIndex}");
+                        }
+                        break;
+                    }
                     if (entry.Index > lastEntryIndex)
                         break;
 
                     firstIndexInEntriesThatWeHaveNotSeen++;
+                }
+                var firstEntry = entries[firstIndexInEntriesThatWeHaveNotSeen];
+                //While we do support the case where we get the same entries, we expect them to have the same index/term up to the commit index.
+                if (firstEntry.Index < lastCommitIndex)
+                {
+                    var message =
+                        $"FATAL ERROR: got an append entries request with index={firstEntry.Index} term={firstEntry.Term} " +
+                        $"while my commit index={lastCommitIndex} with term={lastCommitTerm}, this means something went wrong badly.";
+                    if (Log.IsInfoEnabled)
+                    {
+                        Log.Info(message);
+                    }
+                    throw new InvalidOperationException(message);
                 }
                 var prevIndex = lastEntryIndex;
 
@@ -753,7 +799,8 @@ namespace Raven.Server.Rachis
                     }
 
                     prevIndex = entry.Index;
-                    reversedEntryIndex = Bits.SwapBytes(entry.Index);
+                    //In the case where we delete entries reversedEntryIndex will advance forward so we need to keep the origin index.
+                    var originalReversedIndex = reversedEntryIndex = Bits.SwapBytes(entry.Index);
                     TableValueReader reader;
                     if (table.ReadByKey(key, out reader)) // already exists
                     {
@@ -765,7 +812,6 @@ namespace Raven.Server.Rachis
 
                         // we have found a divergence in the log, and we now need to trucate it from this
                         // location forward
-
                         do
                         {
                             table.Delete(reader.Id);
@@ -781,7 +827,7 @@ namespace Raven.Server.Rachis
                     TableValueBuilder tableValueBuilder;
                     using (table.Allocate(out tableValueBuilder))
                     {
-                        tableValueBuilder.Add(reversedEntryIndex);
+                        tableValueBuilder.Add(originalReversedIndex);
                         tableValueBuilder.Add(entry.Term);
                         tableValueBuilder.Add(nested.BasePointer, nested.Size);
                         tableValueBuilder.Add((int)entry.Flags);
@@ -921,6 +967,8 @@ namespace Raven.Server.Rachis
                         case CommitIndexModification.Equal:
                             if (value == commitIndex)
                                 return;
+                            if(value < commitIndex)
+                                throw new TimeoutException($"We are waiting for commit index to be equal to {value} but we are already in commit index = {commitIndex}");
                             break;
                         case CommitIndexModification.GreaterOrEqual:
                             if (value <= commitIndex)

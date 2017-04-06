@@ -76,7 +76,7 @@ namespace Sparrow
             uint hash = 0;
             for (int i = 0; i < xSize; i++)
             {
-                hash = Hashing.CombineInline(hash, xStr[xStart + i]);
+                hash = Hashing.Combine(hash, xStr[xStart + i]);
             }
 
             return (int)hash;

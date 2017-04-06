@@ -32,7 +32,7 @@ namespace Raven.Client.Documents
 
         private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> _observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
 
-        private readonly ConcurrentDictionary<string, RequestExecutor> _requestExecuters = new ConcurrentDictionary<string, RequestExecutor>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, Lazy<RequestExecutor>> _requestExecuters = new ConcurrentDictionary<string, Lazy<RequestExecutor>>(StringComparer.OrdinalIgnoreCase);
 
         private AsyncMultiDatabaseHiLoKeyGenerator _asyncMultiDbHiLo;
 
@@ -143,7 +143,10 @@ namespace Raven.Client.Documents
 
             foreach (var kvp in _requestExecuters)
             {
-                kvp.Value?.Dispose();
+                if(kvp.Value.IsValueCreated == false)
+                    continue;
+                ;
+                kvp.Value.Value.Dispose();
             }
         }
 
@@ -187,36 +190,20 @@ namespace Raven.Client.Documents
             await requestExecutor.UpdateTopologyAsync();
         }
 
-        internal override void RedirectRequestExecuterTo(string url, string databaseName = null)
-        {
-            var lazy = _requestExecuters.AddOrUpdate(databaseName, 
-                newKey =>
-                {
-                    var newRequestExecutor = RequestExecutor.Create(url, newKey, ApiKey);
-                    newRequestExecutor.TopologyUpdate += () => OnTopologyUpdatedInternal(newKey);
-                    return newRequestExecutor;
-                }, 
-                (existingKey, existingLazy) =>
-                {
-                    var newRequestExecutor = RequestExecutor.Create(url, existingKey, ApiKey);
-                    newRequestExecutor.TopologyUpdate += () => OnTopologyUpdatedInternal(existingKey);
-                    return newRequestExecutor;
-                });
-        }
-
         public override RequestExecutor GetRequestExecuter(string databaseName = null)
         {
             if (databaseName == null)
                 databaseName = DefaultDatabase;
 
-            var executor = _requestExecuters.GetOrAdd(databaseName, dbName => 
-            {
-                var newRequestExecutor = RequestExecutor.Create(Url, dbName, ApiKey);
-                newRequestExecutor.TopologyUpdate += () => OnTopologyUpdatedInternal(dbName);
-                return newRequestExecutor;
-            });
-            
-            return executor;
+            Lazy<RequestExecutor> lazy;
+            if (_requestExecuters.TryGetValue(databaseName, out lazy))
+                return lazy.Value;
+
+            lazy = new Lazy<RequestExecutor>(() => RequestExecutor.Create(Url, databaseName, ApiKey));
+
+            lazy = _requestExecuters.GetOrAdd(databaseName, lazy);
+
+            return lazy.Value;
         }
 
         public override IDocumentStore Initialize()

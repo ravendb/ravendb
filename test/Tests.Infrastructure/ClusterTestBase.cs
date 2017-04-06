@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -11,11 +10,10 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.Server.Commands;
 using Raven.Server;
 using Raven.Server.Rachis;
-using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Xunit;
 using Constants = Raven.Client.Constants;
 
@@ -42,6 +40,32 @@ namespace Tests.Infrastructure
         protected void NoTimeouts()
         {
             TimeoutEvent.Disable = true;
+        }
+
+        protected async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, bool isLoaded, string databaseName = null)
+        {
+            var requestExecutor = store.GetRequestExecuter();
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var shouldContinue = true;
+                var timeoutTask = Task.Delay(timeout);
+                while (shouldContinue && timeoutTask.IsCompleted == false)
+                {
+                    try
+                    {
+                        var databaseIsLoadedCommand = new IsDatabaseLoadedCommand();
+                        await requestExecutor.ExecuteAsync(databaseIsLoadedCommand, context);
+                        shouldContinue = databaseIsLoadedCommand.Result.IsLoaded != isLoaded;
+                        await Task.Delay(100);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        //OperationCanceledException is thrown if the database is currently shutting down
+                    }
+                }
+
+                return timeoutTask.IsCompleted == false;
+            }
         }
 
         protected async Task<bool> WaitForDocumentInClusterAsync<T>(IReadOnlyList<ServerNode> topology,string docId, Func<T, bool> predicate, TimeSpan timeout)
@@ -108,6 +132,17 @@ namespace Tests.Infrastructure
             mre.Wait();
         }
 
+        protected void SetupReplicationOnDatabaseTopology(IReadOnlyList<ServerNode> topologyNodes)
+        {
+            var stores = GetStoresFromTopology(topologyNodes);
+
+            //setup replication -> all nodes to all nodes
+            foreach (var store in stores)
+            {
+                SetupReplication_TEMP(store, new ReplicationDocument(), stores.Except(new[] { store }).ToArray());
+            }
+        }
+
         protected List<DocumentStore> GetStoresFromTopology(IReadOnlyList<ServerNode> topologyNodes)
         {
             var stores = new List<DocumentStore>();
@@ -115,7 +150,7 @@ namespace Tests.Infrastructure
             foreach (var node in topologyNodes)
             {
                 string url;
-                if(!tokenToUrl.TryGetValue(node.ClusterToken,out url)) //precaution
+                if(!tokenToUrl.TryGetValue(node.ClusterTag, out url)) //precaution
                     continue;
 
                 var store = new DocumentStore
@@ -132,46 +167,28 @@ namespace Tests.Infrastructure
             return stores;
         }
 
-        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(RavenServer leader, params RavenServer[] serverNodes)
+        protected void SetupReplication_TEMP(DocumentStore fromStore, ReplicationDocument configOptions, params DocumentStore[] toStores)
         {
-            var serversToPorts = new Dictionary<RavenServer, string>();
-            leader.ServerStore.EnsureNotPassive();
-            Servers.Add(leader);
-            serversToPorts.Add(leader, leader.WebUrls[0]);
-            foreach (var ravenServer in serverNodes)
+            using (var session = fromStore.OpenSession())
             {
-                serversToPorts.Add(ravenServer, ravenServer.WebUrls[0]);
-                Servers.Add(ravenServer);
-            }
-
-            var numberOfNodes = serverNodes.Length + 1;
-            if (numberOfNodes % 2 == 0) // ensure odd number of nodes
-            {
-                numberOfNodes++;
-                var serverUrl = $"http://localhost:{GetPort()}";
-                var server = GetNewServer(new Dictionary<string, string>()
+                var destinations = new List<ReplicationDestination>();
+                foreach (var store in toStores)
                 {
-                    {"Raven/ServerUrl", serverUrl}
-                });
-                serversToPorts.Add(server, serverUrl);
-                Servers.Add(server);
-            }
-            // starts from 1 to skip the leader
-            for (var index = 1; index < Servers.Count; index++)
-            {
-                RavenServer server = Servers[index];
-                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[server]);
-                await server.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
-            }
+                    var replicationDestination = new ReplicationDestination
+                    {
+                        Database = store.DefaultDatabase,
+                        Url = store.Url
+                    };
+                    destinations.Add(replicationDestination);
+                }
 
-            // ReSharper disable once PossibleNullReferenceException
-            Assert.True(leader.ServerStore.WaitForState(RachisConsensus.State.Leader).Wait(numberOfNodes * ElectionTimeoutInMs),
-                "The leader has changed while waiting for cluster to become stable");
-            return leader;
+                configOptions.Destinations = destinations;
+                session.Store(configOptions, Constants.Documents.Replication.ReplicationConfigurationDocument);
+                session.SaveChanges();
+            }
         }
 
-
-        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes)
+        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true)
         {
             var leaderIndex = _random.Next(0, numberOfNodes);
             RavenServer leader = null;
@@ -182,7 +199,7 @@ namespace Tests.Infrastructure
                 var server = GetNewServer(new Dictionary<string, string>()
                 {                    
                     {"Raven/ServerUrl", serverUrl}
-                });
+                },runInMemory:shouldRunInMemory);
                 serversToPorts.Add(server, serverUrl);
                 Servers.Add(server);
                 if (i == leaderIndex)
@@ -206,32 +223,6 @@ namespace Tests.Infrastructure
             Assert.True(leader.ServerStore.WaitForState(RachisConsensus.State.Leader).Wait(numberOfNodes* ElectionTimeoutInMs),
                 "The leader has changed while waiting for cluster to become stable");
             return leader;
-        }
-
-        protected async Task<IDocumentStore> CreateRaftClusterWithDatabaseAndGetLeaderStore(int numberOfNodes, int replicationFactor = 2, [CallerMemberName] string callerName = null)
-        {
-            var leader = await CreateRaftClusterAndGetLeader(numberOfNodes);
-            string databaseName = callerName ?? "Test";
-            var store = new DocumentStore
-            {
-                DefaultDatabase = databaseName,
-                Url = leader.WebUrls[0]
-            }.Initialize();
-
-            var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
-            var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
-
-            Assert.True((databaseResult.ETag ?? 0) > 0); //sanity check                
-            await WaitForEtagInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
-            await ((DocumentStore)store).ForceUpdateTopologyFor(databaseName);
-
-            TransactionOperationContext context;
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
-            {
-                context.OpenReadTransaction();
-                var record = leader.ServerStore.Cluster.ReadDatabase(context,databaseName);             
-            }
-            return store;
         }
 
         public async Task WaitForLeader(TimeSpan timeout)

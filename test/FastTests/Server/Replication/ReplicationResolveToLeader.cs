@@ -28,8 +28,7 @@ namespace FastTests.Server.Replication
          
             SetupReplication(store1,store2);
 
-            var conflicts = WaitUntilHasConflict(store2, "foo/bar");
-            Assert.Equal(2, conflicts["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
 
             SetupReplication(store2, new ReplicationDocument
             {
@@ -70,9 +69,9 @@ namespace FastTests.Server.Replication
             SetupReplication(store1, store2, store3);
             SetupReplication(store2, store1);
 
-            Assert.Equal(2,WaitUntilHasConflict(store1,"foo/bar")["foo/bar"].Count);
-            Assert.Equal(2,WaitUntilHasConflict(store2,"foo/bar")["foo/bar"].Count);
-            Assert.Equal(3,WaitUntilHasConflict(store3,"foo/bar", 3)["foo/bar"].Count);
+            Assert.Equal(2,WaitUntilHasConflict(store1,"foo/bar").Results.Length);
+            Assert.Equal(2,WaitUntilHasConflict(store2,"foo/bar").Results.Length);
+            Assert.Equal(3,WaitUntilHasConflict(store3,"foo/bar", 3).Results.Length);
 
             // store2 <--> store1 <--> store3*
             SetupReplication(store3, new ReplicationDocument
@@ -115,8 +114,8 @@ namespace FastTests.Server.Replication
             // store2 <-- store1 --> store3
             SetupReplication(store1, store2, store3);
            
-            Assert.Equal(2, WaitUntilHasConflict(store3, "foo/bar")["foo/bar"].Count);
-            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar")["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(store3, "foo/bar").Results.Length);
+            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
 
             // store2* <--> store1 --> store3
             
@@ -218,7 +217,7 @@ namespace FastTests.Server.Replication
                 session.Store(new User { Name = "NewOren" }, "foo/bar");
                 session.SaveChanges();
             }
-            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar")["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
         }
 
         [Fact]
@@ -243,7 +242,7 @@ namespace FastTests.Server.Replication
             var mre = new ManualResetEventSlim();
 
             var database2 = GetDocumentDatabaseInstanceFor(store2).Result;
-            database2.DocumentReplicationLoader.ReplicationFailed += (src, ex) =>
+            database2.ReplicationLoader.ReplicationFailed += (src, ex) =>
             {
                 mre.Set();
             };
@@ -300,8 +299,7 @@ namespace FastTests.Server.Replication
             }
             SetupReplication(store1, store2);
 
-            var conflicts = WaitUntilHasConflict(store2, "foo/bar");
-            Assert.Equal(2, conflicts["foo/bar"].Count);
+            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
 
             SetupReplication(store2, new ReplicationDocument
             {

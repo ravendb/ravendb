@@ -38,12 +38,12 @@ namespace SlowTests.Issues
             SetupReplication(store1, store2);
 
             var conflicts = WaitUntilHasConflict(store2, "people/1");
-            Assert.Equal(2, conflicts["people/1"].Count);
+            Assert.Equal(2, conflicts.Results.Length);
 
             SetupReplication(store2, store1);
 
             conflicts = WaitUntilHasConflict(store1, "people/1");
-            Assert.Equal(2, conflicts["people/1"].Count);
+            Assert.Equal(2, conflicts.Results.Length);
 
             using (var commands = store2.Commands())
             {

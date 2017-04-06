@@ -20,19 +20,17 @@ namespace Raven.Server.Documents.Replication
     {
         private readonly DocumentDatabase _database;
         private readonly Logger _log;
-        private readonly DocumentReplicationLoader _documentReplicationLoader;
+        private readonly ReplicationLoader _replicationLoader;
 
         public Task ResolveConflictsTask = Task.CompletedTask;
 
         internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
         private readonly ConflictSolver _conflictSolver;
 
-        public ResolveConflictOnReplicationConfigurationChange(DocumentReplicationLoader documentReplicationLoader, Logger log)
+        public ResolveConflictOnReplicationConfigurationChange(ReplicationLoader replicationLoader, Logger log)
         {
-            _documentReplicationLoader = documentReplicationLoader;
-            _conflictSolver = _documentReplicationLoader.MyDatabaseRecord.ConflictSolverConfig;
-            _database = _documentReplicationLoader.Database;
-            _log = log;
+            _replicationLoader = replicationLoader;
+            _database = _replicationLoader.Database;            _log = log;
         }
 
         public long ConflictsCount => _database.DocumentsStorage.ConflictsStorage.ConflictsCount;
@@ -69,7 +67,6 @@ namespace Raven.Server.Documents.Replication
 
         private void ResolveConflictsInBackground()
         {
-            var resolverStats = new ReplicationStatistics.ResolverIterationStats();
             DocumentsOperationContext context;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
@@ -78,7 +75,6 @@ namespace Raven.Server.Documents.Replication
                 try
                 {
                     bool hasConflicts = true;
-                    resolverStats.StartTime = DateTime.UtcNow;
                     var timeout = 150;
                     if (Debugger.IsAttached)
                         timeout *= 10;
@@ -113,7 +109,7 @@ namespace Raven.Server.Documents.Replication
                                     var conflicts = _database.DocumentsStorage.ConflictsStorage.GetAllConflictsBySameKeyAfter(context, ref lastKey);
                                     if (conflicts.Count == 0)
                                         break;
-                                    if (TryResolveConflict(context, conflicts, resolverStats) == false)
+                                    if (TryResolveConflict(context, conflicts) == false)
                                         continue;
                                     hasConflicts = true;
                                 }
@@ -133,10 +129,6 @@ namespace Raven.Server.Documents.Replication
                             Slice.From(context.Allocator, string.Empty, out lastKey);
                         }
                     }
-                    resolverStats.EndTime = DateTime.UtcNow;
-                    resolverStats.ConflictsLeft = ConflictsCount;
-                    resolverStats.DefaultResolver = _conflictSolver?.Senator;
-                    _documentReplicationLoader.RepliactionStats.Add(resolverStats);
                 }
                 finally
                 {
@@ -146,7 +138,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private bool TryResolveConflict(DocumentsOperationContext context, List<DocumentConflict> conflictList, ReplicationStatistics.ResolverIterationStats stats)
+        private bool TryResolveConflict(DocumentsOperationContext context, List<DocumentConflict> conflictList)
         {
             var collection = conflictList[0].Collection;
 
@@ -161,7 +153,7 @@ namespace Raven.Server.Documents.Replication
                     collection,
                     hasLocalTombstone: false))
                 {
-                    stats.AddResolvedBy(collection + " Script", conflictList.Count);
+                    //stats.AddResolvedBy(collection + " Script", conflictList.Count);
                     return true;
                 }
 
@@ -169,17 +161,15 @@ namespace Raven.Server.Documents.Replication
 
             if (TryResolveUsingDefaultResolverInternal(
                 context,
-                _conflictSolver?.Senator,
-                conflictList))
+_conflictSolver?.Senator,                conflictList))
             {
-                stats.AddResolvedBy("DatabaseResolver", conflictList.Count);
+                //stats.AddResolvedBy("DatabaseResolver", conflictList.Count);
                 return true;
             }
 
-            if (_conflictSolver?.ResolveToLatest ?? false)
-            {
+if (_conflictSolver?.ResolveToLatest ?? false)            {
                 ResolveToLatest(context, conflictList);
-                stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
+                //stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
                 return true;
             }
 
@@ -188,15 +178,13 @@ namespace Raven.Server.Documents.Replication
 
         private void UpdateScriptResolvers()
         {
-            if (_conflictSolver?.ResolveByCollection == null)
-            {
+ if (_conflictSolver?.ResolveByCollection == null)            {
                 if (ScriptConflictResolversCache.Count > 0)
                     ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
                 return;
             }
             var copy = new Dictionary<string, ScriptResolver>();
-            foreach (var kvp in _conflictSolver.ResolveByCollection)
-            {
+foreach (var kvp in _conflictSolver.ResolveByCollection)            {
                 var collection = kvp.Key;
                 var script = kvp.Value.Script;
                 if (string.IsNullOrEmpty(script.Trim()))

@@ -1,33 +1,13 @@
 import commandBase = require("commands/commandBase");
-import topology = require("models/database/replication/topology");
-import database = require("models/resources/database");
+import endpoints = require("endpoints");
+import clusterTopology = require("models/database/cluster/clusterTopology");
 
 class getClusterTopologyCommand extends commandBase {
 
-    constructor(private ownerDb: database) {
-        super();
+    execute(): JQueryPromise<clusterTopology> {
+        const url = endpoints.global.rachisAdmin.adminClusterTopology;
 
-        if (!this.ownerDb) {
-            throw new Error("Must specify a database.");
-        }
-    }
-
-    execute(): JQueryPromise<topology> {
-        var task = $.Deferred<topology>();
-        this.query("/cluster/topology", null, this.ownerDb, x => new topology(x))//TODO: use endpoints
-            .done((result: topology) => {
-                task.resolve(result);
-            })
-            .fail((result :JQueryXHR) => {
-                if (result.status === 200 && !result.responseText) {
-                    task.resolve(null);
-                } else {
-                    task.reject(result);
-                }
-            });
-
-        return task;
-
+        return this.query(url, null, null, dto => new clusterTopology(dto));
     }
 }
 

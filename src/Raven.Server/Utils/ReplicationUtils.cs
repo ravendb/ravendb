@@ -125,14 +125,14 @@ namespace Raven.Server.Utils
             var topologyInfo = new NodeTopologyInfo { DatabaseId = database.DbId.ToString() };
             topologyInfo.InitializeOSInformation();
 
-            var replicationLoader = database.DocumentReplicationLoader;
+            var replicationLoader = database.ReplicationLoader;
 
             GetLocalIncomingTopology(replicationLoader, topologyInfo);
 
             foreach (var destination in destinations)
             {
                 OutgoingReplicationHandler outgoingHandler;
-                DocumentReplicationLoader.ConnectionShutdownInfo connectionFailureInfo;
+                ReplicationLoader.ConnectionShutdownInfo connectionFailureInfo;
 
                 if (TryGetActiveDestination(destination, replicationLoader.OutgoingHandlers, out outgoingHandler))
                 {
@@ -178,7 +178,7 @@ namespace Raven.Server.Utils
             return topologyInfo;
         }
 
-        public static void GetLocalIncomingTopology(DocumentReplicationLoader replicationLoader, NodeTopologyInfo topologyInfo)
+        public static void GetLocalIncomingTopology(ReplicationLoader replicationLoader, NodeTopologyInfo topologyInfo)
         {
             foreach (var incomingHandler in replicationLoader.IncomingHandlers)
             {

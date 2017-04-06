@@ -10,11 +10,11 @@ import databaseSwitcher = require("common/shell/databaseSwitcher");
 import searchBox = require("common/shell/searchBox");
 import database = require("models/resources/database");
 import license = require("models/auth/license");
-import topology = require("models/database/replication/topology");
 import environmentColor = require("models/resources/environmentColor");
 import changesContext = require("common/changesContext");
 import allRoutes = require("common/shell/routes");
 import registration = require("viewmodels/shell/registration");
+import collection = require("models/database/documents/collection");
 
 import appUrl = require("common/appUrl");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
@@ -36,6 +36,8 @@ import accessHelper = require("viewmodels/shell/accessHelper");
 import licensingStatus = require("viewmodels/common/licensingStatus");
 import enterApiKey = require("viewmodels/common/enterApiKey");
 import eventsCollector = require("common/eventsCollector");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import footer = require("common/shell/footer");
 
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import requestExecution = require("common/notifications/requestExecution");
@@ -52,6 +54,8 @@ class shell extends viewModelBase {
     showLogOutButton: KnockoutComputed<boolean>; //TODO:
     
     notificationCenter = notificationCenter.instance;
+    collectionsTracker = collectionsTracker.default;
+    footer = footer.default;
 
     static clusterMode = ko.observable<boolean>(false); //TODO: extract from shell
     isInCluster = ko.computed(() => shell.clusterMode()); //TODO: extract from shell
@@ -115,6 +119,8 @@ class shell extends viewModelBase {
         shell.serverBuildVersion.subscribe(buildVersionDto => {
             this.initAnalytics({ SendUsageStats: true }, [ buildVersionDto ]);
         });
+
+        activeDatabaseTracker.default.database.subscribe(newDatabase => footer.default.forDatabase(newDatabase));
     }
 
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -188,6 +194,10 @@ class shell extends viewModelBase {
         this.initializeShellComponents();
 
         registration.showRegistrationDialogIfNeeded(license.licenseStatus());
+    }
+
+    urlForCollection(coll: collection) {
+        return appUrl.forDocuments(coll.name, this.activeDatabase());
     }
 
     /*
@@ -328,14 +338,6 @@ class shell extends viewModelBase {
             });
     }
 
-    fetchClusterTopology() {
-        new getClusterTopologyCommand(null)
-            .execute()
-            .done((topology: topology) => {
-                shell.clusterMode(topology && topology.allNodes().length > 0);
-            });
-    }
-
     fetchSupportCoverage() {
         new getSupportCoverageCommand()
             .execute()
@@ -406,7 +408,7 @@ class shell extends viewModelBase {
             shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
         } 
 
-        const env = license.licenseStatus() && license.licenseStatus().LicenseType === "Commercial" ? "prod" : "dev";
+        const env = license.licenseStatus() && license.licenseStatus().Type === "Commercial" ? "prod" : "dev";
         const version = buildVersionResult.FullVersion;
         eventsCollector.default.initialize(
             shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, version, shouldTrack);

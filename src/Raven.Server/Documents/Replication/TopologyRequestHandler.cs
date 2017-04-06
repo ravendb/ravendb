@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Replication
                                 { tcp.DocumentDatabase.DbId.ToString(), localNodeTopologyInfo }
                             }
                         };
-                        ReplicationUtils.GetLocalIncomingTopology(tcp.DocumentDatabase.DocumentReplicationLoader, localNodeTopologyInfo);
+                        ReplicationUtils.GetLocalIncomingTopology(tcp.DocumentDatabase.ReplicationLoader, localNodeTopologyInfo);
                         WriteDiscoveryResponse(tcp, context, topology, null, TopologyDiscoveryResponseHeader.Status.Ok);
 
                         return;

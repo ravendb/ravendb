@@ -1,15 +1,20 @@
 ﻿.colselect-dropdown {
-    padding:0;
+    padding: 0;
+
+    &.colselect-sm {
+        .columns-list-container {
+            height: 300px;
+        }
+    }
 }
 .columns-list-container {
     padding: @grid-gutter-width/4;
-    height: 500px;
+    height: 400px;
     max-width: calc(100vw ~"-" @grid-gutter-width/3*4);
     max-height: 55vh;
     
     display:flex;
     flex-direction: column;
-
 
     @media (min-width:@screen-sm) {
         width: 500px;

@@ -38,7 +38,10 @@ namespace Raven.Server.Rachis
                 try
                 {
                     Running = true;
-
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Candidate {_engine.Tag}:Starting elections");
+                    }
                     TransactionOperationContext context;
                     ClusterTopology clusterTopology;
                     using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -113,7 +116,7 @@ namespace Raven.Server.Rachis
                         {
                             if (_engine.Log.IsInfoEnabled)
                             {
-                                _engine.Log.Info($"A leader node has indicated that I'm not in their topology, I was probably kicked out. Moving to passive mode");
+                                _engine.Log.Info($"Candidate {_engine.Tag}:A leader node has indicated that I'm not in their topology, I was probably kicked out. Moving to passive mode");
                             }
                             var engineCurrentTerm = _engine.CurrentTerm;
                             using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -148,7 +151,7 @@ namespace Raven.Server.Rachis
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info("Failure during candidacy run", e);
+                        _engine.Log.Info($"Candidate {_engine.Tag}:Failure during candidacy run", e);
                     }
                 }
             }
@@ -168,7 +171,10 @@ namespace Raven.Server.Rachis
 
                 tx.Commit();
             }
-
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"Candidate {_engine.Tag}: casting vote for self ElectionTerm={ElectionTerm} RunRealElectionAtTerm={RunRealElectionAtTerm}");
+            }
             StateChange();
         }
 
@@ -202,6 +208,10 @@ namespace Raven.Server.Rachis
             _stateChange.TrySetCanceled();
             _peersWaiting.Set();
             //TODO: shutdown notification of some kind?
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"Candidate {_engine.Tag}: Dispose");
+            }
             if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                 _thread.Join();
         }

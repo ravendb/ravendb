@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Voron;
 using Voron.Data;
 using Xunit;
@@ -23,6 +24,10 @@ namespace Tests.Infrastructure
     public class RachisConsensusTestBase : IDisposable
     {
         protected bool PredictableSeeds;
+
+        protected Logger Log = LoggingSource.Instance.GetLogger<RachisConsensusTestBase>("RachisConsensusTest");
+
+        protected int LongWaitTime = 15000; //under stress the thread pool may take time to schedule the task to complete the set of the TCS
 
         protected async Task<RachisConsensus<CountingStateMachine>> CreateNetworkAndGetLeader(int nodeCount, [CallerMemberName] string caller = null)
         {
@@ -98,7 +103,14 @@ namespace Tests.Infrastructure
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, port);
             tcpListener.Start();
-              var ch = (char)(65 + (_count++));
+            var ch = (char)(66 + _count++);
+            if (bootstrap)
+            {
+                ch = (char)65;
+                _count--;
+            }
+
+
             var url = "tcp://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port + "/?" + caller + "#" + ch;
 
 
@@ -108,8 +120,10 @@ namespace Tests.Infrastructure
             var rachis = new RachisConsensus<CountingStateMachine>(seed);
             rachis.Initialize(new StorageEnvironment(server));
             if (bootstrap)
-        
+            {
                 rachis.Bootstarp(url);
+            }
+                
             rachis.Url = url;
             _listeners.Add(tcpListener);
             RachisConsensuses.Add(rachis);
@@ -247,6 +261,7 @@ namespace Tests.Infrastructure
 
             foreach (var mustBeSuccessfulTask in _mustBeSuccessfulTasks)
             {
+
                 Assert.True(mustBeSuccessfulTask.Wait(250));
             }
         }

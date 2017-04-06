@@ -41,7 +41,7 @@ function convertToDurandalRoute(leaf: leafMenuItem): DurandalRouteConfiguration 
 
 function getMenuItemDurandalRoutes(item: menuItem): Array<DurandalRouteConfiguration> {
     if (item.type === 'intermediate') {
-        var intermediateItem = item as intermediateMenuItem;
+        const intermediateItem = item as intermediateMenuItem;
         return intermediateItem.children
             .map(child => getMenuItemDurandalRoutes(child))
             .reduce((result, next) => result.concat(next), []);

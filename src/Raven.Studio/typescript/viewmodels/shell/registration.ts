@@ -10,7 +10,8 @@ import license = require("models/auth/license");
 
 
 class registrationModel {
-    name = ko.observable<string>();
+    firstName = ko.observable<string>();
+    lastName = ko.observable<string>();
     email = ko.observable<string>();
     company = ko.observable<string>();
 
@@ -19,7 +20,11 @@ class registrationModel {
     }
 
     private setupValidation() {
-        this.name.extend({
+        this.firstName.extend({
+            required: true
+        });
+
+        this.lastName.extend({
             required: true
         });
 
@@ -31,9 +36,11 @@ class registrationModel {
 
     toDto(): Raven.Server.Commercial.UserRegistrationInfo {
         return {
-            Name: this.name(),
+            FirstName: this.firstName(),
+            LastName: this.lastName(),
             Email: this.email(),
-            Company: this.company()
+            Company: this.company(),
+            BuildInfo: null
         }
     }
 }
@@ -119,12 +126,12 @@ class registration extends dialogViewModelBase {
 
 
     static showRegistrationDialogIfNeeded(license: Raven.Server.Commercial.LicenseStatus) {
-        if (license.LicenseType === "Invalid") {
+        if (license.Type === "Invalid") {
             registration.showRegistrationDialog(license, false);
             return;
         }
 
-        if (license.LicenseType === "None") {
+        if (license.Type === "None") {
             const firstStart = moment(license.FirstServerStartDate);
             const weekAfterFirstStart = firstStart.add("1", "week");
             const treeWeeksAfterFirstStart = firstStart.add("3", "weeks");

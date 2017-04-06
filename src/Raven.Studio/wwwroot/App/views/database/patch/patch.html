@@ -1,4 +1,4 @@
-<div class="flex-window stretch patch">
+<div class="flex-window stretch patch content-margin">
     <div class="flex-window-head">
         <div id="patch-target" data-bind="collapse: !test.testMode()">
             <div class="clearfix">
@@ -86,9 +86,11 @@
                                 <span data-bind="text: patchDocument().selectedItem() || 'Select collection...'"></span>
                                 <span class="caret"></span>
                             </button>
-                            <ul class="dropdown-menu" data-bind="foreach: collections">
-                                <li><a href="#" data-bind="text: name, click: _.partial($parent.useCollection, $data)"></a></li>
-                            </ul>
+                            <div class="dropdown-menu">
+                                <ul class="menu max-height" data-bind="foreach: collections">
+                                    <li><a href="#" data-bind="text: name, click: _.partial($parent.useCollection, $data)"></a></li>
+                                </ul>
+                            </div>
                         </div>
                         <span class="help-block" data-bind="validationMessage: patchDocument().selectedItem"></span>
                     </div>

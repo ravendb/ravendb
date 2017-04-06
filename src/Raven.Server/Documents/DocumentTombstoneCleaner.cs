@@ -4,8 +4,6 @@ using System.Threading;
 using Raven.Client;
 using Sparrow.Logging;
 
-using Sparrow.Collections;
-
 namespace Raven.Server.Documents
 {
     public class DocumentTombstoneCleaner : IDisposable

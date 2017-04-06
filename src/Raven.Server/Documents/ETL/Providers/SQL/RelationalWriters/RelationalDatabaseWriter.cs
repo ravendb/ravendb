@@ -4,10 +4,12 @@ using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using Raven.Client;
+using Raven.Client.Extensions.Streams;
 using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -446,7 +448,20 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         colParam.Value = blittableJsonReaderArray.ToString();
                         break;
                     default:
+                    {
+                        if (column.Value is Stream stream)
+                        {
+                            colParam.DbType = DbType.Binary;
+
+                            if (stream == Stream.Null)
+                                colParam.Value = DBNull.Value;
+                            else
+                                colParam.Value = stream.ReadData();
+
+                            break;
+                        }
                         throw new InvalidOperationException("Cannot understand how to save " + column.Type + " for " + colParam.ParameterName);
+                    }
                 }
             }
         }

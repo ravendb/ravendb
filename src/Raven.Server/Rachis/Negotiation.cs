@@ -5,7 +5,7 @@
         public long PrevLogIndex { get; set; }
         public long PrevLogTerm { get; set; }
         public long Term { get; set; }
-
+        public bool Truncated { get; set; }
     }
 
     public class LogLengthNegotiationResponse

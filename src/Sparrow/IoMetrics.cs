@@ -9,6 +9,7 @@ namespace Sparrow
     {
         public enum MeterType
         {
+            Compression,
             JournalWrite,
             DataFlush,
             DataSync,
@@ -55,6 +56,9 @@ namespace Sparrow
             IoMeterBuffer buffer;
             switch (type)
             {
+                case MeterType.Compression:
+                    buffer = fileIoMetrics.Compression;
+                    break;
                 case MeterType.JournalWrite:
                     buffer = fileIoMetrics.JournalWrite;
                     break;
@@ -80,6 +84,7 @@ namespace Sparrow
         {
             public string FileName;
             public IoMeterBuffer JournalWrite;
+            public IoMeterBuffer Compression;
             public IoMeterBuffer DataFlush;
             public IoMeterBuffer DataSync;
 
@@ -89,6 +94,7 @@ namespace Sparrow
             {
                 FileName = filename;
 
+                Compression = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
                 JournalWrite = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
                 DataFlush = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
                 DataSync = new IoMeterBuffer(metricsBufferSize, summaryBufferSize);
@@ -98,6 +104,7 @@ namespace Sparrow
             public List<IoMeterBuffer.MeterItem> GetRecentMetrics()
             {
                 var list = new List<IoMeterBuffer.MeterItem>();
+                list.AddRange(Compression.GetCurrentItems());
                 list.AddRange(DataSync.GetCurrentItems());
                 list.AddRange(JournalWrite.GetCurrentItems());
                 list.AddRange(DataFlush.GetCurrentItems());
@@ -110,6 +117,7 @@ namespace Sparrow
             public List<IoMeterBuffer.SummerizedItem> GetSummaryMetrics()
             {
                 var list = new List<IoMeterBuffer.SummerizedItem>();
+                list.AddRange(Compression.GetSummerizedItems());
                 list.AddRange(DataSync.GetSummerizedItems());
                 list.AddRange(DataFlush.GetSummerizedItems());
                 list.AddRange(JournalWrite.GetSummerizedItems());

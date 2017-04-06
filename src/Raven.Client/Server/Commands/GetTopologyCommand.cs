@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Net.Http;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
@@ -13,7 +14,7 @@ namespace Raven.Client.Server.Commands
         public GetTopologyCommand(string forcedUrl = null)
         {
             _forcedUrl = forcedUrl;
-            FailedNodes = new HashSet<ServerNode>();
+            FailedNodes = new Dictionary<ServerNode, ExceptionDispatcher.ExceptionSchema>();
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

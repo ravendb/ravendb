@@ -39,7 +39,7 @@ namespace Raven.Server.Config.Settings
         }
 
         public string ToFullPath()
-        {
+        { 
             var path = Environment.ExpandEnvironmentVariables(_path);
 
             if (path.StartsWith(@"~\") || path.StartsWith(@"~/"))

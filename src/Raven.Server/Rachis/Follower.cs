@@ -27,6 +27,10 @@ namespace Raven.Server.Rachis
         {
             var entries = new List<RachisEntry>();
             long lastCommit = 0, lastTruncate = 0;
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"Follower {_engine.Tag}: Entering steady state");
+            }
             while (true)
             {
                 entries.Clear();
@@ -42,6 +46,14 @@ namespace Raven.Server.Rachis
                         {
                             entries.Add(_connection.ReadRachisEntry(context));
                             _engine.Timeout.Defer(_connection.Source);
+                        }
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"Follower {_engine.Tag}: Got non empty append entries request with {entries.Count} entries. "
+#if DEBUG
+                                + $"[{string.Join(" ,", entries.Select(x=>x.ToString()))}]"
+#endif
+                                );
                         }
                     }
 
@@ -118,6 +130,10 @@ namespace Raven.Server.Rachis
 
                     if (appendEntries.ForceElections)
                     {
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"Follower {_engine.Tag}: Got a request to become candidate from the leader.");
+                        }
                         _engine.SwitchToCandidateState("Was asked to do so by my leader", forced: true);
                         return;
                     }
@@ -164,9 +180,12 @@ namespace Raven.Server.Rachis
         private void NegotiateWithLeader(TransactionOperationContext context, LogLengthNegotiation negotiation)
         {
             // only the leader can send append entries, so if we accepted it, it's the leader
-
-            if (negotiation.Term > _engine.CurrentTerm)
+            if (_engine.Log.IsInfoEnabled)
             {
+                _engine.Log.Info($"Follower {_engine.Tag}: Got a nogotiation requet for term {negotiation.Term} where our term is {_engine.CurrentTerm}");
+            }
+            if (negotiation.Term > _engine.CurrentTerm)
+            {               
                 _engine.FoundAboutHigherTerm(negotiation.Term);
             }
 
@@ -177,12 +196,21 @@ namespace Raven.Server.Rachis
             }
             if (prevTerm != negotiation.PrevLogTerm)
             {
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"Follower {_engine.Tag}: Got a nogotiation requet with PrevLogTerm={negotiation.PrevLogTerm} while our PrevLogTerm={prevTerm}" +
+                                     $" will negotiate to find next matched index");
+                }
                 // we now have a mismatch with the log position, and need to negotiate it with 
                 // the leader
                 NegotiateMatchEntryWithLeaderAndApplyEntries(context, _connection, negotiation);
             }
             else
             {
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"Follower {_engine.Tag}: Got a nogotiation requet with identical PrevLogTerm will continue to steady state");
+                }
                 // this (or the negotiation above) completes the negotiation process
                 _connection.Send(context, new LogLengthNegotiationResponse
                 {
@@ -203,30 +231,64 @@ namespace Raven.Server.Rachis
 
             using (context.OpenWriteTransaction())
             {
-                if (InstallSnapshot(context))
+                var lastCommitIndex = _engine.GetLastCommitIndex(context);
+                if (snapshot.LastIncludedIndex < lastCommitIndex)
                 {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Follower {_engine.Tag}: Got installed snapshot with last index={snapshot.LastIncludedIndex} while our lastCommitIndex={lastCommitIndex}, will just ignore it");
+                    }
+                    //This is okay to ignore because we will just get the commited entries again and skip them
+                    ReadInstallSnapshotAndIgnoreContent(context);
+                }
+                else if (InstallSnapshot(context))
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info(
+                            $"Follower {_engine.Tag}: Installed snapshot with last index={snapshot.LastIncludedIndex} with LastIncludedTerm={snapshot.LastIncludedTerm} ");
+                    }
                     _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
-                    _engine.TruncateLogBefore(context, snapshot.LastIncludedIndex);
+                    _engine.ClearLogEntriesAndSetLastTrancate(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
                 }
                 else
                 {
                     var lastEntryIndex = _engine.GetLastEntryIndex(context);
                     if (lastEntryIndex < snapshot.LastIncludedIndex)
                     {
-                        throw new InvalidOperationException($"The snapshot installation had failed because the last included index {snapshot.LastIncludedIndex} in term {snapshot.LastIncludedTerm} doesn't match the last entry {lastEntryIndex}");
+                        var message =
+                            $"The snapshot installation had failed because the last included index {snapshot.LastIncludedIndex} in term {snapshot.LastIncludedTerm} doesn't match the last entry {lastEntryIndex}";
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"Follower {_engine.Tag}: {message}");
+                        }
+                        throw new InvalidOperationException(message);
                     }
                 }
-
+                                
                 // snapshot always has the latest topology
                 if (snapshot.Topology == null)
-                    throw new InvalidOperationException("Expected to get topology on snapshot");
+                {
+                    var message = "Expected to get topology on snapshot";
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Follower {_engine.Tag}: {message}");
+                    }
+                    throw new InvalidOperationException(message);
+                }
                 using (var topology = context.ReadObject(snapshot.Topology, "topology"))
                 {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Follower {_engine.Tag}: topology on install snapshot: {topology}");
+                    }
                     RachisConsensus.SetTopology(_engine, context.Transaction.InnerTransaction, topology);
                 }
 
                 context.Transaction.Commit();
             }
+            //Here we send the LastIncludedIndex as our matched index even for the case where our lastCommitIndex is greater
+            //So we could validate that the entries sent by the leader are indeed the same as the ones we have.
             _connection.Send(context, new InstallSnapshotResponse
             {
                 Done = true,
@@ -348,6 +410,58 @@ namespace Raven.Server.Rachis
             }
         }
 
+        private bool ReadInstallSnapshotAndIgnoreContent(TransactionOperationContext context)
+        {
+            var sp = Stopwatch.StartNew();
+            var reader = _connection.CreateReader();
+            while (true)
+            {
+                var type = reader.ReadInt32();
+                if (type == -1)
+                    return false;
+
+                int size;
+                long entries;
+                switch ((RootObjectType)type)
+                {
+                    case RootObjectType.None:
+                        return true;
+                    case RootObjectType.VariableSizeTree:
+
+                        size = reader.ReadInt32();
+                        reader.ReadExactly(size);
+
+                        entries = reader.ReadInt64();
+                        for (long i = 0; i < entries; i++)
+                        {
+                            MaybeNotifyLeaderThatWeAreSillAlive(context, i, sp);
+
+                            size = reader.ReadInt32();
+                            reader.ReadExactly(size);
+                            size = reader.ReadInt32();
+                            reader.ReadExactly(size);
+                        }
+                        break;
+                    case RootObjectType.Table:
+
+                        size = reader.ReadInt32();
+                        reader.ReadExactly(size);
+
+                        entries = reader.ReadInt64();
+                        for (long i = 0; i < entries; i++)
+                        {
+                            MaybeNotifyLeaderThatWeAreSillAlive(context, i, sp);
+
+                            size = reader.ReadInt32();
+                            reader.ReadExactly(size);
+                        }
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
+                }
+            }
+        }
+
         private void MaybeNotifyLeaderThatWeAreSillAlive(TransactionOperationContext context, long count, Stopwatch sp)
         {
             if (count % 100 != 0)
@@ -423,7 +537,21 @@ namespace Raven.Server.Rachis
                 var response = connection.Read<LogLengthNegotiation>(context);
 
                 _engine.Timeout.Defer(_connection.Source);
-
+                if (response.Truncated)
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Follower {_engine.Tag}: Got a truncated response from the leader will request all entries");
+                    }
+                    connection.Send(context, new LogLengthNegotiationResponse
+                    {
+                        Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
+                        Message = $"We have entries that are already truncated at the leader, will ask for full snapshot",
+                        CurrentTerm = _engine.CurrentTerm,
+                        LastLogIndex = 0
+                    });
+                    break;
+                }
                 using (context.OpenReadTransaction())
                 {
                     if (_engine.GetTermFor(context, response.PrevLogIndex) == response.PrevLogTerm)
@@ -439,7 +567,10 @@ namespace Raven.Server.Rachis
                 using (context.OpenReadTransaction())
                     midpointTerm = _engine.GetTermForKnownExisting(context, midpointIndex);
             }
-
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"Follower {_engine.Tag}: agreed upon last matched index = {midpointIndex} on term = {_engine.CurrentTerm}");
+            }
             connection.Send(context, new LogLengthNegotiationResponse()
             {
                 Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
@@ -512,7 +643,7 @@ namespace Raven.Server.Rachis
                         }
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info("Failed to talk to leader: " + _engine.Tag, e);
+                            _engine.Log.Info($"Follower {_engine.Tag}:Failed to talk to leader", e);
                         }
                     }
                 }
@@ -529,7 +660,10 @@ namespace Raven.Server.Rachis
         public void Dispose()
         {
             _connection.Dispose();
-
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"Follower {_engine.Tag}:Dispose");
+            }
             if (_thread != null &&
                 _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                 _thread.Join();

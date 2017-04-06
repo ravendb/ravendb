@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Rachis;
@@ -12,7 +13,7 @@ using Xunit;
 namespace SlowTests.Server.Rachis
 {
     public class CommandsTests: RachisConsensusTestBase
-    {
+    {        
         [Fact]
         public async Task When_command_committed_CompletionTaskSource_is_notified()
         {
@@ -37,9 +38,10 @@ namespace SlowTests.Server.Rachis
                     lastIndex = leader.GetLastEntryIndex(context);
             }
             var waitForAllCommits = nonLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
-            Assert.True(await Task.WhenAny(waitForAllCommits, Task.Delay(5000)) == waitForAllCommits, "didn't commit in time");
-
-            Assert.True(tasks.All(t=>t.Status == TaskStatus.RanToCompletion),"Some commands didn't complete");
+            
+            Assert.True(await Task.WhenAny(waitForAllCommits, Task.Delay(LongWaitTime)) == waitForAllCommits, "didn't commit in time");
+            var waitForNotificationsOnTasks = Task.WhenAll(tasks);
+            Assert.True(await Task.WhenAny(waitForNotificationsOnTasks, Task.Delay(LongWaitTime)) == waitForNotificationsOnTasks, "Some commands didn't complete");
         }
 
         [Fact]
@@ -66,7 +68,7 @@ namespace SlowTests.Server.Rachis
                     lastIndex = leader.GetLastEntryIndex(context);
             }
             var waitForAllCommits = nonLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
-            Assert.True(await Task.WhenAny(waitForAllCommits, Task.Delay(5000)) == waitForAllCommits, "didn't commit in time");
+            Assert.True(await Task.WhenAny(waitForAllCommits, Task.Delay(LongWaitTime)) == waitForAllCommits, "didn't commit in time");
 
             Assert.True(tasks.All(t => t.Status == TaskStatus.RanToCompletion), "Some commands didn't complete");
             DisconnectFromNode(leader);
