@@ -35,7 +35,7 @@ namespace SlowTests.Server.Rachis
 
             foreach (var r in RachisConsensuses)
             {
-                Assert.True(r.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex).Wait(5000));   
+                Assert.True(r.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex).Wait(LongWaitTime));   
             }
             
         }

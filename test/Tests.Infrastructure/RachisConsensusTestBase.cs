@@ -128,7 +128,6 @@ namespace Tests.Infrastructure
             _listeners.Add(tcpListener);
             RachisConsensuses.Add(rachis);
             var task = AcceptConnection(tcpListener, rachis);
-            _mustBeSuccessfulTasks.Add(task);
             return rachis;
         }
 
