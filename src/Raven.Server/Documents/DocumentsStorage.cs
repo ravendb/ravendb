@@ -1531,13 +1531,14 @@ namespace Raven.Server.Documents
                                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false ||
                                 attachments.Equals(oldAttachments) == false)
                             {
+                                var actualAttachments = AttachmentsStorage.GetAttachmentsMetadataForDocument(context, loweredKey);
                                 if (metadata == null)
                                 {
                                     document.Modifications = new DynamicJsonValue(document)
                                     {
                                         [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                                         {
-                                            [Constants.Documents.Metadata.Attachments] = oldAttachments
+                                            [Constants.Documents.Metadata.Attachments] = actualAttachments
                                         }
                                     };
                                 }
@@ -1545,7 +1546,7 @@ namespace Raven.Server.Documents
                                 {
                                     metadata.Modifications = new DynamicJsonValue(metadata)
                                     {
-                                        [Constants.Documents.Metadata.Attachments] = oldAttachments
+                                        [Constants.Documents.Metadata.Attachments] = actualAttachments
                                     };
                                     document.Modifications = new DynamicJsonValue(document)
                                     {
@@ -1570,7 +1571,7 @@ namespace Raven.Server.Documents
                     if (_documentDatabase.BundleLoader.VersioningStorage != null)
                     {
                         VersioningConfigurationCollection configuration;
-                        if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document, ref flags, out configuration))
+                        if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document, ref flags, out configuration, context, key))
                         {
                             _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, modifiedTicks, configuration);
                         }
@@ -2073,20 +2074,7 @@ namespace Raven.Server.Documents
                 int size;
                 var data = new BlittableJsonReaderObject(copyTvr.Read((int)DocumentsTable.Data, out size), size, context);
 
-                var attachments = new DynamicJsonArray();
-                using (AttachmentsStorage.GetAttachmentPrefix(context, lowerDocumentId, AttachmentType.Document, null, out Slice prefixSlice))
-                {
-                    foreach (var attachment in AttachmentsStorage.GetAttachmentsForDocument(context, prefixSlice))
-                    {
-                        attachments.Add(new DynamicJsonValue
-                        {
-                            [nameof(AttachmentResult.Name)] = attachment.Name,
-                            [nameof(AttachmentResult.Hash)] = attachment.Base64Hash.ToString(), // TODO: Do better than create a string
-                            [nameof(AttachmentResult.ContentType)] = attachment.ContentType,
-                            [nameof(AttachmentResult.Size)] = attachment.Size,
-                        });
-                    }
-                }
+                var attachments = AttachmentsStorage.GetAttachmentsMetadataForDocument(context, lowerDocumentId);
 
                 var flags = DocumentFlags.None;
                 data.Modifications = new DynamicJsonValue(data);
