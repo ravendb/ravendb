@@ -77,7 +77,7 @@ namespace Raven.Server.Web.System
                 {
                     if (dbBlit == null)
                     {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                         using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
                         {
                             context.Write(writer,
