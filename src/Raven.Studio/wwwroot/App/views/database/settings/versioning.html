@@ -1,8 +1,8 @@
 <section class="content-margin versioning">
 
-    <form class="versioning-settings-form form-horizontal" role="form" data-bind="submit: $root.saveChanges.bind($root)">
+    <form class="versioning-settings-form form-horizontal" role="form" data-bind="submit: saveChanges">
         <div class="margin-bottom">
-            <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: isSaveEnabled" accesskey="S">
+            <button type="submit" class="btn btn-primary" title="Save Changes" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save() }">
                 <i class="icon-save"></i> <span>Save changes</span>
             </button>
         </div>
@@ -12,24 +12,24 @@
                 <div class="versioning-item">
                     <div class="versioning-enable">
                         <div class="toggle">
-                            <input id="compactViewInput" name="compactView" class="styled" type="checkbox">
-                            <label for="compactViewInput">
+                            <input id="enableVersioning" class="styled" type="checkbox" data-bind="checked: versioningEnabled">
+                            <label for="enableVersioning">
                                 Enable versioning
                             </label>
                         </div>
                     </div>
                     <div class="versioning-purge">
                         <div class="toggle">
-                            <input id="compactViewInput" disabled name="compactView" class="styled" type="checkbox">
-                            <label for="compactViewInput">
+                            <input id="purgeOnDelete" class="styled" type="checkbox" data-bind="enable: versioningEnabled, checked: defaultVersioning().purgeOnDelete">
+                            <label for="purgeOnDelete">
                                 Purge on delete
                             </label>
                         </div>
                     </div>
                     <div class="versioning-revisions">
                         <div class="input-group">
-                            <span class="input-group-addon" id="sizing-addon2">Max Revisions</span>
-                            <input type="number" disabled class="form-control" placeholder="0">
+                            <span class="input-group-addon">Max Revisions</span>
+                            <input type="number" class="form-control" placeholder="0" data-bind="enable: versioningEnabled, numericValue: defaultVersioning().maxRevisions, valueUpdate: 'afterkeydown'">
                         </div>
                     </div>
                 </div>
@@ -37,120 +37,58 @@
         </div>
 
         <div class="margin-bottom">
-            <button type="button" class="btn btn-default" data-bind="click: createNewVersioning" title="Add a replication destination (Alt+N)" accesskey="N">
-                <i class="icon-plus"></i> <span>Add configuration</span>
-            </button>
+            <span class="has-disable-reason" data-bind="attr: { 'data-original-title': versioningEnabled() ? '' : 'Enable versioning first' }">
+                <button type="button" class="btn btn-default" data-bind="click: createNewVersioning, enable: versioningEnabled" title="Add collection specific collection configuration">
+                    <i class="icon-plus"></i> <span>Add configuration</span>
+                </button>    
+            </span>
         </div>
 
 
         <div class="row" data-bind="visible: versionings().length == 0">
             <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
                 <i class="icon-xl icon-empty-set text-muted"></i>
-                <h2 class="text-center">You've got no set up for collections.</h2>
+                <h2 class="text-center">No collection specific configuration have been created.</h2>
             </div>
         </div>
 
-        <div data-bind="foreach: versionings">
+        <div data-bind="foreach: versionings, visible: versioningEnabled">
             <div class="panel panel-default">
                 <div class="panel-body">
                     <div class="versioning-item">
-                        <!-- TODO
-                        <h3>
-                            <span> Versioning setup <span data-bind="visible: collection().length>0">for</span> <span data-bind="text: collection"></span></span>
-                        </h3>
-                        -->
-                        
-                        <!-- TODO
-                            <div class="form-group">
-                            <label class="control-label">Collection</label>
-                            <div>
-                                <input required type="text" class="form-control" data-bind="textInput: collection, enable: !isDefault()" />
-                            </div>
-                        </div> -->
                         <div class="versioning-enable">
-                            <div class="dropdown">
-                                <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown" />
-                                <span class="caret"></span>
-                                <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                                    <li><a href="#">Companies</a></li>
-                                    <li><a href="#">Computers</a></li>
-                                    <li><a href="#">ProductComparisons</a></li>                                
+                            <div class="dropdown" data-bind="validationElement: collection">
+                                <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown" data-bind="textInput: collection, attr: { id: 'collectionName' + $index(), }" />
+                                <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'collectionName' + $index(), foreach: $root.createCollectionNameAutocompleter($data)">
+                                    <li role="presentation" data-bind="click: $parent.collection.bind($parent, $data)">
+                                        <a role="menuitem" tabindex="-1" href="#">
+                                            <span data-bind="text: $data"></span>
+                                        </a>
+                                    </li>
                                 </ul>
                             </div>
                         </div>
                         <div class="versioning-purge">
                             <div class="toggle">
-                                <input id="compactViewInput" name="compactView" class="styled" type="checkbox">
-                                <label for="compactViewInput">
+                                <input class="styled" type="checkbox" data-bind="checked: purgeOnDelete, attr: { id : 'collectionPurge' + $index() }">
+                                <label data-bind="attr: { for: 'collectionPurge' + $index() }">
                                     Purge on delete
                                 </label>
                             </div>
                         </div>
                         <div class="versioning-revisions">
                             <div class="input-group">
-                                <span class="input-group-addon" id="sizing-addon2">Max Revisions</span>
+                                <span class="input-group-addon">Max Revisions</span>
                                 <input type="number" class="form-control" placeholder="0" data-bind="numericValue: maxRevisions, valueUpdate: 'afterkeyup', enable: !isDefault()">
                             </div>
                         </div>
                         <div class="flex-separator"></div>
                         <div class="versioning-remove">
-                            <button class="btn btn-danger" data-bind="click: $root.removeVersioning.bind($root), visible: !isDefault()" title="remove this versioning">
+                            <button class="btn btn-danger" data-bind="click: $root.removeVersioning, visible: !isDefault()" title="Remove versioning configuration for this collection">
                                 <i class="icon-trash"></i>
                             </button>
                         </div>
-                            
-                        <!--
-                                    <div class="form-group">
-                                        <label class="col-sm-4 control-label">Excluded</label>
-                                        <div class="col-sm-7">
-                                            <div class="btn-group">
-                                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: !$root.usingGlobal() && localExists()">
-                                                    <span data-bind="visible: !mergedDocument().exclude()">Include</span>
-                                                    <span data-bind="visible: mergedDocument().exclude">Exclude</span>
-                                                    <span class="caret"></span>
-                                                </button>
-                                                <ul class="dropdown-menu" role="menu" data-bind="with: mergedDocument">
-                                                    <li><a href="#" data-bind="click: exclude.bind($root, false)">Include</a></li>
-                                                    <li><a href="#" data-bind="click: exclude.bind($root, true)">Exclude</a></li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-sm-4 control-label">Exclude unless explicit</label>
-                                        <div class="col-sm-7">
-                                            <div class="btn-group">
-                                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: !$root.usingGlobal() && localExists()">
-                                                    <span data-bind="visible: !mergedDocument().excludeUnlessExplicit()">Include</span>
-                                                    <span data-bind="visible: mergedDocument().excludeUnlessExplicit">Exclude</span>
-                                                    <span class="caret"></span>
-                                                </button>
-                                                <ul class="dropdown-menu" role="menu" data-bind="with: mergedDocument">
-                                                    <li><a href="#" data-bind="click: excludeUnlessExplicit.bind($root, false)">Include</a></li>
-                                                    <li><a href="#" data-bind="click: excludeUnlessExplicit.bind($root, true)">Exclude</a></li>
-                                                </ul>
-                                </div>
-                            </div>
-                        </div>-->
-                        <!-- TODO 
-                            <div class="form-group">
-                            <label class="col-sm-4 control-label">Purge on delete</label>
-                            <div class="col-sm-7">
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" data-bind="enable: !isDefault()">
-                                        <span data-bind="visible: !purgeOnDelete()">No</span>
-                                        <span data-bind="visible: purgeOnDelete">Yes</span>
-                                        <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu" role="menu">
-                                        <li><a href="#" data-bind="click: purgeOnDelete.bind($root, false)">No</a></li>
-                                        <li><a href="#" data-bind="click: purgeOnDelete.bind($root, true)">Yes</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                            -->
-                            
                     </div>
                 </div>
             </div>

@@ -192,7 +192,7 @@ class editDocument extends viewModelBase {
         
         this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.userSpecifiedId], false, jsonUtil.newLineNormalizingHashFunction); 
           
-        this.isSaveEnabled = ko.pureComputed(() => {            
+        this.isSaveEnabled = ko.pureComputed(() => {
             const isSaving = this.isSaving();
             const isDirty = this.dirtyFlag().isDirty();
             const etag = this.metadata().etag();

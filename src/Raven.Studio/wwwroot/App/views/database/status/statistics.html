@@ -5,7 +5,7 @@
         <div class="row flex-row" data-bind="with: stats">
             <div class="col-sm-12 col-xl-6">
                 <div class="stats-item">
-                    <div class="name"><i class="icon-database"></i> <span>Database Id</span></div>t
+                    <div class="name"><i class="icon-database"></i> <span>Database Id</span></div>
                     <div class="value long"><span data-bind="text: dataBaseId"></span></div>
                 </div>
             </div>
@@ -62,7 +62,7 @@
                         <h3 class="flex-content text-elipsis">
                             <a href="#" data-bind="attr: { href: $root.urlForIndexPerformance(indexName), title: indexName } ">
                                 <span class="text" data-bind="text: indexName"></span>
-                            </a>                           
+                            </a>
                         </h3>
                         <span class="badge badge-warning pull-right flex-noshrink" data-bind="visible: isStale">Stale</span>
                     </div>
@@ -116,86 +116,4 @@
             </div>
         </div>
     </div>
-
-    <!--
-
-
-
-    <div data-bind="foreach: stats().indexesByType">
-
-        <h3 data-bind="text: indexType"></h3>
-
-        <div class="row">
-            <div data-bind="foreach: indexes">
-                <div class="col-sm-4">
-                    <div class="panel panel-default">
-                        <div class="panel-body">
-                            <div class="table-responsive">
-                                <table class="table table-condensed">
-                                    <thead>
-                                        <tr>
-                                            <th>
-                                                <a href="#" data-bind="attr: { href: $root.urlForIndexPerformance(indexName) } ">
-                                                    <span class="text" data-bind="text: indexName"></span>
-                                                </a>
-                                            </th>
-                                            <th>
-                                                <span class="badge badge-warning" data-bind="visible: isStale">Stale</span>
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>Index Id:</td>
-                                            <td data-bind="text: indexId"></td>
-                                        </tr>
-                                        <tr data-bind="if: !isFaultyIndex">
-                                            <td>Entries Count:</td>
-                                            <td data-bind="text: entriesCount"></td>
-                                        </tr>
-                                        <tr data-bind="if: errorsCount > 0">
-                                            <td>Errors Count:</td>
-                                            <td data-bind="text: errorsCount"></td>
-                                        </tr>
-                                        <tr data-bind="if: !isFaultyIndex">
-                                            <td>Map Attempts:</td>
-                                            <td data-bind="text: mapAttempts"></td>
-                                        </tr>
-                                        <tr data-bind="if: !isFaultyIndex">
-                                            <td>Map Successes:</td>
-                                            <td data-bind="text: mapSuccesses"></td>
-                                        </tr>
-                                        <tr data-bind="if: mapErrors > 0">
-                                            <td>Map Errors:</td>
-                                            <td data-bind="text: mapErrors"></td>
-                                        </tr>
-                                        <tr data-bind="if: mappedPerSecondRate > 1">
-                                            <td>Mapped Per Second Rate:</td>
-                                            <td data-bind="text: mappedPerSecondRateStr"></td>
-                                        </tr>
-                                        <tr data-bind="if: isReduceIndex">
-                                            <td>Reduce Attempts:</td>
-                                            <td data-bind="text: reduceAttempts"></td>
-                                        </tr>
-                                        <tr data-bind="if: isReduceIndex">
-                                            <td>Reduce Successes:</td>
-                                            <td data-bind="text: reduceSuccesses"></td>
-                                        </tr>
-                                        <tr data-bind="if: isReduceIndex && reduceErrors > 0">
-                                            <td>Reduce Errors:</td>
-                                            <td data-bind="text: reduceErrors"></td>
-                                        </tr>
-                                        <tr data-bind="if: isReduceIndex && (reducedPerSecondRate > 1)">
-                                            <td>Reduced Per Second Rate:</td>
-                                            <td data-bind="text: reducedPerSecondRateStr"></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        -->
 </section>
