@@ -16,6 +16,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -171,10 +172,13 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
+            int numberOfResults;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteDocumentQueryResult(context, result, metadataOnly);
+                writer.WriteDocumentQueryResult(context, result, metadataOnly, out numberOfResults);
             }
+
+            AddPagingPerformanceHint(PagingOperationType.Queries, nameof(Query), numberOfResults, indexQuery.PageSize);
         }
 
         private IndexQueryServerSide GetIndexQuery(DocumentsOperationContext context, HttpMethod method)
@@ -209,10 +213,13 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
+            int numberOfResults;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteQueryResult(context, result, metadataOnly: false);
+                writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults);
             }
+
+            AddPagingPerformanceHint(PagingOperationType.Queries, nameof(MoreLikeThis), numberOfResults, query.PageSize);
         }
 
         private void Explain(DocumentsOperationContext context, string indexName)

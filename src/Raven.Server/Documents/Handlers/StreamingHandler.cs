@@ -78,13 +78,13 @@ namespace Raven.Server.Documents.Handlers
                                 Database.DocumentsStorage,
                                 Database.TransformerStore, context))
                             {
-                                writer.WriteDocuments(context, scope.Transform(documents), metadataOnly: false);
+                                writer.WriteDocuments(context, scope.Transform(documents), metadataOnly: false, numberOfResults: out int _);
                             }
                         }
                     }
                     else
                     {
-                        writer.WriteDocuments(context, documents, metadataOnly: false);
+                        writer.WriteDocuments(context, documents, metadataOnly: false, numberOfResults: out int _);
                     }
 
                     writer.WriteEndObject();

@@ -4,6 +4,7 @@
     {
         None,
         Indexing,
-        Replication
+        Replication,
+        Paging
     }
 }

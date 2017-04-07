@@ -8,6 +8,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.Documents.Operations;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 
 namespace Raven.Server.Documents.Handlers
@@ -47,15 +48,20 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
+                var pageSize = GetPageSize();
+                var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), pageSize);
 
+                int numberOfResults;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
+
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
-                    writer.WriteDocuments(context, documents, metadataOnly: false);
+                    writer.WriteDocuments(context, documents, metadataOnly: false, numberOfResults: out numberOfResults);
                     writer.WriteEndObject();
                 }
+
+                AddPagingPerformanceHint(PagingOperationType.Documents, "Collection", numberOfResults, pageSize);
             }
 
             return Task.CompletedTask;

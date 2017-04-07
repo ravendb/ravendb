@@ -15,6 +15,7 @@ using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Versioning;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
@@ -88,6 +89,5 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, UserRegistrationInfo> UserRegistrationInfo = GenerateJsonDeserializationRoutine<UserRegistrationInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseDocument> DatabaseDocument = GenerateJsonDeserializationRoutine<DatabaseDocument>();
-
     }
 }

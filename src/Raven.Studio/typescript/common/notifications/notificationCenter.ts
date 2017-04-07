@@ -304,7 +304,7 @@ class notificationCenter {
                 });
         } else if (notification instanceof performanceHint) {
             const currentHint = notification as performanceHint;
-            const text = JSON.stringify(currentHint.details, null, 4);
+            const text = JSON.stringify(currentHint.details(), null, 4);
             app.showBootstrapDialog(new showDataDialog("Performance Hint", text, "javascript"))
                 .done(() => {
                     this.showNotifications(notificationCenterOpened);
