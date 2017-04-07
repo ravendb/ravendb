@@ -25,7 +25,7 @@ class databaseInfo {
     filteredOut = ko.observable<boolean>(false);
     isBeingDeleted = ko.observable<boolean>(false);
 
-    errors = ko.observable<number>();
+    indexingErrors = ko.observable<number>();
     alerts = ko.observable<number>();
 
     badgeText: KnockoutComputed<string>;
@@ -175,7 +175,7 @@ class databaseInfo {
         this.disabled(dto.Disabled);
         this.isAdmin(dto.IsAdmin);
         this.totalSize(dto.TotalSize ? dto.TotalSize.HumaneSize : null);
-        this.errors(dto.Errors);
+        this.indexingErrors(dto.IndexingErrors);
         this.alerts(dto.Alerts);
         this.loadError(dto.LoadError);
         this.bundles(dto.Bundles);
