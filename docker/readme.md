@@ -1,24 +1,23 @@
-## Raven Docker Support
+## RavenDB Docker Support
 
-The files here support building and running ravendb 4.0 in a docker container on either Linux or Windows (nanoserver).
+The files here support building and running RavenDB 4.0 in a docker container on either Linux or Windows (nanoserver).
 
 ### Building
 
-These docker images are built using the alpha downloads available on the website.  The Dockerfile downloads the zip files and extracts them onto the Docker image.
-
-`build-{platform}.ps1` can be used to build and launch the docker images.
-
-- `./build-{platform}.ps1 -Run -Wait` will build and run the docker image interactively: `docker run -it --rm ...`
-- `./build-{platform}.ps1 -Run` will build and run the docker image detached: `docker run -d ...`
+These docker images are built using local artifacts. Dockerfile copies server archive and extracts it onto the Docker image.
 
 ### Configuration
 
-These images configure the DataDir to /databases or c:/databases, depending on platform.  They expose port 8080 and are configured with the `AllowEverybodyToAccessTheServerAsAdmin` flag set to true.  So the following execution:
+These images configure the `DataDir` to /databases or c:/databases, depending on platform. They expose port 8080 and are configured with the `AllowEverybodyToAccessTheServerAsAdmin` flag set to `false` by default.
 
-#### Linux
-`docker run -d -p 8080:8080 -v db:/databases ravendb`
+To run the image run script called `run_ubuntu1604.ps1` or `run_windows.ps1` depending on your platform. The following switches are supported to simplify usage:
 
-#### Nanoserver
-`docker run -d -p 8080:8080 -v db:c:/databases ravendb`
+    -Detached - runs the image in detached mode (Docker's `-d`)
 
-Would bind to port 8080 and mount the databases directory to the 'db' volume.
+    -AllowEverybodyToAccessTheServerAsAdmin - sets RavenDB's setting `/Raven/AllowEverybodyToAccessTheServerAsAdmin` (default: false)
+
+    -BindPort 8080 - sets the port to which to bind container's RavenDB Server (default: 8080)
+
+    -DbVolumeName - sets the Docker volume name used to persist data (default: ravendb)
+
+NOTE: `run_X.ps1` script will attempt to create Docker volume, if does not exist.
