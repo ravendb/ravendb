@@ -190,12 +190,14 @@
         </div>
     </div>
 
-    <div class="properties-item" data-bind="visible: errors()">
+    <div class="properties-item" data-bind="visible: indexingErrors()">
         <div class="properties-value value-only text-danger">
-            <div class="set-size">
-                <i class="icon-exclamation"></i>
-                <span data-bind="text: $root.pluralize(errors().toLocaleString(), 'error', 'errors')"></span>
-            </div>
+            <a title="View indexing errors" data-bind="attr: { href: $root.indexErrorsUrl($data) }">
+                <div class="set-size">
+                    <i class="icon-exclamation"></i>
+                    <span data-bind="text: $root.pluralize(indexingErrors().toLocaleString(), 'indexing error', 'indexing errors')"></span>
+                </div>
+            </a>
         </div>
     </div>
 
