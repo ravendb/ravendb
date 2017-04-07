@@ -820,44 +820,30 @@ input[type=file] + .form-control {
 .loading-overlay {
     opacity: 0;
     width: 100%;
-    height: 100%;
-    position: relative;
+    height: 0;
+    position: absolute;
+    bottom: 0;
     z-index: @zindex-loading-overlay;
-    -webkit-transition: opacity 0.3s 0.2s ease-in;
-    -moz-transition: opacity 0.3s 0.2s ease-in;
-    -ms-transition: opacity 0.3s 0.2s ease-in;
-    -o-transition: opacity 0.3s 0.2s ease-in;
-    transition: opacity 0.3s 0.2s ease-in;
+    transition: opacity 0.3s 0.3s cubic-bezier(0.6, 0, 1, 0.6), height 0.0s 0.5s cubic-bezier(0.6, 0, 1, 0.6);
     background-image: url('../img/loading_bkg.png');
     background-position: center;
     background-size: cover;
-
+    //transform: translateY(-20px);
     .loading-info {
         content: '';
         display: block;
         position: absolute;
-        width: 250px;
         max-width: 60%;
-        padding-top: 60px;
         top: 50%;
         left: 50%;
         opacity: 0;
-        -moz-transform: translateX(-50%) translateY(-50%) scale(1.4);
-        -webkit-transform: translateX(-50%) translateY(-50%) scale(1.4);
-        -o-transform: translateX(-50%) translateY(-50%) scale(1.4);
-        -ms-transform: translateX(-50%) translateY(-50%) scale(1.4);
-        transform: translateX(-50%) translateY(-50%) scale(1.4);
-        background-image: url('../img/ravendb_logo.png');
-        background-image: url('../img/ravendb_logo.svg'),none;
-        background-position: top center;
-        ;
-        background-repeat: no-repeat;
-        background-size: contain;
-        -webkit-transition: all 0.3s cubic-bezier(0.70,-0.40, 0.40, 0.50);
-        -moz-transition: all 0.3s cubic-bezier(0.70,-0.40, 0.40, 0.50);
-        -ms-transition: all 0.3s cubic-bezier(0.70,-0.40, 0.40, 0.50);
-        -o-transition: all 0.3s cubic-bezier(0.70,-0.40, 0.40, 0.50);
-        transition: all 0.3s cubic-bezier(0.70,-0.40, 0.40, 0.50);
+        transform: translateX(-50%) translateY(-60%);
+        transition: all 0.3s ease-in;
+
+        .raven-logo {
+            color: @brand-primary;
+            font-size: 100px;
+        }
 
         span {
             font-size: 22px;
