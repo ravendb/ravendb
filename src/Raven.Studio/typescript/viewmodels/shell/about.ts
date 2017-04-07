@@ -2,7 +2,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import license = require("models/auth/license");
 import registration = require("viewmodels/shell/registration");
-import moment = require("moment");
 
 class about extends viewModelBase {
 
