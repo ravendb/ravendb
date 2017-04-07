@@ -1453,9 +1453,10 @@ class ioStats extends viewModelBase {
             x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
             y = Math.min(y, Math.max(this.totalHeight - tooltipHeight, 0));
 
-            this.tooltip                           
+            this.tooltip
                 .style("left", (x + 10) + "px")
-                .style("top", (y + 10) + "px");    
+                .style("top", (y + 10) + "px")
+                .style("display", undefined);
            
             this.tooltip
                 .transition()

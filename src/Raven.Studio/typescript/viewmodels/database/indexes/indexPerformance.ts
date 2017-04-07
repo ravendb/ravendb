@@ -41,7 +41,7 @@ class hitTest {
         this.onToggleIndex = onToggleIndex;
         this.handleTrackTooltip = handleTrackTooltip;
         this.handleGapTooltip = handleGapTooltip;
-        this.removeTooltip = removeTooltip;        
+        this.removeTooltip = removeTooltip;
     }
 
     registerTrackItem(x: number, y: number, width: number, height: number, element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation) {
@@ -1092,7 +1092,8 @@ class indexPerformance extends viewModelBase {
 
             this.tooltip
                 .style("left", (x + 10) + "px")
-                .style("top", (y + 10) + "px");
+                .style("top", (y + 10) + "px")
+                .style('display', undefined);
 
             this.tooltip
                 .transition()
