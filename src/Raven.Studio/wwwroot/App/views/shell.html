@@ -104,8 +104,9 @@
                     <span class="notification-counter show" data-bind="text: totalItemsCount(), attr: { 'data-count': totalItemsCount() }, css: { 'show': alertCountAnimation() }"></span>
                 </a>
             </li>
-            <li><a target="_blank" data-bind="attr: { href: currentHelpLink }" class="icon-help"></a></li>
+            <li><a target="_blank" title="Help" data-bind="attr: { href: currentHelpLink }" class="icon-help"></a></li>
             <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
+            <li><a href="#" title="Send feedback" data-toggle="modal" data-target="#feedbackModal"><i class="icon-feedback text-warning"></i></a></li>
             <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
         </ul>
     </div><!--/.nav-collapse -->
@@ -144,7 +145,7 @@
             <!-- /ko -->
         </ul>
     </li>
-    <hr />    
+    <hr />
 </script>
 
 <script type="text/html" id="leafMenuItem">
@@ -209,9 +210,57 @@
     <div class="notification-center-container" data-bind="compose: 'notifications/notificationCenter.html'"></div>
 </div>
 
+<div class="modal fade" id="feedbackModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" data-bind="click: close" class="close" data-dismiss="modal" aria-label="Close"><i aria-hidden="true" class="icon-cancel"></i></button>
+                <h4 class="modal-title" id="myModalLabel">Send feedback</h4>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <!--
+                    <div class="form-group">
+                        <label>Email address</label>
+                       <input type="email" class="form-control">
+                    </div>-->
+                    <div class="form-group">
+                        <label>Message</label>
+                        <textarea class="form-control" rows="6">
+                        
+                        </textarea>
+                    </div>
+                    <label>Attachments</label>
+                    <div class="input-group file-input">
+                        <input required="" type="file" tabindex="-1" name="importFile" id="importFile" accept="">
+                        <span class="static-name form-control">Select file...</span>
+                        <span class="input-group-btn">
+                            <label for="importFile" class="btn btn-default">
+                                <i class="icon-folder"></i>
+                                <span>Browse</span>
+                            </label>
+                        </span>
+                    </div>
+
+                    <div class="checkbox">
+                        <input id="includeScreen" class="styled" type="checkbox">
+                        <label for="includeScreen">
+                            Include current screen
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary"><i class="icon-rocket"></i> <span>Send</span></button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <footer class="status-footer bg-info" data-bind="with: $root.footer">
     <div class="footer-left" data-bind="with: stats(), visible: stats">
-        <!-- TODO 
+        <!-- TODO
         <div class="footer-item">
             <a href="#">Dashboard</a>
         </div>-->
