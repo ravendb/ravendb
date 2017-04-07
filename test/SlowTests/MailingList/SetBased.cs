@@ -69,7 +69,7 @@ namespace SlowTests.MailingList
                     .Operations
                     .Send(new PatchByIndexOperation(
                         new Index1().IndexName,
-                        new IndexQuery(store.Conventions) { Query = string.Empty },
+                        new IndexQuery() { Query = string.Empty },
                         new PatchRequest
                         {
                             Script = "this.Privilege[0].Level = 'Gold'"

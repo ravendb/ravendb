@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Transformers;
@@ -16,10 +15,6 @@ namespace Raven.Server.Documents.Queries
 {
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
-        public IndexQueryServerSide() : base(DocumentConventions.Default)
-        {
-        }
-
         public static IndexQueryServerSide Create(HttpContext httpContext, int start, int pageSize, JsonOperationContext context)
         {
             var result = new IndexQueryServerSide

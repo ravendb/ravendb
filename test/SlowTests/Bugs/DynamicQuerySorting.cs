@@ -72,7 +72,7 @@ namespace SlowTests.Bugs
                         .ToList();
                 }
 
-                var indexQuery = new IndexQuery(new DocumentConventions())
+                var indexQuery = new IndexQuery()
                 {
                     SortedFields = new[]
                    {

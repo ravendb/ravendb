@@ -54,7 +54,7 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var e = Assert.Throws<RavenException>(() => commands.Query(new Users_ByName().IndexName, new IndexQuery(store.Conventions)));
+                    var e = Assert.Throws<RavenException>(() => commands.Query(new Users_ByName().IndexName, new IndexQuery()));
                     Assert.Contains("Simulated corruption", e.InnerException.Message);
                 }
 

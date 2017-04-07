@@ -1,7 +1,6 @@
 using System;
 using FastTests;
 using Xunit;
-using Xunit.Extensions;
 using System.Linq;
 
 namespace SlowTests.Bugs
@@ -18,8 +17,6 @@ namespace SlowTests.Bugs
         {
             using (var documentStore = GetDocumentStore())
             {
-                documentStore.Conventions.ImplicitTakeAmount = 128;
-
                 for (int i = 0; i < 10; i++)
                 {
                     using (var session = documentStore.OpenSession())
@@ -38,7 +35,7 @@ namespace SlowTests.Bugs
                         deletes.ForEach(session.Delete);
                         session.SaveChanges();
 
-                        
+
                         var count = session.Query<Document>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).Count();
                         Assert.Equal(0, count);
                     }
@@ -51,8 +48,6 @@ namespace SlowTests.Bugs
         {
             using (var documentStore = GetDocumentStore())
             {
-                documentStore.Conventions.ImplicitTakeAmount = 128;
-
                 for (int i = 0; i < 10; i++)
                 {
                     using (var session = documentStore.OpenSession())
@@ -71,7 +66,7 @@ namespace SlowTests.Bugs
                         var deletes = session.Query<Document>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).ToList();
                         deletes.ForEach(session.Delete);
                         session.SaveChanges();
-                        
+
                         deletes = session.Query<Document>().Customize(x => x.WaitForNonStaleResultsAsOfNow()).ToList();
                         Assert.Equal(0, deletes.Count);
                     }

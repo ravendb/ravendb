@@ -102,7 +102,7 @@ namespace Raven.Client.Documents
         {
             var ravenQueryInspector = (IRavenQueryInspector)queryable;
             var q = ravenQueryInspector.GetIndexQuery(false);
-            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, facetSetupDoc, null, start, pageSize, q.Conventions);
+            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
 
             return query;
         }
@@ -142,7 +142,7 @@ namespace Raven.Client.Documents
 
             var ravenQueryInspector = (IRavenQueryInspector)queryable;
             var q = ravenQueryInspector.GetIndexQuery(false);
-            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, null, facetsList, start, pageSize, q.Conventions);
+            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, null, facetsList, start, pageSize, ravenQueryInspector.Session.Conventions);
 
             return query;
         }
@@ -190,7 +190,7 @@ namespace Raven.Client.Documents
         {
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
-            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, facetSetupDoc, null, start, pageSize, q.Conventions);
+            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
             var lazyOperation = new LazyFacetsOperation(query);
 
             var documentSession = ((DocumentSession)ravenQueryInspector.Session);
@@ -210,7 +210,7 @@ namespace Raven.Client.Documents
         {
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             var q = ravenQueryInspector.GetIndexQuery(true);
-            var query = FacetQuery.Create(ravenQueryInspector.AsyncIndexQueried, q, facetSetupDoc, null, start, pageSize, q.Conventions);
+            var query = FacetQuery.Create(ravenQueryInspector.AsyncIndexQueried, q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
             var lazyOperation = new LazyFacetsOperation(query);
 
             var documentSession = ((AsyncDocumentSession)ravenQueryInspector.Session);
@@ -229,7 +229,7 @@ namespace Raven.Client.Documents
 
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
-            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, null, facetsList, start, pageSize, q.Conventions);
+            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, null, facetsList, start, pageSize, ravenQueryInspector.Session.Conventions);
             var lazyOperation = new LazyFacetsOperation(query);
 
             var documentSession = ((DocumentSession)ravenQueryInspector.Session);
@@ -1220,12 +1220,12 @@ namespace Raven.Client.Documents
         {
             var queryProvider = (IRavenQueryProvider)self.Provider;
             var docQuery = queryProvider.ToAsyncDocumentQuery<T>(self.Expression);
-            await ToStreamAsync(docQuery, stream, token ).ConfigureAwait(false);
+            await ToStreamAsync(docQuery, stream, token).ConfigureAwait(false);
         }
         /// <summary>
         /// Returns the query results as a stream
         /// </summary>
-        public static async Task ToStreamAsync<T>(this IAsyncDocumentQuery<T> self, Stream stream, CancellationToken token= default(CancellationToken))
+        public static async Task ToStreamAsync<T>(this IAsyncDocumentQuery<T> self, Stream stream, CancellationToken token = default(CancellationToken))
         {
             var documentQuery = (AbstractDocumentQuery<T, AsyncDocumentQuery<T>>)self;
             var session = documentQuery.AsyncSession;

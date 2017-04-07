@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Session
         public Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression, QueryOperationOptions options = null)
         {
             var query = Query<T>(indexName).Where(expression);
-            var indexQuery = new IndexQuery(Conventions)
+            var indexQuery = new IndexQuery
             {
                 Query = query.ToString()
             };
@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Session
         public Operation PatchByIndex<T>(string indexName, Expression<Func<T, bool>> expression, PatchRequest patch, QueryOperationOptions options = null)
         {
             var query = Query<T>(indexName).Where(expression);
-            var indexQuery = new IndexQuery(Conventions)
+            var indexQuery = new IndexQuery
             {
                 Query = query.ToString()
             };

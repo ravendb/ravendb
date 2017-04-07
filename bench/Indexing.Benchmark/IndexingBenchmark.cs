@@ -52,7 +52,7 @@ namespace Indexing.Benchmark
                 {
                     do
                     {
-                        var queryCommand = new QueryCommand(_store.Conventions, context, test.Index.IndexName, new IndexQuery(_store.Conventions)
+                        var queryCommand = new QueryCommand(_store.Conventions, context, test.Index.IndexName, new IndexQuery()
                         {
                             PageSize = 0,
                             Start = 0

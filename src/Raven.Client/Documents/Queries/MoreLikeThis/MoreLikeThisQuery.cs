@@ -1,17 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Queries.MoreLikeThis
 {
     public class MoreLikeThisQuery : MoreLikeThisQuery<Dictionary<string, object>>
     {
-        public MoreLikeThisQuery(DocumentConventions conventions) : base(conventions)
-        {
-        }
-
         protected override void CreateRequestUri(StringBuilder uri)
         {
             base.CreateRequestUri(uri);
@@ -23,10 +18,8 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
     public abstract class MoreLikeThisQuery<T> : IIndexQuery
         where T : class
     {
-        protected MoreLikeThisQuery(DocumentConventions conventions)
+        protected MoreLikeThisQuery()
         {
-            if (conventions != null)
-                PageSize = conventions.ImplicitTakeAmount;
             MapGroupFields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 

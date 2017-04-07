@@ -21,7 +21,7 @@ namespace SlowTests.Issues
             {
                 try
                 {
-                    var op = store.Operations.Send(new DeleteByIndexOperation("noSuchIndex", new IndexQuery(store.Conventions)
+                    var op = store.Operations.Send(new DeleteByIndexOperation("noSuchIndex", new IndexQuery()
                     {
                         Query = "Tag:Animals"
                     }));
