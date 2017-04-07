@@ -59,7 +59,7 @@ namespace Voron
 
         internal LowLevelTransaction.WriteTransactionPool WriteTransactionPool =
             new LowLevelTransaction.WriteTransactionPool();
-        internal ExceptionDispatchInfo CatastrophicFailure;
+        
         private readonly WriteAheadJournal _journal;
         private readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1, 1);
         private NativeMemory.ThreadStats _currentTransactionHolder;
@@ -871,15 +871,6 @@ namespace Voron
 
             _journal.Applicator.ApplyLogsToDataFile(_cancellationTokenSource.Token,
                 Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
-        }
-
-        internal void AssertNoCatastrophicFailure()
-        {
-            if (CatastrophicFailure == null)
-                return;
-
-            _options.CatastrophicFailureNotification.RaiseNotificationOnce(CatastrophicFailure.SourceException);
-            CatastrophicFailure.Throw(); // force re-throw of error
         }
 
         internal void HandleDataDiskFullException(DiskFullException exception)

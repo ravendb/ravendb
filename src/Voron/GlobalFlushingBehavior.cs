@@ -179,7 +179,7 @@ namespace Voron
             {
                 if (_log.IsOperationsEnabled)
                     _log.Operations($"Failed to sync data file for {req.Env.Options.BasePath}", e);
-                req.Env.CatastrophicFailure = ExceptionDispatchInfo.Capture(e);
+                req.Env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
             }
         }
 
@@ -242,7 +242,7 @@ namespace Voron
                         if (_log.IsOperationsEnabled)
                             _log.Operations($"Failed to flush {storageEnvironment.Options.BasePath}", e);
 
-                        storageEnvironment.CatastrophicFailure = ExceptionDispatchInfo.Capture(e);
+                        storageEnvironment.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
                     }
                     finally
                     {
