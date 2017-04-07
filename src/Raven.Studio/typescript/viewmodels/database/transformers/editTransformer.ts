@@ -31,6 +31,7 @@ class editTransformer extends viewModelBase {
     renameMode = ko.observable<boolean>(false);
     renameInProgress = ko.observable<boolean>(false);
     canEditTransformerName: KnockoutComputed<boolean>;
+    transformerNameHasFocus = ko.observable<boolean>(false);
 
     private indexesNames = ko.observableArray<string>();
     private transformersNames = ko.observableArray<string>();
@@ -248,6 +249,7 @@ class editTransformer extends viewModelBase {
 
     enterRenameMode() {
         this.renameMode(true);
+        this.transformerNameHasFocus(true);
     }
 
     renameTransformer() {

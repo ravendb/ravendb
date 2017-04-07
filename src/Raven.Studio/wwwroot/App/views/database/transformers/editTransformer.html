@@ -5,7 +5,7 @@
                 <div class="col-lg-6">
                     <div class="input-group toolbar" data-bind="validationElement: editedTransformer().name">
                         <div class="input-group-addon">Transformer name</div>
-                        <input class="form-control" data-bind="textInput: editedTransformer().name, enable: canEditTransformerName">
+                        <input class="form-control" data-bind="textInput: editedTransformer().name, enable: canEditTransformerName, hasFocus: transformerNameHasFocus">
                         <span class="input-group-btn" data-bind="visible: isEditingExistingTransformer() && !renameMode()">
                             <button class="btn btn-default" type="button" data-bind="click: enterRenameMode"><i class="icon-edit"></i> <span>Rename</span></button>
                         </span>

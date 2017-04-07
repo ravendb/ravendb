@@ -48,6 +48,7 @@ class editIndex extends viewModelBase {
     defaultIndexPath = ko.observable<string>();
     additionalStoragePaths = ko.observableArray<string>([]);
     selectedIndexPath: KnockoutComputed<string>;
+    indexNameHasFocus = ko.observable<boolean>(false);
 
     private indexesNames = ko.observableArray<string>();
     private transformersNames = ko.observableArray<string>();
@@ -533,6 +534,7 @@ class editIndex extends viewModelBase {
 
     enterRenameMode() {
         this.renameMode(true);
+        this.indexNameHasFocus(true);
     }
 
     renameIndex() {
