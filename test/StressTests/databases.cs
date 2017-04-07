@@ -23,7 +23,7 @@ namespace StressTests
     public class Databases : RavenTestBase
     {
         [Theory]
-        [InlineData(250)]
+        [InlineData(150)]
         public void CanHandleMultipledatabasesOnWrite(int numberOfDatabases)
         {
             UseNewLocalServer();
