@@ -480,7 +480,7 @@ namespace FastTests.Client.Indexing
 
                 var operation = await store
                     .Operations
-                    .SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(store.Conventions), new QueryOperationOptions { AllowStale = false }));
+                    .SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
 
                 var deleteResult = await operation
                     .WaitForCompletionAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(false) as BulkOperationResult;
@@ -514,7 +514,7 @@ namespace FastTests.Client.Indexing
 
                 operation = await store
                     .Operations
-                    .SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(store.Conventions), new QueryOperationOptions { AllowStale = false }));
+                    .SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
 
                 var e = Assert.Throws<RavenException>(() =>
                 {
@@ -553,7 +553,7 @@ namespace FastTests.Client.Indexing
 
                 var operation = await store
                     .Operations
-                    .SendAsync(new PatchByIndexOperation(indexName, new IndexQuery(store.Conventions), new PatchRequest { Script = "this.LastName = 'Test';" }, new QueryOperationOptions { AllowStale = false }));
+                    .SendAsync(new PatchByIndexOperation(indexName, new IndexQuery(), new PatchRequest { Script = "this.LastName = 'Test';" }, new QueryOperationOptions { AllowStale = false }));
 
                 await operation
                     .WaitForCompletionAsync(TimeSpan.FromSeconds(15))
@@ -631,7 +631,7 @@ namespace FastTests.Client.Indexing
 
                 using (var commands = store.Commands())
                 {
-                    var command = new ExplainQueryCommand(store.Conventions, commands.Context, "dynamic/Users", new IndexQuery(store.Conventions));
+                    var command = new ExplainQueryCommand(store.Conventions, commands.Context, "dynamic/Users", new IndexQuery());
 
                     await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
@@ -685,7 +685,7 @@ namespace FastTests.Client.Indexing
 
                     WaitForIndexing(store);
 
-                    var list = session.Advanced.MoreLikeThis<Post>(new MoreLikeThisQuery(store.Conventions)
+                    var list = session.Advanced.MoreLikeThis<Post>(new MoreLikeThisQuery()
                     {
                         IndexName = index.Name,
                         DocumentId = "posts/1",

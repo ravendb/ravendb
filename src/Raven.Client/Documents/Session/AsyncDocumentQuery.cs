@@ -1043,7 +1043,7 @@ namespace Raven.Client.Documents.Session
         public async Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, q.Conventions);
+            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
 
             var command = new GetFacetsCommand(TheSession.Context, query);
             await TheSession.RequestExecutor.ExecuteAsync(command, TheSession.Context, token).ConfigureAwait(false);
@@ -1054,7 +1054,7 @@ namespace Raven.Client.Documents.Session
         public async Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, q.Conventions);
+            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, Conventions);
 
             var command = new GetFacetsCommand(TheSession.Context, query);
             await TheSession.RequestExecutor.ExecuteAsync(command, TheSession.Context, token).ConfigureAwait(false);
@@ -1065,7 +1065,7 @@ namespace Raven.Client.Documents.Session
         public Lazy<Task<FacetedQueryResult>> GetFacetsLazyAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, q.Conventions);
+            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
 
             var lazyFacetsOperation = new LazyFacetsOperation(query);
             return ((AsyncDocumentSession)TheSession).AddLazyOperation<FacetedQueryResult>(lazyFacetsOperation, null, token);
@@ -1074,7 +1074,7 @@ namespace Raven.Client.Documents.Session
         public Lazy<Task<FacetedQueryResult>> GetFacetsLazyAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, q.Conventions);
+            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, Conventions);
 
             var lazyFacetsOperation = new LazyFacetsOperation(query);
             return ((AsyncDocumentSession)TheSession).AddLazyOperation<FacetedQueryResult>(lazyFacetsOperation, null, token);

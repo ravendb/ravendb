@@ -43,7 +43,7 @@ namespace SlowTests.SlowTests.Issues
                 }
 
                 WaitForIndexing(store,timeout: TimeSpan.FromMinutes(2));
-                var queryToDelete = new IndexQuery(store.Conventions)
+                var queryToDelete = new IndexQuery()
                 {
                     Query = string.Empty
                 };

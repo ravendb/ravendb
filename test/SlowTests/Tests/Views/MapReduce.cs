@@ -123,7 +123,7 @@ select new {
         {
             WaitForIndexing(store);
 
-            var q = commands.Query("CommentsCountPerBlog", new IndexQuery(store.Conventions)
+            var q = commands.Query("CommentsCountPerBlog", new IndexQuery()
             {
                 Query = query,
                 Start = 0,

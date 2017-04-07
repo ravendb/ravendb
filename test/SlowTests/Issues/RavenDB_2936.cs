@@ -51,7 +51,7 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
 
                 var result = store.Operations.Send(new PatchByIndexOperation("Users/ByName",
-                        new IndexQuery(store.Conventions),
+                        new IndexQuery(),
                         new PatchRequest
                         {
                             Script = @"this.LastName = 'Smith'"
@@ -62,7 +62,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                result = store.Operations.Send(new DeleteByIndexOperation("Users/ByName", new IndexQuery(store.Conventions)))
+                result = store.Operations.Send(new DeleteByIndexOperation("Users/ByName", new IndexQuery()))
                     .WaitForCompletion<BulkOperationResult>(TimeSpan.FromSeconds(15));
 
                 Assert.Empty(result.Details);
@@ -103,7 +103,7 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
 
                 var result = store.Operations.Send(new PatchByIndexOperation("Users/ByName",
-                    new IndexQuery(store.Conventions),
+                    new IndexQuery(),
                     new PatchRequest
                     {
                         Script = @"this.LastName = 'Smith'"
@@ -114,7 +114,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                result = store.Operations.Send(new DeleteByIndexOperation("Users/ByName", new IndexQuery(store.Conventions), new QueryOperationOptions { RetrieveDetails = true }))
+                result = store.Operations.Send(new DeleteByIndexOperation("Users/ByName", new IndexQuery(), new QueryOperationOptions { RetrieveDetails = true }))
                     .WaitForCompletion<BulkOperationResult>(TimeSpan.FromSeconds(15));
 
                 Assert.NotEmpty(result.Details);

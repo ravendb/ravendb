@@ -65,7 +65,7 @@ namespace SlowTests.MailingList
 
                     var result = query.ToList();
 
-                    var facetResults = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery(store.Conventions)
+                    var facetResults = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery()
                     {
                         IndexName = "PropertiesSearchIndex",
                         Query = query.ToString(),

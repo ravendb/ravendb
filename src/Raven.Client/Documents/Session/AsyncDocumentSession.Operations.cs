@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Session
         public Task<Operation> PatchByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression, PatchRequest patch, QueryOperationOptions options = null, CancellationToken token = new CancellationToken())
         {
             var query = Query<T>(indexName).Where(expression);
-            var indexQuery = new IndexQuery(Conventions)
+            var indexQuery = new IndexQuery
             {
                 Query = query.ToString()
             };
@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Session
         public Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression, QueryOperationOptions options = null, CancellationToken token = default(CancellationToken))
         {
             var query = Query<T>(indexName).Where(expression);
-            var indexQuery = new IndexQuery(Conventions)
+            var indexQuery = new IndexQuery
             {
                 Query = query.ToString()
             };

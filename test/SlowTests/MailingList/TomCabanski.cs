@@ -39,7 +39,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery(store.Conventions)
+                    session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery()
                     {
                         IndexName = "test",
                         Query = "(IsActive:true)  AND (BookVendor:\"stroheim & romann\")",

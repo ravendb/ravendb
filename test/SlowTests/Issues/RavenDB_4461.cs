@@ -40,14 +40,14 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     Assert.NotEmpty(session.Advanced
-                        .MoreLikeThis<MockPost, Posts_ByPostCategory>(new MoreLikeThisQuery(store.Conventions)
+                        .MoreLikeThis<MockPost, Posts_ByPostCategory>(new MoreLikeThisQuery()
                         {
                             DocumentId = "posts/123",
                             Fields = new[] { "Body" }
                         }).ToList());
 
                     Assert.Empty(session.Advanced
-                        .MoreLikeThis<MockPost, Posts_ByPostCategory>(new MoreLikeThisQuery(store.Conventions)
+                        .MoreLikeThis<MockPost, Posts_ByPostCategory>(new MoreLikeThisQuery()
                         {
                             DocumentId = "posts/123",
                             Fields = new[] { "Body" },

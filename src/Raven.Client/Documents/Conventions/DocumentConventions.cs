@@ -4,7 +4,6 @@ using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Serialization.Formatters;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.CSharp.RuntimeBinder;
@@ -82,10 +81,8 @@ namespace Raven.Client.Documents.Conventions
                 jsonSerializer.Serialize(streamWriter, entity);
                 streamWriter.Flush();
             };
-            DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
 
-            ImplicitTakeAmount = 25;
-            ThrowIfImplicitTakeAmountExceeded = true;
+            DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
         }
 
         /// <summary>
@@ -98,19 +95,6 @@ namespace Raven.Client.Documents.Conventions
         /// </summary>
         /// <value>The max number of requests per session.</value>
         public int MaxNumberOfRequestsPerSession { get; set; }
-
-        /// <summary>
-        ///     Gets or sets the implicit take amount (page size) that will be used for .Queries() without explicit .Take().
-        /// </summary>
-        /// <value>The max number of requests per session.</value>
-        public int ImplicitTakeAmount { get; set; }
-
-        /// <summary>
-        ///     Gets or sets whether we should throw if implicit take amount is exceeded.
-        ///     The default is true and is recommended in order to make the user use an explicit .Take().
-        /// </summary>
-        /// <value>The max number of requests per session.</value>
-        public bool ThrowIfImplicitTakeAmountExceeded { get; set; }
 
         /// <summary>
         ///     Gets or sets the default max length of a query using the GET method against a server.

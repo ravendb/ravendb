@@ -48,7 +48,7 @@ namespace SlowTests.Issues
 
                 var sw = Stopwatch.StartNew();
                 var op = store.Operations.Send(new DeleteByIndexOperation("Users/ByName",
-                    new IndexQuery(store.Conventions) { Query = "Name:Users*" },
+                    new IndexQuery() { Query = "Name:Users*" },
                     new QueryOperationOptions { AllowStale = false, MaxOpsPerSecond = 2000, StaleTimeout = null }));
 
                 op.WaitForCompletion(TimeSpan.FromSeconds(15));
@@ -81,7 +81,7 @@ namespace SlowTests.Issues
 
                 var sw = Stopwatch.StartNew();
                 var op = store.Operations.Send(new PatchByIndexOperation("Users/ByName",
-                    new IndexQuery(store.Conventions) { Query = "Name:Users*" },
+                    new IndexQuery() { Query = "Name:Users*" },
                     new PatchRequest
                     {
                         Script = "this.Test = 'abc';"

@@ -19,10 +19,6 @@ namespace Raven.Client.Documents.Queries
     /// </summary>
     public class IndexQuery : IndexQuery<Dictionary<string, object>>
     {
-        public IndexQuery(DocumentConventions conventions) : base(conventions)
-        {
-        }
-
         public override bool Equals(IndexQuery<Dictionary<string, object>> other)
         {
             return base.Equals(other) && DictionaryExtensions.ContentEquals(TransformerParameters, other.TransformerParameters);
@@ -31,7 +27,7 @@ namespace Raven.Client.Documents.Queries
         /// <summary>
         /// Gets the index query URL.
         /// </summary>
-        public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
+        public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includeQuery = true)
         {
             if (operationUrl.EndsWith("/"))
                 operationUrl = operationUrl.Substring(0, operationUrl.Length - 1);
@@ -42,7 +38,7 @@ namespace Raven.Client.Documents.Queries
                 .Append("/")
                 .Append(index);
 
-            AppendQueryString(path, includePageSizeEvenIfNotExplicitlySet, includeQuery);
+            AppendQueryString(path, includeQuery);
 
             return path.ToString();
         }
@@ -51,8 +47,7 @@ namespace Raven.Client.Documents.Queries
         /// <summary>
         /// Gets the index query URL.
         /// </summary>
-        public string GetIndexQueryUrl(string index, string operationName,
-            bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
+        public string GetIndexQueryUrl(string index, string operationName, bool includeQuery = true)
         {
             var path = new StringBuilder();
 
@@ -60,7 +55,7 @@ namespace Raven.Client.Documents.Queries
                 .Append("/")
                 .Append(index);
 
-            AppendQueryString(path, includePageSizeEvenIfNotExplicitlySet, includeQuery);
+            AppendQueryString(path, includeQuery);
 
             return path.ToString();
         }
@@ -80,7 +75,7 @@ namespace Raven.Client.Documents.Queries
             return sb.ToString();
         }
 
-        public void AppendQueryString(StringBuilder path, bool includePageSizeEvenIfNotExplicitlySet = true, bool includeQuery = true)
+        public void AppendQueryString(StringBuilder path, bool includeQuery = true)
         {
             path.Append("?");
 
@@ -89,7 +84,7 @@ namespace Raven.Client.Documents.Queries
             if (Start != 0)
                 path.Append("&start=").Append(Start);
 
-            if (includePageSizeEvenIfNotExplicitlySet || PageSizeSet)
+            if (PageSizeSet)
                 path.Append("&pageSize=").Append(PageSize);
 
             if (AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
@@ -184,10 +179,6 @@ namespace Raven.Client.Documents.Queries
 
     public abstract class IndexQuery<T> : IndexQueryBase, IEquatable<IndexQuery<T>>
     {
-        protected IndexQuery(DocumentConventions conventions) : base(conventions)
-        {
-        }
-
         /// <summary>
         /// Parameters that will be passed to transformer (if specified).
         /// </summary>
@@ -334,17 +325,7 @@ namespace Raven.Client.Documents.Queries
 
     public abstract class IndexQueryBase : IIndexQuery, IEquatable<IndexQueryBase>
     {
-        private int _pageSize;
-
-        protected IndexQueryBase(DocumentConventions conventions)
-        {
-            Conventions = conventions;
-
-            if (conventions != null)
-                _pageSize = conventions.ImplicitTakeAmount;
-        }
-
-        protected internal DocumentConventions Conventions { get; }
+        private int _pageSize = int.MaxValue;
 
         /// <summary>
         /// Whatever the page size was explicitly set or still at its default value
@@ -371,7 +352,7 @@ namespace Raven.Client.Documents.Queries
         /// </summary>
         public int PageSize
         {
-            get { return _pageSize; }
+            get => _pageSize;
             set
             {
                 _pageSize = value;

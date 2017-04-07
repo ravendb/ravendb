@@ -1108,7 +1108,7 @@ namespace Raven.Client.Documents.Session
         public FacetedQueryResult GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, q.Conventions);
+            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
 
             var command = new GetFacetsCommand(TheSession.Context, query);
             TheSession.RequestExecutor.Execute(command, TheSession.Context);
@@ -1119,7 +1119,7 @@ namespace Raven.Client.Documents.Session
         public FacetedQueryResult GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, q.Conventions);
+            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, Conventions);
 
             var command = new GetFacetsCommand(TheSession.Context, query);
             TheSession.RequestExecutor.Execute(command, TheSession.Context);
@@ -1130,7 +1130,7 @@ namespace Raven.Client.Documents.Session
         public Lazy<FacetedQueryResult> GetFacetsLazy(string facetSetupDoc, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, q.Conventions);
+            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
 
             var lazyFacetsOperation = new LazyFacetsOperation(query);
             return ((DocumentSession)TheSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetedQueryResult>)null);
@@ -1139,7 +1139,7 @@ namespace Raven.Client.Documents.Session
         public Lazy<FacetedQueryResult> GetFacetsLazy(List<Facet> facets, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, q.Conventions);
+            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, Conventions);
 
             var lazyFacetsOperation = new LazyFacetsOperation(query);
             return ((DocumentSession)TheSession).AddLazyOperation(lazyFacetsOperation, (Action<FacetedQueryResult>)null);

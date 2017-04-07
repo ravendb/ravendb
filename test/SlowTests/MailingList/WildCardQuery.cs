@@ -13,7 +13,7 @@ namespace SlowTests.MailingList
             {
                 using (var commands = store.Commands())
                 {
-                    commands.Query("dynamic", new IndexQuery(store.Conventions)
+                    commands.Query("dynamic", new IndexQuery()
                     {
                         Query = "PortalId:0 AND Query:(*) QueryBoosted:(*)"
                     });
