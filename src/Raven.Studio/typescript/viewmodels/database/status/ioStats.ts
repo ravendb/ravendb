@@ -355,7 +355,6 @@ class ioStats extends viewModelBase {
 
         this.tooltip = d3.select(".tooltip");
         [this.totalWidth, this.totalHeight] = this.getPageHostDimenensions();
-        this.totalHeight -= 50; // substract toolbar height
               
         this.initCanvas();     
 
