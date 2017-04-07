@@ -304,12 +304,10 @@ class indexPerformance extends viewModelBase {
         [this.totalWidth, this.totalHeight] = this.getPageHostDimenensions();
         this.totalWidth -= 1;
 
-        this.totalHeight -= 58; // substract toolbar height
-
         this.initCanvases();
 
         this.hitTest.init(this.svg,
-            (indexName) => this.onToggleIndex(indexName),          
+            (indexName) => this.onToggleIndex(indexName),
             (item, x, y) => this.handleTrackTooltip(item, x, y),
             (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
             () => this.hideTooltip());
@@ -327,7 +325,7 @@ class indexPerformance extends viewModelBase {
         this.inProgressCanvas = metricsContainer
             .append("canvas")
             .attr("width", this.totalWidth + 1)
-            .attr("height", this.totalHeight - indexPerformance.brushSectionHeight)
+            .attr("height", this.totalHeight - indexPerformance.brushSectionHeight - indexPerformance.axisHeight)
             .style("top", (indexPerformance.brushSectionHeight + indexPerformance.axisHeight) + "px");
 
         const inProgressCanvasNode = this.inProgressCanvas.node() as HTMLCanvasElement;
