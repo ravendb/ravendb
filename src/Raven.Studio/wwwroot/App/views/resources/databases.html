@@ -191,9 +191,9 @@
     </div>
 
     <div class="properties-item" data-bind="visible: indexingErrors()">
-        <div class="properties-value value-only text-danger">
+        <div class="properties-value value-only">
             <a title="View indexing errors" data-bind="attr: { href: $root.indexErrorsUrl($data) }">
-                <div class="set-size">
+                <div class="set-size text-danger">
                     <i class="icon-exclamation"></i>
                     <span data-bind="text: $root.pluralize(indexingErrors().toLocaleString(), 'indexing error', 'indexing errors')"></span>
                 </div>
