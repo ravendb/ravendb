@@ -54,7 +54,7 @@ namespace Voron.Impl.Scratch
             {
                 foreach (var freeAndAvailablePageNumber in free.Value)
                 {
-                    byte* freeAndAvailablePagePointer = _scratchPager.AcquirePagePointer(tx, freeAndAvailablePageNumber, PagerState);
+                    byte* freeAndAvailablePagePointer = _scratchPager.AcquirePagePointer(null, freeAndAvailablePageNumber, PagerState);
                     ulong freeAndAvailablePageSize = (ulong)free.Key * Constants.Storage.PageSize;
                     // This has to be forced, as the list of available pages should be protected by default, but this
                     // is a policy we implement inside the ScratchBufferFile only.
@@ -69,7 +69,7 @@ namespace Voron.Impl.Scratch
             {
                 foreach (var val in free.Value)
                 {
-                    byte* freePageBySizePointer = _scratchPager.AcquirePagePointer(tx, val.Page, PagerState);
+                    byte* freePageBySizePointer = _scratchPager.AcquirePagePointer(null, val.Page, PagerState);
                     ulong freePageBySizeSize = (ulong)free.Key * Constants.Storage.PageSize;
                     // This has to be forced, as the list of available pages should be protected by default, but this
                     // is a policy we implement inside the ScratchBufferFile only.
@@ -186,7 +186,7 @@ namespace Voron.Impl.Scratch
             long asOfTxId = txId ?? -1;
 
 #if VALIDATE
-            byte* pagePointer = _scratchPager.AcquirePagePointer(tx, pageNumber, PagerState);
+            byte* pagePointer = _scratchPager.AcquirePagePointer(null, pageNumber, PagerState);
 
             PageFromScratchBuffer temporary;
             if (_allocatedPages.TryGetValue(pageNumber, out temporary) != false)
