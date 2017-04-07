@@ -11,31 +11,6 @@ namespace FastTests.Client.Queries
     public class Take : RavenTestBase
     {
         [Fact]
-        public async Task ExplictTakeWhichIsGreaterThanMaxPageSizeShouldThrow()
-        {
-            using (var store = GetDocumentStore())
-            using (var session = store.OpenAsyncSession())
-            {
-                var exception = await Assert.ThrowsAsync<RavenException>(async () =>
-                {
-                    await session.Query<Item>()
-                        .Customize(customization => customization.WaitForNonStaleResults())
-                        .Take(2048)
-                        .ToListAsync();
-                });
-                Assert.Contains("Your page size (2048) is more than the max page size which is 1024.", exception.Message);
-                Assert.Contains("session.Advanced.Stream(query)", exception.Message);
-
-                exception = await Assert.ThrowsAsync<RavenException>(async () =>
-                {
-                    await store.Admin.Server.SendAsync(new GetApiKeysOperation(0, 2048));
-                });
-                Assert.Contains("Your page size (2048) is more than the max page size which is 1024.", exception.Message);
-                Assert.DoesNotContain("Stream", exception.Message);
-            }
-        }
-
-        [Fact]
         public async Task ImplicitTakeWillBeConfigurableAndByDefault25()
         {
             using (var store = GetDocumentStore())

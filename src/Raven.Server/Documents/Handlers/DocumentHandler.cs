@@ -19,6 +19,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -146,6 +147,8 @@ namespace Raven.Server.Documents.Handlers
                 documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, start, pageSize);
             }
 
+            int numberOfResults;
+
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
@@ -157,16 +160,18 @@ namespace Raven.Server.Documents.Handlers
                     using (var scope = transformer.OpenTransformationScope(transformerParameters, null, Database.DocumentsStorage,
                         Database.TransformerStore, context))
                     {
-                        writer.WriteDocuments(context, scope.Transform(documents).ToList(), metadataOnly);
+                        writer.WriteDocuments(context, scope.Transform(documents).ToList(), metadataOnly, out numberOfResults);
                     }
                 }
                 else
                 {
-                    writer.WriteDocuments(context, documents, metadataOnly);
+                    writer.WriteDocuments(context, documents, metadataOnly, out numberOfResults);
                 }
 
                 writer.WriteEndObject();
             }
+
+            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocuments), numberOfResults, pageSize);
         }
 
         private void GetDocumentsById(DocumentsOperationContext context, StringValues ids, Transformer transformer, bool metadataOnly)
@@ -219,25 +224,26 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
             var blittable = GetBoolValueQueryString("blittable", required: false) ?? false;
-
             if (blittable)
             {
                 WriteDocumentsBlittable(context, documentsToWrite, includes);
             }
             else
             {
-                WriteDocumentsJson(context, metadataOnly, documentsToWrite, includeDocs, includes);
+                WriteDocumentsJson(context, metadataOnly, documentsToWrite, includeDocs, includes, out int count);
+
+                AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsById), count, documents.Count);
             }
         }
 
         private void WriteDocumentsJson(DocumentsOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite,
-            IncludeDocumentsCommand includeDocs, List<Document> includes)
+            IncludeDocumentsCommand includeDocs, List<Document> includes, out int count)
         {
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
-                writer.WriteDocuments(context, documentsToWrite, metadataOnly);
+                writer.WriteDocuments(context, documentsToWrite, metadataOnly, out count);
 
                 includeDocs.Fill(includes);
 
@@ -245,7 +251,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WritePropertyName("Includes");
                 if (includes.Count > 0)
                 {
-                    writer.WriteDocuments(context, includes, metadataOnly);
+                    writer.WriteDocuments(context, includes, metadataOnly, out count);
                 }
                 else
                 {

@@ -365,7 +365,7 @@ namespace Raven.Server.Documents.Versioning
             return numbers.Read(prefix)?.Reader.ReadLittleEndianInt64() ?? 0;
         }
 
-        public (Document[] revisions, long count) GetRevisions(DocumentsOperationContext context, string key, int start, int take)
+        public (Document[] Revisions, long Count) GetRevisions(DocumentsOperationContext context, string key, int start, int take)
         {
             Slice lowerKey, prefixSlice, lastKey;
             using (DocumentKeyWorker.GetSliceFromKey(context, key, out lowerKey))
