@@ -26,7 +26,8 @@ namespace StressTests
         [InlineData(250)]
         public void CanHandleMultipledatabasesOnWrite(int numberOfDatabases)
         {
-            
+            UseNewLocalServer();
+
             using (var store = GetDocumentStore())
             {
                 Console.WriteLine("Creating databases");
