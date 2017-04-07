@@ -163,7 +163,7 @@ class legend {
     private readonly highSizeColor: string;
         
     static readonly imageWidth = 150;
-    static readonly imageHeight = 20;   
+    static readonly imageHeight = 20;
     static readonly legendArrowBorderSize = 6;
 
     constructor(lowSizeColor: string, highSizeColor: string, type: Sparrow.IoMetrics.MeterType) {
@@ -174,7 +174,7 @@ class legend {
 
     setLegendScales() {
         this.sizeScale = d3.scale.linear<number>()
-            .domain([0, legend.imageWidth - legend.legendArrowBorderSize])
+            .domain([-legend.legendArrowBorderSize, legend.imageWidth - legend.legendArrowBorderSize])
             .range([0, this.maxSize()]);
 
         this.colorScale = d3.scale.linear<string>()

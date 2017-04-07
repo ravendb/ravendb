@@ -6,7 +6,7 @@
                     <div class="col-lg-6">
                         <div class="input-group toolbar" data-bind="validationElement: editedIndex().name">
                             <div class="input-group-addon">Index name</div>
-                            <input class="form-control" data-bind="textInput: editedIndex().name, enable: canEditIndexName">
+                            <input class="form-control" data-bind="textInput: editedIndex().name, enable: canEditIndexName, hasFocus: indexNameHasFocus">
                             <span class="input-group-btn rename-show">
                                 <button class="btn btn-default" type="button" data-bind="click: enterRenameMode"><i class="icon-edit"></i> <span>Rename</span></button>
                             </span>
