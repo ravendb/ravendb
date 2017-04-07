@@ -19,8 +19,20 @@ namespace Voron.Exceptions
             }
             catch (Exception e)
             {
-                if (env != null)
-                    env.CatastrophicFailure = ExceptionDispatchInfo.Capture(e);
+                env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                throw;
+            }
+        }
+
+        public static void Raise(StorageEnvironmentOptions options, string message)
+        {
+            try
+            {
+                throw new VoronUnrecoverableErrorException(message);
+            }
+            catch (Exception e)
+            {
+                options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
                 throw;
             }
         }
@@ -33,7 +45,7 @@ namespace Voron.Exceptions
             }
             catch (Exception e)
             {
-                env.CatastrophicFailure = ExceptionDispatchInfo.Capture(e);
+                env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
                 throw;
             }
         }

@@ -137,7 +137,7 @@ namespace Voron.Impl
             Debug.Assert(previous.Flags == TransactionFlags.ReadWrite);
 
             var env = previous._env;
-            env.AssertNoCatastrophicFailure();
+            env.Options.AssertNoCatastrophicFailure();
 
             FlushInProgressLockTaken = previous.FlushInProgressLockTaken;
             DataPager = env.Options.DataPager;
@@ -201,7 +201,7 @@ namespace Voron.Impl
 
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null)
         {
-            env.AssertNoCatastrophicFailure();
+            env.Options.AssertNoCatastrophicFailure();
 
             DataPager = env.Options.DataPager;
             _env = env;
@@ -339,7 +339,7 @@ namespace Voron.Impl
 
         internal Page ModifyPage(long num)
         {
-            _env.AssertNoCatastrophicFailure();
+            _env.Options.AssertNoCatastrophicFailure();
 
             // Check if we can hit the lowest level locality cache.
             Page currentPage = GetPage(num);
@@ -869,7 +869,7 @@ namespace Voron.Impl
             }
             catch (Exception e)
             {
-                _env.CatastrophicFailure = ExceptionDispatchInfo.Capture(e);
+                _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
 
                 throw;
             }
