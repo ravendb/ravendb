@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Queries.Facets
         /// </summary>
         public IReadOnlyList<Facet> Facets
         {
-            get { return _facets; }
+            get => _facets;
             set
             {
                 _facets = value;
@@ -69,7 +69,8 @@ namespace Raven.Client.Documents.Queries.Facets
             if (Start != 0)
                 path.Append("&start=").Append(Start);
 
-            path.Append("&pageSize=").Append(PageSize);
+            if (PageSizeSet)
+                path.Append("&pageSize=").Append(PageSize);
 
             if (string.IsNullOrEmpty(Query) == false)
                 path.Append("&query=").Append(EscapingHelper.EscapeLongDataString(Query));

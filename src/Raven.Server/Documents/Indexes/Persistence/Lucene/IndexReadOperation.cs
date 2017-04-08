@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             //Not sure how to select the page size here??? The problem is that only docs in this search can be part 
             //of the final result because we're doing an intersection query (but we might exclude some of them)
-            int pageSizeBestGuess = (query.Start + query.PageSize) * 2;
+            int pageSizeBestGuess = (int)Math.Min((query.Start + query.PageSize) * 2L, int.MaxValue);
             int intersectMatches, skippedResultsInCurrentLoop = 0;
             int previousBaseQueryMatches = 0, currentBaseQueryMatches;
 
@@ -370,8 +370,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             mlt.SetFieldNames(fieldNames);
             mlt.Analyzer = _analyzer;
 
+            var numHits = Math.Min(_searcher.MaxDoc, query.PageSize);
             var mltQuery = mlt.Like(td.ScoreDocs[0].Doc);
-            var tsdc = TopScoreDocCollector.Create(query.PageSize, true);
+            var tsdc = TopScoreDocCollector.Create(numHits, true);
 
             if (string.IsNullOrWhiteSpace(query.AdditionalQuery) == false)
             {
