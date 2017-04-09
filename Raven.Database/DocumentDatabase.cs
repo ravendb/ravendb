@@ -46,6 +46,7 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Database.Plugins.Catalogs;
 using Raven.Database.Common;
+using Raven.Database.Json;
 using Raven.Database.Raft;
 using Raven.Database.Server.WebApi;
 using ThreadState = System.Threading.ThreadState;
@@ -1215,6 +1216,10 @@ namespace Raven.Database
                     }
 
                     throw;
+                }
+                catch (OptimisticConcurrencyViolationException e)
+                {
+                    throw new ConcurrencyException(e.Message);
                 }
             }
         }
