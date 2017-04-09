@@ -22,39 +22,40 @@ namespace Raven.Server.Documents.Replication
     {
         private readonly DocumentsContextPool _pool;
         private readonly List<string> _alreadyVisited;
-        private readonly ReplicationDestination _destination;
         private readonly string _dbId;
         private readonly long _timeout;
         private readonly TcpClient _tcpClient;
         private readonly Logger _log;
         private readonly ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();
         private TcpConnectionInfo _tcpConnectionInfo;
-
+        public ReplicationNode Node => _destination;
+        private readonly ReplicationNode _destination;
         public NodeTopologyExplorer(
             DocumentsContextPool pool,
             List<string> alreadyVisited,
-            ReplicationDestination destination,
+            ReplicationNode node,
             string dbId,
             TimeSpan timeout)
         {
             _pool = pool;
             _alreadyVisited = alreadyVisited;
-            _destination = destination;
+            _destination = node;
             _dbId = dbId;
             _timeout = (long)Math.Max(5000, timeout.TotalMilliseconds - 10000);// reduce the timeout by 10 sec each hop, to a min of 5
-            _log = LoggingSource.Instance.GetLogger<NodeTopologyExplorer>(destination.Database);
+            _log = LoggingSource.Instance.GetLogger<NodeTopologyExplorer>(node.Database);
             _tcpClient = new TcpClient();
         }
 
-        public ReplicationDestination Destination => _destination;
+        
 
         public async Task<FullTopologyInfo> DiscoverTopologyAsync()
         {
             JsonOperationContext context;
             using (_pool.AllocateOperationContext(out context))
             {
-                _tcpConnectionInfo = await ReplicationUtils.GetTcpInfoAsync(_destination.Url, _destination.Database, _destination.ApiKey);
-                var token = await _authenticator.GetAuthenticationTokenAsync(_destination.ApiKey, _destination.Url, context);
+                //TODO:
+                _tcpConnectionInfo = await ReplicationUtils.GetTcpInfoAsync(_destination.Url, _destination.Database,null);
+                var token = await _authenticator.GetAuthenticationTokenAsync(null, _destination.Url, context);
                 await ConnectSocketAsync();
                 using (var stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, _tcpConnectionInfo))
                 using (var writer = new BlittableJsonTextWriter(context, stream))

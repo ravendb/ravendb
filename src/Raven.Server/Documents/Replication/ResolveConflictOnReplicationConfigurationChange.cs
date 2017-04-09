@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Replication;
 using Raven.Server.Documents.Patch;
@@ -24,6 +25,7 @@ namespace Raven.Server.Documents.Replication
         public Task ResolveConflictsTask = Task.CompletedTask;
 
         internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
+        public ConflictSolver ConflictSolver => _replicationLoader?.MyDatabaseRecord?.ConflictSolverConfig;
 
         public ResolveConflictOnReplicationConfigurationChange(ReplicationLoader replicationLoader, Logger log)
         {
@@ -38,7 +40,7 @@ namespace Raven.Server.Documents.Replication
         {
             UpdateScriptResolvers();
 
-            if (ConflictsCount > 0)
+            if (ConflictsCount > 0 && ConflictSolver.IsEmpty() == false)
             {
                 try
                 {
@@ -160,15 +162,14 @@ namespace Raven.Server.Documents.Replication
 
             if (TryResolveUsingDefaultResolverInternal(
                 context,
-                _replicationLoader.ReplicationDocument?.DefaultResolver,
+                ConflictSolver?.DatabaseResovlerId,                
                 conflictList))
             {
                 //stats.AddResolvedBy("DatabaseResolver", conflictList.Count);
                 return true;
             }
 
-            if (_replicationLoader.ReplicationDocument?.DocumentConflictResolution == StraightforwardConflictResolution.ResolveToLatest)
-            {
+            if (ConflictSolver?.ResolveToLatest ?? false)            {
                 ResolveToLatest(context, conflictList);
                 //stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
                 return true;
@@ -179,14 +180,13 @@ namespace Raven.Server.Documents.Replication
 
         private void UpdateScriptResolvers()
         {
-            if (_replicationLoader.ReplicationDocument?.ResolveByCollection == null)
-            {
+            if (ConflictSolver?.ResolveByCollection == null)            {
                 if (ScriptConflictResolversCache.Count > 0)
                     ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
                 return;
             }
             var copy = new Dictionary<string, ScriptResolver>();
-            foreach (var kvp in _replicationLoader.ReplicationDocument.ResolveByCollection)
+            foreach (var kvp in ConflictSolver.ResolveByCollection)
             {
                 var collection = kvp.Key;
                 var script = kvp.Value.Script;
@@ -204,10 +204,10 @@ namespace Raven.Server.Documents.Replication
 
         public bool TryResolveUsingDefaultResolverInternal(
             DocumentsOperationContext context,
-            DatabaseResolver resolver,
+            string resolver,
             IReadOnlyList<DocumentConflict> conflicts)
         {
-            if (resolver?.ResolvingDatabaseId == null)
+            if (resolver == null)
             {
                 return false;
             }
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Replication
             {
                 foreach (var changeVectorEntry in documentConflict.ChangeVector)
                 {
-                    if (changeVectorEntry.DbId.Equals(new Guid(resolver.ResolvingDatabaseId)))
+                    if (changeVectorEntry.DbId.Equals(new Guid(resolver)))
                     {
                         if (changeVectorEntry.Etag == maxEtag)
                         {

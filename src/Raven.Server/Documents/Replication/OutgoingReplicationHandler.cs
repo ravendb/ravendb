@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Replication
         public event Action<OutgoingReplicationHandler> DocumentsSend;
 
         internal readonly DocumentDatabase _database;
-        internal readonly ReplicationDestination _destination;
+        internal readonly string ServerNode;
         private readonly Logger _log;
         private readonly AsyncManualResetEvent _waitForChanges = new AsyncManualResetEvent();
         private readonly CancellationTokenSource _cts;
@@ -75,18 +75,18 @@ namespace Raven.Server.Documents.Replication
         public event Action<OutgoingReplicationHandler, Exception> Failed;
 
         public event Action<OutgoingReplicationHandler> SuccessfulTwoWaysCommunication;
+        private readonly ReplicationNode _destination;
 
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
 
         private OutgoingReplicationStatsAggregator _lastStats;
 
-        public OutgoingReplicationHandler(ReplicationLoader parent,
-            DocumentDatabase database,
-            ReplicationDestination destination)
+        public OutgoingReplicationHandler(ReplicationLoader parent,            DocumentDatabase database,
+            ReplicationNode node)
         {
             _parent = parent;
             _database = database;
-            _destination = destination;
+            _destination = node;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _database.Changes.OnIndexChange += OnIndexChange;
@@ -122,10 +122,11 @@ namespace Raven.Server.Documents.Replication
         {
             try
             {
-                var connectionInfo = ReplicationUtils.GetTcpInfo(MultiDatabase.GetRootDatabaseUrl(_destination.Url), _destination.Database, _destination.ApiKey);
+                // TODO: use api key of the cluster
+                var connectionInfo = ReplicationUtils.GetTcpInfo(MultiDatabase.GetRootDatabaseUrl(_destination.Url), _destination.NodeTag, null);
 
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Will replicate to {_destination.Database} @ {_destination.Url} via {connectionInfo.Url}");
+                    _log.Info($"Will replicate to {_destination.NodeTag} @ {_destination.Url} via {connectionInfo.Url}");
 
                 using (_tcpClient = new TcpClient())
                 {
@@ -149,13 +150,6 @@ namespace Raven.Server.Documents.Replication
                                     throw new DatabaseDoesNotExistException(response.Item2.Message,
                                         new InvalidOperationException(response.Item2.Exception));
                                 throw new InvalidOperationException(response.Item2.Exception);
-                            }
-
-                            if (response.Item1 == ReplicationMessageReply.ReplyType.Ok)
-                            {
-                                _parent.UpdateReplicationDocumentWithResolver(
-                                    response.Item2.ResolverId,
-                                    response.Item2.ResolverVersion);
                             }
                         }
                         catch (DatabaseDoesNotExistException e)
@@ -310,11 +304,12 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
-                var token = AsyncHelpers.RunSync(() => _authenticator.GetAuthenticationTokenAsync(_destination.ApiKey, _destination.Url, documentsContext));
+                // TODO: use api key of the cluster
+                var token = AsyncHelpers.RunSync(() => _authenticator.GetAuthenticationTokenAsync(null, _destination.Url, documentsContext));
                 //send initial connection information
                 documentsContext.Write(writer, new DynamicJsonValue
                 {
-                    [nameof(TcpConnectionHeaderMessage.DatabaseName)] = _destination.Database,
+                    [nameof(TcpConnectionHeaderMessage.DatabaseName)] =_destination.Database,// _parent.Database.Name,
                     [nameof(TcpConnectionHeaderMessage.Operation)] =
                     TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
                     [nameof(TcpConnectionHeaderMessage.AuthorizationToken)] = token
@@ -329,8 +324,6 @@ namespace Raven.Server.Documents.Replication
                     ["SourceDatabaseName"] = _database.Name,
                     ["SourceUrl"] = _database.Configuration.Core.ServerUrl,
                     ["MachineName"] = Environment.MachineName,
-                    ["ResolverVersion"] = _parent?.ReplicationDocument.DefaultResolver?.Version,
-                    ["ResolverId"] = _parent?.ReplicationDocument.DefaultResolver?.ResolvingDatabaseId,
                 };
 
                 documentsContext.Write(writer, request);
@@ -363,7 +356,7 @@ namespace Raven.Server.Documents.Replication
                         //All good nothing to do
                         break;
                     default:
-                        throw new UnauthorizedAccessException($"{_destination.Url}/{_destination.Database} replied with failure {headerResponse.Status}");
+                        throw new UnauthorizedAccessException($"{_destination.Url}/{_destination.NodeTag} replied with failure {headerResponse.Status}");
                 }
             }
         }
@@ -464,10 +457,10 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public string FromToString => $"from {_database.ResourceName} to {_destination.Database} at {_destination.Url}";
+        public string FromToString => $"from {_database.ResourceName} to {_destination.NodeTag}({_destination.Database}) at {_destination.Url}";
 
-        public ReplicationDestination Destination => _destination;
-        public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";
+        public ReplicationNode Node => _destination;
+        public string DestinationFormatted => $"{_destination.Url}/databases/{_destination.Database}";
 
         internal void SendHeartbeat()
         {
@@ -588,11 +581,11 @@ namespace Raven.Server.Documents.Replication
                 {
                     case ReplicationMessageReply.ReplyType.Ok:
                         _log.Info(
-                            $"Received reply for replication batch from {_destination.Database} @ {_destination.Url}. New destination change vector is {_destinationLastKnownDocumentChangeVectorAsString}");
+                            $"Received reply for replication batch from {_destination.NodeTag} @ {_destination.Url}. New destination change vector is {_destinationLastKnownDocumentChangeVectorAsString}");
                         break;
                     case ReplicationMessageReply.ReplyType.Error:
                         _log.Info(
-                            $"Received reply for replication batch from {_destination.Database} at {_destination.Url}. There has been a failure, error string received : {replicationBatchReply.Exception}");
+                            $"Received reply for replication batch from {_destination.NodeTag} at {_destination.Url}. There has been a failure, error string received : {replicationBatchReply.Exception}");
                         throw new InvalidOperationException(
                             $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Exception}");
                     default:

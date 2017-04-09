@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.Replication
                     if (_log.IsInfoEnabled)
                     {
                         _log.Info(
-                            $"Found {_orderedReplicaItems.Count:#,#;;0} indexes/transformers to replicate to {_parent.Destination.Database} @ {_parent.Destination.Url} in {sp.ElapsedMilliseconds:#,#;;0} ms.");
+                            $"Found {_orderedReplicaItems.Count:#,#;;0} indexes/transformers to replicate to {_parent.Node.Database} @ {_parent.Node.Url} in {sp.ElapsedMilliseconds:#,#;;0} ms.");
                     }
 
                     _parent.CancellationToken.ThrowIfCancellationRequested();

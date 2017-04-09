@@ -311,9 +311,9 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        protected override void ModifyReplicationDestination(ReplicationDestination replicationDestination)
+        protected override void ModifyReplicationDestination(ReplicationNode replicationNode)
         {
-            replicationDestination.SkipIndexReplication = true;
+            replicationNode.SkipIndexReplication = true;
         }
 
         public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()

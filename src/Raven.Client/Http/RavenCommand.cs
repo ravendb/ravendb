@@ -61,8 +61,7 @@ namespace Raven.Client.Http
 
         public bool IsFailedWithNode(ServerNode node)
         {
-            return FailedNodes != null && FailedNodes.ContainsKey(node);
-        }
+			return FailedNodes != null && FailedNodes.ContainsKey(node);        }
 
         public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {

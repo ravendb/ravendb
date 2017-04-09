@@ -120,8 +120,7 @@ namespace Raven.Server.Documents.Handlers
             {                
                 [nameof(Topology.Nodes)] = (nodes == null)? new DynamicJsonArray(): new DynamicJsonArray(nodes),
                 [nameof(Topology.ReadBehavior)] =
-                    ReadBehavior.CurrentNodeWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
-                [nameof(Topology.WriteBehavior)] = WriteBehavior.LeaderOnly.ToString(),
+				ReadBehavior.CurrentNodeWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),                [nameof(Topology.WriteBehavior)] = WriteBehavior.LeaderOnly.ToString(),
                 [nameof(Topology.SLA)] = new DynamicJsonValue
                 {
                     [nameof(TopologySla.RequestTimeThresholdInMilliseconds)] = 100,
@@ -145,8 +144,7 @@ namespace Raven.Server.Documents.Handlers
                 destinations[index] = new DynamicJsonValue
                 {
                     [nameof(ServerNode.Url)] = des.Url,
-                    [nameof(ServerNode.Database)] = des.Database
-                };
+					[nameof(ServerNode.Database)] = des.Database                };
             }
 
             // We want to have the client failover to the most up to date destination if it needs to, so we sort

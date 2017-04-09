@@ -76,9 +76,6 @@ namespace FastTests.Issues
                 await ((DocumentStore)store).ForceUpdateTopologyFor(databaseName);
                 var requestExecutor = ((DocumentStore)store).GetRequestExecuter(databaseName);
 
-                //TODO for Karmel: refactor this test so it uses replication when raft based topology replication is implemented
-                SetupReplicationOnDatabaseTopology(requestExecutor.TopologyNodes);
-
                 using (var session = store.OpenSession(databaseName))
                 {
                     session.Store(new User { Name = "John Doe" }, "users/1");

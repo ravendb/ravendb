@@ -84,11 +84,10 @@ namespace SlowTests.Server.Replication
                     Assert.Equal(0, topologyInfo.NodesById[masterDocumentDatabase.DbId.ToString()].Outgoing.Count);
                     Assert.Equal(1, topologyInfo.NodesById[masterDocumentDatabase.DbId.ToString()].Offline.Count);
 
-                    var replicationDocument = masterDocumentDatabase.ReplicationLoader.ReplicationDocument;
-                    Assert.Equal(1, replicationDocument.Destinations.Count); //sanity check, this should always be true
-
-                    var slaveUrl = replicationDocument.Destinations.First().Url;
-                    var slaveDatabase = replicationDocument.Destinations.First().Database;
+                var destination = masterDocumentDatabase.ReplicationLoader.Destinations.ToList();
+                    Assert.Equal(1, destination.Count); //sanity check, this should always be true
+                    var slaveUrl = destination.First().Url;
+                    var slaveDatabase = destination.First().Database;
 
                     var offlineNodeInfo = topologyInfo.NodesById[masterDocumentDatabase.DbId.ToString()].Offline.First();
 
@@ -209,11 +208,10 @@ namespace SlowTests.Server.Replication
                     Assert.Equal(0, topologyInfo.NodesById[ADocumentDatabase.DbId.ToString()].Outgoing.Count);
 
                     var offlineOfA = topologyInfo.NodesById[ADocumentDatabase.DbId.ToString()].Offline;
-                    var replicationDocument = ADocumentDatabase.ReplicationLoader.ReplicationDocument;
-                    Assert.Equal(1, replicationDocument.Destinations.Count); //sanity check, should always be true
-
-                    var urlOfB = replicationDocument.Destinations[0].Url;
-                    var nameOfB = replicationDocument.Destinations[0].Database;
+                    var destinations = ADocumentDatabase.ReplicationLoader.Destinations.ToList();
+                    Assert.Equal(1, destinations.Count); //sanity check, should always be true
+                    var urlOfB = destinations[0].Url;
+                    var nameOfB = destinations[0].Database;
 
                     Assert.Equal(1, offlineOfA.Count);
                     Assert.Equal(urlOfB, offlineOfA.First().Url);
@@ -234,12 +232,12 @@ namespace SlowTests.Server.Replication
             {
                 var destinations = new[]
                 {
-                    new ReplicationDestination
+                    new ReplicationNode
                     {
                         Database = "FooBar",
                         Url = "http://foo.bar/:1234"
                     },
-                    new ReplicationDestination
+                    new ReplicationNode
                     {
                         Database = "FooBar2",
                         Url = "http://foo.bar/:4567"

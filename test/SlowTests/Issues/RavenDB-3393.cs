@@ -21,10 +21,7 @@ namespace SlowTests.Issues
                 store
                     .Admin
                     .Server
-                    .Send(new CreateDatabaseOperation(new DatabaseRecord
-                    {
-                        DatabaseName = dbName
-                    }));
+                    .Send(new CreateDatabaseOperation(new DatabaseRecord(dbName)));
 
                 using (var session = store.OpenSession(dbName))
                 {

@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Replication
     /// This class represent the list of replication destinations for the server
     /// </summary>
     public abstract class ReplicationDocument<TClass>
-        where TClass : ReplicationDestination
+        where TClass : ReplicationNode
     {
 
         public StraightforwardConflictResolution DocumentConflictResolution { get; set; }
@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Replication
     /// <summary>
     /// This class represent the list of replication destinations for the server
     /// </summary>
-    public class ReplicationDocument : ReplicationDocument<ReplicationDestination>
+    public class ReplicationDocument : ReplicationDocument<ReplicationNode>
     {
         public Dictionary<string, ScriptResolver> ResolveByCollection { get; set; }
         public DatabaseResolver DefaultResolver { get; set; }
@@ -97,6 +97,11 @@ namespace Raven.Client.Documents.Replication
         public string ResolvingDatabaseId { get; set; }
         public int Version { get; set; } = -1;
 
+        public bool Equals(DatabaseResolver other)
+        {
+            return Version == other.Version && ResolvingDatabaseId == other.ResolvingDatabaseId;
+        }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -120,5 +125,21 @@ namespace Raven.Client.Documents.Replication
                 [nameof(LastModifiedTime)] = LastModifiedTime
             };
         }
+
+        public override bool Equals(object obj)
+        {
+            var resolver = obj as ScriptResolver;
+            if (resolver == null)
+                return false;
+            return Script == resolver.Script && LastModifiedTime == resolver.LastModifiedTime;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Script != null ? Script.GetHashCode() : 0) * 397) ^ LastModifiedTime.GetHashCode();
+            }
+        }    
     }
 }

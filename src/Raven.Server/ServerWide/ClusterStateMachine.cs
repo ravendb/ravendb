@@ -13,6 +13,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions.Security;
@@ -105,6 +106,8 @@ namespace Raven.Server.ServerWide
                 case nameof(SetTransformerLockModeCommand):
                 case nameof(DeleteTransformerCommand):
                 case nameof(EditVersioningCommand):
+                case nameof(UpdateTopologyCommand):
+                case nameof(ModifyConflictSolverCommand):
                     UpdateDatabase(context, type, cmd, index, leader);
                     break;
                 case nameof(PutValueCommand):
@@ -147,8 +150,7 @@ namespace Raven.Server.ServerWide
 
                 databaseRecord.Topology.Members.Remove(remove.NodeTag);
                 databaseRecord.Topology.Promotables.Remove(remove.NodeTag);
-                databaseRecord.Topology.Watchers.Remove(remove.NodeTag);
-
+               
                 databaseRecord.DeletionInProgress.Remove(remove.NodeTag);
 
                 if (databaseRecord.Topology.Members.Count == 0 &&
@@ -218,8 +220,7 @@ namespace Raven.Server.ServerWide
                 else
                 {
                     var allNodes = databaseRecord.Topology.Members
-                        .Concat(databaseRecord.Topology.Promotables)
-                        .Concat(databaseRecord.Topology.Watchers);
+                        .Concat(databaseRecord.Topology.Promotables);
 
                     foreach (var node in allNodes)
                     {
@@ -659,6 +660,63 @@ namespace Raven.Server.ServerWide
         void UpdateDatabaseRecord(DatabaseRecord record);
     }
 
+    public class UpdateTopologyCommand : IUpdateDatabaseCommand
+    {
+        public string DatabaseName;
+        public BlittableJsonReaderObject Value;
+
+        public Dictionary<string,string> UpdateBlockedConnections;
+        public List<DatabaseWatcher> NewWatchers;
+        
+        public void Deserialize()
+        {
+            BlittableJsonReaderObject blockedConnectionsBlittable;
+            BlittableJsonReaderArray newWatchersBlittable;
+            Value.TryGet("BlockedConnections", out blockedConnectionsBlittable);
+            Value.TryGet("NewWatchers", out newWatchersBlittable);
+            
+            if (blockedConnectionsBlittable != null)
+            {
+                UpdateBlockedConnections = JsonDeserializationRachis<Dictionary<string, string>>.Deserialize(blockedConnectionsBlittable);
+            }
+            if (newWatchersBlittable != null)
+            {
+                NewWatchers = new List<DatabaseWatcher>();
+                NewWatchers.AddRange(newWatchersBlittable.Items.
+                    Select(i => JsonDeserializationRachis<DatabaseWatcher>.Deserialize((BlittableJsonReaderObject)i)));
+            }
+        }
+
+        public void UpdateDatabaseRecord(DatabaseRecord record)
+        {
+            Deserialize();
+
+            foreach (var updateBlockedConnection in UpdateBlockedConnections)
+            {
+                var key = updateBlockedConnection.Key;
+                var value = updateBlockedConnection.Value;
+                if (value == null)
+                {
+                    record.Topology.CustomConnectionBlocker.Remove(key);
+                    continue;
+                }
+                record.Topology.CustomConnectionBlocker[key] = value;
+            }
+            record.Topology.Watchers = NewWatchers;
+        }
+    }
+
+    public class ModifyConflictSolverCommand : IUpdateDatabaseCommand
+    {
+        public string DatabaseName;
+        public BlittableJsonReaderObject Value;
+
+        public void UpdateDatabaseRecord(DatabaseRecord record)
+        {
+            record.ConflictSolverConfig = JsonDeserializationServer.ConflictSolver(Value);
+        }
+    }
+
     public class PutTransformerCommand : IUpdateDatabaseCommand
     {
         public string DatabaseName;
@@ -708,7 +766,9 @@ namespace Raven.Server.ServerWide
             [nameof(EditVersioningCommand)] = GenerateJsonDeserializationRoutine<EditVersioningCommand>(),
             [nameof(PutTransformerCommand)] = GenerateJsonDeserializationRoutine<PutTransformerCommand>(),
             [nameof(DeleteTransformerCommand)] = GenerateJsonDeserializationRoutine<DeleteTransformerCommand>(),
-            [nameof(SetTransformerLockModeCommand)] = GenerateJsonDeserializationRoutine<SetTransformerLockModeCommand>()
+            [nameof(SetTransformerLockModeCommand)] = GenerateJsonDeserializationRoutine<SetTransformerLockModeCommand>(),
+            [nameof(UpdateTopologyCommand)] = GenerateJsonDeserializationRoutine<UpdateTopologyCommand>(),
+            [nameof(ModifyConflictSolverCommand)] = GenerateJsonDeserializationRoutine<ModifyConflictSolverCommand>(),
         };
 
         public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();

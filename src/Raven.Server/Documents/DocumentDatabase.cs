@@ -65,7 +65,10 @@ namespace Raven.Server.Documents
             IndexStore = new IndexStore(this, _indexAndTransformerLocker);
             TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
             EtlLoader = new EtlLoader(this);
-            ReplicationLoader = new ReplicationLoader(this);
+            if (serverStore != null)
+            {   // make no sense to have replication without server store.
+                ReplicationLoader = new ReplicationLoader(this, serverStore);
+            }
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
             SubscriptionStorage = new SubscriptionStorage(this);
             Operations = new DatabaseOperations(this);
@@ -252,7 +255,7 @@ namespace Raven.Server.Documents
             //so replication of both documents and indexes/transformers can be made within one transaction
             ConfigurationStorage.Initialize(IndexStore, TransformerStore);
 
-            ReplicationLoader.Initialize();
+            ReplicationLoader?.Initialize();
 
             NotificationCenter.Initialize(this);
         }

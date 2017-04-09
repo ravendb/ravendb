@@ -624,37 +624,38 @@ namespace FastTests.Server.Replication
         [Fact]
         public void Should_not_resolve_conflcit_with_script_when_they_from_different_collection()
         {
-            var store1 = GetDocumentStore();
-            var store2 = GetDocumentStore();
-
-            using (var session = store1.OpenSession())
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
             {
-                session.Store(new User { Name = "Karmel" }, "foo/bar");
-                session.SaveChanges();
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store2.OpenSession())
+                {
+                    session.Store(new New_User {Name = "Oren"}, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                SetScriptResolution(store2, "return {Name:docs[0].Name + '123'};", "Users");
+                SetupReplication(store1, store2);
+
+                var db2 = GetDocumentDatabaseInstanceFor(store2).Result.NotificationCenter;
+
+                Assert.Equal(1, WaitForValue(() => db2.GetAlertCount(), 1));
+
+                IEnumerable<NotificationTableValue> alerts;
+                using (db2.GetStored(out alerts))
+                {
+                    var alertsList = alerts.ToList();
+                    string msg;
+                    alertsList[0].Json.TryGet("Message", out msg);
+                    Assert.True(msg.Contains(
+                        "All conflicted documents must have same collection name, but we found conflicted document in Users and an other one in New_Users"));
+                }
             }
-
-            using (var session = store2.OpenSession())
-            {
-                session.Store(new New_User { Name = "Oren" }, "foo/bar");
-                session.SaveChanges();
-            }
-
-            SetScriptResolution(store2, "return {Name:docs[0].Name + '123'};","Users");
-            SetupReplication(store1, store2);
-
-            var db2 = GetDocumentDatabaseInstanceFor(store2).Result.NotificationCenter;
-           
-            Assert.Equal(1, WaitForValue(() => db2.GetAlertCount(), 1));
-
-            IEnumerable<NotificationTableValue> alerts;
-            using (db2.GetStored(out alerts))
-            {
-                var alertsList = alerts.ToList();
-                string msg;
-                alertsList[0].Json.TryGet("Message", out msg);
-                Assert.True(msg.Contains("All conflicted documents must have same collection name, but we found conflicted document in Users and an other one in New_Users"));
-            }
-            
         }
 
         private class UserIndex : AbstractIndexCreationTask<User>

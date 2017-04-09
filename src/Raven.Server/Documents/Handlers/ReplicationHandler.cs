@@ -214,7 +214,6 @@ namespace Raven.Server.Documents.Handlers
                     outgoing.Add(new DynamicJsonValue
                     {
                         ["Url"] = item.Url,
-                        ["Database"] = item.Database,
                         ["Disabled"] = item.Disabled,
                         ["IgnoredClient"] = item.IgnoredClient,
                         ["SkipIndexReplication"] = item.SkipIndexReplication,
@@ -246,7 +245,6 @@ namespace Raven.Server.Documents.Handlers
                         ["Key"] = new DynamicJsonValue
                         {
                             ["Url"] = item.Key.Url,
-                            ["Database"] = item.Key.Database,
                             ["Disabled"] = item.Key.Disabled,
                             ["IgnoredClient"] = item.Key.IgnoredClient,
                             ["SkipIndexReplication"] = item.Key.SkipIndexReplication,
@@ -339,7 +337,6 @@ namespace Raven.Server.Documents.Handlers
                     data.Add(new DynamicJsonValue
                     {
                         ["Url"] = queueItem.Url,
-                        ["Database"] = queueItem.Database,
                         ["Disabled"] = queueItem.Disabled,
                         ["IgnoredClient"] = queueItem.IgnoredClient,
                         ["SkipIndexReplication"] = queueItem.SkipIndexReplication,

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
@@ -12,7 +10,6 @@ namespace Raven.Client.Documents
     {
         public DatabaseRecord()
         {
-            
         }
 
         public DatabaseRecord(string databaseName)
@@ -27,8 +24,10 @@ namespace Raven.Client.Documents
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress;
 
         public string DataDirectory;
-
+        
         public DatabaseTopology Topology;
+
+        public ConflictSolver ConflictSolverConfig = new ConflictSolver();
 
         public Dictionary<string, IndexDefinition> Indexes;
 

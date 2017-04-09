@@ -4,6 +4,7 @@
     {
         Load,
         Put,
+        Update,
         Delete
     }
 }
