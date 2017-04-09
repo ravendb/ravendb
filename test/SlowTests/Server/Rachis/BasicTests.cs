@@ -35,7 +35,9 @@ namespace SlowTests.Server.Rachis
 
             foreach (var r in RachisConsensuses)
             {
-                var condition = await r.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex).WaitAsync(5000);
+                var condition = await
+                    r.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex)
+                        .WaitAsync(5000);
                 TransactionOperationContext context;
                 using (r.ContextPool.AllocateOperationContext(out context))
                 using (context.OpenReadTransaction())
