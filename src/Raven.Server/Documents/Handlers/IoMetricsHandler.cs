@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Sparrow;
@@ -80,6 +81,11 @@ namespace Raven.Server.Documents.Handlers
             foreach (var storageEnvironment in documentDatabase.GetAllStoragesEnvironment())
             {
                 result.Environments.Add(GetIoMetrics(storageEnvironment.Environment));
+            }
+
+            foreach (var metrics in documentDatabase.GetAllPerformanceMetrics())
+            {
+                result.Performances.Add(metrics.Buffer);
             }
 
             return result;
@@ -311,15 +317,18 @@ namespace Raven.Server.Documents.Handlers
         public IOMetricsResponse()
         {
             Environments = new List<IOMetricsEnvironment>();
+            Performances = new List<PerformanceMetrics>();
         }
 
+        public List<PerformanceMetrics> Performances { get; set; }
         public List<IOMetricsEnvironment> Environments { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Environments)] = new DynamicJsonArray(Environments.Select(x => x.ToJson()))
+                [nameof(Environments)] = new DynamicJsonArray(Environments.Select(x => x.ToJson())),
+                [nameof(Performances)] = new DynamicJsonArray(Performances.Select(x => x.ToJson()))
             };
         }
     }
