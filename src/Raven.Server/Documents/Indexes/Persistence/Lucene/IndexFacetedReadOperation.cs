@@ -220,7 +220,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var values = new List<FacetValue>();
                 List<string> allTerms;
 
-                int maxResults = facet.MaxResults.HasValue ? Math.Min(query.PageSize, facet.MaxResults.Value) : query.PageSize;
+                var pageSize = GetPageSize(_searcher, query.PageSize);
+                int maxResults = facet.MaxResults.HasValue ? Math.Min(pageSize, facet.MaxResults.Value) : pageSize;
                 Dictionary<string, FacetValue> groups;
                 if (facetsByName.TryGetValue(facet.DisplayName, out groups) == false || groups == null)
                     continue;
