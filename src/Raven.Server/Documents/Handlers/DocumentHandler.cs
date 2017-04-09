@@ -126,13 +126,14 @@ namespace Raven.Server.Documents.Handlers
             var etag = GetLongQueryString("etag", false);
             var start = GetStart();
             var pageSize = GetPageSize();
+            var isStartsWith = HttpContext.Request.Query.ContainsKey("startsWith");
 
             IEnumerable<Document> documents;
             if (etag != null)
             {
                 documents = Database.DocumentsStorage.GetDocumentsFrom(context, etag.Value, start, pageSize);
             }
-            else if (HttpContext.Request.Query.ContainsKey("startsWith"))
+            else if (isStartsWith)
             {
                 documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
                      HttpContext.Request.Query["startsWith"],
@@ -171,7 +172,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteEndObject();
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocuments), numberOfResults, pageSize);
+            AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocuments), numberOfResults, pageSize);
         }
 
         private void GetDocumentsById(DocumentsOperationContext context, StringValues ids, Transformer transformer, bool metadataOnly)
@@ -223,27 +224,28 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
+            int numberOfResults;
             var blittable = GetBoolValueQueryString("blittable", required: false) ?? false;
             if (blittable)
             {
-                WriteDocumentsBlittable(context, documentsToWrite, includes);
+                WriteDocumentsBlittable(context, documentsToWrite, includes, out numberOfResults);
             }
             else
             {
-                WriteDocumentsJson(context, metadataOnly, documentsToWrite, includeDocs, includes, out int count);
-
-                AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsById), count, documents.Count);
+                WriteDocumentsJson(context, metadataOnly, documentsToWrite, includeDocs, includes, out numberOfResults);
             }
+
+            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsById), numberOfResults, documents.Count);
         }
 
         private void WriteDocumentsJson(DocumentsOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite,
-            IncludeDocumentsCommand includeDocs, List<Document> includes, out int count)
+            IncludeDocumentsCommand includeDocs, List<Document> includes, out int numberOfResults)
         {
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
-                writer.WriteDocuments(context, documentsToWrite, metadataOnly, out count);
+                writer.WriteDocuments(context, documentsToWrite, metadataOnly, out numberOfResults);
 
                 includeDocs.Fill(includes);
 
@@ -251,7 +253,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WritePropertyName("Includes");
                 if (includes.Count > 0)
                 {
-                    writer.WriteDocuments(context, includes, metadataOnly, out count);
+                    writer.WriteDocuments(context, includes, metadataOnly, out numberOfResults);
                 }
                 else
                 {
@@ -263,8 +265,9 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private void WriteDocumentsBlittable(DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, List<Document> includes)
+        private void WriteDocumentsBlittable(DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, List<Document> includes, out int numberOfResults)
         {
+            numberOfResults = 0;
             HttpContext.Response.Headers["Content-Type"] = "binary/blittable-json";
 
             using (var streamBuffer = new UnmanagedStreamBuffer(context, ResponseBodyStream()))
@@ -280,6 +283,7 @@ namespace Raven.Server.Documents.Handlers
 
                 foreach (var document in documentsToWrite)
                 {
+                    numberOfResults++;
                     writer.WriteEmbeddedBlittableDocument(document.Data);
                 }
 
