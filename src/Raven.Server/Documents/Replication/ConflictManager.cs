@@ -242,7 +242,7 @@ namespace Raven.Server.Documents.Replication
             if (existingDoc != null)
             {
                 var compareResult = Document.IsEqualTo(existingDoc.Data, incomingDoc, true);
-                if (compareResult == DocumentCompareResult.DifferenceDetected)
+                if (compareResult == DocumentCompareResult.NotEqual)
                     return false;
 
                 // no real conflict here, both documents have identical content
