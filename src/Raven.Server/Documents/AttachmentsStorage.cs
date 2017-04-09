@@ -759,7 +759,7 @@ namespace Raven.Server.Documents
             {
                 if (otherAttachmentNames.TryGetValue(attachment.Key, out var otherAttachment))
                 {
-                    if (Document.ComparePropertiesExceptionStartingWithAt(attachment.Value, otherAttachment) == DocumentCompareResult.DifferenceDetected)
+                    if (Document.ComparePropertiesExceptStartingWithAt(attachment.Value, otherAttachment) == DocumentCompareResult.DifferenceDetected)
                         return false;
 
                     otherAttachmentNames.Remove(attachment.Key);
