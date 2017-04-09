@@ -75,7 +75,6 @@ namespace Voron.Impl.Journal
 
             _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
             _journalApplicator = new JournalApplicator(this);
-            _journalPath = Path.Combine(env.Options.JournalPath, StorageEnvironmentOptions.JournalName(0));
         }
 
         public ImmutableAppendOnlyList<JournalFile> Files => _files;
@@ -107,7 +106,7 @@ namespace Voron.Impl.Journal
 
             _lastFile = now;
 
-            _journalPath = Path.Combine(_env.Options.JournalPath, StorageEnvironmentOptions.JournalName(_journalIndex));
+            _journalPath = Path.Combine(_env.Options.JournalPath ?? "", StorageEnvironmentOptions.JournalName(_journalIndex));
 
             var journal = new JournalFile(_env, journalPager, _journalIndex);
             journal.AddRef(); // one reference added by a creator - write ahead log
@@ -1334,7 +1333,7 @@ namespace Voron.Impl.Journal
 
             var compressionDuration = Stopwatch.StartNew();
             using (var metrics = _env.Options.IoMetrics.MeterIoRate(
-                _journalPath,
+                _journalPath ?? "",
                 IoMetrics.MeterType.Compression, 0)) // Note that the last journal may be replaced if we switch journals, however it doesn't affect web graph
             {
                 var compressionAcceleration = _lastCompressionAccelerationInfo.LastAcceleration;
