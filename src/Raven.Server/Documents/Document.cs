@@ -129,7 +129,7 @@ namespace Raven.Server.Documents
                 return DocumentCompareResult.Equal | DocumentCompareResult.ShouldRecreateDocument;
             }
 
-            return ComparePropertiesExceptionStartingWithAt(myMetadata, objMetadata, true, skipAttachment);
+            return ComparePropertiesExceptStartingWithAt(myMetadata, objMetadata, true, skipAttachment);
         }
 
         public static DocumentCompareResult IsEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument, 
@@ -142,13 +142,13 @@ namespace Raven.Server.Documents
             if (result == DocumentCompareResult.DifferenceDetected)
                 return DocumentCompareResult.DifferenceDetected;
 
-            if (ComparePropertiesExceptionStartingWithAt(currentDocument, targetDocument) == DocumentCompareResult.DifferenceDetected)
+            if (ComparePropertiesExceptStartingWithAt(currentDocument, targetDocument) == DocumentCompareResult.DifferenceDetected)
                 return DocumentCompareResult.DifferenceDetected;
 
             return result;
         }
 
-        public static DocumentCompareResult ComparePropertiesExceptionStartingWithAt(BlittableJsonReaderObject myObject, BlittableJsonReaderObject otherObject, 
+        public static DocumentCompareResult ComparePropertiesExceptStartingWithAt(BlittableJsonReaderObject myObject, BlittableJsonReaderObject otherObject, 
             bool isMetadata = false, bool tryMergeAttachmentsConflict = false)
         {
             var resolvedAttachmetConflict = false;
