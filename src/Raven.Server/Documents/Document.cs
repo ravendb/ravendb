@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using Raven.Client;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -104,7 +102,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private static DocumentCompareResult IsMetadataEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument, bool skipAttachment)
+        private static DocumentCompareResult IsMetadataEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument, bool tryMergeAttachmentsConflict)
         {
             if (targetDocument == null)
                 return DocumentCompareResult.DifferenceDetected;
@@ -117,19 +115,22 @@ namespace Raven.Server.Documents
             if (myMetadata == null && objMetadata == null)
                 return DocumentCompareResult.Equal;
 
-            if (myMetadata == null)
-                return DocumentCompareResult.Equal;
-
-            if (objMetadata == null)
+            if (myMetadata == null || objMetadata == null)
             {
-                targetDocument.Modifications = new DynamicJsonValue(targetDocument)
+                if (tryMergeAttachmentsConflict)
                 {
-                    [Constants.Documents.Metadata.Key] = myMetadata
-                };
-                return DocumentCompareResult.Equal | DocumentCompareResult.ShouldRecreateDocument;
+                    if (myMetadata == null)
+                        myMetadata = objMetadata;
+
+                    // If the conflict is just on @metadata with @attachment we know how to resolve it.
+                    if (myMetadata.Count == 1 && myMetadata.GetPropertyNames()[0].Equals(Constants.Documents.Metadata.Attachments, StringComparison.OrdinalIgnoreCase))
+                        return DocumentCompareResult.Equal | DocumentCompareResult.ShouldRecreateDocument;
+                }
+
+                return DocumentCompareResult.DifferenceDetected;
             }
 
-            return ComparePropertiesExceptStartingWithAt(myMetadata, objMetadata, true, skipAttachment);
+            return ComparePropertiesExceptStartingWithAt(myMetadata, objMetadata, true, tryMergeAttachmentsConflict);
         }
 
         public static DocumentCompareResult IsEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument, 
