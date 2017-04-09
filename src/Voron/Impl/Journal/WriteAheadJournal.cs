@@ -30,6 +30,7 @@ namespace Voron.Impl.Journal
     {
         private readonly StorageEnvironment _env;
         private readonly AbstractPager _dataPager;
+        private string _journalPath;
 
         private long _currentJournalFileSize;
         private DateTime _lastFile;
@@ -75,6 +76,7 @@ namespace Voron.Impl.Journal
 
             _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
             _journalApplicator = new JournalApplicator(this);
+            _journalPath = Path.Combine(env.Options.JournalPath, StorageEnvironmentOptions.JournalName(0));
         }
 
         public ImmutableAppendOnlyList<JournalFile> Files => _files;
@@ -83,7 +85,7 @@ namespace Voron.Impl.Journal
 
         public bool HasLazyTransactions { get; set; }
 
-        private JournalFile NextFile(int numberOf4kbs = 1)
+        private JournalFile NextFile(int numberOf4Kbs = 1)
         {
             var now = DateTime.UtcNow;
             if ((now - _lastFile).TotalSeconds < 90)
@@ -91,7 +93,7 @@ namespace Voron.Impl.Journal
                 _currentJournalFileSize = Math.Min(_env.Options.MaxLogFileSize, _currentJournalFileSize * 2);
             }
             var actualLogSize = _currentJournalFileSize;
-            long minRequiredSize = numberOf4kbs * 4 * Constants.Size.Kilobyte;
+            long minRequiredSize = numberOf4Kbs * 4 * Constants.Size.Kilobyte;
             if (_currentJournalFileSize < minRequiredSize)
             {
                 _currentJournalFileSize = Bits.NextPowerOf2(minRequiredSize);
@@ -105,6 +107,9 @@ namespace Voron.Impl.Journal
             _journalIndex++;
 
             _lastFile = now;
+
+            _journalPath = Path.Combine(_env.Options.JournalPath, StorageEnvironmentOptions.JournalName(_journalIndex));
+
 
             var journal = new JournalFile(_env, journalPager, _journalIndex);
             journal.AddRef(); // one reference added by a creator - write ahead log
@@ -815,7 +820,7 @@ namespace Voron.Impl.Journal
                 long _lastSyncedJournal;
                 long _currentTotalWrittenBytes;
                 long _lastSyncedTransactionId;
-                private readonly List<KeyValuePair<long, JournalFile>> journalsToDelete;
+                private readonly List<KeyValuePair<long, JournalFile>> _journalsToDelete;
                 bool _flushLockTaken;
                 private TransactionHeader _transactionHeader;
                 private TaskCompletionSource<object> _tcs = new TaskCompletionSource<object>();
@@ -823,7 +828,7 @@ namespace Voron.Impl.Journal
                 public SyncOperation(JournalApplicator parent)
                 {
                     _parent = parent;
-                    journalsToDelete = new List<KeyValuePair<long, JournalFile>>();
+                    _journalsToDelete = new List<KeyValuePair<long, JournalFile>>();
                     _fsyncLockTaken = false;
                     _lastSyncedJournal = 0;
                     _currentTotalWrittenBytes = 0;
@@ -871,7 +876,7 @@ namespace Voron.Impl.Journal
                         _parent._totalWrittenButUnsyncedBytes -= _currentTotalWrittenBytes;
                         _parent.UpdateFileHeaderAfterDataFileSync(_lastSyncedJournal, _lastSyncedTransactionId, ref _transactionHeader);
 
-                        foreach (var toDelete in journalsToDelete)
+                        foreach (var toDelete in _journalsToDelete)
                         {
                             if (_parent._waj._env.Options.IncrementalBackupEnabled == false)
                                 toDelete.Value.DeleteOnClose = true;
@@ -953,9 +958,9 @@ namespace Voron.Impl.Journal
                             if (toDelete.Key > _lastSyncedJournal)
                                 continue;
 
-                            journalsToDelete.Add(toDelete);
+                            _journalsToDelete.Add(toDelete);
                         }
-                        foreach (var kvp in journalsToDelete)
+                        foreach (var kvp in _journalsToDelete)
                         {
                             _parent._journalsToDelete.Remove(kvp.Key);
                         }
@@ -1327,15 +1332,12 @@ namespace Voron.Impl.Journal
 
             var compressionBuffer = fullTxBuffer + sizeof(TransactionHeader);
 
-            var number = CurrentFile?.Number ?? 0;
             long compressedLen;
 
-            // Note that the last journal may be replaced if we switch journals, however it doesn't affect web graph
-            var journalPath = Path.Combine(_env.Options.JournalPath, StorageEnvironmentOptions.JournalName(number));
             var compressionDuration = Stopwatch.StartNew();
             using (var metrics = _env.Options.IoMetrics.MeterIoRate(
-                journalPath,
-                IoMetrics.MeterType.Compression, 0))
+                _journalPath,
+                IoMetrics.MeterType.Compression, 0)) // // Note that the last journal may be replaced if we switch journals, however it doesn't affect web graph
             {
                 var compressionAcceleration = _lastCompressionAccelerationInfo.LastAcceleration;
 
