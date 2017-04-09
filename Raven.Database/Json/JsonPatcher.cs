@@ -284,17 +284,22 @@ namespace Raven.Database.Json
             var prevVal = patchCmd.PrevVal;
             if (prevVal == null || prevVal.Type == JTokenType.Null)
                 return;
+
             switch (prevVal.Type)
             {
                 case JTokenType.Undefined:
                     if (property != null)
-                        throw new ConcurrencyException();
+                        throw new OptimisticConcurrencyViolationException(
+                            $"Previous value is {prevVal} (type: undefined) but new value is {property} (type: {property.Type})");
                     break;
                 default:
                     if (property == null)
-                        throw new ConcurrencyException();
+                        throw new OptimisticConcurrencyViolationException(
+                            $"Previous value is {prevVal} (type: {prevVal.Type}) but new value is null");
                     if (RavenJToken.DeepEquals(property, prevVal) == false)
-                        throw new ConcurrencyException();
+                        throw new OptimisticConcurrencyViolationException(
+                            $"Previous value is {prevVal} (type: {prevVal.Type}) " +
+                            $"but expected value is {property} (type: {property.Type})");
                     break;
             }
         }
