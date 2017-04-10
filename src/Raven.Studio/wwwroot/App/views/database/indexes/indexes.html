@@ -36,7 +36,7 @@
                                 <span class="caret"></span>
                                 <span class="sr-only">Toggle Dropdown</span>
                             </button>
-                            <ul class="dropdown-menu">                                
+                            <ul class="dropdown-menu">
                                 <li data-bind="click: enableSelectedIndexes">
                                     <a href="#" title="Enable">
                                         <i class="icon-play"></i>
@@ -115,15 +115,25 @@
     <div data-bind="foreach: sortedGroups">
         <h2 data-bind="text: entityName, visible: !groupHidden()"></h2>
         <div data-bind="foreach: indexes, visible: !groupHidden()">
-            <div class="panel panel-state index" data-bind="visible: !filteredOut(), template: { name: 'index-template' }, css: { 'has-replacement': replacement }">
-                
-            </div>
-            <div data-bind="with: replacement">
-                <div>
-                    <button class="btn btn-primary" 
-                            data-bind="click: _.partial($root.forceSideBySide, $data.parent), css: { 'btn-spinner': _.includes($root.spinners.swapNow(), parent.name) }, disable: _.includes($root.spinners.swapNow(), parent.name)">Swap now</button>
+            <div data-bind="css: { 'sidebyside-indexes': replacement }, visible: !filteredOut()">
+                <div class="panel panel-state index" data-bind="template: { name: 'index-template' }, css: { 'has-replacement': replacement }">
+
                 </div>
-                <div class="panel panel-state index" data-bind="template: { name: 'index-template' }">
+                <div class="sidebyside-actions" data-bind="with: replacement, visible: replacement">
+                    <div class="panel panel-state panel-warning">
+                        <div class="state state-swap"> <i class="icon-swap"></i> </div>
+                        <div class="padding flex-horizontal">
+                            <div class="title">Side-by-side</div>
+                            <div class="flex-separator"></div>
+                            <button class="btn btn-sm btn-warning" data-bind="click: _.partial($root.forceSideBySide, $data.parent), css: { 'btn-spinner': _.includes($root.spinners.swapNow(), parent.name) }, disable: _.includes($root.spinners.swapNow(), parent.name)">
+                                <i class="icon-force"></i> <span>Swap now</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div data-bind="with: replacement">
+                    <div class="panel panel-state index" data-bind="template: { name: 'index-template' }">
+                    </div>
                 </div>
             </div>
         </div>
@@ -179,11 +189,13 @@
                         </div>
                     </div>
                 </div>
-                <div class="properties-item text-danger errors" data-bind="">
+                <div class="properties-item errors" data-bind="visible: errorsCount">
                     <div class="properties-value value-only">
-                        <div class="set-size">
-                            <i class="icon-index-errors"></i><span>10 Errors</span>
-                        </div>
+                        <a title="View indexing errors" data-bind="attr: { href: $root.indexErrorsUrl() }">
+                            <div class="set-size text-danger">
+                                <i class="icon-index-errors"></i><span><span data-bind="text: errorsCount"></span> Errors</span>
+                            </div>
+                        </a>
                     </div>
                 </div>
             </div>
