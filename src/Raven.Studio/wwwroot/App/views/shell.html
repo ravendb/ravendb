@@ -211,7 +211,7 @@
 </div>
 
 <div class="modal fade" id="feedbackModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
-    <div class="modal-dialog modal-sm" role="document">
+    <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" data-bind="click: close" class="close" data-dismiss="modal" aria-label="Close"><i aria-hidden="true" class="icon-cancel"></i></button>
@@ -219,35 +219,17 @@
             </div>
             <div class="modal-body">
                 <form>
-                    <!--
+                    
                     <div class="form-group">
-                        <label>Email address</label>
+                        <label>Email</label>
                        <input type="email" class="form-control">
-                    </div>-->
-                    <div class="form-group">
+                    </div>
+                    <div class="form-group"> 
                         <label>Message</label>
                         <textarea class="form-control" rows="6">
                         
                         </textarea>
-                    </div>
-                    <label>Attachments</label>
-                    <div class="input-group file-input">
-                        <input required="" type="file" tabindex="-1" name="importFile" id="importFile" accept="">
-                        <span class="static-name form-control">Select file...</span>
-                        <span class="input-group-btn">
-                            <label for="importFile" class="btn btn-default">
-                                <i class="icon-folder"></i>
-                                <span>Browse</span>
-                            </label>
-                        </span>
-                    </div>
-
-                    <div class="checkbox">
-                        <input id="includeScreen" class="styled" type="checkbox">
-                        <label for="includeScreen">
-                            Include current screen
-                        </label>
-                    </div>
+                    </div> 
                 </form>
             </div>
             <div class="modal-footer">
