@@ -3,10 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
 using Raven.Json.Linq;
 using Raven.Database.Json;
 using Raven.Tests.Common;
@@ -100,7 +98,7 @@ namespace Raven.Tests.Patching
         [Fact]
         public void AddingItemToArray_WithConcurrency_Error()
         {
-            Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
+            Assert.Throws<OptimisticConcurrencyViolationException>(() => new JsonPatcher(doc).Apply(
                 new[]
                 {
                     new PatchRequest
@@ -158,7 +156,7 @@ namespace Raven.Tests.Patching
         [Fact]
         public void AddingItemToArrayWhenArrayDoesNotExists_WithConcurrency_Error()
         {
-            Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
+            Assert.Throws<OptimisticConcurrencyViolationException>(() => new JsonPatcher(doc).Apply(
                 new[]
                 {
                     new PatchRequest
@@ -281,7 +279,7 @@ namespace Raven.Tests.Patching
         [Fact]
         public void RemoveItemFromArray_WithConcurrency_Error()
         {
-            Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
+            Assert.Throws<OptimisticConcurrencyViolationException>(() => new JsonPatcher(doc).Apply(
                  new[]
                 {
                     new PatchRequest
@@ -336,7 +334,7 @@ namespace Raven.Tests.Patching
         [Fact]
         public void InsertItemToArray_WithConcurrency_Error()
         {
-            Assert.Throws<ConcurrencyException>(() => new JsonPatcher(doc).Apply(
+            Assert.Throws<OptimisticConcurrencyViolationException>(() => new JsonPatcher(doc).Apply(
                 new[]
                 {
                     new PatchRequest
