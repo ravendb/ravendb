@@ -45,6 +45,8 @@ class indexes extends viewModelBase {
 
     throttledRefresh: Function;
 
+    indexErrorsUrl = ko.pureComputed(() => appUrl.forIndexErrors(this.activeDatabase()));
+
     constructor() {
         super();
         this.initObservables();
@@ -355,7 +357,7 @@ class indexes extends viewModelBase {
     }
 
     forceSideBySide(idx: index) {
-        this.confirmationMessage("Are you sure?", "Do you want to forcibly swap side-by-side index?")
+        this.confirmationMessage("Are you sure?", `Do you want to forcibly swap side-by-side index: ${idx.name}?`)
             .done((result: canActivateResultDto) => {
                 if (result.can) {
                     this.spinners.swapNow.push(idx.name);
