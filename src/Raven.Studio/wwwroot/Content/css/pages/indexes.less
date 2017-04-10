@@ -30,7 +30,7 @@
         }
     }
 
-    .panel {
+    .index {
         &:hover {
             background-color: lighten(@gray-darker, 3%);
             transition: background-color 0.15s ease;
@@ -115,6 +115,42 @@
             margin: 0;
             top: -8px;
             float: left;
+        }
+    }
+
+    .sidebyside-indexes {
+        margin-bottom: @grid-gutter-width/2;
+
+        .panel {
+            margin-bottom: 0;
+        }
+
+
+
+        .sidebyside-actions {
+            .panel {
+                background-color: fadeout(@brand-warning-dark,80%);
+            }
+
+            .state {
+                i {
+                    top: -1px;
+                }
+            }
+
+            .title {
+                color: @brand-warning-dark;
+                font-size: 15px;
+                font-weight: 300;
+                text-transform: uppercase;
+            }
+
+            .padding {
+                border: 1px dashed fadeout(@brand-warning, 70%);
+                border-left: none;
+                border-right: none;
+                padding: 4px 11px;
+            }
         }
     }
 
