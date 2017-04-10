@@ -678,7 +678,7 @@ namespace Sparrow
 
             int allocationSize = length + sizeof(ByteStringStorage);
 
-            _currentlyAllocated += allocationSize;
+           
 
             // This is even bigger than the configured allocation block size. There is no reason why we shouldn't
             // allocate it directly. When released (if released) this will be reused as a segment, ensuring that the context
@@ -696,6 +696,8 @@ namespace Sparrow
 
             // All allocation units are 32 bits aligned. If not we will have a performance issue.
             Debug.Assert(allocationUnit % sizeof(int) == 0);
+
+            _currentlyAllocated += allocationUnit;
 
             // If we can reuse... we retrieve those.
             if (allocationSize <= ByteStringContext.MinBlockSizeInBytes && _internalReusableStringPoolCount[reusablePoolIndex] != 0)
@@ -845,8 +847,6 @@ namespace Sparrow
         public void ReleaseExternal(ref ByteString value)
         {
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
-            if (value._pointer == null)
-                return;
 
             _currentlyAllocated -= _externalAlignedSize;
 
