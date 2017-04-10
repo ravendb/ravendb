@@ -20,6 +20,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
