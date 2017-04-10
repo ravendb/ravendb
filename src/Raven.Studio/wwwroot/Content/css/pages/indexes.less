@@ -12,6 +12,7 @@
 
     .vertical-divider {
         position: relative;
+
         @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
             margin-left: 20px;
         }
@@ -130,6 +131,32 @@
                 width: 49%;
                 max-width: none;
                 min-width: 0;
+            }
+        }
+
+        @media (min-width:@screen-sm) and (max-width:@screen-md-max), (min-width:@screen-xl) {
+            .state-selector {
+                order: 1;
+            }
+
+            .priority {
+                order: 3;
+            }
+
+            .mode {
+                order: 5;
+            }
+
+            .entriesCount {
+                order: 2;
+            }
+
+            .staleness {
+                order: 4;
+            }
+
+            .errors {
+                order: 6;
             }
         }
     }
