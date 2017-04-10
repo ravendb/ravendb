@@ -17,7 +17,7 @@ if ($Detached -eq $False)
         -p "$($BindPort):8080" `
         -v "$($dbVolumeName):c:/databases" `
         -e "AllowEverybodyToAccessTheServerAsAdmin=$($everybodyAdmin)" `
-        ravendb/ravendb:nanoserver
+        ravendb/ravendb:windows-nanoserver-latest
 }
 else
 {
@@ -25,7 +25,7 @@ else
         -p "$($BindPort):8080" `
         -v "$($dbVolumeName):c:/databases" `
         -e "AllowEverybodyToAccessTheServerAsAdmin=$($everybodyAdmin)" `
-        ravendb/ravendb:nanoserver
+        ravendb/ravendb:windows-nanoserver-latest
 
     start-sleep -Seconds 5;
     docker ps -q | % { docker inspect  -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $_ } | % { "http://$($_):8080/" };
