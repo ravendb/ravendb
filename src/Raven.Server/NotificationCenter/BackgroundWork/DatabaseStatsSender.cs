@@ -67,16 +67,13 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                             .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentEtag(context, x.Name)));
                     }
 
-                    if (_latest != null)
-                    {
-                        if (_latest.Equals(current)) 
-                            continue;
+                    if (_latest != null && _latest.Equals(current))
+                        continue;
 
-                        var modifiedCollections = ExtractModifiedCollections(current);
+                    var modifiedCollections = _latest == null ? current.Collections.Values.ToList() : ExtractModifiedCollections(current);
 
-                        _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfDocuments, current.CountOfIndexes,
-                            current.CountOfStaleIndexes, current.LastEtag, current.CountOfIndexingErrors, modifiedCollections));
-                    }
+                    _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfDocuments, current.CountOfIndexes,
+                        current.CountOfStaleIndexes, current.LastEtag, current.CountOfIndexingErrors, modifiedCollections));
 
                     _latest = current;
                 }
