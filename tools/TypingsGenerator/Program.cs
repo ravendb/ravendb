@@ -24,6 +24,7 @@ using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Documents.PeriodicExport;
+using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
@@ -91,6 +92,7 @@ namespace TypingsGenerator
 
             scripter.AddType(typeof(DatabaseDocument));
             scripter.AddType(typeof(DatabaseStatistics));
+            scripter.AddType(typeof(FooterStatistics));
             scripter.AddType(typeof(IndexDefinition));
             scripter.AddType(typeof(PutIndexResult));
 

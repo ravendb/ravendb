@@ -209,58 +209,53 @@
     <div class="notification-center-container" data-bind="compose: 'notifications/notificationCenter.html'"></div>
 </div>
 
-<footer class="status-footer bg-info">
-    <div class="footer-left" data-bind="with: $root.footer.stats()">
+<footer class="status-footer bg-info" data-bind="with: $root.footer">
+    <div class="footer-left" data-bind="with: stats(), visible: stats">
         <!-- TODO 
         <div class="footer-item">
             <a href="#">Dashboard</a>
         </div>-->
         <div class="footer-item">
-            <a href="#" title="Documents"><i class="icon-document"></i> <span data-bind="text: countOfDocuments"></span></a>
+            <a data-bind="attr: { href: $parent.urlForDocuments() }" title="Documents"><i class="icon-document"></i> <span data-bind="text: countOfDocuments"></span></a>
         </div>
         <div class="footer-item">
-            <a href="#" title="Indexes">
+            <a title="Indexes" data-bind="attr: { href: $parent.urlForIndexes() }">
                 <i class="icon-index"></i>
                 <span data-bind="text: countOfIndexes"></span>
                 <span class="label label-warning" data-bind="visible: countOfStaleIndexes"><span data-bind="text: countOfStaleIndexes"></span> STALE</span>
-                <!--TODO: <span class="label label-danger">2 ERRORS</span>-->
+            </a>
+            <a title="Indexing errors" data-bind="attr: { href: $parent.urlForIndexingErrors() }, visible: countOfIndexingErrors">
+                <span class="label label-danger"><span data-bind="text: countOfIndexingErrors"></span> INDEXING ERRORS</span>
             </a>
         </div>
     </div>
+    <div class="footer-left spinner" data-bind="visible: spinners.loading">
+        <i class="btn-spinner"></i> Loading, please wait
+    </div>
     <div class="footer-right">
-        <!-- TODO:
         <div class="footer-item">
-            <a href="#about" title="server version">
-                <i class="icon-server"></i> <span>4.0.0-custom-40000</span>
+            <a title="Studio Version" data-bind="attr: { href: urlForAbout }">
+                <i class="icon-client"></i> <span data-bind="text: $root.constructor.clientVersion"></span>
             </a>
         </div>
         <div class="footer-item">
-            <a href="#about" title="server version">
-                <i class="icon-client"></i> <span>4.0.0-custom-40000</span>
+            <a title="Server Version" data-bind="attr: { href: urlForAbout }">
+                <i class="icon-server"></i> <span data-bind="text: $root.constructor.serverBuildVersion() ? $root.constructor.serverBuildVersion().FullVersion : ''"></span>
             </a>
         </div>
         <div class="footer-item">
-            <a href="#about" class="btn btn-success btn-sm">
+            <a title="License Information" data-bind="attr: { href: urlForAbout, class: licenseClass() + ' btn btn-sm' }">
                 <i class="icon-license-information"></i>
             </a>
         </div>
         <div class="footer-item">
-            <a href="#about" class="btn btn-warning btn-sm">
+            <a class="btn btn-warning btn-sm" title="Support Information" data-bind="attr: { href: urlForAbout }">
                 <i class="icon-support"></i>
             </a>
-        </div>-->
+        </div>
     </div>
 </footer>
-
-
-
-<!--<div class="prerelease-alert bg-prerelease">
-    <p>
-        PRERELEASE SOFTWARE
-    </p>
-</div>-->
 
 <div data-bind="if: displayUsageStatsInfo()">
     <div data-bind="compose: 'usageStats.html'"></div>
 </div>
-
