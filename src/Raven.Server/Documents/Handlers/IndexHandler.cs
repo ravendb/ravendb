@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Handlers
                     break;
             }
 
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/databases/*/indexes/source", "GET")]

@@ -448,7 +448,7 @@ class editIndex extends viewModelBase {
         this.saveInProgress(true);
 
         //if index name has changed it isn't the same index
-        /*
+        /* TODO
         if (this.originalIndexName === this.indexName() && editedIndex.lockMode === "LockedIgnore") {
             messagePublisher.reportWarning("Can not overwrite locked index: " + editedIndex.name() + ". " + 
                                             "Any changes to the index will be ignored.");
@@ -457,22 +457,8 @@ class editIndex extends viewModelBase {
 
         const indexDto = editedIndex.toDto();
 
-        /* TODO we probably won't need this because edit name is locked + we have clone feature
-        if (this.isEditingExistingIndex() && index.Name !== this.loadedIndexName()) {
-            // user changed index name on edit page, ask him what to do: rename or duplicate
-            var dialog = new renameOrDuplicateIndexDialog(this.loadedIndexName(), this.editedIndex().name());
-
-            dialog.getSaveAsNewTask()
-                .done(() => this.saveIndex(indexDto));
-
-            dialog.getRenameTask()
-                .done(() => this.renameIndex(this.loadedIndexName(), index.Name as string));
-
-            app.showBootstrapDialog(dialog);
-        } else {*/
         this.saveIndex(indexDto)
             .always(() => this.saveInProgress(false));
-        //TODO: }
     }
 
     private saveIndex(indexDto: Raven.Client.Documents.Indexes.IndexDefinition): JQueryPromise<Raven.Client.Documents.Indexes.PutIndexResult> {

@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class forceIndexReplace extends commandBase {
 
@@ -7,14 +8,16 @@ class forceIndexReplace extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<any> {
-        this.reportInfo("Replacing index (forced)");
-        var url = "/indexes/" + this.indexName + "?op=forceReplace";//TODO: use endpoints
-        return this.post(url, null, this.db, {dataType: undefined}).done(() => {
-            this.reportSuccess("Replaced index " + this.indexName);
-        }).fail((response: JQueryXHR) => this.reportError("Failed to replace index.", response.responseText, response.statusText));
-    }
+    execute(): JQueryPromise<void> {
+        const args = {
+            name: this.indexName
+        }
+        const url = endpoints.databases.index.indexesReplace + this.urlEncodeArgs(args);
 
+        return this.post(url, null, this.db, { dataType: undefined })
+            .done(() => this.reportSuccess("Replaced index " + this.indexName))
+            .fail((response: JQueryXHR) => this.reportError("Failed to replace index.", response.responseText, response.statusText));
+    }
 }
 
 export = forceIndexReplace; 

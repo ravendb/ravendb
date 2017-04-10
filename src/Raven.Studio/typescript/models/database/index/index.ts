@@ -6,6 +6,7 @@ class index {
 
     static readonly DefaultIndexGroupName = "Other";
 
+    parent: index; // used in side-by-side indexes to point to old index
     collections: { [index: string]: Raven.Client.Documents.Indexes.IndexStats.CollectionStats; };
     collectionNames: Array<string>;
     createdTimestamp: string;
@@ -55,7 +56,10 @@ class index {
     canBeEnabled: KnockoutComputed<boolean>;
     canBeDisabled: KnockoutComputed<boolean>;
 
-    constructor(dto: Raven.Client.Documents.Indexes.IndexStats, globalIndexingStatus: KnockoutObservable<Raven.Client.Documents.Indexes.IndexRunningStatus>) {
+    replacement = ko.observable<index>();
+
+    constructor(dto: Raven.Client.Documents.Indexes.IndexStats, globalIndexingStatus: KnockoutObservable<Raven.Client.Documents.Indexes.IndexRunningStatus>, parentIndex?: index) {
+        this.parent = parentIndex;
         this.collections = dto.Collections;
         this.collectionNames = index.extractCollectionNames(dto.Collections);
         this.createdTimestamp = dto.CreatedTimestamp;
