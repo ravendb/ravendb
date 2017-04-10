@@ -1,15 +1,12 @@
 ﻿using Sparrow;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace FastTests.Sparrow
 {
-    public unsafe class ByteString
+    public unsafe class ByteStringTests : NoDisposalNeeded
     {
-
+        [Fact]
         public void Lifecycle()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>())
@@ -36,6 +33,7 @@ namespace FastTests.Sparrow
             }
         }
 
+        [Fact]
         public void ConstructionInsideWholeSegment()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
@@ -50,6 +48,7 @@ namespace FastTests.Sparrow
             }
         }
 
+        [Fact]
         public void ConstructionInsideWholeSegmentWithHistory()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
@@ -72,6 +71,7 @@ namespace FastTests.Sparrow
             }
         }
 
+        [Fact]
         public void ConstructionReleaseForReuseTheLeftOver()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
@@ -86,6 +86,7 @@ namespace FastTests.Sparrow
             }
         }
 
+        [Fact]
         public void AllocateAndReleaseShouldReuse()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
@@ -108,6 +109,7 @@ namespace FastTests.Sparrow
             }
         }
 
+        [Fact]
         public void AllocateAndReleaseShouldReuseAsSegment()
         {
             int allocationBlockSize = 2 * ByteStringContext.MinBlockSizeInBytes + 128 + sizeof(ByteStringStorage);
@@ -135,6 +137,7 @@ namespace FastTests.Sparrow
             }
         }
 
+        [Fact]
         public void AllocateAndReleaseShouldReuseRepeatedly()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
@@ -153,6 +156,7 @@ namespace FastTests.Sparrow
         }
 
 #if VALIDATE
+        [Fact]
         public void ValidationKeyAfterAllocateAndReleaseReuseShouldBeDifferent()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
@@ -167,6 +171,7 @@ namespace FastTests.Sparrow
             }
         }
 
+        [Fact]
         public void FailValidationTryingToReleaseInAnotherContext()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
@@ -177,6 +182,7 @@ namespace FastTests.Sparrow
             }
         }
 
+        [Fact]
         public void FailValidationReleasingAnAliasAfterReleasingOriginal()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
@@ -189,25 +195,35 @@ namespace FastTests.Sparrow
             }
         }
 
+        [Fact]
         public void DetectImmutableChangeOnValidation()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
             {
-                var value = context.From("string", ByteStringType.Immutable);
-                value.Ptr[2] = (byte)'t';
+                ByteString value;
 
-                Assert.Throws<ByteStringValidationException>(() => context.Release(ref value));
+                Assert.Throws<ByteStringValidationException>(() =>
+                {
+                    using (context.From("string", ByteStringType.Immutable, out value))
+                    {
+                        value.Ptr[2] = (byte)'t';
+                    }
+                });
             }
         }
 
+        [Fact]
         public void DetectImmutableChangeOnContextDispose()
         {
             Assert.Throws<ByteStringValidationException>(() =>
             {
                 using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
                 {
-                    var value = context.From("string", ByteStringType.Immutable);
-                    value.Ptr[2] = (byte)'t';
+                    ByteString value;
+                    using (context.From("string", ByteStringType.Immutable, out value))
+                    {
+                        value.Ptr[2] = (byte)'t';
+                    }
                 }
             });
         }
