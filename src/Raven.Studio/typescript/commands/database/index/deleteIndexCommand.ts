@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class deleteIndexCommand extends commandBase {
     constructor(private indexName: string, private db: database) {
@@ -7,11 +8,13 @@ class deleteIndexCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        this.reportInfo("Deleting " + this.indexName + "...");
         const args = {
             name: this.indexName
         };
-        return this.del("/indexes" + this.urlEncodeArgs(args), null, this.db)//TODO: use endpoints
+
+        const url = endpoints.databases.index.indexes + this.urlEncodeArgs(args);
+
+        return this.del(url, null, this.db)
             .fail((response: JQueryXHR) => this.reportError("Failed to delete index " + this.indexName, response.responseText))
             .done(() => this.reportSuccess("Deleted " + this.indexName));
     }

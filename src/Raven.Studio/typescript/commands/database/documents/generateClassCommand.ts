@@ -8,10 +8,7 @@ class generateClassCommand extends commandBase {
         super();
     }
 
-    isGeneratingCode = ko.observable(true);
-
     execute(): JQueryPromise<string> {
-
         const url = endpoints.databases.document.docsClass;
         const args = {
             id: this.docId,
@@ -20,8 +17,7 @@ class generateClassCommand extends commandBase {
         return this.query(url, args, this.db, null, { dataType: "text" })
             .fail((response: JQueryXHR) => this.reportError("Failed to create class code",
                 response.responseText,
-                response.statusText))
-            .always(() => this.isGeneratingCode(false));
+                response.statusText));
     }
 }
 

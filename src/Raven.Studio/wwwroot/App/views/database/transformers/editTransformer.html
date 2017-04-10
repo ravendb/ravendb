@@ -45,7 +45,7 @@
                 </div>
                 <div class="flex-content flex-vertical">
                     <pre class="form-control flex-content" 
-                         data-bind="aceEditor: { code: editedTransformer().transformResults, hasFocus: editorHasFocus, allowResize: true }"></pre>
+                         data-bind="aceEditor: { code: editedTransformer().transformResults, hasFocus: editorHasFocus, allowResize: true }, validationElement: editedTransformer().transformResults"></pre>
 
                     <div data-bind="validationElement: editedTransformer().transformResults">
                         <div class="help-block" data-bind="validationMessage: editedTransformer().transformResults"></div>

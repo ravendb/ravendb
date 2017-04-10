@@ -7,7 +7,7 @@ class getLatestServerBuildVersionCommand extends commandBase {
     }
 
     execute(): JQueryPromise<serverBuildVersionDto> {
-        var args = {
+        const args = {
             stableOnly: this.stableOnly,
             min: this.min,
             max: this.max
