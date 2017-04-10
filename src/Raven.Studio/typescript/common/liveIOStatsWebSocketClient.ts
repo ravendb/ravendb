@@ -14,7 +14,7 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
     constructor(db: database, onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void) {
         super(db);
         this.onData = onData;
-        this.mergedData = { Environments: [] };
+        this.mergedData = { Environments: [], Performances: [] };
     }
 
     get connectionDescription() {
