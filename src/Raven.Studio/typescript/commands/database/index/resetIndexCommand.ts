@@ -17,8 +17,6 @@ class resetIndexCommand extends commandBase {
             .done(() => this.reportSuccess("Index " + this.indexNameToReset + " successfully reset"))
             .fail((response: JQueryXHR) => this.reportError("Failed to reset index: " + this.indexNameToReset, response.responseText, response.statusText));
     }
-
 }
-
 
 export = resetIndexCommand;

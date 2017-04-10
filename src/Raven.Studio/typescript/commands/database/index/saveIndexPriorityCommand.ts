@@ -13,7 +13,6 @@ class saveIndexPriorityCommand extends commandBase {
             name: this.indexName, 
             priority: this.priority
         }
-        this.reportInfo("Saving " + this.indexName + " Priority ...");
         const url = endpoints.databases.index.indexesSetPriority + this.urlEncodeArgs(args);
         return this.post(url, null, this.db, { dataType: undefined })
             .done(() => {

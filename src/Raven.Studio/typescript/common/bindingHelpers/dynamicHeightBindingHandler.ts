@@ -7,6 +7,7 @@ import composition = require("durandal/composition");
  * Usage: data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }"
  * Target can be whatever element you choose.
  */
+//TODO: remove me!
 class dynamicHeightBindingHandler {
     windowHeightObservable: KnockoutObservable<number>;
     throttleTimeMs = 100;

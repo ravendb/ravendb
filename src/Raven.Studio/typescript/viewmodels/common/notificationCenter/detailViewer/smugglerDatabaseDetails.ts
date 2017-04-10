@@ -20,8 +20,8 @@ class smugglerDatabaseDetails extends dialogViewModelBase {
     static readonly progressType = "Raven.Server.Smuggler.Documents.Data.SmugglerResult+SmugglerProgress, Raven.Server";
     static readonly resultType = "Raven.Server.Smuggler.Documents.Data.SmugglerResult, Raven.Server";
 
-    private op: operation;
-    private killFunction: () => void;
+    private readonly op: operation;
+    private readonly killFunction: () => void;
 
     detailsVisible = ko.observable<boolean>(false);
 
