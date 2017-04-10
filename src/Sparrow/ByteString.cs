@@ -852,10 +852,10 @@ namespace Sparrow
 
             Debug.Assert(value.IsExternal, "Cannot release as external an internal pointer.");
 
-            value._pointer->Flags = ByteStringType.Disposed;
-
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);
+
+            value._pointer->Flags = ByteStringType.Disposed;
 
             // We release the pointer in the appropriate reuse pool.
             if (this._externalFastPoolCount < ExternalFastPoolSize)
