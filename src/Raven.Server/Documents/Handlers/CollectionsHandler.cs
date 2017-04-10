@@ -10,6 +10,7 @@ using Sparrow.Json.Parsing;
 using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 
 namespace Raven.Server.Documents.Handlers
 {

@@ -5,7 +5,7 @@ using Raven.Server.Web;
 using Sparrow.Json;
 using System.Linq;
 using Raven.Client.Documents.Transformers;
-using Raven.Server.NotificationCenter;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents
             if (numberOfResults <= Database.Configuration.PerformanceHints.MaxNumberOfResults)
                 return;
 
-            Database.NotificationCenter.AddPaging(operation, action, numberOfResults, pageSize);
+            Database.NotificationCenter.Paging.Add(operation, action, numberOfResults, pageSize);
         }
     }
 }

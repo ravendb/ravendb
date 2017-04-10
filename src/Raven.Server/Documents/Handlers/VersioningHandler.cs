@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Exceptions.Versioning;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

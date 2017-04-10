@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected static int GetPageSize(IndexSearcher searcher, long pageSize)
         {
-            if (pageSize > searcher.MaxDoc)
+            if (pageSize >= searcher.MaxDoc)
                 return searcher.MaxDoc;
 
             if (pageSize >= int.MaxValue)
