@@ -341,6 +341,10 @@ a {
         [class*=" icon-"],
         [class^="icon-"] {
             top: 1px;
+
+            + span {
+                margin-left: 3px;
+            }
         }
     }
 }
@@ -1259,6 +1263,14 @@ pre {
     bottom: 0;
     width: 30px;
     background-color: @gray;
+    color:@gray-lighter;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    i:before {
+        top:0;
+    }
 
     &.state-primary {
         background-color: @brand-primary-dark;
@@ -1266,6 +1278,10 @@ pre {
 
     &.state-success {
         background-color: @brand-success-dark;
+    }
+
+    &.state-swap {
+        background-color: @brand-warning-dark;
     }
 
     &.state-info {
