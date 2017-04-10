@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
@@ -42,12 +43,15 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                     {
                         var indexes = _database.IndexStore.GetIndexes().ToList();
                         var staleIndexes = 0;
+                        var countOfIndexingErrors = 0;
 
                         // ReSharper disable once LoopCanBeConvertedToQuery
                         foreach (var index in indexes)
                         {
                             if (index.IsStale(context))
                                 staleIndexes++;
+
+                            countOfIndexingErrors += index.GetErrors().Count;
                         }
 
                         current = new Stats
@@ -55,6 +59,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                             CountOfDocuments = _database.DocumentsStorage.GetNumberOfDocuments(context),
                             CountOfIndexes = indexes.Count,
                             CountOfStaleIndexes = staleIndexes,
+                            CountOfIndexingErrors = countOfIndexingErrors,
                             LastEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction),
                         };
 
@@ -70,7 +75,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                         var modifiedCollections = ExtractModifiedCollections(current);
 
                         _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfDocuments, current.CountOfIndexes,
-                            current.CountOfStaleIndexes, current.LastEtag, modifiedCollections));
+                            current.CountOfStaleIndexes, current.LastEtag, current.CountOfIndexingErrors, modifiedCollections));
                     }
 
                     _latest = current;
@@ -128,6 +133,8 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
             public int CountOfStaleIndexes;
 
+            public long CountOfIndexingErrors;
+
             public Dictionary<string, DatabaseStatsChanged.ModifiedCollection> Collections;
 
             public bool Equals(Stats other)
@@ -136,6 +143,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                 if (ReferenceEquals(this, other)) return true;
                 return CountOfDocuments == other.CountOfDocuments &&
                        CountOfIndexes == other.CountOfIndexes &&
+                       CountOfIndexingErrors == other.CountOfIndexingErrors &&
                        LastEtag == other.LastEtag &&
                        CountOfStaleIndexes == other.CountOfStaleIndexes &&
                        DictionaryExtensions.ContentEquals(Collections, other.Collections);
@@ -160,6 +168,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                     var hashCode = CountOfDocuments.GetHashCode();
                     hashCode = (hashCode * 397) ^ CountOfIndexes.GetHashCode();
                     hashCode = (hashCode * 397) ^ LastEtag.GetHashCode();
+                    hashCode = (hashCode * 397) ^ CountOfIndexingErrors.GetHashCode();
                     hashCode = (hashCode * 397) ^ CountOfStaleIndexes.GetHashCode();
                     hashCode = (hashCode * 397) ^ (Collections != null ? Collections.GetHashCode() : 0);
                     return hashCode;

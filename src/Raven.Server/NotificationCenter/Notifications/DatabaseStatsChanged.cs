@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents;
-using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications
@@ -22,6 +20,8 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public long CountOfStaleIndexes { get; private set; }
 
+        public long CountOfIndexingErrors { get; private set; }
+
         public string GlobalDocumentsEtag { get; private set; }
 
         public long LastEtag { get; private set; }
@@ -37,12 +37,13 @@ namespace Raven.Server.NotificationCenter.Notifications
             json[nameof(CountOfStaleIndexes)] = CountOfStaleIndexes;
             json[nameof(LastEtag)] = LastEtag;
             json[nameof(GlobalDocumentsEtag)] = GlobalDocumentsEtag;
+            json[nameof(CountOfIndexingErrors)] = CountOfIndexingErrors;
             json[nameof(ModifiedCollections)] = new DynamicJsonArray(ModifiedCollections.Select(x => x.ToJson()));
 
             return json;
         }
 
-        public static DatabaseStatsChanged Create(long countOfDocs, int countOfIndexes, int countOfStaleIndexes, long lastEtag, List<ModifiedCollection> modifiedCollections)
+        public static DatabaseStatsChanged Create(long countOfDocs, int countOfIndexes, int countOfStaleIndexes, long lastEtag, long countOfIndexingErrors, List<ModifiedCollection> modifiedCollections)
         {
             return new DatabaseStatsChanged
             {
@@ -53,6 +54,7 @@ namespace Raven.Server.NotificationCenter.Notifications
                 CountOfDocuments = countOfDocs,
                 LastEtag = lastEtag,
                 GlobalDocumentsEtag = DocumentsStorage.ComputeEtag(lastEtag, countOfDocs).ToString(), // use string here as javascript may round longs
+                CountOfIndexingErrors = countOfIndexingErrors,
                 CountOfIndexes = countOfIndexes,
                 CountOfStaleIndexes = countOfStaleIndexes,
                 ModifiedCollections = modifiedCollections,
