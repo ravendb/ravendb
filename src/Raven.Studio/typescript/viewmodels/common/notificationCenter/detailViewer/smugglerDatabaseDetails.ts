@@ -43,7 +43,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
             const result = [] as Array<smugglerListItem>;
             result.push(this.mapToExportListItem("Documents", status.Documents));
-            result.push(this.mapToExportListItem("RevisionDocuments", status.RevisionDocuments));
+            result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments));
             result.push(this.mapToExportListItem("Indexes", status.Indexes));
             result.push(this.mapToExportListItem("Transformers", status.Transformers));
             result.push(this.mapToExportListItem("Identities", status.Identities));

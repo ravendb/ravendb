@@ -10,7 +10,7 @@
                             <button class="btn btn-default" type="button" data-bind="click: enterRenameMode"><i class="icon-edit"></i> <span>Rename</span></button>
                         </span>
                         <span class="input-group-btn" data-bind="visible: renameMode">
-                            <button class="btn btn-primary" type="button" data-bind="click: renameTransformer, css: { 'btn-spinner': renameInProgress }, disable: renameInProgress">
+                            <button class="btn btn-primary" type="button" data-bind="click: renameTransformer, css: { 'btn-spinner': renameInProgress }, disable: !nameChanged() || renameInProgress()">
                                 <i class="icon-check"></i> <span>Apply</span>
                             </button>
                             <button class="btn btn-default" type="button" data-bind="click: cancelRename"><i class="icon-cancel"></i> <span>Cancel</span></button>
@@ -23,6 +23,8 @@
                 <i class="icon-save"></i>
                 <span>Save</span>
             </button>
+            
+            <a data-bind="attr: { href: transformersUrl }, visible: !isEditingExistingTransformer()" class="btn btn-default"><i class="icon-cancel"></i> <span>Cancel</span></a>
             
             <button class="btn btn-default" data-bind="click: cloneTransformer, visible: isEditingExistingTransformer"><i class="icon-clone"></i><span>Clone</span></button>
 

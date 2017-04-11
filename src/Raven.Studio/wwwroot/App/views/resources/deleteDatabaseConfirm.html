@@ -12,6 +12,7 @@
                 <strong data-bind="with: databasesToDelete[0]">
                     <span data-bind="text: name"></span>
                 </strong>
+                .
             </div>
             <div data-bind="visible: databasesToDelete.length > 1">
                 <span>You're deleting </span>
@@ -35,8 +36,7 @@
         </div>
         <div class="modal-footer">
             <div class="row">
-                <label class="col-sm-3 control-label">Delete options:</label>
-                <button data-bind="click: keepFiles" type="button" class="col-sm-3 btn btn-danger" title="Keep the physical database files on disk">Delete & keep files</button>
+                <button data-bind="click: keepFiles" type="button" class="col-sm-3 col-sm-offset-3 btn btn-danger" title="Keep the physical database files on disk">Delete & keep files</button>
                 <button data-bind="click: deleteEverything" type="button" class="col-sm-3 btn btn-danger" title="Delete all the on-disk files for this database">Delete everything</button>
                 <button type="button" class="col-sm-2 btn btn-default" data-bind="click: cancel">Cancel</button>
             </div>

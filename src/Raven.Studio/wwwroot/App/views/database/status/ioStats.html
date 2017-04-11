@@ -11,23 +11,22 @@
 
                             <button class="btn btn-default" data-bind="click: expandIndexes, enable: indexesVisible, visible: !isIndexesExpanded()" title="Expand indexes IO stats details"><i class="icon-expand"></i> <span>Expand</span></button>
                             <button class="btn btn-default" data-bind="click: collapseIndexes, enable: indexesVisible, visible: isIndexesExpanded" title="Collapse indexes IO stats details"><i class="icon-collapse"></i> <span>Collapse</span></button>
-
-                            <button class="btn btn-default" data-bind="click: exportAsJson, enable: hasAnyData" title="Export current IO stats graph to a file">
+                            
+                            <button class="btn btn-default" data-bind="click: exportAsJson, enable: hasAnyData, visible: !isImport()" title="Export current IO stats graph to a file">
                                 <i class="icon-export"></i><span>Export</span>
                             </button>
+                            <label for="importFilePicker" class="btn btn-default">
+                                <i class="icon-import"></i><span>Import</span>
+                            </label>
 
-                            <div data-bind="visible: isImport">
-                                <br />
-                                <button class="btn btn-default" data-bind="click: closeImport, visible: isImport" title="Return to currently selected database IO stats graph">
-                                    <i class="icon-cancel"></i><span data-bind="text: 'Close import (' + importFileName() + ')'">Close import</span>
-                                </button>
-                            </div>
-
-                            <div class="input-group file-input" title="Import IO stats graph file">
+                            <span class="input-group file-input" title="Import IO stats graph file">
                                 <input type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1" accept=".json" style="width: 10px">
-                                <label for="importFilePicker" class="btn btn-default" data-bind="visible: !isImport()">
-                                    <i class="icon-import"></i><span>Import</span>
-                                </label>
+                            </span>
+
+                            <div data-bind="visible: isImport" class="margin-top">
+                                <button class="btn btn-default" data-bind="click: closeImport" title="Return to currently selected database IO stats graph">
+                                    <i class="icon-cancel"></i><span data-bind="text: 'Close import (' + importFileName() + ')'"></span>
+                                </button>
                             </div>
 
                             <div>
@@ -62,6 +61,9 @@
             </div>
 
             <div id="ioStats" style="position: relative" data-bind="visible: hasAnyData">
+                <button class="btn btn-default btn-sm clear-button" data-bind="click: clearBrush, visible: clearSelectionVisible">
+                    <span>Clear selection</span>
+                </button>
                 <section class="metricsContainer" id="IOMetricsContainer">
                     <div class="tooltip" style="opacity: 0; display: none">
                     </div>

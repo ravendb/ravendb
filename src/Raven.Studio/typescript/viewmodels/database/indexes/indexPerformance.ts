@@ -213,6 +213,7 @@ class indexPerformance extends viewModelBase {
 
     private liveViewClient = ko.observable<liveIndexPerformanceWebSocketClient>();
     private autoScroll = ko.observable<boolean>(false);
+    private clearSelectionVisible = ko.observable<boolean>(false);
 
     private indexNames = ko.observableArray<string>();
     private filteredIndexNames = ko.observableArray<string>();
@@ -722,6 +723,8 @@ class indexPerformance extends viewModelBase {
 
     private onZoom() {
         this.autoScroll(false);
+        this.clearSelectionVisible(true);
+
         if (!this.brushAndZoomCallbacksDisabled) {
             this.brush.extent(this.xNumericScale.domain() as [number, number]);
             this.brushContainer
@@ -732,6 +735,8 @@ class indexPerformance extends viewModelBase {
     }
 
     private onBrush() {
+        this.clearSelectionVisible(!this.brush.empty());
+
         if (!this.brushAndZoomCallbacksDisabled) {
             this.xNumericScale.domain((this.brush.empty() ? this.xBrushNumericScale.domain() : this.brush.extent()) as [number, number]);
             this.zoom.x(this.xNumericScale);
@@ -1194,6 +1199,7 @@ class indexPerformance extends viewModelBase {
 
         brushAction(this.brush);
         this.brushContainer.call(this.brush);
+        this.clearSelectionVisible(!this.brush.empty());
 
         this.brushAndZoomCallbacksDisabled = false;
     }
@@ -1214,6 +1220,14 @@ class indexPerformance extends viewModelBase {
             }
             return value;
         });
+    }
+
+    clearBrush() {
+        this.autoScroll(false);
+        this.brush.clear();
+        this.brushContainer.call(this.brush);
+
+        this.onBrush();
     }
 
 }

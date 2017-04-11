@@ -17,6 +17,10 @@ class saveTransformerLockModeCommand extends commandBase {
         
         const url = endpoints.databases.transformer.transformersSetLock + this.urlEncodeArgs(args);
         return this.post(url, JSON.stringify(args), this.db, { dataType: 'text' })
+            .done(() => {
+                const transformersNameStr: string = this.transformers.length === 1 ? this.transformers[0].name() : "Transformers";
+                this.reportSuccess(`${transformersNameStr} mode was set to ${this.lockMode}`);
+            })
             .fail((response: JQueryXHR) => this.reportError("Failed to set transformer lock mode", response.responseText));
     }
 }

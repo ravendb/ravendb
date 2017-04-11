@@ -10,7 +10,7 @@ class savePatchCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        return new saveDocumentCommand("Studio/Patch/" + this.patchName, this.patchDocument, this.db, false).execute()
+        return new saveDocumentCommand("Raven/Studio/Patch/" + this.patchName, this.patchDocument, this.db, false).execute()
             .done(() => this.reportSuccess("Patch saved"))
             .fail((response: JQueryXHR) => this.reportError("Failed to save Patch.", response.responseText, response.statusText));
     }
