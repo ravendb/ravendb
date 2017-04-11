@@ -266,7 +266,13 @@ class viewModelBase {
         const isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
             this.confirmationMessage(title, confirmationMessage)
-                .done(() => deferred.resolve());
+                .done((result) => {
+                    if (result.can) {
+                        deferred.resolve();
+                    } else {
+                        deferred.reject();
+                    }
+                });
         } else {
             deferred.resolve();
         }
