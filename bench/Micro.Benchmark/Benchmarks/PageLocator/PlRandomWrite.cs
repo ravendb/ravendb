@@ -9,6 +9,7 @@ using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
+using Micro.Benchmark.PageLocatorImpl;
 using Regression.PageLocator;
 
 namespace Micro.Benchmark.Benchmarks.PageLocator
@@ -40,7 +41,7 @@ namespace Micro.Benchmark.Benchmarks.PageLocator
                 // Generate plots using R if %R_HOME% is correctly set
                 Add(RPlotExporter.Default);
 
-                Add(StatisticColumn.AllStatistics);
+                //Add(StatisticColumn.AllStatistics);
 
                 Add(BaselineValidator.FailOnError);
                 Add(JitOptimizationsValidator.FailOnError);
@@ -67,6 +68,7 @@ namespace Micro.Benchmark.Benchmarks.PageLocator
         private PageLocatorV5 _cacheV5;
         private PageLocatorV6 _cacheV6;
         private PageLocatorV7 _cacheV7;
+        private PageLocatorCurrent _cacheCurrent;
 
         [Setup]
         public void Setup()
@@ -78,6 +80,7 @@ namespace Micro.Benchmark.Benchmarks.PageLocator
             _cacheV5 = new PageLocatorV5(null, CacheSize);
             _cacheV6 = new PageLocatorV6(null, CacheSize);
             _cacheV7 = new PageLocatorV7(null, CacheSize);
+            _cacheCurrent = new PageLocatorCurrent(null, CacheSize);
 
             var generator = new Random(RandomSeed);
 
@@ -93,66 +96,75 @@ namespace Micro.Benchmark.Benchmarks.PageLocator
             }
         }
 
-        [Benchmark(OperationsPerInvoke = NumberOfOperations)]
-        public void BasicV1()
-        {
-            foreach (var pageNumber in _pageNumbers)
-            {
-                _cacheV1.GetWritablePage(pageNumber);
-            }
-        }
+        //[Benchmark(OperationsPerInvoke = NumberOfOperations)]
+        //public void BasicV1()
+        //{
+        //    foreach (var pageNumber in _pageNumbers)
+        //    {
+        //        _cacheV1.GetWritablePage(pageNumber);
+        //    }
+        //}
+
+        //[Benchmark(OperationsPerInvoke = NumberOfOperations)]
+        //public void BasicV2()
+        //{
+        //    foreach (var pageNumber in _pageNumbers)
+        //    {
+        //        _cacheV2.GetWritablePage(pageNumber);
+        //    }
+        //}
+
+        //[Benchmark(OperationsPerInvoke = NumberOfOperations)]
+        //public void BasicV3()
+        //{
+        //    foreach (var pageNumber in _pageNumbers)
+        //    {
+        //        _cacheV3.GetWritablePage(pageNumber);
+        //    }
+        //}
+
+        //[Benchmark(OperationsPerInvoke = NumberOfOperations)]
+        //public void BasicV4()
+        //{
+        //    foreach (var pageNumber in _pageNumbers)
+        //    {
+        //        _cacheV4.GetWritablePage(pageNumber);
+        //    }
+        //}
+
+        //[Benchmark(OperationsPerInvoke = NumberOfOperations)]
+        //public void BasicV5()
+        //{
+        //    foreach (var pageNumber in _pageNumbers)
+        //    {
+        //        _cacheV5.GetWritablePage(pageNumber);
+        //    }
+        //}
+
+        //[Benchmark(OperationsPerInvoke = NumberOfOperations)]
+        //public void BasicV6()
+        //{
+        //    foreach (var pageNumber in _pageNumbers)
+        //    {
+        //        _cacheV6.GetWritablePage(pageNumber);
+        //    }
+        //}
+
+        //[Benchmark(OperationsPerInvoke = NumberOfOperations)]
+        //public void BasicV7()
+        //{
+        //    foreach (var pageNumber in _pageNumbers)
+        //    {
+        //        _cacheV7.GetWritablePage(pageNumber);
+        //    }
+        //}
 
         [Benchmark(OperationsPerInvoke = NumberOfOperations)]
-        public void BasicV2()
+        public void BasicCurrent()
         {
             foreach (var pageNumber in _pageNumbers)
             {
-                _cacheV2.GetWritablePage(pageNumber);
-            }
-        }
-
-        [Benchmark(OperationsPerInvoke = NumberOfOperations)]
-        public void BasicV3()
-        {
-            foreach (var pageNumber in _pageNumbers)
-            {
-                _cacheV3.GetWritablePage(pageNumber);
-            }
-        }
-
-        [Benchmark(OperationsPerInvoke = NumberOfOperations)]
-        public void BasicV4()
-        {
-            foreach (var pageNumber in _pageNumbers)
-            {
-                _cacheV4.GetWritablePage(pageNumber);
-            }
-        }
-
-        [Benchmark(OperationsPerInvoke = NumberOfOperations)]
-        public void BasicV5()
-        {
-            foreach (var pageNumber in _pageNumbers)
-            {
-                _cacheV5.GetWritablePage(pageNumber);
-            }
-        }
-
-        [Benchmark(OperationsPerInvoke = NumberOfOperations)]
-        public void BasicV6()
-        {
-            foreach (var pageNumber in _pageNumbers)
-            {
-                _cacheV6.GetWritablePage(pageNumber);
-            }
-        }
-
-        [Benchmark(OperationsPerInvoke = NumberOfOperations)]
-        public void BasicV7()
-        {
-            foreach (var pageNumber in _pageNumbers)
-            {
-                _cacheV7.GetWritablePage(pageNumber);
+                _cacheCurrent.GetWritablePage(pageNumber);
             }
         }
     }
