@@ -30,11 +30,14 @@ class editTransformer extends viewModelBase {
     isSaving = ko.observable<boolean>(false);
     renameMode = ko.observable<boolean>(false);
     renameInProgress = ko.observable<boolean>(false);
+    nameChanged: KnockoutComputed<boolean>;
     canEditTransformerName: KnockoutComputed<boolean>;
     transformerNameHasFocus = ko.observable<boolean>(false);
 
     private indexesNames = ko.observableArray<string>();
     private transformersNames = ko.observableArray<string>();
+
+    transformersUrl = ko.pureComputed(() => this.appUrls.transformers());
 
     globalValidationGroup: KnockoutValidationGroup;
     renameValidationGroup: KnockoutValidationGroup;
@@ -149,6 +152,13 @@ class editTransformer extends viewModelBase {
             const editMode = this.isEditingExistingTransformer();
             return !editMode || renameMode;
         });
+
+        this.nameChanged = ko.pureComputed(() => {
+            const newName = this.editedTransformer().name();
+            const oldName = this.loadedTransformerName();
+
+            return newName !== oldName;
+        });
     }
 
     private addTransformerHelpPopover() {
@@ -193,7 +203,7 @@ class editTransformer extends viewModelBase {
     }
 
     private fetchIndexes() {
-        const db = this.activeDatabase()
+        const db = this.activeDatabase();
         new getIndexNamesCommand(db)
             .execute()
             .done((indexesNames) => {

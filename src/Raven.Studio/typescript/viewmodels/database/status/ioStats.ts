@@ -267,6 +267,7 @@ class ioStats extends viewModelBase {
 
     private autoScroll = ko.observable<boolean>(false);
     private hasAnyData = ko.observable<boolean>(false);
+    private clearSelectionVisible = ko.observable<boolean>(false);
     private importFileName = ko.observable<string>();
     private isImport = ko.observable<boolean>(false);
     private trackNames = ko.observableArray<string>();
@@ -853,7 +854,7 @@ class ioStats extends viewModelBase {
 
     private drawXaxisTimeLabels(context: CanvasRenderingContext2D, ticks: Date[], timePaddingLeft: number, timePaddingTop: number) {
         try {
-            context.save();                  
+            context.save();
 
             context.textAlign = "left";
             context.textBaseline = "top";
@@ -871,6 +872,7 @@ class ioStats extends viewModelBase {
 
     private onZoom() {
         this.autoScroll(false);
+        this.clearSelectionVisible(true);
 
         if (!this.brushAndZoomCallbacksDisabled) {
             this.brush.extent(this.xNumericScale.domain() as [number, number]);
@@ -882,6 +884,8 @@ class ioStats extends viewModelBase {
     }
 
     private onBrush() {
+        this.clearSelectionVisible(!this.brush.empty());
+
         if (!this.brushAndZoomCallbacksDisabled) {
             this.xNumericScale.domain((this.brush.empty() ? this.xBrushNumericScale.domain() : this.brush.extent()) as [number, number]);
             this.zoom.x(this.xNumericScale);
@@ -1270,6 +1274,7 @@ class ioStats extends viewModelBase {
 
         brushAction(this.brush);
         this.brushContainer.call(this.brush);
+        this.clearSelectionVisible(!this.brush.empty());
 
         this.brushAndZoomCallbacksDisabled = false;
     }
@@ -1483,6 +1488,14 @@ class ioStats extends viewModelBase {
         // No need to show arrow position in legend any more..
         this.itemHovered.forEach(x => x(false));
     }   
+
+    clearBrush() {
+        this.autoScroll(false);
+        this.brush.clear();
+        this.brushContainer.call(this.brush);
+
+        this.onBrush();
+    }
 }
 
 export = ioStats;

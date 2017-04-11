@@ -42,6 +42,7 @@ class editIndex extends viewModelBase {
     indexAutoCompleter: indexAceAutoCompleteProvider;
     renameMode = ko.observable<boolean>(false);
     renameInProgress = ko.observable<boolean>(false);
+    nameChanged: KnockoutComputed<boolean>;
     canEditIndexName: KnockoutComputed<boolean>;
 
     fieldNames = ko.observableArray<string>([]);
@@ -55,6 +56,7 @@ class editIndex extends viewModelBase {
 
     queryUrl = ko.observable<string>();
     termsUrl = ko.observable<string>();
+    indexesUrl = ko.pureComputed(() => this.appUrls.indexes());
 
     /* TODO
     canSaveSideBySideIndex: KnockoutComputed<boolean>;
@@ -106,6 +108,13 @@ class editIndex extends viewModelBase {
 
         this.renameMode.subscribe(renameMode => {
             editIndex.$body.toggleClass('show-rename', renameMode);
+        });
+
+        this.nameChanged = ko.pureComputed(() => {
+            const newName = this.editedIndex().name();
+            const oldName = this.originalIndexName;
+
+            return newName !== oldName;
         });
     }
 

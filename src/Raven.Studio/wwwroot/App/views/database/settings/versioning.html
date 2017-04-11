@@ -5,6 +5,12 @@
             <button type="submit" class="btn btn-primary" title="Save Changes" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save() }">
                 <i class="icon-save"></i> <span>Save</span>
             </button>
+            
+            <span class="has-disable-reason" data-bind="attr: { 'data-original-title': versioningEnabled() ? '' : 'Enable versioning first' }">
+                <button type="button" class="btn btn-default" data-bind="click: createNewVersioning, enable: versioningEnabled" title="Add collection specific collection configuration">
+                    <i class="icon-plus"></i> <span>Add configuration</span>
+                </button>
+            </span>
         </div>
 
         <div class="panel panel-info">
@@ -14,7 +20,7 @@
                         <div class="toggle">
                             <input id="enableVersioning" class="styled" type="checkbox" data-bind="checked: versioningEnabled">
                             <label for="enableVersioning">
-                                Enable versioning
+                                Enable
                             </label>
                         </div>
                     </div>
@@ -28,22 +34,13 @@
                     </div>
                     <div class="versioning-revisions">
                         <div class="input-group">
-                            <span class="input-group-addon">Max Revisions</span>
+                            <span class="input-group-addon">Max revisions</span>
                             <input type="number" class="form-control" placeholder="0" data-bind="enable: versioningEnabled, numericValue: defaultVersioning().maxRevisions, valueUpdate: 'afterkeydown'">
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="margin-bottom">
-            <span class="has-disable-reason" data-bind="attr: { 'data-original-title': versioningEnabled() ? '' : 'Enable versioning first' }">
-                <button type="button" class="btn btn-default" data-bind="click: createNewVersioning, enable: versioningEnabled" title="Add collection specific collection configuration">
-                    <i class="icon-plus"></i> <span>Add configuration</span>
-                </button>    
-            </span>
-        </div>
-
 
         <div class="row" data-bind="visible: versionings().length == 0">
             <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
@@ -79,7 +76,7 @@
                         </div>
                         <div class="versioning-revisions">
                             <div class="input-group">
-                                <span class="input-group-addon">Max Revisions</span>
+                                <span class="input-group-addon">Max revisions</span>
                                 <input type="number" class="form-control" placeholder="0" data-bind="numericValue: maxRevisions, valueUpdate: 'afterkeyup', enable: !isDefault()">
                             </div>
                         </div>

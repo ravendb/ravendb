@@ -11,7 +11,7 @@ class getPatchesCommand extends commandBase {
 
     execute(): JQueryPromise<Array<patchDocument>> {
         const args = {
-            startsWith: "Studio/Patch/",
+            startsWith: "Raven/Studio/Patch/",
             exclude: <string>null,
             start: 0,
             pageSize: 1024

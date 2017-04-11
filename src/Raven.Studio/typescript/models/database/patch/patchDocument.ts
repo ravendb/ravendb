@@ -52,7 +52,7 @@ class patchDocument extends document {
     }
 
     name(): string {
-        return this.__metadata.id.replace('Studio/Patch/', '');
+        return this.__metadata.id.replace('Raven/Studio/Patch/', '');
     }
 
     modificationDate(): string {
