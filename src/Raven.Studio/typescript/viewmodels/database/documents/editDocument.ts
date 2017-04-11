@@ -131,6 +131,11 @@ class editDocument extends viewModelBase {
         this.focusOnEditor();
     }
 
+    detached() {
+        super.detached();
+        this.connectedDocuments.dispose();
+    }
+
     private activateById(id: string) {
         const canActivateResult = $.Deferred<canActivateResultDto>();
         this.loadDocument(id, false)
