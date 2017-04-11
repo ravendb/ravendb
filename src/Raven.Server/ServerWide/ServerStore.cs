@@ -47,6 +47,7 @@ namespace Raven.Server.ServerWide
         public readonly DatabasesLandlord DatabasesLandlord;
         public readonly NotificationCenter.NotificationCenter NotificationCenter;
         public readonly LicenseManager LicenseManager;
+        public readonly FeedbackSender FeedbackSender;
 
         // this is only modified by write transactions under lock
         // no need to use thread safe ops
@@ -93,6 +94,8 @@ namespace Raven.Server.ServerWide
             NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, resourceName, ServerShutdown);
 
             LicenseManager = new LicenseManager(NotificationCenter);
+
+            FeedbackSender = new FeedbackSender();
 
             DatabaseInfoCache = new DatabaseInfoCache();
 
