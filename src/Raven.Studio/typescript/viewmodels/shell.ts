@@ -39,6 +39,7 @@ import enterApiKey = require("viewmodels/common/enterApiKey");
 import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import footer = require("common/shell/footer");
+import feedback = require("viewmodels/shell/feedback");
 
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import requestExecution = require("common/notifications/requestExecution");
@@ -417,6 +418,11 @@ class shell extends viewModelBase {
         const version = buildVersionResult.FullVersion;
         eventsCollector.default.initialize(
             shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, version, shouldTrack);
+    }
+
+    openFeedbackForm() {
+        const dialog = new feedback(shell.clientVersion(), shell.serverBuildVersion().FullVersion);
+        app.showBootstrapDialog(dialog);
     }
 }
 

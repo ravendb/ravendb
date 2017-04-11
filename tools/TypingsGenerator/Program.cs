@@ -173,6 +173,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(UserRegistrationInfo));
             scripter.AddType(typeof(LicenseStatus));
 
+            // feedback form
+            scripter.AddType(typeof(FeedbackForm));
+
             // database admin
             scripter.AddType(typeof(DatabaseDeleteResult));
 

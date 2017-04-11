@@ -106,9 +106,7 @@
             </li>
             <li><a target="_blank" title="Help" data-bind="attr: { href: currentHelpLink }" class="icon-help"></a></li>
             <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
-            <!-- TODO
-                <li><a href="#" title="Send feedback" data-toggle="modal" data-target="#feedbackModal"><i class="icon-feedback text-warning"></i></a></li>
-            -->
+            <li><a href="#" title="Send feedback" data-bind="click: openFeedbackForm"><i class="icon-feedback text-warning"></i></a></li>
             <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
         </ul>
     </div><!--/.nav-collapse -->
@@ -210,36 +208,6 @@
         <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
     </div>
     <div class="notification-center-container" data-bind="compose: 'notifications/notificationCenter.html'"></div>
-</div>
-
-<div class="modal fade" id="feedbackModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" data-bind="click: close" class="close" data-dismiss="modal" aria-label="Close"><i aria-hidden="true" class="icon-cancel"></i></button>
-                <h4 class="modal-title" id="myModalLabel">Send feedback</h4>
-            </div>
-            <div class="modal-body">
-                <form>
-                    
-                    <div class="form-group">
-                        <label>Email</label>
-                       <input type="email" class="form-control">
-                    </div>
-                    <div class="form-group"> 
-                        <label>Message</label>
-                        <textarea class="form-control" rows="6">
-                        
-                        </textarea>
-                    </div> 
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary"><i class="icon-rocket"></i> <span>Send</span></button>
-            </div>
-        </div>
-    </div>
 </div>
 
 <footer class="status-footer bg-info" data-bind="with: $root.footer">

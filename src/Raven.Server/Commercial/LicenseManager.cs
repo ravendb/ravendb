@@ -26,8 +26,6 @@ namespace Raven.Server.Commercial
 {
     public class LicenseManager : IDisposable
     {
-        private const string ApiRavenDbNet = "https://api.ravendb.net";
-
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
         private readonly LicenseStorage _licenseStorage = new LicenseStorage();
         private readonly LicenseStatus _licenseStatus = new LicenseStatus();
@@ -36,10 +34,6 @@ namespace Raven.Server.Commercial
         private RSAParameters? _rsaParameters;
         private readonly NotificationCenter.NotificationCenter _notificationCenter;
         private readonly SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1);
-        private readonly HttpClient _httpClient = new HttpClient
-        {
-            BaseAddress = new Uri(ApiRavenDbNet)
-        };
 
         public LicenseManager(NotificationCenter.NotificationCenter notificationCenter)
         {
@@ -52,16 +46,6 @@ namespace Raven.Server.Commercial
                 CommitHash = ServerVersion.CommitHash,
                 FullVersion = ServerVersion.FullVersion
             };
-
-            var userAgent = $"RavenDB/{ServerVersion.Version} (" +
-                            $"{RuntimeInformation.OSDescription};" +
-                            $"{RuntimeInformation.OSArchitecture};" +
-                            $"{RuntimeInformation.FrameworkDescription};" +
-                            $"{RuntimeInformation.ProcessArchitecture};" +
-                            $"{CultureInfo.CurrentCulture.Name};" +
-                            $"{CultureInfo.CurrentUICulture.Name})";
-
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", userAgent);
         }
 
         private RSAParameters RSAParameters
@@ -145,7 +129,7 @@ namespace Raven.Server.Commercial
         {
             userInfo.BuildInfo = _buildInfo;
 
-            var response = await _httpClient.PostAsync("api/v1/license/register",
+            var response = await ApiHttpClient.Instance.PostAsync("api/v1/license/register",
                     new StringContent(JsonConvert.SerializeObject(userInfo), Encoding.UTF8, "application/json"))
                 .ConfigureAwait(false);
             
@@ -204,7 +188,7 @@ namespace Raven.Server.Commercial
                     BuildInfo = _buildInfo
                 };
 
-                var response = await _httpClient.PostAsync("/api/v1/license/lease",
+                var response = await ApiHttpClient.Instance.PostAsync("/api/v1/license/lease",
                         new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"))
                     .ConfigureAwait(false);
 
