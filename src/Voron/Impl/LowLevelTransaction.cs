@@ -496,6 +496,8 @@ namespace Voron.Impl
 
             _dirtyPages.Add(pageNumber);
 
+            TrackDirtyPage(pageNumber);
+
             if (numberOfPages > 1)
                 _dirtyOverflowPages.Add(pageNumber + 1, numberOfPages - 1);
 
@@ -560,6 +562,7 @@ namespace Voron.Impl
                 _scratchPagesTable[pageNumber + i] = pageFromScratchBuffer;
                 _dirtyOverflowPages.Remove(pageNumber + i);
                 _dirtyPages.Add(pageNumber + i);
+                TrackDirtyPage(pageNumber + i);
                 var newPage = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer + i);
                 newPage.PageNumber = pageNumber + i;
                 newPage.Flags = PageFlags.Single;
@@ -679,6 +682,8 @@ namespace Voron.Impl
                 if (numberOfOverflowPages > 1) // prevent adding range which length is 0
                     _dirtyOverflowPages.Add(pageNumber + 1, numberOfOverflowPages - 1); // change the range of the overflow page
             }
+
+            UntrackDirtyPage(pageNumber);
         }
 
 
@@ -953,6 +958,7 @@ namespace Voron.Impl
 
         private Dictionary<long, ulong> readOnlyPages = new Dictionary<long, ulong>();
         private Dictionary<long, ulong> writablePages = new Dictionary<long, ulong>();
+        private readonly HashSet<long> dirtyPagesValidate = new HashSet<long>();
 
         private void ValidateAllPages()
         {
@@ -965,7 +971,7 @@ namespace Voron.Impl
             foreach (var readOnlyKey in readOnlyPages)
             {
                 long pageNumber = readOnlyKey.Key;
-                if (_dirtyPages.Contains(pageNumber))
+                if (dirtyPagesValidate.Contains(pageNumber))
                     VoronUnrecoverableErrorException.Raise(_env, "Read only page is dirty (which means you are modifying a page directly in the data -- non transactionally -- ).");
 
                 var page = this.GetPage(pageNumber);
@@ -981,7 +987,7 @@ namespace Voron.Impl
             foreach (var writableKey in writablePages)
             {
                 long pageNumber = writableKey.Key;
-                if (!_dirtyPages.Contains(pageNumber))
+                if (!dirtyPagesValidate.Contains(pageNumber))
                     VoronUnrecoverableErrorException.Raise(_env, "Writable key is not dirty (which means you are asking for a page modification for no reason).");
             }
         }
@@ -1023,6 +1029,16 @@ namespace Voron.Impl
             }
         }
 
+        private void TrackDirtyPage(long page)
+        {
+            dirtyPagesValidate.Add(page);
+        }
+
+        private void UntrackDirtyPage(long page)
+        {
+            dirtyPagesValidate.Remove(page);
+        }
+
 #else
         // This will only be used as placeholder for compilation when not running with validation started.
 
@@ -1040,6 +1056,12 @@ namespace Voron.Impl
 
         [Conditional("VALIDATE_PAGES")]
         private void UntrackPage(long pageNumber) { }
+
+        [Conditional("VALIDATE_PAGES")]
+        private void TrackDirtyPage(long page) { }
+
+        [Conditional("VALIDATE_PAGES")]
+        private void UntrackDirtyPage(long page) { }
 #endif
 
         internal TransactionHeader* GetTransactionHeader()
