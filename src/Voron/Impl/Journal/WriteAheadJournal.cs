@@ -1301,11 +1301,6 @@ namespace Voron.Impl.Journal
                 pagesInfo[pageSequencialNumber].DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
                 Debug.Assert(Math.Max(pagesInfo[pageSequencialNumber].Size, pagesInfo[pageSequencialNumber].DiffSize) <= diffPageSize);
 
-                // Protect pages in the scratch buffer after we are done with them
-                // This ensures no one writes to them after we have written them to the journal
-                // Write access is restored when doing freeing them.
-                tx.DataPager.ProtectPageRange(scratchPage, (ulong)(txPage.NumberOfPages * Constants.Storage.PageSize), true);
-
                 ++pageSequencialNumber;
             }
             var totalSizeWritten = (write - outputBuffer) + sizeOfPagesHeader;
