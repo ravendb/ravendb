@@ -146,7 +146,7 @@ namespace SlowTests.Issues
 
                 var index2 = documentStore.Admin.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
 
-                Assert.Equal(index1.IndexId, index2.IndexId);
+                Assert.Equal(index1.Etag, index2.Etag);
             }
         }
 

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
+using Raven.Client.Util.Encryption;
 using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
@@ -165,7 +166,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var indexDefinition = GetOrCreateIndexDefinitionInternal() ?? new IndexDefinition();
             indexDefinition.Name = index.Name;
-            indexDefinition.IndexId = index.IndexId;
+            indexDefinition.Etag = index.Etag;
             indexDefinition.Type = index.Type;
             indexDefinition.LockMode = LockMode;
             indexDefinition.Priority = Priority;
@@ -252,15 +253,17 @@ namespace Raven.Server.Documents.Indexes
             return true;
         }
 
-        public static string GetIndexNameSafeForFileSystem(int id, string name)
+        public static string GetIndexNameSafeForFileSystem(string name)
         {
             foreach (var invalidPathChar in Path.GetInvalidFileNameChars())
             {
                 name = name.Replace(invalidPathChar, '_');
             }
+
+            var hash = MD5Core.GetHashString(name);
             if (name.Length < 64)
-                return $"{id:0000}-{name}";
-            return $"{id:0000}-{name.Substring(0, 64)}";
+                return $"{hash}-{name}";
+            return $"{hash}-{name.Substring(0, 64)}";
         }
 
         protected static string ReadName(BlittableJsonReaderObject reader)

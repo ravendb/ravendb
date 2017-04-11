@@ -274,12 +274,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")
-                    .OrderBy(x => x.IndexId)
+                    .OrderBy(x => x.Etag)
                     .ToList();
 
                 Assert.Equal(2, indexes.Count);
 
-                Assert.Equal(1, indexes[0].IndexId);
+                Assert.Equal(1, indexes[0].Etag);
                 Assert.Equal(1, indexes[0].Definition.Collections.Count);
                 Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
@@ -300,7 +300,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
                 Assert.Equal(IndexState.Normal, indexes[0].State);
 
-                Assert.Equal(2, indexes[1].IndexId);
+                Assert.Equal(2, indexes[1].Etag);
                 Assert.Equal(1, indexes[1].Definition.Collections.Count);
                 Assert.Equal("Users", indexes[1].Definition.Collections.Single());
 

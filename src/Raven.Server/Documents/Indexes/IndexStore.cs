@@ -67,12 +67,6 @@ namespace Raven.Server.Documents.Indexes
                 if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
                 {
                     InitializePath(_documentDatabase.Configuration.Indexing.StoragePath);
-
-                    if (_documentDatabase.Configuration.Indexing.AdditionalStoragePaths != null)
-                    {
-                        foreach (var path in _documentDatabase.Configuration.Indexing.AdditionalStoragePaths)
-                            InitializePath(path);
-                    }
                 }
 
                 _initialized = true;
@@ -81,10 +75,10 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public Index GetIndex(int id)
+        public Index GetIndex(long etag)
         {
             Index index;
-            if (_indexes.TryGetById(id, out index) == false)
+            if (_indexes.TryGetByEtag(etag, out index) == false)
                 return null;
 
             return index;
@@ -99,7 +93,7 @@ namespace Raven.Server.Documents.Indexes
             return index;
         }
 
-        public int CreateIndex(IndexDefinition definition)
+        public long CreateIndex(IndexDefinition definition)
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
@@ -131,7 +125,7 @@ namespace Raven.Server.Documents.Indexes
 
                     TryDeleteIndexIfExists(replacementIndexName);
 
-                    return existingIndex.IndexId;
+                    return existingIndex.Etag;
                 }
 
                 if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
@@ -139,7 +133,7 @@ namespace Raven.Server.Documents.Indexes
                     Debug.Assert(existingIndex != null);
 
                     if (lockMode == IndexLockMode.LockedIgnore)
-                        return existingIndex.IndexId;
+                        return existingIndex.Etag;
 
                     if (lockMode == IndexLockMode.LockedError)
                         throw new InvalidOperationException("Can not overwrite locked index: " + existingIndex.Name);
@@ -147,7 +141,7 @@ namespace Raven.Server.Documents.Indexes
                     TryDeleteIndexIfExists(replacementIndexName);
 
                     UpdateIndex(definition, existingIndex);
-                    return existingIndex.IndexId;
+                    return existingIndex.Etag;
                 }
 
                 if (creationOptions == IndexCreationOptions.Update)
@@ -155,7 +149,7 @@ namespace Raven.Server.Documents.Indexes
                     Debug.Assert(existingIndex != null);
 
                     if (lockMode == IndexLockMode.LockedIgnore)
-                        return existingIndex.IndexId;
+                        return existingIndex.Etag;
 
                     if (lockMode == IndexLockMode.LockedError)
                         throw new InvalidOperationException($"Can not overwrite locked index: {existingIndex.Name}");
@@ -167,12 +161,12 @@ namespace Raven.Server.Documents.Indexes
                     {
                         creationOptions = GetIndexCreationOptions(definition, existingIndex);
                         if (creationOptions == IndexCreationOptions.Noop)
-                            return existingIndex.IndexId;
+                            return existingIndex.Etag;
 
                         if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
                         {
                             UpdateIndex(definition, existingIndex);
-                            return existingIndex.IndexId;
+                            return existingIndex.Etag;
                         }
                     }
 
@@ -198,7 +192,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public int CreateIndex(IndexDefinitionBase definition)
+        public long CreateIndex(IndexDefinitionBase definition)
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
@@ -227,7 +221,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     Debug.Assert(existingIndex != null);
 
-                    return existingIndex.IndexId;
+                    return existingIndex.Etag;
                 }
 
                 if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex || creationOptions == IndexCreationOptions.Update)
@@ -235,7 +229,7 @@ namespace Raven.Server.Documents.Indexes
                     Debug.Assert(existingIndex != null);
 
                     if (lockMode == IndexLockMode.LockedIgnore)
-                        return existingIndex.IndexId;
+                        return existingIndex.Etag;
 
                     if (lockMode == IndexLockMode.LockedError)
                         throw new InvalidOperationException($"Can not overwrite locked index: {existingIndex.Name}");
@@ -399,7 +393,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public int ResetIndex(string name)
+        public long ResetIndex(string name)
         {
             var index = GetIndex(name);
             if (index == null)
@@ -408,11 +402,11 @@ namespace Raven.Server.Documents.Indexes
             return ResetIndexInternal(index);
         }
 
-        public int ResetIndex(int id)
+        public long ResetIndex(long etag)
         {
-            var index = GetIndex(id);
+            var index = GetIndex(etag);
             if (index == null)
-                IndexDoesNotExistException.ThrowFor(id);
+                IndexDoesNotExistException.ThrowFor(etag);
 
             return ResetIndexInternal(index);
         }
@@ -427,11 +421,11 @@ namespace Raven.Server.Documents.Indexes
             return true;
         }
 
-        public void DeleteIndex(int id)
+        public void DeleteIndex(long etag)
         {
-            var index = GetIndex(id);
+            var index = GetIndex(etag);
             if (index == null)
-                IndexDoesNotExistException.ThrowFor(id);
+                IndexDoesNotExistException.ThrowFor(etag);
 
             DeleteIndexInternal(index);
         }
@@ -441,7 +435,7 @@ namespace Raven.Server.Documents.Indexes
             lock (_indexAndTransformerLocker)
             {
                 Index _;
-                _indexes.TryRemoveById(index.IndexId, out _);
+                _indexes.TryRemoveByEtag(index.Etag, out _);
 
                 try
                 {
@@ -450,7 +444,7 @@ namespace Raven.Server.Documents.Indexes
                 catch (Exception e)
                 {
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Could not dispose index '{index.Name}' ({index.IndexId}).", e);
+                        _logger.Info($"Could not dispose index '{index.Name}' ({index.Etag}).", e);
                 }
 
                 var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnIndexDeleted(index);
@@ -464,7 +458,7 @@ namespace Raven.Server.Documents.Indexes
                 if (index.Configuration.RunInMemory)
                     return;
 
-                var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.IndexId, index.Name);
+                var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name);
 
                 var indexPath = index.Configuration.StoragePath.Combine(name);
 
@@ -597,11 +591,11 @@ namespace Raven.Server.Documents.Indexes
             exceptionAggregator.ThrowIfNeeded();
         }
 
-        private int ResetIndexInternal(Index index)
+        private long ResetIndexInternal(Index index)
         {
             lock (_indexAndTransformerLocker)
             {
-                DeleteIndex(index.IndexId);
+                DeleteIndex(index.Etag);
                 return CreateIndex(index.Definition);
             }
         }
@@ -614,12 +608,6 @@ namespace Raven.Server.Documents.Indexes
             lock (_indexAndTransformerLocker)
             {
                 OpenIndexesFromDirectory(_documentDatabase.Configuration.Indexing.StoragePath);
-
-                if (_documentDatabase.Configuration.Indexing.AdditionalStoragePaths != null)
-                {
-                    foreach (var path in _documentDatabase.Configuration.Indexing.AdditionalStoragePaths)
-                        OpenIndexesFromDirectory(path);
-                }
             }
         }
 
@@ -647,7 +635,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (nameFromMetadata != null &&
                     indexDirectory.Name !=
-                    (desiredIndexDirName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(indexId, nameFromMetadata)))
+                    (desiredIndexDirName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(nameFromMetadata)))
                 {
                     var newPath = new PathSetting(indexDirectory.FullName)
                         .Combine("..")
@@ -676,7 +664,7 @@ namespace Raven.Server.Documents.Indexes
                     exceptions = new List<Exception>();
 
                 Index _;
-                if (_indexes.TryGetById(indexId, out _))
+                if (_indexes.TryGetByEtag(indexId, out _))
                 {
                     var message = $"Could not open index with id {indexId} at '{indexPath}'. Index with the same id already exists.";
 
@@ -790,7 +778,7 @@ namespace Raven.Server.Documents.Indexes
                         {
                             item.Index.SetState(IndexState.Idle);
                             if (_logger.IsInfoEnabled)
-                                _logger.Info($"Changed index '{item.Index.Name} ({item.Index.IndexId})' priority to idle. Age: {age}. Last query: {lastQuery}. Query difference: {differenceBetweenNewestAndCurrentQueryingTime}.");
+                                _logger.Info($"Changed index '{item.Index.Name} ({item.Index.Etag})' priority to idle. Age: {age}. Last query: {lastQuery}. Query difference: {differenceBetweenNewestAndCurrentQueryingTime}.");
                         }
                     }
 
@@ -801,9 +789,9 @@ namespace Raven.Server.Documents.Indexes
                 {
                     if (age <= ageThreshold || lastQuery >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
                     {
-                        DeleteIndex(item.Index.IndexId);
+                        DeleteIndex(item.Index.Etag);
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Deleted index '{item.Index.Name} ({item.Index.IndexId})' due to idleness. Age: {age}. Last query: {lastQuery}.");
+                            _logger.Info($"Deleted index '{item.Index.Name} ({item.Index.Etag})' due to idleness. Age: {age}. Last query: {lastQuery}.");
                     }
                 }
             }

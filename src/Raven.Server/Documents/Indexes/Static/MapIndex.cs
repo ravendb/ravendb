@@ -22,8 +22,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private HandleReferences _handleReferences;
 
-        private MapIndex(int indexId, MapIndexDefinition definition, StaticIndexBase compiled)
-            : base(indexId, IndexType.Map, definition)
+        private MapIndex(int etag, MapIndexDefinition definition, StaticIndexBase compiled)
+            : base(etag, IndexType.Map, definition)
         {
             _compiled = compiled;
 

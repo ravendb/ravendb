@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var createdIndexes = new List<KeyValuePair<string, int>>();
+                var createdIndexes = new List<KeyValuePair<string, long>>();
                 var tuple = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "Indexes", BlittableJsonDocumentBuilder.UsageMode.None);
                 using (tuple.Item2)
                 {
@@ -43,8 +43,8 @@ namespace Raven.Server.Documents.Handlers
 
                         if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
                             throw new ArgumentException("Index must have a 'Maps' fields");
-                        var indexId = Database.IndexStore.CreateIndex(indexDefinition);
-                        createdIndexes.Add(new KeyValuePair<string, int>(indexDefinition.Name, indexId));
+                        var etag = Database.IndexStore.CreateIndex(indexDefinition);
+                        createdIndexes.Add(new KeyValuePair<string, long>(indexDefinition.Name, etag));
                     }
                 }
 
@@ -682,8 +682,8 @@ namespace Raven.Server.Documents.Handlers
             var stats = GetIndexesToReportOn()
                 .Select(x => new IndexPerformanceStats
                 {
-                    IndexName = x.Name,
-                    IndexId = x.IndexId,
+                    Name = x.Name,
+                    Etag = x.Etag,
                     Performance = x.GetIndexingPerformance()
                 })
                 .ToArray();
@@ -749,7 +749,7 @@ namespace Raven.Server.Documents.Handlers
             if (names.Count == 0)
                 indexes = Database.IndexStore
                     .GetIndexes()
-                    .OrderBy(x => x.IndexId);
+                    .OrderBy(x => x.Etag);
             else
             {
                 indexes = Database.IndexStore

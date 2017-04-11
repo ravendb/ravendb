@@ -56,12 +56,12 @@ namespace Raven.Server.Json
             {
                 w.WriteStartObject();
 
-                w.WritePropertyName(nameof(stat.IndexName));
-                w.WriteString(stat.IndexName);
+                w.WritePropertyName(nameof(stat.Name));
+                w.WriteString(stat.Name);
                 w.WriteComma();
 
-                w.WritePropertyName(nameof(stat.IndexId));
-                w.WriteInteger(stat.IndexId);
+                w.WritePropertyName(nameof(stat.Etag));
+                w.WriteInteger(stat.Etag);
                 w.WriteComma();
 
                 w.WritePropertyName(nameof(stat.Performance));
@@ -742,8 +742,8 @@ namespace Raven.Server.Json
                 writer.WriteString((index.Name));
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(index.IndexId)));
-                writer.WriteInteger(index.IndexId);
+                writer.WritePropertyName((nameof(index.Etag)));
+                writer.WriteInteger(index.Etag);
                 writer.WriteComma();
 
                 writer.WritePropertyName((nameof(index.LockMode)));
@@ -804,8 +804,8 @@ namespace Raven.Server.Json
             writer.WriteString((indexDefinition.Name));
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(indexDefinition.IndexId)));
-            writer.WriteInteger(indexDefinition.IndexId);
+            writer.WritePropertyName((nameof(indexDefinition.Etag)));
+            writer.WriteInteger(indexDefinition.Etag);
             writer.WriteComma();
 
             writer.WritePropertyName((nameof(indexDefinition.Type)));
@@ -954,8 +954,8 @@ namespace Raven.Server.Json
             writer.WriteString(progress.Type.ToString());
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(progress.Id));
-            writer.WriteInteger(progress.Id);
+            writer.WritePropertyName(nameof(progress.Etag));
+            writer.WriteInteger(progress.Etag);
 
             writer.WriteEndObject();
         }

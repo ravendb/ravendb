@@ -39,7 +39,7 @@ namespace FastTests.Client.Indexing
                     .Admin
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
-                Assert.Equal(1, output.IndexId);
+                Assert.Equal(1, output.Etag);
                 Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false));
             }
         }
@@ -85,7 +85,7 @@ namespace FastTests.Client.Indexing
                     .Admin
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
-                Assert.Equal(1, output.IndexId);
+                Assert.Equal(1, output.Etag);
                 Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false));
 
                 await store
@@ -98,7 +98,7 @@ namespace FastTests.Client.Indexing
                     .Admin
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
-                Assert.Equal(2, output.IndexId);
+                Assert.Equal(2, output.Etag);
                 Assert.Equal("Users_ByName", output.Name);
                 Assert.True(input2.Equals(output, compareIndexIds: false, ignoreFormatting: false));
 
@@ -140,7 +140,7 @@ namespace FastTests.Client.Indexing
                     .Admin
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
-                Assert.Equal(1, output.IndexId);
+                Assert.Equal(1, output.Etag);
                 Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false));
 
                 await store
@@ -157,7 +157,7 @@ namespace FastTests.Client.Indexing
                     .Admin
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
-                Assert.NotEqual(2, output.IndexId);
+                Assert.NotEqual(2, output.Etag);
                 Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false));
 
             }

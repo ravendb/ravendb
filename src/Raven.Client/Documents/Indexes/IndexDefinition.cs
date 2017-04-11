@@ -23,9 +23,9 @@ namespace Raven.Client.Documents.Indexes
         }
 
         /// <summary>
-        /// Index identifier (internal).
+        /// Index etag (internal).
         /// </summary>
-        public int IndexId { get; set; }
+        public long Etag { get; set; }
 
         /// <summary>
         /// This is the means by which the outside world refers to this index definition
@@ -81,7 +81,7 @@ namespace Raven.Client.Documents.Indexes
             if (ReferenceEquals(this, other))
                 return result;
 
-            if (Equals(IndexId, other.IndexId) == false)
+            if (Equals(Etag, other.Etag) == false)
                 result |= IndexDefinitionCompareDifferences.IndexId;
 
             if (Maps.SequenceEqual(other.Maps) == false)
@@ -394,7 +394,7 @@ namespace Raven.Client.Documents.Indexes
                 Name = Name,
                 Type = Type,
                 Priority = Priority,
-                IndexId = IndexId,
+                Etag = Etag,
                 Reduce = Reduce,
                 Maps = new HashSet<string>(Maps),
                 Configuration = new IndexConfiguration(),

@@ -68,12 +68,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/Indexing/JournalsStoragePath")]
         public virtual PathSetting JournalsStoragePath { get; protected set; }
 
-        [Description("List of paths separated by semicolon ';' where database will look for index when it loads.")]
-        [DefaultValue(null)]
-        [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry("Raven/Indexing/AdditionalStoragePaths")]
-        public virtual PathSetting[] AdditionalStoragePaths { get; protected set; }
-
         [Description("How long indexing will keep document transaction open when indexing. After this the transaction will be reopened.")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]

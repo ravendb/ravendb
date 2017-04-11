@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Index identifier.
         /// </summary>
-        public int Id { get; set; }
+        public long Etag { get; set; }
 
         /// <summary>
         /// Index name.

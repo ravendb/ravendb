@@ -29,8 +29,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             new MapResult()
         };
 
-        private AutoMapReduceIndex(int indexId, AutoMapReduceIndexDefinition definition)
-            : base(indexId, IndexType.AutoMapReduce, definition)
+        private AutoMapReduceIndex(int etag, AutoMapReduceIndexDefinition definition)
+            : base(etag, IndexType.AutoMapReduce, definition)
         {
         }
 

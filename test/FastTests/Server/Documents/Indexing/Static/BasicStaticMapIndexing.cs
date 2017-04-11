@@ -151,10 +151,10 @@ namespace FastTests.Server.Documents.Indexing.Static
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")
-                    .OrderBy(x => x.IndexId)
+                    .OrderBy(x => x.Etag)
                     .ToList();
 
-                Assert.Equal(1, indexes[0].IndexId);
+                Assert.Equal(1, indexes[0].Etag);
                 Assert.Equal(IndexType.Map, indexes[0].Type);
                 Assert.Equal("Users_ByName", indexes[0].Name);
                 Assert.Equal(1, indexes[0].Definition.Collections.Count);
@@ -166,7 +166,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(IndexDefinitionCompareDifferences.None, indexes[0].Definition.Compare(indexDefinition1));
                 Assert.True(indexDefinition1.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
 
-                Assert.Equal(2, indexes[1].IndexId);
+                Assert.Equal(2, indexes[1].Etag);
                 Assert.Equal(IndexType.Map, indexes[1].Type);
                 Assert.Equal("Users_ByAge", indexes[1].Name);
                 Assert.Equal(1, indexes[1].Definition.Collections.Count);
@@ -194,7 +194,7 @@ namespace FastTests.Server.Documents.Indexing.Static
             indexDefinition.Name = "n1";
             indexDefinition.Reduce = "c";
             indexDefinition.Type = IndexType.MapReduce;
-            indexDefinition.IndexId = 3;
+            indexDefinition.Etag = 3;
             indexDefinition.Fields = new Dictionary<string, IndexFieldOptions>
             {
                 {"f1", new IndexFieldOptions

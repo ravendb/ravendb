@@ -353,7 +353,7 @@ namespace Raven.Server.Documents.Indexes
                 throw new SimulatedVoronUnrecoverableErrorException("Simulated corruption.");
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Writing last etag for '{_index.Name} ({_index.IndexId})'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
+                _logger.Info($"Writing last etag for '{_index.Name} ({_index.Etag})'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
 
             var statsTree = tx.InnerTransaction.CreateTree(tree);
             Slice etagSlice;
@@ -382,7 +382,7 @@ namespace Raven.Server.Documents.Indexes
         public unsafe IndexFailureInformation UpdateStats(DateTime indexingTime, IndexingRunStats stats)
         {
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Updating statistics for '{_index.Name} ({_index.IndexId})'. Stats: {stats}.");
+                _logger.Info($"Updating statistics for '{_index.Name} ({_index.Etag})'. Stats: {stats}.");
 
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -390,7 +390,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 var result = new IndexFailureInformation
                 {
-                    IndexId = _index.IndexId,
+                    Etag = _index.Etag,
                     Name = _index.Name
                 };
 

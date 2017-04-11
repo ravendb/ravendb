@@ -225,7 +225,7 @@ select new
 
                 var index = database.IndexStore.GetIndex(database.IndexStore.CreateIndex(defOne));
 
-                Assert.Equal(1, index.IndexId);
+                Assert.Equal(1, index.Etag);
 
                 defTwo = new IndexDefinition()
                 {
@@ -276,11 +276,11 @@ select new
                 var indexes = database
                     .IndexStore
                     .GetIndexes()
-                    .OrderBy(x => x.IndexId)
+                    .OrderBy(x => x.Etag)
                     .OfType<MapReduceIndex>()
                     .ToList();
 
-                Assert.Equal(1, indexes[0].IndexId);
+                Assert.Equal(1, indexes[0].Etag);
                 Assert.Equal(IndexType.MapReduce, indexes[0].Type);
                 Assert.Equal("Users_ByCount_GroupByLocation", indexes[0].Name);
                 Assert.Equal(1, indexes[0].Definition.Collections.Count);
@@ -294,7 +294,7 @@ select new
                 Assert.True(defOne.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
                 Assert.Equal(1, indexes[0].MapReduceWorkContext.NextMapResultId);
 
-                Assert.Equal(2, indexes[1].IndexId);
+                Assert.Equal(2, indexes[1].Etag);
                 Assert.Equal(IndexType.MapReduce, indexes[1].Type);
                 Assert.Equal("Orders_ByCount_GroupByProduct", indexes[1].Name);
                 Assert.Equal(1, indexes[1].Definition.Collections.Count);

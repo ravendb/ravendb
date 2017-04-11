@@ -9,8 +9,8 @@ namespace Raven.Server.Documents.Indexes.Auto
 {
     public class AutoMapIndex : MapIndexBase<AutoMapIndexDefinition>
     {
-        private AutoMapIndex(int indexId, AutoMapIndexDefinition definition)
-            : base(indexId, IndexType.AutoMap, definition)
+        private AutoMapIndex(int etag, AutoMapIndexDefinition definition)
+            : base(etag, IndexType.AutoMap, definition)
         {
         }
 

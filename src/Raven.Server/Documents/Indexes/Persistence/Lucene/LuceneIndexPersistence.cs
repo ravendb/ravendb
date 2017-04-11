@@ -198,14 +198,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private void CheckDisposed()
         {
             if (_disposed)
-                throw new ObjectDisposedException($"Index persistence for index '{_index.Definition.Name} ({_index.IndexId})' was already disposed.");
+                throw new ObjectDisposedException($"Index persistence for index '{_index.Definition.Name} ({_index.Etag})' was already disposed.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void CheckInitialized()
         {
             if (_initialized == false)
-                throw new InvalidOperationException($"Index persistence for index '{_index.Definition.Name} ({_index.IndexId})' was not initialized.");
+                throw new InvalidOperationException($"Index persistence for index '{_index.Definition.Name} ({_index.Etag})' was not initialized.");
         }
     }
 }
