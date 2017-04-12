@@ -320,14 +320,8 @@ namespace Raven.Server.Documents.Indexes
 
                 await _serverStore.Cluster.WaitForIndexNotification(index);
 
-                //var instance = GetIndex(definition.Name);
-                //if (instance == null)
-                //{
-                //    await Task.Delay(5000);
-                //    instance = GetIndex(definition.Name);
-                //}
-
-                return index;
+                var instance = GetIndex(definition.Name);
+                return instance.Etag;
             }
             catch (CommandExecutionException e)
             {
@@ -353,14 +347,8 @@ namespace Raven.Server.Documents.Indexes
 
                 await _serverStore.Cluster.WaitForIndexNotification(index);
 
-                //var instance = GetIndex(definition.Name);
-                //if (instance == null)
-                //{
-                //    await Task.Delay(5000);
-                //    instance = GetIndex(definition.Name);
-                //}
-
-                return index;
+                var instance = GetIndex(definition.Name);
+                return instance.Etag;
             }
             catch (CommandExecutionException e)
             {

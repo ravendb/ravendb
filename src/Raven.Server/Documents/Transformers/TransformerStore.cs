@@ -215,7 +215,8 @@ namespace Raven.Server.Documents.Transformers
 
                 await _serverStore.Cluster.WaitForIndexNotification(index);
 
-                return index;
+                var instance = GetTransformer(definition.Name);
+                return instance.Etag;
             }
             catch (CommandExecutionException e)
             {

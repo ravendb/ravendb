@@ -11,7 +11,7 @@ namespace Raven.Client.Server
     {
         public DatabaseRecord()
         {
-            
+
         }
 
         public DatabaseRecord(string databaseName)
@@ -52,8 +52,20 @@ namespace Raven.Client.Server
             var lockMode = IndexLockMode.Unlock;
 
             IndexDefinition existingDefinition;
-            if (Indexes.TryGetValue(definition.Name, out existingDefinition) && existingDefinition.LockMode != null)
-                lockMode = existingDefinition.LockMode.Value;
+            if (Indexes.TryGetValue(definition.Name, out existingDefinition))
+            {
+                if (existingDefinition.LockMode != null)
+                    lockMode = existingDefinition.LockMode.Value;
+
+                var result = existingDefinition.Compare(definition);
+                if (result != IndexDefinitionCompareDifferences.All)
+                {
+                    result &= ~IndexDefinitionCompareDifferences.Etag;
+
+                    if (result == IndexDefinitionCompareDifferences.None)
+                        return;
+                }
+            }
 
             if (lockMode == IndexLockMode.LockedIgnore)
                 return;
@@ -74,8 +86,20 @@ namespace Raven.Client.Server
             var lockMode = IndexLockMode.Unlock;
 
             AutoIndexDefinition existingDefinition;
-            if (AutoIndexes.TryGetValue(definition.Name, out existingDefinition) && existingDefinition.LockMode != null)
-                lockMode = existingDefinition.LockMode.Value;
+            if (AutoIndexes.TryGetValue(definition.Name, out existingDefinition))
+            {
+                if (existingDefinition.LockMode != null)
+                    lockMode = existingDefinition.LockMode.Value;
+
+                var result = existingDefinition.Compare(definition);
+                if (result != IndexDefinitionCompareDifferences.All)
+                {
+                    result &= ~IndexDefinitionCompareDifferences.Etag;
+
+                    if (result == IndexDefinitionCompareDifferences.None)
+                        return;
+                }
+            }
 
             if (lockMode == IndexLockMode.LockedIgnore)
                 return;
@@ -96,7 +120,12 @@ namespace Raven.Client.Server
             TransformerDefinition existingTransformer;
             var lockMode = TransformerLockMode.Unlock;
             if (Transformers.TryGetValue(definition.Name, out existingTransformer))
+            {
                 lockMode = existingTransformer.LockMode;
+
+                if (existingTransformer.Equals(definition))
+                    return;
+            }
 
             if (lockMode == TransformerLockMode.LockedIgnore)
                 return;
