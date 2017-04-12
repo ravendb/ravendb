@@ -183,6 +183,7 @@
             flex-wrap: wrap;
             margin-left: @grid-gutter-width / 4;
             margin-bottom: -@grid-gutter-width / 4;
+            justify-content: flex-end;
 
             .collection-progress {
                 width: @collection-progress-width;
@@ -201,7 +202,6 @@
 
                 small {
                     text-transform: uppercase;
-                    color: @gray;
                     font-size: 11px;
                 }
 
@@ -213,10 +213,15 @@
 
                     .name {
                         float: left;
+                        font-weight: bold;
+                        color: @gray;
                     }
 
                     .percentage {
-                        color: @gray-light;
+                        &:not(.text-success) {
+                            color: @gray-light;
+                        }
+
                         float: right;
                     }
 
