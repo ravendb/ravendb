@@ -14,7 +14,7 @@ To run the image run script called `run_ubuntu1604.ps1` or `run_windows.ps1` dep
 
     -Detached - runs the image in detached mode (Docker's `-d`)
 
-    -Config - allows to mount custom settings file from the host filesystem, absolute path is required
+    -ConfigPath - allows to mount custom settings file from the host filesystem, absolute path is required
 
     -Debug - runs shell in the interactive mode on the container (bash on Ubuntu, powershell on Windows)
 
