@@ -161,10 +161,12 @@ body {
 
 .status-footer {
     display: flex;
+    flex-shrink: 0;
     font-size: 12px;
     justify-content: space-between;
     color: fadeout(@brand-info-light,50%);
     padding: 3px 0;
+
 
     a {
         color: inherit;
@@ -240,8 +242,8 @@ body {
 
         @media (min-width:@screen-md) {
             border-right: 1px solid @layout-border;
-            width: @menu-width - 1;
-            flex-basis: @menu-width - 1;
+            width: @menu-width;
+            flex-basis: @menu-width;
             height: @navbar-height;
         }
 
@@ -815,7 +817,7 @@ body {
             }
 
             .progress {
-                height: @line-height-computed / 4;
+                //height: @line-height-computed / 4;
                 margin-bottom: @line-height-computed / 2;
             }
 
