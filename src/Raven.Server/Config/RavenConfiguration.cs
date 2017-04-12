@@ -68,14 +68,14 @@ namespace Raven.Server.Config
 
         protected IConfigurationRoot Settings { get; set; }
 
-        public RavenConfiguration(string resoureName, ResourceType resourceType)
+        public RavenConfiguration(string resoureName, ResourceType resourceType, string customConfigPath = null)
         {
             ResourceName = resoureName;
             ResourceType = resourceType;
 
             _configBuilder = new ConfigurationBuilder();
-            AddEnvironmentVariables(_configBuilder);
-            AddJsonConfigurationVariables();
+            AddEnvironmentVariables();
+            AddJsonConfigurationVariables(customConfigPath);
 
             Settings = _configBuilder.Build();
             Core = new CoreConfiguration();
@@ -102,8 +102,14 @@ namespace Raven.Server.Config
             Tombstones = new TombstoneConfiguration();
         }
 
-        private void AddJsonConfigurationVariables()
+        private void AddJsonConfigurationVariables(string customConfigPath = null)
         {
+            if (string.IsNullOrEmpty(customConfigPath) == false && File.Exists(customConfigPath))
+            {
+                _configBuilder.AddJsonFile(customConfigPath);
+                return;
+            }
+
             var platformPostfix = "windows";
             if (PlatformDetails.RunningOnPosix)
                 platformPostfix = "posix";
@@ -111,7 +117,7 @@ namespace Raven.Server.Config
             _configBuilder.AddJsonFile($"settings_{platformPostfix}.json", optional: true);
         }
 
-        private static void AddEnvironmentVariables(IConfigurationBuilder configurationBuilder)
+        private void AddEnvironmentVariables()
         {
             foreach (DictionaryEntry de in Environment.GetEnvironmentVariables())
             {
@@ -121,7 +127,7 @@ namespace Raven.Server.Config
                 if (s.StartsWith("RAVEN_") == false)
                     continue;
 
-                configurationBuilder.Properties[s.Replace("RAVEN_", "Raven/")] = de.Value;
+                _configBuilder.Properties[s.Replace("RAVEN_", "Raven/")] = de.Value;
             }
         }
 
