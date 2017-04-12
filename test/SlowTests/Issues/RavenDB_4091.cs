@@ -41,7 +41,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var operation = store.Operations.Send(new DeleteByIndexOperation(new Company_ByName().IndexName, new IndexQuery(store.Conventions) { Query = "" }));
+                var operation = store.Operations.Send(new DeleteByIndexOperation(new Company_ByName().IndexName, new IndexQuery() { Query = "" }));
 
                 var progresses = new List<IOperationProgress>();
 
@@ -68,7 +68,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var operation = store.Operations.Send(new PatchByIndexOperation(new Company_ByName().IndexName, new IndexQuery(store.Conventions) { Query = "" }, new PatchRequest
+                var operation = store.Operations.Send(new PatchByIndexOperation(new Company_ByName().IndexName, new IndexQuery() { Query = "" }, new PatchRequest
                 {
                     Script = @"this.Sample = 'Value'"
                 }));

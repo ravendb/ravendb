@@ -1498,7 +1498,8 @@ namespace Raven.Server.Documents
 
                     int size;
                     var oldFlags = *(DocumentFlags*)oldValue.Read((int)DocumentsTable.Flags, out size);
-                    if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                    if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments || 
+                        (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
                     {
                         flags |= DocumentFlags.HasAttachments;
                     }
@@ -1516,6 +1517,8 @@ namespace Raven.Server.Documents
                 if (collectionName.IsSystem == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
+                    var shouldRecreateAttachment = false;
+                    BlittableJsonReaderObject metadata = null;
                     if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
                         (nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
                         (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
@@ -1528,50 +1531,60 @@ namespace Raven.Server.Documents
                             // Make sure the user did not changed the value of @attachments in the @metadata
                             // In most cases it won't be changed so we can use this value 
                             // instead of recreating the document's blitable from scratch
-                            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
                                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false ||
                                 attachments.Equals(oldAttachments) == false)
                             {
-                                if (metadata == null)
-                                {
-                                    document.Modifications = new DynamicJsonValue(document)
-                                    {
-                                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                                        {
-                                            [Constants.Documents.Metadata.Attachments] = oldAttachments
-                                        }
-                                    };
-                                }
-                                else
-                                {
-                                    metadata.Modifications = new DynamicJsonValue(metadata)
-                                    {
-                                        [Constants.Documents.Metadata.Attachments] = oldAttachments
-                                    };
-                                    document.Modifications = new DynamicJsonValue(document)
-                                    {
-                                        [Constants.Documents.Metadata.Key] = metadata
-                                    };
-                                }
-#if DEBUG
-                                if (document.DebugHash != documentDebugHash)
-                                {
-                                    throw new InvalidDataException("The incoming document " + key + " has changed _during_ the put process, this is likely because you are trying to save a document that is already stored and was moved");
-                                }
-#endif
-                                document = context.ReadObject(document, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-#if DEBUG
-                                documentDebugHash = document.DebugHash;
-                                document.BlittableValidation();
-#endif
+                                shouldRecreateAttachment = true;
                             }
                         }
+                    }
+
+                    if (shouldRecreateAttachment || 
+                        (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
+                    {
+                        if (shouldRecreateAttachment == false)
+                            document.TryGet(Constants.Documents.Metadata.Key, out metadata);
+
+                        var actualAttachments = AttachmentsStorage.GetAttachmentsMetadataForDocument(context, loweredKey);
+                        if (metadata == null)
+                        {
+                            document.Modifications = new DynamicJsonValue(document)
+                            {
+                                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                                {
+                                    [Constants.Documents.Metadata.Attachments] = actualAttachments
+                                }
+                            };
+                        }
+                        else
+                        {
+                            metadata.Modifications = new DynamicJsonValue(metadata)
+                            {
+                                [Constants.Documents.Metadata.Attachments] = actualAttachments
+                            };
+                            document.Modifications = new DynamicJsonValue(document)
+                            {
+                                [Constants.Documents.Metadata.Key] = metadata
+                            };
+                        }
+#if DEBUG
+                        if (document.DebugHash != documentDebugHash)
+                        {
+                            throw new InvalidDataException("The incoming document " + key + " has changed _during_ the put process, this is likely because you are trying to save a document that is already stored and was moved");
+                        }
+#endif
+                        document = context.ReadObject(document, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+#if DEBUG
+                        documentDebugHash = document.DebugHash;
+                        document.BlittableValidation();
+#endif
                     }
 
                     if (_documentDatabase.BundleLoader.VersioningStorage != null)
                     {
                         VersioningConfigurationCollection configuration;
-                        if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document, ref flags, out configuration))
+                        if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document, ref flags, out configuration, context, key))
                         {
                             _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, modifiedTicks, configuration);
                         }
@@ -2074,20 +2087,7 @@ namespace Raven.Server.Documents
                 int size;
                 var data = new BlittableJsonReaderObject(copyTvr.Read((int)DocumentsTable.Data, out size), size, context);
 
-                var attachments = new DynamicJsonArray();
-                using (AttachmentsStorage.GetAttachmentPrefix(context, lowerDocumentId, AttachmentType.Document, null, out Slice prefixSlice))
-                {
-                    foreach (var attachment in AttachmentsStorage.GetAttachmentsForDocument(context, prefixSlice))
-                    {
-                        attachments.Add(new DynamicJsonValue
-                        {
-                            [nameof(AttachmentResult.Name)] = attachment.Name,
-                            [nameof(AttachmentResult.Hash)] = attachment.Base64Hash.ToString(), // TODO: Do better than create a string
-                            [nameof(AttachmentResult.ContentType)] = attachment.ContentType,
-                            [nameof(AttachmentResult.Size)] = attachment.Size,
-                        });
-                    }
-                }
+                var attachments = AttachmentsStorage.GetAttachmentsMetadataForDocument(context, lowerDocumentId);
 
                 var flags = DocumentFlags.None;
                 data.Modifications = new DynamicJsonValue(data);

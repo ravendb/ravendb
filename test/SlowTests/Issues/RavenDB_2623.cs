@@ -51,7 +51,7 @@ namespace SlowTests.Issues
 
                 var e = Assert.Throws<RavenException>(() => store
                     .Operations
-                    .Send(new DeleteByIndexOperation(new People_ByName().IndexName, new IndexQuery(store.Conventions), options: null)).WaitForCompletion(TimeSpan.FromSeconds(15)));
+                    .Send(new DeleteByIndexOperation(new People_ByName().IndexName, new IndexQuery(), options: null)).WaitForCompletion(TimeSpan.FromSeconds(15)));
 
                 Assert.Contains("Cannot perform bulk operation. Query is stale.", e.Message);
             }

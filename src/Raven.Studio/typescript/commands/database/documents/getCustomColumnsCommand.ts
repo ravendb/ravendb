@@ -24,9 +24,6 @@ class getCustomColumnsCommand extends getDocumentWithMetadataCommand {
     static forAllDocuments(db: database) :getCustomColumnsCommand {
         return new getCustomColumnsCommand(db, getCustomColumnsCommand.docsPrefix + "AllDocuments");
     }
-
-
-
 }
 
 export = getCustomColumnsCommand;

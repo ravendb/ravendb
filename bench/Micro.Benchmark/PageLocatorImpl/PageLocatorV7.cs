@@ -46,7 +46,8 @@ namespace Regression.PageLocator
             _current = -1;
             _cache = new PageHandlePtrV3[_cacheSize];
 
-            _fingerprints = (ushort*)_allocator.Allocate(_cacheSize * sizeof(ushort)).Ptr;
+            _allocator.Allocate(_cacheSize * sizeof(ushort), out var fingerprint);
+            _fingerprints = (ushort*)fingerprint.Ptr;
             for (ushort i = 0; i < _cacheSize; i++)
                 _fingerprints[i] = Invalid;
         }

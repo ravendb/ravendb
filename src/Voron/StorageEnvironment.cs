@@ -59,7 +59,7 @@ namespace Voron
 
         internal LowLevelTransaction.WriteTransactionPool WriteTransactionPool =
             new LowLevelTransaction.WriteTransactionPool();
-        internal ExceptionDispatchInfo CatastrophicFailure;
+        
         private readonly WriteAheadJournal _journal;
         private readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1, 1);
         private NativeMemory.ThreadStats _currentTransactionHolder;
@@ -873,15 +873,6 @@ namespace Voron
                 Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
         }
 
-        internal void AssertNoCatastrophicFailure()
-        {
-            if (CatastrophicFailure == null)
-                return;
-
-            _options.CatastrophicFailureNotification.RaiseNotificationOnce(CatastrophicFailure.SourceException);
-            CatastrophicFailure.Throw(); // force re-throw of error
-        }
-
         internal void HandleDataDiskFullException(DiskFullException exception)
         {
             if (_options.ManualFlushing)
@@ -959,18 +950,18 @@ namespace Voron
                 $"Invalid overflow size for page {pageNumber}, current offset is {pageNumber * Constants.Storage.PageSize} and overflow size is {current->OverflowSize}. Page length is beyond the file length {_dataPager.TotalAllocationSize}");
         }
 
-        public unsafe void AddChecksumToPageHeader(PageHeader* current)
+        public unsafe ulong CalculatePageChecksum(byte* ptr, long pageNumber, PageFlags flags, int overflowSize)
         {
             var dataLength = Constants.Storage.PageSize - (PageHeader.ChecksumOffset + sizeof(ulong));
-            if ((current->Flags & PageFlags.Overflow) == PageFlags.Overflow)
-                dataLength = current->OverflowSize - (PageHeader.ChecksumOffset + sizeof(ulong));
+            if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
+                dataLength = overflowSize - (PageHeader.ChecksumOffset + sizeof(ulong));
 
-            var ctx = Hashing.Streamed.XXHash64.BeginProcess((ulong)current->PageNumber);
+            var ctx = Hashing.Streamed.XXHash64.BeginProcess((ulong)pageNumber);
 
-            Hashing.Streamed.XXHash64.Process(ctx, (byte*)current, PageHeader.ChecksumOffset);
-            Hashing.Streamed.XXHash64.Process(ctx, (byte*)current + PageHeader.ChecksumOffset + sizeof(ulong), dataLength);
+            Hashing.Streamed.XXHash64.Process(ctx, ptr, PageHeader.ChecksumOffset);
+            Hashing.Streamed.XXHash64.Process(ctx, ptr + PageHeader.ChecksumOffset + sizeof(ulong), dataLength);
 
-            current->Checksum = Hashing.Streamed.XXHash64.EndProcess(ctx);
+            return Hashing.Streamed.XXHash64.EndProcess(ctx);
         }
 
         public IDisposable GetTemporaryPage(LowLevelTransaction tx, out TemporaryPage tmp)

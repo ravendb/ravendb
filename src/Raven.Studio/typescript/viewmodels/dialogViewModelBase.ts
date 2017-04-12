@@ -1,6 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
+import dialog = require("plugins/dialog");
 
 type dialogViewModelBaseOptions = {
     elementToFocusOnDismissal?: string;
@@ -47,6 +48,10 @@ abstract class dialogViewModelBase {
 
     compositionComplete(view: any, parent: any) {
         setTimeout(() => this.setInitialFocus(), 100); // We have to time-delay this, else it never receives focus.
+    }
+
+    close() {
+        dialog.close(this);
     }
 
     protected setInitialFocus() {

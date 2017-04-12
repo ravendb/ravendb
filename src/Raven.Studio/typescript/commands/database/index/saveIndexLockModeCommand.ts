@@ -20,7 +20,7 @@ class saveIndexLockModeCommand extends commandBase {
         return this.post(url, null, this.db, { dataType: undefined })
             .done(() => {
                 const indexesNameStr = this.indexes.length === 1 ? this.indexes[0].name : "Indexes";
-                this.reportSuccess(`${indexesNameStr} Mode was set to: ${this.lockTitle}`);
+                this.reportSuccess(`${indexesNameStr} mode was set to: ${this.lockTitle}`);
              })
             .fail((response: JQueryXHR) => this.reportError("Failed to set index lock mode", response.responseText));
     }

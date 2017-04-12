@@ -8,7 +8,7 @@ using Xunit;
 
 namespace FastTests.Client.Lazy.Async
 {
-    public class lazyAsync : RavenTestBase
+    public class LazyAsync : RavenTestBase
     {
         [Fact]
         public async Task CanLazilyLoadEntity()
@@ -22,14 +22,16 @@ namespace FastTests.Client.Lazy.Async
 
             using (var store = GetDocumentStore())
             {
-                using (var s = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    PutCommand(s, new Company {Id = COMPANY1_ID}, COMPANY1_ID);
-                    PutCommand(s, new Company {Id = COMPANY2_ID}, COMPANY2_ID);
-                    PutCommand(s, new Company { Id = COMPANY3_ID }, COMPANY3_ID);
-                    PutCommand(s, new Company { Id = COMPANY4_ID }, COMPANY4_ID);
-                    PutCommand(s, new Company { Id = COMPANY5_ID }, COMPANY5_ID);
-                    PutCommand(s, new Company { Id = COMPANY6_ID }, COMPANY6_ID);
+                    session.Store(new Company { Id = COMPANY1_ID }, COMPANY1_ID);
+                    session.Store(new Company { Id = COMPANY2_ID }, COMPANY2_ID);
+                    session.Store(new Company { Id = COMPANY3_ID }, COMPANY3_ID);
+                    session.Store(new Company { Id = COMPANY4_ID }, COMPANY4_ID);
+                    session.Store(new Company { Id = COMPANY5_ID }, COMPANY5_ID);
+                    session.Store(new Company { Id = COMPANY6_ID }, COMPANY6_ID);
+
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -50,7 +52,7 @@ namespace FastTests.Client.Lazy.Async
 
                     Assert.NotNull(company1);
                     Assert.NotNull(company2);
-                    Assert.Equal(COMPANY1_ID,company1.Id);
+                    Assert.Equal(COMPANY1_ID, company1.Id);
                     Assert.Equal(COMPANY2_ID, company2.Id);
 
                     lazyOrder = session.Advanced.Lazily.LoadAsync<Company>("companies/3");
@@ -58,7 +60,7 @@ namespace FastTests.Client.Lazy.Async
                     order = await lazyOrder.Value;
                     Assert.Equal(COMPANY3_ID, order.Id);
 
-                    lazyOrders = session.Advanced.Lazily.LoadAsync<Company>(new [] { "4", "5" });
+                    lazyOrders = session.Advanced.Lazily.LoadAsync<Company>(new[] { "4", "5" });
                     Assert.False(lazyOrders.IsValueCreated);
                     orders = await lazyOrders.Value;
                     Assert.Equal(2, orders.Count);
@@ -76,10 +78,12 @@ namespace FastTests.Client.Lazy.Async
 
             using (var store = GetDocumentStore())
             {
-                using (var s = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    PutCommand(s, new Company { Id = COMPANY1_ID }, COMPANY1_ID);
-                    PutCommand(s, new Company { Id = COMPANY2_ID }, COMPANY2_ID);
+                    session.Store(new Company { Id = COMPANY1_ID }, COMPANY1_ID);
+                    session.Store(new Company { Id = COMPANY2_ID }, COMPANY2_ID);
+
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenAsyncSession())

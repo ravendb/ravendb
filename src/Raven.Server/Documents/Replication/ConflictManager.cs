@@ -6,6 +6,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 
@@ -238,11 +239,17 @@ namespace Raven.Server.Documents.Replication
             var existingDoc = existing.Document;
             var existingTombstone = existing.Tombstone;
 
-            if (existingDoc != null && Document.IsEqualTo(existingDoc.Data, incomingDoc))
+            if (existingDoc != null)
             {
+                var compareResult = Document.IsEqualTo(existingDoc.Data, incomingDoc, true);
+                if (compareResult == DocumentCompareResult.NotEqual)
+                    return false;
+
                 // no real conflict here, both documents have identical content
                 var mergedChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
-                _database.DocumentsStorage.Put(context, key, null, incomingDoc, lastModifiedTicks, mergedChangeVector);
+                var nonPersistnetFlags = (compareResult & DocumentCompareResult.ShouldRecreateDocument) == DocumentCompareResult.ShouldRecreateDocument 
+                    ? NonPersistentDocumentFlags.ResolvedAttachmentConflict : NonPersistentDocumentFlags.None;
+                _database.DocumentsStorage.Put(context, key, null, incomingDoc, lastModifiedTicks, mergedChangeVector, nonPersistentFlags: nonPersistnetFlags);
                 return true;
             }
 

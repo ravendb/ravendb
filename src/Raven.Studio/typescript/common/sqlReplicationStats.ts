@@ -1,7 +1,7 @@
 import genUtils = require("common/generalUtils");
 
 class sqlReplicationStats {
-     public static ALL_TABLES = 'All Tables'
+    public static ALL_TABLES = 'All Tables';
      statistics = ko.observable<any>(); //TODO: use type here!
      metrics = ko.observable<sqlReplicaitonMetricsDto>();
      rateMetrics: KnockoutComputed<metricsDataDto[]>;

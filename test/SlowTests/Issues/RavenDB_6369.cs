@@ -35,7 +35,7 @@ namespace SlowTests.Issues
                 var requestExecuter = store.GetRequestExecuter();
                 using (requestExecuter.ContextPool.AllocateOperationContext(out context))
                 {
-                    var command = new TestQueryCommand(store.Conventions, context, new Users_ByName().IndexName, new IndexQuery(store.Conventions) { WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(100), WaitForNonStaleResults = true });
+                    var command = new TestQueryCommand(store.Conventions, context, new Users_ByName().IndexName, new IndexQuery() { WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(100), WaitForNonStaleResults = true });
 
                     var sw = Stopwatch.StartNew();
                     Assert.Throws<TaskCanceledException>(() => requestExecuter.Execute(command, context));

@@ -36,7 +36,7 @@ namespace SlowTests.Issues
                     }
                     catch (Exception e)
                     {
-                        database.GetAllStoragesEnvironment().First().Environment.CatastrophicFailure = ExceptionDispatchInfo.Capture(e);
+                        database.GetAllStoragesEnvironment().First().Environment.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
                     }
 
                     var ex = Assert.Throws<Exception>(() =>

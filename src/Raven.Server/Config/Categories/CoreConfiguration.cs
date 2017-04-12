@@ -6,12 +6,6 @@ namespace Raven.Server.Config.Categories
 {
     public class CoreConfiguration : ConfigurationCategory
     {
-        [Description("The maximum allowed page size for queries")]
-        [DefaultValue(1024)]
-        [MinValue(10)]
-        [ConfigurationEntry("Raven/MaxPageSize")]
-        public int MaxPageSize { get; set; }
-
         [Description("The directory into which RavenDB will search the studio files, defaults to the base directory")]
         [DefaultValue(null)]
         [ConfigurationEntry("Raven/StudioDirectory")]

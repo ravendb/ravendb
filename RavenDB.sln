@@ -3,6 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26228.4
 VisualStudioVersion = 15.0.26228.10
+VisualStudioVersion = 15.0.26403.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02838C57-DE0E-465D-9FBB-248DA87BEAAE}"
 EndProject
@@ -237,8 +238,8 @@ Global
 		{F116CB0A-1A37-4099-9ADF-874F0EC39295}.Release|x64.Build.0 = Release|Any CPU
 		{F116CB0A-1A37-4099-9ADF-874F0EC39295}.Release|x86.ActiveCfg = Release|Any CPU
 		{F116CB0A-1A37-4099-9ADF-874F0EC39295}.Release|x86.Build.0 = Release|Any CPU
-		{F116CB0A-1A37-4099-9ADF-874F0EC39295}.Validate|Any CPU.ActiveCfg = Release|Any CPU
-		{F116CB0A-1A37-4099-9ADF-874F0EC39295}.Validate|Any CPU.Build.0 = Release|Any CPU
+		{F116CB0A-1A37-4099-9ADF-874F0EC39295}.Validate|Any CPU.ActiveCfg = Validate|Any CPU
+		{F116CB0A-1A37-4099-9ADF-874F0EC39295}.Validate|Any CPU.Build.0 = Validate|Any CPU
 		{F116CB0A-1A37-4099-9ADF-874F0EC39295}.Validate|x64.ActiveCfg = Release|Any CPU
 		{F116CB0A-1A37-4099-9ADF-874F0EC39295}.Validate|x64.Build.0 = Release|Any CPU
 		{F116CB0A-1A37-4099-9ADF-874F0EC39295}.Validate|x86.ActiveCfg = Release|Any CPU

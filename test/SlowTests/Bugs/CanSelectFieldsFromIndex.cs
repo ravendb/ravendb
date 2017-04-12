@@ -57,10 +57,10 @@ namespace SlowTests.Bugs
                                                                               }}}));
 
 
-                while (store.Commands().Query("EmailAndProject", new IndexQuery(new DocumentConventions())).IsStale)
+                while (store.Commands().Query("EmailAndProject", new IndexQuery()).IsStale)
                     Thread.Sleep(100);
 
-                var queryResult = store.Commands().Query("EmailAndProject", new IndexQuery(new DocumentConventions())
+                var queryResult = store.Commands().Query("EmailAndProject", new IndexQuery()
                 {
                     FieldsToFetch = new [] {"email"}
                 });

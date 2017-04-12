@@ -45,7 +45,7 @@ namespace SlowTests.Bugs
 
                 WaitForIndexing(store);
 
-                var firstQueryResult = store.Commands().Query("MyIndex", new IndexQuery(store.Conventions));
+                var firstQueryResult = store.Commands().Query("MyIndex", new IndexQuery());
 
                 Assert.Equal(1, firstQueryResult.TotalResults);
 
@@ -75,7 +75,7 @@ namespace SlowTests.Bugs
 
                 for (int i = 0; i < 100; i++)
                 {
-                    QueryResult queryResult = store.Commands().Query("MyIndex", new IndexQuery(store.Conventions));
+                    QueryResult queryResult = store.Commands().Query("MyIndex", new IndexQuery());
 
                     Assert.Equal(1, queryResult.TotalResults);
                 }
@@ -86,7 +86,7 @@ namespace SlowTests.Bugs
                 car2.Wait();
 
 
-                QueryResult finalQueryResult = store.Commands().Query("MyIndex", new IndexQuery(store.Conventions));
+                QueryResult finalQueryResult = store.Commands().Query("MyIndex", new IndexQuery());
 
                 Assert.Equal(1, finalQueryResult.TotalResults);
             }

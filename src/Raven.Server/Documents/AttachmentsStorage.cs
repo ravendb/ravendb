@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Voron;
@@ -16,6 +17,7 @@ using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
@@ -323,6 +325,25 @@ namespace Raven.Server.Documents
 
                 yield return attachment;
             }
+        }
+
+        public DynamicJsonArray GetAttachmentsMetadataForDocument(DocumentsOperationContext context, Slice lowerDocumentId)
+        {
+            var attachments = new DynamicJsonArray();
+            using (GetAttachmentPrefix(context, lowerDocumentId, AttachmentType.Document, null, out Slice prefixSlice))
+            {
+                foreach (var attachment in GetAttachmentsForDocument(context, prefixSlice))
+                {
+                    attachments.Add(new DynamicJsonValue
+                    {
+                        [nameof(AttachmentResult.Name)] = attachment.Name,
+                        [nameof(AttachmentResult.Hash)] = attachment.Base64Hash.ToString(), // TODO: Do better than create a string
+                        [nameof(AttachmentResult.ContentType)] = attachment.ContentType,
+                        [nameof(AttachmentResult.Size)] = attachment.Size,
+                    });
+                }
+            }
+            return attachments;
         }
 
         public (long AttachmentCount, long StreamsCount) GetNumberOfAttachments(DocumentsOperationContext context)
@@ -696,6 +717,56 @@ namespace Raven.Server.Documents
                 // Linux does not clean the file, so we should clean it manually
                 IOExtensions.DeleteFile(_tempFile);
             }
+        }
+
+        public static bool ShouldResolveAttachmentsConflict(BlittableJsonReaderObject myMetadata, BlittableJsonReaderObject otherMetadata)
+        {
+            myMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray myAttachments);
+            otherMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray otherAttachments);
+            Debug.Assert(myAttachments != null || otherAttachments != null, "Cannot happen. We verified that we have a conflict in @attachments.");
+
+            var myAttachmentNames = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
+            if (myAttachments != null)
+            {
+                foreach (BlittableJsonReaderObject attachment in myAttachments)
+                {
+                    if (attachment.TryGet(nameof(AttachmentResult.Name), out string name) == false)
+                        return false;   // Attachment must have a name. The user modified the value?
+
+                    if (myAttachmentNames.ContainsKey(name))
+                        // The node itself has a conflict
+                        return false;
+                    myAttachmentNames.Add(name, attachment);
+                }
+            }
+
+            var otherAttachmentNames = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
+            if (otherAttachments != null)
+            {
+                foreach (BlittableJsonReaderObject attachment in otherAttachments)
+                {
+                    if (attachment.TryGet(nameof(AttachmentResult.Name), out string name) == false)
+                        return false;   // Attachment must have a name. The user modified the value?
+
+                    if (otherAttachmentNames.ContainsKey(name))
+                        // The node itself has a conflict
+                        return false;
+                    otherAttachmentNames.Add(name, attachment);
+                }
+            }
+
+            foreach (var attachment in myAttachmentNames)
+            {
+                if (otherAttachmentNames.TryGetValue(attachment.Key, out var otherAttachment))
+                {
+                    if (Document.ComparePropertiesExceptStartingWithAt(attachment.Value, otherAttachment) == DocumentCompareResult.NotEqual)
+                        return false;
+
+                    otherAttachmentNames.Remove(attachment.Key);
+                }
+            }
+            
+            return true;
         }
     }
 }

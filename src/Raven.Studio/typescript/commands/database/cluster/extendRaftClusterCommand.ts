@@ -15,7 +15,6 @@ class extendRaftClusterCommand extends commandBase {
                 .done(() => this.reportSuccess("Cluster was created"))
                 .fail((response: JQueryXHR) => this.reportError("Failed to create cluster", response.responseText, response.statusText));
         } else {
-
             var url = "/admin/cluster/join";//TODO: use endpoints
 
             if (this.force) {

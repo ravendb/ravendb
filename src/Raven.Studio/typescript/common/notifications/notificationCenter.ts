@@ -21,10 +21,11 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 import smugglerDatabaseDetails = require("viewmodels/common/notificationCenter/detailViewer/smugglerDatabaseDetails");
+import patchDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/patchDocumentsDetails");
 
 interface customDetailsProvider {
-    supportsDetailsFor(op: operation): boolean;
-    showDetailsFor(op: operation, killFunc: () => void): void;
+    supportsDetailsFor(notification: abstractNotification): boolean;
+    showDetailsFor(notification: abstractNotification, notificationCenter: notificationCenter): JQueryPromise<void>;
 }
 
 interface customOperationMerger {
@@ -80,7 +81,10 @@ class notificationCenter {
 
     private initializeObservables() {
 
-        this.customDetailsProviders.push(smugglerDatabaseDetails);
+        this.customDetailsProviders.push(
+            smugglerDatabaseDetails,
+            patchDocumentsDetails
+        );
 
         this.customOperationMerger.push(smugglerDatabaseDetails);
 
@@ -291,8 +295,19 @@ class notificationCenter {
     }
 
     openDetails(notification: abstractNotification) {
-        //TODO: it is only temporary solution to display progress/details as JSON in dialog 
+        //TODO: it is only temporary solution to display progress/details as JSON in dialog
         const notificationCenterOpened = this.showNotifications();
+
+        for (let i = 0; i < this.customDetailsProviders.length; i++) {
+            const provider = this.customDetailsProviders[i];
+            if (provider.supportsDetailsFor(notification)) {
+                provider.showDetailsFor(notification, this)
+                    .done(() => {
+                        this.showNotifications(notificationCenterOpened);
+                    });
+                return;
+            }
+        }
 
         if (notification instanceof alert) {
             const currentAlert = notification as alert;
@@ -304,13 +319,23 @@ class notificationCenter {
                 });
         } else if (notification instanceof performanceHint) {
             const currentHint = notification as performanceHint;
-            const text = JSON.stringify(currentHint.details, null, 4);
+            const text = JSON.stringify(currentHint.details(), null, 4);
             app.showBootstrapDialog(new showDataDialog("Performance Hint", text, "javascript"))
                 .done(() => {
                     this.showNotifications(notificationCenterOpened);
                 });
         } else if (notification instanceof operation) {
-            this.handleOperationDetails(notification, notificationCenterOpened);
+            const op = notification as operation;
+            
+            const dialogText = ko.pureComputed(() => {
+                const completed = op.isCompleted();
+
+                return completed ? op.result() : op.progress();
+            });
+            app.showBootstrapDialog(new tempStatDialog(dialogText))
+                .done(() => {
+                    this.showNotifications(notificationCenterOpened);
+                });
         } else if (notification instanceof recentError) {
             const error = notification as recentError;
             const recentErrorDetails = {
@@ -325,34 +350,6 @@ class notificationCenter {
         } else {
             throw new Error("Unable to handle details for: " + notification);
         }
-    }
-
-    private handleOperationDetails(op: operation, notificationCenterOpened: boolean) {
-        let alreadyHandled = false;
-        for (let i = 0; i < this.customDetailsProviders.length; i++) {
-            const provider = this.customDetailsProviders[i];
-            if (provider.supportsDetailsFor(op)) {
-                provider.showDetailsFor(op, () => this.killOperation(op));
-
-                alreadyHandled = true;
-                break;
-            }
-        }
-
-        if (!alreadyHandled) {
-            console.warn("Using temporary provider for: " + op.title());
-
-            const dialogText = ko.pureComputed(() => {
-                const completed = op.isCompleted();
-
-                return completed ? op.result() : op.progress();
-            });
-            app.showBootstrapDialog(new tempStatDialog(dialogText))
-                .done(() => {
-                    this.showNotifications(notificationCenterOpened);
-                });
-        }
-        
     }
 
     private shouldConsumeHideEvent(e: Event) {

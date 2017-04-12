@@ -131,7 +131,7 @@ namespace SlowTests.MailingList
 
                         var wods = query.ToList();
 
-                        var facets = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery(store.Conventions)
+                        var facets = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery()
                         {
                             IndexName = "Wod/Search",
                             Query = query.ToString(),

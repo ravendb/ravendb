@@ -219,8 +219,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 var values = new List<FacetValue>();
                 List<string> allTerms;
-
-                int maxResults = facet.MaxResults.HasValue ? Math.Min(query.PageSize, facet.MaxResults.Value) : query.PageSize;
                 Dictionary<string, FacetValue> groups;
                 if (facetsByName.TryGetValue(facet.DisplayName, out groups) == false || groups == null)
                     continue;
@@ -242,6 +240,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     default:
                         throw new ArgumentException(string.Format("Could not understand '{0}'", facet.TermSortMode));
                 }
+
+                var pageSize = Math.Min(allTerms.Count, query.PageSize);
+                int maxResults = facet.MaxResults.HasValue ? Math.Min(pageSize, facet.MaxResults.Value) : pageSize;
 
                 foreach (var term in allTerms.Skip(query.Start).TakeWhile(term => values.Count < maxResults))
                 {

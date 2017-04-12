@@ -36,7 +36,7 @@
                                 <span class="caret"></span>
                                 <span class="sr-only">Toggle Dropdown</span>
                             </button>
-                            <ul class="dropdown-menu">                                
+                            <ul class="dropdown-menu">
                                 <li data-bind="click: enableSelectedIndexes">
                                     <a href="#" title="Enable">
                                         <i class="icon-play"></i>
@@ -111,74 +111,28 @@
     </div>
     </div>
     <div class="flex-content scroll">
+
     <div data-bind="foreach: sortedGroups">
         <h2 data-bind="text: entityName, visible: !groupHidden()"></h2>
         <div data-bind="foreach: indexes, visible: !groupHidden()">
-            <div class="panel panel-state index" data-bind="visible: !filteredOut()">
-                <div class="padding padding-sm">
-                    <div data-bind="attr: { class: 'state ' + badgeClass(), 'data-state-text' : badgeText() }"></div>
-                    <div class="row">
-                        <div class="col-xs-12 col-sm-6 col-xl-4 info-container">
-                            <div class="checkbox">
-                                <input type="checkbox" class="styled" data-bind="checked: $root.selectedIndexesName, checkedValue: name">
-                                <label></label>
-                            </div>
-                            <h3 class="index-name">
-                                <a href="#" data-bind="text: name, attr: { href: queryUrl(), title: name }"></a>
-                            </h3>
-                            <div class="index-type">
-                                <span data-bind="text: getTypeForUI()"></span>
-                                &nbsp; <span data-bind="visible: isTestIndex" class="label label-warning">TEST INDEX</span>
-                            </div>
-                        </div>
-                        <div class="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container" data-bind="if: !isFaulty()">
+            <div data-bind="css: { 'sidebyside-indexes': replacement }, visible: !filteredOut()">
+                <div class="panel panel-state index" data-bind="template: { name: 'index-template' }, css: { 'has-replacement': replacement }">
 
-                            <div class="properties-item state-selector" data-bind="template: { name: 'state-template' }">
-                            </div>
-                            <div class="properties-item priority" data-bind="template: { name: 'priority-template' }">
-                            </div>
-                            <div class="properties-item mode" data-bind="template: { name: 'lock-mode-template' }">
-                            </div>
-                            <div class="properties-item entriesCount">
-                                <div class="properties-value value-only">
-                                    <div class="set-size">
-                                        <i class="icon-list"></i><span data-bind="text: $root.pluralize(entriesCount, 'entry', 'entries')"></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="properties-item staleness" data-bind="visible: isStale()">
-                                <div class="properties-value value-only">
-                                    <div class="set-size">
-                                        <i class="icon-reset"></i><span>Stale</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="properties-item text-success staleness" data-bind="visible: !isStale()">
-                                <div class="properties-value value-only">
-                                    <div class="set-size">
-                                        <i class="icon-check"></i><span>Up to date</span>
-                                    </div>
-                                </div>
-                            </div>
-
+                </div>
+                <div class="sidebyside-actions" data-bind="with: replacement, visible: replacement">
+                    <div class="panel panel-state panel-warning">
+                        <div class="state state-swap"> <i class="icon-swap"></i> </div>
+                        <div class="padding flex-horizontal">
+                            <div class="title">Side-by-side</div>
+                            <div class="flex-separator"></div>
+                            <button class="btn btn-sm btn-warning" data-bind="click: _.partial($root.forceSideBySide, $data.parent), css: { 'btn-spinner': _.includes($root.spinners.swapNow(), parent.name) }, disable: _.includes($root.spinners.swapNow(), parent.name)">
+                                <i class="icon-force"></i> <span>Swap now</span>
+                            </button>
                         </div>
-                        <div class="col-xs-12 col-sm-6 col-xl-3 actions-container">
-                            <div class="actions">
-                                <div class="btn-toolbar pull-right-sm" role="toolbar">
-                                    <div class="btn-group" role="group" data-bind="if: !isFaulty()">
-                                        <a class="btn btn-default" data-bind="attr: { href: queryUrl() }"><i class="icon-search"></i><span>Query</span></a>
-                                    </div>
-                                    <div class="btn-group" role="group" data-bind="if: !isFaulty()">
-                                        <a class="btn btn-default" data-bind="attr: { href: editUrl() }, visible: !isAutoIndex()" title="Edit index"><i class="icon-edit"></i></a>
-                                        <a class="btn btn-default" data-bind="attr: { href: editUrl() }, visible: isAutoIndex" title="View index fields"><i class="icon-preview"></i></a>
-                                        <button class="btn btn-default" data-bind="click: $root.resetIndex" title="Reset index"><i class="icon-reset"></i></button>
-                                    </div>
-                                    <div class="btn-group" role="group">
-                                        <button class="btn btn-danger" data-bind="click: $root.deleteIndex" title="Delete the index"><i class="icon-trash"></i></button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    </div>
+                </div>
+                <div data-bind="with: replacement">
+                    <div class="panel panel-state index" data-bind="template: { name: 'index-template' }">
                     </div>
                 </div>
             </div>
@@ -188,6 +142,83 @@
     </div>
 </div>
 
+<script type="text/html" id="index-template">
+    <div class="padding padding-sm">
+        <div data-bind="attr: { class: 'state ' + badgeClass(), 'data-state-text' : badgeText() }"></div>
+        <div class="row">
+            <div class="col-xs-12 col-sm-6 col-xl-4 info-container">
+                <div class="checkbox">
+                    <input type="checkbox" class="styled" data-bind="checked: $root.selectedIndexesName, checkedValue: name">
+                    <label></label>
+                </div>
+                <h3 class="index-name">
+                    <a href="#" data-bind="text: name, attr: { href: queryUrl(), title: name }"></a>
+                </h3>
+                <div class="index-type">
+                    <span data-bind="text: getTypeForUI()"></span>
+                    <span data-bind="visible: isTestIndex">&nbsp; <span class="label label-warning">TEST INDEX</span></span>
+                    <span data-bind="visible: replacement">&nbsp; <span class="label label-warning">OLD</span></span>
+                    <span data-bind="visible: parent">&nbsp; <span class="label label-warning">NEW</span></span>
+                </div>
+            </div>
+            <div class="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container" data-bind="if: !isFaulty()">
+                <div class="properties-item state-selector" data-bind="template: { name: 'state-template' }">
+                </div>
+                <div class="properties-item priority" data-bind="template: { name: 'priority-template' }">
+                </div>
+                <div class="properties-item mode" data-bind="template: { name: 'lock-mode-template' }">
+                </div>
+                <div class="properties-item entriesCount">
+                    <div class="properties-value value-only">
+                        <div class="set-size">
+                            <i class="icon-list"></i><span data-bind="text: $root.pluralize(entriesCount, 'entry', 'entries')"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="properties-item staleness" data-bind="visible: isStale()">
+                    <div class="properties-value value-only">
+                        <div class="set-size">
+                            <i class="icon-reset"></i><span>Stale</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="properties-item text-success staleness" data-bind="visible: !isStale()">
+                    <div class="properties-value value-only">
+                        <div class="set-size">
+                            <i class="icon-check"></i><span>Up to date</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="properties-item errors" data-bind="visible: errorsCount">
+                    <div class="properties-value value-only">
+                        <a title="View indexing errors" data-bind="attr: { href: $root.indexErrorsUrl() }">
+                            <div class="set-size text-danger">
+                                <i class="icon-index-errors"></i><span><span data-bind="text: errorsCount"></span> Errors</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-12 col-sm-6 col-xl-3 actions-container">
+                <div class="actions">
+                    <div class="btn-toolbar pull-right-sm" role="toolbar">
+                        <div class="btn-group" role="group" data-bind="if: !isFaulty()">
+                            <a class="btn btn-default" data-bind="attr: { href: queryUrl() }"><i class="icon-search"></i><span>Query</span></a>
+                        </div>
+                        <div class="btn-group" role="group" data-bind="if: !isFaulty()">
+                            <a class="btn btn-default" data-bind="attr: { href: editUrl() }, visible: !isAutoIndex()" title="Edit index"><i class="icon-edit"></i></a>
+                            <a class="btn btn-default" data-bind="attr: { href: editUrl() }, visible: isAutoIndex" title="View index fields"><i class="icon-preview"></i></a>
+                            <button class="btn btn-default" data-bind="click: $root.resetIndex" title="Reset index"><i class="icon-reset"></i></button>
+                        </div>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-danger" data-bind="click: $root.deleteIndex" title="Delete the index"><i class="icon-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
 
 <script type="text/html" id="priority-template">
     <span class="properties-label">Priority:</span>

@@ -415,7 +415,7 @@ namespace FastTests.Server.NotificationCenter
                 using (database.NotificationCenter.TrackActions(actions, writer))
                 {
                     var notification = await actions.TryDequeueAsync(TimeSpan.FromMilliseconds(150));
-                    Assert.False(notification.Item1);
+                    Assert.True(notification.Item1);
 
                     DocumentsOperationContext context;
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))

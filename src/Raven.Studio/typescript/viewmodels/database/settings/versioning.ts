@@ -4,24 +4,42 @@ import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import getVersioningsCommand = require("commands/database/documents/getVersioningsCommand");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
+import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
 import document = require("models/database/documents/document");
 import eventsCollector = require("common/eventsCollector");
+import messagePublisher = require("common/messagePublisher");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 class versioning extends viewModelBase {
-    //TODO: introduce model!
+
+    static readonly versioningDocumentKey = "Raven/Versioning/Configuration";
+
+    defaultVersioning = ko.observable<versioningEntry>(versioningEntry.defaultConfiguration());
     versionings = ko.observableArray<versioningEntry>();
     isSaveEnabled: KnockoutComputed<boolean>;
+    versioningEnabled = ko.observable<boolean>(false);
 
-    canActivate(args: any): any {
+    collections = collectionsTracker.default.collections;
+
+    constructor() {
+        super();
+
+        this.bindToCurrentInstance("removeVersioning", "createNewVersioning");
+    }
+
+    spinners = {
+        save: ko.observable<boolean>(false)
+    }
+
+    canActivate(args: any) {
         super.canActivate(args);
 
-        var deferred = $.Deferred();
-        var db = this.activeDatabase();
-        if (db) {
-            this.fetchVersioningEntries(db)
-                .done(() => deferred.resolve({ can: true }))
-                .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
-        }
+        const deferred = $.Deferred<canActivateResultDto>();
+
+        this.fetchVersioningEntries(this.activeDatabase())
+            .done(() => deferred.resolve({ can: true }))
+            .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseSettings(this.activeDatabase()) }));
+
         return deferred;
     }
 
@@ -29,8 +47,18 @@ class versioning extends viewModelBase {
         super.activate(args);
         this.updateHelpLink("1UZ5WL");
 
-        this.dirtyFlag = new ko.DirtyFlag([this.versionings]);
-        this.isSaveEnabled = ko.computed<boolean>(() => this.dirtyFlag().isDirty());
+        this.dirtyFlag = new ko.DirtyFlag([this.versionings, this.defaultVersioning, this.versioningEnabled]);
+        this.isSaveEnabled = ko.pureComputed<boolean>(() => {
+            const dirty = this.dirtyFlag().isDirty();
+            const saving = this.spinners.save();
+            return dirty && !saving;
+        });
+    }
+
+    compositionComplete(): void {
+        super.compositionComplete();
+
+        this.setupDisableReasons();
     }
 
     private fetchVersioningEntries(db: database): JQueryPromise<Raven.Server.Documents.Versioning.VersioningConfiguration> {
@@ -38,46 +66,61 @@ class versioning extends viewModelBase {
             .done((versionings: Raven.Server.Documents.Versioning.VersioningConfiguration) => this.versioningsLoaded(versionings));
     }
 
-
     toDto(): Raven.Server.Documents.Versioning.VersioningConfiguration {
-        const defaultConfiguration = this.versionings().find(x => x.collection() === versioningEntry.DefaultConfiguration);
-
-        const nonDefaultConfiguration = this.versionings().filter(x => x !== defaultConfiguration);
+        const collectionVersioning = this.versionings();
 
         const collectionsDto = {} as { [key: string]: Raven.Server.Documents.Versioning.VersioningConfigurationCollection; }
 
-        nonDefaultConfiguration.forEach(config => {
+        collectionVersioning.forEach(config => {
             collectionsDto[config.collection()] = config.toDto();
         });
 
         return {
-            Default: defaultConfiguration.toDto(),
+            Default: this.defaultVersioning().toDto(),
             Collections: collectionsDto
         }
     }
 
     saveChanges() {
-        //TODO: check etag
-        eventsCollector.default.reportEvent("versioning", "save");
+        //TODO: check if we have to handle etag here (after Raft is merged)
+        let isValid = true;
 
-        const dto = this.toDto();
-        const versioningDocument = new document(dto);
+        this.versionings().forEach(item => {
+            if (!this.isValid(item.validationGroup)) {
+                isValid = false;
+            }
+        });
 
-        new saveDocumentCommand("Raven/Versioning/Configuration", versioningDocument, this.activeDatabase())
-            .execute()
-            .done((saveResult: saveDocumentResponseDto) => this.versioningsSaved(saveResult));
+        if (isValid) {
+            this.spinners.save(true);
+
+            eventsCollector.default.reportEvent("versioning", "save");
+
+            if (this.versioningEnabled()) {
+                const dto = this.toDto();
+                const versioningDocument = new document(dto);
+
+                new saveDocumentCommand(versioning.versioningDocumentKey, versioningDocument, this.activeDatabase())
+                    .execute()
+                    .done((saveResult: saveDocumentResponseDto) => this.versioningsSaved(saveResult))
+                    .always(() => this.spinners.save(false));
+            } else {
+                new deleteDocumentCommand(versioning.versioningDocumentKey, this.activeDatabase())
+                    .execute()
+                    .done(() => this.onVersioningDeleted())
+                    .always(() => this.spinners.save(false));
+            }
+        }
     }
 
     createNewVersioning() {
         eventsCollector.default.reportEvent("versioning", "create");
 
-        const emptyVersioning = versioningEntry.empty();
+        const newItem = versioningEntry.empty();
+        this.versionings.push(newItem);
 
-        if (this.versionings().length === 0) {
-            emptyVersioning.collection(versioningEntry.DefaultConfiguration);
-        }
-
-        this.versionings.push(emptyVersioning);
+        // don't show validation errors for newly created items
+        newItem.validationGroup.errors.showAllMessages(false);
     }
 
     removeVersioning(entry: versioningEntry) {
@@ -88,22 +131,51 @@ class versioning extends viewModelBase {
 
     versioningsLoaded(data: Raven.Server.Documents.Versioning.VersioningConfiguration) {
         if (data) {
-            const versionings = [] as Array<versioningEntry>;
-            versionings.push(new versioningEntry(versioningEntry.DefaultConfiguration, data.Default));
+            this.defaultVersioning(new versioningEntry(versioningEntry.DefaultConfiguration, data.Default));
 
-            for (let collection in data.Collections) {
-                const configuration = data.Collections[collection];
-                versionings.push(new versioningEntry(collection, configuration));
-            }
+            const versionings = _.map(data.Collections, (configuration, collection) => {
+                return new versioningEntry(collection, configuration);
+            });
 
             this.versionings(versionings);
+            this.versioningEnabled(true);
             this.dirtyFlag().reset();
+        } else {
+            this.versioningEnabled(false);
+            this.defaultVersioning(versioningEntry.defaultConfiguration());
         }
     }
 
     versioningsSaved(saveResult: saveDocumentResponseDto) {
         //TODO: test if we have to update etag in metadata to allow subsequent saves
         this.dirtyFlag().reset();
+    }
+
+    onVersioningDeleted() {
+        messagePublisher.reportSuccess("Versioning has been disabled.");
+
+        this.defaultVersioning(versioningEntry.defaultConfiguration());
+        this.versionings([]);
+        
+        this.dirtyFlag().reset();
+    }
+
+    createCollectionNameAutocompleter(item: versioningEntry) {
+        return ko.pureComputed(() => {
+            const key = item.collection();
+            const options = this.collections()
+                .filter(x => !x.isAllDocuments && !x.isSystemDocuments && !x.name.startsWith("@"))
+                .map(x => x.name);
+            const usedOptions = this.versionings().filter(f => f !== item).map(x => x.collection());
+
+            const filteredOptions = _.difference(options, usedOptions);
+
+            if (key) {
+                return filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+            } else {
+                return filteredOptions;
+            }
+        });
     }
 
 }

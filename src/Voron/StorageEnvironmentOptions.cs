@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow;
@@ -24,9 +25,13 @@ namespace Voron
 {
     public abstract class StorageEnvironmentOptions : IDisposable
     {
+        private ExceptionDispatchInfo _catastrophicFailure;
+        private CatastrophicFailureNotification _catastrophicFailureNotification;
+
         public string TempPath { get; }
-        public CatastrophicFailureNotification CatastrophicFailureNotification { get; }
+        
         public IoMetrics IoMetrics { get; set; }
+        
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
         public event EventHandler<NonDurabalitySupportEventArgs> OnNonDurabaleFileSystemError;
@@ -129,6 +134,8 @@ namespace Voron
 
         public abstract string BasePath { get; }
 
+        internal string JournalPath;
+
         /// <summary>
         /// This mode is used in the Voron recovery tool and is not intended to be set otherwise.
         /// </summary>
@@ -171,7 +178,7 @@ namespace Voron
 
             _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(tempPath);
 
-            CatastrophicFailureNotification = catastrophicFailureNotification ?? new CatastrophicFailureNotification((e) =>
+            _catastrophicFailureNotification = catastrophicFailureNotification ?? new CatastrophicFailureNotification((e) =>
             {
                 if (_log.IsOperationsEnabled)
                     _log.Operations($"Catastrophic failure in {this}", e);
@@ -182,6 +189,20 @@ namespace Voron
             bool result;
             if (bool.TryParse(shouldForceEnvVar, out result))
                 ForceUsing32BitsPager = result;
+        }
+
+        public void SetCatastrophicFailure(ExceptionDispatchInfo exception)
+        {
+            _catastrophicFailure = exception;
+            _catastrophicFailureNotification.RaiseNotificationOnce(exception.SourceException);
+        }
+
+        internal void AssertNoCatastrophicFailure()
+        {
+            if (_catastrophicFailure == null)
+                return;
+            
+            _catastrophicFailure.Throw(); // force re-throw of error
         }
 
         public static StorageEnvironmentOptions CreateMemoryOnly(string name, string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
@@ -229,6 +250,8 @@ namespace Voron
             {
                 _basePath = Path.GetFullPath(basePath);
                 _journalPath = !string.IsNullOrEmpty(journalPath) ? Path.GetFullPath(journalPath) : _basePath;
+
+                JournalPath = _journalPath;
 
                 if (Directory.Exists(_basePath) == false)
                     Directory.CreateDirectory(_basePath);

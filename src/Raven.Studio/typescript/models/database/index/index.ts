@@ -6,7 +6,8 @@ class index {
 
     static readonly DefaultIndexGroupName = "Other";
 
-    collections: { [index: string]: Raven.Client.Documents.Indexes.CollectionStats; };
+    parent: index; // used in side-by-side indexes to point to old index
+    collections: { [index: string]: Raven.Client.Documents.Indexes.IndexStats.CollectionStats; };
     collectionNames: Array<string>;
     createdTimestamp: string;
     entriesCount: number;
@@ -21,7 +22,7 @@ class index {
     mapAttempts: number;
     mapErrors: number;
     mapSuccesses: number;
-    memory: Raven.Client.Documents.Indexes.MemoryStats;
+    memory: Raven.Client.Documents.Indexes.IndexStats.MemoryStats;
     name: string;
     priority = ko.observable<Raven.Client.Documents.Indexes.IndexPriority>();
     state = ko.observable<Raven.Client.Documents.Indexes.IndexState>();
@@ -55,7 +56,10 @@ class index {
     canBeEnabled: KnockoutComputed<boolean>;
     canBeDisabled: KnockoutComputed<boolean>;
 
-    constructor(dto: Raven.Client.Documents.Indexes.IndexStats, globalIndexingStatus: KnockoutObservable<Raven.Client.Documents.Indexes.IndexRunningStatus>) {
+    replacement = ko.observable<index>();
+
+    constructor(dto: Raven.Client.Documents.Indexes.IndexStats, globalIndexingStatus: KnockoutObservable<Raven.Client.Documents.Indexes.IndexRunningStatus>, parentIndex?: index) {
+        this.parent = parentIndex;
         this.collections = dto.Collections;
         this.collectionNames = index.extractCollectionNames(dto.Collections);
         this.createdTimestamp = dto.CreatedTimestamp;
@@ -205,7 +209,7 @@ class index {
         });
     }
 
-    private static extractCollectionNames(collections: { [index: string]: Raven.Client.Documents.Indexes.CollectionStats; }): string[] {
+    private static extractCollectionNames(collections: { [index: string]: Raven.Client.Documents.Indexes.IndexStats.CollectionStats; }): string[] {
         return collections ? Object.keys(collections) : [];
     }
 

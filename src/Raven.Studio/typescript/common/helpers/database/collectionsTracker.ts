@@ -110,7 +110,7 @@ class collectionsTracker {
         }
     }
 
-    private onCollectionCreated(incomingItem: Raven.Server.NotificationCenter.Notifications.ModifiedCollection, db: database) {
+    private onCollectionCreated(incomingItem: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged.ModifiedCollection, db: database) {
         const newCollection = new collection(incomingItem.Name, db, incomingItem.Count);
         const insertIndex = _.sortedIndexBy<collection>(this.collections().slice(1), newCollection, x => x.name.toLocaleLowerCase()) + 1;
         this.collections.splice(insertIndex, 0, newCollection);
@@ -123,7 +123,7 @@ class collectionsTracker {
         this.events.removed.forEach(handler => handler(item));
     }
 
-    private onCollectionChanged(item: collection, incomingData: Raven.Server.NotificationCenter.Notifications.ModifiedCollection) {
+    private onCollectionChanged(item: collection, incomingData: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged.ModifiedCollection) {
         item.documentCount(incomingData.Count);
 
         this.events.changed.forEach(handler => handler(item, incomingData.CollectionEtag));

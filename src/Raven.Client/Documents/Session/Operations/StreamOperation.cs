@@ -43,11 +43,11 @@ namespace Raven.Client.Documents.Session.Operations
             string path;
             if (query.Query != null && query.Query.Length > _session.Conventions.MaxLengthOfQueryUsingGetUrl)
             {
-                path = query.GetIndexQueryUrl(indexName, "streams/queries", includePageSizeEvenIfNotExplicitlySet: false, includeQuery: false);
+                path = query.GetIndexQueryUrl(indexName, "streams/queries", includeQuery: false);
             }
             else
             {
-                path = query.GetIndexQueryUrl(indexName, "streams/queries", includePageSizeEvenIfNotExplicitlySet: false);
+                path = query.GetIndexQueryUrl(indexName, "streams/queries");
             }
 
             return new StreamCommand(path, string.IsNullOrWhiteSpace(query.Transformer) == false);

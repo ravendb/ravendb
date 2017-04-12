@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                     using (var commands = session.Advanced.DocumentStore.Commands())
                     {
                         var queryResult = commands
-                            .Query(newIndex, new IndexQuery(docStore.Conventions), false, true);
+                            .Query(newIndex, new IndexQuery(), false, true);
 
                         foreach (BlittableJsonReaderObject result in queryResult.Results)
                         {

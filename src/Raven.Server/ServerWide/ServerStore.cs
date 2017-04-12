@@ -48,6 +48,7 @@ namespace Raven.Server.ServerWide
         public readonly DatabasesLandlord DatabasesLandlord;
         public readonly NotificationCenter.NotificationCenter NotificationCenter;
         public readonly LicenseManager LicenseManager;
+        public readonly FeedbackSender FeedbackSender;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
@@ -66,6 +67,8 @@ namespace Raven.Server.ServerWide
             NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, resourceName, ServerShutdown);
 
             LicenseManager = new LicenseManager(NotificationCenter);
+
+            FeedbackSender = new FeedbackSender();
 
             DatabaseInfoCache = new DatabaseInfoCache();
 

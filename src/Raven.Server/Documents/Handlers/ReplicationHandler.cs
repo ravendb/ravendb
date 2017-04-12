@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers
         public Task GetAllTombstones()
         {
             var start = GetStart();
-            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
+            var pageSize = GetPageSize();
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))

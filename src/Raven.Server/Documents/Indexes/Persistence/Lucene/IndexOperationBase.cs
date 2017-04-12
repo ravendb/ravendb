@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-
+using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
 using Raven.Client;
@@ -134,6 +134,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             //var afterTriggers = ApplyIndexTriggers(documentQuery);
 
             return documentQuery;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected static int GetPageSize(IndexSearcher searcher, long pageSize)
+        {
+            if (pageSize >= searcher.MaxDoc)
+                return searcher.MaxDoc;
+
+            if (pageSize >= int.MaxValue)
+                return int.MaxValue;
+
+            return (int)pageSize;
         }
     }
 }

@@ -201,7 +201,7 @@ namespace Voron.Platform.Posix
                 ThrowAlreadyDisposedException();
 
             if (pageNumber > NumberOfAllocatedPages || pageNumber < 0)
-                ThrowOnInvalidPageNumber(pageNumber, tx.Environment);
+                ThrowOnInvalidPageNumber(pageNumber);
 
             var state = GetTransactionState(tx);
 

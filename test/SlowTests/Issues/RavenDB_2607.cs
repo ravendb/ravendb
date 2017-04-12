@@ -114,15 +114,15 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query(usersIndex.IndexName, new IndexQuery(store.Conventions));
+                    var queryResult = commands.Query(usersIndex.IndexName, new IndexQuery());
 
                     Assert.False(queryResult.IsStale);
                     Assert.True(queryResult.Results.Length > 0);
 
-                    queryResult = commands.Query(companiesIndex.IndexName, new IndexQuery(store.Conventions));
+                    queryResult = commands.Query(companiesIndex.IndexName, new IndexQuery());
                     Assert.True(queryResult.IsStale);
 
-                    queryResult = commands.Query(usersAndCompaniesIndex.IndexName, new IndexQuery(store.Conventions));
+                    queryResult = commands.Query(usersAndCompaniesIndex.IndexName, new IndexQuery());
                     Assert.True(queryResult.IsStale);
                 }
             }

@@ -83,7 +83,7 @@ namespace Voron.Impl.Journal
 
         public bool HasLazyTransactions { get; set; }
 
-        private JournalFile NextFile(int numberOf4kbs = 1)
+        private JournalFile NextFile(int numberOf4Kbs = 1)
         {
             var now = DateTime.UtcNow;
             if ((now - _lastFile).TotalSeconds < 90)
@@ -91,7 +91,7 @@ namespace Voron.Impl.Journal
                 _currentJournalFileSize = Math.Min(_env.Options.MaxLogFileSize, _currentJournalFileSize * 2);
             }
             var actualLogSize = _currentJournalFileSize;
-            long minRequiredSize = numberOf4kbs * 4 * Constants.Size.Kilobyte;
+            long minRequiredSize = numberOf4Kbs * 4 * Constants.Size.Kilobyte;
             if (_currentJournalFileSize < minRequiredSize)
             {
                 _currentJournalFileSize = Bits.NextPowerOf2(minRequiredSize);
@@ -105,6 +105,8 @@ namespace Voron.Impl.Journal
             _journalIndex++;
 
             _lastFile = now;
+
+            _journalPath = Path.Combine(_env.Options.JournalPath ?? "", StorageEnvironmentOptions.JournalName(_journalIndex));
 
             var journal = new JournalFile(_env, journalPager, _journalIndex);
             journal.AddRef(); // one reference added by a creator - write ahead log
@@ -815,7 +817,7 @@ namespace Voron.Impl.Journal
                 long _lastSyncedJournal;
                 long _currentTotalWrittenBytes;
                 long _lastSyncedTransactionId;
-                private readonly List<KeyValuePair<long, JournalFile>> journalsToDelete;
+                private readonly List<KeyValuePair<long, JournalFile>> _journalsToDelete;
                 bool _flushLockTaken;
                 private TransactionHeader _transactionHeader;
                 private TaskCompletionSource<object> _tcs = new TaskCompletionSource<object>();
@@ -823,7 +825,7 @@ namespace Voron.Impl.Journal
                 public SyncOperation(JournalApplicator parent)
                 {
                     _parent = parent;
-                    journalsToDelete = new List<KeyValuePair<long, JournalFile>>();
+                    _journalsToDelete = new List<KeyValuePair<long, JournalFile>>();
                     _fsyncLockTaken = false;
                     _lastSyncedJournal = 0;
                     _currentTotalWrittenBytes = 0;
@@ -871,7 +873,7 @@ namespace Voron.Impl.Journal
                         _parent._totalWrittenButUnsyncedBytes -= _currentTotalWrittenBytes;
                         _parent.UpdateFileHeaderAfterDataFileSync(_lastSyncedJournal, _lastSyncedTransactionId, ref _transactionHeader);
 
-                        foreach (var toDelete in journalsToDelete)
+                        foreach (var toDelete in _journalsToDelete)
                         {
                             if (_parent._waj._env.Options.IncrementalBackupEnabled == false)
                                 toDelete.Value.DeleteOnClose = true;
@@ -953,9 +955,9 @@ namespace Voron.Impl.Journal
                             if (toDelete.Key > _lastSyncedJournal)
                                 continue;
 
-                            journalsToDelete.Add(toDelete);
+                            _journalsToDelete.Add(toDelete);
                         }
-                        foreach (var kvp in journalsToDelete)
+                        foreach (var kvp in _journalsToDelete)
                         {
                             _parent._journalsToDelete.Remove(kvp.Key);
                         }
@@ -1272,12 +1274,14 @@ namespace Voron.Impl.Journal
             foreach (var txPage in txPages)
             {
                 var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointerWithOverflowHandling(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+                
+                var pageHeader = (PageHeader*)scratchPage;
 
-                _env.AddChecksumToPageHeader((PageHeader*)scratchPage);
+                pageHeader->Checksum = _env.CalculatePageChecksum(scratchPage, pageHeader->PageNumber, pageHeader->Flags, pageHeader->OverflowSize);
 
-                pagesInfo[pageSequencialNumber].PageNumber = ((PageHeader*)scratchPage)->PageNumber;
+                pagesInfo[pageSequencialNumber].PageNumber = pageHeader->PageNumber;
 
-                *(long*)write = ((PageHeader*)scratchPage)->PageNumber;
+                *(long*)write = pageHeader->PageNumber;
                 write += sizeof(long);
 
                 _diffPage.Output = write;
@@ -1298,11 +1302,6 @@ namespace Voron.Impl.Journal
                 pagesInfo[pageSequencialNumber].Size = _diffPage.OutputSize == 0 ? 0 : diffPageSize;
                 pagesInfo[pageSequencialNumber].DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
                 Debug.Assert(Math.Max(pagesInfo[pageSequencialNumber].Size, pagesInfo[pageSequencialNumber].DiffSize) <= diffPageSize);
-
-                // Protect pages in the scratch buffer after we are done with them
-                // This ensures no one writes to them after we have written them to the journal
-                // Write access is restored when doing freeing them.
-                tx.DataPager.ProtectPageRange(scratchPage, (ulong)(txPage.NumberOfPages * Constants.Storage.PageSize), true);
 
                 ++pageSequencialNumber;
             }
@@ -1327,13 +1326,12 @@ namespace Voron.Impl.Journal
 
             var compressionBuffer = fullTxBuffer + sizeof(TransactionHeader);
 
-            var number = CurrentFile?.Number ?? 0;
             long compressedLen;
+
             var compressionDuration = Stopwatch.StartNew();
             using (var metrics = _env.Options.IoMetrics.MeterIoRate(
-                // Note that the last journal may be replaced if we switch journals, however it doesn't affect web graph
-                StorageEnvironmentOptions.JournalName(number),
-                IoMetrics.MeterType.Compression, 0))
+                _journalPath ?? "",
+                IoMetrics.MeterType.Compression, 0)) // Note that the last journal may be replaced if we switch journals, however it doesn't affect web graph
             {
                 var compressionAcceleration = _lastCompressionAccelerationInfo.LastAcceleration;
 
@@ -1441,6 +1439,7 @@ namespace Voron.Impl.Journal
 
         private DateTime _lastCompressionBufferReduceCheck = DateTime.UtcNow;
         private CompressionAccelerationStats _lastCompressionAccelerationInfo = new CompressionAccelerationStats();
+        private string _journalPath;
 
         public void ReduceSizeOfCompressionBufferIfNeeded()
         {

@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Handlers
             public string Prefix;
             public long OldMax;
 
-            public override void Execute(DocumentsOperationContext context)
+            public override int Execute(DocumentsOperationContext context)
             {
                 var hiLoDocumentKey = RavenKeyGeneratorsHilo + Key;
                 var prefix = Key + Separator;
@@ -155,6 +155,7 @@ namespace Raven.Server.Documents.Handlers
                     serverPrefixDocReader?.Dispose();
                     hiloDocReader?.Dispose();
                 }
+                return 1;
             }
         }
 
@@ -189,21 +190,21 @@ namespace Raven.Server.Documents.Handlers
             public long End;
             public long Last;
 
-            public override void Execute(DocumentsOperationContext context)
+            public override int Execute(DocumentsOperationContext context)
             {
                 var hiLoDocumentKey = RavenKeyGeneratorsHilo + Key;
 
                 var document = Database.DocumentsStorage.Get(context, hiLoDocumentKey);
 
                 if (document == null)
-                    return;
+                    return 1;
 
                 long oldMax;
 
                 document.Data.TryGet("Max", out oldMax);
 
                 if (oldMax != End || Last > oldMax)
-                    return;
+                    return 1;
 
                 document.Data.Modifications = new DynamicJsonValue()
                 {
@@ -214,6 +215,8 @@ namespace Raven.Server.Documents.Handlers
                 {
                     Database.DocumentsStorage.Put(context, hiLoDocumentKey, null, hiloReader);
                 }
+
+                return 1;
             }
         }
 

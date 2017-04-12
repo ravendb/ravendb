@@ -144,6 +144,11 @@ class databases extends viewModelBase {
         return appUrl.forDocuments(null, db);
     }
 
+    indexErrorsUrl(dbInfo: databaseInfo): string {
+        const db = dbInfo.asDatabase();
+        return appUrl.forIndexErrors(db);
+    }
+
     private getSelectedDatabases() {
         const selected = this.selectedDatabases();
         return this.databases().sortedDatabases().filter(x => _.includes(selected, x.name));

@@ -8,6 +8,11 @@ namespace Regression.PageLocator
         public long PageNumber;
     }
 
+    public struct MyPageStruct
+    {
+        public long PageNumber;
+    }
+
     public struct PageHandlePtrV1
     {
         public readonly MyPage Value;

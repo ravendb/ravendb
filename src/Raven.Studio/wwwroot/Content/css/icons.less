@@ -344,7 +344,7 @@
     content: "\e93a";
 }
 
-.icon-settings:before {
+.icon-settings:before, .icon-system:before {
     content: "\e93b";
 }
 
@@ -375,7 +375,7 @@
     content: "\e9ad";
 }
 
-.icon-support:before {
+.icon-support:before, .icon-feedback:before {
     content: "\e9ae";
 }
 
@@ -917,6 +917,14 @@
 /* MENU AND TOPBAR ICON COLORS*/
 
 #main-menu, .inputs-container, .stats {
+    .icon-system:before {
+        color: #3c6fb4;
+    }
+
+    .icon-recent:before {
+        color: #29fffa;
+    }
+
     .icon-plus:before {
         color: #b0d47d;
     }

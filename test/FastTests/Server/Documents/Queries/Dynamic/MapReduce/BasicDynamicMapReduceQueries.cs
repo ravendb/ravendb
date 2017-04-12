@@ -295,7 +295,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
                 using (var commands = store.Commands())
                 {
-                    var command = new QueryCommand(store.Conventions, commands.Context, "dynamic/Addresses", new IndexQuery(store.Conventions)
+                    var command = new QueryCommand(store.Conventions, commands.Context, "dynamic/Addresses", new IndexQuery()
                     {
                         DynamicMapReduceFields = new[]
                         {

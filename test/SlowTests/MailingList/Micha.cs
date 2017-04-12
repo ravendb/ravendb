@@ -34,7 +34,7 @@ namespace SlowTests.MailingList
                 WaitForIndexing(store);
 
                 store.Operations.Send(new PatchByIndexOperation("EntityEntityIdPatch",
-                    new IndexQuery(store.Conventions),
+                    new IndexQuery(),
                     new PatchRequest
                     {
                         Script = @"

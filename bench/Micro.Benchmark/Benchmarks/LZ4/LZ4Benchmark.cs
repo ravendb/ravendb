@@ -121,7 +121,7 @@ namespace Micro.Benchmark.Benchmarks.LZ4
             // Compute the length of the maximum output data. This is an upper bound
             // to be able to always use the same buffer for decompression.
             int maximumOutputLength = (int)Sparrow.Compression.LZ4.MaximumOutputLength(DataMaximumLength);
-            _lz4Buffer = _allocator.Allocate(maximumOutputLength);
+            _allocator.Allocate(maximumOutputLength, out _lz4Buffer);
 
             var buffer = new byte[DataMaximumLength];
             for (int i = 0; i < NumberOfOperations; i++)

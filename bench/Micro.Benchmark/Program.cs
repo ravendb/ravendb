@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Running;
 using Micro.Benchmark.Benchmarks.PageLocator;
@@ -18,7 +19,7 @@ namespace Micro.Benchmark
             //    tests.TestGetReadonly(cacheSize);
             //}
 
-            BenchmarkRunner.Run<PlRandomRead>();
+            BenchmarkSwitcher.FromAssembly(typeof(Program).GetTypeInfo().Assembly).Run(args);
         }
     }
 }

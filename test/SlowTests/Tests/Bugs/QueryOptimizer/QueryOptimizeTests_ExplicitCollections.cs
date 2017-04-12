@@ -52,7 +52,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                 using (var commands = store.Commands())
                 {
                     var queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Name:Ayende AND Age:3"
                         });
@@ -60,7 +60,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                     Assert.Equal("Auto/Users/ByAgeAndName", queryResult.IndexName);
 
                     queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Name:Ayende"
                         });
@@ -85,7 +85,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                 using (var commands = store.Commands())
                 {
                     var queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Name:Ayende AND Age:3"
                         });
@@ -93,7 +93,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                     Assert.Equal("test", queryResult.IndexName);
 
                     queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Name:Ayende"
                         });
@@ -111,7 +111,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                 using (var commands = store.Commands())
                 {
                     var queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Name:3"
                         });
@@ -119,7 +119,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                     Assert.Equal("Auto/Users/ByName", queryResult.IndexName);
 
                     queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Age:3"
                         });
@@ -127,7 +127,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                     Assert.Equal("Auto/Users/ByAgeAndName", queryResult.IndexName);
 
                     queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Name:Ayende"
                         });
@@ -145,7 +145,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                 using (var commands = store.Commands())
                 {
                     var queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Name:3"
                         });
@@ -153,7 +153,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                     Assert.Equal("Auto/Users/ByName", queryResult.IndexName);
 
                     queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Age:3"
                         });
@@ -161,7 +161,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                     Assert.Equal("Auto/Users/ByAgeAndName", queryResult.IndexName);
 
                     queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Name:Ayende"
                         });
@@ -178,7 +178,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                 using (var commands = store.Commands())
                 {
                     var queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Name:3"
                         });
@@ -186,7 +186,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                     Assert.Equal("Auto/Users/ByName", queryResult.IndexName);
 
                     queryResult = commands.Query("dynamic/Cars",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Age:3"
                         });
@@ -194,7 +194,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                     Assert.Equal("Auto/Cars/ByAge", queryResult.IndexName);
 
                     queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Name:Ayende"
                         });
@@ -226,7 +226,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                 using (var commands = store.Commands())
                 {
                     var queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Name:Ayende AND Age:3"
                         });
@@ -234,7 +234,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                     Assert.Equal("test", queryResult.IndexName);
 
                     queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Name:Ayende"
                         });
@@ -267,7 +267,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                 using (var commands = store.Commands())
                 {
                     var queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Name:Ayende AND Age:3"
                         });
@@ -275,7 +275,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                     Assert.Equal("test", queryResult.IndexName);
 
                     queryResult = commands.Query("test2",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Name:Ayende"
                         });
@@ -307,7 +307,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                 using (var commands = store.Commands())
                 {
                     var queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "Title:Matt"
                         });
@@ -317,7 +317,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                     Assert.NotEqual("test", queryResult.IndexName);
 
                     queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery(store.Conventions)
+                        new IndexQuery()
                         {
                             Query = "BodyText:Matt"
                         });

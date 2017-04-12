@@ -211,7 +211,7 @@ namespace Raven.Server.Web.System
                     [nameof(Size.HumaneSize)] = size.HumaneSize,
                     [nameof(Size.SizeInBytes)] = size.SizeInBytes
                 },
-                [nameof(DatabaseInfo.Errors)] = online
+                [nameof(DatabaseInfo.IndexingErrors)] = online
                     ? db.IndexStore.GetIndexes().Sum(index => index.GetErrors().Count)
                     : 0,
                 [nameof(DatabaseInfo.Alerts)] = online ? db.NotificationCenter.GetAlertCount() : 0,

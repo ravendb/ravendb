@@ -141,9 +141,9 @@ namespace Raven.Server.Documents
                     {
                         Start = item.Start.GetDefaultRavenFormat(),
                         Size = item.Size,
-                        HumanSize = Sizes.Humane(item.Size),
+                        HumaneSize = Sizes.Humane(item.Size),
                         FileSize = item.FileSize,
-                        HumanFileSize = Sizes.Humane(item.FileSize),
+                        HumaneFileSize = Sizes.Humane(item.FileSize),
                         Duration = Math.Round(item.Duration.TotalMilliseconds, 2),
                         Type = item.Type
                     };

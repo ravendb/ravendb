@@ -104,7 +104,64 @@ namespace Raven.Client.Json
                     return false;
                 }
 
+                var originalArray = originalProperty.Value as BlittableJsonReaderArray;
+                var modifiedArray = modifiedProperty.Value as BlittableJsonReaderArray;
+
+                if (originalArray != null && modifiedArray != null)
+                {
+                    if (FastCompareArrayInternal(id, originalArray, modifiedArray))
+                        continue;
+
+                    return false;
+                }
+
                 if (originalProperty.Value.Equals(modifiedProperty.Value) == false)
+                    return false;
+            }
+
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool FastCompareArrayInternal(string id, BlittableJsonReaderArray original, BlittableJsonReaderArray modified)
+        {
+            if (original.Length != modified.Length)
+                return false;
+
+            for (var i = 0; i < original.Length; i++)
+            {
+                var originalItem = original[i];
+                var modifiedItem = modified[i];
+
+                if (originalItem == null && modifiedItem == null)
+                    continue;
+
+                if (originalItem == null || modifiedItem == null)
+                    return false;
+
+                var originalJson = originalItem as BlittableJsonReaderObject;
+                var modifiedJson = modifiedItem as BlittableJsonReaderObject;
+
+                if (originalJson != null && modifiedJson != null)
+                {
+                    if (FastCompare(id, originalJson, modifiedJson))
+                        continue;
+
+                    return false;
+                }
+
+                var originalArray = originalItem as BlittableJsonReaderArray;
+                var modifiedArray = modifiedItem as BlittableJsonReaderArray;
+
+                if (originalArray != null && modifiedArray != null)
+                {
+                    if (FastCompareArrayInternal(id, originalArray, modifiedArray))
+                        continue;
+
+                    return false;
+                }
+
+                if (originalItem.Equals(modifiedItem) == false)
                     return false;
             }
 

@@ -102,10 +102,10 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private static bool IsMetadataEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument)
+        private static DocumentCompareResult IsMetadataEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument, bool tryMergeAttachmentsConflict)
         {
             if (targetDocument == null)
-                return false;
+                return DocumentCompareResult.NotEqual;
 
             BlittableJsonReaderObject myMetadata;
             BlittableJsonReaderObject objMetadata;
@@ -113,26 +113,47 @@ namespace Raven.Server.Documents
             targetDocument.TryGet(Constants.Documents.Metadata.Key, out objMetadata);
 
             if (myMetadata == null && objMetadata == null)
-                return true;
+                return DocumentCompareResult.Equal;
 
             if (myMetadata == null || objMetadata == null)
-                return false;
+            {
+                if (tryMergeAttachmentsConflict)
+                {
+                    if (myMetadata == null)
+                        myMetadata = objMetadata;
 
-            return ComparePropertiesExceptionStartingWithAt(myMetadata, objMetadata, isMetadata: true);
+                    // If the conflict is just on @metadata with @attachment we know how to resolve it.
+                    if (myMetadata.Count == 1 && myMetadata.GetPropertyNames()[0].Equals(Constants.Documents.Metadata.Attachments, StringComparison.OrdinalIgnoreCase))
+                        return DocumentCompareResult.Equal | DocumentCompareResult.ShouldRecreateDocument;
+                }
+
+                return DocumentCompareResult.NotEqual;
+            }
+
+            return ComparePropertiesExceptStartingWithAt(myMetadata, objMetadata, true, tryMergeAttachmentsConflict);
         }
 
-        public static bool IsEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument)
+        public static DocumentCompareResult IsEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument, 
+            bool tryMergeAttachmentsConflict)
         {
             // Performance improvemnt: We compare the metadata first 
             // because that most of the time the metadata itself won't be the equal, so no need to compare all values
 
-            return IsMetadataEqualTo(currentDocument, targetDocument) &&
-                   ComparePropertiesExceptionStartingWithAt(currentDocument, targetDocument);
+            var result = IsMetadataEqualTo(currentDocument, targetDocument, tryMergeAttachmentsConflict);
+            if (result == DocumentCompareResult.NotEqual)
+                return DocumentCompareResult.NotEqual;
+
+            if (ComparePropertiesExceptStartingWithAt(currentDocument, targetDocument) == DocumentCompareResult.NotEqual)
+                return DocumentCompareResult.NotEqual;
+
+            return result;
         }
 
-        private static bool ComparePropertiesExceptionStartingWithAt(BlittableJsonReaderObject myObject,
-            BlittableJsonReaderObject otherObject, bool isMetadata = false)
+        public static DocumentCompareResult ComparePropertiesExceptStartingWithAt(BlittableJsonReaderObject myObject, BlittableJsonReaderObject otherObject, 
+            bool isMetadata = false, bool tryMergeAttachmentsConflict = false)
         {
+            var resolvedAttachmetConflict = false;
+
             var properties = new HashSet<string>(myObject.GetPropertyNames());
             foreach (var propertyName in otherObject.GetPropertyNames())
             {
@@ -145,8 +166,26 @@ namespace Raven.Server.Documents
                 {
                     if (isMetadata)
                     {
-                        if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false &&
-                            property.Equals(Constants.Documents.Metadata.Attachments, StringComparison.OrdinalIgnoreCase) == false)
+                        if (property.Equals(Constants.Documents.Metadata.Attachments, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (tryMergeAttachmentsConflict)
+                            {
+                                if (myObject.TryGetMember(property, out object myAttachments) == false ||
+                                    otherObject.TryGetMember(property, out object otherAttachments) == false)
+                                {
+                                    // Resolve when just 1 document have attachments
+                                    resolvedAttachmetConflict = true;
+                                    continue;
+                                }
+
+                                resolvedAttachmetConflict = AttachmentsStorage.ShouldResolveAttachmentsConflict(myObject, otherObject);
+                                if (resolvedAttachmetConflict)
+                                    continue;
+
+                                return DocumentCompareResult.NotEqual;
+                            }
+                        }
+                        else if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false)
                             continue;
                     }
                     else if (property.Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
@@ -155,20 +194,30 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                object myProperty;
-                object otherPropery;
-
-                if (myObject.TryGetMember(property, out myProperty) == false)
-                    return false;
-
-                if (otherObject.TryGetMember(property, out otherPropery) == false)
-                    return false;
+                if (myObject.TryGetMember(property, out object myProperty) == false ||
+                    otherObject.TryGetMember(property, out object otherPropery) == false)
+                {
+                    return DocumentCompareResult.NotEqual;
+                }
 
                 if (Equals(myProperty, otherPropery) == false)
-                    return false;
+                {
+                    return DocumentCompareResult.NotEqual;
+                }
             }
 
-            return true;
+            return DocumentCompareResult.Equal | (resolvedAttachmetConflict ? DocumentCompareResult.ShouldRecreateDocument : DocumentCompareResult.None);
         }
+    }
+
+    [Flags]
+    public enum DocumentCompareResult
+    {
+        None = 0,
+
+        NotEqual = 0x1,
+        Equal = 0x2,
+
+        ShouldRecreateDocument = 0x8,
     }
 }

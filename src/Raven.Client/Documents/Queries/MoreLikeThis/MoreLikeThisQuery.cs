@@ -1,17 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Queries.MoreLikeThis
 {
     public class MoreLikeThisQuery : MoreLikeThisQuery<Dictionary<string, object>>
     {
-        public MoreLikeThisQuery(DocumentConventions conventions) : base(conventions)
-        {
-        }
-
         protected override void CreateRequestUri(StringBuilder uri)
         {
             base.CreateRequestUri(uri);
@@ -23,10 +18,10 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
     public abstract class MoreLikeThisQuery<T> : IIndexQuery
         where T : class
     {
-        protected MoreLikeThisQuery(DocumentConventions conventions)
+        private int _pageSize = int.MaxValue;
+
+        protected MoreLikeThisQuery()
         {
-            if (conventions != null)
-                PageSize = conventions.ImplicitTakeAmount;
             MapGroupFields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -59,7 +54,6 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
         /// Ignore words which occur in more than this percentage of documents.
         /// </summary>
         public int? MaximumDocumentFrequencyPercentage { get; set; }
-
 
         /// <summary>
         /// Boost terms in query based on score. Default is false.
@@ -140,7 +134,20 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
         /// <summary>
         /// Maximum number of records that will be retrieved.
         /// </summary>
-        public int PageSize { get; set; }
+        public int PageSize
+        {
+            get => _pageSize;
+            set
+            {
+                _pageSize = value;
+                PageSizeSet = true;
+            }
+        }
+
+        /// <summary>
+        /// Whatever the page size was explicitly set or still at its default value
+        /// </summary>
+        protected internal bool PageSizeSet { get; private set; }
 
         protected virtual void CreateRequestUri(StringBuilder uri)
         {
@@ -183,7 +190,8 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
             if (string.IsNullOrEmpty(Transformer) == false)
                 uri.AppendFormat("&transformer={0}", Uri.EscapeDataString(Transformer));
 
-            uri.AppendFormat("&pageSize=" + PageSize);
+            if (PageSizeSet)
+                uri.Append("&pageSize=").Append(PageSize);
 
             Fields.ApplyIfNotNull(f => uri.AppendFormat("&field={0}", f));
             Includes.ApplyIfNotNull(i => uri.AppendFormat("&include={0}", i));

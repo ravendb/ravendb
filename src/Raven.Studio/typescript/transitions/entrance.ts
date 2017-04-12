@@ -89,7 +89,7 @@ define(['durandal/system', 'durandal/composition', 'jquery'], function(system: a
                     display: 'block',
                     opacity: 0,
                     position: 'absolute',
-                    left: fadeOnly || animation ? '0px' : '20px',
+                    left: fadeOnly || animation ? '0px' : '0px',
                     right: 0,
                     top: 0,
                     bottom: 0

@@ -19,6 +19,8 @@ using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -124,14 +126,15 @@ namespace Raven.Server.Documents.Handlers
 
             var etag = GetLongQueryString("etag", false);
             var start = GetStart();
-            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
+            var pageSize = GetPageSize();
+            var isStartsWith = HttpContext.Request.Query.ContainsKey("startsWith");
 
             IEnumerable<Document> documents;
             if (etag != null)
             {
                 documents = Database.DocumentsStorage.GetDocumentsFrom(context, etag.Value, start, pageSize);
             }
-            else if (HttpContext.Request.Query.ContainsKey("startsWith"))
+            else if (isStartsWith)
             {
                 documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
                      HttpContext.Request.Query["startsWith"],
@@ -146,6 +149,8 @@ namespace Raven.Server.Documents.Handlers
                 documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, start, pageSize);
             }
 
+            int numberOfResults;
+
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
@@ -157,16 +162,18 @@ namespace Raven.Server.Documents.Handlers
                     using (var scope = transformer.OpenTransformationScope(transformerParameters, null, Database.DocumentsStorage,
                         Database.TransformerStore, context))
                     {
-                        writer.WriteDocuments(context, scope.Transform(documents).ToList(), metadataOnly);
+                        writer.WriteDocuments(context, scope.Transform(documents).ToList(), metadataOnly, out numberOfResults);
                     }
                 }
                 else
                 {
-                    writer.WriteDocuments(context, documents, metadataOnly);
+                    writer.WriteDocuments(context, documents, metadataOnly, out numberOfResults);
                 }
 
                 writer.WriteEndObject();
             }
+
+            AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocuments), numberOfResults, pageSize);
         }
 
         private void GetDocumentsById(DocumentsOperationContext context, StringValues ids, Transformer transformer, bool metadataOnly)
@@ -218,26 +225,28 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
+            int numberOfResults;
             var blittable = GetBoolValueQueryString("blittable", required: false) ?? false;
-
             if (blittable)
             {
-                WriteDocumentsBlittable(context, documentsToWrite, includes);
+                WriteDocumentsBlittable(context, documentsToWrite, includes, out numberOfResults);
             }
             else
             {
-                WriteDocumentsJson(context, metadataOnly, documentsToWrite, includeDocs, includes);
+                WriteDocumentsJson(context, metadataOnly, documentsToWrite, includeDocs, includes, out numberOfResults);
             }
+
+            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsById), numberOfResults, documents.Count);
         }
 
         private void WriteDocumentsJson(DocumentsOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite,
-            IncludeDocumentsCommand includeDocs, List<Document> includes)
+            IncludeDocumentsCommand includeDocs, List<Document> includes, out int numberOfResults)
         {
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
-                writer.WriteDocuments(context, documentsToWrite, metadataOnly);
+                writer.WriteDocuments(context, documentsToWrite, metadataOnly, out numberOfResults);
 
                 includeDocs.Fill(includes);
 
@@ -245,7 +254,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WritePropertyName("Includes");
                 if (includes.Count > 0)
                 {
-                    writer.WriteDocuments(context, includes, metadataOnly);
+                    writer.WriteDocuments(context, includes, metadataOnly, out numberOfResults);
                 }
                 else
                 {
@@ -257,8 +266,9 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private void WriteDocumentsBlittable(DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, List<Document> includes)
+        private void WriteDocumentsBlittable(DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, List<Document> includes, out int numberOfResults)
         {
+            numberOfResults = 0;
             HttpContext.Response.Headers["Content-Type"] = "binary/blittable-json";
 
             using (var streamBuffer = new UnmanagedStreamBuffer(context, ResponseBodyStream()))
@@ -274,6 +284,7 @@ namespace Raven.Server.Documents.Handlers
 
                 foreach (var document in documentsToWrite)
                 {
+                    numberOfResults++;
                     writer.WriteEmbeddedBlittableDocument(document.Data);
                 }
 
@@ -571,7 +582,7 @@ namespace Raven.Server.Documents.Handlers
             public ExceptionDispatchInfo ExceptionDispatchInfo;
             public DocumentsStorage.PutOperationResults PutResult;
 
-            public override void Execute(DocumentsOperationContext context)
+            public override int Execute(DocumentsOperationContext context)
             {
                 try
                 {
@@ -581,6 +592,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
                 }
+                return 1;
             }
         }
 
@@ -591,7 +603,7 @@ namespace Raven.Server.Documents.Handlers
             public DocumentDatabase Database;
             public ExceptionDispatchInfo ExceptionDispatchInfo;
 
-            public override void Execute(DocumentsOperationContext context)
+            public override int Execute(DocumentsOperationContext context)
             {
                 try
                 {
@@ -601,6 +613,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
                 }
+                return 1;
             }
         }
     }

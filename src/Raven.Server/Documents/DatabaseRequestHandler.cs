@@ -5,6 +5,7 @@ using Raven.Server.Web;
 using Sparrow.Json;
 using System.Linq;
 using Raven.Client.Documents.Transformers;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
@@ -45,6 +46,14 @@ namespace Raven.Server.Documents
                 transformerParameters[kvp.Key.Substring(TransformerParameter.Prefix.Length)] = kvp.Value[0];
 
             return context.ReadObject(transformerParameters, "transformer/parameters");
+        }
+
+        protected void AddPagingPerformanceHint(PagingOperationType operation, string action, int numberOfResults, int pageSize)
+        {
+            if (numberOfResults <= Database.Configuration.PerformanceHints.MaxNumberOfResults)
+                return;
+
+            Database.NotificationCenter.Paging.Add(operation, action, numberOfResults, pageSize);
         }
     }
 }
