@@ -1850,7 +1850,7 @@ namespace Raven.Client.Connection.Async
             }
 
             var request = jsonRequestFactory
-                .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention)
+                .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, path, method, operationMetadata.Credentials, convention, timeout: TimeSpan.FromMinutes(15))
                 .AddOperationHeaders(OperationsHeaders))
                 .AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
@@ -2137,7 +2137,7 @@ namespace Raven.Client.Connection.Async
                 sb.Append("next-page=true").Append("&");
 
             var request = jsonRequestFactory
-                .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", operationMetadata.Credentials, convention)
+                .CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, sb.ToString(), "GET", operationMetadata.Credentials, convention, timeout: TimeSpan.FromMinutes(15))
                 .AddOperationHeaders(OperationsHeaders))
                 .AddReplicationStatusHeaders(Url, operationMetadata.Url, replicationInformer, convention.FailoverBehavior, HandleReplicationStatusChanges);
 
