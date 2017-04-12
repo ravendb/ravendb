@@ -1274,12 +1274,14 @@ namespace Voron.Impl.Journal
             foreach (var txPage in txPages)
             {
                 var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointerWithOverflowHandling(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+                
+                var pageHeader = (PageHeader*)scratchPage;
 
-                _env.AddChecksumToPageHeader((PageHeader*)scratchPage);
+                pageHeader->Checksum = _env.CalculatePageChecksum(scratchPage, pageHeader->PageNumber, pageHeader->Flags, pageHeader->OverflowSize);
 
-                pagesInfo[pageSequencialNumber].PageNumber = ((PageHeader*)scratchPage)->PageNumber;
+                pagesInfo[pageSequencialNumber].PageNumber = pageHeader->PageNumber;
 
-                *(long*)write = ((PageHeader*)scratchPage)->PageNumber;
+                *(long*)write = pageHeader->PageNumber;
                 write += sizeof(long);
 
                 _diffPage.Output = write;
