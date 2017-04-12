@@ -848,6 +848,9 @@ namespace Sparrow
         {
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
 
+            if (value._pointer == null)
+                return;
+
             _currentlyAllocated -= _externalAlignedSize;
 
             Debug.Assert(value.IsExternal, "Cannot release as external an internal pointer.");
