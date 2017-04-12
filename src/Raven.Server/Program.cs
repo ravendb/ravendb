@@ -22,7 +22,8 @@ namespace Raven.Server
         {
             WelcomeMessage.Print();
 
-            var configuration = new RavenConfiguration(null, ResourceType.Server);
+            var customConfigPath = ParseCustomConfigPath(args);
+            var configuration = new RavenConfiguration(null, ResourceType.Server, customConfigPath);
             if (args != null)
             {
                 configuration.AddCommandLine(args);
@@ -90,6 +91,23 @@ namespace Raven.Server
                 Console.WriteLine(e);
                 return -2;
             }
+        }
+
+        private static string ParseCustomConfigPath(string[] args)
+        {
+            string customConfigPath = null;
+            if (args != null)
+            {
+                foreach (var cliOpt in args)
+                {
+                    if (cliOpt.StartsWith("/Raven/Config="))
+                    {
+                        customConfigPath = cliOpt.Split('=')[1].Trim();
+                        break;
+                    }
+                }
+            }
+            return customConfigPath;
         }
 
         private static void RunAsService()

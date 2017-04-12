@@ -2,11 +2,11 @@ FROM ubuntu:16.04
 
 ENV AllowEverybodyToAccessTheServerAsAdmin=false DataDir=APPDRIVE:/databases
 
-VOLUME /databases
-
-EXPOSE 8080
+VOLUME /databases /opt/raven-settings.json
+EXPOSE 8080 38888
 
 COPY RavenDB-4.0.*-*-*-ubuntu.16.04-x64.tar.bz2 /opt/RavenDB.tar.bz2
+COPY run-raven.sh /opt/run-raven.sh
 
 # Prepare container
 RUN apt-get update \
@@ -20,9 +20,4 @@ RUN apt-get update \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /opt/RavenDB/Server
-
-CMD ./Raven.Server \
-    /Raven/RunAsService=true \
-    /Raven/AllowEverybodyToAccessTheServerAsAdmin=${AllowEverybodyToAccessTheServerAsAdmin} \
-    /Raven/DataDir=${DataDir}
+CMD /opt/run-raven.sh
