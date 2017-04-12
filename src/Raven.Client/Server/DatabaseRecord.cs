@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
@@ -92,13 +93,16 @@ namespace Raven.Client.Server
                     lockMode = existingDefinition.LockMode.Value;
 
                 var result = existingDefinition.Compare(definition);
-                if (result != IndexDefinitionCompareDifferences.All)
-                {
-                    result &= ~IndexDefinitionCompareDifferences.Etag;
+                result &= ~IndexDefinitionCompareDifferences.Etag;
 
-                    if (result == IndexDefinitionCompareDifferences.None)
-                        return;
-                }
+                if (result == IndexDefinitionCompareDifferences.None)
+                    return;
+
+                result &= ~IndexDefinitionCompareDifferences.LockMode;
+                result &= ~IndexDefinitionCompareDifferences.Priority;
+
+                if (result != IndexDefinitionCompareDifferences.None)
+                    throw new NotSupportedException($"Can not update auto-index: {definition.Name}");
             }
 
             if (lockMode == IndexLockMode.LockedIgnore)

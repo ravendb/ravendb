@@ -4,7 +4,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
+using Raven.Client.Server;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -1040,10 +1043,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 var definition3 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Storage = FieldStorage.Yes } });
 
-                var indexId3 = await database.IndexStore.CreateIndex(definition3);
+                var e = await Assert.ThrowsAsync<NotSupportedException>(() => database.IndexStore.CreateIndex(definition3));
 
-                Assert.NotEqual(indexId1, indexId3);
-                Assert.Null(database.IndexStore.GetIndex(indexId1));
+                Assert.Contains("Can not update auto-index", e.Message);
+                Assert.NotNull(database.IndexStore.GetIndex(indexId1));
                 Assert.Equal(1, database.IndexStore.GetIndexes().Count());
             }
         }
@@ -1088,7 +1091,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Sort = SortOptions.String
                 };
 
-                var etag = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] {name1}));
+                var etag = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 }));
                 Assert.True(etag > 0);
                 var index = database.IndexStore.GetIndex(etag);
                 indexName = index.Name;
@@ -1101,6 +1104,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "headers.one"));
             IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "headers.two"));
+
+            await ModifyDatabaseSettings(dbName, record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "false";
+            });
 
             using (var database = await GetDatabase(dbName))
             {
@@ -1151,6 +1159,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
             IOExtensions.DeleteDirectory(indexStoragePath);
             Directory.CreateDirectory(indexStoragePath); // worst case, we have no info
 
+            await ModifyDatabaseSettings(dbName, record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "false";
+            });
+
             using (var database = await GetDatabase(dbName))
             {
                 var index = database
@@ -1171,6 +1184,24 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 }
 
                 Assert.False(true, indexStoragePath + " exists");
+            }
+        }
+
+        private async Task ModifyDatabaseSettings(string databaseName, Action<DatabaseRecord> modifySettings)
+        {
+            TransactionOperationContext context;
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenReadTransaction();
+
+                var databaseRecord = Server.ServerStore.Cluster.ReadDatabase(context, databaseName);
+
+                modifySettings(databaseRecord);
+
+                var blittableJsonReaderObject = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
+
+                var index = await Server.ServerStore.WriteDbAsync(context, databaseName, blittableJsonReaderObject, null);
+                await Server.ServerStore.Cluster.WaitForIndexNotification(index);
             }
         }
     }
