@@ -1024,7 +1024,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Fact(Skip = " TODO - Efrat Indexes")]
+        [Fact]
         public async Task IndexCreationOptions()
         {
             using (var database = CreateDocumentDatabase())

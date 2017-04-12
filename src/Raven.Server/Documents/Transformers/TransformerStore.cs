@@ -97,8 +97,29 @@ namespace Raven.Server.Documents.Transformers
                     DeleteTransformerInternal(existingTransformer);
                 }
 
-                var transformer = Transformer.CreateNew(definition, _documentDatabase.Configuration.Indexing, LoggingSource.Instance.GetLogger<Transformer>(_documentDatabase.Name));
-                CreateTransformerInternal(transformer);
+                try
+                {
+                    var transformer = Transformer.CreateNew(definition, _documentDatabase.Configuration.Indexing, LoggingSource.Instance.GetLogger<Transformer>(_documentDatabase.Name));
+                    CreateTransformerInternal(transformer);
+                }
+                catch (Exception e)
+                {
+                    var fakeTransformer = new FaultyInMemoryTransformer(kvp.Key, definition.Etag, e);
+
+                    var message = $"Could not create transformer with etag {definition.Etag}. Created in-memory, fake instance: {fakeTransformer.Name}";
+
+                    if (_log.IsOperationsEnabled)
+                        _log.Operations(message, e);
+
+                    _documentDatabase.NotificationCenter.Add(AlertRaised.Create("Transformer creation failed",
+                        message,
+                        AlertType.TransformerStore_TransformerCouldNotBeCreated,
+                        NotificationSeverity.Error,
+                        key: fakeTransformer.Name,
+                        details: new ExceptionDetails(e)));
+
+                    CreateTransformerInternal(fakeTransformer);
+                }
             }
         }
 
@@ -158,14 +179,14 @@ namespace Raven.Server.Documents.Transformers
 
                         var fakeTransformer = new FaultyInMemoryTransformer(kvp.Key, definition.Etag, e);
 
-                        var message = $"Could not open transformer with etag {definition.Etag}. Created in-memory, fake instance: {fakeTransformer.Name}";
+                        var message = $"Could not create transformer with etag {definition.Etag}. Created in-memory, fake instance: {fakeTransformer.Name}";
 
                         if (_log.IsOperationsEnabled)
                             _log.Operations(message, e);
 
-                        _documentDatabase.NotificationCenter.Add(AlertRaised.Create("Transformers store initialization error",
+                        _documentDatabase.NotificationCenter.Add(AlertRaised.Create("Transformer creation failed",
                             message,
-                            AlertType.TransformerStore_TransformerCouldNotBeOpened,
+                            AlertType.TransformerStore_TransformerCouldNotBeCreated,
                             NotificationSeverity.Error,
                             key: fakeTransformer.Name,
                             details: new ExceptionDetails(e)));
@@ -259,6 +280,10 @@ namespace Raven.Server.Documents.Transformers
             var transformer = GetTransformer(name);
             if (transformer == null)
                 TransformerDoesNotExistException.ThrowFor(name);
+
+            var faultyInMemoryTransformer = transformer as FaultyInMemoryTransformer;
+            if (faultyInMemoryTransformer != null)
+                throw new NotSupportedException("Cannot change lock mode on faulty index", faultyInMemoryTransformer.Error);
 
             var command = new SetTransformerLockCommand(name, mode, _documentDatabase.Name);
 

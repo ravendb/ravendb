@@ -31,7 +31,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             using (var mri = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
             {
                 CreateUsers(db, 2, "Poland");
-                
+
                 mri.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
@@ -46,7 +46,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.Equal("Poland", location);
 
                     var count = result["Count"];
-                    
+
                     Assert.Equal(2L, count);
                 }
 
@@ -125,7 +125,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             {
 
                 CreateUsers(db, numberOfUsers, "Poland");
-                
+
                 // index 10 users
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
@@ -231,8 +231,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
         public async Task DefinitionOfAutoMapReduceIndexIsPersisted()
         {
             var path = NewDataPath();
+            string dbName;
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
+                dbName = database.Name;
+
                 var count = new IndexField
                 {
                     Name = "Count",
@@ -258,15 +261,18 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     MapReduceOperation = FieldMapReduceOperation.Sum
                 };
 
-                Assert.True(await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { location })) > 0);
+                var etag = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { location }));
+                Assert.True(etag > 0);
 
-                var index2 = database.IndexStore.GetIndex(2);
+                var index2 = database.IndexStore.GetIndex(etag);
                 index2.SetLock(IndexLockMode.LockedError);
                 index2.SetPriority(IndexPriority.High);
                 index2.SetState(IndexState.Disabled);
             }
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
+
+            using (var database = await GetDatabase(dbName))
             {
                 var indexes = database
                     .IndexStore
@@ -276,7 +282,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 Assert.Equal(2, indexes.Count);
 
-                Assert.Equal(1, indexes[0].Etag);
+                Assert.True(indexes[0].Etag > 0);
                 Assert.Equal(1, indexes[0].Definition.Collections.Count);
                 Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
@@ -296,7 +302,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
                 Assert.Equal(IndexState.Normal, indexes[0].State);
 
-                Assert.Equal(2, indexes[1].Etag);
+                Assert.True(indexes[1].Etag > 0);
                 Assert.Equal(1, indexes[1].Definition.Collections.Count);
                 Assert.Equal("Users", indexes[1].Definition.Collections.Single());
 
@@ -327,8 +333,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
         {
             using (var db = CreateDocumentDatabase())
             using (var mri = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(
-                "Orders", 
-                new []
+                "Orders",
+                new[]
                 {
                     new IndexField
                     {
@@ -343,13 +349,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Storage = FieldStorage.Yes
                     }
                 },
-                new []
+                new[]
                 {
                     new IndexField
                     {
                         Name = "ShipTo.Country",
                         Storage = FieldStorage.Yes
-                    }, 
+                    },
                 }), db))
             {
                 CreateOrders(db, 5, new[] { "Poland", "Israel" });
@@ -373,11 +379,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     var price = result["Lines,Price"] as LazyDoubleValue;
 
                     Assert.NotNull(price);
-                    
+
                     Assert.Equal(63.6, price, 1);
 
                     var quantity = result["Lines,Quantity"];
-                    
+
                     Assert.Equal(9L, quantity);
                 }
             }
@@ -570,7 +576,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await index.Query(new IndexQueryServerSide() { SortedFields = new []{ new SortedField("Location") }}, context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide() { SortedFields = new[] { new SortedField("Location") } }, context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -611,7 +617,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     },
             }), db))
             {
-                CreateOrders(db, 10, employees: new [] { "employees/1", "employees/2" }, companies: new [] { "companies/1", "companies/2", "companies/3"});
+                CreateOrders(db, 10, employees: new[] { "employees/1", "employees/2" }, companies: new[] { "companies/1", "companies/2", "companies/3" });
 
                 index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
 
@@ -631,7 +637,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         }, context, OperationCancelToken.None)).Results;
 
                         Assert.Equal(1, results.Count);
-                        
+
                         long expectedCount;
 
                         if ((employeeNumber == 1 && companyNumber == 2) || (employeeNumber == 2 && companyNumber == 3))
@@ -641,7 +647,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                         Assert.Equal(expectedCount, results[0].Data["Count"]);
                     }
-                } 
+                }
             }
         }
 

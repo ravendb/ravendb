@@ -3,15 +3,13 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Transformers;
 using Raven.Client.Documents.Transformers;
-using Raven.Client.Exceptions;
 using Xunit;
 
 namespace FastTests.Server.Documents.Transformers
 {
     public class UniqueTransformersNames : RavenTestBase
     {
-        
-        [Fact(Skip="Maxim:will work after raft index implementaion")]
+        [Fact]
         public void TransformersAndIndexesNameShouldBeUniqe()
         {
             using (var store = GetDocumentStore())
@@ -35,7 +33,7 @@ namespace FastTests.Server.Documents.Transformers
             }
         }
 
-        [Fact(Skip = "Maxim:will work after raft index implementaion")]
+        [Fact]
         public void CanCreateTransformerWithTheSameNameOfDeletedIndex()
         {
             using (var store = GetDocumentStore())

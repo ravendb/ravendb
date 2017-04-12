@@ -113,18 +113,16 @@ namespace FastTests.Server.Documents.Transformers
                 );
 
                 Assert.Throws<RavenException>(() => store.Admin.Send(new SetTransformerLockOperation("Transformer1", TransformerLockMode.LockedIgnore)));
-               
+
             }
         }
 
-        [Fact(Skip = "Maxim:Investigate")]
+        [Fact]
         public async Task CanDelete()
         {
-            using (var server = GetNewServer(deletePrevious: true))
-            using (GetDocumentStore(modifyName: x => "CanDelete", defaultServer: server))
+            using (var store = GetDocumentStore())
             {
-
-                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("CanDelete");
+                var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TransformerStore.CreateTransformer(new TransformerDefinition
                 {
                     TransformResults = "results.Select(x => new { Name = x.Name })",
@@ -132,11 +130,9 @@ namespace FastTests.Server.Documents.Transformers
                     Name = "Transformer1"
                 });
 
-                var encodedName = Convert.ToBase64String(Encoding.UTF8.GetBytes("Transformer1"));
-
                 Assert.Equal(1, database.TransformerStore.GetTransformers().Count());
 
-                database.TransformerStore.DeleteTransformer("Transformer1");
+                await database.TransformerStore.DeleteTransformer("Transformer1");
 
                 Assert.Equal(0, database.TransformerStore.GetTransformers().Count());
             }

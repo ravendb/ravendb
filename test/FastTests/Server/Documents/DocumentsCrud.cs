@@ -1,15 +1,10 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using Raven.Client.Util;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using Raven.Server.Config;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow;
 using Voron.Exceptions;
 using Xunit;
 
@@ -166,7 +161,7 @@ namespace FastTests.Server.Documents
         }
 
         [Fact]
-        public void EtagsArePersisted()
+        public async Task EtagsArePersisted()
         {
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
@@ -188,7 +183,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            Restart();
+            await Restart();
 
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
@@ -212,7 +207,7 @@ namespace FastTests.Server.Documents
         }
 
         [Fact]
-        public void EtagsArePersistedWithDeletes()
+        public async Task EtagsArePersistedWithDeletes()
         {
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
@@ -235,7 +230,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            Restart();
+            await Restart();
 
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
@@ -261,10 +256,13 @@ namespace FastTests.Server.Documents
             }
         }
 
-        private void Restart()
+        private async Task Restart()
         {
             _documentDatabase.Dispose();
-            _documentDatabase = CreateDocumentDatabase(caller: _documentDatabase.Name, runInMemory: false, dataDirectory: _path);
+
+            Server.ServerStore.DatabasesLandlord.UnloadDatabase(_documentDatabase.Name);
+
+            _documentDatabase = await GetDatabase(_documentDatabase.Name);
         }
 
         [Fact]
