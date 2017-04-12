@@ -13,6 +13,9 @@ import togglePauseIndexingCommand = require("commands/database/index/togglePause
 import eventsCollector = require("common/eventsCollector");
 import enableIndexCommand = require("commands/database/index/enableIndexCommand");
 import disableIndexCommand = require("commands/database/index/disableIndexCommand");
+import computeIndexingProgressCommand = require("commands/database/index/computeIndexingProgressCommand");
+import observableMap = require("common/helpers/observableMap");
+import indexProgress = require("models/database/index/indexProgress");
 
 type indexGroup = {
     entityName: string;
@@ -29,6 +32,7 @@ class indexes extends viewModelBase {
     lockModeCommon: KnockoutComputed<string>;
     selectedIndexesName = ko.observableArray<string>();
     indexesSelectionState: KnockoutComputed<checkbox>;
+    indexingProgresses = new observableMap<string, indexProgress>();
 
     spinners = {
         globalStartStop: ko.observable<boolean>(false),
@@ -36,7 +40,8 @@ class indexes extends viewModelBase {
         localPriority: ko.observableArray<string>([]),
         localLockChanges: ko.observableArray<string>([]),
         localState: ko.observableArray<string>([]),
-        swapNow: ko.observableArray<string>([])
+        swapNow: ko.observableArray<string>([]),
+        indexingProgress: ko.observableArray<string>([])
     }
 
     globalIndexingStatus = ko.observable<Raven.Client.Documents.Indexes.IndexRunningStatus>();
@@ -53,7 +58,7 @@ class indexes extends viewModelBase {
         this.bindToCurrentInstance(
             "lowPriority", "highPriority", "normalPriority",
             "resetIndex", "deleteIndex",
-            "forceSideBySide",
+            "forceSideBySide", "showProgress",
             "unlockIndex", "lockIndex", "lockErrorIndex",
             "enableIndex", "disableIndex", "disableSelectedIndexes", "enableSelectedIndexes",
             "pauseSelectedIndexes", "resumeSelectedIndexes",
@@ -215,6 +220,27 @@ class indexes extends viewModelBase {
 
             indexGroup.groupHidden(!hasAnyInGroup);
         });
+    }
+
+    showProgress(idx: index) {
+        if (!idx.isStale()) {
+            return;
+        }
+
+        this.confirmationMessage("Are you sure?", "Computing indexing progress is resource intensive and may take a while.", ["Cancel", "Show indexing progress"])
+            .done(result => {
+                if (result.can) {
+                    this.spinners.indexingProgress.push(idx.name);
+                    this.indexingProgresses.delete(idx.name);
+
+                    new computeIndexingProgressCommand(idx.name, this.activeDatabase())
+                        .execute()
+                        .done(progress => {
+                            this.indexingProgresses.set(idx.name, progress);
+                        })
+                        .always(() => this.spinners.indexingProgress.remove(idx.name));
+                }
+            });
     }
 
     resetIndex(indexToReset: index) {
