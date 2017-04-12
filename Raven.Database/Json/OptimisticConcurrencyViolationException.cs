@@ -1,7 +1,9 @@
 using System;
+using System.Runtime.Serialization;
 
 namespace Raven.Database.Json
 {
+    [Serializable]
     public class OptimisticConcurrencyViolationException : Exception
     {
         /// <summary>
@@ -9,6 +11,13 @@ namespace Raven.Database.Json
         /// </summary>
         /// <param name="message">The message.</param>
         public OptimisticConcurrencyViolationException(string message) : base(message)
+        {
+        }
+
+        protected OptimisticConcurrencyViolationException(
+            SerializationInfo info,
+            StreamingContext context)
+            : base(info, context)
         {
         }
     }

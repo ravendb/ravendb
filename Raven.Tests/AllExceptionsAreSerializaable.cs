@@ -25,9 +25,6 @@ namespace Raven.Tests
 
                 foreach (var customException in customExceptions)
                 {
-                    if (customException.Name == "OptimisticConcurrencyViolationException")
-                        continue; // for internal use only
-
                     Assert.True(customException.IsSerializable, customException.FullName);
                 }
             }
