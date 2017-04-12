@@ -301,14 +301,63 @@ namespace Raven.Tests.Common
 
         }
 
+
+        protected void SetupReplication(IDatabaseCommands source, Dictionary<string, string> specifiedCollections, params DocumentStore[] destinations)
+        {
+            Assert.NotEmpty(destinations);
+
+            var destinationDocs = destinations.Select(destination => new RavenJObject
+                {
+                    { "Url", destination.Url },
+                    { "Database", destination.DefaultDatabase },
+                    { "SpecifiedCollections", RavenJObject.FromObject(specifiedCollections) }
+                }).ToList();
+
+            SetupReplication(source, destinationDocs);
+        }
+
+        protected void SetupReplicationWithSkipIndexReplication(IDatabaseCommands source, params DocumentStore[] destinations)
+        {
+            Assert.NotEmpty(destinations);
+
+
+            var destinationDocs = destinations.Select(destination => new RavenJObject
+            {
+                { "Url", destination.Url },
+                { "Database", destination.DefaultDatabase },
+                { "SkipIndexReplication", true }
+            }).ToList();
+
+            SetupReplication(source, destinationDocs);
+        }
+
         protected void SetupReplication(IDatabaseCommands source, params DocumentStore[] destinations)
         {
             Assert.NotEmpty(destinations);
-            SetupReplication(source, destinations.Select(destination => new RavenJObject
+
+
+            var destinationDocs = destinations.Select(destination => new RavenJObject
+                {
+                    {"Url", destination.Url},
+                    {"Database", destination.DefaultDatabase}
+                })
+                .ToList();
+
+            SetupReplication(source, destinationDocs);
+        }
+
+        protected void UpdateReplication(IDatabaseCommands source, params DocumentStore[] destinations)
                                                                         {
-                                                                            { "Url", destination.Url },
-                                                                            { "Database", destination.DefaultDatabase }
-                                                                        }));
+            Assert.NotEmpty(destinations);
+
+            var destinationDocs = destinations.Select(destination => new RavenJObject
+                {
+                    {"Url", destination.Url},
+                    {"Database", destination.DefaultDatabase}
+                })
+                .ToList();
+
+            UpdateReplication(source, destinationDocs);
         }
 
         protected void SetupReplication(IDatabaseCommands source, params string[] urls)
