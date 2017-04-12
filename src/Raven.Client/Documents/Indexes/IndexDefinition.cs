@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Indexes
                 return result;
 
             if (Equals(Etag, other.Etag) == false)
-                result |= IndexDefinitionCompareDifferences.IndexId;
+                result |= IndexDefinitionCompareDifferences.Etag;
 
             if (Maps.SequenceEqual(other.Maps) == false)
             {
@@ -163,7 +163,7 @@ namespace Raven.Client.Documents.Indexes
             if (result == IndexDefinitionCompareDifferences.None)
                 return true;
 
-            if (compareIndexIds && result.HasFlag(IndexDefinitionCompareDifferences.IndexId))
+            if (compareIndexIds && result.HasFlag(IndexDefinitionCompareDifferences.Etag))
                 return false;
 
             var mapsReduceEquals = ignoreFormatting
@@ -413,7 +413,7 @@ namespace Raven.Client.Documents.Indexes
     public enum IndexDefinitionCompareDifferences
     {
         None = 0,
-        IndexId = 1 << 0,
+        Etag = 1 << 0,
         Maps = 1 << 1,
         MapsFormatting = 1 << 2,
         Reduce = 1 << 3,
@@ -423,6 +423,6 @@ namespace Raven.Client.Documents.Indexes
         LockMode = 1 << 7,
         Priority = 1 << 8,
 
-        All = IndexId | Maps | MapsFormatting | Reduce | ReduceFormatting | Fields | Configuration | LockMode | Priority
+        All = Etag | Maps | MapsFormatting | Reduce | ReduceFormatting | Fields | Configuration | LockMode | Priority
     }
 }

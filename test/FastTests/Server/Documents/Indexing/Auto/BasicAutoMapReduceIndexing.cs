@@ -228,7 +228,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Fact]
-        public void DefinitionOfAutoMapReduceIndexIsPersisted()
+        public async Task DefinitionOfAutoMapReduceIndexIsPersisted()
         {
             var path = NewDataPath();
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
@@ -236,32 +236,29 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var count = new IndexField
                 {
                     Name = "Count",
-                    Highlighted = true,
                     Storage = FieldStorage.Yes,
-                    SortOption = SortOptions.Numeric,
+                    Sort = SortOptions.Numeric,
                     MapReduceOperation = FieldMapReduceOperation.Count
                 };
 
                 var location = new IndexField
                 {
                     Name = "Location",
-                    Highlighted = true,
                     Storage = FieldStorage.Yes,
-                    SortOption = SortOptions.String,
+                    Sort = SortOptions.String,
                 };
 
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count }, new[] { location })));
+                Assert.True(await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count }, new[] { location })) > 0);
 
                 var sum = new IndexField
                 {
                     Name = "Sum",
-                    Highlighted = false,
                     Storage = FieldStorage.Yes,
-                    SortOption = SortOptions.Numeric,
+                    Sort = SortOptions.Numeric,
                     MapReduceOperation = FieldMapReduceOperation.Sum
                 };
 
-                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { location })));
+                Assert.True(await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { location })) > 0);
 
                 var index2 = database.IndexStore.GetIndex(2);
                 index2.SetLock(IndexLockMode.LockedError);
@@ -284,8 +281,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
                 Assert.Equal("Count", indexes[0].Definition.MapFields["Count"].Name);
-                Assert.Equal(SortOptions.Numeric, indexes[0].Definition.MapFields["Count"].SortOption);
-                Assert.True(indexes[0].Definition.MapFields["Count"].Highlighted);
+                Assert.Equal(SortOptions.Numeric, indexes[0].Definition.MapFields["Count"].Sort);
                 Assert.Equal(FieldMapReduceOperation.Count, indexes[0].Definition.MapFields["Count"].MapReduceOperation);
 
                 var definition = indexes[0].Definition as AutoMapReduceIndexDefinition;
@@ -294,7 +290,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 Assert.Equal(1, definition.GroupByFields.Count);
                 Assert.Equal("Location", definition.GroupByFields["Location"].Name);
-                Assert.Equal(SortOptions.String, definition.GroupByFields["Location"].SortOption);
+                Assert.Equal(SortOptions.String, definition.GroupByFields["Location"].Sort);
 
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
@@ -307,10 +303,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(2, indexes[1].Definition.MapFields.Count);
                 Assert.Equal("Count", indexes[1].Definition.MapFields["Count"].Name);
                 Assert.Equal(FieldMapReduceOperation.Count, indexes[1].Definition.MapFields["Count"].MapReduceOperation);
-                Assert.Equal(SortOptions.Numeric, indexes[1].Definition.MapFields["Count"].SortOption);
+                Assert.Equal(SortOptions.Numeric, indexes[1].Definition.MapFields["Count"].Sort);
                 Assert.Equal("Sum", indexes[1].Definition.MapFields["Sum"].Name);
                 Assert.Equal(FieldMapReduceOperation.Sum, indexes[1].Definition.MapFields["Sum"].MapReduceOperation);
-                Assert.Equal(SortOptions.Numeric, indexes[1].Definition.MapFields["Sum"].SortOption);
+                Assert.Equal(SortOptions.Numeric, indexes[1].Definition.MapFields["Sum"].Sort);
 
                 definition = indexes[0].Definition as AutoMapReduceIndexDefinition;
 
@@ -318,7 +314,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 Assert.Equal(1, definition.GroupByFields.Count);
                 Assert.Equal("Location", definition.GroupByFields["Location"].Name);
-                Assert.Equal(SortOptions.String, definition.GroupByFields["Location"].SortOption);
+                Assert.Equal(SortOptions.String, definition.GroupByFields["Location"].Sort);
 
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexPriority.High, indexes[1].Definition.Priority);

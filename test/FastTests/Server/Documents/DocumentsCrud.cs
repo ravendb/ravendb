@@ -19,17 +19,12 @@ namespace FastTests.Server.Documents
     {
         private RavenConfiguration _configuration;
         private DocumentDatabase _documentDatabase;
+        private string _path;
 
         public DocumentsCrud()
         {
-            _configuration = new RavenConfiguration("foo", ResourceType.Database);
-            _configuration.Initialize();
-
-            _configuration.Core.RunInMemory = true;
-            _configuration.Core.DataDirectory = new PathSetting(Path.GetTempPath() + @"\crud");
-
-            _documentDatabase = new DocumentDatabase("foo", _configuration, null);
-            _documentDatabase.Initialize();
+            _path = NewDataPath();
+            _documentDatabase = CreateDocumentDatabase(runInMemory: false, dataDirectory: _path);
         }
 
         [Theory]
@@ -268,18 +263,8 @@ namespace FastTests.Server.Documents
 
         private void Restart()
         {
-            var options = _documentDatabase.DocumentsStorage.Environment.Options;
-            options.OwnsPagers = false;
             _documentDatabase.Dispose();
-            options.OwnsPagers = true;
-
-            _configuration = new RavenConfiguration("test", ResourceType.Database);
-            _configuration.Core.DataDirectory = new PathSetting(Path.GetTempPath() + @"\crud");
-            _configuration.Initialize();
-            _configuration.Core.RunInMemory = true;
-
-            _documentDatabase = new DocumentDatabase("test", _configuration, null);
-            _documentDatabase.Initialize(options);
+            _documentDatabase = CreateDocumentDatabase(caller: _documentDatabase.Name, runInMemory: false, dataDirectory: _path);
         }
 
         [Fact]

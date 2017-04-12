@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Handlers
 
                         if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
                             throw new ArgumentException("Index must have a 'Maps' fields");
-                        var etag = Database.IndexStore.CreateIndex(indexDefinition);
+                        var etag = await Database.IndexStore.CreateIndex(indexDefinition);
                         createdIndexes.Add(new KeyValuePair<string, long>(indexDefinition.Name, etag));
                     }
                 }
@@ -377,11 +377,11 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/indexes", "RESET")]
-        public Task Reset()
+        public async Task Reset()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            var newIndexId = Database.IndexStore.ResetIndex(name);
+            var newIndexId = await Database.IndexStore.ResetIndex(name);
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -392,20 +392,16 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteInteger(newIndexId);
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/indexes", "DELETE")]
-        public Task Delete()
+        public async Task Delete()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            HttpContext.Response.StatusCode = Database.IndexStore.TryDeleteIndexIfExists(name)
+            HttpContext.Response.StatusCode = await Database.IndexStore.TryDeleteIndexIfExists(name)
                 ? (int)HttpStatusCode.NoContent
                 : (int)HttpStatusCode.NotFound;
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/indexes/c-sharp-index-definition", "GET")]

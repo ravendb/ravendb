@@ -31,7 +31,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 } }), database);
                 index.Dispose();
@@ -46,7 +45,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 } }), database);
                 index.Start();
@@ -57,7 +55,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                     {
                         Name = "Name",
-                        Highlighted = false,
                         Storage = FieldStorage.No
                     } }), database);
                     index.Start();
@@ -70,55 +67,58 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Fact]
-        public void CanDispose()
+        public async Task CanDispose()
         {
             using (var database = CreateDocumentDatabase(runInMemory: false))
             {
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField
+                Assert.True(await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name1",
-                    Highlighted = false,
                     Storage = FieldStorage.No
-                } })));
-                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField
+                } })) > 0);
+                Assert.True(await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name2",
-                    Highlighted = false,
                     Storage = FieldStorage.No
-                } })));
+                } })) > 0);
             }
         }
 
         [Fact]
-        public void CanPersist()
+        public async Task CanPersist()
         {
             var path = NewDataPath();
+            string dbName;
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
+                dbName = database.Name;
+
                 var name1 = new IndexField
                 {
                     Name = "Name1",
-                    Highlighted = true,
                     Storage = FieldStorage.No,
-                    SortOption = SortOptions.String
+                    Sort = SortOptions.String
                 };
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 })));
+                Assert.True(await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 })) > 0);
                 var name2 = new IndexField
                 {
                     Name = "Name2",
-                    Highlighted = false,
                     Storage = FieldStorage.No,
-                    SortOption = SortOptions.Numeric
+                    Sort = SortOptions.Numeric
                 };
-                Assert.Equal(2, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name2 })));
 
-                var index2 = database.IndexStore.GetIndex(2);
+                var etag2 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name2 }));
+                Assert.True(etag2 > 0);
+
+                var index2 = database.IndexStore.GetIndex(etag2);
                 index2.SetLock(IndexLockMode.LockedError);
                 index2.SetPriority(IndexPriority.Low);
                 index2.SetState(IndexState.Disabled);
             }
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
+
+            using (var database = await GetDatabase(dbName))
             {
                 var indexes = database
                     .IndexStore
@@ -128,24 +128,22 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 Assert.Equal(2, indexes.Count);
 
-                Assert.Equal(1, indexes[0].Etag);
+                Assert.True(indexes[0].Etag > 0);
                 Assert.Equal(1, indexes[0].Definition.Collections.Count);
                 Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
                 Assert.Equal("Name1", indexes[0].Definition.MapFields["Name1"].Name);
-                Assert.Equal(SortOptions.String, indexes[0].Definition.MapFields["Name1"].SortOption);
-                Assert.True(indexes[0].Definition.MapFields["Name1"].Highlighted);
+                Assert.Equal(SortOptions.String, indexes[0].Definition.MapFields["Name1"].Sort);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
                 Assert.Equal(IndexState.Normal, indexes[0].State);
 
-                Assert.Equal(2, indexes[1].Etag);
+                Assert.True(indexes[1].Etag > 0);
                 Assert.Equal(1, indexes[1].Definition.Collections.Count);
                 Assert.Equal("Users", indexes[1].Definition.Collections.Single());
                 Assert.Equal(1, indexes[1].Definition.MapFields.Count);
                 Assert.Equal("Name2", indexes[1].Definition.MapFields["Name2"].Name);
-                Assert.Equal(SortOptions.Numeric, indexes[1].Definition.MapFields["Name2"].SortOption);
-                Assert.False(indexes[1].Definition.MapFields["Name2"].Highlighted);
+                Assert.Equal(SortOptions.Numeric, indexes[1].Definition.MapFields["Name2"].Sort);
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexPriority.Low, indexes[1].Definition.Priority);
                 Assert.Equal(IndexState.Disabled, indexes[1].State);
@@ -153,21 +151,21 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Fact]
-        public void CanDelete()
+        public async Task CanDelete()
         {
             using (var database = CreateDocumentDatabase())
-                CanDelete(database);
+                await CanDelete(database);
 
             var path = NewDataPath();
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
-                CanDelete(database);
+                await CanDelete(database);
         }
 
-        private static void CanDelete(DocumentDatabase database)
+        private static async Task CanDelete(DocumentDatabase database)
         {
             var def1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } });
             var index1 =
-                database.IndexStore.CreateIndex(
+                await database.IndexStore.CreateIndex(
                     def1);
             var path1 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                 IndexDefinitionBase.GetIndexNameSafeForFileSystem(def1.Name));
@@ -177,7 +175,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             var def2 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } });
             var index2 =
-                database.IndexStore.CreateIndex(
+                await database.IndexStore.CreateIndex(
                     def2);
             var path2 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                 IndexDefinitionBase.GetIndexNameSafeForFileSystem(def2.Name));
@@ -187,7 +185,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             Assert.Equal(2, database.IndexStore.GetIndexesForCollection("Users").Count());
 
-            database.IndexStore.DeleteIndex(index1);
+            await database.IndexStore.DeleteIndex(index1);
 
             Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path1) == false, TimeSpan.FromSeconds(5)));
 
@@ -196,7 +194,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             Assert.Equal(1, indexes.Count);
             Assert.Equal(index2, indexes[0].Etag);
 
-            database.IndexStore.DeleteIndex(index2);
+            await database.IndexStore.DeleteIndex(index2);
 
             Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path2) == false, TimeSpan.FromSeconds(5)));
 
@@ -206,20 +204,20 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Fact]
-        public void CanReset()
+        public async Task CanReset()
         {
             using (var database = CreateDocumentDatabase())
-                CanReset(database);
+                await CanReset(database);
 
             var path = NewDataPath();
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
-                CanReset(database);
+                await CanReset(database);
         }
 
-        private static void CanReset(DocumentDatabase database)
+        private static async Task CanReset(DocumentDatabase database)
         {
             var def1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } });
-            var index1 = database.IndexStore.CreateIndex(def1);
+            var index1 = await database.IndexStore.CreateIndex(def1);
 
             var path1 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                 IndexDefinitionBase.GetIndexNameSafeForFileSystem(def1.Name));
@@ -228,7 +226,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.True(Directory.Exists(path1));
 
             var def2 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } });
-            var index2 = database.IndexStore.CreateIndex(def2);
+            var index2 = await database.IndexStore.CreateIndex(def2);
             var path2 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                 IndexDefinitionBase.GetIndexNameSafeForFileSystem(def2.Name));
 
@@ -237,7 +235,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             Assert.Equal(2, database.IndexStore.GetIndexesForCollection("Users").Count());
 
-            var index3 = database.IndexStore.ResetIndex(index1);
+            var index3 = await database.IndexStore.ResetIndex(index1);
             var path3 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath, IndexDefinitionBase.GetIndexNameSafeForFileSystem(def1.Name));
 
             Assert.NotEqual(index3, index1);
@@ -250,7 +248,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             Assert.Equal(2, indexes.Count);
 
-            var index4 = database.IndexStore.ResetIndex(index2);
+            var index4 = await database.IndexStore.ResetIndex(index2);
             var path4 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath, IndexDefinitionBase.GetIndexNameSafeForFileSystem(def2.Name));
 
             Assert.NotEqual(index4, index2);
@@ -272,7 +270,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 using (var index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 } }), database))
                 {
@@ -431,7 +428,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     1,
                     new AutoMapIndexDefinition(
                         "Users",
-                        new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }),
+                        new[] { new IndexField { Name = "Name", Storage = FieldStorage.No } }),
                     database))
                 {
                     index.Start();
@@ -885,7 +882,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     1,
                     new AutoMapIndexDefinition(
                         "Users",
-                        new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }),
+                        new[] { new IndexField { Name = "Name", Storage = FieldStorage.No } }),
                     database))
                 {
                     var stats = new IndexingRunStats();
@@ -914,7 +911,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     1,
                     new AutoMapIndexDefinition(
                         "Users",
-                        new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }),
+                        new[] { new IndexField { Name = "Name", Storage = FieldStorage.No } }),
                     database))
                 {
                     var stats = new IndexingRunStats();
@@ -951,7 +948,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         {
             using (var database = CreateDocumentDatabase())
             {
-                var index0Id = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Job", Highlighted = false, Storage = FieldStorage.No } }));
+                var index0Id = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Job", Storage = FieldStorage.No } }));
                 var index0 = database.IndexStore.GetIndex(index0Id);
 
                 index0.SetState(IndexState.Idle);
@@ -961,8 +958,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 index0 = database.IndexStore.GetIndex(index0Id);
                 Assert.Null(index0);
 
-                var index1Id = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } }));
-                var index2Id = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Age", Highlighted = false, Storage = FieldStorage.No } }));
+                var index1Id = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Storage = FieldStorage.No } }));
+                var index2Id = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Age", Storage = FieldStorage.No } }));
 
                 var index1 = database.IndexStore.GetIndex(index1Id);
                 var index2 = database.IndexStore.GetIndex(index2Id);
@@ -1028,22 +1025,22 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Fact(Skip = " TODO - Efrat Indexes")]
-        public void IndexCreationOptions()
+        public async Task IndexCreationOptions()
         {
             using (var database = CreateDocumentDatabase())
             {
-                var definition1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
-                var definition2 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
+                var definition1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Storage = FieldStorage.No } });
+                var definition2 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Storage = FieldStorage.No } });
 
-                var indexId1 = database.IndexStore.CreateIndex(definition1);
-                var indexId2 = database.IndexStore.CreateIndex(definition2);
+                var indexId1 = await database.IndexStore.CreateIndex(definition1);
+                var indexId2 = await database.IndexStore.CreateIndex(definition2);
 
                 Assert.Equal(indexId1, indexId2);
                 Assert.Equal(1, database.IndexStore.GetIndexes().Count());
 
-                var definition3 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.Yes } });
+                var definition3 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Storage = FieldStorage.Yes } });
 
-                var indexId3 = database.IndexStore.CreateIndex(definition3);
+                var indexId3 = await database.IndexStore.CreateIndex(definition3);
 
                 Assert.NotEqual(indexId1, indexId3);
                 Assert.Null(database.IndexStore.GetIndex(indexId1));
@@ -1052,60 +1049,64 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Fact]
-        public void LockMode()
+        public async Task LockMode()
         {
             using (var database = CreateDocumentDatabase())
             {
-                var definition1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
-                var definition2 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Highlighted = false, Storage = FieldStorage.No } });
+                var definition1 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Storage = FieldStorage.No } });
+                var definition2 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Storage = FieldStorage.No } });
 
-                var indexId1 = database.IndexStore.CreateIndex(definition1);
+                var indexId1 = await database.IndexStore.CreateIndex(definition1);
                 var index1 = database.IndexStore.GetIndex(indexId1);
                 index1.SetLock(IndexLockMode.LockedIgnore);
 
-                var indexId2 = database.IndexStore.CreateIndex(definition2);
-                Assert.Equal(indexId1, indexId2);
+                var indexId2 = await database.IndexStore.CreateIndex(definition2);
                 Assert.Equal(1, database.IndexStore.GetIndexes().Count());
 
                 index1.SetLock(IndexLockMode.LockedError);
-                indexId2 = database.IndexStore.CreateIndex(definition2); // no-op
-                Assert.Equal(indexId1, indexId2);
+                indexId2 = await database.IndexStore.CreateIndex(definition2); // no-op
+                Assert.True(indexId2 >= indexId1);
             }
         }
 
         [Fact]
-        public void IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert()
+        public async Task IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert()
         {
             var path = NewDataPath();
             string indexStoragePath;
             string indexName;
+            string dbName;
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
+                dbName = database.Name;
+
                 var name1 = new IndexField
                 {
                     Name = "Name1",
-                    Highlighted = true,
                     Storage = FieldStorage.No,
-                    SortOption = SortOptions.String
+                    Sort = SortOptions.String
                 };
 
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 })));
-                var index = database.IndexStore.GetIndex(1);
+                var etag = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] {name1}));
+                Assert.True(etag > 0);
+                var index = database.IndexStore.GetIndex(etag);
                 indexName = index.Name;
 
                 indexStoragePath = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                     IndexDefinitionBase.GetIndexNameSafeForFileSystem(indexName));
             }
 
+            Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
+
             IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "headers.one"));
             IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "headers.two"));
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false))
+            using (var database = await GetDatabase(dbName))
             {
                 var index = database
                     .IndexStore
-                    .GetIndex(1);
+                    .GetIndex(indexName);
 
                 Assert.IsType<FaultyInMemoryIndex>(index);
                 Assert.Equal(IndexState.Error, index.State);
@@ -1116,108 +1117,51 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Fact]
-        public void CanDeleteFaultyIndex()
+        public async Task CanDeleteFaultyIndex()
         {
             var path = NewDataPath();
             string indexStoragePath;
             string indexSafeName;
+            string dbName;
+            long etag;
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
+                dbName = database.Name;
+
                 var name1 = new IndexField
                 {
                     Name = "Name1",
-                    Highlighted = true,
                     Storage = FieldStorage.No,
-                    SortOption = SortOptions.String
+                    Sort = SortOptions.String
                 };
 
-                Assert.Equal(1, database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 })));
-                var index = database.IndexStore.GetIndex(1);
+                etag = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 }));
+                Assert.True(etag > 0);
+                var index = database.IndexStore.GetIndex(etag);
                 indexSafeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name);
 
                 indexStoragePath = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                     IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name));
             }
 
-            Assert.True(Directory.Exists(indexStoragePath));
-            IOExtensions.DeleteDirectory(indexStoragePath);
-            Directory.CreateDirectory(indexStoragePath); // worst case, we have no info
-
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
-            {
-                configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false;
-            }))
-            {
-                var index = database
-                    .IndexStore
-                    .GetIndex(1);
-
-                Assert.IsType<FaultyInMemoryIndex>(index);
-                Assert.Equal(IndexState.Error, index.State);
-                Assert.Equal(indexSafeName, IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name));
-
-                database.IndexStore.DeleteIndex(index.Etag);
-
-                for (int i = 0; i < 5; i++)
-                {
-                    if (Directory.Exists(indexStoragePath) == false)
-                        return;
-                    Thread.Sleep(16);
-                }
-
-                Assert.False(true, indexStoragePath + " exists");
-            }
-        }
-
-        [Fact]
-        public void CanDeleteFaultyIndexWithNonDefaultPath()
-        {
-            var path = NewDataPath();
-            var additionalPath = NewDataPath();
-            string indexStoragePath;
-            string indexSafeName;
-
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
-            {
-                configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths), additionalPath);
-            }))
-            {
-                Assert.Equal(1, database.IndexStore.CreateIndex(
-                    new IndexDefinition
-                    {
-                        Name = "Index1",
-                        Maps = { "from doc in docs select new { doc.Name }" },
-                        Configuration =
-                        {
-                            {RavenConfiguration.GetKey(x => x.Indexing.StoragePath), additionalPath}
-                        }
-                    }));
-                var index = database.IndexStore.GetIndex(1);
-                indexSafeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name);
-
-                indexStoragePath = Path.Combine(index.Configuration.StoragePath.FullPath, indexSafeName);
-            }
+            Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
 
             Assert.True(Directory.Exists(indexStoragePath));
             IOExtensions.DeleteDirectory(indexStoragePath);
             Directory.CreateDirectory(indexStoragePath); // worst case, we have no info
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
-            {
-                configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths), additionalPath);
-                configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false;
-            }))
+            using (var database = await GetDatabase(dbName))
             {
                 var index = database
                     .IndexStore
-                    .GetIndex(1);
+                    .GetIndex(etag);
 
                 Assert.IsType<FaultyInMemoryIndex>(index);
                 Assert.Equal(IndexState.Error, index.State);
                 Assert.Equal(indexSafeName, IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name));
 
-                database.IndexStore.DeleteIndex(index.Etag);
+                await database.IndexStore.DeleteIndex(index.Etag);
 
                 for (int i = 0; i < 5; i++)
                 {

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Http;
+using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;

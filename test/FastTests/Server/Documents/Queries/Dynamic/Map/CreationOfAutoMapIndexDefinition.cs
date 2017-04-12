@@ -20,7 +20,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             var fields = new[] { new IndexField
             {
                 Name = "test",
-                Highlighted = false,
                 Storage = FieldStorage.No
             } };
 
@@ -154,9 +153,9 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.True(definition.ContainsField("Age"));
             Assert.Equal("Auto/Users/ByAgeAndNameSortByAge", definition.Name);
             var nameField = definition.GetField("Name");
-            Assert.Null(nameField.SortOption);
+            Assert.Null(nameField.Sort);
             var ageField = definition.GetField("Age");
-            Assert.Equal(SortOptions.Numeric, ageField.SortOption);
+            Assert.Equal(SortOptions.Numeric, ageField.Sort);
         }
 
         [Fact]
@@ -179,9 +178,9 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.True(definition.ContainsField("Address.Country"));
             Assert.Equal("Auto/Users/ByAddress_CountryAndNameSortByAddress_Country", definition.Name);
             var nameField = definition.GetField("Name");
-            Assert.Null(nameField.SortOption);
+            Assert.Null(nameField.Sort);
             var ageField = definition.GetField("Address.Country");
-            Assert.Equal(SortOptions.String, ageField.SortOption);
+            Assert.Equal(SortOptions.String, ageField.Sort);
         }
 
         [Fact]
@@ -204,9 +203,9 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.True(definition.ContainsField("Address.ZipCode"));
             Assert.Equal("Auto/Users/ByAddress_ZipCodeAndNameSortByAddress_ZipCode", definition.Name);
             var nameField = definition.GetField("Name");
-            Assert.Null(nameField.SortOption);
+            Assert.Null(nameField.Sort);
             var ageField = definition.GetField("Address.ZipCode");
-            Assert.Equal(SortOptions.Numeric, ageField.SortOption);
+            Assert.Equal(SortOptions.Numeric, ageField.Sort);
         }
 
         [Fact]
@@ -224,7 +223,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.True(definition.ContainsField("Age"));
             Assert.Equal("Auto/Users/ByAgeSortByAge", definition.Name);
             var nameField = definition.GetField("Age");
-            Assert.Equal(SortOptions.Numeric, nameField.SortOption);
+            Assert.Equal(SortOptions.Numeric, nameField.Sort);
         }
 
         [Fact]
@@ -263,10 +262,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByAgeAndCountAndFirstNameAndLastNameSortByAgeCount", definition.Name);
 
             var ageField = definition.GetField("Age");
-            Assert.Equal(SortOptions.Numeric, ageField.SortOption);
+            Assert.Equal(SortOptions.Numeric, ageField.Sort);
 
             var countField = definition.GetField("Count");
-            Assert.Equal(SortOptions.Numeric, countField.SortOption);
+            Assert.Equal(SortOptions.Numeric, countField.Sort);
         }
 
         [Fact]
@@ -307,10 +306,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByAddressIdAndAgeAndCountAndFirstNameAndLastNameSortByAgeCount", definition.Name);
 
             var ageField = definition.GetField("Age");
-            Assert.Equal(SortOptions.Numeric, ageField.SortOption);
+            Assert.Equal(SortOptions.Numeric, ageField.Sort);
 
             var countField = definition.GetField("Count");
-            Assert.Equal(SortOptions.Numeric, countField.SortOption);
+            Assert.Equal(SortOptions.Numeric, countField.Sort);
         }
 
         private void create_dynamic_mapping_for_users_collection(string query)

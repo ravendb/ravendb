@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Indexes
     {
         public new TIndexDefinition Definition => (TIndexDefinition)base.Definition;
 
-        protected Index(int etag, IndexType type, TIndexDefinition definition)
+        protected Index(long etag, IndexType type, TIndexDefinition definition)
             : base(etag, type, definition)
         {
         }
@@ -152,10 +152,10 @@ namespace Raven.Server.Documents.Indexes
             Suggestion = "Please verify this index definition and consider a re-design of your entities or index for better indexing performance"
         };
 
-        protected Index(int etag, IndexType type, IndexDefinitionBase definition)
+        protected Index(long etag, IndexType type, IndexDefinitionBase definition)
         {
             if (etag <= 0)
-                throw new ArgumentException("IndexId must be greater than zero.", nameof(etag));
+                throw new ArgumentException("Index etag must be greater than zero.", nameof(etag));
 
             Etag = etag;
             Type = type;
@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Indexes
                 HandleAllDocs = true;
         }
 
-        public static Index Open(int indexId, string path, DocumentDatabase documentDatabase)
+        public static Index Open(long etag, string path, DocumentDatabase documentDatabase)
         {
             StorageEnvironment environment = null;
 
@@ -190,7 +190,7 @@ namespace Raven.Server.Documents.Indexes
                 IndexType type;
                 try
                 {
-                    type = IndexStorage.ReadIndexType(indexId, environment);
+                    type = IndexStorage.ReadIndexType(etag, environment);
                 }
                 catch (Exception e)
                 {
@@ -202,15 +202,15 @@ namespace Raven.Server.Documents.Indexes
                 switch (type)
                 {
                     case IndexType.AutoMap:
-                        return AutoMapIndex.Open(indexId, environment, documentDatabase);
+                        return AutoMapIndex.Open(etag, environment, documentDatabase);
                     case IndexType.AutoMapReduce:
-                        return AutoMapReduceIndex.Open(indexId, environment, documentDatabase);
+                        return AutoMapReduceIndex.Open(etag, environment, documentDatabase);
                     case IndexType.Map:
-                        return MapIndex.Open(indexId, environment, documentDatabase);
+                        return MapIndex.Open(etag, environment, documentDatabase);
                     case IndexType.MapReduce:
-                        return MapReduceIndex.Open(indexId, environment, documentDatabase);
+                        return MapReduceIndex.Open(etag, environment, documentDatabase);
                     default:
-                        throw new ArgumentException($"Uknown index type {type} for index {indexId}");
+                        throw new ArgumentException($"Uknown index type {type} for index {etag}");
                 }
             }
             catch (Exception e)

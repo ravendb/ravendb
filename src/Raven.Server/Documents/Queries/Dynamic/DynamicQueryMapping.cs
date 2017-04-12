@@ -42,8 +42,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         Name = field.Name,
                         Storage = FieldStorage.No,
-                        SortOption = SortDescriptors.FirstOrDefault(x => field.Name.Equals(x.Name))?.FieldType,
-                        Highlighted = HighlightedFields.Any(x => field.Name.Equals(x))
+                        Sort = SortDescriptors.FirstOrDefault(x => field.Name.Equals(x.Name))?.FieldType
                     }).ToArray());
             }
 
@@ -59,14 +58,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         Name = field.Name,
                         Storage = FieldStorage.Yes,
                         MapReduceOperation = field.MapReduceOperation,
-                        SortOption = SortDescriptors.FirstOrDefault(x => field.Name.Equals(x.Name))?.FieldType,
+                        Sort = SortDescriptors.FirstOrDefault(x => field.Name.Equals(x.Name))?.FieldType,
                     }).ToArray(),
                     GroupByFields.Select(field =>
                     new IndexField
                     {
                         Name = field,
                         Storage = FieldStorage.Yes,
-                        SortOption = SortDescriptors.FirstOrDefault(x => field.Equals(x.Name))?.FieldType,
+                        Sort = SortDescriptors.FirstOrDefault(x => field.Equals(x.Name))?.FieldType,
                     }).ToArray());
         }
 
@@ -84,12 +83,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     extendedMapFields.Add(new DynamicQueryMappingItem(field.Name, field.MapReduceOperation));
                 }
 
-                if (extendedSortDescriptors.Any(x => x.Name.Equals(field.Name, StringComparison.OrdinalIgnoreCase)) == false && field.SortOption != null)
+                if (extendedSortDescriptors.Any(x => x.Name.Equals(field.Name, StringComparison.OrdinalIgnoreCase)) == false && field.Sort != null)
                 {
                     extendedSortDescriptors.Add(new DynamicSortInfo
                     {
                         Name = field.Name,
-                        FieldType = field.SortOption.Value
+                        FieldType = field.Sort.Value
                     });
                 }
             }

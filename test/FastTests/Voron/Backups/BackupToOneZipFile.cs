@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
@@ -84,9 +85,12 @@ namespace FastTests.Voron.Backups
                 using (var tx = context.OpenReadTransaction())
                 {
                     Assert.NotNull(database.DocumentsStorage.Get(context, "users/2"));
-                    Assert.Equal(database.IndexStore.GetIndex(1).Name, "Users_ByName");
-                    Assert.Equal(database.IndexStore.GetIndex(2).Name, "Users_ByName2");
                     Assert.Equal(database.SubscriptionStorage.GetAllSubscriptionsCount(), 1);
+
+                    var indexes = database.IndexStore.GetIndexes().ToList();
+                    Assert.Equal(2, indexes.Count);
+                    Assert.True(indexes.Any(x => x.Name == "Users_ByName"));
+                    Assert.True(indexes.Any(x => x.Name == "Users_ByName2"));
                 }
             }
         }
@@ -214,9 +218,12 @@ namespace FastTests.Voron.Backups
                 {
                     Assert.NotNull(database.DocumentsStorage.Get(context, "users/2"));
                     Assert.NotNull(database.DocumentsStorage.Get(context, "users/1"));
-                    Assert.Equal(database.IndexStore.GetIndex(1).Name, "Users_ByName");
-                    Assert.Equal(database.IndexStore.GetIndex(2).Name, "Users_ByName2");
                     Assert.Equal(database.SubscriptionStorage.GetAllSubscriptionsCount(), 1);
+
+                    var indexes = database.IndexStore.GetIndexes().ToList();
+                    Assert.Equal(2, indexes.Count);
+                    Assert.True(indexes.Any(x => x.Name == "Users_ByName"));
+                    Assert.True(indexes.Any(x => x.Name == "Users_ByName2"));
                 }
             }
         }

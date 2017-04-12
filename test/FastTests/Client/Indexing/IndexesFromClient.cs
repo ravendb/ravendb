@@ -32,7 +32,7 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
 
-                var indexId = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+                var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
                 var index = database.IndexStore.GetIndex(indexId);
 
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
@@ -53,7 +53,7 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
 
-                var indexId = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+                var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
                 var index = database.IndexStore.GetIndex(indexId);
 
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
@@ -73,8 +73,8 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
 
-                database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
-                database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
+                await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
+                await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name2" } }));
 
                 var status = await store.Admin.SendAsync(new GetIndexingStatusOperation());
 
@@ -663,7 +663,7 @@ namespace FastTests.Client.Indexing
                         .DatabasesLandlord
                         .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase));
 
-                    var indexId = database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Posts", new[]
+                    var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Posts", new[]
                     {
                         new IndexField
                         {

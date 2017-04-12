@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public PropertyAccessor OutputReduceToCollectionPropertyAccessor;
 
-        private MapReduceIndex(int etag, MapReduceIndexDefinition definition, StaticIndexBase compiled)
+        private MapReduceIndex(long etag, MapReduceIndexDefinition definition, StaticIndexBase compiled)
             : base(etag, IndexType.MapReduce, definition)
         {
             _compiled = compiled;
@@ -51,9 +51,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Count > 1);
 
-        public static MapReduceIndex CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
+        public static MapReduceIndex CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
         {
-            var instance = CreateIndexInstance(indexId, definition);
+            var instance = CreateIndexInstance(definition);
             ValidateReduceResultsCollectionName(instance, documentDatabase);
 
             instance.Initialize(documentDatabase,
@@ -126,10 +126,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return false;
         }
 
-        public static Index Open(int indexId, StorageEnvironment environment, DocumentDatabase documentDatabase)
+        public static Index Open(long etag, StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
             var definition = MapIndexDefinition.Load(environment);
-            var instance = CreateIndexInstance(indexId, definition);
+            var instance = CreateIndexInstance(definition);
 
             instance.Initialize(environment, documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
@@ -148,13 +148,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
-        private static MapReduceIndex CreateIndexInstance(int indexId, IndexDefinition definition)
+        private static MapReduceIndex CreateIndexInstance(IndexDefinition definition)
         {
             var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
 
             var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
                 staticIndex.GroupByFields, staticIndex.HasDynamicFields);
-            var instance = new MapReduceIndex(indexId, staticMapIndexDefinition, staticIndex);
+            var instance = new MapReduceIndex(definition.Etag, staticMapIndexDefinition, staticIndex);
 
             return instance;
         }

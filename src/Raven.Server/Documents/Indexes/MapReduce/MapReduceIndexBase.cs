@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private PageLocator _pageLocator;
         
-        protected MapReduceIndexBase(int etag, IndexType type, T definition) : base(etag, type, definition)
+        protected MapReduceIndexBase(long etag, IndexType type, T definition) : base(etag, type, definition)
         {
         }
 

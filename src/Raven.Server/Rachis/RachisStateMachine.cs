@@ -52,7 +52,7 @@ namespace Raven.Server.Rachis
 
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 
-        public abstract Task<Stream> ConenctToPeer(string url, string apiKey);
+        public abstract Task<Stream> ConnectToPeer(string url, string apiKey);
 
         public virtual void OnSnapshotInstalled(TransactionOperationContext context)
         {

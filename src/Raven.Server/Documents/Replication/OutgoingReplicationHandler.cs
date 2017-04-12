@@ -136,7 +136,6 @@ namespace Raven.Server.Documents.Replication
                     using (_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                     {
                         var documentSender = new ReplicationDocumentSender(_stream, this, _log);
-                        var indexAndTransformerSender = new ReplicationIndexTransformerSender(_stream, this, _log);
 
                         WriteHeaderToRemotePeer();
                         //handle initial response to last etag and staff
@@ -187,13 +186,6 @@ namespace Raven.Server.Documents.Replication
                         while (_cts.IsCancellationRequested == false)
                         {
                             Debug.Assert(_database.IndexMetadataPersistence.IsInitialized);
-
-                            var currentEtag = GetLastIndexEtag();
-
-                            if (_destination.SkipIndexReplication == false && currentEtag != indexAndTransformerSender.LastEtag)
-                            {
-                                indexAndTransformerSender.ExecuteReplicationOnce();
-                            }
 
                             while (true)
                             {

@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Errors
     {
         private readonly Exception _e;
 
-        public FaultyInMemoryIndex(Exception e, int etag, string name, IndexingConfiguration configuration)
+        public FaultyInMemoryIndex(Exception e, long etag, string name, IndexingConfiguration configuration)
             : base(etag, IndexType.Faulty, new FaultyIndexDefinition(name ?? $"Faulty/Indexes/{etag}", new HashSet<string> { "@FaultyIndexes" },
                    IndexLockMode.Unlock, IndexPriority.Normal, new IndexField[0]))
         {

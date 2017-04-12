@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Server;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;

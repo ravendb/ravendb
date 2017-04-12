@@ -148,12 +148,12 @@ namespace Raven.Server.Documents.Queries
             return index.MoreLikeThisQuery(query, context, token);
         }
 
-        public IndexEntriesQueryResult ExecuteIndexEntriesQuery(string indexName, IndexQueryServerSide query, long? existingResultEtag, OperationCancelToken token)
+        public async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(string indexName, IndexQueryServerSide query, long? existingResultEtag, OperationCancelToken token)
         {
             if (DynamicQueryRunner.IsDynamicIndex(indexName))
             {
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
-                return runner.ExecuteIndexEntries(indexName, query, existingResultEtag);
+                return await runner.ExecuteIndexEntries(indexName, query, existingResultEtag);
             }
 
             var index = GetIndex(indexName);

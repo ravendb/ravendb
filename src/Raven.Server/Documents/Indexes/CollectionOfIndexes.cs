@@ -14,14 +14,9 @@ namespace Raven.Server.Documents.Indexes
         private readonly ConcurrentDictionary<long, Index> _indexesByEtag = new ConcurrentDictionary<long, Index>();
         private readonly ConcurrentDictionary<string, Index> _indexesByName = new ConcurrentDictionary<string, Index>(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<string, ConcurrentSet<Index>> _indexesByCollection = new ConcurrentDictionary<string, ConcurrentSet<Index>>(StringComparer.OrdinalIgnoreCase);
-        private long _nextIndexEtag = 1;
 
         public void Add(Index index)
         {
-            if (index.Etag < _nextIndexEtag)
-                throw new InvalidOperationException($"Invalid index Id. Should be equal or greater than {_nextIndexEtag}. Was {index.Etag}");
-
-            _nextIndexEtag = Math.Max(index.Etag, _nextIndexEtag) + 1;
             _indexesByEtag[index.Etag] = index;
             _indexesByName[index.Name] = index;
 

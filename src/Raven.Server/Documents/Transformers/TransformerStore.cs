@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Server;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -44,7 +46,7 @@ namespace Raven.Server.Documents.Transformers
             }
         }
 
-        public void Initialize(DatabaseRecord record)
+        public Task InitializeAsync(DatabaseRecord record)
         {
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(TransformerStore)} was already initialized.");
@@ -57,7 +59,7 @@ namespace Raven.Server.Documents.Transformers
 
                 _initialized = true;
 
-                OpenTransformers(record);
+                return Task.Factory.StartNew(() => OpenTransformers(record), TaskCreationOptions.LongRunning);
             }
         }
 

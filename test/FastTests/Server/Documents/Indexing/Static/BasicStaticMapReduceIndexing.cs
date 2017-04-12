@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -21,8 +22,9 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
             using (var database = CreateDocumentDatabase())
             {
-                using (var index = MapReduceIndex.CreateNew(1, new IndexDefinition()
+                using (var index = MapReduceIndex.CreateNew(new IndexDefinition()
                 {
+                    Etag = 10,
                     Name = "Users_ByCount_GroupByLocation",
                     Maps = { @"from user in docs.Users select new { 
                                 user.Location, 
@@ -112,8 +114,9 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
             using (var database = CreateDocumentDatabase())
             {
-                using (var index = MapReduceIndex.CreateNew(1, new IndexDefinition()
+                using (var index = MapReduceIndex.CreateNew(new IndexDefinition()
                 {
+                    Etag = 10,
                     Name = "Users_ByCount_GroupByLocation",
                     Maps = { @"from order in docs.Orders
 from line in order.Lines
@@ -209,7 +212,7 @@ select new
         }
 
         [Fact]
-        public void CanPersist()
+        public async Task CanPersist()
         {
             var path = NewDataPath();
             IndexDefinition defOne, defTwo;
@@ -223,9 +226,8 @@ select new
                     Reduce = "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => x.Count) }",
                 };
 
-                var index = database.IndexStore.GetIndex(database.IndexStore.CreateIndex(defOne));
-
-                Assert.Equal(1, index.Etag);
+                var index = database.IndexStore.GetIndex(await database.IndexStore.CreateIndex(defOne));
+                Assert.True(index.Etag > 0);
 
                 defTwo = new IndexDefinition()
                 {
@@ -247,7 +249,9 @@ select new
                     },
                     LockMode = IndexLockMode.LockedError
                 };
-                Assert.Equal(2, database.IndexStore.CreateIndex(defTwo));
+
+                var etag = await database.IndexStore.CreateIndex(defTwo);
+                Assert.True(etag > 0);
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
@@ -271,7 +275,10 @@ select new
                 }
             }
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true))
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
+            {
+                configuration[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true";
+            }))
             {
                 var indexes = database
                     .IndexStore

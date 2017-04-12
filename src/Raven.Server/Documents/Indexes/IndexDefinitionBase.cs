@@ -137,12 +137,8 @@ namespace Raven.Server.Documents.Indexes
                 writer.WriteString((field.Name));
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(field.Highlighted)));
-                writer.WriteBool(field.Highlighted);
-                writer.WriteComma();
-
-                writer.WritePropertyName((nameof(field.SortOption)));
-                writer.WriteInteger((int)(field.SortOption ?? SortOptions.None));
+                writer.WritePropertyName((nameof(field.Sort)));
+                writer.WriteInteger((int)(field.Sort ?? SortOptions.None));
                 writer.WriteComma();
 
                 writer.WritePropertyName((nameof(field.MapReduceOperation)));
@@ -260,7 +256,7 @@ namespace Raven.Server.Documents.Indexes
                 name = name.Replace(invalidPathChar, '_');
             }
 
-            var hash = MD5Core.GetHashString(name);
+            var hash = MD5Core.GetHashString(name.ToLowerInvariant()).Substring(0, 8);
             if (name.Length < 64)
                 return $"{hash}-{name}";
             return $"{hash}-{name.Substring(0, 64)}";
@@ -320,18 +316,14 @@ namespace Raven.Server.Documents.Indexes
                 string name;
                 json.TryGet(nameof(IndexField.Name), out name);
 
-                bool highlighted;
-                json.TryGet(nameof(IndexField.Highlighted), out highlighted);
-
                 int sortOptionAsInt;
-                json.TryGet(nameof(IndexField.SortOption), out sortOptionAsInt);
+                json.TryGet(nameof(IndexField.Sort), out sortOptionAsInt);
 
                 var field = new IndexField
                 {
                     Name = name,
-                    Highlighted = highlighted,
                     Storage = FieldStorage.No,
-                    SortOption = (SortOptions?)sortOptionAsInt,
+                    Sort = (SortOptions?)sortOptionAsInt,
                     Indexing = FieldIndexing.Default
                 };
 
@@ -345,14 +337,7 @@ namespace Raven.Server.Documents.Indexes
         {
             return fields.ToDictionary(
                 x => x.Key,
-                x => new IndexFieldOptions
-                {
-                    Sort = x.Value.SortOption,
-                    TermVector = x.Value.Highlighted ? FieldTermVector.WithPositionsAndOffsets : (FieldTermVector?)null,
-                    Analyzer = x.Value.Analyzer,
-                    Indexing = x.Value.Indexing,
-                    Storage = x.Value.Storage
-                });
+                x => x.Value.ToIndexFieldOptions());
         }
     }
 }

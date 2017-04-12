@@ -463,17 +463,17 @@ namespace Raven.Server.Documents.Indexes
             table.DeleteForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys, false, numberOfEntriesToDelete);
         }
 
-        public static IndexType ReadIndexType(int indexId, StorageEnvironment environment)
+        public static IndexType ReadIndexType(long etag, StorageEnvironment environment)
         {
             using (var tx = environment.ReadTransaction())
             {
                 var statsTree = tx.ReadTree(IndexSchema.StatsTree);
                 if (statsTree == null)
-                    throw new InvalidOperationException($"Index '{indexId}' does not contain 'Stats' tree.");
+                    throw new InvalidOperationException($"Index '{etag}' does not contain 'Stats' tree.");
 
                 var result = statsTree.Read(IndexSchema.TypeSlice);
                 if (result == null)
-                    throw new InvalidOperationException($"Stats tree does not contain 'Type' entry in index '{indexId}'.");
+                    throw new InvalidOperationException($"Stats tree does not contain 'Type' entry in index '{etag}'.");
 
                 return (IndexType)result.Reader.ReadLittleEndianInt32();
             }

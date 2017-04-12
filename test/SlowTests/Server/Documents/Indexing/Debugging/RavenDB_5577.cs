@@ -21,12 +21,12 @@ namespace SlowTests.Server.Documents.Indexing.Debugging
         {
             using (var database = CreateDocumentDatabase())
             {
-                using (var index = MapReduceIndex.CreateNew(1, new IndexDefinition
+                using (var index = MapReduceIndex.CreateNew(new IndexDefinition
                 {
                     Name = "Users_ByCount_GroupByProduct",
-                    Maps = {@"from order in docs.Orders
+                    Maps = { @"from order in docs.Orders
 from line in order.Lines
-select new { Product = line.Product, Count = 1, Total = line.Price }"},
+select new { Product = line.Product, Count = 1, Total = line.Price }" },
                     Reduce = @"from result in mapResults
 group result by result.Product into g
 select new
@@ -80,7 +80,7 @@ select new
                             Assert.Equal(11, result.Count);
 
                             Assert.Equal("orders/3", result[0]);
-                            
+
                             for (var i = 0; i < 10; i++)
                             {
                                 Assert.Equal($"orders/3{i}", result[i + 1]);
@@ -103,7 +103,7 @@ select new
         {
             using (var database = CreateDocumentDatabase())
             {
-                using (var index = MapReduceIndex.CreateNew(1, new IndexDefinition
+                using (var index = MapReduceIndex.CreateNew(new IndexDefinition
                 {
                     Name = "Users_ByCount_GroupByProduct",
                     Maps = { @"from order in docs.Orders
@@ -171,9 +171,9 @@ select new
                                         tree.Root
                                     };
                                 }
-                                
+
                                 Assert.NotNull(tree.Root.AggregationResult);
-                                
+
                                 foreach (var leafPage in pages)
                                 {
                                     Assert.Null(leafPage.Children);

@@ -3,36 +3,35 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http.OAuth;
-using Raven.Client.Server.Commands;
+using Raven.Client.Server;
 using Raven.Client.Server.Tcp;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Exceptions;
-using Voron.Util;
 
 namespace Raven.Server.ServerWide
 {
@@ -101,6 +100,9 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteValueCommand):
                     DeleteValue(context, cmd, index, leader);
                     break;
+                case nameof(PutIndexCommand):
+                case nameof(PutAutoIndexCommand):
+                case nameof(DeleteIndexCommand):
                 case nameof(PutTransformerCommand):
                 case nameof(SetTransformerLockModeCommand):
                 case nameof(DeleteTransformerCommand):
@@ -253,7 +255,7 @@ namespace Raven.Server.ServerWide
             TableValueBuilder builder;
             Slice valueName, valueNameLowered;
             using (items.Allocate(out builder))
-            using (Slice.From(context.Allocator, "db/"+ addDatabaseCommand.Name, out valueName))
+            using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out valueName))
             using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out valueNameLowered))
             using (var rec = context.ReadObject(addDatabaseCommand.Value, "inner-val"))
             {
@@ -377,7 +379,7 @@ namespace Raven.Server.ServerWide
 
                 if (doc == null)
                 {
-                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
+                    NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
                     return;
                 }
 
@@ -386,12 +388,12 @@ namespace Raven.Server.ServerWide
                 var updateCommand = JsonDeserializationCluster.UpdateDatabaseCommands[type](cmd);
                 try
                 {
-                    updateCommand.UpdateDatabaseRecord(databaseRecord);
+                    updateCommand.UpdateDatabaseRecord(databaseRecord, index);
                     doUpdate = true;
                 }
                 catch (Exception e)
                 {
-                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"Cannot execute command of type {type} for database {databaseName}", e));
+                    NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type} for database {databaseName}", e));
                     doUpdate = false;
                 }
                 if (doUpdate)
@@ -454,7 +456,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<string> GetdatabaseNames(TransactionOperationContext context,int start = 0, int take = Int32.MaxValue)
+        public IEnumerable<string> GetDatabaseNames(TransactionOperationContext context, int start = 0, int take = Int32.MaxValue)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -462,7 +464,7 @@ namespace Raven.Server.ServerWide
             Slice loweredPrefix;
             using (Slice.From(context.Allocator, dbKey, out loweredPrefix))
             {
-                
+
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
                     if (take-- <= 0)
@@ -540,7 +542,7 @@ namespace Raven.Server.ServerWide
             return doc;
         }
 
-        public override async Task<Stream> ConenctToPeer(string url, string apiKey)
+        public override async Task<Stream> ConnectToPeer(string url, string apiKey)
         {
             var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey);
             var authenticator = new ApiKeyAuthenticator();
@@ -595,9 +597,9 @@ namespace Raven.Server.ServerWide
 
         public override void OnSnapshotInstalled(TransactionOperationContext context)
         {
-            var listOfDatabaseName = GetdatabaseNames(context).ToList();
+            var listOfDatabaseName = GetDatabaseNames(context).ToList();
             //There is potentially a lot of work to be done here so we are responding to the change on a separate task.
-            if(DatabaseChanged != null)
+            if (DatabaseChanged != null)
             {
                 Task.Run(() =>
                 {
@@ -606,7 +608,7 @@ namespace Raven.Server.ServerWide
                         DatabaseChanged.Invoke(this, db);
                     }
                 });
-            }            
+            }
         }
     }
 
@@ -621,17 +623,20 @@ namespace Raven.Server.ServerWide
         public string Name;
     }
 
-    public class EditVersioningCommand : IUpdateDatabaseCommand
+    public class EditVersioningCommand : UpdateDatabaseCommand
     {
-        public string DatabaseName;
         public VersioningConfiguration Configuration;
 
-        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
+        public override void UpdateDatabaseRecord(DatabaseRecord databaseRecord, long etag)
         {
             databaseRecord.VersioningConfiguration = Configuration;
         }
-    }
 
+        public override void FillJson(DynamicJsonValue json)
+        {
+            throw new NotImplementedException();
+        }
+    }
 
     public class DeleteDatabaseCommand
     {
@@ -654,39 +659,199 @@ namespace Raven.Server.ServerWide
         public string NodeTag;
     }
 
-    public interface IUpdateDatabaseCommand
-    {
-        void UpdateDatabaseRecord(DatabaseRecord record);
-    }
-
-    public class PutTransformerCommand : IUpdateDatabaseCommand
+    public abstract class UpdateDatabaseCommand
     {
         public string DatabaseName;
+
+        public abstract void UpdateDatabaseRecord(DatabaseRecord record, long etag);
+
+        public abstract void FillJson(DynamicJsonValue json);
+
+        public DynamicJsonValue ToJson()
+        {
+            var json = new DynamicJsonValue
+            {
+                ["Type"] = GetType().Name,
+                [nameof(DatabaseName)] = DatabaseName
+            };
+
+            FillJson(json);
+
+            return json;
+        }
+    }
+
+    public class DeleteIndexCommand : UpdateDatabaseCommand
+    {
+        public string IndexName { get; set; }
+
+        public DeleteIndexCommand()
+        {
+            // for deserialization
+        }
+
+        public DeleteIndexCommand(string name, string databaseName)
+        {
+            IndexName = name;
+            DatabaseName = databaseName;
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            record.DeleteIndex(IndexName);
+        }
+
+        public override void FillJson(DynamicJsonValue json)
+        {
+            json[nameof(IndexName)] = IndexName;
+        }
+    }
+
+    public class PutIndexCommand : UpdateDatabaseCommand
+    {
+        public IndexDefinition Definition;
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            Definition.Etag = etag;
+            record.AddIndex(Definition);
+        }
+
+        public override void FillJson(DynamicJsonValue json)
+        {
+            json[nameof(Definition)] = TypeConverter.ToBlittableSupportedType(Definition);
+        }
+    }
+
+    public class PutAutoIndexCommand : UpdateDatabaseCommand
+    {
+        public AutoIndexDefinition Definition;
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            Definition.Etag = etag;
+            record.AddIndex(Definition);
+        }
+
+        public override void FillJson(DynamicJsonValue json)
+        {
+            json[nameof(Definition)] = TypeConverter.ToBlittableSupportedType(Definition);
+        }
+
+        public static PutAutoIndexCommand Create(IndexDefinitionBase definition, string databaseName)
+        {
+            var map = definition as AutoMapIndexDefinition;
+            if (map != null)
+                return For(map, databaseName);
+
+            var reduce = definition as AutoMapReduceIndexDefinition;
+            if (reduce != null)
+                return For(reduce, databaseName);
+
+            throw new NotSupportedException("Invalid definition type: " + definition.GetType());
+        }
+
+        private static PutAutoIndexCommand For(AutoMapIndexDefinition definition, string databaseName)
+        {
+            return new PutAutoIndexCommand
+            {
+                DatabaseName = databaseName,
+                Definition = new AutoIndexDefinition
+                {
+                    Collection = definition.Collections.First(),
+                    Etag = 0,
+                    MapFields = CreateFields(definition.MapFields),
+                    GroupByFields = null,
+                    LockMode = definition.LockMode,
+                    Priority = definition.Priority,
+                    Name = definition.Name,
+                    Type = IndexType.AutoMap
+                }
+            };
+        }
+
+        private static PutAutoIndexCommand For(AutoMapReduceIndexDefinition definition, string databaseName)
+        {
+            return new PutAutoIndexCommand
+            {
+                DatabaseName = databaseName,
+                Definition = new AutoIndexDefinition
+                {
+                    Collection = definition.Collections.First(),
+                    Etag = 0,
+                    MapFields = CreateFields(definition.MapFields),
+                    GroupByFields = CreateFields(definition.GroupByFields),
+                    LockMode = definition.LockMode,
+                    Priority = definition.Priority,
+                    Name = definition.Name,
+                    Type = IndexType.AutoMapReduce
+                }
+            };
+        }
+
+        private static Dictionary<string, AutoIndexDefinition.AutoIndexFieldOptions> CreateFields(Dictionary<string, IndexField> fields)
+        {
+            if (fields == null)
+                return null;
+
+            var result = new Dictionary<string, AutoIndexDefinition.AutoIndexFieldOptions>();
+            foreach (var kvp in fields)
+                result[kvp.Key] = new AutoIndexDefinition.AutoIndexFieldOptions
+                {
+                    TermVector = kvp.Value.TermVector,
+                    Storage = kvp.Value.Storage,
+                    Indexing = kvp.Value.Indexing,
+                    Analyzer = kvp.Value.Analyzer,
+                    Spatial = null,
+                    Suggestions = null,
+                    Sort = kvp.Value.Sort,
+                    MapReduceOperation = kvp.Value.MapReduceOperation
+                };
+
+            return result;
+        }
+    }
+
+    public class PutTransformerCommand : UpdateDatabaseCommand
+    {
         public TransformerDefinition TransformerDefinition;
-        public void UpdateDatabaseRecord(DatabaseRecord record)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.AddTransformer(TransformerDefinition);
         }
-    }
 
-    public class SetTransformerLockModeCommand : IUpdateDatabaseCommand
-    {
-        public string DatabaseName;
-        public string TransformerName;
-        public TransformerLockMode LockMode;
-        public void UpdateDatabaseRecord(DatabaseRecord record)
+        public override void FillJson(DynamicJsonValue json)
         {
-            record.Transformers[TransformerName].LockMode = LockMode;
+            throw new NotImplementedException();
         }
     }
 
-    public class DeleteTransformerCommand : IUpdateDatabaseCommand
+    public class SetTransformerLockModeCommand : UpdateDatabaseCommand
     {
-        public string DatabaseName;
         public string TransformerName;
-        public void UpdateDatabaseRecord(DatabaseRecord record)
+        public TransformerLockMode LockMode;
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            record.Transformers[TransformerName].LockMode = LockMode;
+        }
+
+        public override void FillJson(DynamicJsonValue json)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class DeleteTransformerCommand : UpdateDatabaseCommand
+    {
+        public string TransformerName;
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.Transformers.Remove(TransformerName);
+        }
+
+        public override void FillJson(DynamicJsonValue json)
+        {
+            throw new NotImplementedException();
         }
     }
 
@@ -703,12 +868,15 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecord = GenerateJsonDeserializationRoutine<DatabaseRecord>();
         public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromDatabaseCommand> RemoveNodeFromDatabaseCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>();
 
-        public static Dictionary<string, Func<BlittableJsonReaderObject, IUpdateDatabaseCommand>> UpdateDatabaseCommands = new Dictionary<string, Func<BlittableJsonReaderObject, IUpdateDatabaseCommand>>()
+        public static Dictionary<string, Func<BlittableJsonReaderObject, UpdateDatabaseCommand>> UpdateDatabaseCommands = new Dictionary<string, Func<BlittableJsonReaderObject, UpdateDatabaseCommand>>()
         {
             [nameof(EditVersioningCommand)] = GenerateJsonDeserializationRoutine<EditVersioningCommand>(),
             [nameof(PutTransformerCommand)] = GenerateJsonDeserializationRoutine<PutTransformerCommand>(),
             [nameof(DeleteTransformerCommand)] = GenerateJsonDeserializationRoutine<DeleteTransformerCommand>(),
-            [nameof(SetTransformerLockModeCommand)] = GenerateJsonDeserializationRoutine<SetTransformerLockModeCommand>()
+            [nameof(SetTransformerLockModeCommand)] = GenerateJsonDeserializationRoutine<SetTransformerLockModeCommand>(),
+            [nameof(PutIndexCommand)] = GenerateJsonDeserializationRoutine<PutIndexCommand>(),
+            [nameof(PutAutoIndexCommand)] = GenerateJsonDeserializationRoutine<PutAutoIndexCommand>(),
+            [nameof(DeleteIndexCommand)] = GenerateJsonDeserializationRoutine<DeleteIndexCommand>()
         };
 
         public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();
