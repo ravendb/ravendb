@@ -319,6 +319,20 @@ namespace Raven.Tests.Common
             SetupReplication(source, destinationDocs);
         }
 
+        protected void SetupReplicationWithSkipIndexReplication(IDatabaseCommands source, params DocumentStore[] destinations)
+        {
+            Assert.NotEmpty(destinations);
+
+
+            var destinationDocs = destinations.Select(destination => new RavenJObject
+            {
+                { "Url", destination.Url },
+                { "Database", destination.DefaultDatabase },
+                { "SkipIndexReplication", true }
+            }).ToList();
+
+            SetupReplication(source, destinationDocs);
+        }
 
         protected void SetupReplication(IDatabaseCommands source, params DocumentStore[] destinations)
         {
@@ -326,10 +340,11 @@ namespace Raven.Tests.Common
 
 
             var destinationDocs = destinations.Select(destination => new RavenJObject
-                                                                        {
-                                                                            { "Url", destination.Url },
-                                                                            { "Database", destination.DefaultDatabase }
-                }).ToList();
+                {
+                    {"Url", destination.Url},
+                    {"Database", destination.DefaultDatabase}
+                })
+                .ToList();
 
             SetupReplication(source, destinationDocs);
         }
@@ -338,12 +353,12 @@ namespace Raven.Tests.Common
                                                                         {
             Assert.NotEmpty(destinations);
 
-
             var destinationDocs = destinations.Select(destination => new RavenJObject
                 {
-                                                                            { "Url", destination.Url },
-                                                                            { "Database", destination.DefaultDatabase }
-                }).ToList();
+                    {"Url", destination.Url},
+                    {"Database", destination.DefaultDatabase}
+                })
+                .ToList();
 
             UpdateReplication(source, destinationDocs);
         }
