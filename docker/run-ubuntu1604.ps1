@@ -1,6 +1,5 @@
 param(
     [switch]$Detached,
-    [switch]$AllowEverybodyToAccessTheServerAsAdmin,
     [switch]$Debug,
     $BindPort = 8080,
     $BindTcpPort = 38888,
@@ -11,8 +10,6 @@ if ([string]::IsNullOrEmpty($(docker volume ls | select-string $DbVolumeName))) 
     write-host "Create docker volume $DbVolumeName"
     docker volume create $DbVolumeName
 }
-
-$everybodyAdmin = $AllowEverybodyToAccessTheServerAsAdmin.ToString().ToLower()
 
 if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
     $configSwitch = "-v`"$($ConfigPath):/opt/raven-settings.json`"".Trim()

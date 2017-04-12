@@ -1,6 +1,5 @@
 param(
     [switch]$Detached,
-    [switch]$AllowEverybodyToAccessTheServerAsAdmin,
     [switch]$Debug,
     $BindPort = 8080,
     $BindTcpPort = 38888,
@@ -11,8 +10,6 @@ if ([string]::IsNullOrEmpty($(docker volume ls | select-string $dbVolumeName))) 
     write-host "Create docker volume $dbVolumeName."
     docker volume create $dbVolumeName
 }
-
-$everybodyAdmin = $AllowEverybodyToAccessTheServerAsAdmin.ToString().ToLower()
 
 if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
     $fileEntry = (get-item $ConfigPath)
