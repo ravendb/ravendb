@@ -236,7 +236,7 @@ namespace Voron.Data.BTrees
             if (MaxKey.HasValue)
                 MaxKey.Release(_tx.Allocator);
             _prevKeyScope.Dispose();
-            _cursor.Dispose();
+            _cursor?.Dispose();
             _decompressedPage?.Dispose();
             OnDisposal?.Invoke(this);
         }
