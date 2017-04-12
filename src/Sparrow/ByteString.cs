@@ -1359,12 +1359,13 @@ namespace Sparrow
             _disposed = true;
 
 #if VALIDATE
-                foreach (var item in _immutableTracker.ToArray())
-                {
-                    var storage = (ByteStringStorage*)item.Value.Item1.ToPointer();
+            /* TODO arek
+            foreach (var item in _immutableTracker.ToArray())
+            {
+                var storage = (ByteStringStorage*)item.Value.Item1.ToPointer();
 
-                    ValidateAndUnregister(storage);
-                }
+                ValidateAndUnregister(storage);
+            } */
 #endif
 
             foreach (var segment in _wholeSegments)
