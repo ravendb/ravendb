@@ -974,9 +974,9 @@ namespace Voron.Impl
                 if (dirtyPagesValidate.Contains(pageNumber))
                     VoronUnrecoverableErrorException.Raise(_env, "Read only page is dirty (which means you are modifying a page directly in the data -- non transactionally -- ).");
 
-                var page = this.GetPage(pageNumber);
-
-                ulong pageHash = Hashing.XXHash64.Calculate(page.Pointer, (ulong)Environment.Options.PageSize);
+                var page = GetPage(pageNumber);
+                
+                ulong pageHash = _env.CalculatePageChecksum(page.Pointer, page.PageNumber, page.Flags, page.OverflowSize);
                 if (pageHash != readOnlyKey.Value)
                     VoronUnrecoverableErrorException.Raise(_env, "Read only page content is different (which means you are modifying a page directly in the data -- non transactionally -- ).");
             }
@@ -1003,9 +1003,9 @@ namespace Voron.Impl
             if (readOnlyPages.ContainsKey(page.PageNumber))
                 readOnlyPages.Remove(page.PageNumber);
 
-            if (!writablePages.ContainsKey(page.PageNumber))
+            if (writablePages.ContainsKey(page.PageNumber) == false)
             {
-                ulong pageHash = Hashing.XXHash64.Calculate(page.Pointer, (ulong)Environment.Options.PageSize);
+                ulong pageHash = _env.CalculatePageChecksum(page.Pointer, page.PageNumber, page.Flags, page.OverflowSize);
                 writablePages[page.PageNumber] = pageHash;
             }
         }
@@ -1015,7 +1015,7 @@ namespace Voron.Impl
             if (writablePages.ContainsKey(page.PageNumber))
                 return;
 
-            ulong pageHash = Hashing.XXHash64.Calculate(page.Pointer, (ulong)Environment.Options.PageSize);
+            ulong pageHash = _env.CalculatePageChecksum(page.Pointer, page.PageNumber, page.Flags, page.OverflowSize);
 
             ulong storedHash;
             if (readOnlyPages.TryGetValue(page.PageNumber, out storedHash))

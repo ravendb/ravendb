@@ -950,18 +950,18 @@ namespace Voron
                 $"Invalid overflow size for page {pageNumber}, current offset is {pageNumber * Constants.Storage.PageSize} and overflow size is {current->OverflowSize}. Page length is beyond the file length {_dataPager.TotalAllocationSize}");
         }
 
-        public unsafe void AddChecksumToPageHeader(PageHeader* current)
+        public unsafe ulong CalculatePageChecksum(byte* ptr, long pageNumber, PageFlags flags, int overflowSize)
         {
             var dataLength = Constants.Storage.PageSize - (PageHeader.ChecksumOffset + sizeof(ulong));
-            if ((current->Flags & PageFlags.Overflow) == PageFlags.Overflow)
-                dataLength = current->OverflowSize - (PageHeader.ChecksumOffset + sizeof(ulong));
+            if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
+                dataLength = overflowSize - (PageHeader.ChecksumOffset + sizeof(ulong));
 
-            var ctx = Hashing.Streamed.XXHash64.BeginProcess((ulong)current->PageNumber);
+            var ctx = Hashing.Streamed.XXHash64.BeginProcess((ulong)pageNumber);
 
-            Hashing.Streamed.XXHash64.Process(ctx, (byte*)current, PageHeader.ChecksumOffset);
-            Hashing.Streamed.XXHash64.Process(ctx, (byte*)current + PageHeader.ChecksumOffset + sizeof(ulong), dataLength);
+            Hashing.Streamed.XXHash64.Process(ctx, ptr, PageHeader.ChecksumOffset);
+            Hashing.Streamed.XXHash64.Process(ctx, ptr + PageHeader.ChecksumOffset + sizeof(ulong), dataLength);
 
-            current->Checksum = Hashing.Streamed.XXHash64.EndProcess(ctx);
+            return Hashing.Streamed.XXHash64.EndProcess(ctx);
         }
 
         public IDisposable GetTemporaryPage(LowLevelTransaction tx, out TemporaryPage tmp)
