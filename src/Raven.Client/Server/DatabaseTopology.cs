@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication;
+using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents
@@ -15,16 +16,18 @@ namespace Raven.Client.Documents
 
         public bool ConflictResolutionChanged(ConflictSolver other)
         {
-            if ((ResolveByCollection == null ^ other.ResolveByCollection == null) == false)
+            var isResolveByCollectionNull = ResolveByCollection == null;
+            var isOtherResolveByCollectionNull = other.ResolveByCollection == null;
+
+            if (isResolveByCollectionNull || isOtherResolveByCollectionNull)
                 return true;
 
-            return ResolveToLatest == other.ResolveToLatest &&
-                   (ResolveByCollection?.SequenceEqual(other.ResolveByCollection) ?? true);
+            return ResolveToLatest == other.ResolveToLatest && (bool)ResolveByCollection?.SequenceEqual(other.ResolveByCollection);
         }
 
         public bool IsEmpty()
         {
-            return ResolveToLatest == false && DatabaseResovlerId == null && ResolveByCollection?.Count == 0;
+            return ResolveByCollection?.Count == 0 || (ResolveToLatest == false && DatabaseResovlerId == null);
         }
 
         public DynamicJsonValue ToJson()
@@ -35,17 +38,20 @@ namespace Raven.Client.Documents
                 [nameof(ResolveToLatest)] = ResolveToLatest,
                 [nameof(ResolveByCollection)] = new DynamicJsonArray
                 {
-                    ResolveByCollection.Select( item => new DynamicJsonValue
-                    {
-                        [nameof(item.Key)] = item.Value.ToJson()
-                    })
+                    ResolveByCollection != null ? 
+                        ResolveByCollection.Select( item => new DynamicJsonValue
+                        {
+                            [nameof(item.Key)] = item.Value.ToJson()
+                        }) :
+                        new DynamicJsonValue[0]
                 }
             };
         }
     }
 
     public interface IDatabaseTask
-    {        
+    {
+        ulong GetTaskKey();
     }
 
     public class DatabaseWatcher : ReplicationNode, IDatabaseTask
@@ -53,7 +59,7 @@ namespace Raven.Client.Documents
     }
 
     public class DatabasePromotable : ReplicationNode, IDatabaseTask
-    {
+    {    
     }
 
     public class DatabaseTopology
@@ -66,6 +72,8 @@ namespace Raven.Client.Documents
 
         // If we want to prevent from a replication we set an entry 
         // e.g. setting ("A","C") will prevent replication from server A to C for this database.
+        //TODO : not sure what this should do (any even why it is needed)
+        //TODO : leaving this for now, perhaps this is here by design
         public Dictionary<string,string> CustomConnectionBlocker = new Dictionary<string, string>();
 
         public bool RelevantFor(string nodeTag)
@@ -133,20 +141,13 @@ namespace Raven.Client.Documents
         public bool IsItMyTask(IDatabaseTask task, string nodeTag)
         {
             var myPosition = Members.FindIndex(s => s == nodeTag);
-            return JumpConsistentHash((ulong)task.GetHashCode(), Members.Count) == myPosition;
-        }
-
-        public static long JumpConsistentHash(ulong key, int numBuckets)
-        {
-            long b = 1L;
-            long j = 0;
-            while (j < numBuckets)
+            if (myPosition == -1) //not a member
             {
-                b = j;
-                key = key * 2862933555777941757UL + 1;
-                j = (long)((b + 1) * ((1L << 31) / ((double)(key >> 33) + 1)));
+                return false;
             }
-            return b;
+
+            //TODO : ask Oren here about suspentions.. (review comments in github)
+            return Hashing.JumpConsistentHash.Calculate(task.GetTaskKey(), Members.Count) == myPosition;
         }
     }
 }
