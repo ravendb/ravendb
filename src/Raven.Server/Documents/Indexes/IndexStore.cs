@@ -24,6 +24,8 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
@@ -93,8 +95,7 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
-                throw;
+                // log here and continue?
             }
         }
 
@@ -274,10 +275,7 @@ namespace Raven.Server.Documents.Indexes
                 if (_initialized)
                     throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
 
-                if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
-                {
-                    InitializePath(_documentDatabase.Configuration.Indexing.StoragePath);
-                }
+                InitializePath(_documentDatabase.Configuration.Indexing.StoragePath);
 
                 _initialized = true;
 
@@ -314,7 +312,7 @@ namespace Raven.Server.Documents.Indexes
 
             IndexAndTransformerCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
 
-            var command = new PutIndexCommand { Definition = definition, DatabaseName = _documentDatabase.Name };
+            var command = new PutIndexCommand(definition, _documentDatabase.Name);
 
             try
             {

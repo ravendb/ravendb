@@ -15,6 +15,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;

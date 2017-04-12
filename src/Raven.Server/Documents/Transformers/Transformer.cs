@@ -1,8 +1,11 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
+using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Server;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
@@ -16,7 +19,6 @@ namespace Raven.Server.Documents.Transformers
     {
         private readonly TransformerBase _transformer;
         private readonly Logger _log;
-        private readonly object _locker = new object();
 
         protected Transformer(TransformerDefinition definition, TransformerBase transformer, Logger log)
         {
@@ -25,9 +27,11 @@ namespace Raven.Server.Documents.Transformers
             _log = log;
         }
 
+        public virtual long Etag => Definition.Etag;
+
         public virtual string Name => Definition?.Name;
 
-        public virtual long Hash => Definition?.GetHashCode()??Name.GetHashCode();
+        public virtual long Hash => Definition?.GetHashCode() ?? Name.GetHashCode();
 
         public virtual bool HasLoadDocument => _transformer.HasLoadDocument;
 
@@ -41,31 +45,11 @@ namespace Raven.Server.Documents.Transformers
 
         public readonly TransformerDefinition Definition;
 
-        public static Transformer CreateNew(TransformerDefinition definition, Logger log)
+        public static Transformer CreateNew(TransformerDefinition definition, IndexingConfiguration configuration, Logger log)
         {
-            TransformerBase compiledTransformer;
-            try
-            {
-                compiledTransformer = IndexAndTransformerCompilationCache.GetTransformerInstance(definition);
-            }
-            catch (Exception e)
-            {
-                return new FaultyInMemoryTransformer(definition.Name, e);
-            }
+            var compiledTransformer = IndexAndTransformerCompilationCache.GetTransformerInstance(definition);
             var transformer = new Transformer(definition, compiledTransformer, log);
-            return transformer;
-        }
 
-        public static Transformer Open(string transformerName, Logger log, DatabaseRecord record)
-        {
-            var transformerDefinitions = record.Transformers.Values.Where(x=>x.Name== transformerName).ToList();
-            
-            if (transformerDefinitions.Count == 0)
-                throw new InvalidOperationException($"Could not read transformer definition for name {transformerName}");
-
-            var transformerDefinition = transformerDefinitions.First();
-            var compiledTransformer = IndexAndTransformerCompilationCache.GetTransformerInstance(transformerDefinition);
-            var transformer = new Transformer(transformerDefinition, compiledTransformer, log);
             return transformer;
         }
 

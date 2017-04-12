@@ -9,12 +9,15 @@ namespace Raven.Server.Documents.Transformers
     {
         private readonly Exception _error;
 
-        public FaultyInMemoryTransformer(string name, Exception error)
+        public FaultyInMemoryTransformer(string name, long etag, Exception error)
             : base(null, null, null)
         {
             _error = error;
             Name = name;
+            Etag = etag;
         }
+
+        public override long Etag { get; }
 
         public override string Name { get; }
 

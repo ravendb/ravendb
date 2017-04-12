@@ -779,20 +779,17 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName((nameof(transformerDefinition.Name)));
+            writer.WritePropertyName(nameof(transformerDefinition.Name));
             writer.WriteString((transformerDefinition.Name));
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(transformerDefinition.TransformResults)));
+            writer.WritePropertyName(nameof(transformerDefinition.TransformResults));
             writer.WriteString((transformerDefinition.TransformResults));
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(transformerDefinition.LockMode)));
+            writer.WritePropertyName(nameof(transformerDefinition.LockMode));
             writer.WriteString((transformerDefinition.LockMode.ToString()));
-            writer.WriteComma();
 
-            writer.WritePropertyName((nameof(transformerDefinition.Temporary)));
-            writer.WriteBool(transformerDefinition.Temporary);
             writer.WriteEndObject();
         }
 

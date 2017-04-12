@@ -96,12 +96,7 @@ namespace Raven.Client.Server
             TransformerDefinition existingTransformer;
             var lockMode = TransformerLockMode.Unlock;
             if (Transformers.TryGetValue(definition.Name, out existingTransformer))
-            {
-                if (existingTransformer.Equals(definition))
-                    return;
-
                 lockMode = existingTransformer.LockMode;
-            }
 
             if (lockMode == TransformerLockMode.LockedIgnore)
                 return;
@@ -116,6 +111,11 @@ namespace Raven.Client.Server
         {
             Indexes?.Remove(name);
             AutoIndexes?.Remove(name);
+        }
+
+        public void DeleteTransformer(string name)
+        {
+            Transformers?.Remove(name);
         }
     }
 

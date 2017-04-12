@@ -3,14 +3,14 @@ namespace Raven.Client.Documents.Transformers
     public class TransformerDefinition
     {
         /// <summary>
+        /// Transformer etag (internal).
+        /// </summary>
+        public long Etag { get; set; }
+
+        /// <summary>
         /// Projection function.
         /// </summary>
         public string TransformResults { get; set; }
-        
-        /// <summary>
-        /// Temporary (used for data exploration - internal)
-        /// </summary>
-        public bool Temporary { get; set; }
 
         /// <summary>
         /// Transformer name.
