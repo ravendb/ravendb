@@ -32,7 +32,8 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-                    Assert.Throws<RavenException>(() => session.Query<Order>().Where(x => x.Id.In(l)).ToList());
+                    var e = Assert.Throws<RavenException>(() => session.Query<Order>().Where(x => x.Id.In(l)).ToList());
+                    Assert.Contains("maxClauseCount is set to", e.Message);
                 }
             }
         }
