@@ -119,8 +119,13 @@ namespace Raven.Database.Bundles.Replication.Tasks
                 {
                     var failedToReplicate = false;
                     var commonReplicatedIndexIds = new HashSet<int>();
-                    var replicationDestinations = GetReplicationDestinations();
-                    
+                    var replicationDestinations = GetReplicationDestinations(x => x.SkipIndexReplication == false);
+                    if (replicationDestinations.Count == 0)
+                    {
+                        sideBySideIndexesToReplicate.Clear();
+                        return;
+                    }
+
                     foreach (var destination in replicationDestinations)
                     {
                         var url = destination.ConnectionStringOptions.Url;
