@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Queries
 
                 _ids = ExtractIdsFromQuery(query);
 
-                if (_ids.Count > BooleanQuery.MaxClauseCount)
+                if (_ids != null && _ids.Count > BooleanQuery.MaxClauseCount)
                     throw new BooleanQuery.TooManyClauses();
 
                 _sort = ExtractSortFromQuery(query);
