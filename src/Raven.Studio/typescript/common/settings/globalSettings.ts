@@ -4,30 +4,19 @@ import storageKeyProvider = require("common/storage/storageKeyProvider");
 import abstractSettings = require("common/settings/abstractSettings");
 import simpleStudioSetting = require("common/settings/simpleStudioSetting");
 import dontShowAgainSettings = require("common/settings/dontShowAgainSettings");
+import studioSetting = require("common/settings/studioSetting");
 
 class globalSettings extends abstractSettings {
-    numberFormatting = new simpleStudioSetting<studio.settings.numberFormatting>("formatted", "numberFormatting");
-    dontShowAgain = new dontShowAgainSettings();
-    sendUsageStats = new simpleStudioSetting<boolean>(false, "sendUsageStats");
+    numberFormatting = new simpleStudioSetting<studio.settings.numberFormatting>("local", "formatted", x => this.saveSetting(x));
+    dontShowAgain = new dontShowAgainSettings(x => this.saveSetting(x));
+    sendUsageStats = new simpleStudioSetting<boolean>("local", false, x => this.saveSetting(x));
+
+    constructor(onSettingChanged: (key: string, value: studioSetting<any>) => void) {
+        super(onSettingChanged);
+    }
 
     get storageKey() {
         return storageKeyProvider.storageKeyFor("settings");
-    }
-
-    protected readSettings(remoteSettings: any, localSettings: any) {
-        super.readSettings(remoteSettings, localSettings);
-
-        this.readSetting(localSettings, this.numberFormatting);
-        this.readSetting(localSettings, this.dontShowAgain);
-        this.readSetting(localSettings, this.sendUsageStats);
-    }
-
-    protected writeSettings(remoteSettings: any, localSettings: any) {
-        super.writeSettings(remoteSettings, localSettings);
-
-        this.writeSetting(localSettings, this.numberFormatting);
-        this.writeSetting(localSettings, this.dontShowAgain);
-        this.writeSetting(localSettings, this.sendUsageStats);
     }
 
     protected fetchConfigDocument(): JQueryPromise<any> {
@@ -36,10 +25,7 @@ class globalSettings extends abstractSettings {
     }
 
     protected saveConfigDocument(settingsToSave: any): JQueryPromise<void> {
-        //TODO: 
-        const task = $.Deferred<void>();
-        setTimeout(() => task.resolve(), 10);
-        return task;
+        throw new Error("not yet implemented");
     }
 }
 

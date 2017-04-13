@@ -43,6 +43,7 @@ import feedback = require("viewmodels/shell/feedback");
 
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import requestExecution = require("common/notifications/requestExecution");
+import studioSettings = require("common/settings/studioSettings");
 
 //TODO: extract cluster related logic to separate class
 //TODO: extract api key related logic to separate class 
@@ -100,6 +101,9 @@ class shell extends viewModelBase {
         oauthContext.enterApiKeyTask.done(() => {
             changesContext.default
                 .connectServerWideNotificationCenter();
+
+            // load global settings
+            studioSettings.default.globalSettings();
 
             // bind event handles before we connect to server wide notification center 
             // (connection will be started after executing this method) - it was just scheduled 2 lines above

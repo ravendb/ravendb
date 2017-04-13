@@ -3,12 +3,13 @@
 import database = require("models/resources/database");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 import abstractSettings = require("common/settings/abstractSettings");
+import studioSetting = require("common/settings/studioSetting");
 
 class databaseSettings extends abstractSettings {
     private db: database;
 
-    constructor(db: database) {
-        super();
+    constructor(onSettingChanged: (key: string, value: studioSetting<any>) => void, db: database) {
+        super(onSettingChanged);
         this.db = db;
     }
 
@@ -23,18 +24,7 @@ class databaseSettings extends abstractSettings {
     }
 
     protected saveConfigDocument(settingsToSave: any): JQueryPromise<void> {
-        //TODO: 
-        const task = $.Deferred<void>();
-        setTimeout(() => task.resolve(), 10);
-        return task;
-    }
-
-    protected readSettings(remoteSettings: any, localSettings: any) {
-        super.readSettings(remoteSettings, localSettings);
-    }
-
-    protected writeSettings(remoteSettings: any, localSettings: any) {
-        super.writeSettings(remoteSettings, localSettings);
+        throw new Error("not yet implemented");
     }
 
 }
