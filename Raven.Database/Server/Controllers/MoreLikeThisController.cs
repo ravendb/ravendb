@@ -67,7 +67,8 @@ namespace Raven.Database.Server.Controllers
                 MinimumTermFrequency = query.Get("minTermFreq").ToNullableInt(),
                 MinimumWordLength = query.Get("minWordLen").ToNullableInt(),
                 StopWordsDocumentId = query.Get("stopWords"),
-                AdditionalQuery= query.Get("query")
+                AdditionalQuery= query.Get("query"),
+                DefaultAnalyzerName = query.Get("defaultAnalyzer")
             };
 
             var keyValues = query.Get("docid").Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
