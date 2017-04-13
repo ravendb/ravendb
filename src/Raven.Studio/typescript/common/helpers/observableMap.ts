@@ -10,7 +10,7 @@ class observableMap<K, V> {
     set(key: K, value: V) {
         const idx = this.store().findIndex(x => x.key === key);
         if (idx !== -1) {
-            this.store[idx] = value;
+            this.store.splice(idx, 0, { key: key, value: value });
         } else {
             this.store.push({ key: key, value: value });
         }
