@@ -106,36 +106,41 @@ namespace Raven.Server.Documents.Indexes
                 var etag = kvp.Value.Etag;
                 var definition = CreateAutoDefinition(kvp.Value);
 
-                var creationOptions = IndexCreationOptions.Create;
-                var existingIndex = GetIndex(name);
-                if (existingIndex != null)
-                    creationOptions = GetIndexCreationOptions(definition, existingIndex);
-
-                if (creationOptions == IndexCreationOptions.Noop)
-                {
-                    Debug.Assert(existingIndex != null);
-
-                    continue;
-                }
-
-                if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex || creationOptions == IndexCreationOptions.Update)
-                {
-                    Debug.Assert(existingIndex != null);
-
-                    throw new NotSupportedException($"Can not update auto-index: {existingIndex.Name}");
-                }
-
-                Index index;
-
-                if (definition is AutoMapIndexDefinition)
-                    index = AutoMapIndex.CreateNew(etag, (AutoMapIndexDefinition)definition, _documentDatabase);
-                else if (definition is AutoMapReduceIndexDefinition)
-                    index = AutoMapReduceIndex.CreateNew(etag, (AutoMapReduceIndexDefinition)definition, _documentDatabase);
-                else
-                    throw new NotImplementedException($"Unknown index definition type: {definition.GetType().FullName}");
-
-                CreateIndexInternal(index);
+                HandleAutoIndexChange(name, etag, definition);
             }
+        }
+
+        private void HandleAutoIndexChange(string name, long etag, IndexDefinitionBase definition)
+        {
+            var creationOptions = IndexCreationOptions.Create;
+            var existingIndex = GetIndex(name);
+            if (existingIndex != null)
+                creationOptions = GetIndexCreationOptions(definition, existingIndex);
+
+            if (creationOptions == IndexCreationOptions.Noop)
+            {
+                Debug.Assert(existingIndex != null);
+
+                return;
+            }
+
+            if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex || creationOptions == IndexCreationOptions.Update)
+            {
+                Debug.Assert(existingIndex != null);
+
+                throw new NotSupportedException($"Can not update auto-index: {existingIndex.Name}");
+            }
+
+            Index index;
+
+            if (definition is AutoMapIndexDefinition)
+                index = AutoMapIndex.CreateNew(etag, (AutoMapIndexDefinition)definition, _documentDatabase);
+            else if (definition is AutoMapReduceIndexDefinition)
+                index = AutoMapReduceIndex.CreateNew(etag, (AutoMapReduceIndexDefinition)definition, _documentDatabase);
+            else
+                throw new NotImplementedException($"Unknown index definition type: {definition.GetType().FullName}");
+
+            CreateIndexInternal(index);
         }
 
         private static IndexDefinitionBase CreateAutoDefinition(AutoIndexDefinition definition)
@@ -180,77 +185,82 @@ namespace Raven.Server.Documents.Indexes
                 var name = kvp.Key;
                 var definition = kvp.Value;
 
-                var creationOptions = IndexCreationOptions.Create;
-                var existingIndex = GetIndex(name);
-                if (existingIndex != null)
-                    creationOptions = GetIndexCreationOptions(definition, existingIndex);
-
-                var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
-
-                if (creationOptions == IndexCreationOptions.Noop)
-                {
-                    Debug.Assert(existingIndex != null);
-
-                    var replacementIndex = GetIndex(replacementIndexName);
-                    if (replacementIndex != null)
-                        DeleteIndexInternal(replacementIndex);
-
-                    continue;
-                }
-
-                if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
-                {
-                    Debug.Assert(existingIndex != null);
-
-                    var replacementIndex = GetIndex(replacementIndexName);
-                    if (replacementIndex != null)
-                        DeleteIndexInternal(replacementIndex);
-
-                    UpdateIndex(definition, existingIndex);
-                    continue;
-                }
-
-                if (creationOptions == IndexCreationOptions.Update)
-                {
-                    Debug.Assert(existingIndex != null);
-
-                    definition.Name = replacementIndexName;
-
-                    existingIndex = GetIndex(replacementIndexName);
-                    if (existingIndex != null)
-                    {
-                        creationOptions = GetIndexCreationOptions(definition, existingIndex);
-                        if (creationOptions == IndexCreationOptions.Noop)
-                            continue;
-
-                        if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
-                        {
-                            UpdateIndex(definition, existingIndex);
-                            continue;
-                        }
-                    }
-
-                    var replacementIndex = GetIndex(replacementIndexName);
-                    if (replacementIndex != null)
-                        DeleteIndexInternal(replacementIndex);
-                }
-
-                Index index;
-
-                switch (definition.Type)
-                {
-                    case IndexType.Map:
-                        index = MapIndex.CreateNew(definition, _documentDatabase);
-                        break;
-                    case IndexType.MapReduce:
-                        index = MapReduceIndex.CreateNew(definition, _documentDatabase);
-                        break;
-                    default:
-                        throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
-                }
-
-                CreateIndexInternal(index);
+                HandleStaticIndexChange(name, definition);
             }
+        }
+
+        private void HandleStaticIndexChange(string name, IndexDefinition definition)
+        {
+            var creationOptions = IndexCreationOptions.Create;
+            var existingIndex = GetIndex(name);
+            if (existingIndex != null)
+                creationOptions = GetIndexCreationOptions(definition, existingIndex);
+
+            var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
+
+            if (creationOptions == IndexCreationOptions.Noop)
+            {
+                Debug.Assert(existingIndex != null);
+
+                var replacementIndex = GetIndex(replacementIndexName);
+                if (replacementIndex != null)
+                    DeleteIndexInternal(replacementIndex);
+
+                return;
+            }
+
+            if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
+            {
+                Debug.Assert(existingIndex != null);
+
+                var replacementIndex = GetIndex(replacementIndexName);
+                if (replacementIndex != null)
+                    DeleteIndexInternal(replacementIndex);
+
+                UpdateIndex(definition, existingIndex);
+                return;
+            }
+
+            if (creationOptions == IndexCreationOptions.Update)
+            {
+                Debug.Assert(existingIndex != null);
+
+                definition.Name = replacementIndexName;
+
+                existingIndex = GetIndex(replacementIndexName);
+                if (existingIndex != null)
+                {
+                    creationOptions = GetIndexCreationOptions(definition, existingIndex);
+                    if (creationOptions == IndexCreationOptions.Noop)
+                        return;
+
+                    if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
+                    {
+                        UpdateIndex(definition, existingIndex);
+                        return;
+                    }
+                }
+
+                var replacementIndex = GetIndex(replacementIndexName);
+                if (replacementIndex != null)
+                    DeleteIndexInternal(replacementIndex);
+            }
+
+            Index index;
+
+            switch (definition.Type)
+            {
+                case IndexType.Map:
+                    index = MapIndex.CreateNew(definition, _documentDatabase);
+                    break;
+                case IndexType.MapReduce:
+                    index = MapReduceIndex.CreateNew(definition, _documentDatabase);
+                    break;
+                default:
+                    throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
+            }
+
+            CreateIndexInternal(index);
         }
 
         private void HandleDeletes(DatabaseRecord record)
