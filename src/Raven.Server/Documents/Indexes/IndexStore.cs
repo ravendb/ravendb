@@ -25,7 +25,6 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -307,11 +306,16 @@ namespace Raven.Server.Documents.Indexes
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            ValidateIndexName(definition.Name);
-            definition.RemoveDefaultValues();
-            ValidateAnalyzers(definition);
+            lock (_indexAndTransformerLocker)
+            {
+                ValidateIndexName(definition.Name);
+                definition.RemoveDefaultValues();
+                ValidateAnalyzers(definition);
 
-            IndexAndTransformerCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
+                var instance = IndexAndTransformerCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
+                if (definition.Type == IndexType.MapReduce)
+                    MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase);
+            }
 
             var command = new PutIndexCommand(definition, _documentDatabase.Name);
 
