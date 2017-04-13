@@ -305,17 +305,18 @@ namespace Raven.Server.Documents.Indexes
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
+            ValidateIndexName(definition.Name);
+            definition.RemoveDefaultValues();
+            ValidateAnalyzers(definition);
+
+            var instance = IndexAndTransformerCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
+
             await _indexAndTransformerLocker.WaitAsync();
 
             try
             {
                 lock (_locker)
                 {
-                    ValidateIndexName(definition.Name);
-                    definition.RemoveDefaultValues();
-                    ValidateAnalyzers(definition);
-
-                    var instance = IndexAndTransformerCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
                     if (definition.Type == IndexType.MapReduce)
                         MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase);
                 }
@@ -324,12 +325,12 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    var index = await _serverStore.SendToLeaderAsync(command);
+                    var etag = await _serverStore.SendToLeaderAsync(command);
 
-                    await _serverStore.Cluster.WaitForIndexNotification(index);
+                    await _serverStore.Cluster.WaitForIndexNotification(etag);
 
-                    var instance = GetIndex(definition.Name);
-                    return instance.Etag;
+                    var index = GetIndex(definition.Name); // not all operations are changing Etag, this is why we need to take it directly from the index
+                    return index.Etag;
                 }
                 catch (CommandExecutionException e)
                 {

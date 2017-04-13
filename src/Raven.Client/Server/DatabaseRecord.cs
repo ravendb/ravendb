@@ -127,7 +127,10 @@ namespace Raven.Client.Server
             {
                 lockMode = existingTransformer.LockMode;
 
-                if (existingTransformer.Equals(definition))
+                var result = existingTransformer.Compare(definition);
+                result &= ~TransformerDefinitionCompareDifferences.Etag;
+
+                if (result == TransformerDefinitionCompareDifferences.None)
                     return;
             }
 

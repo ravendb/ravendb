@@ -148,9 +148,9 @@ namespace Raven.Client.Documents.Indexes
         /// Equals the specified other.
         /// </summary>
         /// <param name="other">The other.</param>
-        /// <param name="compareIndexIds">allow caller to choose whether to include the index Id in the comparison</param>
+        /// <param name="compareIndexEtags">allow caller to choose whether to include the index Id in the comparison</param>
         /// <param name="ignoreFormatting">Comparision ignores formatting in both of the definitions</param>
-        public bool Equals(IndexDefinition other, bool compareIndexIds = true, bool ignoreFormatting = false)
+        public bool Equals(IndexDefinition other, bool compareIndexEtags = true, bool ignoreFormatting = false)
         {
             if (ReferenceEquals(null, other))
                 return false;
@@ -163,7 +163,7 @@ namespace Raven.Client.Documents.Indexes
             if (result == IndexDefinitionCompareDifferences.None)
                 return true;
 
-            if (compareIndexIds && result.HasFlag(IndexDefinitionCompareDifferences.Etag))
+            if (compareIndexEtags && result.HasFlag(IndexDefinitionCompareDifferences.Etag))
                 return false;
 
             var mapsReduceEquals = ignoreFormatting

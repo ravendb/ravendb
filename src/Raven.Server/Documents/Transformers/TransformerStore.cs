@@ -89,8 +89,17 @@ namespace Raven.Server.Documents.Transformers
                 var existingTransformer = GetTransformer(name);
                 if (existingTransformer != null)
                 {
-                    if (definition.Equals(existingTransformer.Definition))
+                    var result = definition.Compare(existingTransformer.Definition);
+                    result &= ~TransformerDefinitionCompareDifferences.Etag;
+
+                    if (result == TransformerDefinitionCompareDifferences.None)
                         continue;
+
+                    if (result.HasFlag(TransformerDefinitionCompareDifferences.LockMode))
+                    {
+                        existingTransformer.Definition.LockMode = definition.LockMode;
+                        continue;
+                    }
 
                     DeleteTransformerInternal(existingTransformer);
                 }
@@ -203,13 +212,12 @@ namespace Raven.Server.Documents.Transformers
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
+            IndexAndTransformerCompilationCache.GetTransformerInstance(definition); // pre-compile it and validate
+
             await _indexAndTransformerLocker.WaitAsync();
 
             try
             {
-
-                IndexAndTransformerCompilationCache.GetTransformerInstance(definition); // pre-compile it and validate
-
                 var command = new PutTransformerCommand(definition, _documentDatabase.Name);
 
                 try

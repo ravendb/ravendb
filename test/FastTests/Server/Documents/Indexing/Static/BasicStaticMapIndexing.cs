@@ -175,7 +175,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
                 Assert.Equal(IndexDefinitionCompareDifferences.Etag, indexes[0].Definition.Compare(indexDefinition1));
-                Assert.True(indexDefinition1.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
+                Assert.True(indexDefinition1.Equals(indexes[0].GetIndexDefinition(), compareIndexEtags: false, ignoreFormatting: false));
 
                 Assert.True(indexes[1].Etag > 0);
                 Assert.Equal(IndexType.Map, indexes[1].Type);
@@ -187,7 +187,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(IndexLockMode.Unlock, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[1].Definition.Priority);
                 Assert.Equal(IndexDefinitionCompareDifferences.Etag, indexes[1].Definition.Compare(indexDefinition2));
-                Assert.True(indexDefinition2.Equals(indexes[1].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
+                Assert.True(indexDefinition2.Equals(indexes[1].GetIndexDefinition(), compareIndexEtags: false, ignoreFormatting: false));
             }
         }
 
@@ -259,7 +259,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     var newIndexDefinition = JsonDeserializationServer.IndexDefinition(json);
 
-                    Assert.True(indexDefinition.Equals(newIndexDefinition, compareIndexIds: true, ignoreFormatting: false));
+                    Assert.True(indexDefinition.Equals(newIndexDefinition, compareIndexEtags: true, ignoreFormatting: false));
                 }
             }
         }

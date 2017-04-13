@@ -300,7 +300,7 @@ select new
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
                 Assert.Equal(IndexDefinitionCompareDifferences.Etag, indexes[0].Definition.Compare(defOne));
-                Assert.True(defOne.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
+                Assert.True(defOne.Equals(indexes[0].GetIndexDefinition(), compareIndexEtags: false, ignoreFormatting: false));
                 Assert.Equal(1, indexes[0].MapReduceWorkContext.NextMapResultId);
 
                 Assert.True(indexes[1].Etag > 0);
@@ -316,7 +316,7 @@ select new
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[1].Definition.Priority);
                 Assert.Equal(IndexDefinitionCompareDifferences.Etag, indexes[1].Definition.Compare(defTwo));
-                Assert.True(defTwo.Equals(indexes[1].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
+                Assert.True(defTwo.Equals(indexes[1].GetIndexDefinition(), compareIndexEtags: false, ignoreFormatting: false));
                 Assert.Equal(0, indexes[1].MapReduceWorkContext.NextMapResultId);
             }
         }
