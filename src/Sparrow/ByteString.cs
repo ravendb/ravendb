@@ -848,7 +848,7 @@ namespace Sparrow
         {
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
 
-            if (value._pointer == null)
+            if (value._pointer == null) // this is a safe-guard on Release, it is better to not release the memory than fail
                 return;
 
             _currentlyAllocated -= _externalAlignedSize;
@@ -888,7 +888,7 @@ namespace Sparrow
         public void Release(ref ByteString value)
         {
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
-            if (value._pointer == null)
+            if (value._pointer == null) // this is a safe-guard on Release, it is better to not release the memory than fail
                 return;
             Debug.Assert(value._pointer->Flags != ByteStringType.Disposed, "Double free");
             Debug.Assert(!value.IsExternal, "Cannot release as internal an external pointer.");
