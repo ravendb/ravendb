@@ -12,6 +12,7 @@ using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Server;
+using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Configuration;
@@ -805,13 +806,14 @@ namespace Raven.Server.Documents.Indexes
 
         public void RunIdleOperations()
         {
-            HandleUnusedAutoIndexes();
+            AsyncHelpers.RunSync(() => HandleUnusedAutoIndexes());
             //DeleteSurpassedAutoIndexes(); // TODO [ppekrol]
         }
 
-        private void HandleUnusedAutoIndexes()
+        private async Task HandleUnusedAutoIndexes()
         {
-            return; // TODO [ppekrol]
+            if (_serverStore.IsLeader() == false)
+                return;
 
             var timeToWaitBeforeMarkingAutoIndexAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle;
             var timeToWaitBeforeDeletingAutoIndexMarkedAsIdle = _documentDatabase.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle;
@@ -869,7 +871,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     if (age <= ageThreshold || lastQuery >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
                     {
-                        DeleteIndex(item.Index.Etag);
+                        await TryDeleteIndexIfExists(item.Index.Name);
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Deleted index '{item.Index.Name} ({item.Index.Etag})' due to idleness. Age: {age}. Last query: {lastQuery}.");
                     }

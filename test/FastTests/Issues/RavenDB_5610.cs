@@ -48,7 +48,7 @@ namespace FastTests.Issues
         [Fact]
         public async Task WillUpdate()
         {
-            long etag;
+            string indexName;
             var path = NewDataPath();
             string dbName;
 
@@ -59,7 +59,7 @@ namespace FastTests.Issues
                 var indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "33";
 
-                etag = await database.IndexStore.CreateIndex(indexDefinition);
+                var etag = await database.IndexStore.CreateIndex(indexDefinition);
                 Assert.True(etag > 0);
 
                 var index = database.IndexStore.GetIndex(etag);
@@ -73,13 +73,15 @@ namespace FastTests.Issues
 
                 index = database.IndexStore.GetIndex(etag);
                 Assert.Equal(30, index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
+
+                indexName = index.Name;
             }
 
             Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
 
             using (var database = await GetDatabase(dbName))
             {
-                var index = database.IndexStore.GetIndex(etag);
+                var index = database.IndexStore.GetIndex(indexName);
                 Assert.Equal(30, index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
             }
         }

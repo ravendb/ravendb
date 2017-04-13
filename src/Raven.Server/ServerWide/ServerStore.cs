@@ -378,6 +378,11 @@ namespace Raven.Server.ServerWide
             return _engine.PutAsync(cmd);
         }
 
+        public bool IsLeader()
+        {
+            return _engine.CurrentState == RachisConsensus.State.Leader;
+        }
+
         public async Task<long> SendToLeaderAsync(UpdateDatabaseCommand cmd)
         {
             TransactionOperationContext context;
