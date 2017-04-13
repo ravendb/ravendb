@@ -346,16 +346,18 @@ namespace Raven.Server.Rachis
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += tx =>
             {
-                Task.Run(() =>
+                var tcs = Interlocked.Exchange(ref _stateChanged, new TaskCompletionSource<object>());
+                
+                Task.Factory.StartNew(t =>
                 {
-                    Interlocked.Exchange(ref _stateChanged, new TaskCompletionSource<object>()).TrySetResult(null);
-                    foreach (var t in toDispose)
-                    {
-                        t.Dispose();
-                    }
-                });
-            };
+                    ((TaskCompletionSource<object>)t).TrySetResult(null);
 
+                    foreach (var d in toDispose)
+                    {
+                        d.Dispose();
+                    }
+                }, tcs, CancellationToken.None, TaskCreationOptions.PreferFairness | TaskCreationOptions.RunContinuationsAsynchronously | TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            };
         }
 
         public void TakeOffice()
@@ -364,8 +366,12 @@ namespace Raven.Server.Rachis
                 return;
 
             CurrentState = State.Leader;
-            ThreadPool.QueueUserWorkItem(
-                _ => { Interlocked.Exchange(ref _stateChanged, new TaskCompletionSource<object>()).TrySetResult(null); });
+            var tcs = Interlocked.Exchange(ref _stateChanged, new TaskCompletionSource<object>());
+
+            Task.Factory.StartNew(t =>
+            {
+                ((TaskCompletionSource<object>)t).TrySetResult(null);
+            }, tcs, CancellationToken.None, TaskCreationOptions.PreferFairness | TaskCreationOptions.RunContinuationsAsynchronously | TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
         public void AppendStateDisposable(IDisposable parentState, IDisposable disposeOnStateChange)
