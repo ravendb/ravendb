@@ -44,7 +44,9 @@ namespace Raven.Server.Documents.Indexes
         /// <summary>
         /// The current lock, used to make sure indexes/transformers have a unique names
         /// </summary>
-        private readonly object _indexAndTransformerLocker;
+        private readonly object _locker = new object();
+
+        private readonly SemaphoreSlim _indexAndTransformerLocker;
 
         private bool _initialized;
 
@@ -54,7 +56,7 @@ namespace Raven.Server.Documents.Indexes
 
         public Logger Logger => _logger;
 
-        public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore, object indexAndTransformerLocker)
+        public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore, SemaphoreSlim indexAndTransformerLocker)
         {
             _documentDatabase = documentDatabase;
             _serverStore = serverStore;
@@ -71,25 +73,22 @@ namespace Raven.Server.Documents.Indexes
 
             try
             {
-                lock (_indexAndTransformerLocker)
+                TransactionOperationContext context;
+                using (_serverStore.ContextPool.AllocateOperationContext(out context))
                 {
-                    TransactionOperationContext context;
-                    using (_serverStore.ContextPool.AllocateOperationContext(out context))
+                    DatabaseRecord record;
+                    using (context.OpenReadTransaction())
                     {
-                        DatabaseRecord record;
-                        using (context.OpenReadTransaction())
-                        {
-                            record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name);
-                            if (record == null)
-                                return;
-                        }
+                        record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name);
+                        if (record == null)
+                            return;
+                    }
 
-                        lock (_indexAndTransformerLocker)
-                        {
-                            HandleDeletes(record);
-                            HandleChangesForStaticIndexes(record);
-                            HandleChangesForAutoIndexes(record);
-                        }
+                    lock (_locker)
+                    {
+                        HandleDeletes(record);
+                        HandleChangesForStaticIndexes(record);
+                        HandleChangesForAutoIndexes(record);
                     }
                 }
             }
@@ -270,7 +269,7 @@ namespace Raven.Server.Documents.Indexes
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
 
-            lock (_indexAndTransformerLocker)
+            lock (_locker)
             {
                 if (_initialized)
                     throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
@@ -306,31 +305,40 @@ namespace Raven.Server.Documents.Indexes
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            lock (_indexAndTransformerLocker)
-            {
-                ValidateIndexName(definition.Name);
-                definition.RemoveDefaultValues();
-                ValidateAnalyzers(definition);
-
-                var instance = IndexAndTransformerCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
-                if (definition.Type == IndexType.MapReduce)
-                    MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase);
-            }
-
-            var command = new PutIndexCommand(definition, _documentDatabase.Name);
+            await _indexAndTransformerLocker.WaitAsync();
 
             try
             {
-                var index = await _serverStore.SendToLeaderAsync(command);
+                lock (_locker)
+                {
+                    ValidateIndexName(definition.Name);
+                    definition.RemoveDefaultValues();
+                    ValidateAnalyzers(definition);
 
-                await _serverStore.Cluster.WaitForIndexNotification(index);
+                    var instance = IndexAndTransformerCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
+                    if (definition.Type == IndexType.MapReduce)
+                        MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase);
+                }
 
-                var instance = GetIndex(definition.Name);
-                return instance.Etag;
+                var command = new PutIndexCommand(definition, _documentDatabase.Name);
+
+                try
+                {
+                    var index = await _serverStore.SendToLeaderAsync(command);
+
+                    await _serverStore.Cluster.WaitForIndexNotification(index);
+
+                    var instance = GetIndex(definition.Name);
+                    return instance.Etag;
+                }
+                catch (CommandExecutionException e)
+                {
+                    throw e.InnerException;
+                }
             }
-            catch (CommandExecutionException e)
+            finally
             {
-                throw e.InnerException;
+                _indexAndTransformerLocker.Release();
             }
         }
 
@@ -342,22 +350,31 @@ namespace Raven.Server.Documents.Indexes
             if (definition is MapIndexDefinition)
                 return await CreateIndex(((MapIndexDefinition)definition).IndexDefinition);
 
-            ValidateIndexName(definition.Name);
-
-            var command = PutAutoIndexCommand.Create(definition, _documentDatabase.Name);
+            await _indexAndTransformerLocker.WaitAsync();
 
             try
             {
-                var index = await _serverStore.SendToLeaderAsync(command);
+                ValidateIndexName(definition.Name);
 
-                await _serverStore.Cluster.WaitForIndexNotification(index);
+                var command = PutAutoIndexCommand.Create(definition, _documentDatabase.Name);
 
-                var instance = GetIndex(definition.Name);
-                return instance.Etag;
+                try
+                {
+                    var index = await _serverStore.SendToLeaderAsync(command);
+
+                    await _serverStore.Cluster.WaitForIndexNotification(index);
+
+                    var instance = GetIndex(definition.Name);
+                    return instance.Etag;
+                }
+                catch (CommandExecutionException e)
+                {
+                    throw e.InnerException;
+                }
             }
-            catch (CommandExecutionException e)
+            finally
             {
-                throw e.InnerException;
+                _indexAndTransformerLocker.Release();
             }
         }
 
@@ -518,31 +535,49 @@ namespace Raven.Server.Documents.Indexes
 
         public async Task<bool> TryDeleteIndexIfExists(string name)
         {
-            var index = GetIndex(name);
-            if (index == null)
-                return false;
+            await _indexAndTransformerLocker.WaitAsync();
 
-            var etag = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
+            try
+            {
+                var index = GetIndex(name);
+                if (index == null)
+                    return false;
 
-            await _serverStore.Cluster.WaitForIndexNotification(etag);
+                var etag = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
 
-            return true;
+                await _serverStore.Cluster.WaitForIndexNotification(etag);
+
+                return true;
+            }
+            finally
+            {
+                _indexAndTransformerLocker.Release();
+            }
         }
 
         public async Task DeleteIndex(long etag)
         {
-            var index = GetIndex(etag);
-            if (index == null)
-                IndexDoesNotExistException.ThrowFor(etag);
+            await _indexAndTransformerLocker.WaitAsync();
 
-            etag = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
+            try
+            {
+                var index = GetIndex(etag);
+                if (index == null)
+                    IndexDoesNotExistException.ThrowFor(etag);
 
-            await _serverStore.Cluster.WaitForIndexNotification(etag);
+                etag = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
+
+                await _serverStore.Cluster.WaitForIndexNotification(etag);
+            }
+            finally
+            {
+                _indexAndTransformerLocker.Release();
+            }
         }
 
         private void DeleteIndexInternal(Index index)
         {
-            lock (_indexAndTransformerLocker)
+            lock (_locker)
             {
                 Index _;
                 _indexes.TryRemoveByEtag(index.Etag, out _);
@@ -713,7 +748,7 @@ namespace Raven.Server.Documents.Indexes
             if (_documentDatabase.Configuration.Indexing.RunInMemory)
                 return;
 
-            lock (_indexAndTransformerLocker)
+            lock (_locker)
             {
                 // apply renames
                 OpenIndexesFromRecord(_documentDatabase.Configuration.Indexing.StoragePath, record);
@@ -923,7 +958,7 @@ namespace Raven.Server.Documents.Indexes
             bool lockTaken = false;
             try
             {
-                Monitor.TryEnter(_indexAndTransformerLocker, 16, ref lockTaken);
+                Monitor.TryEnter(_locker, 16, ref lockTaken);
                 if (lockTaken == false)
                     return false;
 
@@ -963,7 +998,7 @@ namespace Raven.Server.Documents.Indexes
             finally
             {
                 if (lockTaken)
-                    Monitor.Exit(_indexAndTransformerLocker);
+                    Monitor.Exit(_locker);
             }
         }
 
@@ -973,7 +1008,7 @@ namespace Raven.Server.Documents.Indexes
             if (_indexes.TryGetByName(oldIndexName, out index) == false)
                 throw new InvalidOperationException($"Index {oldIndexName} does not exist");
 
-            lock (_indexAndTransformerLocker)
+            lock (_locker)
             {
                 var transformer = _documentDatabase.TransformerStore.GetTransformer(newIndexName);
                 if (transformer != null)

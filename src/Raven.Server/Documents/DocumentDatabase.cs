@@ -42,7 +42,7 @@ namespace Raven.Server.Documents
         /// <summary>
         /// The current lock, used to make sure indexes/transformers have a unique names
         /// </summary>
-        private readonly object _indexAndTransformerLocker = new object();
+        private readonly SemaphoreSlim _indexAndTransformerLocker = new SemaphoreSlim(1, 1);
         private Task _indexStoreTask;
         private Task _transformerStoreTask;
         private long _usages;

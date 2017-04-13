@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions.Transformers;
@@ -31,13 +32,13 @@ namespace Raven.Server.Documents.Transformers
         /// <summary>
         /// The current lock, used to make sure indexes/transformers have a unique names
         /// </summary>
-        private readonly object _indexAndTransformerLocker;
+        private readonly object _locker = new object();
+
+        private SemaphoreSlim _indexAndTransformerLocker;
 
         private bool _initialized;
 
-        private PathSetting _path;
-
-        public TransformerStore(DocumentDatabase documentDatabase, ServerStore serverStore, object indexAndTransformerLocker)
+        public TransformerStore(DocumentDatabase documentDatabase, ServerStore serverStore, SemaphoreSlim indexAndTransformerLocker)
         {
             _documentDatabase = documentDatabase;
             _serverStore = serverStore;
@@ -54,24 +55,21 @@ namespace Raven.Server.Documents.Transformers
 
             try
             {
-                lock (_indexAndTransformerLocker)
+                TransactionOperationContext context;
+                using (_serverStore.ContextPool.AllocateOperationContext(out context))
                 {
-                    TransactionOperationContext context;
-                    using (_serverStore.ContextPool.AllocateOperationContext(out context))
+                    DatabaseRecord record;
+                    using (context.OpenReadTransaction())
                     {
-                        DatabaseRecord record;
-                        using (context.OpenReadTransaction())
-                        {
-                            record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name);
-                            if (record == null)
-                                return;
-                        }
+                        record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name);
+                        if (record == null)
+                            return;
+                    }
 
-                        lock (_indexAndTransformerLocker)
-                        {
-                            HandleDeletes(record);
-                            HandleChanges(record);
-                        }
+                    lock (_locker)
+                    {
+                        HandleDeletes(record);
+                        HandleChanges(record);
                     }
                 }
             }
@@ -139,7 +137,7 @@ namespace Raven.Server.Documents.Transformers
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(TransformerStore)} was already initialized.");
 
-            lock (_indexAndTransformerLocker)
+            lock (_locker)
             {
                 if (_initialized)
                     throw new InvalidOperationException($"{nameof(TransformerStore)} was already initialized.");
@@ -155,7 +153,7 @@ namespace Raven.Server.Documents.Transformers
             if (_documentDatabase.Configuration.Indexing.RunInMemory)
                 return;
 
-            lock (_indexAndTransformerLocker)
+            lock (_locker)
             {
                 foreach (var kvp in record.Transformers)
                 {
@@ -205,22 +203,32 @@ namespace Raven.Server.Documents.Transformers
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            IndexAndTransformerCompilationCache.GetTransformerInstance(definition); // pre-compile it and validate
-
-            var command = new PutTransformerCommand(definition, _documentDatabase.Name);
+            await _indexAndTransformerLocker.WaitAsync();
 
             try
             {
-                var index = await _serverStore.SendToLeaderAsync(command);
 
-                await _serverStore.Cluster.WaitForIndexNotification(index);
+                IndexAndTransformerCompilationCache.GetTransformerInstance(definition); // pre-compile it and validate
 
-                var instance = GetTransformer(definition.Name);
-                return instance.Etag;
+                var command = new PutTransformerCommand(definition, _documentDatabase.Name);
+
+                try
+                {
+                    var index = await _serverStore.SendToLeaderAsync(command);
+
+                    await _serverStore.Cluster.WaitForIndexNotification(index);
+
+                    var instance = GetTransformer(definition.Name);
+                    return instance.Etag;
+                }
+                catch (CommandExecutionException e)
+                {
+                    throw e.InnerException;
+                }
             }
-            catch (CommandExecutionException e)
+            finally
             {
-                throw e.InnerException;
+                _indexAndTransformerLocker.Release();
             }
         }
 
@@ -244,26 +252,44 @@ namespace Raven.Server.Documents.Transformers
 
         public async Task<bool> TryDeleteTransformerIfExists(string name)
         {
-            var transformer = GetTransformer(name);
-            if (transformer == null)
-                return false;
+            await _indexAndTransformerLocker.WaitAsync();
 
-            var etag = await _serverStore.SendToLeaderAsync(new DeleteTransformerCommand(transformer.Name, _documentDatabase.Name));
+            try
+            {
+                var transformer = GetTransformer(name);
+                if (transformer == null)
+                    return false;
 
-            await _serverStore.Cluster.WaitForIndexNotification(etag);
+                var etag = await _serverStore.SendToLeaderAsync(new DeleteTransformerCommand(transformer.Name, _documentDatabase.Name));
 
-            return true;
+                await _serverStore.Cluster.WaitForIndexNotification(etag);
+
+                return true;
+            }
+            finally
+            {
+                _indexAndTransformerLocker.Release();
+            }
         }
 
         public async Task DeleteTransformer(string name)
         {
-            var transformer = GetTransformer(name);
-            if (transformer == null)
-                TransformerDoesNotExistException.ThrowFor(name);
+            await _indexAndTransformerLocker.WaitAsync();
 
-            var etag = await _serverStore.SendToLeaderAsync(new DeleteTransformerCommand(transformer.Name, _documentDatabase.Name));
+            try
+            {
+                var transformer = GetTransformer(name);
+                if (transformer == null)
+                    TransformerDoesNotExistException.ThrowFor(name);
 
-            await _serverStore.Cluster.WaitForIndexNotification(etag);
+                var etag = await _serverStore.SendToLeaderAsync(new DeleteTransformerCommand(transformer.Name, _documentDatabase.Name));
+
+                await _serverStore.Cluster.WaitForIndexNotification(etag);
+            }
+            finally
+            {
+                _indexAndTransformerLocker.Release();
+            }
         }
 
         public IEnumerable<Transformer> GetTransformers()
@@ -278,37 +304,55 @@ namespace Raven.Server.Documents.Transformers
 
         public async Task SetLock(string name, TransformerLockMode mode)
         {
-            var transformer = GetTransformer(name);
-            if (transformer == null)
-                TransformerDoesNotExistException.ThrowFor(name);
+            await _indexAndTransformerLocker.WaitAsync();
 
-            var faultyInMemoryTransformer = transformer as FaultyInMemoryTransformer;
-            if (faultyInMemoryTransformer != null)
-                throw new NotSupportedException("Cannot change lock mode on faulty index", faultyInMemoryTransformer.Error);
+            try
+            {
+                var transformer = GetTransformer(name);
+                if (transformer == null)
+                    TransformerDoesNotExistException.ThrowFor(name);
 
-            var command = new SetTransformerLockCommand(name, mode, _documentDatabase.Name);
+                var faultyInMemoryTransformer = transformer as FaultyInMemoryTransformer;
+                if (faultyInMemoryTransformer != null)
+                    throw new NotSupportedException("Cannot change lock mode on faulty index", faultyInMemoryTransformer.Error);
 
-            var etag = await _serverStore.SendToLeaderAsync(command);
+                var command = new SetTransformerLockCommand(name, mode, _documentDatabase.Name);
 
-            await _serverStore.Cluster.WaitForIndexNotification(etag);
+                var etag = await _serverStore.SendToLeaderAsync(command);
+
+                await _serverStore.Cluster.WaitForIndexNotification(etag);
+            }
+            finally
+            {
+                _indexAndTransformerLocker.Release();
+            }
         }
 
         public async Task Rename(string name, string newName)
         {
-            var transformer = GetTransformer(name);
-            if (transformer == null)
-                TransformerDoesNotExistException.ThrowFor(name);
+            await _indexAndTransformerLocker.WaitAsync();
 
-            var command = new RenameTransformerCommand(name, newName, _documentDatabase.Name);
+            try
+            {
+                var transformer = GetTransformer(name);
+                if (transformer == null)
+                    TransformerDoesNotExistException.ThrowFor(name);
 
-            var etag = await _serverStore.SendToLeaderAsync(command);
+                var command = new RenameTransformerCommand(name, newName, _documentDatabase.Name);
 
-            await _serverStore.Cluster.WaitForIndexNotification(etag);
+                var etag = await _serverStore.SendToLeaderAsync(command);
+
+                await _serverStore.Cluster.WaitForIndexNotification(etag);
+            }
+            finally
+            {
+                _indexAndTransformerLocker.Release();
+            }
         }
 
         private void DeleteTransformerInternal(Transformer transformer)
         {
-            lock (_indexAndTransformerLocker)
+            lock (_locker)
             {
                 Transformer _;
                 _transformers.TryRemoveByEtag(transformer.Etag, out _);
