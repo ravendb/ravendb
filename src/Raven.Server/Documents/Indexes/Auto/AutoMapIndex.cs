@@ -38,7 +38,8 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         public override void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
         {
-            throw new NotSupportedException($"{Type} index does not support updating it's definition and configuration.");
+            SetLock(definition.LockMode);
+            SetPriority(definition.Priority);
         }
     }
 }

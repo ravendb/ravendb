@@ -102,13 +102,20 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             if (ReferenceEquals(this, other))
                 return IndexDefinitionCompareDifferences.None;
 
+            var result = IndexDefinitionCompareDifferences.None;
             if (Collections.SequenceEqual(otherDefinition.Collections) == false || MapFields.SequenceEqual(otherDefinition.MapFields) == false)
-                return IndexDefinitionCompareDifferences.Maps;
+                result |= IndexDefinitionCompareDifferences.Maps;
 
             if (GroupByFields.SequenceEqual(otherDefinition.GroupByFields) == false)
-                return IndexDefinitionCompareDifferences.Reduce;
+                result |= IndexDefinitionCompareDifferences.Reduce;
 
-            return IndexDefinitionCompareDifferences.None;
+            if (LockMode != other.LockMode)
+                result |= IndexDefinitionCompareDifferences.LockMode;
+
+            if (Priority != other.Priority)
+                result |= IndexDefinitionCompareDifferences.Priority;
+
+            return result;
         }
 
         public override IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition)

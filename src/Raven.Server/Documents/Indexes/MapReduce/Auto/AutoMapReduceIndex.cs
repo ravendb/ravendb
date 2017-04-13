@@ -77,7 +77,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public override void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
         {
-            throw new NotSupportedException($"{Type} index does not support updating it's definition and configuration.");
+            SetLock(definition.LockMode);
+            SetPriority(definition.Priority);
         }
 
         public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

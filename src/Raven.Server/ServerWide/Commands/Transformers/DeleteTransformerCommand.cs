@@ -1,7 +1,7 @@
 using Raven.Client.Server;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.ServerWide.Commands
+namespace Raven.Server.ServerWide.Commands.Transformers
 {
     public class DeleteTransformerCommand : UpdateDatabaseCommand
     {

@@ -474,7 +474,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/indexes/set-lock", "POST")]
-        public Task SetLockMode()
+        public async Task SetLockMode()
         {
             var names = GetStringValuesQueryString("name");
             var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
@@ -485,14 +485,10 @@ namespace Raven.Server.Documents.Handlers
 
             foreach (var name in names)
             {
-                var index = Database.IndexStore.GetIndex(name);
-                if (index == null)
-                    IndexDoesNotExistException.ThrowFor(name);
-
-                index.SetLock(mode);
+                await Database.IndexStore.SetLock(name, mode);
             }
 
-            return NoContent();
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/indexes/set-priority", "POST")]

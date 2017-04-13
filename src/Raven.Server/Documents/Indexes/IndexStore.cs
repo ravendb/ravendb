@@ -128,7 +128,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 Debug.Assert(existingIndex != null);
 
-                throw new NotSupportedException($"Can not update auto-index: {existingIndex.Name}");
+                existingIndex.Update(definition, existingIndex.Configuration);
+
+                return;
             }
 
             Index index;
@@ -157,7 +159,17 @@ namespace Raven.Server.Documents.Indexes
                 .ToArray();
 
             if (definition.Type == IndexType.AutoMap)
-                return new AutoMapIndexDefinition(definition.Collection, mapFields);
+            {
+                var result = new AutoMapIndexDefinition(definition.Collection, mapFields);
+
+                if (definition.LockMode.HasValue)
+                    result.LockMode = definition.LockMode.Value;
+
+                if (definition.Priority.HasValue)
+                    result.Priority = definition.Priority.Value;
+
+                return result;
+            }
 
             if (definition.Type == IndexType.AutoMapReduce)
             {
@@ -172,7 +184,14 @@ namespace Raven.Server.Documents.Indexes
                     })
                     .ToArray();
 
-                return new AutoMapReduceIndexDefinition(definition.Collection, mapFields, groupByFields);
+                var result = new AutoMapReduceIndexDefinition(definition.Collection, mapFields, groupByFields);
+                if (definition.LockMode.HasValue)
+                    result.LockMode = definition.LockMode.Value;
+
+                if (definition.Priority.HasValue)
+                    result.Priority = definition.Priority.Value;
+
+                return result;
             }
 
             throw new NotSupportedException("Cannot create auto-index from " + definition.Type);
@@ -1045,6 +1064,35 @@ namespace Raven.Server.Documents.Indexes
                 OldIndexName = oldIndexName,
                 Type = IndexChangeTypes.Renamed
             });
+        }
+
+        public async Task SetLock(string name, IndexLockMode mode)
+        {
+            await _indexAndTransformerLocker.WaitAsync();
+
+            try
+            {
+                var index = GetIndex(name);
+                if (index == null)
+                    IndexDoesNotExistException.ThrowFor(name);
+
+                var faultyInMemoryIndex = index as FaultyInMemoryIndex;
+                if (faultyInMemoryIndex != null)
+                {
+                    faultyInMemoryIndex.SetLock(mode); // this will throw proper exception
+                    return;
+                }
+
+                var command = new SetIndexLockCommand(name, mode, _documentDatabase.Name);
+
+                var etag = await _serverStore.SendToLeaderAsync(command);
+
+                await _serverStore.Cluster.WaitForIndexNotification(etag);
+            }
+            finally
+            {
+                _indexAndTransformerLocker.Release();
+            }
         }
     }
 }

@@ -1,14 +1,7 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using Newtonsoft.Json;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Transformers;
-using Raven.Client.Server;
+﻿using Raven.Client.Documents.Transformers;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -17,6 +10,8 @@ namespace Raven.Server.Documents.Transformers
 {
     public class Transformer
     {
+        private readonly object _locker = new object();
+
         private readonly TransformerBase _transformer;
         private readonly Logger _log;
 
@@ -44,6 +39,23 @@ namespace Raven.Server.Documents.Transformers
         public bool MightRequireTransaction => HasLoadDocument || HasInclude || HasTransformWith;
 
         public readonly TransformerDefinition Definition;
+
+        public virtual void SetLock(TransformerLockMode mode)
+        {
+            if (Definition.LockMode == mode)
+                return;
+
+            lock (_locker)
+            {
+                if (Definition.LockMode == mode)
+                    return;
+
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Changing lock mode for '{Name} ({Etag})' from '{Definition.LockMode}' to '{mode}'.");
+
+                Definition.LockMode = mode;
+            }
+        }
 
         public static Transformer CreateNew(TransformerDefinition definition, IndexingConfiguration configuration, Logger log)
         {

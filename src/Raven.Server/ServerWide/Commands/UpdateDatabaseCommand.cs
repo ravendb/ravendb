@@ -1,7 +1,7 @@
 using Raven.Client.Server;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.ServerWide
+namespace Raven.Server.ServerWide.Commands
 {
     public abstract class UpdateDatabaseCommand
     {

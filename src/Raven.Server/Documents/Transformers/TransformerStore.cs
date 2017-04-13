@@ -8,12 +8,10 @@ using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Server;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Transformers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
@@ -34,7 +32,7 @@ namespace Raven.Server.Documents.Transformers
         /// </summary>
         private readonly object _locker = new object();
 
-        private SemaphoreSlim _indexAndTransformerLocker;
+        private readonly SemaphoreSlim _indexAndTransformerLocker;
 
         private bool _initialized;
 
@@ -322,7 +320,10 @@ namespace Raven.Server.Documents.Transformers
 
                 var faultyInMemoryTransformer = transformer as FaultyInMemoryTransformer;
                 if (faultyInMemoryTransformer != null)
-                    throw new NotSupportedException("Cannot change lock mode on faulty index", faultyInMemoryTransformer.Error);
+                {
+                    faultyInMemoryTransformer.SetLock(mode); // this will throw proper exception
+                    return;
+                }
 
                 var command = new SetTransformerLockCommand(name, mode, _documentDatabase.Name);
 

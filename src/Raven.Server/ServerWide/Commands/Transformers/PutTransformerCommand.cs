@@ -3,7 +3,7 @@ using Raven.Client.Server;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.ServerWide.Commands
+namespace Raven.Server.ServerWide.Commands.Transformers
 {
     public class PutTransformerCommand : UpdateDatabaseCommand
     {
