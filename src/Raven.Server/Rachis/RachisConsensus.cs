@@ -348,15 +348,15 @@ namespace Raven.Server.Rachis
             {
                 var tcs = Interlocked.Exchange(ref _stateChanged, new TaskCompletionSource<object>());
                 
-                Task.Factory.StartNew(t =>
-                {
-                    ((TaskCompletionSource<object>)t).TrySetResult(null);
+                TrySetResultAndPreventSynchronousContinuations(tcs);
 
+                tcs.Task.ContinueWith(t =>
+                {
                     foreach (var d in toDispose)
                     {
                         d.Dispose();
                     }
-                }, tcs, CancellationToken.None, TaskCreationOptions.PreferFairness | TaskCreationOptions.RunContinuationsAsynchronously | TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                });
             };
         }
 
@@ -366,12 +366,10 @@ namespace Raven.Server.Rachis
                 return;
 
             CurrentState = State.Leader;
+
             var tcs = Interlocked.Exchange(ref _stateChanged, new TaskCompletionSource<object>());
 
-            Task.Factory.StartNew(t =>
-            {
-                ((TaskCompletionSource<object>)t).TrySetResult(null);
-            }, tcs, CancellationToken.None, TaskCreationOptions.PreferFairness | TaskCreationOptions.RunContinuationsAsynchronously | TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            TrySetResultAndPreventSynchronousContinuations(tcs);
         }
 
         public void AppendStateDisposable(IDisposable parentState, IDisposable disposeOnStateChange)
@@ -544,10 +542,9 @@ namespace Raven.Server.Rachis
 
             tx.LowLevelTransaction.OnDispose += _ =>
             {
-                Task.Run(() =>
-                {
-                    Interlocked.Exchange(ref engine._topologyChanged, new TaskCompletionSource<object>()).TrySetResult(null);
-                });
+                var tcs = Interlocked.Exchange(ref engine._topologyChanged, new TaskCompletionSource<object>());
+
+                TrySetResultAndPreventSynchronousContinuations(tcs);
             };
 
 
@@ -972,7 +969,9 @@ namespace Raven.Server.Rachis
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
             {
-                Interlocked.Exchange(ref _commitIndexChanged, new TaskCompletionSource<object>()).TrySetResult(null);
+                var tcs = Interlocked.Exchange(ref _commitIndexChanged, new TaskCompletionSource<object>());
+
+                TrySetResultAndPreventSynchronousContinuations(tcs);
             };
         }
 
@@ -1337,6 +1336,15 @@ namespace Raven.Server.Rachis
                 return;
 
             _leadershipTimeChanged.SetInAsyncMannerFireAndForget();
+        }
+
+        private static void TrySetResultAndPreventSynchronousContinuations(TaskCompletionSource<object> tcs)
+        {
+            Task.Factory.StartNew(t =>
+            {
+                ((TaskCompletionSource<object>)t).TrySetResult(null);
+
+            }, tcs, CancellationToken.None, TaskCreationOptions.PreferFairness | TaskCreationOptions.RunContinuationsAsynchronously | TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
     }
 
