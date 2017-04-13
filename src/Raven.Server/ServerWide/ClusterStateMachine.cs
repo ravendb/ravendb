@@ -101,6 +101,8 @@ namespace Raven.Server.ServerWide
                 case nameof(PutAutoIndexCommand):
                 case nameof(DeleteIndexCommand):
                 case nameof(SetIndexLockCommand):
+                case nameof(SetIndexPriorityCommand):
+
                 case nameof(PutTransformerCommand):
                 case nameof(SetTransformerLockCommand):
                 case nameof(DeleteTransformerCommand):

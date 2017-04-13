@@ -492,7 +492,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/indexes/set-priority", "POST")]
-        public Task SetPriority()
+        public async Task SetPriority()
         {
             var names = GetStringValuesQueryString("name");
             var priorityStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("priority");
@@ -503,14 +503,10 @@ namespace Raven.Server.Documents.Handlers
 
             foreach (var name in names)
             {
-                var index = Database.IndexStore.GetIndex(name);
-                if (index == null)
-                    IndexDoesNotExistException.ThrowFor(name);
-
-                index.SetPriority(priority);
+                await Database.IndexStore.SetPriority(name, priority);
             }
 
-            return NoContent();
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/indexes/errors", "GET")]

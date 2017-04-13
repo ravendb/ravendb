@@ -875,7 +875,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void RunIdleOperations()
         {
-            AsyncHelpers.RunSync(() => HandleUnusedAutoIndexes());
+            AsyncHelpers.RunSync(HandleUnusedAutoIndexes);
             //DeleteSurpassedAutoIndexes(); // TODO [ppekrol]
         }
 
@@ -1084,6 +1084,35 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 var command = new SetIndexLockCommand(name, mode, _documentDatabase.Name);
+
+                var etag = await _serverStore.SendToLeaderAsync(command);
+
+                await _serverStore.Cluster.WaitForIndexNotification(etag);
+            }
+            finally
+            {
+                _indexAndTransformerLocker.Release();
+            }
+        }
+
+        public async Task SetPriority(string name, IndexPriority priority)
+        {
+            await _indexAndTransformerLocker.WaitAsync();
+
+            try
+            {
+                var index = GetIndex(name);
+                if (index == null)
+                    IndexDoesNotExistException.ThrowFor(name);
+
+                var faultyInMemoryIndex = index as FaultyInMemoryIndex;
+                if (faultyInMemoryIndex != null)
+                {
+                    faultyInMemoryIndex.SetPriority(priority); // this will throw proper exception
+                    return;
+                }
+
+                var command = new SetIndexPriorityCommand(name, priority, _documentDatabase.Name);
 
                 var etag = await _serverStore.SendToLeaderAsync(command);
 
