@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Replication
                     SystemDocumentSkipCount = Stats.SystemDocumentSkipCount,
                     DocumentChangeVectorSkipCount = Stats.DocumentChangeVectorSkipCount,
                 },
-                Network = new OutgoingReplicationPerformanceStats.OutgoingNetworkStats
+                Network = new OutgoingReplicationPerformanceStats.NetworkStats
                 {
                     AttachmentOutputCount = Stats.AttachmentOutputCount,
                     AttachmentOutputSizeInBytes = Stats.AttachmentOutputSize.GetValue(SizeUnit.Bytes),

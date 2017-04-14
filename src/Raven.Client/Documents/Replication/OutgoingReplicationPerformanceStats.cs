@@ -19,11 +19,11 @@ namespace Raven.Client.Documents.Replication
 
         public StorageStats Storage { get; set; }
 
-        public OutgoingNetworkStats Network { get; set; }
+        public NetworkStats Network { get; set; }
 
         public List<ReplicationError> Errors { get; set; }
         
-        public class OutgoingNetworkStats
+        public class NetworkStats
         {
             public int AttachmentOutputCount { get; set; }
             public long AttachmentOutputSizeInBytes { get; set; }
