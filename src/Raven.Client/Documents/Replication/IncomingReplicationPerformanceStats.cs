@@ -17,11 +17,11 @@ namespace Raven.Client.Documents.Replication
 
         public long ReceivedLastEtag { get; set; }
 
-        public IncomingNetworkStats Network { get; set; }
+        public NetworkStats Network { get; set; }
 
         public List<ReplicationError> Errors { get; set; }
         
-        public class IncomingNetworkStats
+        public class NetworkStats
         {
             public int InputCount { get; set; }
 
