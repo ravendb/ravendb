@@ -59,6 +59,9 @@ class about extends viewModelBase {
         registration.showRegistrationDialog(this.licenseStatus(), true);
     }
 
+    openFeedbackForm() {
+        shell.openFeedbackForm();
+    }
 }
 
 export = about;

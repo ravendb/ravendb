@@ -424,7 +424,7 @@ class shell extends viewModelBase {
             shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, version, shouldTrack);
     }
 
-    openFeedbackForm() {
+    static openFeedbackForm() {
         const dialog = new feedback(shell.clientVersion(), shell.serverBuildVersion().FullVersion);
         app.showBootstrapDialog(dialog);
     }
