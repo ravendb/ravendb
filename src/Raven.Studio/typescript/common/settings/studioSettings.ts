@@ -6,11 +6,17 @@ import databaseSettings = require("common/settings/databaseSettings");
 import abstractSettings = require("common/settings/abstractSettings");
 import studioSetting = require("common/settings/studioSetting");
 
+type handlerItem = {
+    nameCondition: (name: string) => boolean;
+    handler: (name: string, setting: studioSetting<any>) => void;
+}
+
 class studioSettings {
 
     static default = new studioSettings();
 
     private globalSettingsCached: JQueryPromise<globalSettings>;
+    private readonly onSettingChangedHandlers = [] as Array<handlerItem>;
 
     forDatabase(db: database): JQueryPromise<databaseSettings> {
         const settings = new databaseSettings((key, value) => this.onSettingChanged(key, value), db);
@@ -55,8 +61,24 @@ class studioSettings {
     }
 
     private onSettingChanged(name: string, setting: studioSetting<any>) {
-        //TODO: dispatch to event listeners
-        console.log("changed: " + name + ", value = " + setting.serialize());
+        this.onSettingChangedHandlers.forEach(item => {
+            if (item.nameCondition(name)) {
+                item.handler(name, setting);
+            }
+        });
+    }
+
+    registerOnSettingChangedHandler<T extends studioSetting<any>>(nameCondition: (name: string) => boolean, handler: (name: string, setting: T) => void): disposable {
+        const entry = {
+            nameCondition,
+            handler
+        } as handlerItem;
+
+        this.onSettingChangedHandlers.push(entry);
+
+        return {
+            dispose: () => _.pull(this.onSettingChangedHandlers, entry)
+        }
     }
 
 }
