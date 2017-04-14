@@ -1,4 +1,5 @@
 using System;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -71,6 +72,21 @@ namespace Raven.Client.Extensions
         public static Task ContinueWithTask(this Task task, Func<Task> result)
         {
             return task.WithResult(result).Unwrap();
+        }
+
+        private const int TASK_STATE_THREAD_WAS_ABORTED = 134217728;
+        private const string stateFlagsFieldName = "m_stateFlags";
+        private static readonly ParameterExpression TaskParameter = Expression.Parameter(typeof(Task));
+
+        // http://stackoverflow.com/questions/22579206/how-can-i-prevent-synchronous-continuations-on-a-task
+        private static readonly Action<Task> EnsureContinuationsWontBeCalledSynchronously = Expression.Lambda<Action<Task>>(
+            Expression.Assign(Expression.Field(TaskParameter, stateFlagsFieldName),
+                Expression.Or(Expression.Field(TaskParameter, stateFlagsFieldName),
+                    Expression.Constant(TASK_STATE_THREAD_WAS_ABORTED))), TaskParameter).Compile();
+
+        public static void PreventSynchronousContinuations(this Task t)
+        {
+            EnsureContinuationsWontBeCalledSynchronously(t);
         }
     }
 }

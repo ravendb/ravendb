@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -145,7 +146,7 @@ namespace Raven.Server.Rachis
 
         private Leader _currentLeader;
         private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>();
-        private TaskCompletionSource<object> _stateChanged = new TaskCompletionSource<object>();
+        private ManualResetEventSlim _stateChanged = new ManualResetEventSlim(false);
         private TaskCompletionSource<object> _commitIndexChanged = new TaskCompletionSource<object>();
         private int? _seed;
         private string _lastStateChangeReason;
@@ -253,10 +254,12 @@ namespace Raven.Server.Rachis
         {
             while (true)
             {
-                var task = _stateChanged.Task;
                 if (CurrentState == state)
                     return;
-                await task;
+
+                await _stateChanged.WaitHandle.WaitOneAsync();
+
+                _stateChanged.Reset();
             }
         }
 
@@ -346,17 +349,12 @@ namespace Raven.Server.Rachis
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += tx =>
             {
-                var tcs = Interlocked.Exchange(ref _stateChanged, new TaskCompletionSource<object>());
-                
-                TrySetResultAndPreventSynchronousContinuations(tcs);
+                _stateChanged.Set();
 
-                tcs.Task.ContinueWith(t =>
+                foreach (var d in toDispose)
                 {
-                    foreach (var d in toDispose)
-                    {
-                        d.Dispose();
-                    }
-                });
+                    d.Dispose();
+                }
             };
         }
 
@@ -367,9 +365,8 @@ namespace Raven.Server.Rachis
 
             CurrentState = State.Leader;
 
-            var tcs = Interlocked.Exchange(ref _stateChanged, new TaskCompletionSource<object>());
-
-            TrySetResultAndPreventSynchronousContinuations(tcs);
+            _stateChanged.Set();
+            _stateChanged.Reset();
         }
 
         public void AppendStateDisposable(IDisposable parentState, IDisposable disposeOnStateChange)
