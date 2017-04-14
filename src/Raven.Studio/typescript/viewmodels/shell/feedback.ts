@@ -47,12 +47,17 @@ class feedback extends dialogViewModelBase {
 
     private toDto(): Raven.Server.Documents.Studio.FeedbackForm {
         return {
-            Name: this.model.name(),
-            Email: this.model.email(),
             Message: this.model.message(),
-            UserAgent: navigator.userAgent,
-            StudioVersion: this.studioVersion,
-            ServerVersion: this.serverVersion
+            Product: {
+                StudioVersion: this.studioVersion,
+                Version: this.serverVersion,
+                Name: "RavenDB"
+            },
+            User: {
+                Name: this.model.name(),
+                Email: this.model.email(),
+                UserAgent: navigator.userAgent
+            }
         }
     }
 
