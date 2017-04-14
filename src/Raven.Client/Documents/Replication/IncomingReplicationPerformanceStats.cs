@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Replication
 {
-    public class IncomingReplicationPerformanceStats : ReplicationPerformanceBase<ReplicationPerformanceOperation>
+    public class IncomingReplicationPerformanceStats : ReplicationPerformanceBase
     {
         public IncomingReplicationPerformanceStats()
         {
@@ -17,11 +17,11 @@ namespace Raven.Client.Documents.Replication
 
         public long ReceivedLastEtag { get; set; }
 
-        public NetworkStats Network { get; set; }
+        public IncomingNetworkStats Network { get; set; }
 
         public List<ReplicationError> Errors { get; set; }
-
-        public class NetworkStats
+        
+        public class IncomingNetworkStats
         {
             public int InputCount { get; set; }
 
