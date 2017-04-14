@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Operations
             {
                 var state = taskAndState.Value;
 
-                if (state.Description.EndTime < twoDaysAgo)
+                if (state.Description.EndTime.HasValue && state.Description.EndTime < twoDaysAgo)
                 {
                     Operation value;
                     _completed.TryRemove(taskAndState.Key, out value);
@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.Operations
             public string Description;
             public OperationType TaskType;
             public DateTime StartTime;
-            public DateTime EndTime;
+            public DateTime? EndTime;
 
             public DynamicJsonValue ToJson()
             {

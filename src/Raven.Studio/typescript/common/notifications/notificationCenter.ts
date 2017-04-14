@@ -94,7 +94,7 @@ class notificationCenter {
 
             const mergedNotifications = globalNotifications.concat(databaseNotifications);
 
-            return _.sortBy(mergedNotifications, x => -1 * x.createdAt().unix());
+            return _.sortBy(mergedNotifications, x => -1 * x.displayDate().unix());
         });
 
         this.totalItemsCount = ko.pureComputed(() => this.allNotifications().length);
