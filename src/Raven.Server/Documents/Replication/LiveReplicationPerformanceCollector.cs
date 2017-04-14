@@ -206,26 +206,26 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private class OutgoingPerformanceStats : ReplicationPerformanceStatsBase<OutgoingReplicationPerformanceStats>
+        public class OutgoingPerformanceStats : ReplicationPerformanceStatsBase<OutgoingReplicationPerformanceStats>
         {
             public OutgoingPerformanceStats(string id, string description, OutgoingReplicationPerformanceStats[] performance)
-                : base(id, description, ReplicationType.Outgoing, performance)
+                : base(id, description, ReplicationPerformanceType.Outgoing, performance)
             {
             }
         }
 
-        private class IncomingPerformanceStats : ReplicationPerformanceStatsBase<IncomingReplicationPerformanceStats>
+        public class IncomingPerformanceStats : ReplicationPerformanceStatsBase<IncomingReplicationPerformanceStats>
         {
             public IncomingPerformanceStats(string id, string description, IncomingReplicationPerformanceStats[] performance)
-                : base(id, description, ReplicationType.Incoming, performance)
+                : base(id, description, ReplicationPerformanceType.Incoming, performance)
             {
             }
         }
 
         public abstract class ReplicationPerformanceStatsBase<TPerformance> : IReplicationPerformanceStats
-            where TPerformance : class
+            where TPerformance : ReplicationPerformanceBase
         {
-            protected ReplicationPerformanceStatsBase(string id, string description, ReplicationType type, TPerformance[] performance)
+            protected ReplicationPerformanceStatsBase(string id, string description, ReplicationPerformanceType type, TPerformance[] performance)
             {
                 Id = id;
                 Description = description;
@@ -233,13 +233,13 @@ namespace Raven.Server.Documents.Replication
                 Performance = performance;
             }
 
-            protected ReplicationType Type { get; }
+            public ReplicationPerformanceType Type { get; }
 
-            protected string Id { get; }
+            public string Id { get; }
 
-            protected string Description { get; }
+            public string Description { get; }
 
-            protected TPerformance[] Performance { get; }
+            public TPerformance[] Performance { get; }
 
             public void Write(JsonOperationContext context, BlittableJsonTextWriter writer)
             {
@@ -266,12 +266,12 @@ namespace Raven.Server.Documents.Replication
 
                 writer.WriteEndObject();
             }
+        }
 
-            public enum ReplicationType
-            {
-                Incoming,
-                Outgoing
-            }
+        public enum ReplicationPerformanceType
+        {
+            Incoming,
+            Outgoing
         }
 
         public interface IReplicationPerformanceStats

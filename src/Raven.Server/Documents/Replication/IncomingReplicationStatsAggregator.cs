@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Replication
                 Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
                 Details = Scope.ToReplicationPerformanceOperation("Replication"),
                 ReceivedLastEtag = Stats.LastEtag,
-                Network = new IncomingReplicationPerformanceStats.NetworkStats
+                Network = new IncomingReplicationPerformanceStats.IncomingNetworkStats
                 {
                     InputCount = Stats.InputCount,
                     AttachmentReadCount = Stats.AttachmentReadCount,
