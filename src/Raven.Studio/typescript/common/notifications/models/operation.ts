@@ -11,6 +11,8 @@ class operation extends abstractNotification {
     status = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
     killable = ko.observable<boolean>();
     taskType = ko.observable<Raven.Server.Documents.Operations.DatabaseOperations.OperationType>();
+    startTime = ko.observable<moment.Moment>();
+    endTime = ko.observable<moment.Moment>();
 
     isCompleted: KnockoutComputed<boolean>;
     isPercentageProgress: KnockoutComputed<boolean>;
@@ -33,6 +35,8 @@ class operation extends abstractNotification {
         this.result(stateDto.Result);
         this.status(stateDto.Status);
         this.taskType(incomingChanges.TaskType);
+        this.startTime(incomingChanges.StartTime ? moment.utc(incomingChanges.StartTime) : null);
+        this.endTime(incomingChanges.EndTime ? moment.utc(incomingChanges.EndTime) : null);
     }
 
     percentageProgress(): number {
@@ -55,6 +59,14 @@ class operation extends abstractNotification {
             }
 
             return progress.hasOwnProperty("Processed") && progress.hasOwnProperty("Total");
+        });
+
+        // override event date - for operations we use end date (if available), or start start
+        this.displayDate = ko.pureComputed(() => {
+            const start = this.startTime();
+            const end = this.endTime();
+            const dateToUse = end || start;
+            return moment(dateToUse).local();
         });
     }
 
