@@ -32,7 +32,7 @@ class documents extends viewModelBase {
 
     inSpecificCollection: KnockoutComputed<boolean>;
     deleteEnabled: KnockoutComputed<boolean>;
-    private selectedItemsCount: KnockoutComputed<number>;
+    selectedItemsCount: KnockoutComputed<number>;
 
     dirtyResult = ko.observable<boolean>(false);
     dataChanged: KnockoutComputed<boolean>;

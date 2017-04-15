@@ -25,7 +25,7 @@
                     <span>New database</span>
                 </button>
                 
-                <div class="btn-group-label" data-label="Selection" role="group">
+                <div class="btn-group-label" data-bind="css: { active: selectedDatabases().length }" data-label="Selection" role="group">
                     <button class="btn btn-danger" data-bind="visible: isGlobalAdmin(), enable: selectedDatabases().length, click: deleteSelectedDatabases">
                         <i class="icon-trash"></i>
                         <span>Delete</span>
