@@ -4,7 +4,7 @@ class timeHelpers {
 
     // don't make this method public, instead create field for given time period
     private static createTimeBasedObservable(updatePeriodInMillis: number) {
-        let now: KnockoutObservable<moment.Moment> = ko.observable<moment.Moment>();
+        const now: KnockoutObservable<moment.Moment> = ko.observable<moment.Moment>();
         let interval: number;
 
         const computed = ko.pureComputed(() => now());
@@ -23,5 +23,6 @@ class timeHelpers {
     }
 
     static readonly utcNowWithMinutePrecision = timeHelpers.createTimeBasedObservable(60 * 1000);
+    static readonly utcNowWithSecondPrecision = timeHelpers.createTimeBasedObservable(1000);
 }
 export = timeHelpers;
