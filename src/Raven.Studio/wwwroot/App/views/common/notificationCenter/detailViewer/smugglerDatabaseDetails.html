@@ -6,7 +6,7 @@
                     <h3 class="modal-title" id="myModalLabel" data-bind="text: op.title"></h3>
                 </div>
                 <div class="flex-content text-right">
-                    <!-- TODO <span class="text-muted">Time elapsed:</span> 00:01:20-->
+                    <span class="text-muted">Time elapsed:</span> <span data-bind="text: op.duration"></span>
                 </div>
                 <div>
                     <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
@@ -16,7 +16,8 @@
             </div>
         </div>
         <div class="modal-body">
-            <div class="export-list">
+            <h3 class="text-danger" data-bind="visible: operationFailed">Operation failed</h3>
+            <div class="export-list" data-bind="visible: exportItems().length">
                 <div class="export-legend">
                     <div class="name">
                     </div>
@@ -42,6 +43,9 @@
                         <div class="status status-processed" data-bind="visible: stage === 'processed'">
                             <i class="icon-check"></i> <span>Processed</span>
                         </div>
+                        <div class="status status-errored" data-bind="visible: stage === 'error'">
+                            <i class="icon-exclamation"></i> <span>Error</span>
+                        </div>
                         <div class="status status-skipped" data-bind="visible: stage === 'skipped'">
                             <i class="icon-skip"></i> <span>Skipped</span>
                         </div>
@@ -60,7 +64,7 @@
                     </div>
                 </div>
             </div>
-            <div class="clearfix">
+            <div class="clearfix" data-bind="visible: !operationFailed()">
                 <div class="pull-right">
                     <button class="btn btn-default btn-sm" data-bind="click: toggleDetails, text: detailsVisible() ? 'Hide details':'Show details', clickBubble: false">
                     </button>
@@ -68,10 +72,16 @@
             </div>
             <pre class="margin-top export-messages" data-bind="visible: detailsVisible"><code data-bind="foreach: messages"><span data-bind="text: $data"></span>
 </code></pre>
+            <div class="toggle" data-bind="visible: detailsVisible() && !operationFailed()">
+                <input id="smuggler-monitoring" type="checkbox" data-bind="checked: tail, disable: op.isCompleted">
+                <label for="smuggler-monitoring">
+                    Monitoring (tail -f)
+                </label>
+            </div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
-            <button type="button" class="btn btn-danger" data-bind="click: killOperation, visible: killable">
+            <button type="button" class="btn btn-danger" data-bind="click: killOperation, visible: killable, css: { 'btn-spinner': spinners.kill }, disable: spinners.kill">
                 <i class="icon-cancel"></i> <span>Abort</span>
             </button>
         </div>

@@ -2,6 +2,8 @@
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import database = require("models/resources/database");
+import generalUtils = require("common/generalUtils");
+import timeHelpers = require("common/timeHelpers");
 
 class operation extends abstractNotification {
 
@@ -11,10 +13,13 @@ class operation extends abstractNotification {
     status = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
     killable = ko.observable<boolean>();
     taskType = ko.observable<Raven.Server.Documents.Operations.DatabaseOperations.OperationType>();
+
     startTime = ko.observable<moment.Moment>();
     endTime = ko.observable<moment.Moment>();
+    duration: KnockoutComputed<string>;
 
     isCompleted: KnockoutComputed<boolean>;
+    isCanceled: KnockoutComputed<boolean>;
     isPercentageProgress: KnockoutComputed<boolean>;
 
     constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
@@ -46,6 +51,7 @@ class operation extends abstractNotification {
 
     private initializeObservables() {
         this.isCompleted = ko.pureComputed(() => this.status() !== "InProgress");
+        this.isCanceled = ko.pureComputed(() => this.status() === "Canceled");
         this.hasDetails = ko.pureComputed(() => {
             const hasResult = !!this.result();
             const hasProgress = !!this.progress();
@@ -65,8 +71,18 @@ class operation extends abstractNotification {
         this.displayDate = ko.pureComputed(() => {
             const start = this.startTime();
             const end = this.endTime();
-            const dateToUse = end || start;
+            const created = this.createdAt();
+            const dateToUse = end || start || created;
             return moment(dateToUse).local();
+        });
+
+        this.duration = ko.pureComputed(() => {
+            const start = this.startTime();
+            const end = this.endTime();
+
+            const endTime = end || timeHelpers.utcNowWithSecondPrecision();
+
+            return generalUtils.formatAsTimeSpan(endTime.diff(start));
         });
     }
 

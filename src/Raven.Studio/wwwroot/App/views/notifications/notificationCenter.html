@@ -16,6 +16,7 @@
                 <h3 data-bind="text: title"></h3>
                 <div class="time" data-bind="text: displayDate().format('LLL')"></div>
                 <p data-bind="text: message"></p>
+                <p data-bind="visible: isCanceled" class="text-warning">The operation was cancelled.</p>
 
                 <div class="text-right">
                     <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
