@@ -119,8 +119,7 @@ namespace Sparrow.Json
             if (sizeOfValue == sizeof(short))
                 return returnValue;
 
-            returnValue |= *(value + 2) << 16;
-            returnValue |= *(value + 3) << 24;
+            returnValue |= *(short*)(value + 2) << 16;
             if (sizeOfValue == sizeof(int))
                 return returnValue;          
 
@@ -181,33 +180,41 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int ReadVariableSizeInt(byte* buffer, int pos, out byte offset)
         {
+            offset = 0;
+
             if (pos < 0)
-                ThrowInvalidPosition(pos);
+                goto ThrowInvalid;
 
             // Read out an Int32 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
             // we assume that the value shouldn't be zero very often
             // because then we'll always take 5 bytes to store it
-            offset = 0;
+
             int count = 0;
-            int shift = 0;
+            byte shift = 0;
             byte b;
             do
             {
                 if (shift == 35)
                     goto Error; // PERF: Using goto to diminish the size of the loop.
 
-                b = buffer[pos++];
-                count |= (b & 0x7F) << shift;
-                shift += 7;
+                b = buffer[pos];
+                pos++;
                 offset++;
+
+                count |= (b & 0x7F) << shift;
+                shift += 7;                
             }
             while ((b & 0x80) != 0);
 
             return count;
 
             Error:
-            ThrowInvalidShift();
+            ThrowInvalidShift();            
+
+            ThrowInvalid:
+            ThrowInvalidPosition(pos);
+
             return -1;
         }
 
@@ -229,17 +236,19 @@ namespace Sparrow.Json
             // because then we'll always take 5 bytes to store it
             offset = 0;
             int count = 0;
-            int shift = 0;
+            byte shift = 0;
             byte b;
             do
             {
                 if (shift == 35)
                     goto Error; // PERF: Using goto to diminish the size of the loop.
 
-                b = buffer[pos--];
-                count |= (b & 0x7F) << shift;
-                shift += 7;
+                b = buffer[pos];
+                pos--;
                 offset++;
+
+                count |= (b & 0x7F) << shift;
+                shift += 7;                
             }
             while ((b & 0x80) != 0);
             return count;
@@ -255,7 +264,7 @@ namespace Sparrow.Json
             // of the byte when on means to continue reading more bytes.
 
             ulong count = 0;
-            int shift = 0;
+            byte shift = 0;
             byte b;
             do
             {
