@@ -147,7 +147,7 @@ namespace Sparrow.Json
 
         private static void ThrowObjectDisposed()
         {
-            throw new ObjectDisposedException("blittalbe object has been disposed");
+            throw new ObjectDisposedException("blittable object has been disposed");
         }
 
         public int Size => _size;
