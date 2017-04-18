@@ -146,7 +146,7 @@ namespace Raven.Server.Rachis
 
         private Leader _currentLeader;
         private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>();
-        private ManualResetEventSlim _stateChanged = new ManualResetEventSlim(false);
+        private readonly AutoResetEvent _stateChanged = new AutoResetEvent(false);
         private TaskCompletionSource<object> _commitIndexChanged = new TaskCompletionSource<object>();
         private int? _seed;
         private string _lastStateChangeReason;
@@ -254,12 +254,13 @@ namespace Raven.Server.Rachis
         {
             while (true)
             {
+                // we setup the wait _before_ checking the state
+                var task = _stateChanged.WaitOneAsync();
+
                 if (CurrentState == state)
                     return;
 
-                await _stateChanged.WaitHandle.WaitOneAsync();
-
-                _stateChanged.Reset();
+                await task;
             }
         }
 
@@ -366,7 +367,6 @@ namespace Raven.Server.Rachis
             CurrentState = State.Leader;
 
             _stateChanged.Set();
-            _stateChanged.Reset();
         }
 
         public void AppendStateDisposable(IDisposable parentState, IDisposable disposeOnStateChange)

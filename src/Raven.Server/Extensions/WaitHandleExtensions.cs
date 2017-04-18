@@ -7,7 +7,7 @@ namespace Raven.Server.Extensions
 {
     public static class WaitHandleExtensions
     {
-        public static Task<bool> WaitOneAsync(this WaitHandle handle, int millisecondsTimeout)
+        public static async Task<bool> WaitOneAsync(this WaitHandle handle, int millisecondsTimeout)
         {
             RegisteredWaitHandle registeredHandle = null;
             
@@ -24,7 +24,7 @@ namespace Raven.Server.Extensions
                     millisecondsTimeout,
                     true);
 
-                return tcs.Task;
+                return await tcs.Task;
             }
             finally
             {
