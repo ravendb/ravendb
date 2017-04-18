@@ -26,6 +26,7 @@ using Raven.Server.Documents.Versioning;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -190,6 +191,10 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IOMetricsResponse));
             scripter.AddType(typeof(FileStatus));
             scripter.AddType(typeof(IoMetrics.MeterType));
+
+            // replication stats
+            scripter.AddType(typeof(LiveReplicationPerformanceCollector.OutgoingPerformanceStats));
+            scripter.AddType(typeof(LiveReplicationPerformanceCollector.IncomingPerformanceStats));
 
             return scripter;
         }
