@@ -41,7 +41,7 @@ namespace SlowTests.Server.Rachis
             List<Task> waitingList = new List<Task>();
             foreach (var consensus in RachisConsensuses)
             {
-                waitingList.Add(consensus.WaitForTopology(Leader.TopologyModification.Promotable, "http://rachis.example.com:1337"));
+                waitingList.Add(consensus.WaitForTopology(Leader.TopologyModification.Promotable, "D"));
             }
             Assert.True(Task.WhenAll(waitingList).Wait(leader.ElectionTimeoutMs * 2),"Cluster was non informed about new node within two election periods");
         }
