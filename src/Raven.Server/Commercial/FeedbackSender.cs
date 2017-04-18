@@ -18,8 +18,7 @@ namespace Raven.Server.Commercial
             var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             if (response.IsSuccessStatusCode == false)
             {
-                throw new InvalidOperationException("Sending feedback failed with status code: " + response.StatusCode +
-                                                    Environment.NewLine + responseString);
+                throw new InvalidOperationException(responseString);
             }
         }
 
