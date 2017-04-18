@@ -10,6 +10,7 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
     private mergedData: Raven.Server.Documents.Handlers.IOMetricsResponse;    
     private pendingDataToApply: Raven.Server.Documents.Handlers.IOMetricsResponse[] = []; // Used to hold data when pauseUpdates
     private updatesPaused = false;
+    loading = ko.observable<boolean>(true);
 
     constructor(db: database, onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void) {
         super(db);
@@ -43,7 +44,13 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
         this.onData(this.mergedData);
     }
 
+    protected onHeartBeat() {
+        this.loading(false);
+    }
+
     protected onMessage(e: Raven.Server.Documents.Handlers.IOMetricsResponse) {
+        this.loading(false);
+
         if (this.updatesPaused) {
             this.pendingDataToApply.push(e);
         } else {
