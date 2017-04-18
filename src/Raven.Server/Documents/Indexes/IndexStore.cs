@@ -359,6 +359,8 @@ namespace Raven.Server.Documents.Indexes
                     await _serverStore.Cluster.WaitForIndexNotification(etag);
 
                     var index = GetIndex(definition.Name); // not all operations are changing Etag, this is why we need to take it directly from the index
+                    if(index == null)
+                        throw new InvalidOperationException("Failed to create index " + definition.Name);
                     return index.Etag;
                 }
                 catch (CommandExecutionException e)
