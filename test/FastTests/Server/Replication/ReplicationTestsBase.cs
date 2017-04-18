@@ -314,10 +314,9 @@ namespace FastTests.Server.Replication
 
         protected static async Task<UpdateTopologyResult> UpdateReplicationTopology(
             DocumentStore store, 
-            Dictionary<string,string> dictionary,
             List<DatabaseWatcher> watchers)
         {
-            var cmd = new UpdateDatabaseTopology(store.DefaultDatabase, dictionary, watchers);
+            var cmd = new UpdateDatabaseTopology(store.DefaultDatabase, watchers);
             return await store.Admin.Server.SendAsync(cmd);
         }
 
@@ -340,7 +339,7 @@ namespace FastTests.Server.Replication
                     Url = store.Url,                  
                 });
             }
-            var result = await UpdateReplicationTopology(fromStore, null,watchers);
+            var result = await UpdateReplicationTopology(fromStore,watchers);
             CurrentDatabaseTopology = result.Topology;
         }
 

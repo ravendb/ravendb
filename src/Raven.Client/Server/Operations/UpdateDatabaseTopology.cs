@@ -15,21 +15,19 @@ namespace Raven.Client.Server.Operations
 {
     public class UpdateDatabaseTopology : IServerOperation<UpdateTopologyResult>
     {
-        private readonly Dictionary<string, string> _updateBlockedConnections;
         private readonly List<DatabaseWatcher> _newWatchers;
         private readonly string _database;
 
-        public UpdateDatabaseTopology(string database, Dictionary<string,string> updateUpdateBlockedConnections, List<DatabaseWatcher> newWatchers = null)
+        public UpdateDatabaseTopology(string database, List<DatabaseWatcher> newWatchers = null)
         {
             MultiDatabase.AssertValidName(database);
             _database = database;
-            _updateBlockedConnections = updateUpdateBlockedConnections;
             _newWatchers = newWatchers;
         }
 
         public RavenCommand<UpdateTopologyResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new UpdateTopologyCommand(conventions, context, _database, _updateBlockedConnections, _newWatchers);
+            return new UpdateTopologyCommand(conventions, context, _database, _newWatchers);
         }
 
         private class UpdateTopologyCommand : RavenCommand<UpdateTopologyResult>
@@ -37,14 +35,12 @@ namespace Raven.Client.Server.Operations
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
-            private readonly Dictionary<string, string> _blockedConnections;
             private readonly List<DatabaseWatcher> _newWatchers;
           
             public UpdateTopologyCommand(
                 DocumentConventions conventions, 
                 JsonOperationContext context, 
                 string database,
-                Dictionary<string, string> blockedConnections,
                 List<DatabaseWatcher> newWatchers
                
                 )
@@ -52,7 +48,6 @@ namespace Raven.Client.Server.Operations
                 _context = context ?? throw new ArgumentNullException(nameof(context));
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _databaseName = database ?? throw new ArgumentNullException(nameof(database));
-                _blockedConnections = blockedConnections;
                 _newWatchers = newWatchers;
             }
 
@@ -67,7 +62,6 @@ namespace Raven.Client.Server.Operations
                     {
                         var json = new DynamicJsonValue
                         {
-                            ["BlockedConnections"] = DynamicJsonValue.Convert(_blockedConnections),
                             ["NewWatchers"] = new DynamicJsonArray(_newWatchers?.Select( w=> w.ToJson())),
                         };
 

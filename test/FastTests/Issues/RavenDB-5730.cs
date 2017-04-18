@@ -59,7 +59,7 @@ namespace FastTests.Issues
                 }
             };
 
-            UpdateReplicationTopology(storeA, null, watchers).ConfigureAwait(false);
+            UpdateReplicationTopology(storeA, watchers).ConfigureAwait(false);
             
             using (var session = storeA.OpenSession())
             {

@@ -664,21 +664,13 @@ namespace Raven.Server.ServerWide
     {
         public string DatabaseName;
         public BlittableJsonReaderObject Value;
-
-        public Dictionary<string,string> UpdateBlockedConnections;
         public List<DatabaseWatcher> NewWatchers;
         
         public void Deserialize()
         {
-            BlittableJsonReaderObject blockedConnectionsBlittable;
             BlittableJsonReaderArray newWatchersBlittable;
-            Value.TryGet("BlockedConnections", out blockedConnectionsBlittable);
             Value.TryGet("NewWatchers", out newWatchersBlittable);
             
-            if (blockedConnectionsBlittable != null)
-            {
-                UpdateBlockedConnections = JsonDeserializationRachis<Dictionary<string, string>>.Deserialize(blockedConnectionsBlittable);
-            }
             if (newWatchersBlittable != null)
             {
                 NewWatchers = new List<DatabaseWatcher>();
@@ -690,18 +682,6 @@ namespace Raven.Server.ServerWide
         public void UpdateDatabaseRecord(DatabaseRecord record)
         {
             Deserialize();
-
-            foreach (var updateBlockedConnection in UpdateBlockedConnections)
-            {
-                var key = updateBlockedConnection.Key;
-                var value = updateBlockedConnection.Value;
-                if (value == null)
-                {
-                    record.Topology.CustomConnectionBlocker.Remove(key);
-                    continue;
-                }
-                record.Topology.CustomConnectionBlocker[key] = value;
-            }
             record.Topology.Watchers = NewWatchers;
         }
     }

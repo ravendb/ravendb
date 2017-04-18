@@ -15,8 +15,13 @@ namespace Raven.Client.Documents
 
         public bool ConflictResolutionChanged(ConflictSolver other)
         {
-            if ((ResolveByCollection == null ^ other.ResolveByCollection == null) == false)
+ 
+            if (ResolveByCollection != null && other.ResolveByCollection == null || 
+               ResolveByCollection == null && other.ResolveByCollection != null)
                 return true;
+
+            //if ((ResolveByCollection == null ^ other.ResolveByCollection == null) == false)
+            //    return true;
 
             return ResolveToLatest == other.ResolveToLatest &&
                    (ResolveByCollection?.SequenceEqual(other.ResolveByCollection) ?? true);
@@ -24,7 +29,9 @@ namespace Raven.Client.Documents
 
         public bool IsEmpty()
         {
-            return ResolveToLatest == false && DatabaseResovlerId == null && ResolveByCollection?.Count == 0;
+            return ResolveToLatest == false && 
+                DatabaseResovlerId == null && 
+                (ResolveByCollection == null || ResolveByCollection.Count == 0);
         }
 
         public DynamicJsonValue ToJson()
@@ -35,7 +42,7 @@ namespace Raven.Client.Documents
                 [nameof(ResolveToLatest)] = ResolveToLatest,
                 [nameof(ResolveByCollection)] = new DynamicJsonArray
                 {
-                    ResolveByCollection.Select( item => new DynamicJsonValue
+                    ResolveByCollection?.Select( item => new DynamicJsonValue
                     {
                         [nameof(item.Key)] = item.Value.ToJson()
                     })
@@ -63,11 +70,7 @@ namespace Raven.Client.Documents
         public List<DatabaseWatcher> Watchers = new List<DatabaseWatcher>();
 
         public Dictionary<string,string> NameToUrlMap = new Dictionary<string, string>();
-
-        // If we want to prevent from a replication we set an entry 
-        // e.g. setting ("A","C") will prevent replication from server A to C for this database.
-        public Dictionary<string,string> CustomConnectionBlocker = new Dictionary<string, string>();
-
+        
         public bool RelevantFor(string nodeTag)
         {
             return Members.Contains(nodeTag) ||
@@ -77,14 +80,10 @@ namespace Raven.Client.Documents
 
         public IEnumerable<ReplicationNode> GetDestinations(string nodeTag, string databaseName)
         {
-            var except = CustomConnectionBlocker
-                .Where(item => item.Key == nodeTag)
-                .Select(item => item.Key)
-                .Concat(new []{nodeTag});
-
+          
             var watchers = Watchers.Where(w => IsItMyTask(w, nodeTag));
 
-            return AllNodes.Except(except).Select(n => new ReplicationNode{
+            return AllNodes.Select(n => new ReplicationNode{
                 NodeTag = n,
                 Url = NameToUrlMap[n],
                 Database = databaseName
@@ -118,7 +117,6 @@ namespace Raven.Client.Documents
                 [nameof(Members)] = new DynamicJsonArray(Members),
                 [nameof(Promotables)] = new DynamicJsonArray(Promotables),
                 [nameof(Watchers)] = new DynamicJsonArray(Watchers.Select(w => w.ToJson())),
-                [nameof(CustomConnectionBlocker)] = DynamicJsonValue.Convert(CustomConnectionBlocker),
                 [nameof(NameToUrlMap)] = DynamicJsonValue.Convert(NameToUrlMap)
             };
         }
@@ -127,7 +125,6 @@ namespace Raven.Client.Documents
         {
             Members.Remove(delDbFromNode);
             Promotables.Remove(delDbFromNode);
-            CustomConnectionBlocker.Remove(delDbFromNode);
         }
 
         public bool IsItMyTask(IDatabaseTask task, string nodeTag)
