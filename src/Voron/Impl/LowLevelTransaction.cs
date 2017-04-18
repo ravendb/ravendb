@@ -920,9 +920,12 @@ namespace Voron.Impl
             // release scratch file page allocated for the transaction header
             Allocator.Release(ref _txHeaderMemory);
 
-            _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
-            _env.Journal.UpdateCacheForJournalSnapshots();
-
+            using (_env.PreventNewReadTransactions())
+            {
+                _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
+                _env.Journal.UpdateCacheForJournalSnapshots();
+            }
+            
             RolledBack = true;
         }
         public void RetrieveCommitStats(out CommitStats stats)
