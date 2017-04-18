@@ -94,7 +94,8 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                // log here and continue?
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Failed to proccess database changes on index store",e);
             }
         }
 
@@ -104,9 +105,17 @@ namespace Raven.Server.Documents.Indexes
             {
                 var name = kvp.Key;
                 var etag = kvp.Value.Etag;
-                var definition = CreateAutoDefinition(kvp.Value);
+                try
+                {
+                    var definition = CreateAutoDefinition(kvp.Value);
 
-                HandleAutoIndexChange(name, etag, definition);
+                    HandleAutoIndexChange(name, etag, definition);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Could not create auto index {name}", e);
+                }
             }
         }
 
@@ -204,7 +213,15 @@ namespace Raven.Server.Documents.Indexes
                 var name = kvp.Key;
                 var definition = kvp.Value;
 
-                HandleStaticIndexChange(name, definition);
+                try
+                {
+                    HandleStaticIndexChange(name, definition);
+                }
+                catch (Exception exception)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Could not update static index {name}", exception);
+                }
             }
         }
 
@@ -289,7 +306,15 @@ namespace Raven.Server.Documents.Indexes
                 if (record.Indexes.ContainsKey(index.Name) || record.AutoIndexes.ContainsKey(index.Name))
                     continue;
 
-                DeleteIndexInternal(index);
+                try
+                {
+                    DeleteIndexInternal(index);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Could not delete index {index.Name}", e);
+                }
             }
         }
 

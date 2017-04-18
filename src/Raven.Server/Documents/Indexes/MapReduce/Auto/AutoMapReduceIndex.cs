@@ -77,7 +77,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public override void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
         {
-            SetLock(definition.LockMode);
             SetPriority(definition.Priority);
         }
 

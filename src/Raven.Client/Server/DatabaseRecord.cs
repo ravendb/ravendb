@@ -105,12 +105,6 @@ namespace Raven.Client.Server
                     throw new NotSupportedException($"Can not update auto-index: {definition.Name}");
             }
 
-            if (lockMode == IndexLockMode.LockedIgnore)
-                return;
-
-            if (lockMode == IndexLockMode.LockedError)
-                throw new IndexOrTransformerAlreadyExistException($"Cannot edit existing index {definition.Name} with lock mode {lockMode}");
-
             AutoIndexes[definition.Name] = definition;
         }
 

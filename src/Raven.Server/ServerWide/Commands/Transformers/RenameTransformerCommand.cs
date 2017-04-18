@@ -1,4 +1,6 @@
-﻿using Raven.Client.Server;
+﻿using System;
+using Raven.Client.Documents.Transformers;
+using Raven.Client.Server;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Transformers
@@ -24,12 +26,17 @@ namespace Raven.Server.ServerWide.Commands.Transformers
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            var transformer = record.Transformers[TransformerName];
-            transformer.Etag = etag;
-            transformer.Name = NewTransformerName;
+            if (record.Transformers.TryGetValue(TransformerName, out TransformerDefinition transformer))
+            {
+                transformer.Etag = etag;
+                transformer.Name = NewTransformerName;
 
-            record.AddTransformer(transformer);
-            record.Transformers.Remove(TransformerName);
+                record.AddTransformer(transformer);
+                record.Transformers.Remove(TransformerName);
+                return;
+            }
+
+            throw new InvalidOperationException($"Could not rename transformer {TransformerName} because it was not found in DatabaseRecord");
         }
 
         public override void FillJson(DynamicJsonValue json)
