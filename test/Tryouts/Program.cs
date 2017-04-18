@@ -13,17 +13,8 @@ namespace Tryouts
                 Console.WriteLine(i);
 
                 using (var a = new ReplicationResolveToDatabase())
-                using (var b = new ReplicationCleanTombstones())
                 {
-                    try
-                    {
-                        b.DontCleanTombstones();
-                    }
-                    catch
-                    {
-                        //
-                    }
-                    a.ResovleToDatabase();                                      
+                    a.ResovleToDatabase().Wait();
                 }
             }
         }

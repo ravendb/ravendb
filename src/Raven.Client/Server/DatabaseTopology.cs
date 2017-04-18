@@ -10,7 +10,7 @@ namespace Raven.Client.Documents
 {
     public class ConflictSolver
     {
-        public string DatabaseResovlerId;
+        public string DatabaseResolverId;
         public Dictionary<string, ScriptResolver> ResolveByCollection;
         public bool ResolveToLatest;
 
@@ -27,14 +27,17 @@ namespace Raven.Client.Documents
 
         public bool IsEmpty()
         {
-            return ResolveByCollection?.Count == 0 || (ResolveToLatest == false && DatabaseResovlerId == null);
+            return 
+                ResolveByCollection?.Count == 0 &&
+                ResolveToLatest == false && 
+                DatabaseResolverId == null;
         }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(DatabaseResovlerId)] = DatabaseResovlerId,
+                [nameof(DatabaseResolverId)] = DatabaseResolverId,
                 [nameof(ResolveToLatest)] = ResolveToLatest,
                 [nameof(ResolveByCollection)] = new DynamicJsonArray
                 {

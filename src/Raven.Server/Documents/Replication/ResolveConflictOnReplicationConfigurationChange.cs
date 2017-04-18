@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Replication
 
             if (TryResolveUsingDefaultResolverInternal(
                 context,
-                ConflictSolver?.DatabaseResovlerId,                
+                ConflictSolver?.DatabaseResolverId,                
                 conflictList))
             {
                 //stats.AddResolvedBy("DatabaseResolver", conflictList.Count);

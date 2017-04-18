@@ -10,9 +10,13 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Raven.Client.Server;
 using Raven.Client.Server.Commands;
+using Raven.Client.Server.Operations;
 using Raven.Server;
+using Raven.Server.Documents;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Xunit;
 using Constants = Raven.Client.Constants;
@@ -41,6 +45,26 @@ namespace Tests.Infrastructure
         {
             TimeoutEvent.Disable = true;
         }
+
+        protected async Task CreateAndWaitForClusterDatabase(string databaseName, IDocumentStore store)
+        {
+            if (Servers.Count == 0)
+                throw new InvalidOperationException("You cannot create a database on an empty cluster...");
+
+            var databaseResult = CreateClusterDatabase(databaseName, store);
+
+            Assert.True((databaseResult.ETag ?? 0) > 0); //sanity check                
+
+            await WaitForEtagInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+        }
+
+        protected static CreateDatabaseResult CreateClusterDatabase(string databaseName, IDocumentStore store, int replicationFactor = 2)
+        {
+            var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+            var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+            return databaseResult;
+        }
+
 
         protected async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, bool isLoaded, string databaseName = null)
         {
@@ -156,6 +180,41 @@ namespace Tests.Infrastructure
             return stores;
         }
 
+        protected async Task<RavenServer> SetupRaftClusterOnExistingServers(params RavenServer[] servers)
+        {
+            RavenServer leader = null;
+            var numberOfNodes = servers.Length;
+            var serversToPorts = new Dictionary<RavenServer, string>();
+            var leaderIndex = _random.Next(0, numberOfNodes);
+            for (var i = 0; i < numberOfNodes; i++)
+            {
+                var server = servers[i];
+                serversToPorts.Add(server, server.WebUrls[0]);
+                if (i == leaderIndex)
+                {
+                    server.ServerStore.EnsureNotPassive();
+                    leader = server;
+                    break;
+                }
+            }
+
+            for (var i = 0; i < numberOfNodes; i++)
+            {
+                if (i == leaderIndex)
+                {
+                    continue;
+                }
+                var follower = Servers[i];
+                // ReSharper disable once PossibleNullReferenceException
+                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower]);
+                await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
+            }
+            // ReSharper disable once PossibleNullReferenceException
+            Assert.True(await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes * ElectionTimeoutInMs),
+                "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.ClusterStatus());
+            return leader;
+        }
+
         protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true)
         {
             var leaderIndex = _random.Next(0, numberOfNodes);
@@ -206,13 +265,32 @@ namespace Tests.Infrastructure
                 throw new TimeoutException();
         }
 
+        protected override Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store)
+        {
+            var index = FindStoreIndex(store);
+            Assert.False(index == -1,"Didn't find store index, most likely it doesn't belong to the cluster. Did you setup Raft cluster properly?");
+            return Servers[index].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+        }
+
+        private int FindStoreIndex(IDocumentStore store)
+        {
+            return Servers.FindIndex(srv => srv.WebUrls[0].Equals(store.Url, StringComparison.OrdinalIgnoreCase));
+        }
+
         public async Task WaitForEtagInCluster(long etag,  TimeSpan timeout)
         {
+            if (Servers.Count == 0)
+                return;
+
+            //maybe we are already at that etag, in this case nothing to do
+            if(Servers.All(server => server.ServerStore.LastRaftCommitEtag >= etag))
+                return;
+            
             var tasks = 
                 Servers
                 .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(etag))
                 .ToList();
-
+                        
             var timeoutTask = Task.Delay(timeout);
             
             await Task.WhenAny(timeoutTask, Task.WhenAll(tasks));

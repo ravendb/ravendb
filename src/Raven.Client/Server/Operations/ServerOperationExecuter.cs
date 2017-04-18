@@ -31,8 +31,7 @@ namespace Raven.Client.Server.Operations
 
         public async Task SendAsync(IServerOperation operation, CancellationToken token = default(CancellationToken))
         {
-            JsonOperationContext context;
-            using (GetContext(out context))
+            using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_store.Conventions, context);
 
@@ -42,8 +41,7 @@ namespace Raven.Client.Server.Operations
 
         public async Task<TResult> SendAsync<TResult>(IServerOperation<TResult> operation, CancellationToken token = default(CancellationToken))
         {
-            JsonOperationContext context;
-            using (GetContext(out context))
+            using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_store.Conventions, context);
 
