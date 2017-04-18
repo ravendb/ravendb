@@ -305,8 +305,9 @@ namespace Voron.Impl
 
         private void InitTransactionHeader()
         {
-            _txHeaderMemory = Allocator.Allocate(sizeof(TransactionHeader));
-            UnmanagedMemory.Set(_txHeaderMemory.Ptr, 0, sizeof(TransactionHeader));
+            Allocator.Allocate(sizeof(TransactionHeader), out _txHeaderMemory);
+            Memory.Set(_txHeaderMemory.Ptr, 0, sizeof(TransactionHeader));
+
             _txHeader = (TransactionHeader*)_txHeaderMemory.Ptr;
             _txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 
@@ -513,7 +514,7 @@ namespace Voron.Impl
                 pageFromScratchBuffer.PositionInScratchBuffer);
 
             if (zeroPage)
-                UnmanagedMemory.Set(newPagePointer, 0, Constants.Storage.PageSize * numberOfPages);
+                Memory.Set(newPagePointer, 0, Constants.Storage.PageSize * numberOfPages);
 
             var newPage = new Page(newPagePointer)
             {

@@ -29,7 +29,7 @@ interface customDetailsProvider {
 }
 
 interface customOperationMerger {
-    merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): boolean;
+    merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): void;
 }
 
 class notificationCenter {
@@ -54,7 +54,7 @@ class notificationCenter {
     databaseNotifications = ko.observableArray<abstractNotification>();
 
     globalOperationsWatch = new notificationCenterOperationsWatch();
-    databseOperationsWatch = new notificationCenterOperationsWatch();
+    databaseOperationsWatch = new notificationCenterOperationsWatch();
 
     allNotifications: KnockoutComputed<abstractNotification[]>;
 
@@ -94,7 +94,7 @@ class notificationCenter {
 
             const mergedNotifications = globalNotifications.concat(databaseNotifications);
 
-            return _.sortBy(mergedNotifications, x => -1 * x.createdAt().unix());
+            return _.sortBy(mergedNotifications, x => -1 * x.displayDate().unix());
         });
 
         this.totalItemsCount = ko.pureComputed(() => this.allNotifications().length);
@@ -130,7 +130,7 @@ class notificationCenter {
 
     configureForDatabase(client: databaseNotificationCenterClient): changeSubscription[] {
         const db = client.getDatabase();
-        this.databseOperationsWatch.configureFor(db);
+        this.databaseOperationsWatch.configureFor(db);
 
         return [
             client.watchAllAlerts(e => this.onAlertReceived(e, this.databaseNotifications, db)),
@@ -216,7 +216,7 @@ class notificationCenter {
     }
 
     private getOperationsWatch(db: database) {
-        return db ? this.databseOperationsWatch : this.globalOperationsWatch;
+        return db ? this.databaseOperationsWatch : this.globalOperationsWatch;
     }
 
     monitorOperation<TProgress extends Raven.Client.Documents.Operations.IOperationProgress,
@@ -262,7 +262,7 @@ class notificationCenter {
         this.databaseNotifications.remove(notification);
     }
 
-    killOperation(operationToKill: operation) {
+    killOperation(operationToKill: operation): void {
         const notificationId = operationToKill.id;
 
         this.spinners.kill.push(notificationId);

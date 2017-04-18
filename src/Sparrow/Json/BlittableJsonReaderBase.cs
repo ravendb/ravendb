@@ -11,8 +11,14 @@ namespace Sparrow.Json
         protected int _propNamesDataOffsetSize;
         protected internal JsonOperationContext _context;
 
+        protected BlittableJsonReaderBase(JsonOperationContext context)
+        {
+            this._context = context;
+        }
+
         public bool NoCache { get; set; }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int ProcessTokenPropertyFlags(BlittableJsonToken currentType)
         {
             // process part of byte flags that responsible for property ids sizes
@@ -22,19 +28,22 @@ namespace Sparrow.Json
                 BlittableJsonToken.PropertyIdSizeInt;
 
             // PERF: Switch for this case will create if-then-else anyways. 
-            //       So we order them explicitely based on knowledge.
+            //       So we order them explicitly based on knowledge.
             BlittableJsonToken current = currentType & mask;
+            int size; // PERF: We assign to a variable instead to have smaller code for inlining.
             if (current == BlittableJsonToken.PropertyIdSizeByte)
-                return sizeof(byte);
-            if (current == BlittableJsonToken.PropertyIdSizeShort)
-                return sizeof(short);
-            if (current == BlittableJsonToken.PropertyIdSizeInt)
-                return sizeof(int);
-
-            ThrowInvalidOfsetSize(currentType);
-            return -1;//will never happen
+                size = sizeof(byte); 
+            else if (current == BlittableJsonToken.PropertyIdSizeShort)
+                size = sizeof(short);
+            else if (current == BlittableJsonToken.PropertyIdSizeInt)
+                size = sizeof(int);
+            else
+                size = ThrowInvalidOfsetSize(currentType);
+                
+            return size;                        
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int ProcessTokenOffsetFlags(BlittableJsonToken currentType)
         {
             // process part of byte flags that responsible for offset sizes
@@ -44,20 +53,22 @@ namespace Sparrow.Json
                 BlittableJsonToken.OffsetSizeInt;
 
             // PERF: Switch for this case will create if-then-else anyways. 
-            //       So we order them explicitely based on knowledge.
+            //       So we order them explicitly based on knowledge.
             BlittableJsonToken current = currentType & mask;
+            int size; // PERF: We assign to a variable instead to have smaller code for inlining.
             if (current == BlittableJsonToken.OffsetSizeByte)
-                return sizeof(byte);
-            if (current == BlittableJsonToken.OffsetSizeShort)
-                return sizeof(short);
-            if (current == BlittableJsonToken.OffsetSizeInt)
-                return sizeof(int);
+                size = sizeof(byte);
+            else if (current == BlittableJsonToken.OffsetSizeShort)
+                size = sizeof(short);
+            else if (current == BlittableJsonToken.OffsetSizeInt)
+                size = sizeof(int);
+            else
+                size = ThrowInvalidOfsetSize(currentType);
 
-            ThrowInvalidOfsetSize(currentType);
-            return -1; // will never happen
+            return size;
         }
 
-        private static void ThrowInvalidOfsetSize(BlittableJsonToken currentType)
+        private static int ThrowInvalidOfsetSize(BlittableJsonToken currentType)
         {
             throw new ArgumentException($"Illegal offset size {currentType}");
         }
@@ -108,8 +119,7 @@ namespace Sparrow.Json
             if (sizeOfValue == sizeof(short))
                 return returnValue;
 
-            returnValue |= *(value + 2) << 16;
-            returnValue |= *(value + 3) << 24;
+            returnValue |= *(short*)(value + 2) << 16;
             if (sizeOfValue == sizeof(int))
                 return returnValue;          
 
@@ -132,6 +142,7 @@ namespace Sparrow.Json
             };
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue ReadStringLazily(int pos)
         {
             byte offset;
@@ -140,6 +151,7 @@ namespace Sparrow.Json
             return _context.AllocateStringValue(null, _mem + pos + offset, size);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyCompressedStringValue ReadCompressStringLazily(int pos)
         {
             byte offset;
@@ -168,33 +180,41 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int ReadVariableSizeInt(byte* buffer, int pos, out byte offset)
         {
+            offset = 0;
+
             if (pos < 0)
-                ThrowInvalidPosition(pos);
+                goto ThrowInvalid;
 
             // Read out an Int32 7 bits at a time.  The high bit 
             // of the byte when on means to continue reading more bytes.
             // we assume that the value shouldn't be zero very often
             // because then we'll always take 5 bytes to store it
-            offset = 0;
+
             int count = 0;
-            int shift = 0;
+            byte shift = 0;
             byte b;
             do
             {
                 if (shift == 35)
                     goto Error; // PERF: Using goto to diminish the size of the loop.
 
-                b = buffer[pos++];
-                count |= (b & 0x7F) << shift;
-                shift += 7;
+                b = buffer[pos];
+                pos++;
                 offset++;
+
+                count |= (b & 0x7F) << shift;
+                shift += 7;                
             }
             while ((b & 0x80) != 0);
 
             return count;
 
             Error:
-            ThrowInvalidShift();
+            ThrowInvalidShift();            
+
+            ThrowInvalid:
+            ThrowInvalidPosition(pos);
+
             return -1;
         }
 
@@ -216,17 +236,19 @@ namespace Sparrow.Json
             // because then we'll always take 5 bytes to store it
             offset = 0;
             int count = 0;
-            int shift = 0;
+            byte shift = 0;
             byte b;
             do
             {
                 if (shift == 35)
                     goto Error; // PERF: Using goto to diminish the size of the loop.
 
-                b = buffer[pos--];
-                count |= (b & 0x7F) << shift;
-                shift += 7;
+                b = buffer[pos];
+                pos--;
                 offset++;
+
+                count |= (b & 0x7F) << shift;
+                shift += 7;                
             }
             while ((b & 0x80) != 0);
             return count;
@@ -242,7 +264,7 @@ namespace Sparrow.Json
             // of the byte when on means to continue reading more bytes.
 
             ulong count = 0;
-            int shift = 0;
+            byte shift = 0;
             byte b;
             do
             {

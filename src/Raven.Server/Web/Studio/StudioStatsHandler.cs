@@ -36,7 +36,7 @@ namespace Raven.Server.Web.Studio
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(FooterStatistics.CountOfIndexingErrors));
-                writer.WriteInteger(indexes.Sum(index => index.GetErrors().Count));
+                writer.WriteInteger(indexes.Sum(index => index.GetErrorCount()));
 
                 writer.WriteEndObject();
             }

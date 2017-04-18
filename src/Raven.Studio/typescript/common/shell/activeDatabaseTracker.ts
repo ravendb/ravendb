@@ -35,6 +35,8 @@ class activeDatabaseTracker {
                 }
             }
         });
+
+        studioSettings.default.init(this.settings);
     }
 
     onActivation(db: database): JQueryPromise<void> {
@@ -46,7 +48,7 @@ class activeDatabaseTracker {
             this.database(null);
         }
 
-        studioSettings.forDatabase(db)
+        studioSettings.default.forDatabase(db)
             .done((settings) => {
 
                 this.settings(settings);

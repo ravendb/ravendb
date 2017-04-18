@@ -152,6 +152,89 @@
         }
     }
 
+    .progress-container {
+        display: flex;
+
+        .progress-ovarall {
+            flex-grow: 1;
+            min-width: 220px;
+
+            h3 {
+                margin-bottom: @grid-gutter-width / 4;
+            }
+
+            .percentage {
+                color: @brand-primary;
+                font-size: 18px;
+                line-height: 29px;
+                font-weight: bold;
+            }
+
+            .progress {
+                margin: 0;
+                background-color: @gray-dark;
+            }
+        }
+
+        @collection-progress-width: 410px;
+
+        .collections-container {
+            display: flex;
+            flex-wrap: wrap;
+            margin-left: @grid-gutter-width / 4;
+            margin-bottom: -@grid-gutter-width / 4;
+            justify-content: flex-end;
+
+            .collection-progress {
+                width: @collection-progress-width;
+                margin-left: @grid-gutter-width / 4;
+                margin-bottom: @grid-gutter-width / 4;
+                display: flex;
+                align-items: center;
+                padding: @grid-gutter-width /4 @grid-gutter-width /2;
+
+                .collection-name {
+                    flex-grow: 1;
+                    line-height: 22px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                small {
+                    text-transform: uppercase;
+                    font-size: 11px;
+                }
+
+                .documents, .tombstones {
+                    margin-left: @grid-gutter-width/2;
+                    line-height: 12px;
+                    width: 115px;
+                    flex-shrink: 0;
+
+                    .name {
+                        float: left;
+                        font-weight: bold;
+                        color: @gray;
+                    }
+
+                    .percentage {
+                        &:not(.text-success) {
+                            color: @gray-light;
+                        }
+
+                        float: right;
+                    }
+
+                    .progress {
+                        clear: both;
+                        margin-top: @grid-gutter-width/4;
+                        margin-bottom: 0;
+                    }
+                }
+            }
+        }
+    }
+
     .properties-container {
         .properties-item {
             .properties-label,

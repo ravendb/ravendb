@@ -41,6 +41,7 @@ namespace Voron.Impl
             _lowLevelTransaction = lowLevelTransaction;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureTrees()
         {
             if (_trees != null)

@@ -62,7 +62,7 @@ namespace SlowTests.Bugs.Indexing
                 }
 
                 var db = GetDocumentDatabaseInstanceFor(store).Result;
-                var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrors().Count);
+                var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
 
                 Assert.NotEqual(errorsCount, 0);
             }
@@ -99,7 +99,7 @@ namespace SlowTests.Bugs.Indexing
                 Assert.True(fooIndex.State == IndexState.Error);
 
                 var db = GetDocumentDatabaseInstanceFor(store).Result;
-                var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrors().Count);
+                var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
 
                 Assert.NotEqual(errorsCount, 0);
 

@@ -17,7 +17,7 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
-                Parallel.For(0, 10, _ =>
+                Parallel.For(0, 100, _ =>
                 {
                     using (var a = new BasicTests())
                     {

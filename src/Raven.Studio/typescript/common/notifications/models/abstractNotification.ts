@@ -15,6 +15,8 @@ abstract class abstractNotification {
     hasDetails: KnockoutComputed<boolean>;
     canBePostponed: KnockoutComputed<boolean>;
 
+    displayDate: KnockoutComputed<moment.Moment>;
+
     cssClass: KnockoutComputed<string>;
 
     constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.Notification) {
@@ -40,6 +42,8 @@ abstract class abstractNotification {
         });
 
         this.canBePostponed = ko.pureComputed(() => this.isPersistent());
+
+        this.displayDate = ko.pureComputed(() => moment(this.createdAt()).local());
     }
 
     updateWith(incomingChanges: Raven.Server.NotificationCenter.Notifications.Notification) {

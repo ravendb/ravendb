@@ -14,9 +14,13 @@ To run the image run script called `run_ubuntu1604.ps1` or `run_windows.ps1` dep
 
     -Detached - runs the image in detached mode (Docker's `-d`)
 
-    -AllowEverybodyToAccessTheServerAsAdmin - sets RavenDB's setting `/Raven/AllowEverybodyToAccessTheServerAsAdmin` (default: false)
+    -ConfigPath - allows to mount custom settings file from the host filesystem, absolute path is required
+
+    -Debug - runs shell in the interactive mode on the container (bash on Ubuntu, powershell on Windows)
 
     -BindPort 8080 - sets the port to which to bind container's RavenDB Server (default: 8080)
+
+    -BindTcpPort 38888 - sets the port to which to bind container's RavenDB Server TCP port (default: 38888)
 
     -DbVolumeName - sets the Docker volume name used to persist data (default: ravendb)
 

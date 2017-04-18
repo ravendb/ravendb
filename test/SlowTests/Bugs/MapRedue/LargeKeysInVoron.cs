@@ -105,7 +105,7 @@ namespace SlowTests.Bugs.MapRedue
 
                 var db = GetDocumentDatabaseInstanceFor(store).Result;
                 var indexes = db.IndexStore.GetIndexes();
-                var errorsCount = indexes.Sum(index => index.GetErrors().Count);
+                var errorsCount = indexes.Sum(index => index.GetErrorCount());
 
                 Assert.Equal(errorsCount, 0);
             }

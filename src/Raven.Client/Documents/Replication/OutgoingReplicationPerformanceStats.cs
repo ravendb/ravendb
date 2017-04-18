@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Replication
 {
-    public class OutgoingReplicationPerformanceStats : ReplicationPerformanceBase<ReplicationPerformanceOperation>
+    public class OutgoingReplicationPerformanceStats : ReplicationPerformanceBase
     {
         public OutgoingReplicationPerformanceStats()
         {
@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Replication
         public NetworkStats Network { get; set; }
 
         public List<ReplicationError> Errors { get; set; }
-
+        
         public class NetworkStats
         {
             public int AttachmentOutputCount { get; set; }
@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Replication
         }
     }
 
-    public abstract class ReplicationPerformanceBase<T>
+    public abstract class ReplicationPerformanceBase
     {
         protected ReplicationPerformanceBase()
         {
@@ -68,6 +68,6 @@ namespace Raven.Client.Documents.Replication
 
         public DateTime? Completed { get; set; }
 
-        public T Details { get; set; }
+        public ReplicationPerformanceOperation Details { get; set; }
     }
 }

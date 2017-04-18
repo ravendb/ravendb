@@ -43,7 +43,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                     {
                         var indexes = _database.IndexStore.GetIndexes().ToList();
                         var staleIndexes = 0;
-                        var countOfIndexingErrors = 0;
+                        var countOfIndexingErrors = 0L;
 
                         // ReSharper disable once LoopCanBeConvertedToQuery
                         foreach (var index in indexes)
@@ -51,7 +51,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                             if (index.IsStale(context))
                                 staleIndexes++;
 
-                            countOfIndexingErrors += index.GetErrors().Count;
+                            countOfIndexingErrors += index.GetErrorCount();
                         }
 
                         current = new Stats
