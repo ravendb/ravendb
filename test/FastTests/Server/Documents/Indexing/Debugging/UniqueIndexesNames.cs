@@ -34,7 +34,7 @@ namespace FastTests.Server.Documents.Indexing.Debugging
             }
         }
 
-        [Fact(Skip="Return here after implemented indexes in raft")]
+        [Fact]
         public void CanCreateIndexWithTheSameNameOfDeletedTransformer()
         {
             using (var store = GetDocumentStore())

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
@@ -15,7 +17,7 @@ namespace FastTests.Voron.Backups
     public class BackupToOneZipFile : RavenLowLevelTestBase
     {
         [Fact]
-        public void FullBackupToOneZipFile()
+        public async Task FullBackupToOneZipFile()
         {
             var tempFileName = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             Directory.CreateDirectory(tempFileName);
@@ -35,13 +37,13 @@ namespace FastTests.Voron.Backups
                 var reader = context.Read(stream, "docs/1");
                 database.SubscriptionStorage.CreateSubscription(reader);
 
-                database.IndexStore.CreateIndex(new IndexDefinition()
+                await database.IndexStore.CreateIndex(new IndexDefinition()
                 {
                     Name = "Users_ByName",
                     Maps = { "from user in docs.Users select new { user.Name }" },
                     Type = IndexType.Map
                 });
-                database.IndexStore.CreateIndex(new IndexDefinition()
+                await database.IndexStore.CreateIndex(new IndexDefinition()
                 {
                     Name = "Users_ByName2",
                     Maps = { "from user in docs.Users select new { user.Name }" },
@@ -84,15 +86,18 @@ namespace FastTests.Voron.Backups
                 using (var tx = context.OpenReadTransaction())
                 {
                     Assert.NotNull(database.DocumentsStorage.Get(context, "users/2"));
-                    Assert.Equal(database.IndexStore.GetIndex(1).Name, "Users_ByName");
-                    Assert.Equal(database.IndexStore.GetIndex(2).Name, "Users_ByName2");
                     Assert.Equal(database.SubscriptionStorage.GetAllSubscriptionsCount(), 1);
+
+                    var indexes = database.IndexStore.GetIndexes().ToList();
+                    Assert.Equal(2, indexes.Count);
+                    Assert.True(indexes.Any(x => x.Name == "Users_ByName"));
+                    Assert.True(indexes.Any(x => x.Name == "Users_ByName2"));
                 }
             }
         }
 
         [Fact]
-        public void IncrementalBackupToOneZipFile()
+        public async Task IncrementalBackupToOneZipFile()
         {
             var tempFileName = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             Directory.CreateDirectory(tempFileName);
@@ -117,7 +122,7 @@ namespace FastTests.Voron.Backups
                     var reader = context.Read(stream, "docs/1");
                     database.SubscriptionStorage.CreateSubscription(reader);
 
-                    database.IndexStore.CreateIndex(new IndexDefinition()
+                    await database.IndexStore.CreateIndex(new IndexDefinition()
                     {
                         Name = "Users_ByName",
                         Maps = { "from user in docs.Users select new { user.Name }" },
@@ -158,7 +163,7 @@ namespace FastTests.Voron.Backups
                         string.Format("voron-test.{0}-incremental-backup.zip", 0)));
 
 
-                    database.IndexStore.CreateIndex(new IndexDefinition()
+                    await database.IndexStore.CreateIndex(new IndexDefinition()
                     {
                         Name = "Users_ByName2",
                         Maps = { "from user in docs.Users select new { user.Name }" },
@@ -214,9 +219,12 @@ namespace FastTests.Voron.Backups
                 {
                     Assert.NotNull(database.DocumentsStorage.Get(context, "users/2"));
                     Assert.NotNull(database.DocumentsStorage.Get(context, "users/1"));
-                    Assert.Equal(database.IndexStore.GetIndex(1).Name, "Users_ByName");
-                    Assert.Equal(database.IndexStore.GetIndex(2).Name, "Users_ByName2");
                     Assert.Equal(database.SubscriptionStorage.GetAllSubscriptionsCount(), 1);
+
+                    var indexes = database.IndexStore.GetIndexes().ToList();
+                    Assert.Equal(2, indexes.Count);
+                    Assert.True(indexes.Any(x => x.Name == "Users_ByName"));
+                    Assert.True(indexes.Any(x => x.Name == "Users_ByName2"));
                 }
             }
         }

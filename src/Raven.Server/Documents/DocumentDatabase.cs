@@ -4,7 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Client.Extensions;
+using Raven.Client.Server;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -20,7 +22,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
@@ -41,8 +42,9 @@ namespace Raven.Server.Documents
         /// <summary>
         /// The current lock, used to make sure indexes/transformers have a unique names
         /// </summary>
-        private readonly object _indexAndTransformerLocker = new object();
+        private readonly SemaphoreSlim _indexAndTransformerLocker = new SemaphoreSlim(1, 1);
         private Task _indexStoreTask;
+        private Task _transformerStoreTask;
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
@@ -62,7 +64,7 @@ namespace Raven.Server.Documents
             IoChanges = new IoChangesNotifications();
             Changes = new DocumentsChanges();
             DocumentsStorage = new DocumentsStorage(this);
-            IndexStore = new IndexStore(this, _indexAndTransformerLocker);
+            IndexStore = new IndexStore(this, serverStore, _indexAndTransformerLocker);
             TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
             EtlLoader = new EtlLoader(this);
             ReplicationLoader = new ReplicationLoader(this);
@@ -116,7 +118,7 @@ namespace Raven.Server.Documents
 
         public IoChangesNotifications IoChanges { get; }
 
-        public CatastrophicFailureNotification CatastrophicFailureNotification { get;}
+        public CatastrophicFailureNotification CatastrophicFailureNotification { get; }
 
         public NotificationCenter.NotificationCenter NotificationCenter { get; private set; }
 
@@ -130,7 +132,7 @@ namespace Raven.Server.Documents
 
         public TransformerStore TransformerStore { get; }
 
-        public ConfigurationStorage ConfigurationStorage { get; private set; }
+        public ConfigurationStorage ConfigurationStorage { get; }
 
         public IndexesEtagsStorage IndexMetadataPersistence => ConfigurationStorage.IndexesEtagsStorage;
 
@@ -218,24 +220,22 @@ namespace Raven.Server.Documents
 
             ConfigurationStorage.InitializeNotificationsStorage();
 
-            _indexStoreTask = IndexStore.InitializeAsync();
+            DatabaseRecord record;
             TransactionOperationContext context;
-            if (_serverStore != null)
+            using (_serverStore.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
-                using (_serverStore.ContextPool.AllocateOperationContext(out context))
-                {
-                    context.OpenReadTransaction();
-                    var record = _serverStore.Cluster.ReadDatabase(context, Name);
-                    TransformerStore.Initialize(record);
-                }
+                record = _serverStore.Cluster.ReadDatabase(context, Name);
             }
+
+            _indexStoreTask = IndexStore.InitializeAsync(record);
+            _transformerStoreTask = TransformerStore.InitializeAsync(record);
 
             BundleLoader = new BundleLoader(this, _serverStore);
             Patcher.Initialize();
             EtlLoader.Initialize();
 
             DocumentTombstoneCleaner.Initialize();
-            
 
             try
             {
@@ -245,7 +245,16 @@ namespace Raven.Server.Documents
             {
                 _indexStoreTask = null;
             }
-            
+
+            try
+            {
+                _transformerStoreTask.Wait(DatabaseShutdown);
+            }
+            finally
+            {
+                _transformerStoreTask = null;
+            }
+
             SubscriptionStorage.Initialize();
 
             //Index Metadata Store shares Voron env and context pool with documents storage, 
@@ -277,7 +286,7 @@ namespace Raven.Server.Documents
                 catch (Exception e)
                 {
                     // if we encountered a catastrophic failure we might not be able to retrieve database info
-                    
+
                     if (_logger.IsInfoEnabled)
                         _logger.Info("Failed to generate and store database info", e);
                 }
@@ -312,12 +321,26 @@ namespace Raven.Server.Documents
                     TxMerger.Dispose();
                 });
 
+                exceptionAggregator.Execute(() =>
+                {
+                    TransformerStore.Dispose();
+                });
+
                 if (_indexStoreTask != null)
                 {
                     exceptionAggregator.Execute(() =>
                     {
                         _indexStoreTask.Wait(DatabaseShutdown);
                         _indexStoreTask = null;
+                    });
+                }
+
+                if (_transformerStoreTask != null)
+                {
+                    exceptionAggregator.Execute(() =>
+                    {
+                        _transformerStoreTask.Wait(DatabaseShutdown);
+                        _transformerStoreTask = null;
                     });
                 }
 
@@ -405,7 +428,7 @@ namespace Raven.Server.Documents
             Size size = new Size(envs.Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));
             var databaseInfo = new DynamicJsonValue
             {
-                [nameof(DatabaseInfo.Bundles)] = BundleLoader!= null? new DynamicJsonArray(BundleLoader.GetActiveBundles()):null,
+                [nameof(DatabaseInfo.Bundles)] = BundleLoader != null ? new DynamicJsonArray(BundleLoader.GetActiveBundles()) : null,
                 [nameof(DatabaseInfo.IsAdmin)] = true, //TODO: implement me!
                 [nameof(DatabaseInfo.Name)] = Name,
                 [nameof(DatabaseInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
@@ -510,7 +533,7 @@ namespace Raven.Server.Documents
         public void StateChanged()
         {
         }
-        
+
         public IEnumerable<DatabasePerformanceMetrics> GetAllPerformanceMetrics()
         {
             yield return TxMerger.GeneralWaitPerformanceMetrics;

@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
 using Raven.Server.Documents.Versioning;
 
-namespace Raven.Client.Documents
+namespace Raven.Client.Server
 {
     public class DatabaseRecord
     {
         public DatabaseRecord()
         {
-            
+
         }
 
         public DatabaseRecord(string databaseName)
@@ -32,6 +32,8 @@ namespace Raven.Client.Documents
 
         public Dictionary<string, IndexDefinition> Indexes;
 
+        public Dictionary<string, AutoIndexDefinition> AutoIndexes;
+
         //todo: see how we can protect this
         public Dictionary<string, TransformerDefinition> Transformers;
 
@@ -41,21 +43,95 @@ namespace Raven.Client.Documents
 
         public VersioningConfiguration VersioningConfiguration;
 
+        public void AddIndex(IndexDefinition definition)
+        {
+            if (Transformers != null && Transformers.ContainsKey(definition.Name))
+            {
+                throw new IndexOrTransformerAlreadyExistException($"Tried to create an index with a name of {definition.Name}, but a transformer under the same name exists");
+            }
+
+            var lockMode = IndexLockMode.Unlock;
+
+            IndexDefinition existingDefinition;
+            if (Indexes.TryGetValue(definition.Name, out existingDefinition))
+            {
+                if (existingDefinition.LockMode != null)
+                    lockMode = existingDefinition.LockMode.Value;
+
+                var result = existingDefinition.Compare(definition);
+                if (result != IndexDefinitionCompareDifferences.All)
+                {
+                    result &= ~IndexDefinitionCompareDifferences.Etag;
+
+                    if (result == IndexDefinitionCompareDifferences.None)
+                        return;
+                }
+            }
+
+            if (lockMode == IndexLockMode.LockedIgnore)
+                return;
+
+            if (lockMode == IndexLockMode.LockedError)
+                throw new IndexOrTransformerAlreadyExistException($"Cannot edit existing index {definition.Name} with lock mode {lockMode}");
+
+            Indexes[definition.Name] = definition;
+        }
+
+        public void AddIndex(AutoIndexDefinition definition)
+        {
+            if (Transformers != null && Transformers.ContainsKey(definition.Name))
+            {
+                throw new IndexOrTransformerAlreadyExistException($"Tried to create an index with a name of {definition.Name}, but a transformer under the same name exists");
+            }
+
+            var lockMode = IndexLockMode.Unlock;
+
+            AutoIndexDefinition existingDefinition;
+            if (AutoIndexes.TryGetValue(definition.Name, out existingDefinition))
+            {
+                if (existingDefinition.LockMode != null)
+                    lockMode = existingDefinition.LockMode.Value;
+
+                var result = existingDefinition.Compare(definition);
+                result &= ~IndexDefinitionCompareDifferences.Etag;
+
+                if (result == IndexDefinitionCompareDifferences.None)
+                    return;
+
+                result &= ~IndexDefinitionCompareDifferences.LockMode;
+                result &= ~IndexDefinitionCompareDifferences.Priority;
+
+                if (result != IndexDefinitionCompareDifferences.None)
+                    throw new NotSupportedException($"Can not update auto-index: {definition.Name}");
+            }
+
+            if (lockMode == IndexLockMode.LockedIgnore)
+                return;
+
+            if (lockMode == IndexLockMode.LockedError)
+                throw new IndexOrTransformerAlreadyExistException($"Cannot edit existing index {definition.Name} with lock mode {lockMode}");
+
+            AutoIndexes[definition.Name] = definition;
+        }
+
         public void AddTransformer(TransformerDefinition definition)
         {
             if (Indexes != null && Indexes.ContainsKey(definition.Name))
             {
-                throw new IndexOrTransformerAlreadyExistException($"Tried to create a transformer with a name of {definition.Name}, but an index under the same name exist");
+                throw new IndexOrTransformerAlreadyExistException($"Tried to create a transformer with a name of {definition.Name}, but an index under the same name exists");
             }
 
             TransformerDefinition existingTransformer;
             var lockMode = TransformerLockMode.Unlock;
             if (Transformers.TryGetValue(definition.Name, out existingTransformer))
             {
-                if (existingTransformer.Equals(definition))
-                    return;
-
                 lockMode = existingTransformer.LockMode;
+
+                var result = existingTransformer.Compare(definition);
+                result &= ~TransformerDefinitionCompareDifferences.Etag;
+
+                if (result == TransformerDefinitionCompareDifferences.None)
+                    return;
             }
 
             if (lockMode == TransformerLockMode.LockedIgnore)
@@ -65,6 +141,17 @@ namespace Raven.Client.Documents
                 throw new IndexOrTransformerAlreadyExistException($"Cannot edit existing transformer {definition.Name} with lock mode {lockMode}");
 
             Transformers[definition.Name] = definition;
+        }
+
+        public void DeleteIndex(string name)
+        {
+            Indexes?.Remove(name);
+            AutoIndexes?.Remove(name);
+        }
+
+        public void DeleteTransformer(string name)
+        {
+            Transformers?.Remove(name);
         }
     }
 

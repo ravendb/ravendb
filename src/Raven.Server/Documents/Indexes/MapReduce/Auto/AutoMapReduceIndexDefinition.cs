@@ -46,8 +46,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
-            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted},Operation:{x.Value.MapReduceOperation}>"))}]";
-            var reduce = $"{Collections.First()}:[{string.Join(";", GroupByFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted}>"))}]";
+            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.Sort},Operation:{x.Value.MapReduceOperation}>"))}]";
+            var reduce = $"{Collections.First()}:[{string.Join(";", GroupByFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.Sort}>"))}]";
 
             var indexDefinition = new IndexDefinition();
             indexDefinition.Maps.Add(map);
@@ -74,16 +74,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                 writer.WriteStartObject();
 
-                writer.WritePropertyName((nameof(field.Name)));
-                writer.WriteString((field.Name));
+                writer.WritePropertyName(nameof(field.Name));
+                writer.WriteString(field.Name);
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(field.Highlighted)));
-                writer.WriteBool(field.Highlighted);
-                writer.WriteComma();
-
-                writer.WritePropertyName((nameof(field.SortOption)));
-                writer.WriteInteger((int)(field.SortOption ?? SortOptions.None));
+                writer.WritePropertyName((nameof(field.Sort)));
+                writer.WriteInteger((int)(field.Sort ?? SortOptions.None));
 
                 writer.WriteEndObject();
 
@@ -106,13 +102,20 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             if (ReferenceEquals(this, other))
                 return IndexDefinitionCompareDifferences.None;
 
+            var result = IndexDefinitionCompareDifferences.None;
             if (Collections.SequenceEqual(otherDefinition.Collections) == false || MapFields.SequenceEqual(otherDefinition.MapFields) == false)
-                return IndexDefinitionCompareDifferences.Maps;
+                result |= IndexDefinitionCompareDifferences.Maps;
 
             if (GroupByFields.SequenceEqual(otherDefinition.GroupByFields) == false)
-                return IndexDefinitionCompareDifferences.Reduce;
+                result |= IndexDefinitionCompareDifferences.Reduce;
 
-            return IndexDefinitionCompareDifferences.None;
+            if (LockMode != other.LockMode)
+                result |= IndexDefinitionCompareDifferences.LockMode;
+
+            if (Priority != other.Priority)
+                result |= IndexDefinitionCompareDifferences.Priority;
+
+            return result;
         }
 
         public override IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition)
@@ -160,11 +163,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 string name;
                 json.TryGet(nameof(IndexField.Name), out name);
 
-                bool highlighted;
-                json.TryGet(nameof(IndexField.Highlighted), out highlighted);
-
                 int sortOptionAsInt;
-                json.TryGet(nameof(IndexField.SortOption), out sortOptionAsInt);
+                json.TryGet(nameof(IndexField.Sort), out sortOptionAsInt);
 
                 int mapReduceOperationAsInt;
                 json.TryGet(nameof(IndexField.MapReduceOperation), out mapReduceOperationAsInt);
@@ -172,9 +172,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 var field = new IndexField
                 {
                     Name = name,
-                    Highlighted = highlighted,
                     Storage = FieldStorage.Yes,
-                    SortOption = (SortOptions?)sortOptionAsInt,
+                    Sort = (SortOptions?)sortOptionAsInt,
                     Indexing = FieldIndexing.Default,
                     MapReduceOperation = (FieldMapReduceOperation)mapReduceOperationAsInt
                 };
@@ -194,18 +193,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 string name;
                 json.TryGet(nameof(IndexField.Name), out name);
 
-                bool highlighted;
-                json.TryGet(nameof(IndexField.Highlighted), out highlighted);
-
                 int sortOptionAsInt;
-                json.TryGet(nameof(IndexField.SortOption), out sortOptionAsInt);
+                json.TryGet(nameof(IndexField.Sort), out sortOptionAsInt);
 
                 var field = new IndexField
                 {
                     Name = name,
-                    Highlighted = highlighted,
                     Storage = FieldStorage.Yes,
-                    SortOption = (SortOptions?)sortOptionAsInt,
+                    Sort = (SortOptions?)sortOptionAsInt,
                     Indexing = FieldIndexing.Default
                 };
 

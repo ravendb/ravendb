@@ -2,18 +2,12 @@
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Transformers;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
-using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -28,26 +22,10 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), name);
-
-                // validating transformer definition
                 var transformerDefinition = JsonDeserializationServer.TransformerDefinition(json);
-
-                // validate that this transformer compiles
-                IndexAndTransformerCompilationCache.GetTransformerInstance(transformerDefinition);
-
                 transformerDefinition.Name = name;
-                long index;
-                using (var putTransfomerCommand = context.ReadObject(new DynamicJsonValue
-                {
-                    ["Type"] = nameof(PutTransformerCommand),
-                    [nameof(PutTransformerCommand.TransformerDefinition)] = json,
-                    [nameof(PutTransformerCommand.DatabaseName)] = Database.Name,
-                }, "put-transformer-cmd"))
-                {
-                    index = await ServerStore.SendToLeaderAsync(putTransfomerCommand);
-                }
 
-                await ServerStore.Cluster.WaitForIndexNotification(index);
+                var transformerId = await Database.TransformerStore.CreateTransformer(transformerDefinition);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -59,8 +37,9 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteString(name);
                     writer.WriteComma();
 
-                    writer.WritePropertyName("Etag");
-                    writer.WriteInteger(index);
+                    writer.WritePropertyName("TransformerId");
+                    writer.WriteInteger(transformerId);
+
                     writer.WriteEndObject();
                 }
             }
@@ -124,56 +103,9 @@ namespace Raven.Server.Documents.Handlers
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var newName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("newName");
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                var existingTransformer = Database.TransformerStore.GetTransformer(name);
-                var newDefinition = new TransformerDefinition
-                {
-                    Name = newName,
-                    LockMode = TransformerLockMode.Unlock, // todo: check that this is not blocked
-                    Temporary = existingTransformer.Definition.Temporary,
-                    TransformResults = existingTransformer.Definition.TransformResults
-                };
-                var transformerBlittable = EntityToBlittable.ConvertEntityToBlittable(newDefinition, DocumentConventions.Default, context);
+            await Database.TransformerStore.Rename(name, newName);
 
-                var delVal = new DynamicJsonValue
-                {
-                    ["Type"] = nameof(DeleteTransformerCommand),
-                    [nameof(DeleteTransformerCommand.TransformerName)] = name,
-                    [nameof(DeleteTransformerCommand.DatabaseName)] = Database.Name,
-                };
-                var putVal = new DynamicJsonValue
-                {
-                    ["Type"] = nameof(PutTransformerCommand),
-                    [nameof(PutTransformerCommand.TransformerDefinition)] = transformerBlittable,
-                    [nameof(PutTransformerCommand.DatabaseName)] = Database.Name,
-                };
-
-                long index;
-                using (var deleteTransformerCommand = context.ReadObject(delVal, "delete-transformer-cmd"))
-                using (var putTransfomerCommand = context.ReadObject(putVal, "put-transformer-cmd"))
-                {
-                    var del = ServerStore.SendToLeaderAsync(deleteTransformerCommand);
-                    var put = ServerStore.SendToLeaderAsync(putTransfomerCommand);
-                    await Task.WhenAll(del, put);
-                    index = await put;
-                    await ServerStore.Cluster.WaitForIndexNotification(index);
-                }
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName("Transformer");
-                    writer.WriteString(name);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName("Etag");
-                    writer.WriteInteger(index);
-                    writer.WriteEndObject();
-                }
-            }
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/transformers/set-lock", "POST")]
@@ -186,35 +118,12 @@ namespace Raven.Server.Documents.Handlers
             if (Enum.TryParse(modeStr, out mode) == false)
                 throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + modeStr);
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            foreach (var name in names)
             {
-                long index = 0;
-
-                foreach (var name in names)
-                {
-                    var transformer = Database.TransformerStore.GetTransformer(name);
-                    if (transformer == null)
-                        TransformerDoesNotExistException.ThrowFor(name);
-                    var faultyInMemoryTransformer = transformer as FaultyInMemoryTransformer;
-                    if (faultyInMemoryTransformer != null)
-                        throw new NotSupportedException("Cannot change lock mode on faulty index", faultyInMemoryTransformer.Error);
-
-                    using (var setTranformerLockModeCommand = context.ReadObject(new DynamicJsonValue
-                    {
-                        ["Type"] = nameof(SetTransformerLockModeCommand),
-                        [nameof(SetTransformerLockModeCommand.LockMode)] = mode,
-                        [nameof(SetTransformerLockModeCommand.DatabaseName)] = Database.Name,
-                        [nameof(SetTransformerLockModeCommand.TransformerName)] = name,
-                    }, "set-transformer_lock_mode-cmd"))
-                    {
-                        index = await ServerStore.SendToLeaderAsync(setTranformerLockModeCommand);
-                    }
-                }
-                await ServerStore.Cluster.WaitForIndexNotification(index);
-
-                NoContentStatus();
+                await Database.TransformerStore.SetLock(name, mode);
             }
+
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/transformers", "DELETE")]
@@ -222,25 +131,9 @@ namespace Raven.Server.Documents.Handlers
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                // validating transformer definition
+            await Database.TransformerStore.DeleteTransformer(name);
 
-                long index = 0;
-                using (var deleteTransformerCommand = context.ReadObject(new DynamicJsonValue
-                {
-                    ["Type"] = nameof(DeleteTransformerCommand),
-                    [nameof(DeleteTransformerCommand.TransformerName)] = name,
-                    [nameof(DeleteTransformerCommand.DatabaseName)] = Database.Name,
-                }, "delete-transformer-cmd"))
-                {
-                    index = await ServerStore.SendToLeaderAsync(deleteTransformerCommand);
-                }
-
-                await ServerStore.Cluster.WaitForIndexNotification(index);
-                NoContentStatus();
-            }
+            NoContentStatus();
         }
     }
 }

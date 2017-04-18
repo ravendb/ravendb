@@ -16,6 +16,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Server.Config;
 using Raven.Server.Documents;

@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,10 +7,6 @@ using Raven.Client.Documents.Operations.Transformers;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
-using Raven.Server;
-using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 
@@ -30,7 +24,6 @@ namespace FastTests.Server.Documents.Transformers
                 {
                     TransformResults = "results.Select(x => new { Name = x.Name })",
                     LockMode = TransformerLockMode.LockedIgnore,
-                    Temporary = true,
                     Name = "Transformer1"
                 }));
 
@@ -38,7 +31,6 @@ namespace FastTests.Server.Documents.Transformers
                 {
                     TransformResults = "results.Select(x => new { Name = x.Email })",
                     LockMode = TransformerLockMode.Unlock,
-                    Temporary = false,
                     Name = "Transformer2"
                 }));
 
@@ -62,14 +54,12 @@ namespace FastTests.Server.Documents.Transformers
                 Assert.Equal("Transformer1", transformer.Definition.Name);
                 Assert.Equal("results.Select(x => new { Name = x.Name })", transformer.Definition.TransformResults);
                 Assert.Equal(TransformerLockMode.LockedIgnore, transformer.Definition.LockMode);
-                Assert.True(transformer.Definition.Temporary);
 
                 transformer = transformers[1];
                 Assert.Equal("Transformer2", transformer.Name);
                 Assert.Equal("Transformer2", transformer.Definition.Name);
                 Assert.Equal("results.Select(x => new { Name = x.Email })", transformer.Definition.TransformResults);
                 Assert.Equal(TransformerLockMode.Unlock, transformer.Definition.LockMode);
-                Assert.False(transformer.Definition.Temporary);
             }
         }
 
@@ -83,7 +73,6 @@ namespace FastTests.Server.Documents.Transformers
                 {
                     TransformResults = "results.Select(x => new { Name = x.Name })",
                     LockMode = TransformerLockMode.LockedIgnore,
-                    Temporary = true,
                     Name = "Transformer1"
                 }));
 
@@ -124,31 +113,26 @@ namespace FastTests.Server.Documents.Transformers
                 );
 
                 Assert.Throws<RavenException>(() => store.Admin.Send(new SetTransformerLockOperation("Transformer1", TransformerLockMode.LockedIgnore)));
-               
+
             }
         }
 
-        [Fact(Skip = "Maxim:Investigate")]
+        [Fact]
         public async Task CanDelete()
         {
-            using (var server = GetNewServer(deletePrevious: true))
-            using (GetDocumentStore(modifyName: x => "CanDelete", defaultServer: server))
+            using (var store = GetDocumentStore())
             {
-
-                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("CanDelete");
-                database.TransformerStore.CreateTransformer(new TransformerDefinition
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TransformerStore.CreateTransformer(new TransformerDefinition
                 {
                     TransformResults = "results.Select(x => new { Name = x.Name })",
                     LockMode = TransformerLockMode.LockedIgnore,
-                    Temporary = true,
                     Name = "Transformer1"
                 });
 
-                var encodedName = Convert.ToBase64String(Encoding.UTF8.GetBytes("Transformer1"));
-
                 Assert.Equal(1, database.TransformerStore.GetTransformers().Count());
 
-                database.TransformerStore.DeleteTransformer("Transformer1");
+                await database.TransformerStore.DeleteTransformer("Transformer1");
 
                 Assert.Equal(0, database.TransformerStore.GetTransformers().Count());
             }

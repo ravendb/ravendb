@@ -522,29 +522,6 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void PutTransformerReplicationItem(ReplicationIndexOrTransformerPositions item, BlittableJsonReaderObject definition)
-        {
-            if (_log.IsInfoEnabled)
-            {
-                _log.Info($"Replicated tranhsformer with name = {item.Name}");
-            }
-
-            _database.TransformerStore.TryDeleteTransformerIfExists(item.Name);
-
-            try
-            {
-                TransformerProcessor.Import(definition, _database, ServerVersion.BuildType);
-            }
-            catch (ArgumentException e)
-            {
-                if (_log.IsOperationsEnabled)
-                    _log.Operations(
-                        $"Failed to read transformer (name = {item.Name}, etag = {item.Etag}) definition from incoming replication batch. This is not supposed to happen.",
-                        e);
-                throw;
-            }
-        }
-
         private void PutIndexReplicationItem(
             TransactionOperationContext configurationContext,
             ReplicationIndexOrTransformerPositions item,

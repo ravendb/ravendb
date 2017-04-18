@@ -11,18 +11,13 @@ namespace Raven.Server.Documents.Indexes
 {
     public class CollectionOfIndexes : IEnumerable<Index>
     {
-        private readonly ConcurrentDictionary<int, Index> _indexesById = new ConcurrentDictionary<int, Index>();
+        private readonly ConcurrentDictionary<long, Index> _indexesByEtag = new ConcurrentDictionary<long, Index>();
         private readonly ConcurrentDictionary<string, Index> _indexesByName = new ConcurrentDictionary<string, Index>(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<string, ConcurrentSet<Index>> _indexesByCollection = new ConcurrentDictionary<string, ConcurrentSet<Index>>(StringComparer.OrdinalIgnoreCase);
-        private int _nextIndexId = 1;
 
         public void Add(Index index)
         {
-            if (index.IndexId < _nextIndexId)
-                throw new InvalidOperationException($"Invalid index Id. Should be equal or greater than {_nextIndexId}. Was {index.IndexId}");
-
-            _nextIndexId = Math.Max(index.IndexId, _nextIndexId) + 1;
-            _indexesById[index.IndexId] = index;
+            _indexesByEtag[index.Etag] = index;
             _indexesByName[index.Name] = index;
 
             foreach (var collection in index.Definition.Collections)
@@ -52,7 +47,7 @@ namespace Raven.Server.Documents.Indexes
 
                 indexes.TryRemove(oldIndex);
             }
-            _indexesById.TryRemove(oldIndex.IndexId, out oldIndex);
+            _indexesByEtag.TryRemove(oldIndex.Etag, out oldIndex);
         }
 
         public void RenameIndex(Index index, string oldName, string newName)
@@ -62,9 +57,9 @@ namespace Raven.Server.Documents.Indexes
             _indexesByName.TryRemove(oldName, out _);
         }
 
-        public bool TryGetById(int id, out Index index)
+        public bool TryGetByEtag(long etag, out Index index)
         {
-            return _indexesById.TryGetValue(id, out index);
+            return _indexesByEtag.TryGetValue(etag, out index);
         }
 
         public bool TryGetByName(string name, out Index index)
@@ -72,9 +67,9 @@ namespace Raven.Server.Documents.Indexes
             return _indexesByName.TryGetValue(name, out index);
         }
 
-        public bool TryRemoveById(int id, out Index index)
+        public bool TryRemoveByEtag(long etag, out Index index)
         {
-            var result = _indexesById.TryRemove(id, out index);
+            var result = _indexesByEtag.TryRemove(etag, out index);
             if (result == false)
                 return false;
 
@@ -102,14 +97,9 @@ namespace Raven.Server.Documents.Indexes
             return indexes;
         }
 
-        public int GetNextIndexId()
-        {
-            return _nextIndexId;
-        }
-
         public IEnumerator<Index> GetEnumerator()
         {
-            return _indexesById.Values.GetEnumerator();
+            return _indexesByEtag.Values.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -117,6 +107,6 @@ namespace Raven.Server.Documents.Indexes
             return GetEnumerator();
         }
 
-        public int Count => _indexesById.Count;
+        public int Count => _indexesByEtag.Count;
     }
 }

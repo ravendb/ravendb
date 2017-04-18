@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Indexes;
-using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
@@ -52,10 +51,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return indexName[DynamicIndex.Length] == '/';
         }
 
-        public Task ExecuteStream(HttpResponse response, BlittableJsonTextWriter writer, string dynamicIndexName, IndexQueryServerSide query)
+        public async Task ExecuteStream(HttpResponse response, BlittableJsonTextWriter writer, string dynamicIndexName, IndexQueryServerSide query)
         {
-            string collection;
-            var index = MatchIndex(dynamicIndexName, query, false, out collection);
+            var tuple = await MatchIndex(dynamicIndexName, query, false);
+            var index = tuple.Index;
+            var collection = tuple.Collection;
             if (index == null)
             {
                 using (var result = new StreamDocumentQueryResult(response, writer, _context))
@@ -67,16 +67,17 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     ExecuteCollectionQuery(result, query, collection);
                 }
 
-                return Task.CompletedTask;
+                return;
             }
 
-            return index.StreamQuery(response, writer, query, _context, _token);
+            await index.StreamQuery(response, writer, query, _context, _token);
         }
 
-        public Task<DocumentQueryResult> Execute(string dynamicIndexName, IndexQueryServerSide query, long? existingResultEtag)
+        public async Task<DocumentQueryResult> Execute(string dynamicIndexName, IndexQueryServerSide query, long? existingResultEtag)
         {
-            string collection;
-            var index = MatchIndex(dynamicIndexName, query, true, out collection);
+            var tuple = await MatchIndex(dynamicIndexName, query, true);
+            var index = tuple.Index;
+            var collection = tuple.Collection;
             if (index == null)
             {
                 var result = new DocumentQueryResult();
@@ -86,28 +87,28 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (existingResultEtag.HasValue)
                 {
                     if (result.ResultEtag == existingResultEtag)
-                        return new CompletedTask<DocumentQueryResult>(DocumentQueryResult.NotModifiedResult);
+                        return DocumentQueryResult.NotModifiedResult;
                 }
 
                 ExecuteCollectionQuery(result, query, collection);
 
-                return new CompletedTask<DocumentQueryResult>(result);
+                return result;
             }
 
             if (existingResultEtag.HasValue)
             {
                 var etag = index.GetIndexEtag();
                 if (etag == existingResultEtag)
-                    return new CompletedTask<DocumentQueryResult>(DocumentQueryResult.NotModifiedResult);
+                    return DocumentQueryResult.NotModifiedResult;
             }
 
-            return index.Query(query, _context, _token);
+            return await index.Query(query, _context, _token);
         }
 
-        public IndexEntriesQueryResult ExecuteIndexEntries(string dynamicIndexName, IndexQueryServerSide query, long? existingResultEtag)
+        public async Task<IndexEntriesQueryResult> ExecuteIndexEntries(string dynamicIndexName, IndexQueryServerSide query, long? existingResultEtag)
         {
-            string collection;
-            var index = MatchIndex(dynamicIndexName, query, false, out collection);
+            var tuple = await MatchIndex(dynamicIndexName, query, false);
+            var index = tuple.Index;
 
             if (existingResultEtag.HasValue)
             {
@@ -194,16 +195,16 @@ namespace Raven.Server.Documents.Queries.Dynamic
             resultToFill.ResultEtag = (long) Hashing.XXHash64.Calculate((byte*) buffer, sizeof(long) * 3);
         }
 
-        private Index MatchIndex(string dynamicIndexName, IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, out string collection)
+        private async Task<(Index Index, string Collection)> MatchIndex(string dynamicIndexName, IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound)
         {
-            collection = dynamicIndexName.Length == DynamicIndex.Length
+            var collection = dynamicIndexName.Length == DynamicIndex.Length
                 ? Constants.Documents.Indexing.AllDocumentsCollection
                 : dynamicIndexName.Substring(DynamicIndexPrefix.Length);
 
             var map = DynamicQueryMapping.Create(collection, query);
 
             if (map.MapFields.Length == 0 && map.SortDescriptors.Length == 0 && map.GroupByFields.Length == 0)
-                return null; // use collection query
+                return (null, collection); // use collection query
 
             Index index;
             if (TryMatchExistingIndexToQuery(map, out index) == false)
@@ -213,7 +214,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 var definition = map.CreateAutoIndexDefinition();
 
-                var id = _indexStore.CreateIndex(definition);
+                var id = await _indexStore.CreateIndex(definition);
                 index = _indexStore.GetIndex(id);
 
                 CleanupSupercededAutoIndexes(index, map)
@@ -237,7 +238,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             EnsureValidQuery(query, map);
 
-            return index;
+            return (index, collection);
         }
 
         private async Task CleanupSupercededAutoIndexes(Index index, DynamicQueryMapping map)
@@ -280,7 +281,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         try
                         {
-                            _indexStore.DeleteIndex(supercededIndex.IndexId);
+                            _indexStore.DeleteIndex(supercededIndex.Etag);
                         }
                         catch (IndexDoesNotExistException)
                         {

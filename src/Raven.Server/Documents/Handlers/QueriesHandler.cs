@@ -307,14 +307,14 @@ namespace Raven.Server.Documents.Handlers
             throw new NotSupportedException($"Not supported query debug operation: '{debug}'");
         }
 
-        private void IndexEntries(DocumentsOperationContext context, string indexName, OperationCancelToken token, HttpMethod method)
+        private async Task IndexEntries(DocumentsOperationContext context, string indexName, OperationCancelToken token, HttpMethod method)
         {
             var indexQuery = GetIndexQuery(context, method);
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
             var queryRunner = new QueryRunner(Database, context);
 
-            var result = queryRunner.ExecuteIndexEntriesQuery(indexName, indexQuery, existingResultEtag, token);
+            var result = await queryRunner.ExecuteIndexEntriesQuery(indexName, indexQuery, existingResultEtag, token);
 
             if (result.NotModified)
             {

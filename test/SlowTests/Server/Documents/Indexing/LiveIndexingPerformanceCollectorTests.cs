@@ -69,7 +69,7 @@ namespace SlowTests.Server.Documents.Indexing
 
                 Assert.Equal(1, stats.Count);
                 var usersStats = stats[0];
-                Assert.Equal("Users/ByName", usersStats.IndexName);
+                Assert.Equal("Users/ByName", usersStats.Name);
 
                 Assert.Equal(2, usersStats.Performance.Select(x => x.InputCount).Sum());
             }
@@ -126,7 +126,7 @@ namespace SlowTests.Server.Documents.Indexing
                     Assert.Equal(1, tuple.Item2.Count);
                     usersStats = tuple.Item2[0];
                 }
-                Assert.Equal("Users/ByName", usersStats.IndexName);
+                Assert.Equal("Users/ByName", usersStats.Name);
 
                 Assert.True(usersStats.Performance.Select(x => x.InputCount).Sum() == 2, $"Can\'t find indexing performance stats, after {dequeueCount} tries");
             }

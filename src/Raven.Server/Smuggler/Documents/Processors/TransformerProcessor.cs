@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
@@ -21,12 +22,6 @@ namespace Raven.Server.Smuggler.Documents.Processors
                 default:
                     throw new ArgumentOutOfRangeException(nameof(buildVersionType), buildVersionType, null);
             }   
-        }
-
-        public static void Import(BlittableJsonReaderObject transformerDefinitionDoc, DocumentDatabase database, BuildVersionType buildType)
-        {
-            var transformerDefinition = ReadTransformerDefinition(transformerDefinitionDoc, buildType);
-            database.TransformerStore.CreateTransformer(transformerDefinition);
         }
 
         public static void Export(BlittableJsonTextWriter writer, Transformer transformer, JsonOperationContext context)
