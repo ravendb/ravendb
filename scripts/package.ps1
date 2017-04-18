@@ -114,11 +114,6 @@ function CreatePackageServerLayout ( $projectDir, $serverOutDir, $packageDir, $s
 
     Copy-Item "$settingsFilePath" $serverOutDir
 
-    if ($spec.Name -eq "raspberry-pi") {
-        del $([io.path]::combine($serverOutDir, "*.so"))
-        del $([io.path]::combine($serverOutDir, "*.ni.*"))
-    }
-
     Copy-Item "$serverOutDir" -Recurse -Destination "$packageDir"
 }
 
