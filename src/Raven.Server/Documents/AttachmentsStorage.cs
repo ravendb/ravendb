@@ -713,55 +713,5 @@ namespace Raven.Server.Documents
                 IOExtensions.DeleteFile(_tempFile);
             }
         }
-
-        public static bool ShouldResolveAttachmentsConflict(BlittableJsonReaderObject myMetadata, BlittableJsonReaderObject otherMetadata)
-        {
-            myMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray myAttachments);
-            otherMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray otherAttachments);
-            Debug.Assert(myAttachments != null || otherAttachments != null, "Cannot happen. We verified that we have a conflict in @attachments.");
-
-            var myAttachmentNames = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
-            if (myAttachments != null)
-            {
-                foreach (BlittableJsonReaderObject attachment in myAttachments)
-                {
-                    if (attachment.TryGet(nameof(AttachmentResult.Name), out string name) == false)
-                        return false;   // Attachment must have a name. The user modified the value?
-
-                    if (myAttachmentNames.ContainsKey(name))
-                        // The node itself has a conflict
-                        return false;
-                    myAttachmentNames.Add(name, attachment);
-                }
-            }
-
-            var otherAttachmentNames = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
-            if (otherAttachments != null)
-            {
-                foreach (BlittableJsonReaderObject attachment in otherAttachments)
-                {
-                    if (attachment.TryGet(nameof(AttachmentResult.Name), out string name) == false)
-                        return false;   // Attachment must have a name. The user modified the value?
-
-                    if (otherAttachmentNames.ContainsKey(name))
-                        // The node itself has a conflict
-                        return false;
-                    otherAttachmentNames.Add(name, attachment);
-                }
-            }
-
-            foreach (var attachment in myAttachmentNames)
-            {
-                if (otherAttachmentNames.TryGetValue(attachment.Key, out var otherAttachment))
-                {
-                    if (Document.ComparePropertiesExceptStartingWithAt(attachment.Value, otherAttachment) == DocumentCompareResult.NotEqual)
-                        return false;
-
-                    otherAttachmentNames.Remove(attachment.Key);
-                }
-            }
-            
-            return true;
-        }
     }
 }

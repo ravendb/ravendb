@@ -241,7 +241,7 @@ namespace Raven.Server.Documents.Replication
 
             if (existingDoc != null)
             {
-                var compareResult = Document.IsEqualTo(existingDoc.Data, incomingDoc, true);
+                var compareResult = DocumentCompare.IsEqualTo(existingDoc.Data, incomingDoc, true);
                 if (compareResult == DocumentCompareResult.NotEqual)
                     return false;
 
