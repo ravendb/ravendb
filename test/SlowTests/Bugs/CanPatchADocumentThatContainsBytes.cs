@@ -41,7 +41,7 @@ namespace SlowTests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var index = new IndexQuery(new DocumentConventions())
+                    var index = new IndexQuery()
                     {
                         Query =
                             session.Query<PrimarySkills.Result, PrimarySkills>()

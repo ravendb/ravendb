@@ -1,7 +1,8 @@
 import app = require("durandal/app");
-import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import dialog = require("plugins/dialog");
 import operation = require("common/notifications/models/operation");
+import abstractNotification = require("common/notifications/models/abstractNotification");
+import notificationCenter = require("common/notifications/notificationCenter");
+import abstractOperationDetails = require("viewmodels/common/notificationCenter/detailViewer/abstractOperationDetails");
 
 type smugglerListItemStatus = "processed" | "skipped" | "processing" | "pending";
 
@@ -16,30 +17,22 @@ type smugglerListItem = {
     skippedCount: string;
 }
 
-class smugglerDatabaseDetails extends dialogViewModelBase {
-    static readonly progressType = "Raven.Server.Smuggler.Documents.Data.SmugglerResult+SmugglerProgress, Raven.Server";
-    static readonly resultType = "Raven.Server.Smuggler.Documents.Data.SmugglerResult, Raven.Server";
-
-    private op: operation;
-    private killFunction: () => void;
+class smugglerDatabaseDetails extends abstractOperationDetails {
 
     detailsVisible = ko.observable<boolean>(false);
 
     exportItems: KnockoutComputed<Array<smugglerListItem>>;
     messages: KnockoutComputed<Array<string>>;
-    killable: KnockoutComputed<boolean>;
 
-    constructor(op: operation, killFunction: () => void) {
-        super();
-        this.bindToCurrentInstance("close", "toggleDetails", "killOperation");
-        this.op = op;
-        this.killFunction = killFunction;
+    constructor(op: operation, notificationCenter: notificationCenter) {
+        super(op, notificationCenter);
+        this.bindToCurrentInstance("toggleDetails");
 
         this.initObservables();
     }
 
-    private initObservables() {
-        this.killable = ko.pureComputed(() => !this.op.isCompleted());
+    protected initObservables() {
+        super.initObservables();
 
         this.exportItems = ko.pureComputed(() => {
             const status = (this.op.isCompleted() ? this.op.result() : this.op.progress()) as Raven.Server.Smuggler.Documents.Data.SmugglerProgressBase;
@@ -50,7 +43,7 @@ class smugglerDatabaseDetails extends dialogViewModelBase {
 
             const result = [] as Array<smugglerListItem>;
             result.push(this.mapToExportListItem("Documents", status.Documents));
-            result.push(this.mapToExportListItem("RevisionDocuments", status.RevisionDocuments));
+            result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments));
             result.push(this.mapToExportListItem("Indexes", status.Indexes));
             result.push(this.mapToExportListItem("Transformers", status.Transformers));
             result.push(this.mapToExportListItem("Identities", status.Identities));
@@ -89,20 +82,11 @@ class smugglerDatabaseDetails extends dialogViewModelBase {
         });
     }
 
-    close() {
-        dialog.close(this);
-    }
-
-    killOperation() {
-        //TODO: spinner
-        this.killFunction();
-    }
-
     toggleDetails() {
         this.detailsVisible(!this.detailsVisible());
     }
 
-    private mapToExportListItem(name: string, item: Raven.Server.Smuggler.Documents.Data.Counts): smugglerListItem {
+    private mapToExportListItem(name: string, item: Raven.Server.Smuggler.Documents.Data.SmugglerProgressBase.Counts): smugglerListItem {
         let stage: smugglerListItemStatus = "processing";
         if (item.Skipped) {
             stage = "skipped";
@@ -116,22 +100,18 @@ class smugglerDatabaseDetails extends dialogViewModelBase {
             hasReadCount: true, // it will be reassigned in post-processing
             readCount: item.ReadCount.toLocaleString(),
             hasSkippedCount: name === "Documents",
-            skippedCount: name === "Documents" ? (item as Raven.Server.Smuggler.Documents.Data.CountsWithSkippedCountAndLastEtag).SkippedCount.toLocaleString() : "-",
+            skippedCount: name === "Documents" ? (item as Raven.Server.Smuggler.Documents.Data.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag).SkippedCount.toLocaleString() : "-",
             hasErroredCount: true, // it will be reassigned in post-processing
             erroredCount: item.ErroredCount.toLocaleString()
         } as smugglerListItem;
     }
 
-    static supportsDetailsFor(op: operation) {
-        if (op.status() === "InProgress") {
-            return (op.progress() as any)["$type"] === smugglerDatabaseDetails.progressType;
-        } else {
-            return (op.result() as any)["$type"] === smugglerDatabaseDetails.resultType;
-        }
+    static supportsDetailsFor(notification: abstractNotification) {
+        return (notification instanceof operation) && (notification.taskType() === "DatabaseExport" || notification.taskType() === "DatabaseImport");
     }
 
-    static showDetailsFor(op: operation, killFunction: () => void) {
-        return app.showBootstrapDialog(new smugglerDatabaseDetails(op, killFunction));
+    static showDetailsFor(op: operation, center: notificationCenter) {
+        return app.showBootstrapDialog(new smugglerDatabaseDetails(op, center));
     }
 
     static merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): boolean {

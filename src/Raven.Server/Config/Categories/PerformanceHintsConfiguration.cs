@@ -21,5 +21,10 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(1024)]
         [ConfigurationEntry("Raven/PerformanceHints/Indexing/MaxIndexOutputsPerDocument")]
         public int MaxWarnIndexOutputsPerDocument { get; set; }
+
+        [Description("The maximum amount of results after which we will create a performance hint")]
+        [DefaultValue(2048)]
+        [ConfigurationEntry("Raven/PerformanceHints/MaxNumberOfResults")]
+        public int MaxNumberOfResults { get; set; }
     }
 }

@@ -35,7 +35,7 @@ namespace Raven.Server.Web.Studio
         public Task PreviewCollection()
         {
             var start = GetStart();
-            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
+            var pageSize = GetPageSize();
             var collection = GetStringQueryString("collection", required: false);
             var bindings = GetStringValuesQueryString("binding", required: false);
             var fullBindings = GetStringValuesQueryString("fullBinding", required: false);

@@ -82,8 +82,6 @@ namespace Regression.PageLocator
                             return _cache[j].Value;
                         }
                     }
-
-                    throw new InvalidOperationException("This cant happen");
                 }
             }         
 

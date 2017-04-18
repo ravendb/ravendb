@@ -29,7 +29,7 @@ class commandBase {
     query<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
         const ajax = this.ajax<T>(relativeUrl, args, "GET", db, options, timeToAlert);
         if (resultsSelector) {
-            var task = $.Deferred<T>();
+            const task = $.Deferred<T>();
             ajax.done((results, status, xhr) => {
                 var transformedResults = resultsSelector(results, xhr);
                 task.resolve(transformedResults, status, xhr);

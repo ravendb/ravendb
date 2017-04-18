@@ -26,20 +26,22 @@ namespace Raven.Server.NotificationCenter
             _notificationsStorage = notificationsStorage;
             _resourceName = resourceName;
             _shutdown = shutdown;
+            Options = new NotificationCenterOptions();
+            Paging = new Paging(this, _notificationsStorage);
         }
 
         public void Initialize(DocumentDatabase database = null)
         {
-            _postponedNotifications = new PostponedNotificationsSender(_resourceName, _notificationsStorage,
-                    _watchers, _shutdown);
-
+            _postponedNotifications = new PostponedNotificationsSender(_resourceName, _notificationsStorage, _watchers, _shutdown);
             _backgroundWorkers.Add(_postponedNotifications);
 
             if (database != null)
                 _backgroundWorkers.Add(new DatabaseStatsSender(database, this));
         }
 
-        public NotificationCenterOptions Options { get; } = new NotificationCenterOptions();
+        public readonly Paging Paging;
+
+        public readonly NotificationCenterOptions Options;
 
         private void StartBackgroundWorkers()
         {
@@ -163,6 +165,8 @@ namespace Raven.Server.NotificationCenter
 
         public void Dispose()
         {
+            Paging?.Dispose();
+
             foreach (var worker in _backgroundWorkers)
             {
                 worker.Dispose();

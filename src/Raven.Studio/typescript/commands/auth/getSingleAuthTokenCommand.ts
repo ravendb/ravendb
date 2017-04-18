@@ -9,7 +9,7 @@ class getSingleAuthTokenCommand extends commandBase {
     }
 
     execute(): JQueryPromise<singleAuthToken> {
-        var args: { CheckIfMachineAdmin: boolean } = null;
+        let args: { CheckIfMachineAdmin: boolean } = null;
 
         if (this.checkIfMachineAdmin) {
             args = {

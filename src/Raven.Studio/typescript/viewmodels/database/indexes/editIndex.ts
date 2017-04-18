@@ -42,18 +42,21 @@ class editIndex extends viewModelBase {
     indexAutoCompleter: indexAceAutoCompleteProvider;
     renameMode = ko.observable<boolean>(false);
     renameInProgress = ko.observable<boolean>(false);
+    nameChanged: KnockoutComputed<boolean>;
     canEditIndexName: KnockoutComputed<boolean>;
 
     fieldNames = ko.observableArray<string>([]);
     defaultIndexPath = ko.observable<string>();
     additionalStoragePaths = ko.observableArray<string>([]);
     selectedIndexPath: KnockoutComputed<string>;
+    indexNameHasFocus = ko.observable<boolean>(false);
 
     private indexesNames = ko.observableArray<string>();
     private transformersNames = ko.observableArray<string>();
 
     queryUrl = ko.observable<string>();
     termsUrl = ko.observable<string>();
+    indexesUrl = ko.pureComputed(() => this.appUrls.indexes());
 
     /* TODO
     canSaveSideBySideIndex: KnockoutComputed<boolean>;
@@ -105,6 +108,13 @@ class editIndex extends viewModelBase {
 
         this.renameMode.subscribe(renameMode => {
             editIndex.$body.toggleClass('show-rename', renameMode);
+        });
+
+        this.nameChanged = ko.pureComputed(() => {
+            const newName = this.editedIndex().name();
+            const oldName = this.originalIndexName;
+
+            return newName !== oldName;
         });
     }
 
@@ -447,7 +457,7 @@ class editIndex extends viewModelBase {
         this.saveInProgress(true);
 
         //if index name has changed it isn't the same index
-        /*
+        /* TODO
         if (this.originalIndexName === this.indexName() && editedIndex.lockMode === "LockedIgnore") {
             messagePublisher.reportWarning("Can not overwrite locked index: " + editedIndex.name() + ". " + 
                                             "Any changes to the index will be ignored.");
@@ -456,22 +466,8 @@ class editIndex extends viewModelBase {
 
         const indexDto = editedIndex.toDto();
 
-        /* TODO we probably won't need this because edit name is locked + we have clone feature
-        if (this.isEditingExistingIndex() && index.Name !== this.loadedIndexName()) {
-            // user changed index name on edit page, ask him what to do: rename or duplicate
-            var dialog = new renameOrDuplicateIndexDialog(this.loadedIndexName(), this.editedIndex().name());
-
-            dialog.getSaveAsNewTask()
-                .done(() => this.saveIndex(indexDto));
-
-            dialog.getRenameTask()
-                .done(() => this.renameIndex(this.loadedIndexName(), index.Name as string));
-
-            app.showBootstrapDialog(dialog);
-        } else {*/
         this.saveIndex(indexDto)
             .always(() => this.saveInProgress(false));
-        //TODO: }
     }
 
     private saveIndex(indexDto: Raven.Client.Documents.Indexes.IndexDefinition): JQueryPromise<Raven.Client.Documents.Indexes.PutIndexResult> {
@@ -533,6 +529,7 @@ class editIndex extends viewModelBase {
 
     enterRenameMode() {
         this.renameMode(true);
+        this.indexNameHasFocus(true);
     }
 
     renameIndex() {

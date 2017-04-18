@@ -210,19 +210,6 @@ namespace Raven.Client.Documents.Session.Operations
             _currentQueryResults = result;
             _currentQueryResults.EnsureSnapshot();
 
-            if (_session.Conventions.ThrowIfImplicitTakeAmountExceeded &&
-                IndexQuery.PageSizeSet == false &&
-                _currentQueryResults.TotalResults > IndexQuery.PageSize)
-            {
-                var message = $"The query has more results ({_currentQueryResults.TotalResults}) than the implicity take ammount " +
-                              $"which is .Take({_session.Conventions.ImplicitTakeAmount}).{Environment.NewLine}" +
-                              $"You can solve this error in the following ways:{Environment.NewLine}" +
-                              "1. Have an explicit .Take() on your query. This is the recommended solution." +
-                              $"2. Set store.Conventions.ThowIfImplicitTakeAmountExceeded to false{Environment.NewLine}" +
-                              "3. Increase the value of store.Conventions.ImplicitTakeAmount.";
-                throw new RavenException(message);
-            }
-
             if (Logger.IsInfoEnabled)
             {
                 var isStale = result.IsStale ? "stale " : "";

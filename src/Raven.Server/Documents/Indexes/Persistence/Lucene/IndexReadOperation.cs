@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 using Lucene.Net.Documents;
@@ -69,7 +70,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public IEnumerable<Document> Query(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, CancellationToken token)
         {
-            var docsToGet = query.PageSize;
+            var pageSize = GetPageSize(_searcher, query.PageSize);
+            var docsToGet = pageSize;
             var position = query.Start;
 
             var luceneQuery = GetLuceneQuery(query.Query, query.DefaultOperator, query.DefaultField, _analyzer);
@@ -88,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     scope.RecordAlreadyPagedItemsInPreviousPage(search);
 
-                    for (; position < search.ScoreDocs.Length && query.PageSize > 0; position++)
+                    for (; position < search.ScoreDocs.Length && pageSize > 0; position++)
                     {
                         token.ThrowIfCancellationRequested();
 
@@ -112,15 +114,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         returnedResults++;
                         yield return result;
 
-                        if (returnedResults == query.PageSize)
+                        if (returnedResults == pageSize)
                             yield break;
                     }
 
-                    docsToGet += (query.PageSize - returnedResults) * _maxNumberOfOutputsPerDocument;
+                    docsToGet += GetPageSize(_searcher, (long)(pageSize - returnedResults) * _maxNumberOfOutputsPerDocument);
                     if (search.TotalHits == search.ScoreDocs.Length)
                         break;
 
-                    if (returnedResults >= query.PageSize)
+                    if (returnedResults >= pageSize)
                         break;
                 }
             }
@@ -134,7 +136,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             //Not sure how to select the page size here??? The problem is that only docs in this search can be part 
             //of the final result because we're doing an intersection query (but we might exclude some of them)
-            int pageSizeBestGuess = (query.Start + query.PageSize) * 2;
+            var pageSize = GetPageSize(_searcher, query.PageSize);
+            int pageSizeBestGuess = GetPageSize(_searcher, ((long)query.Start + query.PageSize) * 2);
             int intersectMatches, skippedResultsInCurrentLoop = 0;
             int previousBaseQueryMatches = 0, currentBaseQueryMatches;
 
@@ -171,7 +174,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var currentIntersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
                     intersectMatches = currentIntersectResults.Count;
                     skippedResultsInCurrentLoop = pageSizeBestGuess - intersectMatches;
-                } while (intersectMatches < query.PageSize                      //stop if we've got enough results to satisfy the pageSize
+                } while (intersectMatches < pageSize                      //stop if we've got enough results to satisfy the pageSize
                     && currentBaseQueryMatches < search.TotalHits           //stop if increasing the page size wouldn't make any difference
                     && previousBaseQueryMatches < currentBaseQueryMatches); //stop if increasing the page size didn't result in any more "base query" results
 
@@ -207,7 +210,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     returnedResults++;
                     yield return result;
-                    if (returnedResults == query.PageSize)
+                    if (returnedResults == pageSize)
                         yield break;
                 }
             }
@@ -217,7 +220,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             if (sort == null && _indexHasBoostedFields == false && IsBoostedQuery(documentQuery) == false)
             {
-                if (pageSize == int.MaxValue) // we want all docs, no sorting required
+                if (pageSize == int.MaxValue || pageSize == _searcher.MaxDoc) // we want all docs, no sorting required
                 {
                     var gatherAllCollector = new GatherAllCollector();
                     _searcher.Search(documentQuery, gatherAllCollector);
@@ -231,8 +234,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 return noSortingCollector.ToTopDocs();
             }
 
-            var absFullPage = Math.Abs(pageSize + start); // need to protect against ridiculously high values of pageSize + start that overflow
-            var minPageSize = Math.Max(absFullPage, 1);
+            var minPageSize = GetPageSize(_searcher, (long)pageSize + start);
 
             if (sort != null)
             {
@@ -370,8 +372,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             mlt.SetFieldNames(fieldNames);
             mlt.Analyzer = _analyzer;
 
+            var pageSize = GetPageSize(_searcher, query.PageSize);
             var mltQuery = mlt.Like(td.ScoreDocs[0].Doc);
-            var tsdc = TopScoreDocCollector.Create(query.PageSize, true);
+            var tsdc = TopScoreDocCollector.Create(pageSize, true);
 
             if (string.IsNullOrWhiteSpace(query.AdditionalQuery) == false)
             {
@@ -414,7 +417,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, CancellationToken token)
         {
-            var docsToGet = query.PageSize;
+            var docsToGet = GetPageSize(_searcher, query.PageSize);
             var position = query.Start;
 
             var luceneQuery = GetLuceneQuery(query.Query, query.DefaultOperator, query.DefaultField, _analyzer);

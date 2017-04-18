@@ -68,7 +68,7 @@ namespace SlowTests.MailingList
         {
             using (var session = store.OpenSession())
             {
-                return session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery(store.Conventions)
+                return session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery()
                 {
                     IndexName = "Product/AvailableForSale2",
                     Query = "MyName1",

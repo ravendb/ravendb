@@ -25,6 +25,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="wwwroot\Content\css\pages\stats.less" />
+    <Content Include="wwwroot\Content\css\pages\versioning.less" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics" Version="1.1.1" />

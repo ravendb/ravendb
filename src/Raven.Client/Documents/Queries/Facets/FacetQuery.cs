@@ -23,10 +23,6 @@ namespace Raven.Client.Documents.Queries.Facets
         private IReadOnlyList<Facet> _facets;
         private DynamicJsonArray _facetsAsDynamicJsonArray;
 
-        public FacetQuery(DocumentConventions conventions) : base(conventions)
-        {
-        }
-
         /// <summary>
         /// Index name to run facet query on.
         /// </summary>
@@ -42,7 +38,7 @@ namespace Raven.Client.Documents.Queries.Facets
         /// </summary>
         public IReadOnlyList<Facet> Facets
         {
-            get { return _facets; }
+            get => _facets;
             set
             {
                 _facets = value;
@@ -73,7 +69,8 @@ namespace Raven.Client.Documents.Queries.Facets
             if (Start != 0)
                 path.Append("&start=").Append(Start);
 
-            path.Append("&pageSize=").Append(PageSize);
+            if (PageSizeSet)
+                path.Append("&pageSize=").Append(PageSize);
 
             if (string.IsNullOrEmpty(Query) == false)
                 path.Append("&query=").Append(EscapingHelper.EscapeLongDataString(Query));
@@ -112,7 +109,7 @@ namespace Raven.Client.Documents.Queries.Facets
 #if !NET46
         public static FacetQuery Parse(IQueryCollection query, int start, int pageSize, DocumentConventions conventions)
         {
-            var result = new FacetQuery(conventions)
+            var result = new FacetQuery
             {
                 Start = start,
                 PageSize = pageSize
@@ -152,7 +149,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
         public static FacetQuery Create(string indexName, IndexQueryBase query, string facetSetupDoc, List<Facet> facets, int start, int? pageSize, DocumentConventions conventions)
         {
-            var result = new FacetQuery(conventions)
+            var result = new FacetQuery
             {
                 IndexName = indexName,
                 CutoffEtag = query.CutoffEtag,

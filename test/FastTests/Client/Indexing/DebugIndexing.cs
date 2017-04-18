@@ -75,7 +75,7 @@ namespace FastTests.Client.Indexing
                     DocumentId = "docs/1"
                 };
 
-                var query3 = new FacetQuery(store.Conventions)
+                var query3 = new FacetQuery()
                 {
                     FacetSetupDoc = "setup/1"
                 };

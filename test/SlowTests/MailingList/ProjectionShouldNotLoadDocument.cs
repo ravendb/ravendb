@@ -48,7 +48,7 @@ namespace SlowTests.MailingList
                 {
                     commands.Put("FOO", null, new { Name = "Ayende" }, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "Foos" } });
 
-                    var result = commands.Query("dynamic", new IndexQuery(store.Conventions)
+                    var result = commands.Query("dynamic", new IndexQuery()
                     {
                         FieldsToFetch = new[] { "Name" },
                         Query = "Name:Ayende"
@@ -64,7 +64,7 @@ namespace SlowTests.MailingList
                     new Index1().Execute(store);
                     WaitForIndexing(store);
 
-                    result = commands.Query("Index1", new IndexQuery(store.Conventions)
+                    result = commands.Query("Index1", new IndexQuery()
                     {
                         FieldsToFetch = new[] { "Name" },
                         Query = "Name:Ayende"

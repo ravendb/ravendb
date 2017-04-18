@@ -38,6 +38,7 @@ import enterApiKey = require("viewmodels/common/enterApiKey");
 import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import footer = require("common/shell/footer");
+import feedback = require("viewmodels/shell/feedback");
 
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import requestExecution = require("common/notifications/requestExecution");
@@ -152,11 +153,9 @@ class shell extends viewModelBase {
     }
 
     private setupRouting() {
-        let routes = allRoutes.get(this.appUrls);
+        const routes = allRoutes.get(this.appUrls);
         routes.push(...routes);
         router.map(routes).buildNavigationModel();
-        //TODO: do we indicate this? router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
-        //TODO: do we indicated this? router.on('router:navigation:cancelled', () => this.showNavigationProgress(false));
 
         appUrl.mapUnknownRoutes(router);
     }
@@ -186,7 +185,7 @@ class shell extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        $("#body").removeClass('loading-active');
+        $("body").removeClass('loading-active');
 
         this.studioLoadingFakeRequest.markCompleted();
         this.studioLoadingFakeRequest = null;
@@ -225,20 +224,20 @@ class shell extends viewModelBase {
 
     setupApiKey() {
         // try to find api key as studio hash parameter
-        var hash = window.location.hash;
+        const hash = window.location.hash;
         if (hash === "#has-api-key") {
             return this.showApiKeyDialog();
         } else if (hash.match(/#api-key/g)) {
-            var match = /#api-key=(.*)/.exec(hash);
+            const match = /#api-key=(.*)/.exec(hash);
             if (match && match.length === 2) {
                 oauthContext.apiKey(match[1]);
                 apiKeyLocalStorage.setValue(match[1]);
             }
-            var splittedHash = hash.split("&#api-key");
-            var url = (splittedHash.length === 1) ? "#databases" : splittedHash[0];
+            const splittedHash = hash.split("&#api-key");
+            const url = (splittedHash.length === 1) ? "#databases" : splittedHash[0];
             window.location.href = url;
         } else {
-            var apiKeyFromStorage = apiKeyLocalStorage.get();
+            const apiKeyFromStorage = apiKeyLocalStorage.get();
             if (apiKeyFromStorage) {
                 oauthContext.apiKey(apiKeyFromStorage);
             }
@@ -295,7 +294,7 @@ class shell extends viewModelBase {
     }
 
     private static activateHotSpareEnvironment(hotSpare: HotSpareDto) {
-        var color = new environmentColor(hotSpare.ActivationMode === "Activated" ? "Active Hot Spare" : "Hot Spare", "#FF8585");
+        const color = new environmentColor(hotSpare.ActivationMode === "Activated" ? "Active Hot Spare" : "Hot Spare", "#FF8585");
         license.hotSpare(hotSpare);
     }
 
@@ -321,13 +320,11 @@ class shell extends viewModelBase {
             .done((serverBuildResult: serverBuildVersionDto) => {
                 shell.serverBuildVersion(serverBuildResult);
 
-                var currentBuildVersion = serverBuildResult.BuildVersion;
+                const currentBuildVersion = serverBuildResult.BuildVersion;
                 if (currentBuildVersion !== DEV_BUILD_NUMBER) {
                     shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
                 }
-
             });
-        
     }
 
     fetchClientBuildVersion() {
@@ -347,12 +344,12 @@ class shell extends viewModelBase {
     }
 
     showApiKeyDialog() {
-        var dialog = new enterApiKey();
+        const dialog = new enterApiKey();
         return app.showBootstrapDialog(dialog).then(() => window.location.href = "#databases");
     }
 
     showLicenseStatusDialog() {
-        var dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage(), license.hotSpare());
+        const dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage(), license.hotSpare());
         app.showBootstrapDialog(dialog);
     }
 
@@ -402,8 +399,8 @@ class shell extends viewModelBase {
     }
 
     private configureAnalytics(track: boolean, [buildVersionResult]: [serverBuildVersionDto]) {
-        let currentBuildVersion = buildVersionResult.BuildVersion;
-        let shouldTrack = track && currentBuildVersion !== DEV_BUILD_NUMBER;
+        const currentBuildVersion = buildVersionResult.BuildVersion;
+        const shouldTrack = track && currentBuildVersion !== DEV_BUILD_NUMBER;
         if (currentBuildVersion !== DEV_BUILD_NUMBER) {
             shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
         } 
@@ -412,6 +409,11 @@ class shell extends viewModelBase {
         const version = buildVersionResult.FullVersion;
         eventsCollector.default.initialize(
             shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, version, shouldTrack);
+    }
+
+    openFeedbackForm() {
+        const dialog = new feedback(shell.clientVersion(), shell.serverBuildVersion().FullVersion);
+        app.showBootstrapDialog(dialog);
     }
 }
 

@@ -161,9 +161,9 @@ namespace FastTests.Client.Attachments
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var commands = store.Commands())
                 {
-                    PutCommand(session, new User { Name = "Fitzchak" }, "users/1", true);
+                    commands.Put("users/1", null, new User { Name = "Fitzchak" });
                     using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                     {
                         store.Operations.Send(new PutAttachmentOperation("users/1", "pic", profileStream, "image/png"));
@@ -172,9 +172,9 @@ namespace FastTests.Client.Attachments
 
                 ValidateMetadata_PutAttachmentAndPutDocument_ShouldHaveHasAttachmentsFlag(store);
 
-                using (var session = store.OpenSession())
+                using (var commands = store.Commands())
                 {
-                    PutCommand(session, new User { Name = "Fitzchak 2" }, "users/1", true);
+                    commands.Put("users/1", null, new User { Name = "Fitzchak 2" });
                 }
 
                 ValidateMetadata_PutAttachmentAndPutDocument_ShouldHaveHasAttachmentsFlag(store);

@@ -10,6 +10,7 @@ class operation extends abstractNotification {
     result = ko.observable<Raven.Client.Documents.Operations.IOperationResult>();
     status = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
     killable = ko.observable<boolean>();
+    taskType = ko.observable<Raven.Server.Documents.Operations.DatabaseOperations.OperationType>();
 
     isCompleted: KnockoutComputed<boolean>;
     isPercentageProgress: KnockoutComputed<boolean>;
@@ -31,6 +32,7 @@ class operation extends abstractNotification {
         this.progress(stateDto.Progress);
         this.result(stateDto.Result);
         this.status(stateDto.Status);
+        this.taskType(incomingChanges.TaskType);
     }
 
     percentageProgress(): number {

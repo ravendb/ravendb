@@ -28,7 +28,7 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var result = commands.Query("CustomersIndex", new IndexQuery(store.Conventions) { Query = "Number:1" });
+                    var result = commands.Query("CustomersIndex", new IndexQuery() { Query = "Number:1" });
                     Assert.NotEmpty(result.Results);
                 }
             }
@@ -72,7 +72,7 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var result = commands.Query("CustomersIndex", new IndexQuery(store.Conventions) { Query = "Number%3A1" });
+                    var result = commands.Query("CustomersIndex", new IndexQuery() { Query = "Number%3A1" });
                     Assert.NotEmpty(result.Results);
                 }
             }

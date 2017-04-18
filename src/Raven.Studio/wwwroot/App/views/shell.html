@@ -104,8 +104,9 @@
                     <span class="notification-counter show" data-bind="text: totalItemsCount(), attr: { 'data-count': totalItemsCount() }, css: { 'show': alertCountAnimation() }"></span>
                 </a>
             </li>
-            <li><a target="_blank" data-bind="attr: { href: currentHelpLink }" class="icon-help"></a></li>
+            <li><a target="_blank" title="Help" data-bind="attr: { href: currentHelpLink }" class="icon-help"></a></li>
             <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
+            <li><a href="#" title="Send feedback" data-bind="click: openFeedbackForm"><i class="icon-feedback text-warning"></i></a></li>
             <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
         </ul>
     </div><!--/.nav-collapse -->
@@ -117,37 +118,34 @@
         <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
             <i class="icon-recent"></i>
             <span>Recent</span>
-            <span class="label label-primary collection-count" data-bind="text: documentCount().toLocaleString()"></span>
+            <div class="label label-primary collection-count" data-bind="text: documentCount().toLocaleString()"></div>
         </a>
         <!-- /ko -->
     </li>
     <li>
         <!-- ko with: $root.collectionsTracker.getSystemDocumentsCollection() -->
         <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
-            <span>System</span>
-            <span class="label label-primary collection-count" data-bind="text: documentCount().toLocaleString()"></span>
+            <i class="icon-system"></i> <span>System</span>
+            <div class="label label-primary collection-count" data-bind="text: documentCount().toLocaleString()"></div>
         </a>
         <!-- /ko -->
     </li>
-    <li class="separator" data-bind="visible: $root.collectionsTracker.collections().length > 1">
-        <h3>Collections</h3>
-    </li>
+    <hr data-bind="visible: $root.collectionsTracker.collections().length > 1" />
+    <h3 data-bind="visible: $root.collectionsTracker.collections().length > 1">Collections</h3>
 
-    <li>
+    <li class="scroll collections-list">
         <ul>
             <!-- ko foreach: $root.collectionsTracker.collections -->
             <li>
-                <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }, visible: !isAllDocuments && !isSystemDocuments">
+                <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data), title: name }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }, visible: !isAllDocuments && !isSystemDocuments">
                     <span data-bind="text: name"></span>
-                    <span class="label label-primary collection-count" data-bind="text: documentCount().toLocaleString()"></span>
+                    <div class="label label-primary collection-count" data-bind="text: documentCount().toLocaleString()"></div>
                 </a>
             </li>
             <!-- /ko -->
         </ul>
     </li>
-    <li class="separator">
-        <h3></h3>
-    </li>
+    <hr />
 </script>
 
 <script type="text/html" id="leafMenuItem">
@@ -212,58 +210,53 @@
     <div class="notification-center-container" data-bind="compose: 'notifications/notificationCenter.html'"></div>
 </div>
 
-<footer class="status-footer bg-info">
-    <div class="footer-left" data-bind="with: $root.footer.stats()">
-        <!-- TODO 
+<footer class="status-footer bg-info" data-bind="with: $root.footer">
+    <div class="footer-left" data-bind="with: stats(), visible: stats">
+        <!-- TODO
         <div class="footer-item">
             <a href="#">Dashboard</a>
         </div>-->
         <div class="footer-item">
-            <a href="#" title="Documents"><i class="icon-document"></i> <span data-bind="text: countOfDocuments"></span></a>
+            <a data-bind="attr: { href: $parent.urlForDocuments() }" title="Documents"><i class="icon-document"></i> <span data-bind="text: countOfDocuments"></span></a>
         </div>
         <div class="footer-item">
-            <a href="#" title="Indexes">
+            <a title="Indexes" data-bind="attr: { href: $parent.urlForIndexes() }">
                 <i class="icon-index"></i>
                 <span data-bind="text: countOfIndexes"></span>
                 <span class="label label-warning" data-bind="visible: countOfStaleIndexes"><span data-bind="text: countOfStaleIndexes"></span> STALE</span>
-                <!--TODO: <span class="label label-danger">2 ERRORS</span>-->
+            </a>
+            <a title="Indexing errors" data-bind="attr: { href: $parent.urlForIndexingErrors() }, visible: countOfIndexingErrors">
+                <span class="label label-danger"><span data-bind="text: countOfIndexingErrors"></span> INDEXING ERRORS</span>
             </a>
         </div>
     </div>
+    <div class="footer-left spinner" data-bind="visible: spinners.loading">
+        <i class="btn-spinner"></i> Loading, please wait
+    </div>
     <div class="footer-right">
-        <!-- TODO:
         <div class="footer-item">
-            <a href="#about" title="server version">
-                <i class="icon-server"></i> <span>4.0.0-custom-40000</span>
+            <a title="Studio Version" data-bind="attr: { href: urlForAbout }">
+                <i class="icon-client"></i> <span data-bind="text: $root.constructor.clientVersion"></span>
             </a>
         </div>
         <div class="footer-item">
-            <a href="#about" title="server version">
-                <i class="icon-client"></i> <span>4.0.0-custom-40000</span>
+            <a title="Server Version" data-bind="attr: { href: urlForAbout }">
+                <i class="icon-server"></i> <span data-bind="text: $root.constructor.serverBuildVersion() ? $root.constructor.serverBuildVersion().FullVersion : ''"></span>
             </a>
         </div>
         <div class="footer-item">
-            <a href="#about" class="btn btn-success btn-sm">
+            <a title="License Information" data-bind="attr: { href: urlForAbout, class: licenseClass() + ' btn btn-sm' }">
                 <i class="icon-license-information"></i>
             </a>
         </div>
         <div class="footer-item">
-            <a href="#about" class="btn btn-warning btn-sm">
+            <a class="btn btn-warning btn-sm" title="Support Information" data-bind="attr: { href: urlForAbout }">
                 <i class="icon-support"></i>
             </a>
-        </div>-->
+        </div>
     </div>
 </footer>
-
-
-
-<!--<div class="prerelease-alert bg-prerelease">
-    <p>
-        PRERELEASE SOFTWARE
-    </p>
-</div>-->
 
 <div data-bind="if: displayUsageStatsInfo()">
     <div data-bind="compose: 'usageStats.html'"></div>
 </div>
-

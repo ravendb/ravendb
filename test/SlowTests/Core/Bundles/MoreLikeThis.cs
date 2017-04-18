@@ -33,7 +33,7 @@ namespace SlowTests.Core.Bundles
 
                     WaitForIndexing(store);
 
-                    var list = session.Advanced.MoreLikeThis<Post, Posts_ByTitleAndContent>(new MoreLikeThisQuery(store.Conventions)
+                    var list = session.Advanced.MoreLikeThis<Post, Posts_ByTitleAndContent>(new MoreLikeThisQuery()
                     {
                         DocumentId = "posts/1",
                         MinimumDocumentFrequency = 1,
@@ -79,7 +79,7 @@ namespace SlowTests.Core.Bundles
 
                     WaitForIndexing(store);
 
-                    var list = session.Advanced.MoreLikeThis<PostWithContentTransformer.Result>(new MoreLikeThisQuery(store.Conventions)
+                    var list = session.Advanced.MoreLikeThis<PostWithContentTransformer.Result>(new MoreLikeThisQuery()
                     {
                         IndexName = index.IndexName,
                         Transformer = transformer.TransformerName,
@@ -120,7 +120,7 @@ namespace SlowTests.Core.Bundles
 
                     WaitForIndexing(store);
 
-                    var list = session.Advanced.MoreLikeThis<User, Users_ByName>(new MoreLikeThisQuery(store.Conventions)
+                    var list = session.Advanced.MoreLikeThis<User, Users_ByName>(new MoreLikeThisQuery()
                     {
                         DocumentId = "users/1",
                         Includes = new[] { "AddressId" },

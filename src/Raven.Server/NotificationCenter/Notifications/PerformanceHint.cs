@@ -8,6 +8,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         private PerformanceHint() : base(NotificationType.PerformanceHint)
         {
         }
+
         public PerformanceHintType HintType { get; private set; }
 
         public string Source { get; private set; }

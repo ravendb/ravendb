@@ -16,6 +16,8 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -93,7 +95,7 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task FacetedQuery(DocumentsOperationContext context, string indexName, OperationCancelToken token)
         {
-            var query = FacetQuery.Parse(HttpContext.Request.Query, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), DocumentConventions.Default);
+            var query = FacetQuery.Parse(HttpContext.Request.Query, GetStart(), GetPageSize(), DocumentConventions.Default);
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
             long? facetsEtag = null;
@@ -171,15 +173,18 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
+            int numberOfResults;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteDocumentQueryResult(context, result, metadataOnly);
+                writer.WriteDocumentQueryResult(context, result, metadataOnly, out numberOfResults);
             }
+
+            AddPagingPerformanceHint(PagingOperationType.Queries, nameof(Query), numberOfResults, indexQuery.PageSize);
         }
 
         private IndexQueryServerSide GetIndexQuery(DocumentsOperationContext context, HttpMethod method)
         {
-            var indexQuery = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), context);
+            var indexQuery = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
 
             if (method == HttpMethod.Post && string.IsNullOrWhiteSpace(indexQuery.Query))
             {
@@ -196,7 +201,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var query = MoreLikeThisQueryServerSide.Create(HttpContext, GetPageSize(Database.Configuration.Core.MaxPageSize), context);
+            var query = MoreLikeThisQueryServerSide.Create(HttpContext, GetPageSize(), context);
             var runner = new QueryRunner(Database, context);
 
             var result = runner.ExecuteMoreLikeThisQuery(indexName, query, context, existingResultEtag, token);
@@ -209,15 +214,18 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
+            int numberOfResults;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteQueryResult(context, result, metadataOnly: false);
+                writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults);
             }
+
+            AddPagingPerformanceHint(PagingOperationType.Queries, nameof(MoreLikeThis), numberOfResults, query.PageSize);
         }
 
         private void Explain(DocumentsOperationContext context, string indexName)
         {
-            var indexQuery = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), context);
+            var indexQuery = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
             var runner = new QueryRunner(Database, context);
 
             var explanations = runner.ExplainDynamicIndexSelection(indexName, indexQuery);
@@ -261,7 +269,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
-            var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(int.MaxValue), context);
+            var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
             var options = GetQueryOperationOptions();
             var token = CreateTimeLimitedOperationToken();
 

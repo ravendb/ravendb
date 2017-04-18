@@ -678,7 +678,7 @@ namespace Sparrow
 
             int allocationSize = length + sizeof(ByteStringStorage);
 
-            _currentlyAllocated += allocationSize;
+           
 
             // This is even bigger than the configured allocation block size. There is no reason why we shouldn't
             // allocate it directly. When released (if released) this will be reused as a segment, ensuring that the context
@@ -696,6 +696,8 @@ namespace Sparrow
 
             // All allocation units are 32 bits aligned. If not we will have a performance issue.
             Debug.Assert(allocationUnit % sizeof(int) == 0);
+
+            _currentlyAllocated += allocationUnit;
 
             // If we can reuse... we retrieve those.
             if (allocationSize <= ByteStringContext.MinBlockSizeInBytes && _internalReusableStringPoolCount[reusablePoolIndex] != 0)
@@ -845,6 +847,7 @@ namespace Sparrow
         public void ReleaseExternal(ref ByteString value)
         {
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
+
             if (value._pointer == null)
                 return;
 
@@ -852,10 +855,10 @@ namespace Sparrow
 
             Debug.Assert(value.IsExternal, "Cannot release as external an internal pointer.");
 
-            value._pointer->Flags = ByteStringType.Disposed;
-
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
             ValidateAndUnregister(value);
+
+            value._pointer->Flags = ByteStringType.Disposed;
 
             // We release the pointer in the appropriate reuse pool.
             if (this._externalFastPoolCount < ExternalFastPoolSize)
@@ -1356,12 +1359,13 @@ namespace Sparrow
             _disposed = true;
 
 #if VALIDATE
-                foreach (var item in _immutableTracker.ToArray())
-                {
-                    var storage = (ByteStringStorage*)item.Value.Item1.ToPointer();
+            /* TODO arek
+            foreach (var item in _immutableTracker.ToArray())
+            {
+                var storage = (ByteStringStorage*)item.Value.Item1.ToPointer();
 
-                    ValidateAndUnregister(storage);
-                }
+                ValidateAndUnregister(storage);
+            } */
 #endif
 
             foreach (var segment in _wholeSegments)

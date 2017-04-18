@@ -821,7 +821,7 @@ this.Value = another.Value;
                 }
 
                 var operation = await store.Operations.SendAsync(new PatchByIndexOperation("TestIndex",
-                    new IndexQuery(store.Conventions) { Query = "Value:1" },
+                    new IndexQuery() { Query = "Value:1" },
                     new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }));
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
@@ -940,7 +940,7 @@ this.Value = another.Value;
                 WaitForIndexing(store);
 
                 var operation = store.Operations.Send(new PatchByIndexOperation("TestIndex",
-                    new IndexQuery(store.Conventions) { Query = "Owner:Bob" },
+                    new IndexQuery() { Query = "Owner:Bob" },
                     new PatchRequest { Script = SampleScript }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(15));

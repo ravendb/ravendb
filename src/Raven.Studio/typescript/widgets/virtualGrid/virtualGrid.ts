@@ -567,6 +567,7 @@ class virtualGrid<T> {
         this.virtualRows.forEach(r => r.reset());
         this.inIncludeSelectionMode = true;
         this.selectionDiff = [];
+        this.syncSelectAll();
 
         this.previousResultsEtag(undefined);
         this.dirtyResults(false);

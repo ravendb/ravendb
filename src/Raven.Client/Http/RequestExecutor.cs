@@ -324,9 +324,9 @@ namespace Raven.Client.Http
                     if (await HandleUnsuccessfulResponse(choosenNode, context, command, request, response, url).ConfigureAwait(false) == false)
                     {
                         if (command.FailedNodes.Count == 0) //precaution, should never happen at this point
-                            throw new InvalidOperationException("Received unsuccessful resonse and couldn't recover from it. Also, no record of exceptions per failed nodes. This is weird and should not happen.");
+                            throw new InvalidOperationException("Received unsuccessful response and couldn't recover from it. Also, no record of exceptions per failed nodes. This is weird and should not happen.");
 
-                        throw new AllTopologyNodesDownException("Received unsuccessful resonse and couldn't recover from it.",
+                        throw new AllTopologyNodesDownException("Received unsuccessful response and couldn't recover from it.",
                             new AggregateException(command.FailedNodes.Select(x => new UnsuccessfulRequestException(x.Key.Url, x.Value))));
                     }
                     return; // we either handled this already in the unsuccessul response or we are throwing

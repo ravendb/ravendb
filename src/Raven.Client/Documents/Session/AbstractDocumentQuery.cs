@@ -1405,7 +1405,7 @@ If you really want to do in memory filtering on the data returned from the query
                 if (IndexName == "dynamic" || IndexName.StartsWith("dynamic/"))
                     throw new NotSupportedException("Dynamic indexes do not support spatial queries. A static index, with spatial field(s), must be defined.");
 
-                var spatialQuery = new SpatialIndexQuery(_conventions)
+                var spatialQuery = new SpatialIndexQuery
                 {
                     IsDistinct = _isDistinct,
                     Query = query,
@@ -1443,7 +1443,7 @@ If you really want to do in memory filtering on the data returned from the query
                 return spatialQuery;
             }
 
-            var indexQuery = new IndexQuery(_conventions)
+            var indexQuery = new IndexQuery
             {
                 IsDistinct = _isDistinct,
                 Query = query,

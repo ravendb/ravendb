@@ -126,7 +126,7 @@ namespace Voron.Impl.Journal
                 }
                 catch (Exception e)
                 {
-                    _env.CatastrophicFailure = ExceptionDispatchInfo.Capture(e);
+                    _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
                     throw;
                 }
             }
@@ -147,7 +147,7 @@ namespace Voron.Impl.Journal
                     }
                     catch (Exception e)
                     {
-                        _env.CatastrophicFailure = ExceptionDispatchInfo.Capture(e);
+                        _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
                         throw;
                     }
                 }

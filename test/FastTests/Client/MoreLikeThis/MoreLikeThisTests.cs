@@ -113,7 +113,7 @@ namespace FastTests.Client.MoreLikeThis
 
             using (var session = _store.OpenSession())
             {
-                var list = session.Advanced.MoreLikeThis<Transformer1, Transformer1.Result, DataIndex>(new MoreLikeThisQuery(_store.Conventions)
+                var list = session.Advanced.MoreLikeThis<Transformer1, Transformer1.Result, DataIndex>(new MoreLikeThisQuery()
                 {
                     DocumentId = id,
                     Fields = new[] { "Body" }
@@ -150,7 +150,7 @@ namespace FastTests.Client.MoreLikeThis
 
             using (var session = _store.OpenSession())
             {
-                var list = session.Advanced.MoreLikeThis<Transformer2, Transformer2.Result, DataIndex>(new MoreLikeThisQuery(_store.Conventions)
+                var list = session.Advanced.MoreLikeThis<Transformer2, Transformer2.Result, DataIndex>(new MoreLikeThisQuery()
                 {
                     DocumentId = id,
                     Fields = new[] { "Body" }
@@ -194,7 +194,7 @@ namespace FastTests.Client.MoreLikeThis
 
             using (var session = _store.OpenSession())
             {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery(_store.Conventions)
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
                 {
                     DocumentId = id,
                     Fields = new[] { "Body" },
@@ -360,7 +360,7 @@ namespace FastTests.Client.MoreLikeThis
 
             using (var session = _store.OpenSession())
             {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery(_store.Conventions)
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
                 {
                     DocumentId = key,
                     Fields = new[] { "Body" }
@@ -491,7 +491,7 @@ namespace FastTests.Client.MoreLikeThis
 
             using (var session = _store.OpenSession())
             {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery(_store.Conventions)
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
                 {
                     DocumentId = key,
                     Fields = new[] { "Body" },
@@ -527,7 +527,7 @@ namespace FastTests.Client.MoreLikeThis
             using (var session = _store.OpenSession())
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
-                    new MoreLikeThisQuery(_store.Conventions)
+                    new MoreLikeThisQuery()
                     {
                         DocumentId = key,
                         Fields = new[] { "Body" },
@@ -572,7 +572,7 @@ namespace FastTests.Client.MoreLikeThis
 
             using (var session = _store.OpenSession())
             {
-                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery(_store.Conventions)
+                var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
                 {
                     DocumentId = key,
                     StopWordsDocumentId = "Config/Stopwords",
@@ -650,7 +650,7 @@ namespace FastTests.Client.MoreLikeThis
         {
             using (var session = _store.OpenSession())
             {
-                var list = session.Advanced.MoreLikeThis<T, TIndex>(new MoreLikeThisQuery(_store.Conventions)
+                var list = session.Advanced.MoreLikeThis<T, TIndex>(new MoreLikeThisQuery()
                 {
                     DocumentId = documentKey,
                     Fields = new[] { "Body" }
@@ -664,7 +664,7 @@ namespace FastTests.Client.MoreLikeThis
         {
             using (var session = _store.OpenAsyncSession())
             {
-                var list = await session.Advanced.MoreLikeThisAsync<T, TIndex>(new MoreLikeThisQuery(_store.Conventions)
+                var list = await session.Advanced.MoreLikeThisAsync<T, TIndex>(new MoreLikeThisQuery()
                 {
                     DocumentId = documentKey,
                     Fields = new[] { "Body" }

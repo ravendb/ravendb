@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Queries.Spatial
         /// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
         /// </summary>
         /// <param name="query">The query.</param>
-        public SpatialIndexQuery(IndexQuery query) : this(query.Conventions)
+        public SpatialIndexQuery(IndexQuery query)
         {
             Query = query.Query;
             Start = query.Start;
@@ -81,7 +81,7 @@ namespace Raven.Client.Documents.Queries.Spatial
         /// <summary>
         /// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
         /// </summary>
-        public SpatialIndexQuery(DocumentConventions conventions) : base(conventions)
+        public SpatialIndexQuery()
         {
             DistanceErrorPercentage = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct;
         }

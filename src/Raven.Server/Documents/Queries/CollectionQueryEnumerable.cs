@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Documents.Queries.Results;
@@ -78,6 +79,10 @@ namespace Raven.Server.Documents.Queries
                     _alreadySeenProjections = new HashSet<ulong>();
 
                 _ids = ExtractIdsFromQuery(query);
+
+                if (_ids != null && _ids.Count > BooleanQuery.MaxClauseCount)
+                    throw new BooleanQuery.TooManyClauses();
+
                 _sort = ExtractSortFromQuery(query);
             }
 

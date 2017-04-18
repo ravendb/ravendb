@@ -33,7 +33,7 @@ namespace Raven.Client.Server.Operations
 
         public bool IsAdmin { get; set; }
 
-        public int? Errors { get; set; }
+        public int? IndexingErrors { get; set; }
 
         public int? Alerts { get; set; }
 

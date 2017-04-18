@@ -9,6 +9,8 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Exceptions.Versioning;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -45,10 +47,10 @@ namespace Raven.Server.Documents.Handlers
                 if (revision != null)
                 {
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    { 
+                    {
                         writer.WriteStartObject();
                         writer.WritePropertyName("Results");
-                        writer.WriteDocuments(context, new [] { revision }, false);
+                        writer.WriteDocuments(context, new[] { revision }, metadataOnly: false, numberOfResults: out int _);
                         writer.WriteEndObject();
                     }
                 }
@@ -73,9 +75,9 @@ namespace Raven.Server.Documents.Handlers
                 var versioningStorage = Database.BundleLoader.VersioningStorage;
 
                 int start = GetStart();
-                int take = GetPageSize(Database.Configuration.Core.MaxPageSize);
-                var result = versioningStorage.GetRevisions(context, key, start, take);
-                var revisions = result.revisions;
+                int pageSize = GetPageSize();
+                var result = versioningStorage.GetRevisions(context, key, start, pageSize);
+                var revisions = result.Revisions;
 
                 long actualEtag = revisions.Length == 0 ? -1 : revisions[0].Etag;
                 if (GetLongFromHeaders("If-None-Match") == actualEtag)
@@ -86,18 +88,21 @@ namespace Raven.Server.Documents.Handlers
 
                 HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
 
+                int count;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
-                    writer.WriteDocuments(context, revisions, metadataOnly);
+                    writer.WriteDocuments(context, revisions, metadataOnly, out count);
 
                     writer.WriteComma();
 
                     writer.WritePropertyName("TotalResults");
-                    writer.WriteInteger(result.count);
+                    writer.WriteInteger(result.Count);
                     writer.WriteEndObject();
                 }
+
+                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), count, pageSize);
             }
 
             return Task.CompletedTask;

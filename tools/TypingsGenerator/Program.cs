@@ -25,6 +25,7 @@ using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Documents.PeriodicExport;
+using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
@@ -50,7 +51,7 @@ namespace TypingsGenerator
         {
             Directory.CreateDirectory(TargetDirectory);
 
-            var scripter = new Scripter()
+            var scripter = new CustomScripter()
                 .UsingFormatter(new TsFormatter
                 {
                     EnumsAsString = true
@@ -93,6 +94,7 @@ namespace TypingsGenerator
 
             scripter.AddType(typeof(DatabaseRecord));
             scripter.AddType(typeof(DatabaseStatistics));
+            scripter.AddType(typeof(FooterStatistics));
             scripter.AddType(typeof(IndexDefinition));
             scripter.AddType(typeof(PutIndexResult));
 
@@ -116,6 +118,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OperationStatusChange));
             scripter.AddType(typeof(DeterminateProgress));
             scripter.AddType(typeof(IndeterminateProgress));
+            scripter.AddType(typeof(BulkOperationResult));
             scripter.AddType(typeof(OperationExceptionResult));
             scripter.AddType(typeof(DocumentChange));
             scripter.AddType(typeof(IndexChange));
@@ -176,12 +179,16 @@ namespace TypingsGenerator
             scripter.AddType(typeof(UserRegistrationInfo));
             scripter.AddType(typeof(LicenseStatus));
 
+            // feedback form
+            scripter.AddType(typeof(FeedbackForm));
+
             // database admin
             scripter.AddType(typeof(DatabaseDeleteResult));
 
             // io metrics stats
             scripter.AddType(typeof(IOMetricsHistoryStats));
             scripter.AddType(typeof(IOMetricsRecentStats));
+            scripter.AddType(typeof(IOMetricsRecentStatsAdditionalTypes));
             scripter.AddType(typeof(IOMetricsFileStats));
             scripter.AddType(typeof(IOMetricsEnvironment));
             scripter.AddType(typeof(IOMetricsResponse));

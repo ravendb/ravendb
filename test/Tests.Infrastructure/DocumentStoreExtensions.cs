@@ -65,7 +65,7 @@ namespace FastTests
                 return AsyncHelpers.RunSync(() => PutAsync(id, etag, data, metadata));
             }
 
-            public async Task<PutResult> PutAsync(string id, long? etag, object data, Dictionary<string, object> metadata, CancellationToken cancellationToken = default(CancellationToken))
+            public async Task<PutResult> PutAsync(string id, long? etag, object data, Dictionary<string, object> metadata = null, CancellationToken cancellationToken = default(CancellationToken))
             {
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));

@@ -3,11 +3,9 @@
 import appUrl = require("common/appUrl");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
-import app = require("durandal/app");
 import changeSubscription = require("common/changeSubscription");
 import oauthContext = require("common/oauthContext");
 import changesContext = require("common/changesContext");
-import confirmationDialog = require("viewmodels/common/confirmationDialog");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import document = require("models/database/documents/document");
 import downloader = require("common/downloader");
@@ -93,9 +91,9 @@ class viewModelBase {
     }
 
     getPageHostDimenensions(): [number, number] {
-        const $pageHostRoot = $("#page-host-root");
+        const $pageHostRoot = $(".dynamic-container");
 
-        return [$pageHostRoot.width(), $pageHostRoot.height()];
+        return [$pageHostRoot.innerWidth(), $pageHostRoot.innerHeight()];
     }
 
     attached() {
@@ -266,7 +264,13 @@ class viewModelBase {
         const isDirty = this.dirtyFlag().isDirty();
         if (isDirty) {
             this.confirmationMessage(title, confirmationMessage)
-                .done(() => deferred.resolve());
+                .done((result) => {
+                    if (result.can) {
+                        deferred.resolve();
+                    } else {
+                        deferred.reject();
+                    }
+                });
         } else {
             deferred.resolve();
         }

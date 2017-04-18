@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Handlers
         public Task GetAll()
         {
             var start = GetStart();
-            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
+            var pageSize = GetPageSize();
             var history = GetBoolValueQueryString("history", required: false) ?? false;
             var running = GetBoolValueQueryString("running", required: false) ?? false;
             var id = GetLongQueryString("id", required: false);

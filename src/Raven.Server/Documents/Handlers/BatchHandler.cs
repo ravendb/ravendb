@@ -221,7 +221,7 @@ namespace Raven.Server.Documents.Handlers
                 return sb.ToString();
             }
 
-            public override void Execute(DocumentsOperationContext context)
+            public override int Execute(DocumentsOperationContext context)
             {
                 Reply = new DynamicJsonArray();
                 for (int i = ParsedCommands.Offset; i < ParsedCommands.Count; i++)
@@ -320,6 +320,7 @@ namespace Raven.Server.Documents.Handlers
                             break;
                     }
                 }
+                return Reply.Count;
             }
 
             public void Dispose()

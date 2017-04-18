@@ -417,7 +417,7 @@ namespace Raven.Server.Documents
                     [nameof(Size.HumaneSize)] = size.HumaneSize,
                     [nameof(Size.SizeInBytes)] = size.SizeInBytes
                 },
-                [nameof(DatabaseInfo.Errors)] = IndexStore.GetIndexes().Sum(index => index.GetErrors().Count),
+                [nameof(DatabaseInfo.IndexingErrors)] = IndexStore.GetIndexes().Sum(index => index.GetErrors().Count),
                 [nameof(DatabaseInfo.Alerts)] = NotificationCenter.GetAlertCount(),
                 [nameof(DatabaseInfo.UpTime)] = null, //it is shutting down
                 [nameof(DatabaseInfo.BackupInfo)] = BundleLoader?.GetBackupInfo(),
@@ -512,7 +512,12 @@ namespace Raven.Server.Documents
 
         public void StateChanged()
         {
-            
+        }
+        
+        public IEnumerable<DatabasePerformanceMetrics> GetAllPerformanceMetrics()
+        {
+            yield return TxMerger.GeneralWaitPerformanceMetrics;
+            yield return TxMerger.TransactionPerformanceMetrics;
         }
     }
 

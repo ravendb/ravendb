@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
@@ -96,6 +97,7 @@ namespace Raven.Client.Documents.Operations
                 case OperationStatus.Faulted:
                     _work = false;
                     var exceptionResult = (OperationExceptionResult)change.State.Result;
+                    Debug.Assert(exceptionResult!=null);
                     _result.TrySetException(ExceptionDispatcher.Get(exceptionResult.Message, exceptionResult.Error, exceptionResult.Type, exceptionResult.StatusCode));
                     break;
                 case OperationStatus.Canceled:

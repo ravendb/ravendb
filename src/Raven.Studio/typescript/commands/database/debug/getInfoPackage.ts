@@ -28,11 +28,10 @@ class getInfoPackage extends commandBase {
                 var now = d3.time.format("%Y-%m-%d_%H:%M:%S")(new Date());
                 var filename = isSystem ? "Admin-Debug-Info-" + now + ".zip" : "Debug-Info-" + this.db.name + "-" + now + ".zip";
 
-                zipUtils.getBinaryContent(url, function (err: any, data: any) {
+                zipUtils.getBinaryContent(url, (err: any, data: any) => {
                     if (err) {
                         task.reject(err);
                     } else {
-
                         task.resolve(data, filename);
                     }            
                 });

@@ -41,7 +41,7 @@ class hitTest {
         this.onToggleIndex = onToggleIndex;
         this.handleTrackTooltip = handleTrackTooltip;
         this.handleGapTooltip = handleGapTooltip;
-        this.removeTooltip = removeTooltip;        
+        this.removeTooltip = removeTooltip;
     }
 
     registerTrackItem(x: number, y: number, width: number, height: number, element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation) {
@@ -213,6 +213,7 @@ class indexPerformance extends viewModelBase {
 
     private liveViewClient = ko.observable<liveIndexPerformanceWebSocketClient>();
     private autoScroll = ko.observable<boolean>(false);
+    private clearSelectionVisible = ko.observable<boolean>(false);
 
     private indexNames = ko.observableArray<string>();
     private filteredIndexNames = ko.observableArray<string>();
@@ -304,12 +305,10 @@ class indexPerformance extends viewModelBase {
         [this.totalWidth, this.totalHeight] = this.getPageHostDimenensions();
         this.totalWidth -= 1;
 
-        this.totalHeight -= 58; // substract toolbar height
-
         this.initCanvases();
 
         this.hitTest.init(this.svg,
-            (indexName) => this.onToggleIndex(indexName),          
+            (indexName) => this.onToggleIndex(indexName),
             (item, x, y) => this.handleTrackTooltip(item, x, y),
             (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
             () => this.hideTooltip());
@@ -327,7 +326,7 @@ class indexPerformance extends viewModelBase {
         this.inProgressCanvas = metricsContainer
             .append("canvas")
             .attr("width", this.totalWidth + 1)
-            .attr("height", this.totalHeight - indexPerformance.brushSectionHeight)
+            .attr("height", this.totalHeight - indexPerformance.brushSectionHeight - indexPerformance.axisHeight)
             .style("top", (indexPerformance.brushSectionHeight + indexPerformance.axisHeight) + "px");
 
         const inProgressCanvasNode = this.inProgressCanvas.node() as HTMLCanvasElement;
@@ -724,6 +723,8 @@ class indexPerformance extends viewModelBase {
 
     private onZoom() {
         this.autoScroll(false);
+        this.clearSelectionVisible(true);
+
         if (!this.brushAndZoomCallbacksDisabled) {
             this.brush.extent(this.xNumericScale.domain() as [number, number]);
             this.brushContainer
@@ -734,6 +735,8 @@ class indexPerformance extends viewModelBase {
     }
 
     private onBrush() {
+        this.clearSelectionVisible(!this.brush.empty());
+
         if (!this.brushAndZoomCallbacksDisabled) {
             this.xNumericScale.domain((this.brush.empty() ? this.xBrushNumericScale.domain() : this.brush.extent()) as [number, number]);
             this.zoom.x(this.xNumericScale);
@@ -1094,7 +1097,8 @@ class indexPerformance extends viewModelBase {
 
             this.tooltip
                 .style("left", (x + 10) + "px")
-                .style("top", (y + 10) + "px");
+                .style("top", (y + 10) + "px")
+                .style('display', undefined);
 
             this.tooltip
                 .transition()
@@ -1195,6 +1199,7 @@ class indexPerformance extends viewModelBase {
 
         brushAction(this.brush);
         this.brushContainer.call(this.brush);
+        this.clearSelectionVisible(!this.brush.empty());
 
         this.brushAndZoomCallbacksDisabled = false;
     }
@@ -1215,6 +1220,14 @@ class indexPerformance extends viewModelBase {
             }
             return value;
         });
+    }
+
+    clearBrush() {
+        this.autoScroll(false);
+        this.brush.clear();
+        this.brushContainer.call(this.brush);
+
+        this.onBrush();
     }
 
 }

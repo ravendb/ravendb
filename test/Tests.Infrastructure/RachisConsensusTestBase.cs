@@ -118,7 +118,12 @@ namespace Tests.Infrastructure
         
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : _count;
             var rachis = new RachisConsensus<CountingStateMachine>(seed);
-            rachis.Initialize(new StorageEnvironment(server));
+            var storageEnvironment = new StorageEnvironment(server);
+            rachis.Initialize(storageEnvironment);
+            rachis.OnDispose += (sender, args) =>
+            {
+                storageEnvironment.Dispose();
+            };
             if (bootstrap)
             {
                 rachis.Bootstarp(url);

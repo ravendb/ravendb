@@ -41,7 +41,9 @@ class connectedDocuments {
     document: KnockoutObservable<document>;
     db: KnockoutObservable<database>;
     inReadOnlyMode: KnockoutObservable<boolean>;
-    searchInput = ko.observable<string>(""); //TODO: not yet working!
+    searchInput = ko.observable<string>("");
+    searchInputVisible: KnockoutObservable<boolean>;
+    clearSearchInputSubscription: KnockoutSubscription;
 
     docsColumns: virtualColumn[];
     attachmentsColumns: virtualColumn[];
@@ -98,6 +100,13 @@ class connectedDocuments {
             const readOnly = inReadOnlyMode();
             return onAttachmentsPane && readOnly;
         });
+
+        this.searchInputVisible = ko.pureComputed(() => !this.isRevisionsActive() && !this.isRecentActive());
+        this.searchInput.throttle(250).subscribe(() => {
+            this.gridController().reset(false);
+        });
+
+        this.clearSearchInputSubscription = connectedDocuments.currentTab.subscribe(() => this.searchInput(""));
     }
 
     private initColumns() {
@@ -142,6 +151,10 @@ class connectedDocuments {
         connectedDocuments.currentTab.subscribe(() => this.gridController().reset());
     }
 
+    dispose() {
+        this.clearSearchInputSubscription.dispose();
+    }
+
     private fetchCurrentTabItems(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument | attachmentItem>> {
         const doc = this.document();
         if (!doc) {
@@ -163,8 +176,14 @@ class connectedDocuments {
 
     fetchRelatedDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
         const deferred = $.Deferred<pagedResult<connectedDocument>>();
+        const search = this.searchInput().toLocaleLowerCase();
 
-        const relatedDocumentsCandidates: string[] = documentHelpers.findRelatedDocumentsCandidates(this.document());
+        let relatedDocumentsCandidates: string[] = documentHelpers.findRelatedDocumentsCandidates(this.document());
+
+        if (search) {
+            relatedDocumentsCandidates = relatedDocumentsCandidates.filter(x => x.includes(search));
+        }
+
         const docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.db());
         docIDsVerifyCommand.execute()
             .done((verifiedIDs: string[]) => {
@@ -180,8 +199,14 @@ class connectedDocuments {
 
     fetchAttachments(skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> {
         const doc = this.document();
+        const search = this.searchInput().toLocaleLowerCase();
 
-        const attachments: documentAttachmentDto[] = doc.__metadata.attachments || [];
+        let attachments: documentAttachmentDto[] = doc.__metadata.attachments || [];
+
+        if (search) {
+            attachments = attachments.filter(file => file.Name.includes(search));
+        }
+
         const mappedFiles = attachments.map(file => ({
             documentId: doc.getId(),
             name: file.Name,
@@ -300,6 +325,7 @@ class connectedDocuments {
     }
 
     private afterUpload() {
+        this.searchInput("");
         this.loadDocumentAction(this.document().getId());
     }
 

@@ -120,7 +120,7 @@ namespace Voron.Impl
             {
                 _pager.UnprotectPageRange(allocationInfo.BaseAddress, (ulong)allocationInfo.Size);
 
-                for (int i = 0; i < allocationInfo.Size; i++)
+                for (long i = 0; i < allocationInfo.Size; i++)
                 {
                     var b = *(allocationInfo.BaseAddress + i);
                     *(allocationInfo.BaseAddress + i) = b;
@@ -131,7 +131,7 @@ namespace Voron.Impl
 
             _pager.UnprotectPageRange(MapBase, (ulong)size);
 
-            for (int i = 0; i < size; i++)
+            for (long i = 0; i < size; i++)
             {
                 var b = *(MapBase + i);
                 *(MapBase + i) = b;

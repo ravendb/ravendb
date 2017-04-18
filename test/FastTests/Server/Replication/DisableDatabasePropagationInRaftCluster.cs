@@ -87,7 +87,7 @@ namespace FastTests.Server.Replication
                     //note: the handler that receives DisableDatabaseToggleOperation "waits" until the cluster has a quorum
                     //thus, session.Load() operation would fail now
 
-                    var e = Assert.Throws<InvalidOperationException>(() => session.Load<User>("users/1"));
+                    var e = Assert.Throws<AllTopologyNodesDownException>(() => session.Load<User>("users/1"));
                     Assert.IsType<AggregateException>(e.InnerException);
                     var ae = e.InnerException as AggregateException;
                     foreach (var ie in ae.InnerExceptions)

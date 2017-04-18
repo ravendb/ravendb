@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Sparrow;
@@ -82,6 +83,11 @@ namespace Raven.Server.Documents.Handlers
                 result.Environments.Add(GetIoMetrics(storageEnvironment.Environment));
             }
 
+            foreach (var metrics in documentDatabase.GetAllPerformanceMetrics())
+            {
+                result.Performances.Add(metrics.Buffer);
+            }
+
             return result;
         }
 
@@ -120,9 +126,9 @@ namespace Raven.Server.Documents.Handlers
                     Start = historyMetric.TotalTimeStart.GetDefaultRavenFormat(),
                     End = historyMetric.TotalTimeEnd.GetDefaultRavenFormat(),
                     Size = historyMetric.TotalSize,
-                    HumanSize = Sizes.Humane(historyMetric.TotalSize),
+                    HumaneSize = Sizes.Humane(historyMetric.TotalSize),
                     FileSize = historyMetric.TotalFileSize,
-                    HumanFileSize = Sizes.Humane(historyMetric.TotalFileSize),
+                    HumaneFileSize = Sizes.Humane(historyMetric.TotalFileSize),
                     Duration = Math.Round((historyMetric.TotalTimeEnd - historyMetric.TotalTimeStart).TotalMilliseconds, 2),
                     ActiveDuration = Math.Round(historyMetric.TotalTime.TotalMilliseconds, 2),
                     MaxDuration = Math.Round(historyMetric.MaxTime.TotalMilliseconds, 2),
@@ -130,7 +136,7 @@ namespace Raven.Server.Documents.Handlers
                     MaxAcceleration = historyMetric.MaxAcceleration,
                     MinAcceleration = historyMetric.MinAcceleration,
                     CompressedSize = historyMetric.TotalCompressedSize,
-                    HumanCompressedSize = Sizes.Humane(historyMetric.TotalCompressedSize),
+                    HumaneCompressedSize = Sizes.Humane(historyMetric.TotalCompressedSize),
                     Type = historyMetric.Type
                 });
             }
@@ -146,10 +152,10 @@ namespace Raven.Server.Documents.Handlers
                 Size = recentMetric.Size,
                 Acceleration = recentMetric.Acceleration,
                 CompressedSize = recentMetric.CompressedSize,
-                HumanCompressedSize = Sizes.Humane(recentMetric.CompressedSize),
-                HumanSize = Sizes.Humane(recentMetric.Size),
+                HumaneCompressedSize = Sizes.Humane(recentMetric.CompressedSize),
+                HumaneSize = Sizes.Humane(recentMetric.Size),
                 FileSize = recentMetric.FileSize,
-                HumanFileSize = Sizes.Humane(recentMetric.FileSize),
+                HumaneFileSize = Sizes.Humane(recentMetric.FileSize),
                 Duration = Math.Round(recentMetric.Duration.TotalMilliseconds, 2),
                 Type = recentMetric.Type,
             };
@@ -161,9 +167,9 @@ namespace Raven.Server.Documents.Handlers
         public string Start { get; set; }
         public string End { get; set; }
         public long Size { get; set; }
-        public string HumanSize { get; set; }
+        public string HumaneSize { get; set; }
         public long FileSize { get; set; }
-        public string HumanFileSize { get; set; }
+        public string HumaneFileSize { get; set; }
         public double Duration { get; set; }
         public double ActiveDuration { get; set; }
         public double MaxDuration { get; set; }
@@ -171,7 +177,7 @@ namespace Raven.Server.Documents.Handlers
         public int MaxAcceleration { get; set; }
         public int MinAcceleration { get; set; }
         public long CompressedSize { get; set; }
-        public string HumanCompressedSize { get; set; }
+        public string HumaneCompressedSize { get; set; }
         public IoMetrics.MeterType Type { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -181,9 +187,9 @@ namespace Raven.Server.Documents.Handlers
                 [nameof(Start)] = Start,
                 [nameof(End)] = End,
                 [nameof(Size)] = Size,
-                [nameof(HumanSize)] = HumanSize,
+                [nameof(HumaneSize)] = HumaneSize,
                 [nameof(FileSize)] = FileSize,
-                [nameof(HumanFileSize)] = HumanFileSize,
+                [nameof(HumaneFileSize)] = HumaneFileSize,
                 [nameof(Duration)] = Duration,
                 [nameof(ActiveDuration)] = ActiveDuration,
                 [nameof(MaxDuration)] = MaxDuration,
@@ -191,19 +197,19 @@ namespace Raven.Server.Documents.Handlers
                 [nameof(MaxAcceleration)] = MaxAcceleration,
                 [nameof(MinAcceleration)] = MinAcceleration,
                 [nameof(CompressedSize)] = CompressedSize,
-                [nameof(HumanCompressedSize)] = HumanCompressedSize,
+                [nameof(HumaneCompressedSize)] = HumaneCompressedSize,
                 [nameof(Type)] = Type,
             };
         }
     }
 
-    public class IOMetricsRecentStatsAdditionalTypes
+    public class IOMetricsRecentStatsAdditionalTypes : IOMetricsRecentStats
     {
         public long OriginalSize;
-        public string HumanOriginalSize;
+        public string HumaneOriginalSize;
         public long CompressedSize;
-        public string HumanCompressedSize;
-        public string CompressionRatio;
+        public string HumaneCompressedSize;
+        public double CompressionRatio;
         public int Acceleration;
     }
 
@@ -211,15 +217,15 @@ namespace Raven.Server.Documents.Handlers
     {
         public string Start { get; set; }
         public long Size { get; set; }
-        public string HumanSize { get; set; }
+        public string HumaneSize { get; set; }
 
         public long CompressedSize { get; set; }
-        public string HumanCompressedSize { get; set; }
+        public string HumaneCompressedSize { get; set; }
 
         public int Acceleration { get; set; }
 
         public long FileSize { get; set; }
-        public string HumanFileSize { get; set; }
+        public string HumaneFileSize { get; set; }
         public double Duration { get; set; }
         public IoMetrics.MeterType Type { get; set; }
 
@@ -228,16 +234,15 @@ namespace Raven.Server.Documents.Handlers
             switch (Type)
             {
                 case IoMetrics.MeterType.Compression:
-                    var compressionRatio = $"{CompressedSize / (double)Size:P1}";
                     return new DynamicJsonValue
                     {
                         [nameof(Start)] = Start,
                         [nameof(IOMetricsRecentStatsAdditionalTypes.OriginalSize)] = Size,
-                        [nameof(IOMetricsRecentStatsAdditionalTypes.HumanOriginalSize)] = HumanSize,
+                        [nameof(IOMetricsRecentStatsAdditionalTypes.HumaneOriginalSize)] = HumaneSize,
                         [nameof(IOMetricsRecentStatsAdditionalTypes.CompressedSize)] = CompressedSize,
-                        [nameof(IOMetricsRecentStatsAdditionalTypes.HumanCompressedSize)] = HumanCompressedSize,
+                        [nameof(IOMetricsRecentStatsAdditionalTypes.HumaneCompressedSize)] = HumaneCompressedSize,
                         [nameof(IOMetricsRecentStatsAdditionalTypes.Acceleration)] = Acceleration,
-                        [nameof(IOMetricsRecentStatsAdditionalTypes.CompressionRatio)] = compressionRatio,
+                        [nameof(IOMetricsRecentStatsAdditionalTypes.CompressionRatio)] = CompressedSize * 1.0 / Size,
                         [nameof(Duration)] = Duration,
                         [nameof(Type)] = Type
                     };
@@ -246,14 +251,13 @@ namespace Raven.Server.Documents.Handlers
                     {
                         [nameof(Start)] = Start,
                         [nameof(Size)] = Size,
-                        [nameof(HumanSize)] = HumanSize,
+                        [nameof(HumaneSize)] = HumaneSize,
                         [nameof(FileSize)] = FileSize,
-                        [nameof(HumanFileSize)] = HumanFileSize,
+                        [nameof(HumaneFileSize)] = HumaneFileSize,
                         [nameof(Duration)] = Duration,
                         [nameof(Type)] = Type
                     };
             }
-
         }
     }
 
@@ -313,15 +317,18 @@ namespace Raven.Server.Documents.Handlers
         public IOMetricsResponse()
         {
             Environments = new List<IOMetricsEnvironment>();
+            Performances = new List<PerformanceMetrics>();
         }
 
+        public List<PerformanceMetrics> Performances { get; set; }
         public List<IOMetricsEnvironment> Environments { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Environments)] = new DynamicJsonArray(Environments.Select(x => x.ToJson()))
+                [nameof(Environments)] = new DynamicJsonArray(Environments.Select(x => x.ToJson())),
+                [nameof(Performances)] = new DynamicJsonArray(Performances.Select(x => x.ToJson()))
             };
         }
     }
