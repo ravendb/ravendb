@@ -15,6 +15,8 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.
     private pendingDataToApply: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = [];
     private updatesPaused = false;
 
+    loading = ko.observable<boolean>(true);
+
     constructor(db: database, onData: (data: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) => void) {
         super(db);
         this.onData = onData;
@@ -47,7 +49,13 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.
         this.onData(this.mergedData);
     }
 
+    protected onHeartBeat() {
+        this.loading(false);
+    }
+
     protected onMessage(e: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) {
+        this.loading(false);
+
         if (this.updatesPaused) {
             this.pendingDataToApply.push(...e);
         } else {
