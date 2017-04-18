@@ -58,17 +58,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private const string TrueString = "true";
 
-        private const string FalseString = "false";
-
-        private static readonly FieldCacheKeyEqualityComparer Comparer = new FieldCacheKeyEqualityComparer();
+        private const string FalseString = "false";       
 
         private readonly Field _reduceValueField = new Field(Constants.Documents.Indexing.Fields.ReduceValueFieldName, new byte[0], 0, 0, Field.Store.YES);
 
         protected readonly ConversionScope Scope = new ConversionScope();
 
-        private readonly Dictionary<FieldCacheKey, CachedFieldItem<Field>> _fieldsCache = new Dictionary<FieldCacheKey, CachedFieldItem<Field>>(Comparer);
+        private readonly Dictionary<int, CachedFieldItem<Field>> _fieldsCache = new Dictionary<int, CachedFieldItem<Field>>();
 
-        private readonly Dictionary<FieldCacheKey, CachedFieldItem<NumericField>> _numericFieldsCache = new Dictionary<FieldCacheKey, CachedFieldItem<NumericField>>(Comparer);
+        private readonly Dictionary<int, CachedFieldItem<NumericField>> _numericFieldsCache = new Dictionary<int, CachedFieldItem<NumericField>>();
 
         public readonly LuceneDocument Document = new LuceneDocument();
 
@@ -481,12 +479,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected Field GetOrCreateField(string name, string value, LazyStringValue lazyValue, BlittableJsonReaderObject blittableValue, Field.Store store, Field.Index index, Field.TermVector termVector)
         {
-            var cacheKey = new FieldCacheKey(name, index, store, termVector, _multipleItemsSameFieldCount.ToArray());
+            int cacheKey = FieldCacheKey.GetHashCode(name, index, store, termVector, _multipleItemsSameFieldCount);
 
             Field field;
-            CachedFieldItem<Field> cached;
-
-            if (_fieldsCache.TryGetValue(cacheKey, out cached) == false)
+            if (_fieldsCache.TryGetValue(cacheKey, out CachedFieldItem<Field> cached) == false ||
+                !cached.Key.IsSame(name, index, store, termVector, _multipleItemsSameFieldCount))
             {
                 LazyStringReader stringReader = null;
                 BlittableObjectReader blittableReader = null;
@@ -524,6 +521,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 _fieldsCache[cacheKey] = new CachedFieldItem<Field>
                 {
+                    Key = new FieldCacheKey(name, index, store, termVector, _multipleItemsSameFieldCount.ToArray()),
                     Field = field,
                     LazyStringReader = stringReader,
                     BlittableObjectReader = blittableReader
@@ -556,11 +554,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             var fieldNameLong = field.Name + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
 
             var multipleItemsSameFieldCountArray = _multipleItemsSameFieldCount.ToArray();
-            var cacheKeyDouble = new FieldCacheKey(fieldNameDouble, null, storage, termVector, multipleItemsSameFieldCountArray);
-            var cacheKeyLong = new FieldCacheKey(fieldNameLong, null, storage, termVector, multipleItemsSameFieldCountArray);
 
-            var numericFieldDouble = GetNumericFieldFromCache(cacheKeyDouble, storage);
-            var numericFieldLong = GetNumericFieldFromCache(cacheKeyLong, storage);
+            var numericFieldDouble = GetNumericFieldFromCache(fieldNameDouble, null, storage, termVector, multipleItemsSameFieldCountArray);
+            var numericFieldLong = GetNumericFieldFromCache(fieldNameLong, null, storage, termVector, multipleItemsSameFieldCountArray);
 
             double doubleValue;
             long longValue;
@@ -578,15 +574,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        private NumericField GetNumericFieldFromCache(FieldCacheKey cacheKey, Field.Store storage)
+        private NumericField GetNumericFieldFromCache(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
         {
-            CachedFieldItem<NumericField> cached;
+            int cacheKey = FieldCacheKey.GetHashCode(name, index, store, termVector, _multipleItemsSameFieldCount);
+
             NumericField numericField;
-            if (_numericFieldsCache.TryGetValue(cacheKey, out cached) == false)
+            if (_numericFieldsCache.TryGetValue(cacheKey, out CachedFieldItem<NumericField> cached) == false ||
+                !cached.Key.IsSame(name, index, store, termVector, _multipleItemsSameFieldCount))
             {
                 _numericFieldsCache[cacheKey] = new CachedFieldItem<NumericField>
                 {
-                    Field = numericField = new NumericField(CreateFieldName(cacheKey.name), storage, true)
+                    Key = new FieldCacheKey(name, index, store, termVector, _multipleItemsSameFieldCount.ToArray()),
+                    Field = numericField = new NumericField(CreateFieldName(name), store, true)
                 };
             }
             else
