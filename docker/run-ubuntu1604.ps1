@@ -16,6 +16,10 @@ if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
     write-host "Reading configuration from $ConfigPath."
 }
 
+if ($Debug) {
+    $debugOpt = "bash"
+}
+
 if($Detached -eq $False) {
     docker run -it --rm `
         -p "$($BindPort):8080" `
