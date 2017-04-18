@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                         }
                     });
 
-                    Assert.Equal("Carastrophy", ex.Message);
+                    Assert.Equal("Catastrophy", ex.Message);
 
                     // db unloaded
                     Assert.True(SpinWait.SpinUntil(() => Server.ServerStore.DatabasesLandlord.ResourcesStoresCache.Any() == false, TimeSpan.FromMinutes(1)));
