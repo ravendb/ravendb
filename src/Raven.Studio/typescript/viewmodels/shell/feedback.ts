@@ -18,7 +18,12 @@ class feedbackModel {
     }
 
     private setupValidation() {
+        this.name.extend({
+            required: true
+        });
+
         this.email.extend({
+            required: true,
             email: true
         });
 
