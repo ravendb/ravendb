@@ -98,12 +98,12 @@ namespace SlowTests.Server.Rachis
         {
             var leader = await CreateNetworkAndGetLeader(nodeCount);
             var follower = GetRandomFollower();
-            Assert.True(leader.RemoveFromClusterAsync(follower.Url).Wait(leader.ElectionTimeoutMs*10),"Was unable to remove node from cluster in time");
+            Assert.True(leader.RemoveFromClusterAsync(follower.Tag).Wait(leader.ElectionTimeoutMs*10),"Was unable to remove node from cluster in time");
             foreach (var node in RachisConsensuses)
             {
                 if(node.Url == follower.Url)
                     continue;
-                Assert.True(node.WaitForTopology(Leader.TopologyModification.Remove, follower.Url).Wait(node.ElectionTimeoutMs * 10),"Node was not removed from topology in time");
+                Assert.True(node.WaitForTopology(Leader.TopologyModification.Remove, follower.Tag).Wait(node.ElectionTimeoutMs * 1000),"Node was not removed from topology in time");
             }
         }
     }
