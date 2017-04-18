@@ -238,7 +238,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             Assert.Equal(2, database.IndexStore.GetIndexesForCollection("Users").Count());
 
-            var index3 = await database.IndexStore.ResetIndex(index1);
+            var index3 = database.IndexStore.ResetIndex(index1);
             var path3 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath, IndexDefinitionBase.GetIndexNameSafeForFileSystem(def1.Name));
 
             Assert.NotEqual(index3, index1);
@@ -251,7 +251,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             Assert.Equal(2, indexes.Count);
 
-            var index4 = await database.IndexStore.ResetIndex(index2);
+            var index4 = database.IndexStore.ResetIndex(index2);
             var path4 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath, IndexDefinitionBase.GetIndexNameSafeForFileSystem(def2.Name));
 
             Assert.NotEqual(index4, index2);

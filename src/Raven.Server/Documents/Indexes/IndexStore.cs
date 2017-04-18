@@ -545,7 +545,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public Task<long> ResetIndex(string name)
+        public long ResetIndex(string name)
         {
             var index = GetIndex(name);
             if (index == null)
@@ -554,7 +554,7 @@ namespace Raven.Server.Documents.Indexes
             return ResetIndexInternal(index);
         }
 
-        public Task<long> ResetIndex(long etag)
+        public long ResetIndex(long etag)
         {
             var index = GetIndex(etag);
             if (index == null)
@@ -767,10 +767,12 @@ namespace Raven.Server.Documents.Indexes
             exceptionAggregator.ThrowIfNeeded();
         }
 
-        private async Task<long> ResetIndexInternal(Index index)
+        private long ResetIndexInternal(Index index)
         {
-            await DeleteIndex(index.Etag);
-            return await CreateIndex(index.Definition);
+            DeleteIndexInternal(index);
+            CreateIndexInternal(index);
+
+            return index.Etag;
         }
 
         private void OpenIndexes(DatabaseRecord record)

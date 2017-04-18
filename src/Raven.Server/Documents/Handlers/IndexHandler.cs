@@ -377,11 +377,11 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/indexes", "RESET")]
-        public async Task Reset()
+        public Task Reset()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            var newIndexId = await Database.IndexStore.ResetIndex(name);
+            var newIndexId = Database.IndexStore.ResetIndex(name);
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -392,6 +392,8 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteInteger(newIndexId);
                 writer.WriteEndObject();
             }
+
+            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/indexes", "DELETE")]
