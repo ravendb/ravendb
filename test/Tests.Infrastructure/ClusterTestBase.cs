@@ -220,8 +220,11 @@ namespace Tests.Infrastructure
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException
-            Assert.True(await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes* ElectionTimeoutInMs),
-                "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.ClusterStatus());
+            var condition = await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes* ElectionTimeoutInMs);
+            if(condition == false)
+                Console.WriteLine("Failed on " + leader.ServerStore.Engine.a);
+            Assert.True(condition,
+                "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.ClusterStatus() + " " + +leader.ServerStore.Engine.a);
             return leader;
         }
 

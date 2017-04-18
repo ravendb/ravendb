@@ -90,6 +90,8 @@ namespace Raven.Server.ServerWide
         private RachisConsensus<ClusterStateMachine> _engine;
         private bool _disposed;
 
+        public RachisConsensus<ClusterStateMachine> Engine => _engine;
+
         public ClusterTopology GetClusterTopology(TransactionOperationContext context)
         {
             return _engine.GetTopology(context);

@@ -5,10 +5,12 @@ using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using Voron.Global;
 using static Sparrow.DatabasePerformanceMetrics;
 
@@ -549,21 +551,13 @@ namespace Raven.Server.Documents
 
         private void NotifyOnThreadPool(MergedTransactionCommand cmd)
         {
-            if (ThreadPool.QueueUserWorkItem(DoCommandNotification, cmd) == false)
-            {
-                // if we can't schedule it, run it inline
-                DoCommandNotification(cmd);
-            }
+            TaskNotifier.Execute(DoCommandNotification, cmd);
         }
 
 
         private void NotifyOnThreadPool(List<MergedTransactionCommand> cmds)
         {
-            if (ThreadPool.QueueUserWorkItem(DoCommandsNotification, cmds) == false)
-            {
-                // if we can't schedule it, run it inline
-                DoCommandsNotification(cmds);
-            }
+            TaskNotifier.Execute(DoCommandsNotification, cmds);
         }
 
 
