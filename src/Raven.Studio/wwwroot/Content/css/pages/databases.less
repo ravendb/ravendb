@@ -55,11 +55,8 @@
 
         .info-container {
             font-size: 19px;
-
-            .icon-database {
-               // color: @brand-database-color;
-            }
-
+            display: flex; 
+            align-items:flex-start;
         }
 
         .row {
@@ -84,22 +81,19 @@
         .database-name {
             color: @brand-primary;
             font-size: 118%;
-            margin-left: 30px;
             margin-bottom: 0;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            flex-grow: 1;
         }
 
         .checkbox {
             position: relative;
             margin: 0;
-            top: -2px;
-            float: left;
         }
 
         .state {
-            cursor: pointer;
         }
 
         .state.state-warning {
@@ -108,9 +102,8 @@
     }
 
     .properties-container {
-        flex-direction: column;
-        height: 80px;
         align-content: flex-start;
+        align-items:center;
         overflow: hidden;
 
         .properties-item {
