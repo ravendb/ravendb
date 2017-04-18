@@ -1524,21 +1524,22 @@ namespace Raven.Client.Documents.Indexes
                     }
                     Visit(node.Arguments[num2]);
                     _avoidDuplicatedParameters = oldAvoidDuplicateParameters;
-                    // Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).AssemblyQualifiedName)
-                    if (node.Method.Name == "OfType")
-                    {
-                        var type = node.Method.GetGenericArguments()[0];
-                        var typeFullName = ReflectionUtil.GetFullNameWithoutVersionInformation(type);
-                        Out(", (Func<dynamic, bool>)(_itemRaven => string.Equals(_itemRaven[\"$type\"], \"");
-                        Out(typeFullName);
-                        Out("\", StringComparison.Ordinal))");
-                    }
                 }
                 finally
                 {
                     castLambdas = old;
                 }
                 num2++;
+            }
+
+            // Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).AssemblyQualifiedName)
+            if (node.Method.Name == "OfType")
+            {
+                var type = node.Method.GetGenericArguments()[0];
+                var typeFullName = ReflectionUtil.GetFullNameWithoutVersionInformation(type);
+                Out("_itemRaven => string.Equals(_itemRaven[\"$type\"], \"");
+                Out(typeFullName);
+                Out("\", StringComparison.Ordinal)");
             }
 
             if (node.Method.Name == nameof(AbstractIndexCreationTask.LoadDocument))
@@ -1650,6 +1651,7 @@ namespace Raven.Client.Documents.Indexes
                     case "Reverse":
                     case "Take":
                     case "Skip":
+                    case "OfType":
                         return true;
                 }
                 return false;
