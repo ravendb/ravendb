@@ -15,6 +15,8 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
@@ -80,6 +82,20 @@ namespace Raven.Server.Documents
             {
                 serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailure(name, e);
             });
+            NonDurabaleFileSystemNotification = new NonDurabaleFileSystemNotification(e =>
+            {
+                if (serverStore != null)
+                {
+                    if (serverStore.NonDurableFileSystemNotified) // alert once per server (if at least on storage alerting)
+                        return;
+                    serverStore.NonDurableFileSystemNotified = true;
+
+                    serverStore.NotificationCenter.Add(AlertRaised.Create("Non Durable File System",
+                        e.Message,
+                        AlertType.NonDurableFileSystem,
+                        NotificationSeverity.Warning));
+                }
+            });
         }
 
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
@@ -114,7 +130,9 @@ namespace Raven.Server.Documents
 
         public IoChangesNotifications IoChanges { get; }
 
-        public CatastrophicFailureNotification CatastrophicFailureNotification { get;}
+        public CatastrophicFailureNotification CatastrophicFailureNotification { get; }
+
+        public NonDurabaleFileSystemNotification NonDurabaleFileSystemNotification { get;}
 
         public NotificationCenter.NotificationCenter NotificationCenter { get; private set; }
 
