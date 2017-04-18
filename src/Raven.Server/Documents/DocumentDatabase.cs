@@ -78,7 +78,7 @@ namespace Raven.Server.Documents
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
             CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
             {
-                serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailue(name, e);
+                serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailure(name, e);
             });
         }
 

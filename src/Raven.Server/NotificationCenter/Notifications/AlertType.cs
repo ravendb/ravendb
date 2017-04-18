@@ -24,6 +24,6 @@ namespace Raven.Server.NotificationCenter.Notifications
         TransformerStore_TransformerCouldNotBeOpened,
         WarnIndexOutputsPerDocument,
         ErrorSavingReduceOutputDocuments,
-        CatastrophicDatabaseFailue
+        CatastrophicDatabaseFailure
     }
 }

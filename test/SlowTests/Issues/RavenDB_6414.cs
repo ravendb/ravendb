@@ -32,7 +32,7 @@ namespace SlowTests.Issues
 
                     try
                     {
-                        throw new Exception("Carastrophy");
+                        throw new Exception("Catastrophy");
                     }
                     catch (Exception e)
                     {
@@ -64,7 +64,7 @@ namespace SlowTests.Issues
                     var alert = await notifications.TryDequeueOfTypeAsync<AlertRaised>(TimeSpan.Zero);
 
                     Assert.True(alert.Item1);
-                    Assert.Equal(AlertType.CatastrophicDatabaseFailue, alert.Item2.AlertType);
+                    Assert.Equal(AlertType.CatastrophicDatabaseFailure, alert.Item2.AlertType);
                     Assert.Contains(database.Name, alert.Item2.Title);
                 }
 
