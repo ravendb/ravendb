@@ -9,60 +9,60 @@ namespace Raven.Server.Documents
 {
     public static class DocumentCompare
     {
-        public static DocumentCompareResult IsEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument,
+        public static DocumentCompareResult IsEqualTo(BlittableJsonReaderObject original, BlittableJsonReaderObject modified,
             bool tryMergeAttachmentsConflict)
         {
             // Performance improvemnt: We compare the metadata first 
             // because that most of the time the metadata itself won't be the equal, so no need to compare all values
 
-            var result = IsMetadataEqualTo(currentDocument, targetDocument, tryMergeAttachmentsConflict);
+            var result = IsMetadataEqualTo(original, modified, tryMergeAttachmentsConflict);
             if (result == DocumentCompareResult.NotEqual)
                 return DocumentCompareResult.NotEqual;
 
-            if (ComparePropertiesExceptStartingWithAt(currentDocument, targetDocument) == DocumentCompareResult.NotEqual)
+            if (ComparePropertiesExceptStartingWithAt(original, modified) == DocumentCompareResult.NotEqual)
                 return DocumentCompareResult.NotEqual;
 
             return result;
         }
 
-        private static DocumentCompareResult IsMetadataEqualTo(BlittableJsonReaderObject currentDocument, BlittableJsonReaderObject targetDocument, bool tryMergeAttachmentsConflict)
+        private static DocumentCompareResult IsMetadataEqualTo(BlittableJsonReaderObject current, BlittableJsonReaderObject modified, bool tryMergeAttachmentsConflict)
         {
-            if (targetDocument == null)
+            if (modified == null)
                 return DocumentCompareResult.NotEqual;
 
-            BlittableJsonReaderObject myMetadata;
+            BlittableJsonReaderObject currentMetadata;
             BlittableJsonReaderObject objMetadata;
-            currentDocument.TryGet(Constants.Documents.Metadata.Key, out myMetadata);
-            targetDocument.TryGet(Constants.Documents.Metadata.Key, out objMetadata);
+            current.TryGet(Constants.Documents.Metadata.Key, out currentMetadata);
+            modified.TryGet(Constants.Documents.Metadata.Key, out objMetadata);
 
-            if (myMetadata == null && objMetadata == null)
+            if (currentMetadata == null && objMetadata == null)
                 return DocumentCompareResult.Equal;
 
-            if (myMetadata == null || objMetadata == null)
+            if (currentMetadata == null || objMetadata == null)
             {
                 if (tryMergeAttachmentsConflict)
                 {
-                    if (myMetadata == null)
-                        myMetadata = objMetadata;
+                    if (currentMetadata == null)
+                        currentMetadata = objMetadata;
 
                     // If the conflict is just on @metadata with @attachment we know how to resolve it.
-                    if (myMetadata.Count == 1 && myMetadata.GetPropertyNames()[0].Equals(Constants.Documents.Metadata.Attachments, StringComparison.OrdinalIgnoreCase))
+                    if (currentMetadata.Count == 1 && currentMetadata.GetPropertyNames()[0].Equals(Constants.Documents.Metadata.Attachments, StringComparison.OrdinalIgnoreCase))
                         return DocumentCompareResult.Equal | DocumentCompareResult.ShouldRecreateDocument;
                 }
 
                 return DocumentCompareResult.NotEqual;
             }
 
-            return ComparePropertiesExceptStartingWithAt(myMetadata, objMetadata, true, tryMergeAttachmentsConflict);
+            return ComparePropertiesExceptStartingWithAt(currentMetadata, objMetadata, true, tryMergeAttachmentsConflict);
         }
 
-        private static DocumentCompareResult ComparePropertiesExceptStartingWithAt(BlittableJsonReaderObject myObject, BlittableJsonReaderObject otherObject, 
+        private static DocumentCompareResult ComparePropertiesExceptStartingWithAt(BlittableJsonReaderObject current, BlittableJsonReaderObject modified, 
             bool isMetadata = false, bool tryMergeAttachmentsConflict = false)
         {
             var resolvedAttachmetConflict = false;
 
-            var properties = new HashSet<string>(myObject.GetPropertyNames());
-            foreach (var propertyName in otherObject.GetPropertyNames())
+            var properties = new HashSet<string>(current.GetPropertyNames());
+            foreach (var propertyName in modified.GetPropertyNames())
             {
                 properties.Add(propertyName);
             }
@@ -77,15 +77,15 @@ namespace Raven.Server.Documents
                         {
                             if (tryMergeAttachmentsConflict)
                             {
-                                if (myObject.TryGetMember(property, out object myAttachments) == false ||
-                                    otherObject.TryGetMember(property, out object otherAttachments) == false)
+                                if (current.TryGetMember(property, out object currentAttachments) == false ||
+                                    modified.TryGetMember(property, out object modifiedAttachments) == false)
                                 {
                                     // Resolve when just 1 document have attachments
                                     resolvedAttachmetConflict = true;
                                     continue;
                                 }
 
-                                resolvedAttachmetConflict = ShouldResolveAttachmentsConflict(myObject, otherObject);
+                                resolvedAttachmetConflict = ShouldResolveAttachmentsConflict(current, modified);
                                 if (resolvedAttachmetConflict)
                                     continue;
 
@@ -101,13 +101,13 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                if (myObject.TryGetMember(property, out object myProperty) == false ||
-                    otherObject.TryGetMember(property, out object otherPropery) == false)
+                if (current.TryGetMember(property, out object currentProperty) == false ||
+                    modified.TryGetMember(property, out object modifiedPropery) == false)
                 {
                     return DocumentCompareResult.NotEqual;
                 }
 
-                if (Equals(myProperty, otherPropery) == false)
+                if (Equals(currentProperty, modifiedPropery) == false)
                 {
                     return DocumentCompareResult.NotEqual;
                 }
@@ -116,50 +116,50 @@ namespace Raven.Server.Documents
             return DocumentCompareResult.Equal | (resolvedAttachmetConflict ? DocumentCompareResult.ShouldRecreateDocument : DocumentCompareResult.None);
         }
 
-        private static bool ShouldResolveAttachmentsConflict(BlittableJsonReaderObject myMetadata, BlittableJsonReaderObject otherMetadata)
+        private static bool ShouldResolveAttachmentsConflict(BlittableJsonReaderObject currentMetadata, BlittableJsonReaderObject modifiedMetadata)
         {
-            myMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray myAttachments);
-            otherMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray otherAttachments);
-            Debug.Assert(myAttachments != null || otherAttachments != null, "Cannot happen. We verified that we have a conflict in @attachments.");
+            currentMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray currentAttachments);
+            modifiedMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray modifiedAttachments);
+            Debug.Assert(currentAttachments != null || modifiedAttachments != null, "Cannot happen. We verified that we have a conflict in @attachments.");
 
-            var myAttachmentNames = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
-            if (myAttachments != null)
+            var currentAttachmentNames = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
+            if (currentAttachments != null)
             {
-                foreach (BlittableJsonReaderObject attachment in myAttachments)
+                foreach (BlittableJsonReaderObject attachment in currentAttachments)
                 {
                     if (attachment.TryGet(nameof(AttachmentResult.Name), out string name) == false)
                         return false;   // Attachment must have a name. The user modified the value?
 
-                    if (myAttachmentNames.ContainsKey(name))
+                    if (currentAttachmentNames.ContainsKey(name))
                         // The node itself has a conflict
                         return false;
-                    myAttachmentNames.Add(name, attachment);
+                    currentAttachmentNames.Add(name, attachment);
                 }
             }
 
-            var otherAttachmentNames = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
-            if (otherAttachments != null)
+            var modifiedAttachmentNames = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
+            if (modifiedAttachments != null)
             {
-                foreach (BlittableJsonReaderObject attachment in otherAttachments)
+                foreach (BlittableJsonReaderObject attachment in modifiedAttachments)
                 {
                     if (attachment.TryGet(nameof(AttachmentResult.Name), out string name) == false)
                         return false;   // Attachment must have a name. The user modified the value?
 
-                    if (otherAttachmentNames.ContainsKey(name))
+                    if (modifiedAttachmentNames.ContainsKey(name))
                         // The node itself has a conflict
                         return false;
-                    otherAttachmentNames.Add(name, attachment);
+                    modifiedAttachmentNames.Add(name, attachment);
                 }
             }
 
-            foreach (var attachment in myAttachmentNames)
+            foreach (var attachment in currentAttachmentNames)
             {
-                if (otherAttachmentNames.TryGetValue(attachment.Key, out var otherAttachment))
+                if (modifiedAttachmentNames.TryGetValue(attachment.Key, out var modifiedAttachment))
                 {
-                    if (ComparePropertiesExceptStartingWithAt(attachment.Value, otherAttachment) == DocumentCompareResult.NotEqual)
+                    if (ComparePropertiesExceptStartingWithAt(attachment.Value, modifiedAttachment) == DocumentCompareResult.NotEqual)
                         return false;
 
-                    otherAttachmentNames.Remove(attachment.Key);
+                    modifiedAttachmentNames.Remove(attachment.Key);
                 }
             }
 
