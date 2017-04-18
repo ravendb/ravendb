@@ -17,7 +17,7 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 //LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
-                Parallel.For(0, 1, _ =>
+                Parallel.For(0, 10, _ =>
                 {
                     using (var a = new RavenDB_6602())
                     {
