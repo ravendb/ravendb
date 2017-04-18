@@ -72,7 +72,7 @@
             <div class="padding padding-sm">
                 <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                 <div class="row">
-                    <div class="col-xs-12 col-sm-6 col-xl-4 info-container">
+                    <div class="col-xs-12 col-sm-grow col-xl-4 info-container">
                         <div class="checkbox">
                             <input type="checkbox" class="styled" data-bind="checked: $root.selectedDatabases, checkedValue: name">
                             <label></label>
@@ -90,7 +90,7 @@
                     <div class="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container" 
                          data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }">
                     </div>
-                    <div class="col-xs-12 col-sm-6 col-xl-3 actions-container">
+                    <div class="col-xs-12 col-sm-auto col-xl-3 actions-container">
                         <span data-bind="visible: isLoading">
                             <span class="global-spinner spinner-sm"></span>&nbsp;&nbsp;&nbsp;&nbsp;
                         </span>
@@ -149,7 +149,6 @@
                                 </button>
                                 <button class="btn btn-danger" data-bind="click: $root.deleteDatabase, disable: isBeingDeleted"> 
                                     <i class="icon-trash"></i>
-                                    <!--<span>Delete</span>-->
                                 </button>
                             </div>
                         </div>

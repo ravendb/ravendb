@@ -12,7 +12,7 @@
                 <div class="form-control btn-toggle database-switcher">
                     <span class="database" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
                 </div>
-                <a data-bind="attr: { href: $root.appUrls.databases }" class="btn btn-primary btn-sm resources-link">All Databases</a>
+                <a data-bind="attr: { href: $root.appUrls.databases }" class="resources-link"><i class="icon-resources"></i></a>
                 <div class="box-container">
                     <div class="database-filter-container">
                         <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />
@@ -210,7 +210,7 @@
     <div class="notification-center-container" data-bind="compose: 'notifications/notificationCenter.html'"></div>
 </div>
 
-<footer class="status-footer bg-info" data-bind="with: $root.footer">
+<footer class="status-footer" data-bind="with: $root.footer">
     <div class="footer-left" data-bind="with: stats(), visible: stats">
         <!-- TODO
         <div class="footer-item">
@@ -223,10 +223,16 @@
             <a title="Indexes" data-bind="attr: { href: $parent.urlForIndexes() }">
                 <i class="icon-index"></i>
                 <span data-bind="text: countOfIndexes"></span>
-                <span class="label label-warning" data-bind="visible: countOfStaleIndexes"><span data-bind="text: countOfStaleIndexes"></span> STALE</span>
+            </a>            
+        </div>
+        <div class="footer-item" data-bind="visible: countOfStaleIndexes">
+            <a title="Stale indexes" class="text-warning" data-bind="attr: { href: $parent.urlForIndexes() }">
+                <i class="icon-warning"></i><span data-bind="text: countOfStaleIndexes"></span>
             </a>
-            <a title="Indexing errors" data-bind="attr: { href: $parent.urlForIndexingErrors() }, visible: countOfIndexingErrors">
-                <span class="label label-danger"><span data-bind="text: countOfIndexingErrors"></span> INDEXING ERRORS</span>
+        </div>
+        <div class="footer-item" data-bind="visible: countOfIndexingErrors">
+            <a title="Indexing errors" class="text-danger" data-bind="attr: { href: $parent.urlForIndexingErrors() }">
+                <i class="icon-index-errors"></i> <span data-bind="text: countOfIndexingErrors"></span>
             </a>
         </div>
     </div>
