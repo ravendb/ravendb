@@ -131,7 +131,7 @@ namespace Raven.Client.Documents.Replication
             var resolver = obj as ScriptResolver;
             if (resolver == null)
                 return false;
-            return Script == resolver.Script && LastModifiedTime == resolver.LastModifiedTime;
+            return string.Equals(Script, resolver.Script, StringComparison.OrdinalIgnoreCase) && LastModifiedTime == resolver.LastModifiedTime;
         }
 
         public override int GetHashCode()

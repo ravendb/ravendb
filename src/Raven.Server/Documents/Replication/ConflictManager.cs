@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Replication
             ChangeVectorEntry[] incomingChangeVector,
             BlittableJsonReaderObject doc)
         {
-            if (_conflictResolver.ConflictSolver?.DatabaseResovlerId == null)
+            if (_conflictResolver.ConflictSolver?.DatabaseResolverId == null)
                 return false;
 
             var conflicts = new List<DocumentConflict>(_database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id));
@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.Replication
 
             return _conflictResolver.TryResolveUsingDefaultResolverInternal(
                 context,
-                _conflictResolver.ConflictSolver.DatabaseResovlerId,
+                _conflictResolver.ConflictSolver.DatabaseResolverId,
                 conflicts);
         }
 

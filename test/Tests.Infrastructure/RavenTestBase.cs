@@ -33,11 +33,11 @@ namespace FastTests
 
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
 
-        protected Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(DocumentStore store)
+        protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store)
         {
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
         }
-
+        
         private readonly object _getDocumentStoreSync = new object();
 
         protected virtual DocumentStore GetDocumentStore(

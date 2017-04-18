@@ -14,14 +14,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.Operations
 {
-    public class ModifyConflictSolver : IServerOperation<ModifySolverResult>
+    public class ModifyConflictSolverOperation : IServerOperation<ModifySolverResult>
     {
         private readonly string _database;
         public string ResolverDbId;
         public Dictionary<string, ScriptResolver> CollectionByScript;
         public bool ResolveToLatest;
 
-        public ModifyConflictSolver(string database,string resolverDbId = null, Dictionary<string,ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
+        public ModifyConflictSolverOperation(string database,string resolverDbId = null, Dictionary<string,ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
         {
             MultiDatabase.AssertValidName(database);
             _database = database;
@@ -37,7 +37,7 @@ namespace Raven.Client.Server.Operations
 
         private class ModifyConflictSolverCommand : RavenCommand<ModifySolverResult>
         {
-            private readonly ModifyConflictSolver _solver;
+            private readonly Operations.ModifyConflictSolverOperation _solver;
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
@@ -46,7 +46,7 @@ namespace Raven.Client.Server.Operations
                 DocumentConventions conventions,
                 JsonOperationContext context,
                 string database,
-                ModifyConflictSolver solver)
+                Operations.ModifyConflictSolverOperation solver)
             {
                 _context = context ?? throw new ArgumentNullException(nameof(context));
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
@@ -67,7 +67,7 @@ namespace Raven.Client.Server.Operations
                         {
                             ResolveByCollection = _solver.CollectionByScript,
                             ResolveToLatest = _solver.ResolveToLatest,
-                            DatabaseResovlerId = _solver.ResolverDbId
+                            DatabaseResolverId = _solver.ResolverDbId
                         }, _conventions, _context);
                         _context.Write(stream, solver);
                     })

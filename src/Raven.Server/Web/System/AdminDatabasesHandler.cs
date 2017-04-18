@@ -254,7 +254,7 @@ namespace Raven.Server.Web.System
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));
-
+                
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -280,8 +280,7 @@ namespace Raven.Server.Web.System
                 throw new BadRequestException(errorMessage);
 
             ServerStore.EnsureNotPassive();
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "read-conflict-resolver");
                 context.OpenReadTransaction();

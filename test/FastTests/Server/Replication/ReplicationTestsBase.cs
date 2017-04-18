@@ -66,7 +66,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected GetConflictsResult GetConflicts(DocumentStore store, string docId)
+        protected GetConflictsResult GetConflicts(IDocumentStore store, string docId)
         {
             using (var commands = store.Commands())
             {
@@ -78,7 +78,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected GetConflictsResult WaitUntilHasConflict(DocumentStore store, string docId, int count = 2)
+        protected GetConflictsResult WaitUntilHasConflict(IDocumentStore store, string docId, int count = 2)
         {
             int timeout = 5000;
 
@@ -140,7 +140,7 @@ namespace FastTests.Server.Replication
             return false;
         }
 
-        protected bool WaitForDocument<T>(DocumentStore store,
+        protected bool WaitForDocument<T>(IDocumentStore store,
             string docId,
             Func<T, bool> predicate,
             int timeout = 10000)
@@ -231,7 +231,7 @@ namespace FastTests.Server.Replication
         }
 
         protected List<string> WaitUntilHasTombstones(
-                DocumentStore store,
+                IDocumentStore store,
                 int count = 1)
         {
 
@@ -258,7 +258,7 @@ namespace FastTests.Server.Replication
         }
 
 
-        protected List<string> GetTombstones(DocumentStore store)
+        protected List<string> GetTombstones(IDocumentStore store)
         {
             using (var commands = store.Commands())
             {
@@ -270,7 +270,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected FullTopologyInfo GetFullTopology(DocumentStore store)
+        protected FullTopologyInfo GetFullTopology(IDocumentStore store)
         {
             using (var commands = store.Commands())
             {
@@ -282,7 +282,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected T WaitForDocumentToReplicate<T>(DocumentStore store, string id, int timeout)
+        protected T WaitForDocumentToReplicate<T>(IDocumentStore store, string id, int timeout)
             where T : class
         {
             var sw = Stopwatch.StartNew();
@@ -321,9 +321,10 @@ namespace FastTests.Server.Replication
             return await store.Admin.Server.SendAsync(cmd);
         }
 
-        protected static async Task<ModifySolverResult> UpdateConflictResolver(DocumentStore store, string resovlerDbId = null, Dictionary<string, ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
+        protected static async Task<ModifySolverResult> UpdateConflictResolver(IDocumentStore store, string resovlerDbId = null, Dictionary<string, ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
         {
-            var cmd = new ModifyConflictSolver(store.DefaultDatabase, resovlerDbId, collectionByScript, resolveToLatest);
+            var cmd = new ModifyConflictSolverOperation(store.DefaultDatabase, 
+                resovlerDbId, collectionByScript, resolveToLatest);
             return await store.Admin.Server.SendAsync(cmd);
         }
 
@@ -392,7 +393,7 @@ namespace FastTests.Server.Replication
 
         protected async Task SetupReplicationAsync(DocumentStore fromStore, ConflictSolver conflictSolver, params DocumentStore[] toStores)
         {
-            await UpdateConflictResolver(fromStore, conflictSolver.DatabaseResovlerId, conflictSolver.ResolveByCollection, conflictSolver.ResolveToLatest);
+            await UpdateConflictResolver(fromStore, conflictSolver.DatabaseResolverId, conflictSolver.ResolveByCollection, conflictSolver.ResolveToLatest);
             await SetupReplicationAsync(fromStore, toStores);
         }
 
