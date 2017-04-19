@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class Includes :  RavenTestBase
+    public class Includes : RavenTestBase
     {
         [Fact]
         public void Can_Load_With_Include()
@@ -58,12 +58,12 @@ namespace FastTests.Client
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Customer {Id = "users/1", Name = "Daniel Lang"});
-                    session.Store(new Customer {Id = "users/2", Name = "Oren Eini"});
+                    session.Store(new Customer { Id = "users/1", Name = "Daniel Lang" });
+                    session.Store(new Customer { Id = "users/2", Name = "Oren Eini" });
 
-                    session.Store(new Order {CustomerId = "users/1", Number = "1"});
-                    session.Store(new Order {CustomerId = "users/1", Number = "2"});
-                    session.Store(new Order {CustomerId = "users/2", Number = "3"});
+                    session.Store(new Order { CustomerId = "users/1", Number = "1" });
+                    session.Store(new Order { CustomerId = "users/1", Number = "2" });
+                    session.Store(new Order { CustomerId = "users/2", Number = "3" });
 
                     session.SaveChanges();
                 }
@@ -92,8 +92,8 @@ namespace FastTests.Client
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Customer {Id = "customers/1"});
-                    session.Store(new Order {CustomerId = "customers/1"}, "orders/1234");
+                    session.Store(new Customer { Id = "customers/1" });
+                    session.Store(new Order { CustomerId = "customers/1" }, "orders/1234");
 
                     session.SaveChanges();
                 }
@@ -119,16 +119,16 @@ namespace FastTests.Client
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Customer {Id = "customers/1", Name = "1"});
-                    session.Store(new Customer {Id = "customers/2", Name = "2"});
-                    session.Store(new Customer {Id = "customers/3", Name = "3"});
-                    session.Store(new Order {CustomerId = "customers/1", TotalPrice = 200D}, "orders/1234");
-                    session.Store(new Order {CustomerId = "customers/2", TotalPrice = 50D}, "orders/1235");
-                    session.Store(new Order {CustomerId = "customers/3", TotalPrice = 300D}, "orders/1236");
+                    session.Store(new Customer { Id = "customers/1", Name = "1" });
+                    session.Store(new Customer { Id = "customers/2", Name = "2" });
+                    session.Store(new Customer { Id = "customers/3", Name = "3" });
+                    session.Store(new Order { CustomerId = "customers/1", TotalPrice = 200D }, "orders/1234");
+                    session.Store(new Order { CustomerId = "customers/2", TotalPrice = 50D }, "orders/1235");
+                    session.Store(new Order { CustomerId = "customers/3", TotalPrice = 300D }, "orders/1236");
 
                     session.SaveChanges();
                 }
-                
+
                 using (var session = store.OpenSession())
                 {
                     var orders = session.Query<Order>()
@@ -157,10 +157,10 @@ namespace FastTests.Client
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Supplier {Name = "1"});
-                    session.Store(new Supplier {Name = "2"});
-                    session.Store(new Supplier {Name = "3"});
-                    session.Store(new Order {SupplierIds = new[] {"suppliers/1", "suppliers/2", "suppliers/3"}},
+                    session.Store(new Supplier { Name = "1" });
+                    session.Store(new Supplier { Name = "2" });
+                    session.Store(new Supplier { Name = "3" });
+                    session.Store(new Order { SupplierIds = new[] { "suppliers/1", "suppliers/2", "suppliers/3" } },
                         "orders/1234");
 
                     session.SaveChanges();
@@ -193,7 +193,7 @@ namespace FastTests.Client
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Customer());
-                    session.Store(new Order {Refferal = new Referral {CustomerId = "customers/1"}}, "orders/1234");
+                    session.Store(new Order { Refferal = new Referral { CustomerId = "customers/1" } }, "orders/1234");
 
                     session.SaveChanges();
                 }
@@ -219,9 +219,9 @@ namespace FastTests.Client
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Product {Name = "1"});
-                    session.Store(new Product {Name = "2"});
-                    session.Store(new Product {Name = "3"});
+                    session.Store(new Product { Name = "1" });
+                    session.Store(new Product { Name = "2" });
+                    session.Store(new Product { Name = "3" });
                     session.Store(
                         new Order
                         {
@@ -253,7 +253,7 @@ namespace FastTests.Client
             }
         }
 
-        public class Order
+        private class Order
         {
             public string Number { get; set; }
             public string CustomerId { get; set; }
@@ -263,7 +263,7 @@ namespace FastTests.Client
             public double TotalPrice { get; set; }
         }
 
-        public class Order2
+        private class Order2
         {
             public int Customer2Id { get; set; }
             public string Customer2IdString { get { return Customer2Id.ToString(CultureInfo.InvariantCulture); } }
@@ -273,7 +273,7 @@ namespace FastTests.Client
             public double TotalPrice { get; set; }
         }
 
-        public class Order3
+        private class Order3
         {
             public DenormalizedCustomer Customer { get; set; }
             public string[] SupplierIds { get; set; }
@@ -282,7 +282,7 @@ namespace FastTests.Client
             public double TotalPrice { get; set; }
         }
 
-        public class Customer
+        private class Customer
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -291,7 +291,7 @@ namespace FastTests.Client
             public string HashedPassword { get; set; }
         }
 
-        public class Customer2
+        private class Customer2
         {
             public int Id { get; set; }
             public string Name { get; set; }
@@ -300,39 +300,39 @@ namespace FastTests.Client
             public string HashedPassword { get; set; }
         }
 
-        public class DenormalizedCustomer
+        private class DenormalizedCustomer
         {
             public int Id { get; set; }
             public string Name { get; set; }
             public string Address { get; set; }
         }
 
-        public class Supplier
+        private class Supplier
         {
             public string Name { get; set; }
             public string Address { get; set; }
         }
 
-        public class Supplier2
+        private class Supplier2
         {
             public Guid Id { get; set; }
             public string Name { get; set; }
             public string Address { get; set; }
         }
 
-        public class Referral
+        private class Referral
         {
             public string CustomerId { get; set; }
             public double CommissionPercentage { get; set; }
         }
 
-        public class Referral2
+        private class Referral2
         {
             public int Customer2Id { get; set; }
             public double CommissionPercentage { get; set; }
         }
 
-        public class LineItem
+        private class LineItem
         {
             public string ProductId { get; set; }
             public string Name { get; set; }
@@ -340,7 +340,7 @@ namespace FastTests.Client
             public double Price { get; set; }
         }
 
-        public class LineItem2
+        private class LineItem2
         {
             public Guid Product2Id { get; set; }
             public string Name { get; set; }
@@ -348,14 +348,14 @@ namespace FastTests.Client
             public double Price { get; set; }
         }
 
-        public class Product
+        private class Product
         {
             public string Name { get; set; }
             public string[] Images { get; set; }
             public double Price { get; set; }
         }
 
-        public class Product2
+        private class Product2
         {
             public Guid Id { get; set; }
             public string Name { get; set; }
