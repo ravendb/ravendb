@@ -427,7 +427,7 @@ namespace FastTests.Client.Attachments
 
         [Fact(Skip = "WIP")]
         public async Task AttachmentsVersioningReplication()
-         {
+        {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {

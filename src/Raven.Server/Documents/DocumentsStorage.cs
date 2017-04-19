@@ -1,21 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading;
 using Raven.Client;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
-using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Versioning;
-using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -28,7 +21,6 @@ using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.Utils;
 using Voron.Data;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
@@ -41,16 +33,16 @@ namespace Raven.Server.Documents
         private static readonly Slice AllDocsEtagsSlice;
         private static readonly Slice TombstonesSlice;
         private static readonly Slice CollectionsSlice;
-        private static readonly Slice IdentitiesSlice;
         private static readonly Slice LastReplicatedEtagsSlice;
         private static readonly Slice ChangeVectorSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
 
         private static readonly Slice AllTombstonesEtagsSlice;
-        public static readonly TableSchema DocsSchema = new TableSchema();
         private static readonly Slice TombstonesPrefix;
         private static readonly Slice DeletedEtagsSlice;
+
+        public static readonly TableSchema DocsSchema = new TableSchema();
         public static readonly TableSchema TombstonesSchema = new TableSchema();
         private static readonly TableSchema CollectionsSchema = new TableSchema();
 
@@ -71,7 +63,7 @@ namespace Raven.Server.Documents
             LastModified = 8,
         }
 
-        private enum DocumentsTable
+        public enum DocumentsTable
         {
             LoweredKey = 0,
             Etag = 1,
@@ -95,7 +87,6 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, "Collections", ByteStringType.Immutable, out CollectionsSlice);
             Slice.From(StorageEnvironment.LabelsContext, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
             Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Identities", ByteStringType.Immutable, out IdentitiesSlice);
             Slice.From(StorageEnvironment.LabelsContext, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "ChangeVector", ByteStringType.Immutable, out ChangeVectorSlice);
 
@@ -168,8 +159,6 @@ namespace Raven.Server.Documents
         // no need to use thread safe ops
         private long _lastEtag;
 
-        private readonly StringBuilder _keyBuilder = new StringBuilder();
-
         public DocumentsContextPool ContextPool;
 
         public DocumentsStorage(DocumentDatabase documentDatabase)
@@ -181,9 +170,10 @@ namespace Raven.Server.Documents
 
         public StorageEnvironment Environment { get; private set; }
 
-        public ConflictsStorage ConflictsStorage { get; private set; }
-
-        public AttachmentsStorage AttachmentsStorage { get; private set; }
+        public ConflictsStorage ConflictsStorage;
+        public AttachmentsStorage AttachmentsStorage;
+        public IdentitiesStorage Identities;
+        public DocumentPutAction DocumentPut;
 
         public void Dispose()
         {
@@ -256,13 +246,14 @@ namespace Raven.Server.Documents
 
                     tx.CreateTree(DocsSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
-                    tx.CreateTree(IdentitiesSlice);
                     tx.CreateTree(ChangeVectorSlice);
 
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
+                    Identities = new IdentitiesStorage(_documentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(_documentDatabase, tx);
                     AttachmentsStorage = new AttachmentsStorage(_documentDatabase, tx);
+                    DocumentPut = new DocumentPutAction(this, _documentDatabase);
 
                     _lastEtag = ReadLastEtag(tx);
                     _collectionsCache = ReadCollections(tx);
@@ -574,8 +565,7 @@ namespace Raven.Server.Documents
         public DocumentOrTombstone GetDocumentOrTombstone(DocumentsOperationContext context, Slice loweredKey, bool throwOnConflict = true)
         {
             if (context.Transaction == null)
-                ThrowRequiresTransaction();
-            Debug.Assert(context.Transaction != null);
+                throw DocumentPutAction.ThrowRequiresTransaction();
 
             try
             {
@@ -856,8 +846,7 @@ namespace Raven.Server.Documents
 
         public DeleteOperationResult? Delete(DocumentsOperationContext context, string key, long? expectedEtag)
         {
-            Slice loweredKey;
-            using (DocumentKeyWorker.GetSliceFromKey(context, key, out loweredKey))
+            using (DocumentKeyWorker.GetSliceFromKey(context, key, out Slice loweredKey))
             {
                 return Delete(context, loweredKey, key, expectedEtag);
             }
@@ -875,7 +864,7 @@ namespace Raven.Server.Documents
 
             if (ConflictsStorage.ConflictsCount != 0)
             {
-                var result = DeleteConflicts(context, loweredKey, expectedEtag, changeVector);
+                var result = ConflictsStorage.DeleteConflicts(context, loweredKey, expectedEtag, changeVector);
                 if (result != null)
                     return result;
             }
@@ -997,37 +986,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        public DeleteOperationResult? DeleteConflicts(DocumentsOperationContext context,
-            Slice loweredKey,
-            long? expectedEtag,
-            ChangeVectorEntry[] changeVector)
-        {
-            Slice prefixSlice;
-            using (ConflictsStorage.GetConflictsKeyPrefix(context, loweredKey, out prefixSlice))
-            {
-                var conflicts = ConflictsStorage.GetConflictsFor(context, prefixSlice);
-                if (conflicts.Count > 0)
-                {
-                    // We do have a conflict for our deletion candidate
-                    // Since this document resolve the conflict we dont need to alter the change vector.
-                    // This way we avoid another replication back to the source
-                    if (expectedEtag.HasValue)
-                    {
-                        ConflictsStorage.ThrowConcurrencyExceptionOnConflict(context, loweredKey.Content.Ptr, loweredKey.Size, expectedEtag);
-                    }
-
-                    long etag;
-                    var collectionName = ResolveConflictAndAddTombstone(context, changeVector, conflicts, out etag);
-                    return new DeleteOperationResult
-                    {
-                        Collection = collectionName,
-                        Etag = etag
-                    };
-                }
-            }
-            return null;
-        }
-
         // Note: Make sure to call this with a seprator, to you won't delete "users/11" for "users/1"
         public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix)
         {
@@ -1066,59 +1024,6 @@ namespace Raven.Server.Documents
             public CollectionName Collection;
         }
 
-        private CollectionName ResolveConflictAndAddTombstone(DocumentsOperationContext context,
-            ChangeVectorEntry[] changeVector, IReadOnlyList<DocumentConflict> conflicts, out long etag)
-        {
-            ChangeVectorEntry[] mergedChangeVector;
-            var indexOfLargestEtag = FindIndexOfLargestEtagAndMergeChangeVectors(conflicts, out mergedChangeVector);
-            var latestConflict = conflicts[indexOfLargestEtag];
-            var collectionName = new CollectionName(latestConflict.Collection);
-
-            Slice lowerKey;
-            using (DocumentKeyWorker.GetSliceFromKey(context, latestConflict.Key, out lowerKey))
-            {
-                //note that CreateTombstone is also deleting conflicts
-                etag = CreateTombstone(context,
-                    lowerKey,
-                    latestConflict.Etag,
-                    collectionName,
-                    mergedChangeVector,
-                    latestConflict.LastModified.Ticks,
-                    changeVector,
-                    DocumentFlags.None);
-            }
-
-            return collectionName;
-        }
-
-        private static int FindIndexOfLargestEtagAndMergeChangeVectors(IReadOnlyList<DocumentConflict> conflicts, out ChangeVectorEntry[] mergedChangeVectorEntries)
-        {
-            mergedChangeVectorEntries = null;
-            bool firstTime = true;
-
-            int indexOfLargestEtag = 0;
-            long largestEtag = 0;
-            for (var i = 0; i < conflicts.Count; i++)
-            {
-                var conflict = conflicts[i];
-                if (conflict.Etag > largestEtag)
-                {
-                    largestEtag = conflict.Etag;
-                    indexOfLargestEtag = i;
-                }
-
-                if (firstTime)
-                {
-                    mergedChangeVectorEntries = conflict.ChangeVector;
-                    firstTime = false;
-                    continue;
-                }
-                mergedChangeVectorEntries = ReplicationUtils.MergeVectors(mergedChangeVectorEntries, conflict.ChangeVector);
-            }
-
-            return indexOfLargestEtag;
-        }
-
         public long GenerateNextEtag()
         {
             return ++_lastEtag;
@@ -1135,7 +1040,7 @@ namespace Raven.Server.Documents
                 etagTree.Add(LastEtagSlice, etagSlice);
         }
 
-        private long CreateTombstone(
+        public long CreateTombstone(
             DocumentsOperationContext context,
             Slice lowerKey,
             long documentEtag,
@@ -1189,162 +1094,6 @@ namespace Raven.Server.Documents
             return newEtag;
         }
 
-        public void AddConflict(
-            DocumentsOperationContext context,
-            string key,
-            long lastModifiedTicks,
-            BlittableJsonReaderObject incomingDoc,
-            ChangeVectorEntry[] incomingChangeVector,
-            string incomingTombstoneCollection)
-        {
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Adding conflict to {key} (Incoming change vector {incomingChangeVector.Format()})");
-            var tx = context.Transaction.InnerTransaction;
-            var conflictsTable = tx.OpenTable(ConflictsStorage.ConflictsSchema, ConflictsStorage.ConflictsSlice);
-
-            CollectionName collectionName;
-
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out Slice lowerKey, out Slice keyPtr);
-            // ReSharper disable once ArgumentsStyleLiteral
-            var existing = GetDocumentOrTombstone(context, key, throwOnConflict: false);
-            if (existing.Document != null)
-            {
-                var existingDoc = existing.Document;
-
-                fixed (ChangeVectorEntry* pChangeVector = existingDoc.ChangeVector)
-                {
-                    var lazyCollectionName = CollectionName.GetLazyCollectionNameFrom(context, existingDoc.Data);
-
-                    TableValueBuilder tbv;
-                    using (conflictsTable.Allocate(out tbv))
-                    {
-                        tbv.Add(lowerKey);
-                        tbv.Add(SpecialChars.RecordSeperator);
-                        tbv.Add((byte*)pChangeVector, existingDoc.ChangeVector.Length * sizeof(ChangeVectorEntry));
-                        tbv.Add(keyPtr);
-                        tbv.Add(existingDoc.Data.BasePointer, existingDoc.Data.Size);
-                        tbv.Add(Bits.SwapBytes(GenerateNextEtag()));
-                        tbv.Add(lazyCollectionName.Buffer, lazyCollectionName.Size);
-                        tbv.Add(existingDoc.LastModified.Ticks);
-
-                        conflictsTable.Set(tbv);
-                    }
-
-                    Interlocked.Increment(ref ConflictsStorage.ConflictsCount);
-                    // we delete the data directly, without generating a tombstone, because we have a 
-                    // conflict instead
-                    EnsureLastEtagIsPersisted(context, existingDoc.Etag);
-                    collectionName = ExtractCollectionName(context, existingDoc.Key, existingDoc.Data);
-
-                    //make sure that the relevant collection tree exists
-                    var table = tx.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
-                    table.Delete(existingDoc.StorageId);
-                }
-            }
-            else if (existing.Tombstone != null)
-            {
-                var existingTombstone = existing.Tombstone;
-
-                fixed (ChangeVectorEntry* pChangeVector = existingTombstone.ChangeVector)
-                {
-                    TableValueBuilder tableValueBuilder;
-                    using (conflictsTable.Allocate(out tableValueBuilder))
-                    {
-                        tableValueBuilder.Add(lowerKey);
-                        tableValueBuilder.Add(SpecialChars.RecordSeperator);
-                        tableValueBuilder.Add((byte*)pChangeVector, existingTombstone.ChangeVector.Length * sizeof(ChangeVectorEntry));
-                        tableValueBuilder.Add(keyPtr);
-                        tableValueBuilder.Add(null, 0);
-                        tableValueBuilder.Add(Bits.SwapBytes(GenerateNextEtag()));
-                        tableValueBuilder.Add(existingTombstone.Collection.Buffer, existingTombstone.Collection.Size);
-                        tableValueBuilder.Add(existingTombstone.LastModified.Ticks);
-                        conflictsTable.Set(tableValueBuilder);
-                    }
-                    Interlocked.Increment(ref ConflictsStorage.ConflictsCount);
-                    // we delete the data directly, without generating a tombstone, because we have a 
-                    // conflict instead
-                    EnsureLastEtagIsPersisted(context, existingTombstone.Etag);
-
-                    collectionName = GetCollection(existingTombstone.Collection, throwIfDoesNotExist: true);
-
-                    var table = tx.OpenTable(TombstonesSchema,
-                        collectionName.GetTableName(CollectionTableType.Tombstones));
-                    table.Delete(existingTombstone.StorageId);
-                }
-            }
-            else // has existing conflicts
-            {
-                collectionName = ExtractCollectionName(context, key, incomingDoc);
-
-                Slice prefixSlice;
-                using (ConflictsStorage.GetConflictsKeyPrefix(context, lowerKey, out prefixSlice))
-                {
-                    var conflicts = ConflictsStorage.GetConflictsFor(context, prefixSlice);
-                    foreach (var conflict in conflicts)
-                    {
-                        var conflictStatus = ReplicationUtils.GetConflictStatus(incomingChangeVector, conflict.ChangeVector);
-                        switch (conflictStatus)
-                        {
-                            case ReplicationUtils.ConflictStatus.Update:
-                                ConflictsStorage.DeleteConflictsFor(context, conflict.ChangeVector); // delete this, it has been subsumed
-                                break;
-                            case ReplicationUtils.ConflictStatus.Conflict:
-                                break; // we'll add this conflict if no one else also includes it
-                            case ReplicationUtils.ConflictStatus.AlreadyMerged:
-                                return; // we already have a conflict that includes this version
-                            default:
-                                throw new ArgumentOutOfRangeException("Invalid conflict status " + conflictStatus);
-                        }
-                    }
-                }
-            }
-
-            fixed (ChangeVectorEntry* pChangeVector = incomingChangeVector)
-            {
-                byte* doc = null;
-                int docSize = 0;
-                LazyStringValue lazyCollectionName;
-                if (incomingDoc != null) // can be null if it is a tombstone
-                {
-                    doc = incomingDoc.BasePointer;
-                    docSize = incomingDoc.Size;
-                    lazyCollectionName = CollectionName.GetLazyCollectionNameFrom(context, incomingDoc);
-                }
-                else
-                {
-                    lazyCollectionName = context.GetLazyString(incomingTombstoneCollection);
-                }
-
-                using (lazyCollectionName)
-                {
-                    TableValueBuilder tvb;
-                    using (conflictsTable.Allocate(out tvb))
-                    {
-                        tvb.Add(lowerKey);
-                        tvb.Add(SpecialChars.RecordSeperator);
-                        tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * incomingChangeVector.Length);
-                        tvb.Add(keyPtr);
-                        tvb.Add(doc, docSize);
-                        tvb.Add(Bits.SwapBytes(GenerateNextEtag()));
-                        tvb.Add(lazyCollectionName.Buffer, lazyCollectionName.Size);
-                        tvb.Add(lastModifiedTicks);
-
-                        Interlocked.Increment(ref ConflictsStorage.ConflictsCount);
-                        conflictsTable.Set(tvb);
-                    }
-                }
-            }
-
-            context.Transaction.AddAfterCommitNotification(new DocumentChange
-            {
-                Etag = _lastEtag,
-                CollectionName = collectionName.Name,
-                Key = key,
-                Type = DocumentChangeTypes.Conflict,
-                IsSystemDocument = false,
-            });
-        }
-
         public struct PutOperationResults
         {
             public string Key;
@@ -1372,6 +1121,7 @@ namespace Raven.Server.Documents
             table.Delete(storageId);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PutOperationResults Put(DocumentsOperationContext context, string key, long? expectedEtag,
             BlittableJsonReaderObject document,
             long? lastModifiedTicks = null,
@@ -1379,402 +1129,7 @@ namespace Raven.Server.Documents
             DocumentFlags flags = DocumentFlags.None,
             NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
-            if (context.Transaction == null)
-            {
-                ThrowRequiresTransaction();
-                return default(PutOperationResults);// never reached
-            }
-#if DEBUG
-            var documentDebugHash = document.DebugHash;
-            document.BlittableValidation();
-#endif
-
-            BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
-
-            var collectionName = ExtractCollectionName(context, key, document);
-            var newEtag = GenerateNextEtag();
-
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
-
-            bool knownNewKey = false;
-            if (string.IsNullOrWhiteSpace(key))
-            {
-                key = Guid.NewGuid().ToString();
-                knownNewKey = true;
-            }
-
-            switch (key[key.Length - 1])
-            {
-                case '/':
-                    int tries;
-                    key = GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out tries);
-                    knownNewKey = true;
-                    break;
-                case '|':
-                    key = AppendNumericValueToKey(key, newEtag);
-                    knownNewKey = true;
-                    break;
-            }
-
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out Slice lowerKey, out Slice keyPtr);
-
-            if (ConflictsStorage.ConflictsCount != 0)
-            {
-                // Since this document resolve the conflict we dont need to alter the change vector.
-                // This way we avoid another replication back to the source
-                if (expectedEtag.HasValue)
-                {
-                    ConflictsStorage.ThrowConcurrencyExceptionOnConflict(context, lowerKey.Content.Ptr, lowerKey.Size, expectedEtag);
-                }
-
-                bool fromReplication = (flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication;
-                if (fromReplication)
-                {
-                    ConflictsStorage.DeleteConflictsFor(context, key);
-                }
-                else
-                {
-                    changeVector = ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key, newEtag);
-                }
-            }
-
-            // delete a tombstone if it exists, if it known that it is a new key, no need, so we can skip it
-            if (knownNewKey == false)
-            {
-                DeleteTombstoneIfNeeded(context, collectionName, lowerKey.Content.Ptr, lowerKey.Size);
-            }
-
-            var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
-
-            var oldValue = default(TableValueReader);
-            if (knownNewKey == false)
-            {
-                table.ReadByKey(lowerKey, out oldValue);
-            }
-
-            BlittableJsonReaderObject oldDoc = null;
-            if (oldValue.Pointer == null)
-            {
-                if (expectedEtag != null && expectedEtag != 0)
-                {
-                    ThrowConcurrentExceptionOnMissingDoc(key, expectedEtag.Value);
-                }
-            }
-            else
-            {
-                if (expectedEtag != null)
-                {
-                    var oldEtag = TableValueToEtag(1, ref oldValue);
-                    if (oldEtag != expectedEtag)
-                        ThrowConcurrentException(key, expectedEtag, oldEtag);
-                }
-
-                int oldSize;
-                oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsTable.Data, out oldSize), oldSize, context);
-                var oldCollectionName = ExtractCollectionName(context, key, oldDoc);
-                if (oldCollectionName != collectionName)
-                    ThrowInvalidCollectionNameChange(key, oldCollectionName, collectionName);
-
-                int size;
-                var oldFlags = *(DocumentFlags*)oldValue.Read((int)DocumentsTable.Flags, out size);
-                if ((oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments || 
-                    (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
-                {
-                    flags |= DocumentFlags.HasAttachments;
-                }
-            }
-
-            if (changeVector == null)
-            {
-                var oldChangeVector = oldValue.Pointer != null ? GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)DocumentsTable.ChangeVector) : null;
-                changeVector = SetDocumentChangeVectorForLocalChange(context, lowerKey, oldChangeVector, newEtag);
-            }
-
-
-            if (collectionName.IsSystem == false &&
-                (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
-            {
-                var shouldRecreateAttachment = false;
-                BlittableJsonReaderObject metadata = null;
-                if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
-                    (nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
-                    (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
-                {
-                    Debug.Assert(oldDoc != null, "Can be null when it comes from replication, but we checked for this.");
-
-                    if (oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
-                        oldMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray oldAttachments))
-                    {
-                        // Make sure the user did not changed the value of @attachments in the @metadata
-                        // In most cases it won't be changed so we can use this value 
-                        // instead of recreating the document's blitable from scratch
-                        if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
-                            metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false ||
-                            attachments.Equals(oldAttachments) == false)
-                        {
-                            shouldRecreateAttachment = true;
-                        }
-                    }
-                }
-
-                if (shouldRecreateAttachment || 
-                    (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) == NonPersistentDocumentFlags.ResolvedAttachmentConflict)
-                {
-                    if (shouldRecreateAttachment == false)
-                        document.TryGet(Constants.Documents.Metadata.Key, out metadata);
-
-                    var actualAttachments = AttachmentsStorage.GetAttachmentsMetadataForDocument(context, lowerKey);
-                    if (metadata == null)
-                    {
-                        document.Modifications = new DynamicJsonValue(document)
-                        {
-                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                            {
-                                [Constants.Documents.Metadata.Attachments] = actualAttachments
-                            }
-                        };
-                    }
-                    else
-                    {
-                        metadata.Modifications = new DynamicJsonValue(metadata)
-                        {
-                            [Constants.Documents.Metadata.Attachments] = actualAttachments
-                        };
-                        document.Modifications = new DynamicJsonValue(document)
-                        {
-                            [Constants.Documents.Metadata.Key] = metadata
-                        };
-                    }
-#if DEBUG
-                    if (document.DebugHash != documentDebugHash)
-                    {
-                        throw new InvalidDataException("The incoming document " + key + " has changed _during_ the put process, this is likely because you are trying to save a document that is already stored and was moved");
-                    }
-#endif
-                    document = context.ReadObject(document, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-#if DEBUG
-                    documentDebugHash = document.DebugHash;
-                    document.BlittableValidation();
-#endif
-                }
-
-                if (_documentDatabase.BundleLoader.VersioningStorage != null)
-                {
-                    VersioningConfigurationCollection configuration;
-                    if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document, ref flags, out configuration, context, key))
-                    {
-                        _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, modifiedTicks, configuration);
-                    }
-                }
-            }
-
-            fixed (ChangeVectorEntry* pChangeVector = changeVector)
-            {
-                var transactionMarker = context.GetTransactionMarker();
-
-                TableValueBuilder tbv;
-                using (table.Allocate(out tbv))
-                {
-                    tbv.Add(lowerKey);
-                    tbv.Add(Bits.SwapBytes(newEtag));
-                    tbv.Add(keyPtr);
-                    tbv.Add(document.BasePointer, document.Size);
-                    tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
-                    tbv.Add(modifiedTicks);
-                    tbv.Add((int)flags);
-                    tbv.Add(transactionMarker);
-
-                    if (oldValue.Pointer == null)
-                    {
-                        table.Insert(tbv);
-                    }
-                    else
-                    {
-                        table.Update(oldValue.Id, tbv);
-                    }
-                }
-            }
-
-            if (collectionName.IsSystem == false)
-            {
-                _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context, lowerKey, document);
-            }
-
-            _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
-            _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Size);
-
-
-            context.Transaction.AddAfterCommitNotification(new DocumentChange
-            {
-                Etag = newEtag,
-                CollectionName = collectionName.Name,
-                Key = key,
-                Type = DocumentChangeTypes.Put,
-                IsSystemDocument = collectionName.IsSystem,
-            });
-
-#if DEBUG
-            if (document.DebugHash != documentDebugHash)
-            {
-                throw new InvalidDataException("The incoming document " + key + " has changed _during_ the put process, this is likely because you are trying to save a document that is already stored and was moved");
-            }
-#endif
-
-            return new PutOperationResults
-            {
-                Etag = newEtag,
-                Key = key,
-                Collection = collectionName,
-                ChangeVector = changeVector
-            };
-        }
-
-        private static void ThrowConcurrentExceptionOnMissingDoc(string key, long expectedEtag)
-        {
-            throw new ConcurrencyException(
-                $"Document {key} does not exist, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
-            {
-                ExpectedETag = expectedEtag
-            };
-        }
-
-        private static void ThrowInvalidCollectionNameChange(string key, CollectionName oldCollectionName,
-            CollectionName collectionName)
-        {
-            throw new InvalidOperationException(
-                $"Changing '{key}' from '{oldCollectionName.Name}' to '{collectionName.Name}' via update is not supported.{System.Environment.NewLine}" +
-                $"Delete it and recreate the document {key}.");
-        }
-
-        private static void ThrowConcurrentException(string key, long? expectedEtag, long oldEtag)
-        {
-            throw new ConcurrencyException(
-                $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
-            {
-                ActualETag = oldEtag,
-                ExpectedETag = expectedEtag ?? -1
-            };
-        }
-
-        public static void ThrowRequiresTransaction([CallerMemberName]string caller = null)
-        {
-            // ReSharper disable once NotResolvedInText
-            throw new ArgumentException("Context must be set with a valid transaction before calling " + caller, "context");
-        }
-
-        private static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, CollectionName collectionName, byte* lowerKey, int lowerSize)
-        {
-            var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
-            Slice key;
-            using (Slice.From(context.Allocator, lowerKey, lowerSize, out key))
-            {
-                tombstoneTable.DeleteByKey(key);
-            }
-        }
-
-        private ChangeVectorEntry[] SetDocumentChangeVectorForLocalChange(
-            DocumentsOperationContext context, Slice loweredKey,
-            ChangeVectorEntry[] oldChangeVector, long newEtag)
-        {
-            if (oldChangeVector != null)
-                return ReplicationUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, newEtag, oldChangeVector);
-
-            return ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, loweredKey, newEtag);
-        }
-
-
-
-        public IEnumerable<KeyValuePair<string, long>> GetIdentities(DocumentsOperationContext context)
-        {
-            var identities = context.Transaction.InnerTransaction.ReadTree(IdentitiesSlice);
-            using (var it = identities.Iterate(false))
-            {
-                if (it.Seek(Slices.BeforeAllKeys) == false)
-                    yield break;
-
-                do
-                {
-                    var name = it.CurrentKey.ToString();
-                    var value = it.CreateReaderForCurrent().ReadLittleEndianInt64();
-
-                    yield return new KeyValuePair<string, long>(name, value);
-                } while (it.MoveNext());
-            }
-        }
-
-        public string GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, Table table, DocumentsOperationContext context, out int tries)
-        {
-            var identities = context.Transaction.InnerTransaction.ReadTree(IdentitiesSlice);
-            var nextIdentityValue = identities.Increment(key, 1);
-            var finalKey = AppendIdentityValueToKey(key, nextIdentityValue);
-            Slice finalKeySlice;
-            tries = 1;
-
-            using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
-            {
-                TableValueReader reader;
-                if (table.ReadByKey(finalKeySlice, out reader) == false)
-                {
-                    return finalKey;
-                }
-            }
-
-            /* We get here if the user inserted a document with a specified id.
-            e.g. your identity is 100
-            but you forced a put with 101
-            so you are trying to insert next document and it would overwrite the one with 101 */
-
-            var lastKnownBusy = nextIdentityValue;
-            var maybeFree = nextIdentityValue * 2;
-            var lastKnownFree = long.MaxValue;
-            while (true)
-            {
-                tries++;
-                finalKey = AppendIdentityValueToKey(key, maybeFree);
-                using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
-                {
-                    TableValueReader reader;
-                    if (table.ReadByKey(finalKeySlice, out reader) == false)
-                    {
-                        if (lastKnownBusy + 1 == maybeFree)
-                        {
-                            nextIdentityValue = identities.Increment(key, lastKnownBusy);
-                            return key + nextIdentityValue;
-                        }
-                        lastKnownFree = maybeFree;
-                        maybeFree = Math.Max(maybeFree - (maybeFree - lastKnownBusy) / 2, lastKnownBusy + 1);
-                    }
-                    else
-                    {
-                        lastKnownBusy = maybeFree;
-                        maybeFree = Math.Min(lastKnownFree, maybeFree * 2);
-                    }
-                }
-            }
-        }
-
-        private string AppendIdentityValueToKey(string key, long val)
-        {
-            _keyBuilder.Length = 0;
-            _keyBuilder.Append(key);
-            _keyBuilder.Append(val);
-            return _keyBuilder.ToString();
-        }
-
-
-        private string AppendNumericValueToKey(string key, long val)
-        {
-            _keyBuilder.Length = 0;
-            _keyBuilder.Append(key);
-            _keyBuilder[_keyBuilder.Length - 1] = '/';
-            _keyBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0:D19}", val);
-            return _keyBuilder.ToString();
-        }
-
-        public long IdentityFor(DocumentsOperationContext ctx, string key)
-        {
-            var identities = ctx.Transaction.InnerTransaction.ReadTree(IdentitiesSlice);
-            return identities.Increment(key, 1);
+            return DocumentPut.PutDocument(context, key, expectedEtag, document, lastModifiedTicks, changeVector, flags, nonPersistentFlags);
         }
 
         public long GetNumberOfDocumentsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
@@ -1930,15 +1285,6 @@ namespace Raven.Server.Documents
                     yield return tombstoneCollection.Substring(TombstonesPrefix.Size);
                 }
                 while (it.MoveNext());
-            }
-        }
-
-        public void UpdateIdentities(DocumentsOperationContext context, Dictionary<string, long> identities)
-        {
-            var readTree = context.Transaction.InnerTransaction.ReadTree(IdentitiesSlice);
-            foreach (var identity in identities)
-            {
-                readTree.AddMax(identity.Key, identity.Value);
             }
         }
 

@@ -329,7 +329,7 @@ namespace Raven.Server.Documents
         {
             if (oldValue.Pointer != null)
             {
-                var changeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)MetadataFields.ChangeVector);
+                var changeVector = DocumentsStorage.GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)MetadataFields.ChangeVector);
                 return ReplicationUtils.UpdateChangeVectorWithNewEtag(_environment.DbId, newEtag, changeVector);
             }
 
@@ -407,7 +407,7 @@ namespace Raven.Server.Documents
                 foreach (var tvr in table.SeekForwardFrom(ConflictsTableSchema.Indexes[NameAndEtagIndexName], name, 0, true))
                 {
                     more = true;
-                    list.Add(ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr.Result.Reader, (int)MetadataFields.ChangeVector));
+                    list.Add(DocumentsStorage.GetChangeVectorEntriesFromTableValueReader(ref tvr.Result.Reader, (int)MetadataFields.ChangeVector));
 
                     table.Delete(tvr.Result.Reader.Id);
                     break;
@@ -600,7 +600,7 @@ namespace Raven.Server.Documents
 
             metadata.Name = context.AllocateStringValue(null, tvr.Read((int)MetadataFields.Name, out size), size).ToString();
 
-            metadata.ChangeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)MetadataFields.ChangeVector);
+            metadata.ChangeVector = DocumentsStorage.GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)MetadataFields.ChangeVector);
             metadata.Type = (IndexEntryType)(*tvr.Read((int)MetadataFields.Type, out size));
             metadata.Etag = Bits.SwapBytes(*(long*)tvr.Read((int)MetadataFields.Etag, out size));
             metadata.IsConflicted = *(bool*)tvr.Read((int)MetadataFields.IsConflicted, out size);
@@ -617,7 +617,7 @@ namespace Raven.Server.Documents
 
             data.Name = context.AllocateStringValue(null, tvr.Read((int)ConflictFields.Name, out size), size).ToString();
 
-            data.ChangeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictFields.ChangeVector);
+            data.ChangeVector = DocumentsStorage.GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictFields.ChangeVector);
             data.Type = (IndexEntryType)(*tvr.Read((int)ConflictFields.Type, out size));
             data.Etag = Bits.SwapBytes(*(long*)tvr.Read((int)ConflictFields.Etag, out size));
 
