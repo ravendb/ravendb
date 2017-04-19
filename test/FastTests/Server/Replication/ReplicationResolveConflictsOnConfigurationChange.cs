@@ -87,9 +87,11 @@ namespace FastTests.Server.Replication
             using (var store2 = GetDocumentStore())
             {
                 GenerateConflicts(store1, store2);
+                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.DefaultDatabase).Result;
+
                 var config = new ConflictSolver
                 {
-                    DatabaseResolverId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString()
+                    DatabaseResolverId = storage1.DbId.ToString()
                 };
                 SetupReplication(store1, config, store2);
 
@@ -108,8 +110,8 @@ namespace FastTests.Server.Replication
                 await SetupReplicationAsync(store1);
                 await SetupReplicationAsync(store2);
                 GenerateConflicts(store1, store2, "users/2");
-                
-                await UpdateConflictResolver(store1, GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString());
+                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.DefaultDatabase).Result;
+                await UpdateConflictResolver(store1, storage1.DbId.ToString());
 
                 Assert.True(WaitForDocument<User>(store1, "users/1", u => u.Name == "Store1"));
                 Assert.True(WaitForDocument<User>(store2, "users/1", u => u.Name == "Store1"));

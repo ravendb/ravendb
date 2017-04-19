@@ -360,28 +360,6 @@ namespace FastTests.Server.Replication
             UpdateConflictResolver(store, null, null, conflictResolution == StraightforwardConflictResolution.ResolveToLatest).ConfigureAwait(false);
         }
 
-               
-        protected static void SetupReplication(DocumentStore fromStore, Dictionary<string, string> etlScripts, params DocumentStore[] toStores)
-        {
-            using (var session = fromStore.OpenSession())
-            {
-                var destinations = new List<ReplicationNode>();
-                foreach (var store in toStores)
-                    destinations.Add(
-                        new ReplicationNode
-                        {
-                            Database = store.DefaultDatabase,
-                            Url = store.Url,
-                            SpecifiedCollections = etlScripts
-                        });
-                session.Store(new ReplicationDocument
-                {
-                    Destinations = destinations
-                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                session.SaveChanges();
-            }
-        }
-
         protected void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
         {
             SetupReplicationAsync(fromStore, toStores).ConfigureAwait(false);
@@ -397,49 +375,24 @@ namespace FastTests.Server.Replication
         {
             SetupReplicationAsync(fromStore, conflictSolver, toStores).ConfigureAwait(false);
         }
+                     
+        protected virtual void ModifyReplicationDestination(ReplicationNode replicationNode)
+        {
+        }
         
-                protected static void DeleteReplication(DocumentStore fromStore, DocumentStore deletedStoreDestination)
+        protected static async Task SetupReplicationWithCustomDestinations(DocumentStore fromStore, params ReplicationNode[] toNodes)
+        {
+            var watchers = new List<DatabaseWatcher>();
+            foreach (var node in toNodes)
+            {
+                watchers.Add(new DatabaseWatcher
                 {
-                    ReplicationDocument replicationConfigDocument;
-        
-                    using (var session = fromStore.OpenSession())
-                    {
-                        replicationConfigDocument =
-                            session.Load<ReplicationDocument>(Constants.Documents.Replication.ReplicationConfigurationDocument);
-        
-                        if (replicationConfigDocument == null)
-                            return;
-        
-                        session.Delete(replicationConfigDocument);
-                        session.SaveChanges();
-                    }
-        
-                    using (var session = fromStore.OpenSession())
-                    {
-        
-                        replicationConfigDocument.Destinations.RemoveAll(
-                            x => x.Database == deletedStoreDestination.DefaultDatabase);
-        
-                        session.Store(replicationConfigDocument);
-                        session.SaveChanges();
-                    }
-                }
-        
-                protected virtual void ModifyReplicationDestination(ReplicationNode replicationNode)
-                {
-                }
-        
-                protected static void SetupReplicationWithCustomDestinations(DocumentStore fromStore, params ReplicationNode[] toNodes)
-                {
-                    using (var session = fromStore.OpenSession())
-                    {
-                        session.Store(new ReplicationDocument
-                        {
-                            Destinations = toNodes.ToList()
-                        }, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                        session.SaveChanges();
-                    }
-                }
+                    Database = node.Database,
+                    Url = node.Url,
+                });
+            }
+            await UpdateReplicationTopology(fromStore, watchers);
+        }
 
         private class GetRevisionsCommand : RavenCommand<List<object>>
         {

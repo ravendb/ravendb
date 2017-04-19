@@ -81,11 +81,6 @@ namespace Raven.Server.Documents.Replication
 
         private OutgoingReplicationStatsAggregator _lastStats;
 
-        private bool _pauseReplication;
-
-        public void PauseReplication() => _pauseReplication = true;
-        public void ResumeReplication() => _pauseReplication = false;
-
         public OutgoingReplicationHandler(ReplicationLoader parent,DocumentDatabase database,ReplicationNode node)
         {
             _parent = parent;
@@ -196,11 +191,6 @@ namespace Raven.Server.Documents.Replication
 
                             while (true)
                             {
-                                if (_pauseReplication) //except for tests, should never be used...
-                                {
-                                    continue;
-                                }
-
                                 var sp = Stopwatch.StartNew();
                                 var stats = _lastStats = new OutgoingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
                                 AddReplicationPerformance(stats);

@@ -13,10 +13,11 @@ namespace FastTests.Server.Replication
         [Fact]
         public void DontCleanTombstones()
         {
+            DoNotReuseServer();
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                var storage1 = GetDocumentDatabaseInstanceFor(store1).Result;
+                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.DefaultDatabase).Result;
 
                 using (var session = store1.OpenSession())
                 {
@@ -25,12 +26,15 @@ namespace FastTests.Server.Replication
                 }
 
                 SetupReplication(store1, store2);
+                Assert.True(WaitForDocument(store2, "foo/bar"));
+                
                 using (var session = store1.OpenSession())
                 {
                     session.Delete("foo/bar");
                     session.SaveChanges();
                     storage1.DocumentTombstoneCleaner.ExecuteCleanup(null);
                 }
+
                 Assert.Equal(1, WaitUntilHasTombstones(store1).Count);
             }
         }
@@ -41,7 +45,7 @@ namespace FastTests.Server.Replication
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                var storage1 = GetDocumentDatabaseInstanceFor(store1).Result;
+                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.DefaultDatabase).Result;
 
                 using (var session = store1.OpenSession())
                 {

@@ -123,8 +123,8 @@ namespace Raven.Server.Documents.Replication
         {
             TransactionOperationContext context;
             using (Server.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
-                context.OpenReadTransaction();
                 var databaseRecord = Server.Cluster.ReadDatabase(context, Database.Name);
                 if (databaseRecord == null)
                 {

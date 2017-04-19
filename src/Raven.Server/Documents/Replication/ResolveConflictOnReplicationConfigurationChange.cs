@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Replication
         {
             UpdateScriptResolvers();
 
-            if (ConflictsCount > 0 && ConflictSolver.IsEmpty() == false)
+            if (ConflictsCount > 0 && ConflictSolver?.IsEmpty() == false)
             {
                 try
                 {

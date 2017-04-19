@@ -43,7 +43,7 @@ namespace FastTests.Issues
                     { "bars", "this.Foo = 'bar'" } //dummy script
                 };
 
-                SetupReplication(storeA, etl, storeB);
+                /*SetupReplication(storeA, etl, storeB);
 
                 using (var session = storeA.OpenSession())
                 {
@@ -60,7 +60,7 @@ namespace FastTests.Issues
                     session.SaveChanges();
                 }
 
-                SetupReplication(storeB, etl, storeC);
+                SetupReplication(storeB, etl, storeC);*/
 
                 WaitForDocumentToReplicate<Bar>(storeC, "bar", 10000);
 

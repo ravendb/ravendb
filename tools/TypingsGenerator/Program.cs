@@ -155,9 +155,6 @@ namespace TypingsGenerator
             // versioning
             scripter.AddType(typeof(VersioningConfiguration));
 
-            // replication 
-            scripter.AddType(typeof(ReplicationDocument<>));
-
             // sql replication 
             scripter.AddType(typeof(SqlConnections));
             scripter.AddType(typeof(SqlEtlConfiguration));

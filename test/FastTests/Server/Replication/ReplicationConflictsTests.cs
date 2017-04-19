@@ -641,8 +641,7 @@ namespace FastTests.Server.Replication
 
                 SetScriptResolution(store2, "return {Name:docs[0].Name + '123'};", "Users");
                 SetupReplication(store1, store2);
-
-                var db2 = GetDocumentDatabaseInstanceFor(store2).Result.NotificationCenter;
+                var db2 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.DefaultDatabase).Result.NotificationCenter;
 
                 Assert.Equal(1, WaitForValue(() => db2.GetAlertCount(), 1));
 

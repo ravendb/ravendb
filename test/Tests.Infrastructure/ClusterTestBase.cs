@@ -267,9 +267,10 @@ namespace Tests.Infrastructure
 
         protected override Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store)
         {
-            var index = FindStoreIndex(store);
-            Assert.False(index == -1,"Didn't find store index, most likely it doesn't belong to the cluster. Did you setup Raft cluster properly?");
-            return Servers[index].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+            //var index = FindStoreIndex(store);
+            //Assert.False(index == -1, "Didn't find store index, most likely it doesn't belong to the cluster. Did you setup Raft cluster properly?");
+            //return Servers[index].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
         }
 
         private int FindStoreIndex(IDocumentStore store)

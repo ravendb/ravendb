@@ -226,7 +226,7 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
-        public void Master_with_offline_slaves_should_be_properly_detected_in_full_topology()
+        public async Task Master_with_offline_slaves_should_be_properly_detected_in_full_topology()
         {
             using (var master = GetDocumentStore())
             {
@@ -244,7 +244,7 @@ namespace SlowTests.Server.Replication
                     }
                 };
 
-                SetupReplicationWithCustomDestinations(master, destinations);
+                await SetupReplicationWithCustomDestinations(master, destinations);
 
                 var topologyInfo = GetFullTopology(master);
 
