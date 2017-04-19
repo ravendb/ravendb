@@ -1,4 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 using Lucene.Net.Documents;
 
@@ -6,7 +8,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 {
-    public class FieldCacheKey
+    public sealed class FieldCacheKey
     {
         internal readonly string name;
         internal readonly Field.Index? index;
@@ -23,23 +25,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
             get
             {
                 if (_hashKey == 0)
-                {
-                    unsafe
-                    {
-                        int nameHash = name?.GetHashCode() ?? 0;
-                        int fieldHash = (index != null ? (byte)index : -1) << 16 | ((byte)store << 8) | (byte)termVector;
-                        int hash = Hashing.Combine(nameHash, fieldHash);
-
-                        if (multipleItemsSameField.Length > 0)
-                        {
-                            fixed (int* buffer = multipleItemsSameField)
-                            {
-                                _hashKey = (int)Hashing.XXHash32.CalculateInline((byte*)buffer, multipleItemsSameField.Length * sizeof(int), (uint)hash);
-                            }
-                        }
-                        else _hashKey = hash;
-                    }
-                }
+                    _hashKey = GetHashCode(name, index, store, termVector, multipleItemsSameField);
 
                 return _hashKey;
             }
@@ -52,6 +38,72 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
             this.store = store;
             this.termVector = termVector;
             this.multipleItemsSameField = multipleItemsSameField;
+        }
+
+        public bool IsSame(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
+        {
+            // We are thinking it is possible to have collisions. This may not be true ever!
+            if (this.index != index || this.store != store || this.termVector != termVector || !string.Equals(this.name, name))
+                return false;
+
+            if (this.multipleItemsSameField.Length != multipleItemsSameField.Length)
+                return false;
+
+            int count = this.multipleItemsSameField.Length;
+            for (int i = 0; i < count; i++)
+            {
+                if (this.multipleItemsSameField[i] != multipleItemsSameField[i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        public bool IsSame(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, List<int> multipleItemsSameField)
+        {
+            // We are thinking it is possible to have collisions. This may not be true ever!
+            if (this.index != index || this.store != store || this.termVector != termVector || !string.Equals(this.name, name))
+                return false;
+
+            if (this.multipleItemsSameField.Length != multipleItemsSameField.Count)
+                return false;
+
+            int count = this.multipleItemsSameField.Length;
+            for (int i = 0; i < count; i++)
+            {
+                if (this.multipleItemsSameField[i] != multipleItemsSameField[i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        public static int GetHashCode(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
+        {
+            ulong tmpHash = Hashing.Marvin32.CalculateInline(name) << 32;
+            int field = ((index != null ? (byte)index : 0xFF) << 16 | ((byte)store << 8) | (byte)termVector);
+            tmpHash = tmpHash | (uint)field;
+
+            uint hash = Hashing.Mix(tmpHash);
+
+            if (multipleItemsSameField.Length == 0)
+                return (int)hash;
+
+            return (int)Hashing.Combine(hash, Hashing.Marvin32.CalculateInline(multipleItemsSameField));
+        }
+
+        public static int GetHashCode(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, List<int> multipleItemsSameField)
+        {
+            ulong tmpHash = Hashing.Marvin32.CalculateInline(name) << 32;
+            int field = ((index != null ? (byte)index : 0xFF) << 16 | ((byte)store << 8) | (byte)termVector);
+            tmpHash = tmpHash | (uint)field;
+
+            uint hash = Hashing.Mix(tmpHash);
+
+            if (multipleItemsSameField.Count == 0)
+                return (int)hash;
+
+            return (int)Hashing.Combine(hash, Hashing.Marvin32.CalculateInline(multipleItemsSameField));
         }
 
         public override int GetHashCode()

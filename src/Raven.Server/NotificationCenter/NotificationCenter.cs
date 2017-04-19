@@ -31,6 +31,8 @@ namespace Raven.Server.NotificationCenter
             Paging = new Paging(this, _notificationsStorage);
         }
 
+        public bool IsInitialized { get; set; }
+
         public void Initialize(DocumentDatabase database = null)
         {
             _postponedNotifications = new PostponedNotificationsSender(_resourceName, _notificationsStorage, _watchers, _shutdown);
@@ -38,6 +40,8 @@ namespace Raven.Server.NotificationCenter
 
             if (database != null)
                 _backgroundWorkers.Add(new DatabaseStatsSender(database, this));
+
+            IsInitialized = true;
         }
 
         public readonly Paging Paging;

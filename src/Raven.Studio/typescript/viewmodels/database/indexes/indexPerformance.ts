@@ -209,6 +209,7 @@ class indexPerformance extends viewModelBase {
     /* observables */
 
     hasAnyData = ko.observable<boolean>(false);
+    loading: KnockoutComputed<boolean>;
     private searchText = ko.observable<string>();
 
     private liveViewClient = ko.observable<liveIndexPerformanceWebSocketClient>();
@@ -278,6 +279,11 @@ class indexPerformance extends viewModelBase {
                 this.brushContainer
                     .transition(); 
             }
+        });
+
+        this.loading = ko.pureComputed(() => {
+            const client = this.liveViewClient();
+            return client ? client.loading() : true;
         });
     }
 
@@ -614,7 +620,7 @@ class indexPerformance extends viewModelBase {
             this.brushContainer
                 .call(this.brush)
                 .selectAll("rect")
-                .attr("y", 0)
+                .attr("y", 1)
                 .attr("height", indexPerformance.brushSectionHeight - 1);
         }
     }
@@ -1180,6 +1186,7 @@ class indexPerformance extends viewModelBase {
 
     closeImport() {
         this.isImport(false);
+        this.hasAnyData(false);
         this.resetGraphData();
         this.enableLiveView();
     }

@@ -308,18 +308,6 @@ namespace Raven.Server.Utils
             return (TEnum)Enum.ToObject(typeof(TEnum), storageTypeNum);
         }
 
-        public static unsafe ChangeVectorEntry[] GetChangeVectorEntriesFromTableValueReader(ref TableValueReader tvr, int index)
-        {
-            int size;
-            var pChangeVector = (ChangeVectorEntry*)tvr.Read(index, out size);
-            var changeVector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
-            for (int i = 0; i < changeVector.Length; i++)
-            {
-                changeVector[i] = pChangeVector[i];
-            }
-            return changeVector;
-        }
-
         public static unsafe ChangeVectorEntry[] ReadChangeVectorFrom(Tree tree)
         {
             var changeVector = new ChangeVectorEntry[tree.State.NumberOfEntries];

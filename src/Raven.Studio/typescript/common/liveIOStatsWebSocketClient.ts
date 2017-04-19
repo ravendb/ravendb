@@ -2,6 +2,7 @@
 import database = require("models/resources/database");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import d3 = require("d3");
+import endpoints = require("endpoints");
 
 class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Documents.Handlers.IOMetricsResponse> {
 
@@ -10,6 +11,7 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
     private mergedData: Raven.Server.Documents.Handlers.IOMetricsResponse;    
     private pendingDataToApply: Raven.Server.Documents.Handlers.IOMetricsResponse[] = []; // Used to hold data when pauseUpdates
     private updatesPaused = false;
+    loading = ko.observable<boolean>(true);
 
     constructor(db: database, onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void) {
         super(db);
@@ -22,8 +24,8 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
     }
 
     protected webSocketUrlFactory(token: singleAuthToken) {
-        const connectionString = "singleUseAuthToken=" + token.Token;
-        return "/debug/io-metrics/live?" + connectionString; 
+        const connectionString = "?singleUseAuthToken=" + token.Token;
+        return endpoints.databases.ioMetrics.debugIoMetricsLive + connectionString;
     }
 
     get autoReconnect() {
@@ -43,7 +45,13 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
         this.onData(this.mergedData);
     }
 
+    protected onHeartBeat() {
+        this.loading(false);
+    }
+
     protected onMessage(e: Raven.Server.Documents.Handlers.IOMetricsResponse) {
+        this.loading(false);
+
         if (this.updatesPaused) {
             this.pendingDataToApply.push(e);
         } else {

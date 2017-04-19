@@ -3,6 +3,7 @@
 import database = require("models/resources/database");
 import d3 = require("d3");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
+import endpoints = require("endpoints");
 
 class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.Client.Documents.Indexes.IndexPerformanceStats[]> {
 
@@ -15,6 +16,8 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.
     private pendingDataToApply: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = [];
     private updatesPaused = false;
 
+    loading = ko.observable<boolean>(true);
+
     constructor(db: database, onData: (data: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) => void) {
         super(db);
         this.onData = onData;
@@ -25,8 +28,8 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.
     }
 
     protected webSocketUrlFactory(token: singleAuthToken) {
-        const connectionString = "singleUseAuthToken=" + token.Token;
-        return "/indexes/performance/live?" + connectionString;
+        const connectionString = "?singleUseAuthToken=" + token.Token;
+        return endpoints.databases.index.indexesPerformanceLive + connectionString;
     }
 
     get autoReconnect() {
@@ -47,7 +50,13 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.
         this.onData(this.mergedData);
     }
 
+    protected onHeartBeat() {
+        this.loading(false);
+    }
+
     protected onMessage(e: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) {
+        this.loading(false);
+
         if (this.updatesPaused) {
             this.pendingDataToApply.push(...e);
         } else {

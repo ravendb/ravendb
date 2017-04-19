@@ -15,6 +15,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -33,6 +34,7 @@ namespace Raven.Server.Documents
 {
     public class DocumentDatabase : IResourceStore
     {
+        private readonly ServerStore _serverStore;
         private readonly Logger _logger;
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
@@ -52,8 +54,18 @@ namespace Raven.Server.Documents
             _lastIdleTicks = DateTime.MinValue.Ticks;
         }
 
+        internal void HandleNonDurableFileSystemError(object sender, NonDurabilitySupportEventArgs e)
+        {
+            _serverStore?.NotificationCenter.Add(AlertRaised.Create($"Non Durable File System - {Name ?? "Unknown Database"}",
+                e.Message,
+                AlertType.NonDurableFileSystem,
+                NotificationSeverity.Warning,
+                Name));
+        }
+
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore)
         {
+            _serverStore = serverStore;
             StartTime = SystemTime.UtcNow;
             Name = name;
             ResourceName = "db/" + name;
@@ -80,7 +92,6 @@ namespace Raven.Server.Documents
             ConfigurationStorage = new ConfigurationStorage(this);
             NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
-            _serverStore = serverStore;
             _rachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
             CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
             {
@@ -399,7 +410,6 @@ namespace Raven.Server.Documents
         }
 
         private static readonly string CachedDatabaseInfo = "CachedDatabaseInfo";
-        private ServerStore _serverStore;
 
         public DynamicJsonValue GenerateDatabaseInfo()
         {
@@ -533,7 +543,6 @@ namespace Raven.Server.Documents
             yield return TxMerger.GeneralWaitPerformanceMetrics;
             yield return TxMerger.TransactionPerformanceMetrics;
         }
-        
     }
 
     public class StorageEnvironmentWithType

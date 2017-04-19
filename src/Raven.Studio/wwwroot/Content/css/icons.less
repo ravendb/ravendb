@@ -264,15 +264,15 @@
     content: "\e926";
 }
 
-.icon-document:before, .icon-documents:before {
+.icon-document:before  {
     content: @icon-document;
 }
 
 .icon-document2:before {
-    content: "\e928";
+    content: @icon-document //"\e928";
 }
 
-.icon-document-group:before {
+.icon-document-group:before, .icon-documents:before {
     content: "\e929";
 }
 
@@ -332,7 +332,7 @@
     content: "\e937";
 }
 
-.icon-recent:before, .icon-latest:before {
+.icon-recent:before, .icon-latest:before, .icon-postpone:before {
     content: "\e938";
 }
 
@@ -848,7 +848,7 @@
 .icon-index:before {
   content: "\e92d";
 }
-.icon-info:before {
+.icon-info:before, icon-details {
   content: "\e92e";
 }
 .icon-link:before {

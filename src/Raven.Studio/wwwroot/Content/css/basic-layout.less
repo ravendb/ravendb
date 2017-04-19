@@ -9,7 +9,7 @@
 
 body,
 html {
-    overflow:hidden;
+    overflow: hidden;
     width: 100%;
     height: 100%;
 }
@@ -22,7 +22,7 @@ html {
 
 .durandal-wrapper {
     height: 100%;
-    flex-grow:1;
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
 }
@@ -35,7 +35,7 @@ body {
 
         .loading-overlay {
             opacity: 1;
-            height:100%;
+            height: 100%;
             transform: translateY(0);
 
             .loading-info {
@@ -107,12 +107,46 @@ body {
 .scroll {
     overflow-y: auto;
     overflow-x: hidden;
-    flex-basis:auto;
-    flex-shrink:1;
+    flex-basis: auto;
+    flex-shrink: 1;
 }
 
 .flex-separator {
-    flex-grow:1;
+    flex-grow: 1;
+}
+
+.col-sm-auto {
+    @media (min-width:@screen-sm) {
+        width: initial;
+    }
+}
+
+.col-sm-grow {
+    @media (min-width:@screen-sm) {
+        width: auto;
+        flex-grow: 1;
+    }
+}
+
+.col-md-grow {
+    @media (min-width:@screen-md) {
+        width: auto;
+        flex-grow: 1;
+    }
+}
+
+.col-lg-grow {
+    @media (min-width:@screen-lg) {
+        width: auto;
+        flex-grow: 1;
+    }
+}
+
+.col-xl-grow {
+    @media (min-width:@screen-xl) {
+        width: auto;
+        flex-grow: 1;
+    }
 }
 
 .tooltip {
@@ -162,26 +196,45 @@ body {
 .status-footer {
     display: flex;
     flex-shrink: 0;
-    font-size: 12px;
+    font-size: 14px;
     justify-content: space-between;
-    color: fadeout(@brand-info-light,50%);
-    padding: 3px 0;
+    align-items: stretch;
+    background-color: @gray-dark;
+    border-top: 1px solid fadeout(gray,60%);
+    color: @gray-light;
 
 
     a {
-        color: inherit;
         padding: @grid-gutter-width/8 @grid-gutter-width/2;
         display: inline-block;
         transition: color .1s ease;
+        height: 100%;
+
+        &:not(.text-danger):not(.text-warning) {
+            color: inherit;
+        }
 
         .label {
             opacity: .7;
             transition: opacity .1s ease;
         }
 
+        &.btn {
+            top: -1px;
+            position: relative;
+            height: ~"calc(100% + 1px)";
+            display: flex;
+            align-items: center;
+
+            i {
+                font-size: 22px !important;
+                top: -1px !important;
+            }
+        }
+
         &:hover, &:active, &:focus {
             text-decoration: none !important;
-            color: @gray-lighter;
+            color: #FFF;
 
             .label {
                 opacity: 1;
@@ -195,7 +248,7 @@ body {
 
     .footer-right, .footer-left {
         display: flex;
-        align-items: center;
+        align-items: stretch;
     }
 
     .footer-right {
@@ -208,7 +261,7 @@ body {
 
     .footer-item {
         & + .footer-item {
-            border-left: 1px solid fadeout(@brand-info-light,80%);
+            border-left: 1px solid fadeout(gray,60%);
         }
     }
 }
@@ -279,7 +332,7 @@ body {
             text-align: right;
         }
 
-        margin-left:@grid-gutter-width/2;
+        margin-left: @grid-gutter-width/2;
 
         li {
             display: inline-block;
@@ -549,10 +602,15 @@ body {
             .resources-link {
                 .slidein-style;
                 position: absolute;
-                top: @grid-gutter-width/4;
-                right: @grid-gutter-width/4;
+                top: 6px;
+                padding: 1px 6px;
+                right: 40px;
                 z-index: 21;
                 display: none;
+
+                &:hover {
+                    background-color: @gray;
+                }
             }
 
             &.active {
@@ -684,9 +742,9 @@ body {
 
 .content-container {
     position: relative;
-    display:flex;
-    width:100%;
-    overflow-y:auto;
+    display: flex;
+    width: 100%;
+    overflow-y: auto;
     -webkit-transition: left @menu-transition-ease;
     -moz-transition: left @menu-transition-ease;
     -ms-transition: left @menu-transition-ease;
@@ -694,15 +752,15 @@ body {
     transition: left @menu-transition-ease;
 
     .content-margin {
-        flex-grow:1;
+        flex-grow: 1;
         margin: @grid-gutter-width;
-        position:relative;
+        position: relative;
     }
 }
 
 .page-host {
     width: 100%; // fix full width;
-    display:flex;
+    display: flex;
 }
 
 #menu-toggle {
@@ -717,6 +775,7 @@ body {
     transition: transform @menu-transition-ease;
     width: @menu-width;
     flex-basis: @menu-width;
+    flex-shrink:0;
 
     @media (min-width: @screen-md) {
         top: @navbar-height;

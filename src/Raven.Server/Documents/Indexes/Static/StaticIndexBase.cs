@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -93,8 +94,31 @@ namespace Raven.Server.Documents.Indexes.Static
                 keyOrEnumerable.GetType().FullName + ": " + keyOrEnumerable);
         }
 
+        private struct StaticIndexLuceneDocumentWrapper : ILuceneDocumentWrapper
+        {
+            private readonly List<AbstractField> _fields;
+
+            public StaticIndexLuceneDocumentWrapper(List<AbstractField> fields)
+            {
+                _fields = fields;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Add(AbstractField field)
+            {
+                _fields.Add(field);                
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public IList<IFieldable> GetFields()
+            {
+                throw new NotImplementedException();
+            }
+        }
+
         protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool? analyzed = null)
         {
+            // IMPORTANT: Do not delete this method, it is used by the indexes code when using LoadDocument
             FieldIndexing? index;
 
             switch (analyzed)
@@ -118,9 +142,11 @@ namespace Raven.Server.Documents.Indexes.Static
             }, null);
 
             if (_createFieldsConverter == null)
-                _createFieldsConverter = new LuceneDocumentConverter(new IndexField[] {});
+                _createFieldsConverter = new LuceneDocumentConverter(new IndexField[] { });
 
-            return _createFieldsConverter.GetRegularFields(field, value, CurrentIndexingScope.Current.IndexContext);
+            var result = new List<AbstractField>();
+            _createFieldsConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext);
+            return result;
         }
 
         public IndexingFunc Reduce;

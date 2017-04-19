@@ -138,11 +138,8 @@ namespace Raven.Client.Documents.Session
         public bool UseOptimisticConcurrency { get; set; }
 
         private readonly List<ICommandData> _deferedCommands = new List<ICommandData>();
-        private readonly BlittableOperation _blittableOperation;
         public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; }
         public EntityToBlittable EntityToBlittable { get; }
-
-        public BlittableOperation BlittableOperation => _blittableOperation;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
@@ -162,7 +159,6 @@ namespace Raven.Client.Documents.Session
             MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(documentStore.Conventions, GenerateKey);
             EntityToBlittable = new EntityToBlittable(this);
-            _blittableOperation = new BlittableOperation();
         }
 
         /// <summary>
@@ -832,7 +828,7 @@ more responsive application.
 
         protected bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)
         {
-            return _blittableOperation.EntityChanged(newObj, documentInfo, changes);
+            return BlittableOperation.EntityChanged(newObj, documentInfo, changes);
         }
 
         public IDictionary<string, DocumentsChanges[]> WhatChanged()

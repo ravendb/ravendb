@@ -118,7 +118,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<KeyValuePair<string, long>> GetIdentities()
         {
-            return _database.DocumentsStorage.GetIdentities(_context);
+            return _database.DocumentsStorage.Identities.GetIdentities(_context);
         }
 
         public long SkipType(DatabaseItemType type)

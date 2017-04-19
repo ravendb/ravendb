@@ -96,8 +96,9 @@ namespace Raven.Server.Documents.Replication
 
                 _conflictResolver.ResolveToLatest(documentsContext, conflicts);
                 return;
+
             }
-            _database.DocumentsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection);
+            _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection);
         }
 
         private bool TryResovleConflictByScript(
@@ -237,7 +238,7 @@ namespace Raven.Server.Documents.Replication
 
             if (existingDoc != null)
             {
-                var compareResult = Document.IsEqualTo(existingDoc.Data, incomingDoc, true);
+                var compareResult = DocumentCompare.IsEqualTo(existingDoc.Data, incomingDoc, true);
                 if (compareResult == DocumentCompareResult.NotEqual)
                     return false;
 
@@ -256,7 +257,7 @@ namespace Raven.Server.Documents.Replication
                 Slice loweredKey;
                 using (Slice.External(context.Allocator, existingTombstone.LoweredKey, out loweredKey))
                 {
-                    _database.DocumentsStorage.DeleteConflicts(context, loweredKey, null, existingTombstone.ChangeVector);
+                    _database.DocumentsStorage.ConflictsStorage.DeleteConflicts(context, loweredKey, null, existingTombstone.ChangeVector);
                 }
                 return true;
             }

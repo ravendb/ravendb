@@ -484,7 +484,6 @@ namespace Raven.Server.Documents
             return maxLastWork + TimeSpan.FromMilliseconds(dbSize / 1024L);
         }
 
-
         public void UnloadResourceOnCatastrophicFailue(string databaseName, Exception e)
         {
             Task.Run(async () =>
@@ -497,7 +496,7 @@ namespace Raven.Server.Documents
                     _serverStore.NotificationCenter.Add(AlertRaised.Create(
                         title,
                         message,
-                        AlertType.CatastrophicDatabaseFailue,
+                        AlertType.CatastrophicDatabaseFailure,
                         NotificationSeverity.Error,
                         key: databaseName,
                         details: new ExceptionDetails(e)));

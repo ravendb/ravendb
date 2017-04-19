@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Versioning
                 }
 
                 // compare the contents of the existing and the new document
-                if (Document.IsEqualTo(existingDocument, document, false) != DocumentCompareResult.NotEqual)
+                if (DocumentCompare.IsEqualTo(existingDocument, document, false) != DocumentCompareResult.NotEqual)
                 {
                     // no need to create a new revision, both documents have identical content
                     return false;

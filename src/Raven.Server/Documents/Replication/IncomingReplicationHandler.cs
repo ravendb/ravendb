@@ -331,11 +331,11 @@ namespace Raven.Server.Documents.Replication
         {
             if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out int itemsCount))
                 throw new InvalidDataException(
-                    "Expected the 'ItemsCount' field, but had no numeric field of this value, this is likely a bug");
+                    $"Expected the '{nameof(ReplicationMessageHeader.ItemsCount)}' field, but had no numeric field of this value, this is likely a bug");
 
             if (!message.TryGet(nameof(ReplicationMessageHeader.AttachmentStreamsCount), out int attachmentStreamCount))
                 throw new InvalidDataException(
-                    "Expected the 'AttachmentStreamsCount' field, but had no numeric field of this value, this is likely a bug");
+                    $"Expected the '{nameof(ReplicationMessageHeader.AttachmentStreamsCount)}' field, but had no numeric field of this value, this is likely a bug");
 
 
             ReceiveSingleDocumentsBatch(documentsContext, itemsCount, attachmentStreamCount, lastDocumentEtag, stats);

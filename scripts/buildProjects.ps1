@@ -22,9 +22,14 @@ function BuildServerArm ( $srcDir, $outDir, $runtime, $specName ) {
     write-host "Building Server for $specName"
     #build server
     $output = [io.path]::combine($outDir, "Server");
-    $build = [io.path]::combine($buildDir, $runtime)
+    $build = [io.path]::combine($buildDir, $runtime);
+    $bin = [io.path]::combine($srcDir, "bin");
+
+    Remove-Item -Recurse -Force $bin
+
     & dotnet publish --output $output `
-                 --configuration "Release" $srcDir;
+                 --configuration "Release" $srcDir `
+                 /p:ARM=true
     CheckLastExitCode
 }
 

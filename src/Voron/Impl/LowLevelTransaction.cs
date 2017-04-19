@@ -375,7 +375,7 @@ namespace Voron.Impl
         private PagerStateCacheItem _lastScratchFileUsed = new PagerStateCacheItem(InvalidScratchFile, null);
         private bool _disposed;
 
-        public class PagerRef
+        public sealed class PagerRef
         {
             public AbstractPager Pager;
             public long PagerPageNumber;
@@ -423,7 +423,11 @@ namespace Voron.Impl
                 {
                     p = DataPager.ReadPage(this, pageNumber);
                     if (pagerRef != null)
+                    {
                         pagerRef.Pager = DataPager;
+                        pagerRef.PagerPageNumber = pageNumber;
+                    }
+
                     Debug.Assert(p.PageNumber == pageNumber,
                         string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
 
@@ -916,9 +920,12 @@ namespace Voron.Impl
             // release scratch file page allocated for the transaction header
             Allocator.Release(ref _txHeaderMemory);
 
-            _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
-            _env.Journal.UpdateCacheForJournalSnapshots();
-
+            using (_env.PreventNewReadTransactions())
+            {
+                _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
+                _env.Journal.UpdateCacheForJournalSnapshots();
+            }
+            
             RolledBack = true;
         }
         public void RetrieveCommitStats(out CommitStats stats)

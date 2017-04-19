@@ -1,5 +1,6 @@
 using Sparrow.Binary;
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -822,6 +823,76 @@ namespace Sparrow
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static uint CalculateInline(int[] buffer, ulong seed = 0x5D70D359C498B3F8ul)
+            {
+                uint high = (uint)(seed >> 32);
+                uint low = (uint)seed;
+
+                for (uint i = 0; i < buffer.Length; i++)
+                {
+                    MarvinMix(ref high, ref low, (uint)buffer[i]);
+                }
+
+                MarvinMix(ref high, ref low, 0x80);
+                MarvinMix(ref high, ref low, 0);
+
+                return low ^ high;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static uint CalculateInline(uint[] buffer, ulong seed = 0x5D70D359C498B3F8ul)
+            {
+                uint high = (uint)(seed >> 32);
+                uint low = (uint)seed;
+
+                for (uint i = 0; i < buffer.Length; i++)
+                {
+                    MarvinMix(ref high, ref low, (uint)buffer[i]);
+                }
+
+                MarvinMix(ref high, ref low, 0x80);
+                MarvinMix(ref high, ref low, 0);
+
+                return low ^ high;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static uint CalculateInline(List<uint> buffer, ulong seed = 0x5D70D359C498B3F8ul)
+            {
+                uint high = (uint)(seed >> 32);
+                uint low = (uint)seed;
+
+                int len = buffer.Count;
+                for (int i = 0; i < len; i++)
+                {
+                    MarvinMix(ref high, ref low, buffer[i]);
+                }
+
+                MarvinMix(ref high, ref low, 0x80);
+                MarvinMix(ref high, ref low, 0);
+
+                return low ^ high;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static uint CalculateInline(List<int> buffer, ulong seed = 0x5D70D359C498B3F8ul)
+            {
+                uint high = (uint)(seed >> 32);
+                uint low = (uint)seed;
+
+                int len = buffer.Count;
+                for (int i = 0; i < len; i++)
+                {
+                    MarvinMix(ref high, ref low, (uint)buffer[i]);
+                }
+
+                MarvinMix(ref high, ref low, 0x80);
+                MarvinMix(ref high, ref low, 0);
+
+                return low ^ high;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static uint CalculateInline(byte* buffer, int len, ulong seed = 0x5D70D359C498B3F8ul)
             {
                 uint high = (uint)(seed >> 32);
@@ -829,8 +900,8 @@ namespace Sparrow
 
                 byte* ptr = buffer;
                 byte* bEnd = ptr + len;
-                byte* loopEnd = bEnd - sizeof(uint);        
-                
+                byte* loopEnd = bEnd - sizeof(uint);
+
                 while (ptr <= loopEnd)
                 {
                     MarvinMix(ref high, ref low, *(uint*)ptr);

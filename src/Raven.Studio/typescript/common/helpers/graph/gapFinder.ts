@@ -116,11 +116,15 @@ class gapFinder {
     }
 
     private static createScaleInternal(totalWidth: number, paddingBetweenGaps: number, domain: Date[]) {
-        const totalTime = gapFinder.calculateTotalTime(domain);
+        let totalTime = gapFinder.calculateTotalTime(domain);
 
         const gapsCount = domain.length / 2 - 1;
         const widthExceptGrapsPadding = totalWidth - paddingBetweenGaps * gapsCount;
 
+        // This is a patch so that we don't divide by 0... See issue 6770..
+        if (totalTime === 0) {
+            totalTime = 1;
+        }
         const extentFunc = (period: number) => period * widthExceptGrapsPadding / totalTime;
 
         let currentX = 0;

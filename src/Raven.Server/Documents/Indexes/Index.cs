@@ -182,6 +182,7 @@ namespace Raven.Server.Documents.Indexes
                 documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
             try
             {
+                options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
@@ -292,6 +293,8 @@ namespace Raven.Server.Documents.Indexes
                         documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification)
                     : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, journalPath?.FullPath,
                         documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
+
+                options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
 
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
@@ -662,102 +665,108 @@ namespace Raven.Server.Documents.Indexes
 
                         var batchCompleted = false;
 
-                        using (var scope = stats.CreateScope())
+                        try
                         {
-                            try
+                            using (var scope = stats.CreateScope())
                             {
-                                _cts.Token.ThrowIfCancellationRequested();
-
-                                bool didWork;
                                 try
                                 {
-                                    TimeSpentIndexing.Start();
-                                    didWork = DoIndexingWork(scope, _cts.Token);
-                                }
-                                finally
-                                {
-                                    TimeSpentIndexing.Stop();
-                                }
+                                    _cts.Token.ThrowIfCancellationRequested();
 
-                                _indexingBatchCompleted.SetAndResetAtomically();
-
-                                if (didWork)
-                                    ResetErrors();
-
-                                _hadRealIndexingWorkToDo |= didWork;
-
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Finished indexing for '{Name} ({IndexId})'.'");
-
-                                if (ShouldReplace())
-                                {
-                                    var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty);
-
-                                    // this can fail if the indexes lock is currently held, so we'll retry
-                                    // however, we might be requested to shutdown, so we want to skip replacing
-                                    // in this case, worst case scenario we'll handle this in the next batch
-                                    while (_cts.IsCancellationRequested == false)
+                                    bool didWork;
+                                    try
                                     {
-                                        if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name))
-                                            break;
+                                        TimeSpentIndexing.Start();
+                                        didWork = DoIndexingWork(scope, _cts.Token);
                                     }
+                                    finally
+                                    {
+                                        TimeSpentIndexing.Stop();
+                                    }
+
+                                    _indexingBatchCompleted.SetAndResetAtomically();
+
+                                    if (didWork)
+                                        ResetErrors();
+
+                                    _hadRealIndexingWorkToDo |= didWork;
+
+                                    if (_logger.IsInfoEnabled)
+                                        _logger.Info($"Finished indexing for '{Name} ({IndexId})'.'");
+
+                                    if (ShouldReplace())
+                                    {
+                                        var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty);
+
+                                        // this can fail if the indexes lock is currently held, so we'll retry
+                                        // however, we might be requested to shutdown, so we want to skip replacing
+                                        // in this case, worst case scenario we'll handle this in the next batch
+                                        while (_cts.IsCancellationRequested == false)
+                                        {
+                                            if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name))
+                                                break;
+                                        }
+                                    }
+
+                                    batchCompleted = true;
+                                }
+                                catch (OutOfMemoryException oome)
+                                {
+                                    if (_logger.IsInfoEnabled)
+                                        _logger.Info($"Out of memory occurred for '{Name} ({IndexId})'.", oome);
+                                    // TODO [ppekrol] GC?
+
+                                    scope.AddMemoryError(oome);
+                                }
+                                catch (VoronUnrecoverableErrorException ide)
+                                {
+                                    HandleIndexCorruption(scope, ide);
+                                }
+                                catch (IndexCorruptionException ice)
+                                {
+                                    HandleIndexCorruption(scope, ice);
+                                }
+                                catch (IndexWriteException iwe)
+                                {
+                                    HandleWriteErrors(scope, iwe);
+                                }
+                                catch (IndexAnalyzerException iae)
+                                {
+                                    HandleAnalyzerErrors(scope, iae);
+                                }
+                                catch (OperationCanceledException)
+                                {
+                                    scope.RecordMapCompletedReason("Operation canceled.");
+                                    return;
+                                }
+                                catch (Exception e)
+                                {
+                                    if (_logger.IsOperationsEnabled)
+                                        _logger.Operations($"Critical exception occurred for '{Name} ({IndexId})'.", e);
+
+                                    HandleCriticalErrors(scope, e);
                                 }
 
-                                batchCompleted = true;
-                            }
-                            catch (OutOfMemoryException oome)
-                            {
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Out of memory occurred for '{Name} ({IndexId})'.", oome);
-                                // TODO [ppekrol] GC?
-
-                                scope.AddMemoryError(oome);
-                            }
-                            catch (VoronUnrecoverableErrorException ide)
-                            {
-                                HandleIndexCorruption(scope, ide);
-                            }
-                            catch (IndexCorruptionException ice)
-                            {
-                                HandleIndexCorruption(scope, ice);
-                            }
-                            catch (IndexWriteException iwe)
-                            {
-                                HandleWriteErrors(scope, iwe);
-                            }
-                            catch (IndexAnalyzerException iae)
-                            {
-                                HandleAnalyzerErrors(scope, iae);
-                            }
-                            catch (OperationCanceledException)
-                            {
-                                return;
-                            }
-                            catch (Exception e)
-                            {
-                                if (_logger.IsOperationsEnabled)
-                                    _logger.Operations($"Critical exception occurred for '{Name} ({IndexId})'.", e);
-
-                                HandleCriticalErrors(scope, e);
-                            }
-
-                            try
-                            {
-                                var failureInformation = _indexStorage.UpdateStats(stats.StartTime, stats.ToIndexingBatchStats());
-                                HandleIndexFailureInformation(failureInformation);
-                            }
-                            catch (VoronUnrecoverableErrorException vuee)
-                            {
-                                HandleIndexCorruption(scope, vuee);
-                            }
-                            catch (Exception e)
-                            {
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Could not update stats for '{Name} ({IndexId})'.", e);
+                                try
+                                {
+                                    var failureInformation = _indexStorage.UpdateStats(stats.StartTime, stats.ToIndexingBatchStats());
+                                    HandleIndexFailureInformation(failureInformation);
+                                }
+                                catch (VoronUnrecoverableErrorException vuee)
+                                {
+                                    HandleIndexCorruption(scope, vuee);
+                                }
+                                catch (Exception e)
+                                {
+                                    if (_logger.IsInfoEnabled)
+                                        _logger.Info($"Could not update stats for '{Name} ({IndexId})'.", e);
+                                }
                             }
                         }
-
-                        stats.Complete();
+                        finally
+                        {
+                            stats.Complete();
+                        }
 
                         if (batchCompleted)
                         {
@@ -2192,7 +2201,7 @@ namespace Raven.Server.Documents.Indexes
                     var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath, null, null, DocumentDatabase.IoChanges,
                         DocumentDatabase.CatastrophicFailureNotification);
                     srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-
+                    srcOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
                     var wasRunning = _indexingThread != null;
 
                     Dispose();
@@ -2202,6 +2211,8 @@ namespace Raven.Server.Documents.Indexes
                     using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
                         StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification))
                     {
+                        compactOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
+
                         compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
                         StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
