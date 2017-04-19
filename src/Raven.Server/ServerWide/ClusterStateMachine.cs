@@ -601,15 +601,16 @@ namespace Raven.Server.ServerWide
         {
             var listOfDatabaseName = GetDatabaseNames(context).ToList();
             //There is potentially a lot of work to be done here so we are responding to the change on a separate task.
-            if (DatabaseChanged != null)
+            var onDatabaseChanged = DatabaseChanged;
+            if (onDatabaseChanged != null)
             {
-                Task.Run(() =>
+                TaskExecuter.Execute(_ =>
                 {
                     foreach (var db in listOfDatabaseName)
                     {
-                        DatabaseChanged.Invoke(this, db);
+                        onDatabaseChanged.Invoke(this, db);
                     }
-                });
+                }, null);
             }
         }
     }

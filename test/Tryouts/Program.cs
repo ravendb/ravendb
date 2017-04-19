@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using FastTests.Client.Queries;
 using FastTests.Issues;
 using FastTests.Server.Replication;
 using Lucene.Net.Store;
@@ -16,16 +17,13 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                //LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
-                Parallel.For(0, 10, _ =>
+                Parallel.For(0, 1, _ =>
                 {
-                    using (var a = new RavenDB_6602())
+                    using (var a = new FullTextSearchOnTags())
                     {
-                        a.RequestExecutor_failover_with_only_one_database_should_properly_fail().Wait();
+                        a.CanSearchUsingPhrase_MultipleSearches();
                     }
                 });
-                //LoggingSource.Instance.SetupLogMode(LogMode.None, "logs");
-                //Directory.Delete("logs", true);
 
             }
         }

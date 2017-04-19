@@ -52,74 +52,84 @@ namespace Raven.Server.Documents
 
         public void ClusterOnDatabaseChanged(object sender, string dbName)
         {
-            // response to changed database.
-            // if disabled, unload
-            Debug.Assert(_serverStore.Disposed == false);
-
-            TransactionOperationContext context;
-            using (_serverStore.ContextPool.AllocateOperationContext(out context))
+            _disposing.EnterReadLock();
+            try
             {
-                context.OpenReadTransaction();
-                var record = _serverStore.Cluster.ReadDatabase(context, dbName);
-                if (record == null)
-                {
-                    // was removed, need to make sure that it isn't loaded 
-                    UnloadDatabase(dbName, null);
+                if (_serverStore.Disposed)
                     return;
-                }
 
-                DeletionInProgressStatus deletionInProgress;
-                if (record.DeletionInProgress != null &&
-                    record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
-                    deletionInProgress != DeletionInProgressStatus.No)
+                // response to changed database.
+                // if disabled, unload
+
+                TransactionOperationContext context;
+                using (_serverStore.ContextPool.AllocateOperationContext(out context))
                 {
-                    UnloadDatabase(dbName, null);
-
-                    if (deletionInProgress == DeletionInProgressStatus.HardDelete)
+                    context.OpenReadTransaction();
+                    var record = _serverStore.Cluster.ReadDatabase(context, dbName);
+                    if (record == null)
                     {
-                        var configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, databaseRecord:record);
-                        //this can happen if the database record was already deleted
-                        if (configuration != null)
-                        {
-                            DatabaseHelper.DeleteDatabaseFiles(configuration);
-                        }
+                        // was removed, need to make sure that it isn't loaded 
+                        UnloadDatabase(dbName);
+                        return;
                     }
 
-                    _serverStore.NotificationCenter.Add(DatabaseChanged.Create(dbName, DatabaseChangeType.Delete));
+                    DeletionInProgressStatus deletionInProgress;
+                    if (record.DeletionInProgress != null &&
+                        record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
+                        deletionInProgress != DeletionInProgressStatus.No)
+                    {
+                        UnloadDatabase(dbName);
 
-                    NotifyLeaderAboutRemoval(dbName);
+                        if (deletionInProgress == DeletionInProgressStatus.HardDelete)
+                        {
+                            var configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, databaseRecord: record);
+                            //this can happen if the database record was already deleted
+                            if (configuration != null)
+                            {
+                                DatabaseHelper.DeleteDatabaseFiles(configuration);
+                            }
+                        }
+
+                        _serverStore.NotificationCenter.Add(DatabaseChanged.Create(dbName, DatabaseChangeType.Delete));
+
+                        NotifyLeaderAboutRemoval(dbName);
 
 
-                    return;
+                        return;
+                    }
+
+                    if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
+                        return;
+
+                    if (record.Disabled)
+                    {
+                        UnloadDatabase(dbName, null);
+                        return;
+                    }
+                    Task<DocumentDatabase> task;
+                    if (DatabasesCache.TryGetValue(dbName, out task) == false)
+                        return;
+
+                    if (task.IsCanceled || task.IsFaulted)
+                        return;
+
+                    if (task.IsCompleted)
+                    {
+                        NotifyDatabaseAboutStateChange(dbName, task);
+                        return;
+                    }
+                    task.ContinueWith(done =>
+                    {
+                        NotifyDatabaseAboutStateChange(dbName, done);
+                    });
                 }
 
-                if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
-                    return;
-
-                if (record.Disabled)
-                {
-                    UnloadDatabase(dbName, null);
-                    return;
-                }
-                Task<DocumentDatabase> task;
-                if (DatabasesCache.TryGetValue(dbName, out task) == false)
-                    return;
-
-                if (task.IsCanceled || task.IsFaulted)
-                    return;
-
-                if (task.IsCompleted)
-                {
-                    NotifyDatabaseAboutStateChange(dbName, task);
-                    return;
-                }
-                task.ContinueWith(done =>
-                {
-                    NotifyDatabaseAboutStateChange(dbName, done);
-                });
+                // if deleted, unload / deleted and then notify leader that we removed it
             }
-
-            // if deleted, unload / deleted and then notify leader that we removed it
+            finally
+            {
+                _disposing.ExitReadLock();
+            }
         }
 
         private void NotifyLeaderAboutRemoval(string dbName)
