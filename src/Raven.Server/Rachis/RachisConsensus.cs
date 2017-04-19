@@ -359,8 +359,6 @@ namespace Raven.Server.Rachis
             };
         }
 
-        private static int i;
-        public int a = Interlocked.Increment(ref i);
         public void TakeOffice()
         {
             if (CurrentState != State.LeaderElect)
