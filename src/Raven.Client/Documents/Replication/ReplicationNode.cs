@@ -6,7 +6,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 using Raven.Client.Extensions;
+using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Replication
@@ -128,11 +130,23 @@ namespace Raven.Client.Documents.Replication
                 var hashCode = (NodeTag?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Database?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (int)TransitiveReplicationBehavior;
-                hashCode = (hashCode * 397) ^ IgnoredClient.GetHashCode();
-                hashCode = (hashCode * 397) ^ Disabled.GetHashCode();
                 hashCode = (hashCode * 397) ^ (ClientVisibleUrl?.GetHashCode() ?? 0);
                 return hashCode;
             }
+        }
+
+        public virtual ulong GetTaskKey()
+        {
+            var hashCode = CalculateStringHash(NodeTag);
+            hashCode = (hashCode * 397) ^ CalculateStringHash(Database);
+            hashCode = (hashCode * 397) ^ (ulong)TransitiveReplicationBehavior;
+            hashCode = (hashCode * 397) ^ CalculateStringHash(ClientVisibleUrl);
+            return hashCode;
+        }
+
+        protected static ulong CalculateStringHash(string s)
+        {
+            return string.IsNullOrEmpty(s) ? 0 : Hashing.XXHash64.Calculate(s, Encoding.UTF8);
         }
 
         public DynamicJsonValue ToJson()

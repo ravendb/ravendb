@@ -3,56 +3,49 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication;
+using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents
 {
     public class ConflictSolver
     {
-        public string DatabaseResovlerId;
+        public string DatabaseResolverId;
         public Dictionary<string, ScriptResolver> ResolveByCollection;
         public bool ResolveToLatest;
 
         public bool ConflictResolutionChanged(ConflictSolver other)
         {
- 
-            if (ResolveByCollection != null && other.ResolveByCollection == null || 
-               ResolveByCollection == null && other.ResolveByCollection != null)
                 return true;
 
-            //if ((ResolveByCollection == null ^ other.ResolveByCollection == null) == false)
-            //    return true;
-
-            return ResolveToLatest == other.ResolveToLatest &&
-                   (ResolveByCollection?.SequenceEqual(other.ResolveByCollection) ?? true);
         }
 
         public bool IsEmpty()
         {
-            return ResolveToLatest == false && 
-                DatabaseResovlerId == null && 
-                (ResolveByCollection == null || ResolveByCollection.Count == 0);
         }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(DatabaseResovlerId)] = DatabaseResovlerId,
+                [nameof(DatabaseResolverId)] = DatabaseResolverId,
                 [nameof(ResolveToLatest)] = ResolveToLatest,
                 [nameof(ResolveByCollection)] = new DynamicJsonArray
                 {
-                    ResolveByCollection?.Select( item => new DynamicJsonValue
-                    {
-                        [nameof(item.Key)] = item.Value.ToJson()
-                    })
+                    ResolveByCollection != null ? 
+                        ResolveByCollection.Select( item => new DynamicJsonValue
+                        {
+                            [nameof(item.Key)] = item.Value.ToJson()
+                        }) :
+                        new DynamicJsonValue[0]
                 }
             };
         }
     }
 
     public interface IDatabaseTask
-    {        
+    {
+        ulong GetTaskKey();
     }
 
     public class DatabaseWatcher : ReplicationNode, IDatabaseTask
@@ -60,7 +53,7 @@ namespace Raven.Client.Documents
     }
 
     public class DatabasePromotable : ReplicationNode, IDatabaseTask
-    {
+    {    
     }
 
     public class DatabaseTopology
@@ -70,7 +63,6 @@ namespace Raven.Client.Documents
         public List<DatabaseWatcher> Watchers = new List<DatabaseWatcher>();
 
         public Dictionary<string,string> NameToUrlMap = new Dictionary<string, string>();
-        
         public bool RelevantFor(string nodeTag)
         {
             return Members.Contains(nodeTag) ||
@@ -130,20 +122,13 @@ namespace Raven.Client.Documents
         public bool IsItMyTask(IDatabaseTask task, string nodeTag)
         {
             var myPosition = Members.FindIndex(s => s == nodeTag);
-            return JumpConsistentHash((ulong)task.GetHashCode(), Members.Count) == myPosition;
-        }
-
-        public static long JumpConsistentHash(ulong key, int numBuckets)
-        {
-            long b = 1L;
-            long j = 0;
-            while (j < numBuckets)
+            if (myPosition == -1) //not a member
             {
-                b = j;
-                key = key * 2862933555777941757UL + 1;
-                j = (long)((b + 1) * ((1L << 31) / ((double)(key >> 33) + 1)));
+                return false;
             }
-            return b;
+
+            //TODO : ask Oren here about suspentions.. (review comments in github)
+            return Hashing.JumpConsistentHash.Calculate(task.GetTaskKey(), Members.Count) == myPosition;
         }
     }
 }

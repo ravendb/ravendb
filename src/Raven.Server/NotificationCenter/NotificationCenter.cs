@@ -8,6 +8,7 @@ using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Sparrow.Collections;
+using Sparrow.Collections.LockFree;
 
 namespace Raven.Server.NotificationCenter
 {

@@ -81,6 +81,16 @@ namespace Raven.Server.ServerWide
 
         public TransactionContextPool ContextPool;
 
+        public long LastCommitEtag
+        {
+            get
+            {
+                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                    return _engine.GetLastCommitIndex(context);
+            }
+        }
+
         public ClusterStateMachine Cluster => _engine.StateMachine;
         public string LeaderTag => _engine.LeaderTag;
 

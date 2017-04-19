@@ -89,7 +89,7 @@ namespace FastTests.Server.Replication
                 GenerateConflicts(store1, store2);
                 var config = new ConflictSolver
                 {
-                    DatabaseResovlerId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString()
+                    DatabaseResolverId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString()
                 };
                 SetupReplication(store1, config, store2);
 
