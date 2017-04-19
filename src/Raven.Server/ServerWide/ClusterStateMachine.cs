@@ -28,6 +28,7 @@ using Sparrow;
 using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
@@ -334,7 +335,7 @@ namespace Raven.Server.ServerWide
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
             {
-                Task.Run(() =>
+                TaskNotifier.Execute(_ =>
                 {
                     try
                     {
@@ -352,7 +353,7 @@ namespace Raven.Server.ServerWide
                         }
                         _notifiedListeners.Set();
                     }
-                });
+                }, null);
             };
         }
 

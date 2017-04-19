@@ -8,7 +8,7 @@ namespace Sparrow.Utils
     /// Allow to raise a task completion source with minimal costs
     /// and attempt to avoid stalls due to thread pool starvation
     /// </summary>
-    public static class TaskNotifier
+    public static class TaskExecuter
     {
         private static readonly Runner Instance = new Runner();
 
@@ -31,8 +31,8 @@ namespace Sparrow.Utils
                         }
                         catch { }
                     }
-                    _event.Reset();
                     _event.WaitOne();
+                    _event.Reset();
                 }
             }
 
@@ -47,7 +47,7 @@ namespace Sparrow.Utils
                 new Thread(Run)
                 {
                     IsBackground = true,
-                    Name = "RavenDB Tasks Notifier"
+                    Name = "RavenDB Tasks Executer"
                 }.Start();
             }
         }
