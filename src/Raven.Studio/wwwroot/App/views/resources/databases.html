@@ -82,9 +82,6 @@
                             <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase(), text: name"></span>
                             <a data-bind="attr: { title: name, href: $root.databaseUrl($data) }, visible: canNavigateToDatabase()" href="#"><i class="icon-database"></i><span data-bind="text: name"></span></a>
                         </h3>
-                        <button class="btn btn-info" data-bind="click: $root.activateDatabase">
-                            Select
-                        </button>
                     </div>
 
                     <div class="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container" 
@@ -170,7 +167,7 @@
 <script type="text/html" id="valid-database-properties-template">
     <div class="properties-item" data-bind="visible: totalSize">
         <div class="properties-value value-only">
-            <div class="set-size">
+            <div class="set-size" title="Total size">
                 <i class="icon-drive"></i>
                 <span data-bind="text: totalSize"></span>
             </div>
@@ -179,18 +176,20 @@
 
     <div class="properties-item" data-bind="visible: $data.qualifier === 'db', if: $data.qualifier === 'db'">
         <div class="properties-value value-only">
-            <div class="set-size">
+            <div class="set-size" title="Documents">
                 <i class="icon-document-group"></i>
-                <span data-bind="text: $root.pluralize(documentsCount().toLocaleString(), 'document', 'documents')"></span>
+                <span data-bind="text: documentsCount().toLocaleString()"></span>
+                <span class="hidden-compact" data-bind="text: $root.pluralize(documentsCount().toLocaleString(), 'document', 'documents', true)"></span>
             </div>
         </div>
     </div>
 
     <div class="properties-item" data-bind="visible: $data.qualifier === 'db', if: $data.qualifier === 'db'">
         <div class="properties-value value-only">
-            <div class="set-size">
+            <div class="set-size" title="Indexes">
                 <i class="icon-index"></i>
-                <span data-bind="text: $root.pluralize(indexesCount().toLocaleString(), 'index', 'indexes')"></span>
+                <span data-bind="text: indexesCount().toLocaleString()"></span>
+                <span class="hidden-compact" data-bind="text: $root.pluralize(indexesCount().toLocaleString(), 'index', 'indexes', true)"></span>
             </div>
         </div>
     </div>
@@ -198,9 +197,10 @@
     <div class="properties-item" data-bind="visible: indexingErrors()">
         <div class="properties-value value-only">
             <a title="View indexing errors" data-bind="attr: { href: $root.indexErrorsUrl($data) }">
-                <div class="set-size text-danger">
+                <div class="set-size text-danger" title="Indexing errors">
                     <i class="icon-exclamation"></i>
-                    <span data-bind="text: $root.pluralize(indexingErrors().toLocaleString(), 'indexing error', 'indexing errors')"></span>
+                    <span data-bind="text: indexingErrors().toLocaleString()"></span>
+                    <span class="hidden-compact" data-bind="text: $root.pluralize(indexingErrors().toLocaleString(), 'indexing error', 'indexing errors', true)"></span>
                 </div>
             </a>
         </div>
@@ -208,16 +208,17 @@
 
     <div class="properties-item" data-bind="visible: alerts()">
         <div class="properties-value value-only text-warning">
-            <div class="set-size">
+            <div class="set-size" title="Alerts">
                 <i class="icon-warning"></i>
-                <span data-bind="text: $root.pluralize(alerts().toLocaleString(), 'alert', 'alerts')"></span>
+                <span data-bind="text: alerts().toLocaleString()"></span>
+                <span class="hidden-compact" data-bind="text: $root.pluralize(alerts().toLocaleString(), 'alert', 'alerts', true)"></span>
             </div>
         </div>
     </div>
 
     <div class="properties-item" data-bind="visible: backupEnabled()">
         <div data-bind="attr: { class: 'properties-value value-only ' + backupStatus() }">
-            <div class="set-size">
+            <div class="set-size" title="Backup" >
                 <i class="icon-backup"></i>
                 <span data-bind="text: backupStatus() !== 'text-danger' ? 'Backed up ' + lastFullOrIncrementalBackup() : 'Never backed up'"></span>
             </div>
@@ -226,16 +227,19 @@
 
     <div class="properties-item" data-bind="visible: uptime()">
         <div class="properties-value value-only ">
-            <div class="set-size">
+            <div class="set-size" title="Uptime">
                 <i class="icon-recent"></i>
-                <span data-bind="text: 'Up for ' + uptime()"></span>
+                <span>
+                    <span class="hidden-compact">Up for</span>
+                    <span data-bind="text: uptime()"></span>
+                </span>
             </div>
         </div>
     </div>
 
     <div class="properties-item" data-bind="visible: indexingPaused() && !indexingDisabled()">
         <div class="properties-value value-only text-warning">
-            <div class="set-size">
+            <div class="set-size" title="Indexing paused">
                 <i class="icon-pause"></i>
                 <span>Indexing paused</span>
             </div>
@@ -244,16 +248,16 @@
 
     <div class="properties-item" data-bind="visible: indexingDisabled()">
         <div class="properties-value value-only text-danger">
-            <div class="set-size">
+            <div class="set-size" title="Indexing disabled">
                 <i class="icon-lock"></i>
-                <span>Indexing disabled</span>
+                <span class="hidden-compact">Indexing disabled</span>
             </div>
         </div>
     </div>
 
     <div class="properties-item" data-bind="visible: rejectClients()">
         <div class="properties-value value-only text-warning">
-            <div class="set-size">
+            <div class="set-size" title="Clients rejection mode">
                 <i class="icon-umbrella"></i>
                 <span>Clients rejection mode</span>
             </div>

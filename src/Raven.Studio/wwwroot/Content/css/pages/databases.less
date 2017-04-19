@@ -1,10 +1,8 @@
 .databases {
 
     .databasesToolbar-toggleCompactView {
-
         display: inline-block;
-        margin-left:10px;
-
+        margin-left: 10px;
     }
 
     .databasesToolbar-actions {
@@ -28,9 +26,11 @@
 
     .vertical-divider {
         position: relative;
+
         @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
             margin-left: 20px;
         }
+
         @media (min-width:@screen-xl) {
             &:before {
                 content: '';
@@ -55,8 +55,8 @@
 
         .info-container {
             font-size: 19px;
-            display: flex; 
-            align-items:flex-start;
+            display: flex;
+            align-items: flex-start;
         }
 
         .row {
@@ -103,7 +103,7 @@
 
     .properties-container {
         align-content: flex-start;
-        align-items:center;
+        align-items: center;
         overflow: hidden;
 
         .properties-item {
@@ -120,6 +120,15 @@
         .panel {
             margin-bottom: 10px;
         }
+
+        .hidden-compact {
+            display: none;
+        }
+
+        .properties-item {
+            min-width: 0;
+        }
+        
         .database  {
 
             .checkbox {
