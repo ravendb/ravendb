@@ -20,7 +20,8 @@
                 <div class="text-right">
                     <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                             class="btn btn-sm">
-                        Details
+                        <i class="icon-details"></i>
+                        <span>Details</span>
                     </button>
                     <button class="btn btn-sm" data-bind="click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
                         <i class="icon-cancel"></i>
@@ -47,7 +48,8 @@
                 <div class="text-right">
                     <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                             class="btn btn-sm">
-                        Details
+                        <i class="icon-details"></i>
+                        <span>Details</span>
                     </button>
                     <button class="btn btn-sm btn-danger" data-bind="click: _.partial($parent.killOperation, $data), visible: killable(), enable: !_.includes($parent.spinners.kill(), id), css: { 'btn-spinner': _.includes($parent.spinners.kill(), id) }">
                         <i class="icon-cancel"></i>
@@ -67,7 +69,8 @@
             <div class="text-right">
                 <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                         class="btn btn-sm">
-                    Details
+                    <i class="icon-details"></i>
+                    <span>Details</span>
                 </button>
 
                 <div class="dropdown" data-bind="visible: canBePostponed">
