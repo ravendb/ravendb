@@ -80,6 +80,7 @@ namespace Raven.Server.Documents
             NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
             _serverStore = serverStore;
+            _rachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
             CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
             {
                 serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailue(name, e);
@@ -530,15 +531,30 @@ namespace Raven.Server.Documents
             BackupMethods.Incremental.ToFile(GetAllStoragesEnvironmentInformation(), backupPath);
         }
 
-        public void StateChanged()
+        public void StateChanged(long index)
         {
+            try
+            {
+                TransformerStore.HandleDatabaseRecordChange();
+                BundleLoader.HandleDatabaseRecordChange();
+                IndexStore.HandleDatabaseRecordChange();
+            }
+            finally
+            {
+                _rachisLogIndexNotifications.NotifyListenersAbout(index);
+            }
         }
+
+        public Task WaitForIndexNotification(long index) => _rachisLogIndexNotifications.WaitForIndexNotification(index);
+
+        private readonly RachisLogIndexNotifications _rachisLogIndexNotifications;
 
         public IEnumerable<DatabasePerformanceMetrics> GetAllPerformanceMetrics()
         {
             yield return TxMerger.GeneralWaitPerformanceMetrics;
             yield return TxMerger.TransactionPerformanceMetrics;
         }
+        
     }
 
     public class StorageEnvironmentWithType

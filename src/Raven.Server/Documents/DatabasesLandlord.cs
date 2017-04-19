@@ -50,7 +50,7 @@ namespace Raven.Server.Documents
             _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Raven/Server");
         }
 
-        public void ClusterOnDatabaseChanged(object sender, string dbName)
+        public void ClusterOnDatabaseChanged(object sender, (string dbName, long index) t)
         {
             _disposing.EnterReadLock();
             try
@@ -65,11 +65,11 @@ namespace Raven.Server.Documents
                 using (_serverStore.ContextPool.AllocateOperationContext(out context))
                 {
                     context.OpenReadTransaction();
-                    var record = _serverStore.Cluster.ReadDatabase(context, dbName);
+                    var record = _serverStore.Cluster.ReadDatabase(context, t.dbName);
                     if (record == null)
                     {
                         // was removed, need to make sure that it isn't loaded 
-                        UnloadDatabase(dbName);
+                        UnloadDatabase(t.dbName);
                         return;
                     }
 
@@ -78,11 +78,21 @@ namespace Raven.Server.Documents
                         record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
                         deletionInProgress != DeletionInProgressStatus.No)
                     {
-                        UnloadDatabase(dbName);
+                        UnloadDatabase(t.dbName);
 
                         if (deletionInProgress == DeletionInProgressStatus.HardDelete)
                         {
-                            var configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, databaseRecord: record);
+                            RavenConfiguration configuration;
+                            try
+                            {
+                                configuration = CreateDatabaseConfiguration(t.dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, databaseRecord: record);
+                            }
+                            catch (Exception ex)
+                            {
+                                configuration = null;
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info("Could not create database configuration",ex);
+                            }
                             //this can happen if the database record was already deleted
                             if (configuration != null)
                             {
@@ -90,9 +100,9 @@ namespace Raven.Server.Documents
                             }
                         }
 
-                        _serverStore.NotificationCenter.Add(DatabaseChanged.Create(dbName, DatabaseChangeType.Delete));
+                        _serverStore.NotificationCenter.Add(DatabaseChanged.Create(t.dbName, DatabaseChangeType.Delete));
 
-                        NotifyLeaderAboutRemoval(dbName);
+                        NotifyLeaderAboutRemoval(t.dbName);
 
 
                         return;
@@ -103,11 +113,11 @@ namespace Raven.Server.Documents
 
                     if (record.Disabled)
                     {
-                        UnloadDatabase(dbName, null);
+                        UnloadDatabase(t.dbName, null);
                         return;
                     }
                     Task<DocumentDatabase> task;
-                    if (DatabasesCache.TryGetValue(dbName, out task) == false)
+                    if (DatabasesCache.TryGetValue(t.dbName, out task) == false)
                         return;
 
                     if (task.IsCanceled || task.IsFaulted)
@@ -115,16 +125,21 @@ namespace Raven.Server.Documents
 
                     if (task.IsCompleted)
                     {
-                        NotifyDatabaseAboutStateChange(dbName, task);
+                        NotifyDatabaseAboutStateChange(t.dbName, task, t.index);
                         return;
                     }
                     task.ContinueWith(done =>
                     {
-                        NotifyDatabaseAboutStateChange(dbName, done);
+                        NotifyDatabaseAboutStateChange(t.dbName, done, t.index);
                     });
                 }
 
                 // if deleted, unload / deleted and then notify leader that we removed it
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Could not react to a cluster database change", e);
             }
             finally
             {
@@ -158,11 +173,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void NotifyDatabaseAboutStateChange(string changedDatabase, Task<DocumentDatabase> done)
+        private void NotifyDatabaseAboutStateChange(string changedDatabase, Task<DocumentDatabase> done, long index)
         {
             try
             {
-                done.Result.StateChanged();
+                done.Result.StateChanged(index);
             }
             catch (Exception e)
             {

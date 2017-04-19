@@ -55,9 +55,9 @@ namespace Raven.Server.Rachis
             return StateMachine.ShouldSnapshot(slice, type);
         }
 
-        public override void SnapshotInstalled(TransactionOperationContext context)
+        public override void SnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex)
         {
-            StateMachine.OnSnapshotInstalled(context);
+            StateMachine.OnSnapshotInstalled(context, lastIncludedIndex);
         }
 
         public override async Task<Stream> ConenctToPeer(string url, string apiKey, TransactionOperationContext context = null)
@@ -1263,7 +1263,7 @@ namespace Raven.Server.Rachis
 
         public abstract void Apply(TransactionOperationContext context, long uptoInclusive, Leader leader);
 
-        public abstract void SnapshotInstalled(TransactionOperationContext context);
+        public abstract void SnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex);
 
         private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
         private int _hasTimers;

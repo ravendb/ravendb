@@ -64,15 +64,10 @@ namespace Raven.Server.Documents.Indexes
             _serverStore = serverStore;
             _logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
             _indexAndTransformerLocker = indexAndTransformerLocker;
-
-            _serverStore.Cluster.DatabaseChanged += OnDatabaseChanged;
         }
 
-        private void OnDatabaseChanged(object sender, string databaseName)
+        public void HandleDatabaseRecordChange()
         {
-            if (string.Equals(databaseName, _documentDatabase.Name, StringComparison.OrdinalIgnoreCase) == false)
-                return;
-
             try
             {
                 TransactionOperationContext context;
@@ -264,7 +259,6 @@ namespace Raven.Server.Documents.Indexes
                 Debug.Assert(existingIndex != null);
 
                 definition.Name = replacementIndexName;
-
                 existingIndex = GetIndex(replacementIndexName);
                 if (existingIndex != null)
                 {
@@ -305,9 +299,15 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var index in _indexes)
             {
-                if (record.Indexes.ContainsKey(index.Name) || record.AutoIndexes.ContainsKey(index.Name))
-                    continue;
+                var indexNormalizedName = index.Name;
+                if (indexNormalizedName.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix))
+                {
+                    indexNormalizedName = indexNormalizedName.Remove(0, Constants.Documents.Indexing.SideBySideIndexNamePrefix.Length);
 
+                }
+                if (record.Indexes.ContainsKey(indexNormalizedName) || record.AutoIndexes.ContainsKey(indexNormalizedName))
+                    continue;
+                
                 try
                 {
                     DeleteIndexInternal(index);
@@ -383,7 +383,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var etag = await _serverStore.SendToLeaderAsync(command);
 
-                    await _serverStore.Cluster.WaitForIndexNotification(etag);
+                    await _documentDatabase.WaitForIndexNotification(etag);
 
                     var index = GetIndex(definition.Name); // not all operations are changing Etag, this is why we need to take it directly from the index
                     if(index == null)
@@ -421,7 +421,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var index = await _serverStore.SendToLeaderAsync(command);
 
-                    await _serverStore.Cluster.WaitForIndexNotification(index);
+                    await _documentDatabase.WaitForIndexNotification(index);
 
                     var instance = GetIndex(definition.Name);
                     return instance.Etag;
@@ -604,7 +604,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var etag = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
 
-                await _serverStore.Cluster.WaitForIndexNotification(etag);
+                await _documentDatabase.WaitForIndexNotification(etag);
 
                 return true;
             }
@@ -626,7 +626,7 @@ namespace Raven.Server.Documents.Indexes
 
                 etag = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
 
-                await _serverStore.Cluster.WaitForIndexNotification(etag);
+                await _documentDatabase.WaitForIndexNotification(etag);
             }
             finally
             {
@@ -791,14 +791,34 @@ namespace Raven.Server.Documents.Indexes
                 exceptionAggregator.Execute(index.Dispose);
             });
 
-            _serverStore.Cluster.DatabaseChanged -= OnDatabaseChanged;
-
             exceptionAggregator.ThrowIfNeeded();
         }
 
         private long ResetIndexInternal(Index index)
         {
             DeleteIndexInternal(index);
+            
+            var definitionBase = index.Definition;
+            if (definitionBase is AutoMapIndexDefinition)
+                index = AutoMapIndex.CreateNew(index.Etag, (AutoMapIndexDefinition)definitionBase, _documentDatabase);
+            else if (definitionBase is AutoMapReduceIndexDefinition)
+                index = AutoMapReduceIndex.CreateNew(index.Etag, (AutoMapReduceIndexDefinition)definitionBase, _documentDatabase);
+            else
+            {
+                var staticIndexDefinition = index.Definition.ConvertToIndexDefinition(index);
+                switch (staticIndexDefinition.Type)
+                {
+                    case IndexType.Map:
+                        index = MapIndex.CreateNew(staticIndexDefinition, _documentDatabase);
+                        break;
+                    case IndexType.MapReduce:
+                        index = MapReduceIndex.CreateNew(staticIndexDefinition, _documentDatabase);
+                        break;
+                    default:
+                        throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
+                }
+            }
+
             CreateIndexInternal(index);
 
             return index.Etag;
@@ -831,8 +851,13 @@ namespace Raven.Server.Documents.Indexes
             using (context.OpenReadTransaction())
             {
                 var customPathsDoc = _documentDatabase.DocumentsStorage.Get(context, "Raven/CustomPaths");
-                var customPaths = JsonDeserializationServer.CustomIndexPaths(customPathsDoc.Data);
-                indexesCustomPaths = customPaths.Paths;
+                if (customPathsDoc != null)
+                {
+                    var customPaths = JsonDeserializationServer.CustomIndexPaths(customPathsDoc.Data);
+                    indexesCustomPaths = customPaths.Paths;
+                }
+                else
+                    indexesCustomPaths = new Dictionary<string, string>();
             }
                 
             List<Exception> exceptions = null;
@@ -841,27 +866,28 @@ namespace Raven.Server.Documents.Indexes
 
 
             // delete all unrecognized index directories
-            foreach (var indexDirectory in new DirectoryInfo(path.FullPath).GetDirectories().Concat(indexesCustomPaths.Values.SelectMany(x => new DirectoryInfo(x).GetDirectories())))
-            {
-                if (record.Indexes.ContainsKey(indexDirectory.Name) == false)
-                {
-                    Directory.Delete(indexDirectory.FullName);
-                    continue;
-                }
+            //foreach (var indexDirectory in new DirectoryInfo(path.FullPath).GetDirectories().Concat(indexesCustomPaths.Values.SelectMany(x => new DirectoryInfo(x).GetDirectories())))
+            //{
+            //    if (record.Indexes.ContainsKey(indexDirectory.Name) == false)
+            //    {
+            //        IOExtensions.DeleteDirectory(indexDirectory.FullName);
+                    
+            //        continue;
+            //    }
 
-                // delete all redundant index instances
-                var indexInstances = indexDirectory.GetDirectories();
-                if (indexInstances.Length > 2)
-                {
-                    var orderedIndexes = indexInstances.OrderByDescending(x =>
-                        int.Parse(x.Name.Substring(x.Name.LastIndexOf("\\") +1)));
+            //    // delete all redundant index instances
+            //    var indexInstances = indexDirectory.GetDirectories();
+            //    if (indexInstances.Length > 2)
+            //    {
+            //        var orderedIndexes = indexInstances.OrderByDescending(x =>
+            //            int.Parse(x.Name.Substring(x.Name.LastIndexOf("\\") +1)));
 
-                    foreach (var indexToRemove in orderedIndexes.Skip(2))
-                    {
-                        Directory.Delete(indexToRemove.FullName);
-                    }
-                }
-            }
+            //        foreach (var indexToRemove in orderedIndexes.Skip(2))
+            //        {
+            //            Directory.Delete(indexToRemove.FullName);
+            //        }
+            //    }
+            //}
             
             foreach (var kvp in record.Indexes)
             {
@@ -1157,7 +1183,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var etag = await _serverStore.SendToLeaderAsync(command);
 
-                await _serverStore.Cluster.WaitForIndexNotification(etag);
+                await _documentDatabase.WaitForIndexNotification(etag);
             }
             finally
             {
@@ -1186,7 +1212,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var etag = await _serverStore.SendToLeaderAsync(command);
 
-                await _serverStore.Cluster.WaitForIndexNotification(etag);
+                await _documentDatabase.WaitForIndexNotification(etag);
             }
             finally
             {

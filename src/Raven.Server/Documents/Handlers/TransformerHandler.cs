@@ -25,7 +25,8 @@ namespace Raven.Server.Documents.Handlers
                 var transformerDefinition = JsonDeserializationServer.TransformerDefinition(json);
                 transformerDefinition.Name = name;
 
-                var transformerId = await Database.TransformerStore.CreateTransformer(transformerDefinition);
+                var index = await Database.TransformerStore.CreateTransformer(transformerDefinition);
+                await Database.WaitForIndexNotification(index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -38,7 +39,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
 
                     writer.WritePropertyName("TransformerId");
-                    writer.WriteInteger(transformerId);
+                    writer.WriteInteger(index);
 
                     writer.WriteEndObject();
                 }

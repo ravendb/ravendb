@@ -62,25 +62,15 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        private readonly AsyncManualResetEvent _notifiedListeners = new AsyncManualResetEvent();
-        private long _lastNotified;
-
-        public async Task WaitForIndexNotification(long index, TimeSpan? timeout = null)
-        {
-            //this is needed because WaitAsync without timeout is an overload of WaitAsync with timeout
-            var task = timeout.HasValue ? _notifiedListeners.WaitAsync(timeout.Value) : _notifiedListeners.WaitAsync();
-
-            while (index > Volatile.Read(ref _lastNotified))
-            {
-                await task;
-                task = timeout.HasValue ? _notifiedListeners.WaitAsync(timeout.Value) : _notifiedListeners.WaitAsync();
-            }
-        }
-
-        public event EventHandler<string> DatabaseChanged;
+        public event EventHandler<(string dbName, long index)> DatabaseChanged;
 
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
+            {
+                _rachisLogIndexNotifications.NotifyListenersAbout(index);
+            };
+
             string type;
             if (cmd.TryGet("Type", out type) == false)
                 return;
@@ -119,6 +109,9 @@ namespace Raven.Server.ServerWide
                     break;
             }
         }
+
+        private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
+        public Task WaitForIndexNotification(long index) => _rachisLogIndexNotifications.WaitForIndexNotification(index);
 
         private unsafe void RemoveNodeFromDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
@@ -340,22 +333,7 @@ namespace Raven.Server.ServerWide
             {
                 TaskExecuter.Execute(_ =>
                 {
-                    try
-                    {
-                        DatabaseChanged?.Invoke(this, databaseName);
-                    }
-                    finally
-                    {
-                        var lastNotified = _lastNotified;
-                        while (lastNotified < index)
-                        {
-                            var result = Interlocked.CompareExchange(ref _lastNotified, index, lastNotified);
-                            if (result == lastNotified)
-                                break;
-                            lastNotified = result;
-                        }
-                        _notifiedListeners.Set();
-                    }
+                    DatabaseChanged?.Invoke(this, (databaseName, index));
                 }, null);
             };
         }
@@ -597,7 +575,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public override void OnSnapshotInstalled(TransactionOperationContext context)
+        public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex)
         {
             var listOfDatabaseName = GetDatabaseNames(context).ToList();
             //There is potentially a lot of work to be done here so we are responding to the change on a separate task.
@@ -608,7 +586,7 @@ namespace Raven.Server.ServerWide
                 {
                     foreach (var db in listOfDatabaseName)
                     {
-                        onDatabaseChanged.Invoke(this, db);
+                        onDatabaseChanged.Invoke(this, (db, lastIncludedIndex));
                     }
                 }, null);
             }
@@ -644,5 +622,35 @@ namespace Raven.Server.ServerWide
     {
         public string DatabaseName;
         public string NodeTag;
+    }
+
+    public class RachisLogIndexNotifications
+    {
+        private long _lastModifiedIndex;
+        private readonly AsyncManualResetEvent _notifiedListeners;
+
+        public RachisLogIndexNotifications(CancellationToken token)
+        {
+            _notifiedListeners = new AsyncManualResetEvent(token);
+        }
+
+        public async Task WaitForIndexNotification(long index)
+        {
+            while (index > Volatile.Read(ref _lastModifiedIndex))
+            {
+                await _notifiedListeners.WaitAsync();
+            }
+        }
+
+
+        public void NotifyListenersAbout(long index)
+        {
+            var lastModifed = _lastModifiedIndex;
+            while (index > lastModifed)
+            {
+                lastModifed = Interlocked.CompareExchange(ref _lastModifiedIndex, index, lastModifed);
+            }
+            _notifiedListeners.Set();
+        }
     }
 }

@@ -17,7 +17,7 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                Parallel.For(0, 1, _ =>
+                Parallel.For(0, 10, _ =>
                 {
                     using (var a = new FullTextSearchOnTags())
                     {

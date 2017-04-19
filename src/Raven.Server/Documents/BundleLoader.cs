@@ -35,16 +35,11 @@ namespace Raven.Server.Documents
             if (_serverStore == null)
                 return;
 
-            _serverStore.Cluster.DatabaseChanged += HandleDatabaseRecordChange;
             InitializeBundles();
         }
 
-        private void HandleDatabaseRecordChange(object sender, string changedDatabase)
+        public void HandleDatabaseRecordChange()
         {
-            if (_serverStore == null)
-                return;
-            if (string.Equals(changedDatabase, _database.Name, StringComparison.OrdinalIgnoreCase) == false)
-                return;
             VersioningStorage = VersioningStorage.LoadConfigurations(_database, _serverStore, VersioningStorage);
         }
 
@@ -126,8 +121,6 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             _database.Changes.OnSystemDocumentChange -= HandleSystemDocumentChange;
-            if (_serverStore != null)
-                _serverStore.Cluster.DatabaseChanged -= HandleDatabaseRecordChange;
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(BundleLoader)}");
             exceptionAggregator.Execute(() =>
             {

@@ -42,15 +42,10 @@ namespace Raven.Server.Documents.Transformers
             _serverStore = serverStore;
             _log = LoggingSource.Instance.GetLogger<TransformerStore>(_documentDatabase.Name);
             _indexAndTransformerLocker = indexAndTransformerLocker;
-
-            _serverStore.Cluster.DatabaseChanged += OnDatabaseChanged;
         }
 
-        private void OnDatabaseChanged(object sender, string databaseName)
+        public void HandleDatabaseRecordChange()
         {
-            if (string.Equals(databaseName, _documentDatabase.Name, StringComparison.OrdinalIgnoreCase) == false)
-                return;
-
             try
             {
                 TransactionOperationContext context;
@@ -73,7 +68,8 @@ namespace Raven.Server.Documents.Transformers
             }
             catch (Exception e)
             {
-                // log here and continue?
+                if (_log.IsInfoEnabled)
+                    _log.Info("Could not proccess database change for TransformerStore",e);
             }
         }
 
@@ -222,7 +218,7 @@ namespace Raven.Server.Documents.Transformers
                 {
                     var index = await _serverStore.SendToLeaderAsync(command);
 
-                    await _serverStore.Cluster.WaitForIndexNotification(index);
+                    await _documentDatabase.WaitForIndexNotification(index);
 
                     var instance = GetTransformer(definition.Name);
                     return instance.Etag;
@@ -268,7 +264,7 @@ namespace Raven.Server.Documents.Transformers
 
                 var etag = await _serverStore.SendToLeaderAsync(new DeleteTransformerCommand(transformer.Name, _documentDatabase.Name));
 
-                await _serverStore.Cluster.WaitForIndexNotification(etag);
+                await _documentDatabase.WaitForIndexNotification(etag);
 
                 return true;
             }
@@ -290,7 +286,7 @@ namespace Raven.Server.Documents.Transformers
 
                 var etag = await _serverStore.SendToLeaderAsync(new DeleteTransformerCommand(transformer.Name, _documentDatabase.Name));
 
-                await _serverStore.Cluster.WaitForIndexNotification(etag);
+                await _documentDatabase.WaitForIndexNotification(etag);
             }
             finally
             {
@@ -329,7 +325,7 @@ namespace Raven.Server.Documents.Transformers
 
                 var etag = await _serverStore.SendToLeaderAsync(command);
 
-                await _serverStore.Cluster.WaitForIndexNotification(etag);
+                await _documentDatabase.WaitForIndexNotification(etag);
             }
             finally
             {
@@ -351,7 +347,7 @@ namespace Raven.Server.Documents.Transformers
 
                 var etag = await _serverStore.SendToLeaderAsync(command);
 
-                await _serverStore.Cluster.WaitForIndexNotification(etag);
+                await _documentDatabase.WaitForIndexNotification(etag);
             }
             finally
             {
@@ -391,7 +387,7 @@ namespace Raven.Server.Documents.Transformers
 
         public void Dispose()
         {
-            _serverStore.Cluster.DatabaseChanged -= OnDatabaseChanged;
+            
         }
     }
 }
