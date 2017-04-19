@@ -40,6 +40,13 @@ interface metadataAwareDto {
     '@metadata'?: documentMetadataDto;
 }
 
+interface IndexErrorPerDocument {
+    Document: string;
+    Error: string;
+    IndexName: string;
+    Timestamp: string;
+}
+
 interface documentMetadataDto {
     '@collection'?: string;
     'Raven-Clr-Type'?: string;

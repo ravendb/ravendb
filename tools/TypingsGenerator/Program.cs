@@ -129,6 +129,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexDefinition));
             scripter.AddType(typeof(TermsQueryResult));
             scripter.AddType(typeof(IndexProgress));
+            scripter.AddType(typeof(IndexErrors));
 
             // query 
             scripter.AddType(typeof(QueryResult<>));
