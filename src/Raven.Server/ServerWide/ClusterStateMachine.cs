@@ -254,7 +254,7 @@ namespace Raven.Server.ServerWide
             TableValueBuilder builder;
             Slice valueName, valueNameLowered;
             using (items.Allocate(out builder))
-            using (Slice.From(context.Allocator, "db/"+ addDatabaseCommand.Name, out valueName))
+            using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out valueName))
             using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out valueNameLowered))
             using (var rec = context.ReadObject(addDatabaseCommand.Value, "inner-val"))
             {
@@ -455,7 +455,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<string> GetdatabaseNames(TransactionOperationContext context,int start = 0, int take = Int32.MaxValue)
+        public IEnumerable<string> GetdatabaseNames(TransactionOperationContext context, int start = 0, int take = Int32.MaxValue)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -463,7 +463,7 @@ namespace Raven.Server.ServerWide
             Slice loweredPrefix;
             using (Slice.From(context.Allocator, dbKey, out loweredPrefix))
             {
-                
+
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
                     if (take-- <= 0)
@@ -598,16 +598,17 @@ namespace Raven.Server.ServerWide
         {
             var listOfDatabaseName = GetdatabaseNames(context).ToList();
             //There is potentially a lot of work to be done here so we are responding to the change on a separate task.
-            if(DatabaseChanged != null)
+            var onDatabaseChanged = DatabaseChanged;
+            if (onDatabaseChanged != null)
             {
-                Task.Run(() =>
+                TaskExecuter.Execute(_ =>
                 {
                     foreach (var db in listOfDatabaseName)
                     {
-                        DatabaseChanged.Invoke(this, db);
+                        onDatabaseChanged.Invoke(this, db);
                     }
-                });
-            }            
+                }, null);
+            }
         }
     }
 
