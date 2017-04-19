@@ -19,10 +19,12 @@ namespace Raven.Server.Documents.Replication
         private CancellationTokenSource _cts;
         private readonly Task<Task> _task;
 
-        private static readonly ConcurrentDictionary<string, ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator>> _incoming = new ConcurrentDictionary<string, ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator>>(StringComparer.OrdinalIgnoreCase);
-
-        private static readonly ConcurrentDictionary<OutgoingReplicationHandler, ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator>> _outgoing = new ConcurrentDictionary<OutgoingReplicationHandler, ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator>>();
-
+        private readonly ConcurrentDictionary<string, ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator>> _incoming = 
+            new ConcurrentDictionary<string, ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator>>(StringComparer.OrdinalIgnoreCase);
+       
+        private readonly ConcurrentDictionary<OutgoingReplicationHandler, ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator>> _outgoing = 
+            new ConcurrentDictionary<OutgoingReplicationHandler, ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator>>();
+        
         public LiveReplicationPerformanceCollector(DocumentDatabase database)
         {
             _database = database;
@@ -73,7 +75,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private static IEnumerable<IReplicationPerformanceStats> PreparePerformanceStats()
+        private IEnumerable<IReplicationPerformanceStats> PreparePerformanceStats()
         {
             foreach (var incoming in _incoming.Values)
             {

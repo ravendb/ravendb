@@ -3,6 +3,7 @@
 import database = require("models/resources/database");
 import d3 = require("d3");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
+import endpoints = require("endpoints");
 
 class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]> {
     
@@ -25,8 +26,8 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<Raven.
     }
 
     protected webSocketUrlFactory(token: singleAuthToken) {
-        const connectionString = "singleUseAuthToken=" + token.Token;
-        return "/replication/performance/live?" + connectionString;
+        const connectionString = "?singleUseAuthToken=" + token.Token;
+        return endpoints.databases.replication.replicationPerformanceLive + connectionString;
     }
 
     get autoReconnect() {
@@ -58,9 +59,8 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<Raven.
 
     private mergeIncomingData(e: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) {
         e.forEach(replicationStatsFromEndpoing => {
-            
-            const replicationDesc = replicationStatsFromEndpoing.Description.split(" ")[0]; 
-            const replicationType = replicationStatsFromEndpoing.Type.toString();
+            const replicationDesc = replicationStatsFromEndpoing.Description;
+            const replicationType = replicationStatsFromEndpoing.Type;
 
             let existingReplicationStats = this.mergedData.find(x => x.Type === replicationType && x.Description === replicationDesc);
 
@@ -97,11 +97,13 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<Raven.
     static fillCache(perf: Raven.Client.Documents.Replication.ReplicationPerformanceBase,
                      type: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType,
                      description: string) {
+
         const withCache = perf as ReplicationPerformanceBaseWithCache;
         withCache.CompletedAsDate = perf.Completed ? liveReplicationStatsWebSocketClient.isoParser.parse(perf.Completed) : undefined;
         withCache.StartedAsDate = liveReplicationStatsWebSocketClient.isoParser.parse(perf.Started);
         withCache.Type = type;
         withCache.Description = description;
+        withCache.Errors = (perf as Raven.Client.Documents.Replication.OutgoingReplicationPerformanceStats).Errors; // check !!! if to remove from export ...!!!
     }
 }
 
