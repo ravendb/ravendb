@@ -109,6 +109,20 @@ namespace FastTests.Sparrow
             Assert.Equal(r, 0xba627c81);
         }
 
+        [Fact]
+        public unsafe void Marvin32_IntArrayEquivalence()
+        {
+            int[] test = { 32, 5, 11588, 5 }; /* "Abcdefg" in UTF-16-LE */
+            
+            fixed (int* ptr = test)
+            {
+                uint r = Hashing.Marvin32.CalculateInline(test);
+                uint x = Hashing.Marvin32.CalculateInline((byte*)ptr, test.Length * sizeof(int));
+
+                Assert.Equal(r, x);
+            }                        
+        }
+
 
         [Fact]
         public void XXHash32_EquivalenceInDifferentMemoryLocations()

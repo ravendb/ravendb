@@ -375,7 +375,7 @@ namespace Voron.Impl
         private PagerStateCacheItem _lastScratchFileUsed = new PagerStateCacheItem(InvalidScratchFile, null);
         private bool _disposed;
 
-        public class PagerRef
+        public sealed class PagerRef
         {
             public AbstractPager Pager;
             public long PagerPageNumber;

@@ -6,7 +6,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 {
     public class CachedFieldItem<T> : IDisposable where T : AbstractField
     {
-        public T Field;
+        public FieldCacheKey Key;
+
+        public T Field;        
 
         public LazyStringReader LazyStringReader { get; set; }
 

@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using Lucene.Net.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using LuceneDocument = Lucene.Net.Documents.Document;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
-    public class AnonymousLuceneDocumentConverter : LuceneDocumentConverterBase
+    public sealed class AnonymousLuceneDocumentConverter : LuceneDocumentConverterBase
     {
         private readonly bool _isMultiMap;
         private PropertyAccessor _propertyAccessor;
@@ -19,10 +19,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             _isMultiMap = isMultiMap;
         }
         
-        protected override IEnumerable<AbstractField> GetFields(LazyStringValue key, object document, JsonOperationContext indexContext)
+        protected override int GetFields<T>(T instance, LazyStringValue key, object document, JsonOperationContext indexContext)
         {
+            int newFields = 0;
             if (key != null)
-                yield return GetOrCreateKeyField(key);
+            {
+                instance.Add(GetOrCreateKeyField(key));
+                newFields++;
+            }
 
             var boostedValue = document as BoostedValue;
             var documentToProcess = boostedValue == null ? document : boostedValue.Value;
@@ -30,8 +34,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             PropertyAccessor accessor;
 
             if (_isMultiMap == false)
-                accessor = _propertyAccessor ??
-                           (_propertyAccessor = PropertyAccessor.Create(documentToProcess.GetType()));
+                accessor = _propertyAccessor ?? (_propertyAccessor = PropertyAccessor.Create(documentToProcess.GetType()));
             else
                 accessor = TypeConverter.GetPropertyAccessor(documentToProcess);
 
@@ -52,15 +55,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.", e);
                 }
 
-                foreach (var luceneField in GetRegularFields(field, value, indexContext))
+                int boostedFields = GetRegularFields(instance, field, value, indexContext);
+                newFields += boostedFields;
+
+                if (boostedValue != null)
                 {
-                    if (boostedValue != null)
+                    var fields = instance.GetFields();
+                    for (int idx = fields.Count - 1; boostedFields > 0; boostedFields--, idx--)
                     {
+                        var luceneField = fields[idx];
                         luceneField.Boost = boostedValue.Boost;
                         luceneField.OmitNorms = false;
                     }
-
-                    yield return luceneField;
                 }
 
                 if (reduceResult != null)
@@ -68,7 +74,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
 
             if (_reduceOutput)
-                yield return GetReduceResultValueField(Scope.CreateJson(reduceResult, indexContext));
+            {
+                instance.Add(GetReduceResultValueField(Scope.CreateJson(reduceResult, indexContext)));
+                newFields++;
+            }
+
+            return newFields;
         }
     }
 }
