@@ -124,8 +124,7 @@ namespace Raven.Server.Documents.Replication
             IsIncomingReplicationThread = true;
             try
             {
-
-                using (_connectionOptions.ConnectionProcessingInProgress())
+                using (_connectionOptions.ConnectionProcessingInProgress("Replication"))
                 using (_stream)
                 using (var interruptibleRead = new InterruptibleRead(
                             _database.DocumentsStorage.ContextPool,

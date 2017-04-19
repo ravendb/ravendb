@@ -265,7 +265,6 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     await session.StoreAsync(new RavenDB_4323.Marker { Name = "Marker" }, "marker");
                     await session.SaveChangesAsync();
                 }
-
                 Assert.True(WaitForDocument(store2, "marker"));
 
                 var collectionStatistics = await store1.Admin.SendAsync(new GetCollectionStatisticsOperation());
@@ -283,7 +282,8 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 database.DocumentTombstoneCleaner.Subscribe(this);
                 database2.DocumentTombstoneCleaner.Subscribe(this);
 
-                await store1.Operations.SendAsync(new DeleteCollectionOperation("Invoices"));
+                var operation = await store1.Operations.SendAsync(new DeleteCollectionOperation("Invoices"));
+                await operation.WaitForCompletionAsync();
                 using (var session = store1.OpenAsyncSession())
                 {
                     await session.StoreAsync(new RavenDB_4323.Marker { Name = "Marker 2" }, "marker2");

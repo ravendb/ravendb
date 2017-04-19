@@ -21,7 +21,8 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server.Operations;
-using Raven.Server.Documents.Replication;using Raven.Server.ServerWide;
+using Raven.Server.Documents.Replication;
+using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -31,7 +32,7 @@ namespace FastTests.Server.Replication
 {
     public class ReplicationTestsBase : ClusterTestBase
     {
-        protected List<object> GetRevisions(DocumentStore store,string id)
+        protected List<object> GetRevisions(DocumentStore store, string id)
         {
             using (var commands = store.Commands())
             {
@@ -301,7 +302,7 @@ namespace FastTests.Server.Replication
             public IReadOnlyList<ServerNode> Nodes;
             public IDocumentStore LeaderStore;
             public string Database;
-            
+
             public void Dispose()
             {
                 LeaderStore?.Dispose();
@@ -310,7 +311,7 @@ namespace FastTests.Server.Replication
 
 
         protected static async Task<UpdateTopologyResult> UpdateReplicationTopology(
-            DocumentStore store, 
+            DocumentStore store,
             List<DatabaseWatcher> watchers)
         {
             var cmd = new UpdateDatabaseTopology(store.DefaultDatabase, watchers);
@@ -319,7 +320,7 @@ namespace FastTests.Server.Replication
 
         protected static async Task<ModifySolverResult> UpdateConflictResolver(IDocumentStore store, string resovlerDbId = null, Dictionary<string, ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
         {
-            var cmd = new ModifyConflictSolverOperation(store.DefaultDatabase, 
+            var cmd = new ModifyConflictSolverOperation(store.DefaultDatabase,
                 resovlerDbId, collectionByScript, resolveToLatest);
             return await store.Admin.Server.SendAsync(cmd);
         }
@@ -331,13 +332,15 @@ namespace FastTests.Server.Replication
             var watchers = new List<DatabaseWatcher>();
             foreach (var store in toStores)
             {
-                watchers.Add(new DatabaseWatcher
+                var databaseWatcher = new DatabaseWatcher
                 {
                     Database = store.DefaultDatabase,
-                    Url = store.Url,                  
-                });
+                    Url = store.Url,
+                };
+                ModifyReplicationDestination(databaseWatcher);
+                watchers.Add(databaseWatcher);
             }
-            var result = await UpdateReplicationTopology(fromStore,watchers);
+            var result = await UpdateReplicationTopology(fromStore, watchers);
             CurrentDatabaseTopology = result.Topology;
         }
 
@@ -375,11 +378,11 @@ namespace FastTests.Server.Replication
         {
             SetupReplicationAsync(fromStore, conflictSolver, toStores).ConfigureAwait(false);
         }
-                     
+
         protected virtual void ModifyReplicationDestination(ReplicationNode replicationNode)
         {
         }
-        
+
         protected static async Task SetupReplicationWithCustomDestinations(DocumentStore fromStore, params ReplicationNode[] toNodes)
         {
             var watchers = new List<DatabaseWatcher>();
@@ -567,7 +570,7 @@ namespace FastTests.Server.Replication
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
                 if (response == null)
-                    ThrowInvalidResponse();               
+                    ThrowInvalidResponse();
 
                 Result = JsonDeserializationClient.GetConflictsResult(response);
             }

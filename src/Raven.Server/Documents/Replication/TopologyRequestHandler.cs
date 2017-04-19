@@ -14,11 +14,11 @@ namespace Raven.Server.Documents.Replication
 {
     public class TopologyRequestHandler
     {
-        public void AcceptIncomingConnectionAndRespond(TcpConnectionOptions tcp)
+        public void AcceptIncomingConnectionAndRespond(TcpConnectionOptions tcp, string debugTag)
         {
             DocumentsOperationContext context;
             using (tcp)
-            using(tcp.ConnectionProcessingInProgress())
+            using(tcp.ConnectionProcessingInProgress(debugTag))
             using (tcp.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 TopologyDiscoveryRequest header;

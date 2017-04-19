@@ -19,9 +19,9 @@ namespace Tryouts
                 //LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
                 Parallel.For(0, 1, _ =>
                 {
-                    using (var a = new FastTests.Server.NotificationCenter.NotificationCenterTests())
+                    using (var a = new FastTests.Server.Documents.Indexing.MapReduce.RavenDB_4323_Replication())
                     {
-                        a.Should_get_notification();
+                        a.ReduceOutputShouldNotBeReplicated().Wait();
                     }
                 });
                 //LoggingSource.Instance.SetupLogMode(LogMode.None, "logs");
