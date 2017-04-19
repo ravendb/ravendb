@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Replication
         {
             get
             {
-               
+
                 if (Destinations == null || !Destinations.Any())
                     return long.MaxValue;
 
@@ -105,11 +105,13 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks =
             new ConcurrentQueue<TaskCompletionSource<object>>();
 
-		public ServerStore Server;
+        public ServerStore Server;
         public DatabaseRecord MyDatabaseRecord;
         internal DatabaseTopology ReplicationTopology => MyDatabaseRecord.Topology;
-        public IEnumerable<ReplicationNode> Destinations => ReplicationTopology?.GetDestinations(Server.NodeTag,Database.Name);
-        public ReplicationLoader(DocumentDatabase database, ServerStore server)        {
+        public IEnumerable<ReplicationNode> Destinations => ReplicationTopology?.GetDestinations(Server.NodeTag, Database.Name);
+
+        public ReplicationLoader(DocumentDatabase database, ServerStore server)
+        {
             Server = server;
             Database = database;
             _log = LoggingSource.Instance.GetLogger<ReplicationLoader>(Database.Name);
@@ -117,7 +119,7 @@ namespace Raven.Server.Documents.Replication
                 null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
             MinimalHeartbeatInterval =
                (int)Database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
-                                 
+
         }
 
         private DatabaseRecord LoadDatabaseRecord()
@@ -375,29 +377,20 @@ namespace Raven.Server.Documents.Replication
         {
             if (_isInitialized) //precaution -> probably not necessary, but still...
                 return;
-            
+
             _isInitialized = true;
-            
+
             MyDatabaseRecord = LoadDatabaseRecord();
             ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
             InitializeOutgoingReplications();
             ConflictResolver.RunConflictResolversOnce();
-
-            Server.Cluster.DatabaseChanged += OnDatabaseRecordChange;
         }
 
-        private void OnDatabaseRecordChange(object sender, (string dbName, long index) t)
+        public void HandleDatabaseRecordChange()
         {
-
-            if (Server == null)
-                return;
-
-            if (string.Equals(t.dbName, Database.Name, StringComparison.OrdinalIgnoreCase) == false)
-                return;
-
             var newRecord = LoadDatabaseRecord();
 
-            if(newRecord == null)
+            if (newRecord == null)
                 return;
 
             var connectionChanged = ReplicationTopology.MyConnectionChanged(newRecord.Topology, Server.NodeTag, Database.Name);
@@ -434,7 +427,7 @@ namespace Raven.Server.Documents.Replication
 
                 ConflictResolver.RunConflictResolversOnce();
             }
-                                 
+
         }
 
         private void InitializeOutgoingReplications()
@@ -588,8 +581,6 @@ namespace Raven.Server.Documents.Replication
 
             ea.Execute(_reconnectAttemptTimer.Dispose);
 
-            Server.Cluster.DatabaseChanged -= OnDatabaseRecordChange;
-
             ea.Execute(() => ConflictResolver?.ResolveConflictsTask.Wait());
 
             if (_log.IsInfoEnabled)
@@ -605,7 +596,7 @@ namespace Raven.Server.Documents.Replication
 
             ea.ThrowIfNeeded();
         }
-        
+
         public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
             var minEtag = MinimalEtagForReplication;

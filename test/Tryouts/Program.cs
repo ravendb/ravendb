@@ -17,11 +17,11 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 //LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
-                Parallel.For(0, 10, _ =>
+                Parallel.For(0, 1, _ =>
                 {
-                    using (var a = new RavenDB_6602())
+                    using (var a = new FastTests.Server.NotificationCenter.NotificationCenterTests())
                     {
-                        a.RequestExecutor_failover_with_only_one_database_should_properly_fail().Wait();
+                        a.Should_get_notification();
                     }
                 });
                 //LoggingSource.Instance.SetupLogMode(LogMode.None, "logs");

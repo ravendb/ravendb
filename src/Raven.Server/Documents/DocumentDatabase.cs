@@ -77,10 +77,8 @@ namespace Raven.Server.Documents
             IndexStore = new IndexStore(this, _indexAndTransformerLocker);
             TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
             EtlLoader = new EtlLoader(this);
-            if (serverStore != null)
-            {   // make no sense to have replication without server store.
+            if(serverStore != null)
                 ReplicationLoader = new ReplicationLoader(this, serverStore);
-            }
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
             SubscriptionStorage = new SubscriptionStorage(this);
             Operations = new DatabaseOperations(this);
@@ -145,7 +143,7 @@ namespace Raven.Server.Documents
 
         public TransformerStore TransformerStore { get; }
 
-        public ConfigurationStorage ConfigurationStorage { get; private set; }
+        public ConfigurationStorage ConfigurationStorage { get; }
 
         public IndexesEtagsStorage IndexMetadataPersistence => ConfigurationStorage.IndexesEtagsStorage;
 
@@ -234,10 +232,9 @@ namespace Raven.Server.Documents
             ConfigurationStorage.InitializeNotificationsStorage();
 
             _indexStoreTask = IndexStore.InitializeAsync();
-            TransactionOperationContext context;
             if (_serverStore != null)
             {
-                using (_serverStore.ContextPool.AllocateOperationContext(out context))
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext  context))
                 {
                     context.OpenReadTransaction();
                     var record = _serverStore.Cluster.ReadDatabase(context, Name);
@@ -527,6 +524,7 @@ namespace Raven.Server.Documents
             {
                 TransformerStore.HandleDatabaseRecordChange();
                 BundleLoader.HandleDatabaseRecordChange();
+                ReplicationLoader?.HandleDatabaseRecordChange();
             }
             finally
             {

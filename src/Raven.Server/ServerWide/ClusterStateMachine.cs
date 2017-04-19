@@ -637,25 +637,24 @@ namespace Raven.Server.ServerWide
     {
         public string DatabaseName;
         public BlittableJsonReaderObject Value;
-        public List<DatabaseWatcher> NewWatchers;
         
-        public void Deserialize()
-        {
-            BlittableJsonReaderArray newWatchersBlittable;
-            Value.TryGet("NewWatchers", out newWatchersBlittable);
-            
-            if (newWatchersBlittable != null)
-            {
-                NewWatchers = new List<DatabaseWatcher>();
-                NewWatchers.AddRange(newWatchersBlittable.Items.
-                    Select(i => JsonDeserializationRachis<DatabaseWatcher>.Deserialize((BlittableJsonReaderObject)i)));
-            }
-        }
+       
 
         public void UpdateDatabaseRecord(DatabaseRecord record)
         {
-            Deserialize();
-            record.Topology.Watchers = NewWatchers;
+            Value.TryGet("NewWatchers", out BlittableJsonReaderArray watchers);
+
+            if (watchers != null)
+            {
+                record.Topology.Watchers = new List<DatabaseWatcher>(
+                    watchers.Items.Select(
+                        i => JsonDeserializationRachis<DatabaseWatcher>.Deserialize((BlittableJsonReaderObject)i)
+                    ));
+            }
+            else
+            {
+                record.Topology.Watchers = new List<DatabaseWatcher>();
+            }
         }
     }
 
