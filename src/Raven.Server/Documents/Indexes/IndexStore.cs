@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -22,6 +23,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -812,15 +814,53 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+
+        
+
+
         private void OpenIndexesFromRecord(PathSetting path, DatabaseRecord record)
         {
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Starting to load indexes from record");
 
+            Dictionary<string, string> indexesCustomPaths;
+
+            using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var customPathsDoc = _documentDatabase.DocumentsStorage.Get(context, "Raven/CustomPaths");
+                var customPaths = JsonDeserializationServer.CustomIndexPaths(customPathsDoc.Data);
+                indexesCustomPaths = customPaths.Paths;
+            }
+                
             List<Exception> exceptions = null;
             if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)
                 exceptions = new List<Exception>();
 
+
+            // delete all unrecognized index directories
+            foreach (var indexDirectory in new DirectoryInfo(path.FullPath).GetDirectories().Concat(indexesCustomPaths.Values.SelectMany(x => new DirectoryInfo(x).GetDirectories())))
+            {
+                if (record.Indexes.ContainsKey(indexDirectory.Name) == false)
+                {
+                    Directory.Delete(indexDirectory.FullName);
+                    continue;
+                }
+
+                // delete all redundant index instances
+                var indexInstances = indexDirectory.GetDirectories();
+                if (indexInstances.Length > 2)
+                {
+                    var orderedIndexes = indexInstances.OrderByDescending(x =>
+                        int.Parse(x.Name.Substring(x.Name.LastIndexOf("\\") +1)));
+
+                    foreach (var indexToRemove in orderedIndexes.Skip(2))
+                    {
+                        Directory.Delete(indexToRemove.FullName);
+                    }
+                }
+            }
+            
             foreach (var kvp in record.Indexes)
             {
                 if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
@@ -830,6 +870,7 @@ namespace Raven.Server.Documents.Indexes
                 var definition = kvp.Value;
 
                 var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
+                var singleIndexConfiguration = new SingleIndexConfiguration(definition.Configuration, _documentDatabase.Configuration);
                 var indexPath = path.Combine(safeName).FullPath;
 
                 OpenIndex(path, definition.Etag, indexPath, exceptions, name);
@@ -1150,5 +1191,10 @@ namespace Raven.Server.Documents.Indexes
                 _indexAndTransformerLocker.Release();
             }
         }
+    }
+
+    public class CustomIndexPaths
+    {
+        public Dictionary<string, string> Paths;
     }
 }
