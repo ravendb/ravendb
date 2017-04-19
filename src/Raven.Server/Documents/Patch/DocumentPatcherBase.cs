@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 else
                 {
-                    if (BlittableOperation.FastCompare(documentKey, originalDocument.Data, modifiedDocument) == false) // http://issues.hibernatingrhinos.com/issue/RavenDB-6408
+                    if (DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDocument, true) == DocumentCompareResult.NotEqual) // http://issues.hibernatingrhinos.com/issue/RavenDB-6408
                     {
                         putResult = _database.DocumentsStorage.Put(context, originalDocument.Key, originalDocument.Etag, modifiedDocument);
                         result.Status = PatchStatus.Patched;
