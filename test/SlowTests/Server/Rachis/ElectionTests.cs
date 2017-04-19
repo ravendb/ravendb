@@ -46,7 +46,7 @@ namespace SlowTests.Server.Rachis
             List<Task> waitingList = new List<Task>();
             foreach (var follower in followers)
             {
-                waitingList.Add(follower.WaitForState(RachisConsensus.State.LeaderElect));
+                waitingList.Add(follower.WaitForState(RachisConsensus.State.Leader));
             }
             if (Log.IsInfoEnabled)
             {
@@ -59,7 +59,7 @@ namespace SlowTests.Server.Rachis
             }
             Assert.True(t, "Followers didn't become leaders although old leader can't communicate with the cluster");
 
-            var newLeader = followers.First(f => f.CurrentState == RachisConsensus.State.Leader || f.CurrentState == RachisConsensus.State.LeaderElect);
+            var newLeader = followers.First(f => f.CurrentState == RachisConsensus.State.Leader);
             var newLeaderLastIndex = await IssueCommandsAndWaitForCommit(newLeader, 3, "test", 1);
             ReconnectToNode(firstLeader);
             Assert.True(firstLeader.WaitForState(RachisConsensus.State.Follower).Wait(timeToWait), "Old leader didn't become follower after two election timeouts");
