@@ -555,7 +555,7 @@ namespace Raven.Server.Documents.Replication
             TaskCompletionSource<object> result;
             while (_waitForReplicationTasks.TryDequeue(out result))
             {
-                TaskNotifier.Complete(result);
+                TaskExecuter.Complete(result);
             }
 
         }

@@ -584,7 +584,7 @@ namespace Voron.Impl.Journal
                         var operation = new SyncOperation(this);
                         operation.GatherInformationToStartSync();
                         _pendingSync = operation.Task;
-                        TaskNotifier.Execute(state => ((SyncOperation)state).CompleteSync(), operation);
+                        TaskExecuter.Execute(state => ((SyncOperation)state).CompleteSync(), operation);
                     }
 
                     ApplyJournalStateAfterFlush(token, lastProcessedJournal, lastFlushedTransactionId, unusedJournals);

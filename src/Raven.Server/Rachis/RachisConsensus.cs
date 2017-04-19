@@ -351,7 +351,7 @@ namespace Raven.Server.Rachis
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += tx =>
             {
-                TaskNotifier.CompleteAndReplace(ref _stateChanged);
+                TaskExecuter.CompleteAndReplace(ref _stateChanged);
                 foreach (var d in toDispose)
                 {
                     d.Dispose();
@@ -367,7 +367,7 @@ namespace Raven.Server.Rachis
                 return;
 
             CurrentState = State.Leader;
-            TaskNotifier.CompleteAndReplace(ref _stateChanged);
+            TaskExecuter.CompleteAndReplace(ref _stateChanged);
         }
 
         public void AppendStateDisposable(IDisposable parentState, IDisposable disposeOnStateChange)
@@ -538,7 +538,7 @@ namespace Raven.Server.Rachis
                 return;
 
 
-            tx.LowLevelTransaction.OnDispose += _ => TaskNotifier.CompleteAndReplace(ref engine._topologyChanged);
+            tx.LowLevelTransaction.OnDispose += _ => TaskExecuter.CompleteAndReplace(ref engine._topologyChanged);
 
 
         }
@@ -960,7 +960,7 @@ namespace Raven.Server.Rachis
                 data[1] = term;
             }
 
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ => TaskNotifier.CompleteAndReplace(ref _commitIndexChanged);
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ => TaskExecuter.CompleteAndReplace(ref _commitIndexChanged);
         }
 
         public async Task WaitForCommitIndexChange(CommitIndexModification modification, long value)

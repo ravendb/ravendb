@@ -117,7 +117,7 @@ namespace Voron
 
                 for (int i = 0; i < parallelSyncsPerIo; i++)
                 {
-                    TaskNotifier.Execute(SyncAllEnvironmentsInMountPoint, mountPoint.Value); 
+                    TaskExecuter.Execute(SyncAllEnvironmentsInMountPoint, mountPoint.Value); 
                 }
             }
         }
@@ -224,7 +224,7 @@ namespace Voron
 
                 _concurrentFlushes.Wait();
 
-                TaskNotifier.Execute(env =>
+                TaskExecuter.Execute(env =>
                 {
                     var storageEnvironment = ((StorageEnvironment)env);
                     try

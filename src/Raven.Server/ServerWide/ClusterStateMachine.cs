@@ -335,7 +335,7 @@ namespace Raven.Server.ServerWide
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
             {
-                TaskNotifier.Execute(_ =>
+                TaskExecuter.Execute(_ =>
                 {
                     try
                     {

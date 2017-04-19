@@ -229,7 +229,7 @@ namespace Raven.Server.Rachis
                         case 0: // new entry
                             _newEntry.Reset();
                             // release any waiting ambassadors to send immediately
-                            TaskNotifier.CompleteAndReplace(ref _newEntriesArrived);
+                            TaskExecuter.CompleteAndReplace(ref _newEntriesArrived);
                             if (_voters.Count == 0)
                                 goto case 1;
                             break;
@@ -370,7 +370,7 @@ namespace Raven.Server.Rachis
                 CommandState value;
                 if (_entries.TryRemove(kvp.Key, out value))
                 {
-                    TaskNotifier.Execute(o =>
+                    TaskExecuter.Execute(o =>
                     {
                         var tuple = (CommandState)o;
                         if (tuple.OnNotify != null)
@@ -533,7 +533,7 @@ namespace Raven.Server.Rachis
         {
             Running = false;
             _shutdownRequested.Set();
-            TaskNotifier.Execute(_ =>
+            TaskExecuter.Execute(_ =>
             {
                 _newEntriesArrived.TrySetCanceled();
                 var lastStateChangeReason = _engine.LastStateChangeReason;
