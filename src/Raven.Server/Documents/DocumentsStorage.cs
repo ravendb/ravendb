@@ -218,6 +218,8 @@ namespace Raven.Server.Documents
                     _documentDatabase.CatastrophicFailureNotification
                     );
 
+            options.OnNonDurableFileSystemError += _documentDatabase.HandleNonDurableFileSystemError;
+
             options.ForceUsing32BitsPager = _documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
             try
