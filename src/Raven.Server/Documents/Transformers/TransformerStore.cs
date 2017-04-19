@@ -37,11 +37,6 @@ namespace Raven.Server.Documents.Transformers
             _serverStore = serverStore;
             _log = LoggingSource.Instance.GetLogger<TransformerStore>(_documentDatabase.Name);
             _indexAndTransformerLocker = indexAndTransformerLocker;
-
-            if (_serverStore != null)
-            {
-                _serverStore.Cluster.DatabaseChanged += HandleDatabaseRecordChange;
-            }
         }
 
         public void Initialize(DatabaseRecord record)
@@ -61,13 +56,11 @@ namespace Raven.Server.Documents.Transformers
             }
         }
 
-        private void HandleDatabaseRecordChange(object sender, string changedDatabase)
+        public void HandleDatabaseRecordChange()
         {
             if (_serverStore == null)
                 return;
-            if (string.Equals(changedDatabase, _documentDatabase.Name, StringComparison.OrdinalIgnoreCase) == false)
-                return;
-            
+
             var transformersToDelete = new List<string>();
 
             TransactionOperationContext context;

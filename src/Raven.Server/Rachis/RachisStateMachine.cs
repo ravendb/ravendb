@@ -54,7 +54,7 @@ namespace Raven.Server.Rachis
 
         public abstract Task<Stream> ConenctToPeer(string url, string apiKey);
 
-        public virtual void OnSnapshotInstalled(TransactionOperationContext context)
+        public virtual void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex)
         {
             
         }

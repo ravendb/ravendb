@@ -318,7 +318,7 @@ namespace Raven.Server.Rachis
             using (context.OpenReadTransaction())
             {
                 // notify the state machine
-                _engine.SnapshotInstalled(context);
+                _engine.SnapshotInstalled(context, snapshot.LastIncludedIndex);
             }
 
             _engine.Timeout.Defer(_connection.Source);

@@ -3,21 +3,16 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Exceptions.Indexes;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http.OAuth;
-using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Json;
@@ -25,7 +20,6 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -33,7 +27,6 @@ using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Exceptions;
-using Voron.Util;
 
 namespace Raven.Server.ServerWide
 {
@@ -66,25 +59,15 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        private readonly AsyncManualResetEvent _notifiedListeners = new AsyncManualResetEvent();
-        private long _lastNotified;
-
-        public async Task WaitForIndexNotification(long index, TimeSpan? timeout = null)
-        {
-            //this is needed because WaitAsync without timeout is an overload of WaitAsync with timeout
-            var task = timeout.HasValue ? _notifiedListeners.WaitAsync(timeout.Value) : _notifiedListeners.WaitAsync();
-
-            while (index > Volatile.Read(ref _lastNotified))
-            {
-                await task;
-                task = timeout.HasValue ? _notifiedListeners.WaitAsync(timeout.Value) : _notifiedListeners.WaitAsync();
-            }
-        }
-
-        public event EventHandler<string> DatabaseChanged;
+        public event EventHandler<(string dbName, long index)> DatabaseChanged;
 
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
+            {
+                _rachisLogIndexNotifications.NotifyListenersAbout(index);
+            };
+
             string type;
             if (cmd.TryGet("Type", out type) == false)
                 return;
@@ -116,6 +99,9 @@ namespace Raven.Server.ServerWide
                     break;
             }
         }
+
+        private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
+        public Task WaitForIndexNotification(long index) => _rachisLogIndexNotifications.WaitForIndexNotification(index);
 
         private unsafe void RemoveNodeFromDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
@@ -337,22 +323,7 @@ namespace Raven.Server.ServerWide
             {
                 TaskExecuter.Execute(_ =>
                 {
-                    try
-                    {
-                        DatabaseChanged?.Invoke(this, databaseName);
-                    }
-                    finally
-                    {
-                        var lastNotified = _lastNotified;
-                        while (lastNotified < index)
-                        {
-                            var result = Interlocked.CompareExchange(ref _lastNotified, index, lastNotified);
-                            if (result == lastNotified)
-                                break;
-                            lastNotified = result;
-                        }
-                        _notifiedListeners.Set();
-                    }
+                    DatabaseChanged?.Invoke(this, (databaseName, index));
                 }, null);
             };
         }
@@ -594,7 +565,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public override void OnSnapshotInstalled(TransactionOperationContext context)
+        public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex)
         {
             var listOfDatabaseName = GetdatabaseNames(context).ToList();
             //There is potentially a lot of work to be done here so we are responding to the change on a separate task.
@@ -605,7 +576,7 @@ namespace Raven.Server.ServerWide
                 {
                     foreach (var db in listOfDatabaseName)
                     {
-                        onDatabaseChanged.Invoke(this, db);
+                        onDatabaseChanged.Invoke(this, (db, lastIncludedIndex));
                     }
                 }, null);
             }
@@ -714,5 +685,35 @@ namespace Raven.Server.ServerWide
         };
 
         public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();
+    }
+
+    public class RachisLogIndexNotifications
+    {
+        private long _lastModifiedIndex;
+        private readonly AsyncManualResetEvent _notifiedListeners;
+
+        public RachisLogIndexNotifications(CancellationToken token)
+        {
+            _notifiedListeners = new AsyncManualResetEvent(token);
+        }
+
+        public async Task WaitForIndexNotification(long index)
+        {
+            while (index > Volatile.Read(ref _lastModifiedIndex))
+            {
+                await _notifiedListeners.WaitAsync();
+            }
+        }
+
+
+        public void NotifyListenersAbout(long index)
+        {
+            var lastModifed = _lastModifiedIndex;
+            while (index > lastModifed)
+            {
+                lastModifed = Interlocked.CompareExchange(ref _lastModifiedIndex, index, lastModifed);
+            }
+            _notifiedListeners.Set();
+        }
     }
 }
