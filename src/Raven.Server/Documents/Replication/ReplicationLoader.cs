@@ -21,6 +21,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Server.Utils;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -569,7 +570,7 @@ namespace Raven.Server.Documents.Replication
             TaskCompletionSource<object> result;
             while (_waitForReplicationTasks.TryDequeue(out result))
             {
-                ThreadPool.QueueUserWorkItem(task => ((TaskCompletionSource<object>)task).TrySetResult(null), result);
+                TaskExecuter.Complete(result);
             }
 
         }

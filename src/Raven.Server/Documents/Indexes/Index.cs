@@ -1096,6 +1096,14 @@ namespace Raven.Server.Documents.Indexes
             return _indexStorage.ReadErrors();
         }
 
+        public long GetErrorCount()
+        {
+            if (_isCompactionInProgress)
+                return 0;
+
+            return _indexStorage.ReadErrorsCount();
+        }
+
         public virtual void SetPriority(IndexPriority priority)
         {
             if (Definition.Priority == priority)

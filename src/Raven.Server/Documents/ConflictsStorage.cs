@@ -112,21 +112,22 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ReleaseMemory GetConflictsKeyPrefix(DocumentsOperationContext context, Slice lowerKey, out Slice prefixSlice)
+        public static ByteStringContext.InternalScope GetConflictsKeyPrefix(DocumentsOperationContext context, Slice lowerKey, out Slice prefixSlice)
         {
             return GetConflictsKeyPrefix(context, lowerKey.Content.Ptr, lowerKey.Size, out prefixSlice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ReleaseMemory GetConflictsKeyPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, out Slice prefixSlice)
+        public static ByteStringContext.InternalScope GetConflictsKeyPrefix(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, out Slice prefixSlice)
         {
-            var keyMem = context.Allocator.Allocate(lowerKeySize + 1);
+            ByteString keyMem;
+            var scope = context.Allocator.Allocate(lowerKeySize + 1, out keyMem);
 
             Memory.Copy(keyMem.Ptr, lowerKey, lowerKeySize);
             keyMem.Ptr[lowerKeySize] = SpecialChars.RecordSeperator;
 
             prefixSlice = new Slice(SliceOptions.Key, keyMem);
-            return new ReleaseMemory(keyMem, context);
+            return scope;
         }
 
         public List<DocumentConflict> GetAllConflictsBySameKeyAfter(DocumentsOperationContext context, ref Slice lastKey)
@@ -248,16 +249,13 @@ namespace Raven.Server.Documents
             if (ConflictsCount == 0)
                 return;
 
-            byte* lowerKey;
-            int lowerSize;
-            byte* keyPtr;
-            int keySize;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            Slice lowerKey;
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out var _);
 
-            DeleteConflictsFor(context, lowerKey, lowerSize);
+            DeleteConflictsFor(context, lowerKey);
         }
 
-        public IReadOnlyList<ChangeVectorEntry[]> DeleteConflictsFor(DocumentsOperationContext context, byte* lowerKey, int lowerSize)
+        public IReadOnlyList<ChangeVectorEntry[]> DeleteConflictsFor(DocumentsOperationContext context, Slice lowerKey)
         {
             var list = new List<ChangeVectorEntry[]>();
             if (ConflictsCount == 0)
@@ -265,7 +263,7 @@ namespace Raven.Server.Documents
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
             Slice prefixSlice;
-            using (GetConflictsKeyPrefix(context, lowerKey, lowerSize, out prefixSlice))
+            using (GetConflictsKeyPrefix(context, lowerKey, out prefixSlice))
             {
                 conflictsTable.DeleteForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], prefixSlice, true, long.MaxValue, before =>
                 {
@@ -326,14 +324,12 @@ namespace Raven.Server.Documents
         {
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
 
-            byte* lowerKey;
-            int lowerSize;
-            byte* keyPtr;
-            int keySize;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
+            Slice keyPtr;
+            Slice lowerKey;
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out keyPtr);
 
             Slice prefixSlice;
-            using (GetConflictsKeyPrefix(context, lowerKey, lowerSize, out prefixSlice))
+            using (GetConflictsKeyPrefix(context, lowerKey, out prefixSlice))
             {
                 foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], prefixSlice, 0, true))
                 {
@@ -385,15 +381,14 @@ namespace Raven.Server.Documents
 
         public ChangeVectorEntry[] GetMergedConflictChangeVectorsAndDeleteConflicts(
            DocumentsOperationContext context,
-           byte* lowerKey,
-           int lowerSize,
+           Slice lowerKey,
            long newEtag,
            ChangeVectorEntry[] existing = null)
         {
             if (ConflictsCount == 0)
                 return MergeVectorsWithoutConflicts(newEtag, existing);
 
-            var conflictChangeVectors = DeleteConflictsFor(context, lowerKey, lowerSize);
+            var conflictChangeVectors = DeleteConflictsFor(context, lowerKey);
             if (conflictChangeVectors.Count == 0)
                 return MergeVectorsWithoutConflicts(newEtag, existing);
 

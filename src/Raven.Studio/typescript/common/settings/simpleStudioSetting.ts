@@ -3,12 +3,9 @@
 import studioSetting = require("common/settings/studioSetting");
 
 class simpleStudioSetting<T> extends studioSetting<T> {
-    name: string;
-    private readonly localSetting: boolean;
 
-    constructor(defaultValue: T, name: string) {
-        super(defaultValue);
-        this.name = name;
+    constructor(saveLocation: studio.settings.saveLocation, defaultValue: T, saveHandler: (item: simpleStudioSetting<T>) => JQueryPromise<void>) {
+        super(saveLocation, defaultValue, saveHandler);
     }
 
     getValue(): T {
@@ -17,6 +14,8 @@ class simpleStudioSetting<T> extends studioSetting<T> {
 
     setValue(value: T) {
         this.value = value;
+
+        this.save();
     }
 }
 

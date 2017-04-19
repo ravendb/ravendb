@@ -18,6 +18,7 @@ namespace Voron.Data
         private readonly int[] _positions;
         private int _index;
         private LowLevelTransaction _llt;
+        private LowLevelTransaction.PagerRef _pagerRef;
         
         public override bool CanRead => true;
         public override bool CanSeek => true;
@@ -37,6 +38,7 @@ namespace Voron.Data
             _positions = new int[_chunksDetails.Length];
             _index = 0;
             _llt = llt;
+            _pagerRef = new LowLevelTransaction.PagerRef();
             foreach (var cd in _chunksDetails)
             {
                 Length += cd.ChunkSize;
@@ -100,9 +102,8 @@ namespace Voron.Data
                     return -1;
             }
 
-            var pagerRef = new LowLevelTransaction.PagerRef();
-            var page = _llt.GetPage(_chunksDetails[_index].PageNumber, pagerRef);
-            pagerRef.Pager.EnsureMapped(_llt, pagerRef.PagerPageNumber, pagerRef.Pager.GetNumberOfOverflowPages(page.OverflowSize));
+            var page = _llt.GetPage(_chunksDetails[_index].PageNumber, _pagerRef);
+            _pagerRef.Pager.EnsureMapped(_llt, _pagerRef.PagerPageNumber, _pagerRef.Pager.GetNumberOfOverflowPages(page.OverflowSize));
 
             return page.DataPointer[_positions[_index]++];
         }
@@ -129,9 +130,8 @@ namespace Voron.Data
             if (count > len - pos)
                 count = len - pos;
 
-            var pagerRef = new LowLevelTransaction.PagerRef();
-            var page = _llt.GetPage(_chunksDetails[_index].PageNumber, pagerRef);
-            pagerRef.Pager.EnsureMapped(_llt, pagerRef.PagerPageNumber, pagerRef.Pager.GetNumberOfOverflowPages(page.OverflowSize));
+            var page = _llt.GetPage(_chunksDetails[_index].PageNumber, _pagerRef);
+            _pagerRef.Pager.EnsureMapped(_llt, _pagerRef.PagerPageNumber, _pagerRef.Pager.GetNumberOfOverflowPages(page.OverflowSize));
 
             fixed (byte* dst = buffer)
             {

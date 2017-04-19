@@ -3,28 +3,59 @@
 import simpleStudioSetting = require("common/settings/simpleStudioSetting");
 import studioSetting = require("common/settings/studioSetting");
 
+
 abstract class abstractSettings {
 
-    environment = new simpleStudioSetting<studio.settings.usageEnvironment>("Default", "environment");
+    environment = new simpleStudioSetting<studio.settings.usageEnvironment>("remote", "Default", x => this.saveSetting(x));
 
     abstract get storageKey(): string;
     protected abstract fetchConfigDocument(): JQueryPromise<any>;
     protected abstract saveConfigDocument(settingsToSave: any): JQueryPromise<void>;
+    protected readonly onSettingChanged: (key: string, setting: studioSetting<any>) => void;
 
+    constructor(onSettingChanged: (key: string, value: any) => void) {
+        this.onSettingChanged = onSettingChanged;
+    }
+
+    protected saveSetting(item: studioSetting<any>): JQueryPromise<void> {
+
+        const settings = {} as any;
+        let settingName: string;
+
+        _.forIn(this, (value, name) => {
+            if (value instanceof studioSetting && value.saveLocation === item.saveLocation) {
+                settings[name] = value.serialize();
+
+                if (value === item) {
+                    settingName = name;
+                }
+            }
+        });
+
+        this.onSettingChanged(settingName, item);
+
+        switch (item.saveLocation) {
+            case "local":
+                return this.saveLocalSettings(settings);
+            case "remote":
+                return this.saveConfigDocument(settings);
+            default:
+                throw new Error("Unhandled save location:" + item.saveLocation);
+        }
+    }
+
+    private saveLocalSettings(localSettings: any) {
+        localStorage.setObject(this.storageKey, localSettings);
+        return $.Deferred<void>().resolve();
+    }
+    
     protected readSettings(remoteSettings: any, localSettings: any) {
-        this.readSetting(remoteSettings, this.environment);
-    }
-
-    protected writeSettings(remoteSettings: any, localSettings: any) {
-        this.writeSetting(remoteSettings, this.environment);
-    }
-
-    protected readSetting(source: any, targetSetting: studioSetting<any>) {
-        targetSetting.deserialize(source ? source[targetSetting.name] : undefined);
-    }
-
-    protected writeSetting(target: any, settingToWrite: studioSetting<any>) {
-        target[settingToWrite.name] = settingToWrite.serialize();
+        _.forIn(this, (value, name) => {
+            if (value instanceof studioSetting) {
+                const sourceItem = value.saveLocation === "remote" ? remoteSettings : localSettings;
+                value.deserialize(sourceItem ? sourceItem[name] : undefined);
+            }
+        });
     }
 
     load(): JQueryPromise<this> {
@@ -40,19 +71,6 @@ abstract class abstractSettings {
             .fail(() => loadTask.reject());
 
         return loadTask;
-    }
-
-    save(): JQueryPromise<void> {
-        const localSettings = {} as any;
-        const remoteSettings = {} as any;
-
-        //TODO: what about concurrent updates?
-
-        this.writeSettings(remoteSettings, localSettings);
-
-        localStorage.setItem(this.storageKey, localSettings);
-
-        return this.saveConfigDocument(remoteSettings);
     }
 }
 

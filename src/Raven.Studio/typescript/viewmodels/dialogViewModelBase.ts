@@ -14,6 +14,7 @@ abstract class dialogViewModelBase {
     private onEnterBinding: JwertySubscription;
     private readonly elementToFocusOnDismissal: string;
     private readonly dialogSelector: string;
+    private disposableActions: Array<disposable> = [];
 
     pluralize = pluralizeHelpers.pluralize;
 
@@ -38,6 +39,9 @@ abstract class dialogViewModelBase {
         if (this.onEnterBinding) {
             this.onEnterBinding.unbind();
         }
+
+        this.disposableActions.forEach(f => f.dispose());
+        this.disposableActions = [];
     }
 
     detached() {
@@ -52,6 +56,10 @@ abstract class dialogViewModelBase {
 
     close() {
         dialog.close(this);
+    }
+
+    protected registerDisposable(disposable: disposable) {
+        this.disposableActions.push(disposable);
     }
 
     protected setInitialFocus() {

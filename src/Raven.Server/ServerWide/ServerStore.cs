@@ -102,6 +102,8 @@ namespace Raven.Server.ServerWide
         private RachisConsensus<ClusterStateMachine> _engine;
         private bool _disposed;
 
+        public RachisConsensus<ClusterStateMachine> Engine => _engine;
+
         public ClusterTopology GetClusterTopology(TransactionOperationContext context)
         {
             return _engine.GetTopology(context);
@@ -178,7 +180,7 @@ namespace Raven.Server.ServerWide
 
                 foreach (var db in _engine.StateMachine.ItemsStartingWith(context, "db/", 0, int.MaxValue))
                 {
-                    DatabasesLandlord.ClusterOnDatabaseChanged(this, db.Item1);
+                    DatabasesLandlord.ClusterOnDatabaseChanged(this, (db.Item1, 0));
                 }
             }
         }
@@ -241,20 +243,18 @@ namespace Raven.Server.ServerWide
 
         public async Task DeleteValueInClusterAsync(JsonOperationContext context, string key)
         {
-            //TODO: redirect to leader
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
                 ["Type"] = nameof(DeleteValueCommand),
                 [nameof(DeleteValueCommand.Name)] = key,
             }, "delete-cmd"))
             {
-                await _engine.PutAsync(putCmd);
+                await SendToLeaderAsync(putCmd);
             }
         }
 
         public async Task PutEditVersioningCommandAsync(JsonOperationContext context, string databaseName, BlittableJsonReaderObject val)
         {
-            //TODO: redirect to leader
             using (var editVersioningCmd = context.ReadObject(new DynamicJsonValue
             {
                 ["Type"] = nameof(EditVersioningCommand),
@@ -262,7 +262,7 @@ namespace Raven.Server.ServerWide
                 [nameof(EditVersioningCommand.DatabaseName)] = databaseName,
             }, "edit-versioning-cmd"))
             {
-                var index = await _engine.PutAsync(editVersioningCmd);
+                var index = await SendToLeaderAsync(editVersioningCmd);
                 await Cluster.WaitForIndexNotification(index);
             }
         }
@@ -277,39 +277,45 @@ namespace Raven.Server.ServerWide
                 if (_disposed)
                     return;
 
-                _disposed = true;
-                if (_shutdownNotification.IsCancellationRequested)
-                    return;
-
-                _shutdownNotification.Cancel();
-                var toDispose = new List<IDisposable>
+                try
                 {
-                    _engine,
-                    NotificationCenter,
-                    LicenseManager,
-                    DatabasesLandlord,
-                    _env,
-                    ContextPool
-                };
+                    if (_shutdownNotification.IsCancellationRequested)
+                        return;
 
-                var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(ServerStore)}.");
-
-                foreach (var disposable in toDispose)
-                    exceptionAggregator.Execute(() =>
+                    _shutdownNotification.Cancel();
+                    var toDispose = new List<IDisposable>
                     {
-                        try
-                        {
-                            disposable?.Dispose();
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            //we are disposing, so don't care
-                        }
-                    });
+                        _engine,
+                        NotificationCenter,
+                        LicenseManager,
+                        DatabasesLandlord,
+                        _env,
+                        ContextPool
+                    };
 
-                exceptionAggregator.Execute(() => _shutdownNotification.Dispose());
+                    var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(ServerStore)}.");
 
-                exceptionAggregator.ThrowIfNeeded();
+                    foreach (var disposable in toDispose)
+                        exceptionAggregator.Execute(() =>
+                        {
+                            try
+                            {
+                                disposable?.Dispose();
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                //we are disposing, so don't care
+                            }
+                        });
+
+                    exceptionAggregator.Execute(() => _shutdownNotification.Dispose());
+
+                    exceptionAggregator.ThrowIfNeeded();
+                }
+                finally
+                {
+                    _disposed = true;
+                }
             }
 
 

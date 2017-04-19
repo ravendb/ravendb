@@ -313,10 +313,12 @@ namespace Raven.Server.Rachis
                 LastLogIndex = snapshot.LastIncludedIndex
             });
 
+            _engine.Timeout.Defer(_connection.Source);
+
             using (context.OpenReadTransaction())
             {
                 // notify the state machine
-                _engine.SnapshotInstalled(context);
+                _engine.SnapshotInstalled(context, snapshot.LastIncludedIndex);
             }
 
             _engine.Timeout.Defer(_connection.Source);

@@ -131,6 +131,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexPerformanceStats));
             scripter.AddType(typeof(IndexDefinition));
             scripter.AddType(typeof(TermsQueryResult));
+            scripter.AddType(typeof(IndexProgress));
 
             // cluster 
             scripter.AddType(typeof(ClusterTopology));

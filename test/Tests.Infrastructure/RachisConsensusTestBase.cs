@@ -292,7 +292,7 @@ namespace Tests.Infrastructure
 
             }
 
-            public override void OnSnapshotInstalled(TransactionOperationContext context)
+            public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex)
             {
 
             }

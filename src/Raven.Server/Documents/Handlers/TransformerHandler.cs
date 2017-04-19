@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Handlers
                     index = await ServerStore.SendToLeaderAsync(putTransfomerCommand);
                 }
 
-                await ServerStore.Cluster.WaitForIndexNotification(index);
+                await Database.WaitForIndexNotification(index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Handlers
                     var put = ServerStore.SendToLeaderAsync(putTransfomerCommand);
                     await Task.WhenAll(del, put);
                     index = await put;
-                    await ServerStore.Cluster.WaitForIndexNotification(index);
+                    await Database.WaitForIndexNotification(index);
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -211,7 +211,7 @@ namespace Raven.Server.Documents.Handlers
                         index = await ServerStore.SendToLeaderAsync(setTranformerLockModeCommand);
                     }
                 }
-                await ServerStore.Cluster.WaitForIndexNotification(index);
+                await Database.WaitForIndexNotification(index);
 
                 NoContentStatus();
             }
@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Handlers
                     index = await ServerStore.SendToLeaderAsync(deleteTransformerCommand);
                 }
 
-                await ServerStore.Cluster.WaitForIndexNotification(index);
+                await Database.WaitForIndexNotification(index);
                 NoContentStatus();
             }
         }

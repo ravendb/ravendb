@@ -207,10 +207,7 @@ namespace Raven.Server.Documents.Handlers
     {
         public long OriginalSize;
         public string HumaneOriginalSize;
-        public long CompressedSize;
-        public string HumaneCompressedSize;
         public double CompressionRatio;
-        public int Acceleration;
     }
 
     public class IOMetricsRecentStats

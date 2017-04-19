@@ -113,7 +113,8 @@ namespace Voron.Data.Tables
                 if (totalSize < 0)
                     throw new ArgumentOutOfRangeException(nameof(totalSize), "Size cannot be negative");
 #endif
-                var ret = context.Allocate(totalSize);
+                ByteString ret;
+                var scope = context.Allocate(totalSize, out ret);
                 try
                 {
                     var ptr = ret.Ptr;
@@ -132,11 +133,11 @@ namespace Voron.Data.Tables
                         }
                     }
                     slice = new Slice(ret);
-                    return new ByteStringContext<ByteStringMemoryCache>.Scope(context, ret);
+                    return scope;
                 }
                 catch (Exception)
                 {
-                    context.Release(ref ret);
+                    scope.Dispose();
                     throw;
                 }
             }

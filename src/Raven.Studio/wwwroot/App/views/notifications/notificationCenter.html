@@ -14,7 +14,9 @@
         <div class="panel-body">
             <div data-bind="if: isCompleted()">
                 <h3 data-bind="text: title"></h3>
+                <div class="time" data-bind="text: displayDate().format('LLL')"></div>
                 <p data-bind="text: message"></p>
+                <p data-bind="visible: isCanceled" class="text-warning">The operation was cancelled.</p>
 
                 <div class="text-right">
                     <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
@@ -33,6 +35,7 @@
                     <span class="global-spinner spinner-xs"></span>
                     <span data-bind="text: title"></span>
                 </h3>
+                <div class="time" data-bind="text: displayDate().format('LLL')"></div>
                 <p data-bind="text: message"></p>
 
                 <div class="progress" data-bind="visible: isPercentageProgress(), if: isPercentageProgress()">
@@ -60,6 +63,7 @@
     <div data-bind="attr: { class: 'panel ' + cssClass() }">
         <div class="panel-body">
             <h3 class="text-warning" data-bind="text: title"></h3>
+            <div class="time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: message"></p>
             <div class="text-right">
                 <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
@@ -89,6 +93,7 @@
     <div data-bind="attr: { class: 'panel ' + cssClass() }">
         <div class="panel-body">
             <h3 class="text-warning" data-bind="text: title"></h3>
+            <div class="time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: message"></p>
             <div class="text-right">
                 <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
@@ -108,6 +113,7 @@
     <div data-bind="attr: { class: 'panel ' + cssClass() }">
         <div class="panel-body">
             <h3 class="text-warning" data-bind="text: title"></h3>
+            <div class="time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: message"></p>
             
             <div class="checkbox">

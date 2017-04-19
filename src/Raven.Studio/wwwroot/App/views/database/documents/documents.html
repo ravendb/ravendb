@@ -17,7 +17,7 @@
                 </ul>               
             </div>
 
-                <div class="btn-group-label active" data-bind="" data-label="Selection" role="group">
+                <div class="btn-group-label" data-bind="css: { active: selectedItemsCount }" data-label="Selection" role="group">
                     <button type="button" class="btn btn-danger" data-bind="click: deleteSelected, css: { 'btn-spinner': spinners.delete() }, enable: deleteEnabled">
                         <span class="icon-trash"></span> <span>Delete</span>
                     </button>
@@ -76,7 +76,8 @@
 <div class="tooltip json-preview" style="opacity: 0">
     <pre><code></code></pre>
 </div>
-<!--<div id="documents-pane" class="documents-page no-outline row" tabindex="0">
+<!-- TODO
+    <div id="documents-pane" class="documents-page no-outline row" tabindex="0">
 
     <div id="documents-page-container" class="col-md-2 col-resizable-target">
         <ul class="nav nav-pills nav-stacked document-collections" data-bind="with: allDocumentsCollection">
