@@ -10,6 +10,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Rachis
 {
@@ -228,8 +229,7 @@ namespace Raven.Server.Rachis
                         case 0: // new entry
                             _newEntry.Reset();
                             // release any waiting ambassadors to send immediately
-                            var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>());
-                            ThreadPool.QueueUserWorkItem(o => ((TaskCompletionSource<object>)o).TrySetResult(null), old);
+                            TaskExecuter.CompleteAndReplace(ref _newEntriesArrived);
                             if (_voters.Count == 0)
                                 goto case 1;
                             break;
@@ -370,7 +370,7 @@ namespace Raven.Server.Rachis
                 CommandState value;
                 if (_entries.TryRemove(kvp.Key, out value))
                 {
-                    ThreadPool.QueueUserWorkItem(o =>
+                    TaskExecuter.Execute(o =>
                     {
                         var tuple = (CommandState)o;
                         if (tuple.OnNotify != null)
@@ -533,7 +533,7 @@ namespace Raven.Server.Rachis
         {
             Running = false;
             _shutdownRequested.Set();
-            ThreadPool.QueueUserWorkItem(_ =>
+            TaskExecuter.Execute(_ =>
             {
                 _newEntriesArrived.TrySetCanceled();
                 var lastStateChangeReason = _engine.LastStateChangeReason;
@@ -551,7 +551,7 @@ namespace Raven.Server.Rachis
                         entry.Value.TaskCompletionSource.TrySetException(te);
                     }
                 }
-            });
+            }, null);
 
             if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                 _thread.Join();

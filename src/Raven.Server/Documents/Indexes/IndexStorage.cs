@@ -213,6 +213,17 @@ namespace Raven.Server.Documents.Indexes
             return errors;
         }
 
+        public long ReadErrorsCount()
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
+                return table.NumberOfEntries;
+            }
+        }
+
         public DateTime? ReadLastIndexingTime(RavenTransaction tx)
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);

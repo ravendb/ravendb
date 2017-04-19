@@ -16,16 +16,16 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
+                //LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
                 Parallel.For(0, 10, _ =>
                 {
-                    using (var a = new BasicTests())
+                    using (var a = new RavenDB_6602())
                     {
-                        a.CanApplyCommitAcrossAllCluster(amount: 7).Wait();
+                        a.RequestExecutor_failover_with_only_one_database_should_properly_fail().Wait();
                     }
                 });
-                LoggingSource.Instance.SetupLogMode(LogMode.None, "logs");
-                Directory.Delete("logs", true);
+                //LoggingSource.Instance.SetupLogMode(LogMode.None, "logs");
+                //Directory.Delete("logs", true);
 
             }
         }

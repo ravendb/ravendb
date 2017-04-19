@@ -3,12 +3,18 @@
 abstract class studioSetting<T> {
     protected value: T;
     protected readonly defaultValue: T;
+    protected saveHandler: (item: this) => JQueryPromise<void>; 
+    readonly saveLocation: studio.settings.saveLocation;
 
-    constructor(defaultValue: T) {
+    constructor(saveLocation: studio.settings.saveLocation, defaultValue: T, saveHandler: (item: studioSetting<T>) => JQueryPromise<void>) {
+        this.saveLocation = saveLocation;
         this.defaultValue = defaultValue;
+        this.saveHandler = saveHandler;
     }
 
-    abstract get name(): string;
+    protected save() {
+        return this.saveHandler(this);
+    }
 
     serialize() {
         return JSON.stringify(this.value);

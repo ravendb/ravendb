@@ -20,13 +20,15 @@ namespace Sparrow.Json
         public BlittableJsonReaderObject Parent => _parent;
       
         public BlittableJsonReaderArray(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
+            : base (parent._context)
         {
             _parent = parent;
+
             byte arraySizeOffset;
             _count = parent.ReadVariableSizeInt(pos, out arraySizeOffset);
 
             _dataStart = parent.BasePointer + pos;
-            _metadataPtr = parent.BasePointer + pos + arraySizeOffset;
+            _metadataPtr = _dataStart + arraySizeOffset;
 
             // analyze main object type and it's offset and propertyIds flags
             _currentOffsetSize = ProcessTokenOffsetFlags(type);
@@ -101,9 +103,7 @@ namespace Sparrow.Json
                 {
                     if (_cache == null)
                     {
-                        _cache =
-                            new FastDictionary<int, Tuple<object, BlittableJsonToken>, NumericEqualityStructComparer>(
-                                default(NumericEqualityStructComparer));
+                        _cache = new FastDictionary<int, Tuple<object, BlittableJsonToken>, NumericEqualityStructComparer>(default(NumericEqualityStructComparer));
                     }
                     _cache[index] = result;
                 }

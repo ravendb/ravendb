@@ -921,6 +921,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     index._indexStorage.UpdateStats(SystemTime.UtcNow, stats);
 
                     Assert.Equal(0, index.GetErrors().Count);
+                    Assert.Equal(0, index.GetErrorCount());
 
                     stats.AddWriteError(new IndexWriteException());
                     stats.AddAnalyzerError(new IndexAnalyzerException());
@@ -942,6 +943,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                     errors = index.GetErrors();
                     Assert.Equal(IndexStorage.MaxNumberOfKeptErrors, errors.Count);
+                    Assert.Equal(index.GetErrorCount(), errors.Count);
                 }
             }
         }

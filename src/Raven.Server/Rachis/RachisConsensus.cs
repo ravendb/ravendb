@@ -8,12 +8,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
@@ -253,9 +255,12 @@ namespace Raven.Server.Rachis
         {
             while (true)
             {
+                // we setup the wait _before_ checking the state
                 var task = _stateChanged.Task;
+
                 if (CurrentState == state)
                     return;
+
                 await task;
             }
         }
@@ -346,30 +351,23 @@ namespace Raven.Server.Rachis
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += tx =>
             {
-                var tcs = Interlocked.Exchange(ref _stateChanged, new TaskCompletionSource<object>());
-                
-                TrySetResultAndPreventSynchronousContinuations(tcs);
-
-                tcs.Task.ContinueWith(t =>
+                TaskExecuter.CompleteAndReplace(ref _stateChanged);
+                foreach (var d in toDispose)
                 {
-                    foreach (var d in toDispose)
-                    {
-                        d.Dispose();
-                    }
-                });
+                    d.Dispose();
+                }
             };
         }
 
+        private static int i;
+        public int a = Interlocked.Increment(ref i);
         public void TakeOffice()
         {
             if (CurrentState != State.LeaderElect)
                 return;
 
             CurrentState = State.Leader;
-
-            var tcs = Interlocked.Exchange(ref _stateChanged, new TaskCompletionSource<object>());
-
-            TrySetResultAndPreventSynchronousContinuations(tcs);
+            TaskExecuter.CompleteAndReplace(ref _stateChanged);
         }
 
         public void AppendStateDisposable(IDisposable parentState, IDisposable disposeOnStateChange)
@@ -540,12 +538,7 @@ namespace Raven.Server.Rachis
                 return;
 
 
-            tx.LowLevelTransaction.OnDispose += _ =>
-            {
-                var tcs = Interlocked.Exchange(ref engine._topologyChanged, new TaskCompletionSource<object>());
-
-                TrySetResultAndPreventSynchronousContinuations(tcs);
-            };
+            tx.LowLevelTransaction.OnDispose += _ => TaskExecuter.CompleteAndReplace(ref engine._topologyChanged);
 
 
         }
@@ -967,12 +960,7 @@ namespace Raven.Server.Rachis
                 data[1] = term;
             }
 
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
-            {
-                var tcs = Interlocked.Exchange(ref _commitIndexChanged, new TaskCompletionSource<object>());
-
-                TrySetResultAndPreventSynchronousContinuations(tcs);
-            };
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ => TaskExecuter.CompleteAndReplace(ref _commitIndexChanged);
         }
 
         public async Task WaitForCommitIndexChange(CommitIndexModification modification, long value)
@@ -1174,7 +1162,9 @@ namespace Raven.Server.Rachis
         public virtual void Dispose()
         {
             OnDispose?.Invoke(this, EventArgs.Empty);
-            ThreadPool.QueueUserWorkItem(_ => _topologyChanged.TrySetCanceled());
+            _topologyChanged.TrySetCanceled();
+            _stateChanged.TrySetCanceled();
+            _commitIndexChanged.TrySetCanceled();
             ContextPool?.Dispose();
         }
 
@@ -1336,15 +1326,6 @@ namespace Raven.Server.Rachis
                 return;
 
             _leadershipTimeChanged.SetInAsyncMannerFireAndForget();
-        }
-
-        private static void TrySetResultAndPreventSynchronousContinuations(TaskCompletionSource<object> tcs)
-        {
-            Task.Factory.StartNew(t =>
-            {
-                ((TaskCompletionSource<object>)t).TrySetResult(null);
-
-            }, tcs, CancellationToken.None, TaskCreationOptions.PreferFairness | TaskCreationOptions.RunContinuationsAsynchronously | TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
     }
 

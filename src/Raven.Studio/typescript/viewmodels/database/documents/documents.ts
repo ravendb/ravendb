@@ -32,7 +32,7 @@ class documents extends viewModelBase {
 
     inSpecificCollection: KnockoutComputed<boolean>;
     deleteEnabled: KnockoutComputed<boolean>;
-    private selectedItemsCount: KnockoutComputed<number>;
+    selectedItemsCount: KnockoutComputed<number>;
 
     dirtyResult = ko.observable<boolean>(false);
     dataChanged: KnockoutComputed<boolean>;
@@ -267,7 +267,7 @@ class documents extends viewModelBase {
                         this.spinners.delete(true);
 
                         deleteCollectionDialog.operationIdTask.done((operationId: operationIdDto) => {
-                            notificationCenter.instance.databseOperationsWatch.monitorOperation(operationId.OperationId)
+                            notificationCenter.instance.databaseOperationsWatch.monitorOperation(operationId.OperationId)
                                 .done(() => {
                                     if (excludedIds.length === 0) {
                                         messagePublisher.reportSuccess(`Deleted collection ${this.currentCollection().name}`);

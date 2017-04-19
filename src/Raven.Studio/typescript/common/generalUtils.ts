@@ -78,6 +78,16 @@ class genUtils {
         return genUtils.formatDuration(moment.duration(input));
     }
 
+    static formatAsTimeSpan(millis: number) {
+        const duration = moment.duration({
+            milliseconds: millis
+        });
+
+        const formatNumber = (input: number) => _.padStart(input.toString(), 2, '0');
+
+        return `${formatNumber(Math.floor(duration.asHours()))}:${formatNumber(duration.minutes())}:${formatNumber(duration.seconds())}`;
+    }
+
     // Format bytes to human size string
     static formatBytesToSize(bytes: number) : string {
         const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];

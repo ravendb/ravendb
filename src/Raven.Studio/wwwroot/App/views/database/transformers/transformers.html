@@ -26,7 +26,7 @@
                         <i class="icon-plus"></i>
                         <span>New transformer</span>
                     </a>
-                    <div class="btn-group-label" data-label="Selection" role="group">
+                    <div class="btn-group-label" data-bind="css: { active: selectedTransformersName().length }" data-label="Selection" role="group">
                         <div class="btn-group">
                             <button class="btn btn-danger" data-bind="click: deleteSelectedTransformers, enable: selectedTransformersName().length">
                                 <i class="icon-trash"></i><span>Delete</span>

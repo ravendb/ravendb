@@ -58,6 +58,10 @@ class notificationCenterOperationsWatch {
 
             if (state.Status === "Completed") {
                 operation.resolve(state.Result);
+            } else if (state.Status === "Canceled") {
+                operation.reject({
+                    Message: "The operation was canceled"
+                } as Raven.Client.Documents.Operations.OperationExceptionResult);
             } else {
                 operation.reject(state.Result);
             }

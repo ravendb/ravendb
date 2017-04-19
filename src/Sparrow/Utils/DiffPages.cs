@@ -255,7 +255,7 @@ namespace Sparrow.Utils
                     count *= -1;
                     if (start + count > size)
                         AssertInvalidSize(start, count);
-                    Memory.Set(destPtr + start, 0, count);
+                    Memory.SetInline(destPtr + start, 0, count);
                     continue;
                 }
 

@@ -213,7 +213,7 @@ namespace Raven.Server.Web.System
                     [nameof(Size.SizeInBytes)] = size.SizeInBytes
                 },
                 [nameof(DatabaseInfo.IndexingErrors)] = online
-                    ? db.IndexStore.GetIndexes().Sum(index => index.GetErrors().Count)
+                    ? db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount())
                     : 0,
                 [nameof(DatabaseInfo.Alerts)] = online ? db.NotificationCenter.GetAlertCount() : 0,
                 [nameof(DatabaseInfo.UpTime)] = online ? GetUptime(db).ToString() : null,

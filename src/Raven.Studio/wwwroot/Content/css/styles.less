@@ -7,8 +7,10 @@
 @import "main-menu.less";
 @import "prerelease.less";
 @import "basic-layout.less";
+@import "notification-center.less";
 @import "virtual-grid.less";
 @import "column-selector.less";
+@import "feedback.less";
 
 /*
     Available animations (add "classname;" inside your class)
@@ -685,6 +687,11 @@ input[type=file] + .form-control {
     margin-top: @line-height-computed / 2;
 }
 
+.margin-center {
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .processing-spinner {
     position: fixed;
     bottom: -10px;
@@ -1204,6 +1211,11 @@ pre {
 }
 
 .panel {
+
+    .panel {
+        background-color:@gray-dark;
+    }
+
     .panel-heading {
         .right-action-button {
             display: inline;
@@ -1344,7 +1356,7 @@ pre {
 }
 
 .input-group {
-    &.has-error {
+    &.has-error, &.has-warning {
         padding-bottom: 25px;
 
         .input-group-addon {
@@ -1357,6 +1369,7 @@ pre {
             bottom: 0;
             left: 0;
             width: 100%;
+            margin-bottom: 0;
         }
     }
 }
@@ -1374,25 +1387,6 @@ pre {
 
             &::before {
             }
-        }
-    }
-}
-
-.input-group {
-    &.has-error {
-        padding-bottom: 25px;
-
-        .input-group-addon {
-            color: inherit;
-            background-color: inherit;
-        }
-
-        .help-block {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            margin-bottom: 0;
         }
     }
 }
@@ -1461,6 +1455,11 @@ pre {
     top: 29px !important;
 }
 
+
+.error-messages {
+    height: 300px;
+    overflow: auto;
+}
 
 
 @import "pages/tasks-sampleData";
