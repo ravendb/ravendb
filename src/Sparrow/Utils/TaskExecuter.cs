@@ -56,8 +56,8 @@ namespace Sparrow.Utils
 
         public static void CompleteAndReplace(ref TaskCompletionSource<object> task)
         {
-            task = Interlocked.Exchange(ref task, new TaskCompletionSource<object>());
-            Execute(TaskCompletionCallback, task);
+            var task2 = Interlocked.Exchange(ref task, new TaskCompletionSource<object>());
+            Execute(TaskCompletionCallback, task2);
         }
 
         public static void Complete(TaskCompletionSource<object> task)
