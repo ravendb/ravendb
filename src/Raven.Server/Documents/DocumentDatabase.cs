@@ -409,7 +409,7 @@ namespace Raven.Server.Documents
         }
 
         private static readonly string CachedDatabaseInfo = "CachedDatabaseInfo";
-        public EventHandler<NonDurabalitySupportEventArgs> NonDurableFileSystemError;
+        public EventHandler<NonDurabilitySupportEventArgs> NonDurableFileSystemError;
 
         public DynamicJsonValue GenerateDatabaseInfo()
         {
