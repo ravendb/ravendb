@@ -179,9 +179,10 @@ namespace Raven.Server.Documents.Indexes
             var journalPath = documentDatabase.Configuration.Indexing.JournalsStoragePath?.Combine(name);
 
             var options = StorageEnvironmentOptions.ForPath(indexPath, indexTempPath?.FullPath, journalPath?.FullPath,
-                documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification, documentDatabase.NonDurableFileSystemError);
+                documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
             try
             {
+                options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
@@ -291,7 +292,9 @@ namespace Raven.Server.Documents.Indexes
                     ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath.FullPath, indexTempPath?.FullPath,
                         documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification)
                     : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, journalPath?.FullPath,
-                        documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification, documentDatabase.NonDurableFileSystemError);
+                        documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
+
+                options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
 
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
@@ -2196,9 +2199,9 @@ namespace Raven.Server.Documents.Indexes
                     var environmentOptions =
                         (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)_environment.Options;
                     var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath, null, null, DocumentDatabase.IoChanges,
-                        DocumentDatabase.CatastrophicFailureNotification, DocumentDatabase.NonDurableFileSystemError);
+                        DocumentDatabase.CatastrophicFailureNotification);
                     srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-
+                    srcOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
                     var wasRunning = _indexingThread != null;
 
                     Dispose();
@@ -2206,8 +2209,10 @@ namespace Raven.Server.Documents.Indexes
                     compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(IndexId, Name) + "_Compact");
 
                     using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
-                        StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification, DocumentDatabase.NonDurableFileSystemError))
+                        StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification))
                     {
+                        compactOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
+
                         compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
                         StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>

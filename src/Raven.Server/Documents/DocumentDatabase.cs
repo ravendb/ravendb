@@ -32,6 +32,7 @@ namespace Raven.Server.Documents
 {
     public class DocumentDatabase : IResourceStore
     {
+        private readonly ServerStore _serverStore;
         private readonly Logger _logger;
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
@@ -52,20 +53,22 @@ namespace Raven.Server.Documents
             _lastIdleTicks = DateTime.MinValue.Ticks;
         }
 
+        internal void HandleNonDurableFileSystemError(object sender, NonDurabilitySupportEventArgs e)
+        {
+            _serverStore?.NotificationCenter.Add(AlertRaised.Create($"Non Durable File System - {Name ?? "Unknown Database"}",
+                e.Message,
+                AlertType.NonDurableFileSystem,
+                NotificationSeverity.Warning,
+                Name));
+        }
+
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore)
         {
+            _serverStore = serverStore;
             StartTime = SystemTime.UtcNow;
             Name = name;
             ResourceName = "db/" + name;
             Configuration = configuration;
-            NonDurableFileSystemError += (obj, e) =>
-            {
-                serverStore?.NotificationCenter.Add(AlertRaised.Create($"Non Durable File System - {name ?? "Unknown Database"}",
-                    e.Message,
-                    AlertType.NonDurableFileSystem,
-                    NotificationSeverity.Warning,
-                    name));
-            };
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             IoChanges = new IoChangesNotifications();
             Changes = new DocumentsChanges();
@@ -409,7 +412,6 @@ namespace Raven.Server.Documents
         }
 
         private static readonly string CachedDatabaseInfo = "CachedDatabaseInfo";
-        public EventHandler<NonDurabilitySupportEventArgs> NonDurableFileSystemError;
 
         public DynamicJsonValue GenerateDatabaseInfo()
         {
@@ -526,6 +528,7 @@ namespace Raven.Server.Documents
             yield return TxMerger.GeneralWaitPerformanceMetrics;
             yield return TxMerger.TransactionPerformanceMetrics;
         }
+
     }
 
     public class StorageEnvironmentWithType
