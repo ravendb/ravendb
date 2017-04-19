@@ -123,23 +123,24 @@ namespace Raven.Server.ServerWide
 
             var options = Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
-                : StorageEnvironmentOptions.ForPath(path.FullPath, null, null, null, null,
-                    (obj, e) =>
-                    {
-                        var alert = AlertRaised.Create("Non Durable File System - System Database",
-                            e.Message,
-                            AlertType.NonDurableFileSystem,
-                            NotificationSeverity.Warning,
-                            "System");
-                        if (NotificationCenter.IsInitialized)
-                        {
-                            NotificationCenter.Add(alert);
-                        }
-                        else
-                        {
-                            storeAlertForLateRaise = alert;
-                        }
-                    });
+                : StorageEnvironmentOptions.ForPath(path.FullPath);
+
+            options.OnNonDurableFileSystemError += (obj, e) =>
+            {
+                var alert = AlertRaised.Create("Non Durable File System - System Database",
+                    e.Message,
+                    AlertType.NonDurableFileSystem,
+                    NotificationSeverity.Warning,
+                    "System");
+                if (NotificationCenter.IsInitialized)
+                {
+                    NotificationCenter.Add(alert);
+                }
+                else
+                {
+                    storeAlertForLateRaise = alert;
+                }
+            };
 
             options.SchemaVersion = 2;
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;

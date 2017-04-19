@@ -149,8 +149,7 @@ namespace Voron
 
         public Func<string, bool> ShouldUseKeyPrefix { get; set; }
 
-        protected StorageEnvironmentOptions(string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification,
-            EventHandler<NonDurabilitySupportEventArgs> nonDurableFileSystemEventHandler)
+        protected StorageEnvironmentOptions(string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
         {
             SafePosixOpenFlags = SafePosixOpenFlags | DefaultPosixFlags;
 
@@ -190,8 +189,6 @@ namespace Voron
             bool result;
             if (bool.TryParse(shouldForceEnvVar, out result))
                 ForceUsing32BitsPager = result;
-
-            OnNonDurableFileSystemError += nonDurableFileSystemEventHandler;
         }
 
         public void SetCatastrophicFailure(ExceptionDispatchInfo exception)
@@ -221,21 +218,19 @@ namespace Voron
             return CreateMemoryOnly(null, null, null, null);
         }
 
-        public static StorageEnvironmentOptions ForPath(string path, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification,
-            EventHandler<NonDurabilitySupportEventArgs> nonDurableFileSystemEventHandler)
+        public static StorageEnvironmentOptions ForPath(string path, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
         {
             if (RunningOnPosix)
             {
                 path = PosixHelper.FixLinuxPath(path);
                 tempPath = PosixHelper.FixLinuxPath(tempPath);
             }
-            return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath, ioChangesNotifications, catastrophicFailureNotification, 
-                nonDurableFileSystemEventHandler);
+            return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath, ioChangesNotifications, catastrophicFailureNotification);
         }
 
         public static StorageEnvironmentOptions ForPath(string path)
         {
-            return ForPath(path, null, null, null, null, null);
+            return ForPath(path, null, null, null, null);
         }
 
         public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
@@ -249,10 +244,9 @@ namespace Voron
                 new ConcurrentDictionary<string, Lazy<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
 
             public DirectoryStorageEnvironmentOptions(string basePath, string tempPath, string journalPath, 
-                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, 
-                EventHandler<NonDurabilitySupportEventArgs> nonDurableFileSystemEventHandler)
+                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
                 : base(string.IsNullOrEmpty(tempPath) == false ? Path.GetFullPath(tempPath) : Path.GetFullPath(basePath), 
-                      ioChangesNotifications, catastrophicFailureNotification, nonDurableFileSystemEventHandler)
+                      ioChangesNotifications, catastrophicFailureNotification)
             {
                 _basePath = Path.GetFullPath(basePath);
                 _journalPath = !string.IsNullOrEmpty(journalPath) ? Path.GetFullPath(journalPath) : _basePath;
@@ -663,7 +657,7 @@ namespace Voron
 
             public PureMemoryStorageEnvironmentOptions(string name, string tempPath, 
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification) 
-                : base(tempPath, ioChangesNotifications, catastrophicFailureNotification, null)
+                : base(tempPath, ioChangesNotifications, catastrophicFailureNotification)
             {
                 _name = name;
                 _instanceId = Interlocked.Increment(ref _counter);

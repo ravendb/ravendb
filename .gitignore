@@ -111,3 +111,4 @@ test/Studio/js/
 release
 
 !scripts/assets/bin
+/.idea
