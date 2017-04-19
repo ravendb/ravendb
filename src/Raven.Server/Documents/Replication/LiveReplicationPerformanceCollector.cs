@@ -28,6 +28,13 @@ namespace Raven.Server.Documents.Replication
         public LiveReplicationPerformanceCollector(DocumentDatabase database)
         {
             _database = database;
+
+            var recentStats = PrepareInitialPerformanceStats().ToList();
+            if (recentStats.Count > 0)
+            {
+                Stats.Enqueue(recentStats);
+            }
+
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
             _task = Task.Factory.StartNew(StartCollectingStats);
         }
@@ -72,6 +79,23 @@ namespace Raven.Server.Documents.Replication
                 _database.ReplicationLoader.OutgoingReplicationAdded -= OutgoingHandlerAdded;
                 _database.ReplicationLoader.IncomingReplicationRemoved -= IncomingHandlerRemoved;
                 _database.ReplicationLoader.IncomingReplicationAdded -= IncomingHandlerAdded;
+            }
+        }
+
+        private IEnumerable<IReplicationPerformanceStats> PrepareInitialPerformanceStats()
+        {
+            foreach (var handler in _database.ReplicationLoader.IncomingHandlers)
+            {
+                var stats = handler.GetReplicationPerformance();
+                if (stats.Length > 0)
+                    yield return new IncomingPerformanceStats(handler.ConnectionInfo.SourceDatabaseId, handler.SourceFormatted, stats);
+            }
+
+            foreach (var handler in _database.ReplicationLoader.OutgoingHandlers)
+            {
+                var stats = handler.GetReplicationPerformance();
+                if (stats.Length > 0)
+                    yield return new OutgoingPerformanceStats(handler.DestinationDbId, handler.DestinationFormatted, stats);
             }
         }
 
