@@ -12,6 +12,15 @@ namespace Raven.Server.Documents
         public static DocumentCompareResult IsEqualTo(BlittableJsonReaderObject original, BlittableJsonReaderObject modified,
             bool tryMergeAttachmentsConflict)
         {
+            if (ReferenceEquals(original, modified))
+                return DocumentCompareResult.Equal;
+
+            if (original == null || modified == null)
+                return DocumentCompareResult.NotEqual;
+
+            BlittableJsonReaderObject.AssertNoModifications(original, nameof(original), true);
+            BlittableJsonReaderObject.AssertNoModifications(modified, nameof(modified), true);
+
             // Performance improvemnt: We compare the metadata first 
             // because that most of the time the metadata itself won't be the equal, so no need to compare all values
 
