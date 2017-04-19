@@ -48,7 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Threading.ThreadPool">
-      <HintPath>..\..\..\..\Users\ayende\.nuget\packages\system.threading.threadpool\4.3.0\ref\netstandard1.3\System.Threading.ThreadPool.dll</HintPath>
+      <HintPath>..\..\..\..\Users\maxim.HRHINOS\.nuget\packages\system.threading.threadpool\4.3.0\ref\netstandard1.3\System.Threading.ThreadPool.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>
