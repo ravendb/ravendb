@@ -103,7 +103,7 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<Raven.
         withCache.StartedAsDate = liveReplicationStatsWebSocketClient.isoParser.parse(perf.Started);
         withCache.Type = type;
         withCache.Description = description;
-        withCache.Errors = (perf as Raven.Client.Documents.Replication.OutgoingReplicationPerformanceStats).Errors; // check !!! if to remove from export ...!!!
+        withCache.Errors = perf.Errors;
     }
 }
 
