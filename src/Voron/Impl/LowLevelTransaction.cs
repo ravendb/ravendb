@@ -423,7 +423,11 @@ namespace Voron.Impl
                 {
                     p = DataPager.ReadPage(this, pageNumber);
                     if (pagerRef != null)
+                    {
                         pagerRef.Pager = DataPager;
+                        pagerRef.PagerPageNumber = pageNumber;
+                    }
+
                     Debug.Assert(p.PageNumber == pageNumber,
                         string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
 
