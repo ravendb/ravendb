@@ -45,7 +45,6 @@
     }
 
     .dropdown-menu {
-        background-color: transparent;
         padding: 0;
     }
 
@@ -54,7 +53,6 @@
         height: 500px;
         max-width: calc(100vw ~"-" @grid-gutter-width/3*4);
         max-height: 55vh;
-        display: flex;
 
         @media (min-width:@screen-sm) {
             width: 1000px;
@@ -63,6 +61,16 @@
 
         @media (min-width:@screen-md) {
             max-width: calc(100vw ~"-" @grid-gutter-width/3*7);
+        }
+
+        .loadpatch-container {
+            display: flex;
+            align-items: stretch;
+        }
+
+        .flex-footer {
+            margin:0;
+            padding: 0 @grid-gutter-width/4 @grid-gutter-width/4;
         }
 
         .patch-preview-container, .patch-list-container {
@@ -143,10 +151,13 @@
 
                 .name {
                     flex-grow: 1;
+                    font-weight: bold;
                 }
 
                 .modified {
                     font-size: 11px;
+                    position:relative;
+                    top:-1px;
                     color: @gray-light;
                 }
             }

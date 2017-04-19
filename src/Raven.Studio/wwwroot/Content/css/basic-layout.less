@@ -234,7 +234,7 @@ body {
 
         &:hover, &:active, &:focus {
             text-decoration: none !important;
-            color: @gray-lighter;
+            color: #FFF;
 
             .label {
                 opacity: 1;
@@ -775,6 +775,7 @@ body {
     transition: transform @menu-transition-ease;
     width: @menu-width;
     flex-basis: @menu-width;
+    flex-shrink:0;
 
     @media (min-width: @screen-md) {
         top: @navbar-height;
