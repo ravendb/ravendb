@@ -566,7 +566,10 @@ namespace Raven.Server.Documents
         public DocumentOrTombstone GetDocumentOrTombstone(DocumentsOperationContext context, Slice loweredKey, bool throwOnConflict = true)
         {
             if (context.Transaction == null)
-                throw DocumentPutAction.ThrowRequiresTransaction();
+            {
+                DocumentPutAction.ThrowRequiresTransaction();
+                return default(DocumentOrTombstone);// never hit
+            }
 
             try
             {

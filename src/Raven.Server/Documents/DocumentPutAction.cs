@@ -40,7 +40,10 @@ namespace Raven.Server.Documents
             NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
             if (context.Transaction == null)
-                throw ThrowRequiresTransaction();
+            {
+                ThrowRequiresTransaction();
+                return default(DocumentsStorage.PutOperationResults);// never hit
+            }
 
 #if DEBUG
             var documentDebugHash = document.DebugHash;
@@ -290,10 +293,10 @@ namespace Raven.Server.Documents
             return true;
         }
 
-        public static ArgumentException ThrowRequiresTransaction([CallerMemberName]string caller = null)
+        public static void ThrowRequiresTransaction([CallerMemberName]string caller = null)
         {
             // ReSharper disable once NotResolvedInText
-            return new ArgumentException("Context must be set with a valid transaction before calling " + caller, "context");
+            throw new ArgumentException("Context must be set with a valid transaction before calling " + caller, "context");
         }
 
         private static void ThrowConcurrentExceptionOnMissingDoc(string key, long expectedEtag)
