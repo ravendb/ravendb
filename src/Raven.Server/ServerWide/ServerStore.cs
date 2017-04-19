@@ -103,6 +103,7 @@ namespace Raven.Server.ServerWide
         }
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
+        public bool NonDurableFileSystemNotified { get; set; }
 
         public TransactionContextPool ContextPool;
 

@@ -27,6 +27,7 @@ namespace Voron
     {
         private ExceptionDispatchInfo _catastrophicFailure;
         private CatastrophicFailureNotification _catastrophicFailureNotification;
+        private NonDurabaleFileSystemNotification _durabaleFileSystemNotification;
 
         public string TempPath { get; }
         
@@ -34,7 +35,6 @@ namespace Voron
         
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
-        public event EventHandler<NonDurabalitySupportEventArgs> OnNonDurabaleFileSystemError;
         private long _reuseCounter;
         public abstract override string ToString();
 
@@ -65,19 +65,6 @@ namespace Voron
             }
 
             handler(this, new RecoveryErrorEventArgs(message, e));
-        }
-
-        public void InvokeNonDurabaleFileSystemError(object sender, string message, Exception e)
-        {
-            var handler = OnNonDurabaleFileSystemError;
-            if (handler == null)
-            {
-                throw new InvalidDataException(message + Environment.NewLine +
-                                               "An exception has been thrown because there isn't a listener to the OnNonDurabaleFileSystemError event on the storage options.",
-                    e);
-            }
-
-            handler(this, new NonDurabalitySupportEventArgs(message, e));
         }
 
         public long? InitialFileSize { get; set; }
@@ -149,7 +136,7 @@ namespace Voron
 
         public Func<string, bool> ShouldUseKeyPrefix { get; set; }
 
-        protected StorageEnvironmentOptions(string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
+        protected StorageEnvironmentOptions(string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, NonDurabaleFileSystemNotification nonDurabaleFileSystemNotification)
         {
             SafePosixOpenFlags = SafePosixOpenFlags | DefaultPosixFlags;
 
@@ -182,6 +169,16 @@ namespace Voron
             {
                 if (_log.IsOperationsEnabled)
                     _log.Operations($"Catastrophic failure in {this}", e);
+            });
+
+            _durabaleFileSystemNotification = nonDurabaleFileSystemNotification ?? new NonDurabaleFileSystemNotification((e) =>
+            {
+                if (_alreadyNotifiedNonDurableFileSystem)
+                    return;
+                _alreadyNotifiedNonDurableFileSystem = true;
+
+                if (_log.IsOperationsEnabled)
+                    _log.Operations($"NonDurabaleFileSystem in {this}", e);
             });
 
             var shouldForceEnvVar = Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager");
@@ -218,19 +215,19 @@ namespace Voron
             return CreateMemoryOnly(null, null, null, null);
         }
 
-        public static StorageEnvironmentOptions ForPath(string path, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
+        public static StorageEnvironmentOptions ForPath(string path, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, NonDurabaleFileSystemNotification nonDurabaleFileSystemNotification)
         {
             if (RunningOnPosix)
             {
                 path = PosixHelper.FixLinuxPath(path);
                 tempPath = PosixHelper.FixLinuxPath(tempPath);
             }
-            return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath, ioChangesNotifications, catastrophicFailureNotification);
+            return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath, ioChangesNotifications, catastrophicFailureNotification, nonDurabaleFileSystemNotification);
         }
 
         public static StorageEnvironmentOptions ForPath(string path)
         {
-            return ForPath(path, null, null, null, null);
+            return ForPath(path, null, null, null, null, null);
         }
 
         public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
@@ -244,9 +241,9 @@ namespace Voron
                 new ConcurrentDictionary<string, Lazy<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
 
             public DirectoryStorageEnvironmentOptions(string basePath, string tempPath, string journalPath, 
-                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
+                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, NonDurabaleFileSystemNotification nonDurabaleFileSystemNotification)
                 : base(string.IsNullOrEmpty(tempPath) == false ? Path.GetFullPath(tempPath) : Path.GetFullPath(basePath), 
-                      ioChangesNotifications, catastrophicFailureNotification)
+                      ioChangesNotifications, catastrophicFailureNotification, nonDurabaleFileSystemNotification)
             {
                 _basePath = Path.GetFullPath(basePath);
                 _journalPath = !string.IsNullOrEmpty(journalPath) ? Path.GetFullPath(journalPath) : _basePath;
@@ -657,7 +654,7 @@ namespace Voron
 
             public PureMemoryStorageEnvironmentOptions(string name, string tempPath, 
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification) 
-                : base(tempPath, ioChangesNotifications, catastrophicFailureNotification)
+                : base(tempPath, ioChangesNotifications, catastrophicFailureNotification, null)
             {
                 _name = name;
                 _instanceId = Interlocked.Increment(ref _counter);
@@ -875,6 +872,8 @@ namespace Voron
         private readonly SortedList<DateTime, string> _journalsForReuse =
             new SortedList<DateTime, string>();
 
+        private static bool _alreadyNotifiedNonDurableFileSystem;
+
         public virtual void SetPosixOptions()
         {
             if (PlatformDetails.RunningOnPosix == false)
@@ -884,7 +883,7 @@ namespace Voron
                 SafePosixOpenFlags &= ~PerPlatformValues.OpenFlags.O_DIRECT;
                 var message = "Path " + BasePath +
                               " not supporting O_DIRECT writes. As a result - data durability is not guarenteed";
-                InvokeNonDurabaleFileSystemError(this, message, null);
+                _durabaleFileSystemNotification.RaiseNotificationOnce(new Exception(message));
             }
 
             PosixOpenFlags = SafePosixOpenFlags;
