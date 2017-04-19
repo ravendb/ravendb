@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.Versioning;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -15,6 +16,7 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Util;
@@ -439,8 +441,7 @@ namespace Raven.Server.Documents
         public void ThrowConcurrencyExceptionOnConflict(DocumentsOperationContext context, byte* lowerKey, int lowerSize, long? expectedEtag)
         {
             long currentMaxConflictEtag;
-            Slice prefixSlice;
-            using (GetConflictsKeyPrefix(context, lowerKey, lowerSize, out prefixSlice))
+            using (GetConflictsKeyPrefix(context, lowerKey, lowerSize, out Slice prefixSlice))
             {
                 currentMaxConflictEtag = GetConflictsMaxEtagFor(context, prefixSlice);
             }
@@ -483,6 +484,243 @@ namespace Raven.Server.Documents
                 return mergedChangeVectorEntries;
             }
             return documentChangeVector; // this covers the null && null case too
+        }
+
+        public void AddConflict(
+            DocumentsOperationContext context,
+            string key,
+            long lastModifiedTicks,
+            BlittableJsonReaderObject incomingDoc,
+            ChangeVectorEntry[] incomingChangeVector,
+            string incomingTombstoneCollection)
+        {
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Adding conflict to {key} (Incoming change vector {incomingChangeVector.Format()})");
+
+            var tx = context.Transaction.InnerTransaction;
+            var conflictsTable = tx.OpenTable(ConflictsSchema, ConflictsSlice);
+
+            CollectionName collectionName;
+
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out Slice lowerKey, out Slice keyPtr);
+            // ReSharper disable once ArgumentsStyleLiteral
+            var existing = _documentsStorage.GetDocumentOrTombstone(context, key, throwOnConflict: false);
+            if (existing.Document != null)
+            {
+                var existingDoc = existing.Document;
+
+                fixed (ChangeVectorEntry* pChangeVector = existingDoc.ChangeVector)
+                {
+                    var lazyCollectionName = CollectionName.GetLazyCollectionNameFrom(context, existingDoc.Data);
+
+                    TableValueBuilder tbv;
+                    using (conflictsTable.Allocate(out tbv))
+                    {
+                        tbv.Add(lowerKey);
+                        tbv.Add(SpecialChars.RecordSeperator);
+                        tbv.Add((byte*)pChangeVector, existingDoc.ChangeVector.Length * sizeof(ChangeVectorEntry));
+                        tbv.Add(keyPtr);
+                        tbv.Add(existingDoc.Data.BasePointer, existingDoc.Data.Size);
+                        tbv.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
+                        tbv.Add(lazyCollectionName.Buffer, lazyCollectionName.Size);
+                        tbv.Add(existingDoc.LastModified.Ticks);
+
+                        conflictsTable.Set(tbv);
+                    }
+
+                    Interlocked.Increment(ref ConflictsCount);
+                    // we delete the data directly, without generating a tombstone, because we have a 
+                    // conflict instead
+                    _documentsStorage.EnsureLastEtagIsPersisted(context, existingDoc.Etag);
+                    collectionName = _documentsStorage.ExtractCollectionName(context, existingDoc.Key, existingDoc.Data);
+
+                    //make sure that the relevant collection tree exists
+                    var table = tx.OpenTable(DocumentsStorage.DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+                    table.Delete(existingDoc.StorageId);
+                }
+            }
+            else if (existing.Tombstone != null)
+            {
+                var existingTombstone = existing.Tombstone;
+
+                fixed (ChangeVectorEntry* pChangeVector = existingTombstone.ChangeVector)
+                {
+                    TableValueBuilder tableValueBuilder;
+                    using (conflictsTable.Allocate(out tableValueBuilder))
+                    {
+                        tableValueBuilder.Add(lowerKey);
+                        tableValueBuilder.Add(SpecialChars.RecordSeperator);
+                        tableValueBuilder.Add((byte*)pChangeVector, existingTombstone.ChangeVector.Length * sizeof(ChangeVectorEntry));
+                        tableValueBuilder.Add(keyPtr);
+                        tableValueBuilder.Add(null, 0);
+                        tableValueBuilder.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
+                        tableValueBuilder.Add(existingTombstone.Collection.Buffer, existingTombstone.Collection.Size);
+                        tableValueBuilder.Add(existingTombstone.LastModified.Ticks);
+                        conflictsTable.Set(tableValueBuilder);
+                    }
+                    Interlocked.Increment(ref ConflictsCount);
+                    // we delete the data directly, without generating a tombstone, because we have a 
+                    // conflict instead
+                    _documentsStorage.EnsureLastEtagIsPersisted(context, existingTombstone.Etag);
+
+                    collectionName = _documentsStorage.GetCollection(existingTombstone.Collection, throwIfDoesNotExist: true);
+
+                    var table = tx.OpenTable(DocumentsStorage.TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+                    table.Delete(existingTombstone.StorageId);
+                }
+            }
+            else // has existing conflicts
+            {
+                collectionName = _documentsStorage.ExtractCollectionName(context, key, incomingDoc);
+
+                Slice prefixSlice;
+                using (GetConflictsKeyPrefix(context, lowerKey, out prefixSlice))
+                {
+                    var conflicts = GetConflictsFor(context, prefixSlice);
+                    foreach (var conflict in conflicts)
+                    {
+                        var conflictStatus = ReplicationUtils.GetConflictStatus(incomingChangeVector, conflict.ChangeVector);
+                        switch (conflictStatus)
+                        {
+                            case ReplicationUtils.ConflictStatus.Update:
+                                DeleteConflictsFor(context, conflict.ChangeVector); // delete this, it has been subsumed
+                                break;
+                            case ReplicationUtils.ConflictStatus.Conflict:
+                                break; // we'll add this conflict if no one else also includes it
+                            case ReplicationUtils.ConflictStatus.AlreadyMerged:
+                                return; // we already have a conflict that includes this version
+                            default:
+                                throw new ArgumentOutOfRangeException("Invalid conflict status " + conflictStatus);
+                        }
+                    }
+                }
+            }
+
+            var etag = _documentsStorage.GenerateNextEtag();
+
+            fixed (ChangeVectorEntry* pChangeVector = incomingChangeVector)
+            {
+                byte* doc = null;
+                int docSize = 0;
+                LazyStringValue lazyCollectionName;
+                if (incomingDoc != null) // can be null if it is a tombstone
+                {
+                    doc = incomingDoc.BasePointer;
+                    docSize = incomingDoc.Size;
+                    lazyCollectionName = CollectionName.GetLazyCollectionNameFrom(context, incomingDoc);
+                }
+                else
+                {
+                    lazyCollectionName = context.GetLazyString(incomingTombstoneCollection);
+                }
+
+                using (lazyCollectionName)
+                using (conflictsTable.Allocate(out TableValueBuilder tvb))
+                {
+                    tvb.Add(lowerKey);
+                    tvb.Add(SpecialChars.RecordSeperator);
+                    tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * incomingChangeVector.Length);
+                    tvb.Add(keyPtr);
+                    tvb.Add(doc, docSize);
+                    tvb.Add(Bits.SwapBytes(etag));
+                    tvb.Add(lazyCollectionName.Buffer, lazyCollectionName.Size);
+                    tvb.Add(lastModifiedTicks);
+
+                    Interlocked.Increment(ref ConflictsCount);
+                    conflictsTable.Set(tvb);
+                }
+            }
+
+            context.Transaction.AddAfterCommitNotification(new DocumentChange
+            {
+                Etag = etag,
+                CollectionName = collectionName.Name,
+                Key = key,
+                Type = DocumentChangeTypes.Conflict,
+                IsSystemDocument = false,
+            });
+        }
+
+        public DocumentsStorage.DeleteOperationResult? DeleteConflicts(DocumentsOperationContext context,
+            Slice loweredKey,
+            long? expectedEtag,
+            ChangeVectorEntry[] changeVector)
+        {
+            Slice prefixSlice;
+            using (GetConflictsKeyPrefix(context, loweredKey, out prefixSlice))
+            {
+                var conflicts = GetConflictsFor(context, prefixSlice);
+                if (conflicts.Count > 0)
+                {
+                    // We do have a conflict for our deletion candidate
+                    // Since this document resolve the conflict we dont need to alter the change vector.
+                    // This way we avoid another replication back to the source
+                    if (expectedEtag.HasValue)
+                    {
+                        ThrowConcurrencyExceptionOnConflict(context, loweredKey.Content.Ptr, loweredKey.Size, expectedEtag);
+                    }
+
+                    long etag;
+                    var collectionName = ResolveConflictAndAddTombstone(context, changeVector, conflicts, out etag);
+                    return new DocumentsStorage.DeleteOperationResult
+                    {
+                        Collection = collectionName,
+                        Etag = etag
+                    };
+                }
+            }
+            return null;
+        }
+
+        private CollectionName ResolveConflictAndAddTombstone(DocumentsOperationContext context,
+            ChangeVectorEntry[] changeVector, IReadOnlyList<DocumentConflict> conflicts, out long etag)
+        {
+            var indexOfLargestEtag = FindIndexOfLargestEtagAndMergeChangeVectors(conflicts, out ChangeVectorEntry[] mergedChangeVector);
+            var latestConflict = conflicts[indexOfLargestEtag];
+            var collectionName = new CollectionName(latestConflict.Collection);
+
+            using (DocumentKeyWorker.GetSliceFromKey(context, latestConflict.Key, out Slice lowerKey))
+            {
+                //note that CreateTombstone is also deleting conflicts
+                etag = _documentsStorage.CreateTombstone(context,
+                    lowerKey,
+                    latestConflict.Etag,
+                    collectionName,
+                    mergedChangeVector,
+                    latestConflict.LastModified.Ticks,
+                    changeVector,
+                    DocumentFlags.None);
+            }
+
+            return collectionName;
+        }
+
+        private static int FindIndexOfLargestEtagAndMergeChangeVectors(IReadOnlyList<DocumentConflict> conflicts, out ChangeVectorEntry[] mergedChangeVectorEntries)
+        {
+            mergedChangeVectorEntries = null;
+            bool firstTime = true;
+
+            int indexOfLargestEtag = 0;
+            long largestEtag = 0;
+            for (var i = 0; i < conflicts.Count; i++)
+            {
+                var conflict = conflicts[i];
+                if (conflict.Etag > largestEtag)
+                {
+                    largestEtag = conflict.Etag;
+                    indexOfLargestEtag = i;
+                }
+
+                if (firstTime)
+                {
+                    mergedChangeVectorEntries = conflict.ChangeVector;
+                    firstTime = false;
+                    continue;
+                }
+                mergedChangeVectorEntries = ReplicationUtils.MergeVectors(mergedChangeVectorEntries, conflict.ChangeVector);
+            }
+
+            return indexOfLargestEtag;
         }
     }
 }

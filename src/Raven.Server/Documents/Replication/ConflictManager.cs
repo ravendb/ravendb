@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Replication
                     _conflictResolver.ResolveToLatest(documentsContext, conflicts);
                     break;
                 default:
-                    _database.DocumentsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection);
+                    _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection);
                     break;
             }
         }
@@ -260,7 +260,7 @@ namespace Raven.Server.Documents.Replication
                 Slice loweredKey;
                 using (Slice.External(context.Allocator, existingTombstone.LoweredKey, out loweredKey))
                 {
-                    _database.DocumentsStorage.DeleteConflicts(context, loweredKey, null, existingTombstone.ChangeVector);
+                    _database.DocumentsStorage.ConflictsStorage.DeleteConflicts(context, loweredKey, null, existingTombstone.ChangeVector);
                 }
                 return true;
             }

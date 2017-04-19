@@ -124,10 +124,7 @@ namespace Raven.Server.Documents
             Stream stream)
         {
             if (context.Transaction == null)
-            {
-                DocumentsStorage.ThrowRequiresTransaction();
-                return default(AttachmentResult); // never reached
-            }
+                throw DocumentPutAction.ThrowRequiresTransaction();
 
             // Attachment etag should be generated before updating the document
             var attachmenEtag = _documentsStorage.GenerateNextEtag();

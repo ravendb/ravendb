@@ -335,12 +335,12 @@ namespace Raven.Server.Documents.Replication
             int itemsCount;
             if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out itemsCount))
                 throw new InvalidDataException(
-                    "Expected the 'ItemsCount' field, but had no numeric field of this value, this is likely a bug");
+                    $"Expected the '{nameof(ReplicationMessageHeader.ItemsCount)}' field, but had no numeric field of this value, this is likely a bug");
 
             int attachmentStreamCount;
             if (!message.TryGet(nameof(ReplicationMessageHeader.AttachmentStreamsCount), out attachmentStreamCount))
                 throw new InvalidDataException(
-                    "Expected the 'AttachmentStreamsCount' field, but had no numeric field of this value, this is likely a bug");
+                    $"Expected the '{nameof(ReplicationMessageHeader.AttachmentStreamsCount)}' field, but had no numeric field of this value, this is likely a bug");
 
             string resovlerId;
             int? resolverVersion;
