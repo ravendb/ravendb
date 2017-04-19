@@ -224,7 +224,8 @@ namespace Raven.Server.Documents
                     _documentDatabase.Configuration.Storage.TempPath?.FullPath,
                     _documentDatabase.Configuration.Storage.JournalsStoragePath?.FullPath,
                     _documentDatabase.IoChanges,
-                    _documentDatabase.CatastrophicFailureNotification
+                    _documentDatabase.CatastrophicFailureNotification,
+                    _documentDatabase.NonDurableFileSystemError
                     );
 
             options.ForceUsing32BitsPager = _documentDatabase.Configuration.Storage.ForceUsing32BitsPager;

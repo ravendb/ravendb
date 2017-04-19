@@ -15,6 +15,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
@@ -57,6 +58,14 @@ namespace Raven.Server.Documents
             Name = name;
             ResourceName = "db/" + name;
             Configuration = configuration;
+            NonDurableFileSystemError += (obj, e) =>
+            {
+                serverStore?.NotificationCenter.Add(AlertRaised.Create($"Non Durable File System - {name ?? "Unknown Database"}",
+                    e.Message,
+                    AlertType.NonDurableFileSystem,
+                    NotificationSeverity.Warning,
+                    name));
+            };
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             IoChanges = new IoChangesNotifications();
             Changes = new DocumentsChanges();
@@ -400,6 +409,8 @@ namespace Raven.Server.Documents
         }
 
         private static readonly string CachedDatabaseInfo = "CachedDatabaseInfo";
+        public EventHandler<NonDurabalitySupportEventArgs> NonDurableFileSystemError;
+
         public DynamicJsonValue GenerateDatabaseInfo()
         {
             var envs = GetAllStoragesEnvironment();
