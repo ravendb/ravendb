@@ -29,7 +29,7 @@ function BuildServerArm ( $srcDir, $outDir, $runtime, $specName ) {
     
     & dotnet publish --output $output `
                  --configuration "Release" $srcDir `
-                 /p:ARM=true
+                 /p:ARM=true /p:Platform=x86
     CheckLastExitCode
 }
 

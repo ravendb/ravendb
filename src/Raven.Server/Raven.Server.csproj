@@ -39,10 +39,10 @@
     <None Include="..\..\libs\libsodium\x64\libsodium.so" Link="libsodium.so" Condition="$(Platform) == 'x64' OR $(Platform) == 'AnyCPU'">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\libsodium\x86\libsodium.so" Link="libsodium.so" Condition="$(Platform) == 'x86' OR $(ARM) == ''">
+    <None Include="..\..\libs\libsodium\x86\libsodium.so" Link="libsodium.so" Condition="$(Platform) == 'x86' AND $(ARM) == ''">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\libsodium\x86\libsodium.arm.so" Link="libsodium.so" Condition="$(Platform) == 'x86' OR $(ARM) == 'true'">
+    <None Include="..\..\libs\libsodium\x86\libsodium.arm.so" Link="libsodium.so" Condition="$(Platform) == 'x86' AND $(ARM) == 'true'">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
