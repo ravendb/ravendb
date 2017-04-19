@@ -20,8 +20,6 @@ namespace Raven.Client.Documents.Replication
         public StorageStats Storage { get; set; }
 
         public NetworkStats Network { get; set; }
-
-        public List<ReplicationError> Errors { get; set; }
         
         public class NetworkStats
         {
@@ -69,5 +67,7 @@ namespace Raven.Client.Documents.Replication
         public DateTime? Completed { get; set; }
 
         public ReplicationPerformanceOperation Details { get; set; }
+
+        public List<ReplicationError> Errors { get; set; }
     }
 }

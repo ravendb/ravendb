@@ -428,7 +428,7 @@ class replicationStats extends viewModelBase {
         this.filteredTrackNames(this.replicationTracksNames());
 
         const criteria = this.searchText().toLowerCase();
-        if (criteria !== "") {
+        if (criteria) {
             this.filteredTrackNames(this.replicationTracksNames().filter(x => x.toLowerCase().includes(criteria)));
         }
     }
@@ -960,8 +960,7 @@ class replicationStats extends viewModelBase {
             context.font = "bold 12px Lato";
             const replicationType = this.getType(replicationName);
 
-            const directionText = (replicationType === "Outgoing") ? "Outgoing" : "Incoming";
-            const directionTextWidth = context.measureText(directionText).width;
+            const directionTextWidth = context.measureText(replicationType).width;
             let restOfText = (replicationType === "Outgoing") ? " to " : " from ";
             restOfText += replicationName;
             const restOfTextWidth = context.measureText(restOfText).width;
@@ -973,7 +972,7 @@ class replicationStats extends viewModelBase {
             this.hitTest.registerReplicationToggle(2, yScale(replicationName), rectWidth, replicationStats.trackHeight, replicationName);
             
             context.fillStyle = replicationStats.colors.trackDirectionText; 
-            context.fillText(directionText, textStart + 0.5, yScale(replicationName) + textShift);
+            context.fillText(replicationType, textStart + 0.5, yScale(replicationName) + textShift);
             context.fillStyle = replicationStats.colors.trackNameFg;
             context.fillText(restOfText, textStart + directionTextWidth + 0.5, yScale(replicationName) + textShift);
 
@@ -1075,10 +1074,9 @@ class replicationStats extends viewModelBase {
             }
 
             // Handle Errors:
-            // Note: the downcast used here can be of Either type... doesn't matter..
-            if ((baseElement as Raven.Client.Documents.Replication.IncomingReplicationPerformanceStats).Errors) {
+            if (baseElement.Errors) {
                 tooltipHtml += `<span style=color:Crimson;"><strong>Errors:</strong></span><br/>`;
-                (baseElement as Raven.Client.Documents.Replication.IncomingReplicationPerformanceStats).Errors.forEach(err => tooltipHtml += `Errors: ${err.Error}<br/>`);
+                baseElement.Errors.forEach(err => tooltipHtml += `Errors: ${err.Error}<br/>`);
             }
 
             this.handleTooltip(element, x, y, tooltipHtml);
