@@ -28,7 +28,7 @@ namespace Raven.Server.Documents
 
             var options = db.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath, null, db.IoChanges, db.CatastrophicFailureNotification)
-                : StorageEnvironmentOptions.ForPath(path.FullPath, null, null, db.IoChanges, db.CatastrophicFailureNotification);
+                : StorageEnvironmentOptions.ForPath(path.FullPath, null, null, db.IoChanges, db.CatastrophicFailureNotification, db.NonDurableFileSystemError);
 
             options.SchemaVersion = 1;
             options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
