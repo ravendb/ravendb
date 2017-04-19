@@ -24,12 +24,12 @@ function BuildServerArm ( $srcDir, $outDir, $runtime, $specName ) {
     $output = [io.path]::combine($outDir, "Server");
     $build = [io.path]::combine($buildDir, $runtime);
     $bin = [io.path]::combine($srcDir, "bin");
-    
+
     Remove-Item -Recurse -Force $bin
-    
+
     & dotnet publish --output $output `
                  --configuration "Release" $srcDir `
-                 /p:ARM=true /p:Platform=x86
+                 /p:ARM=true
     CheckLastExitCode
 }
 
