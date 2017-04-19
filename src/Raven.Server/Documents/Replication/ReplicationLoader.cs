@@ -377,24 +377,22 @@ namespace Raven.Server.Documents.Replication
                 return;
             
             _isInitialized = true;
-
-            Server.Cluster.DatabaseChanged += OnDatabaseRecordChange;
-
+            
             MyDatabaseRecord = LoadDatabaseRecord();
             ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
             InitializeOutgoingReplications();
             ConflictResolver.RunConflictResolversOnce();
 
-            
+            Server.Cluster.DatabaseChanged += OnDatabaseRecordChange;
         }
 
-        private void OnDatabaseRecordChange(object sender, string changedDatabase)
+        private void OnDatabaseRecordChange(object sender, (string dbName, long index) t)
         {
 
             if (Server == null)
                 return;
 
-            if (string.Equals(changedDatabase, Database.Name, StringComparison.OrdinalIgnoreCase) == false)
+            if (string.Equals(t.dbName, Database.Name, StringComparison.OrdinalIgnoreCase) == false)
                 return;
 
             var newRecord = LoadDatabaseRecord();
@@ -452,7 +450,7 @@ namespace Raven.Server.Documents.Replication
                     _log.Info("Tried to initialize outgoing replications, but there is no replication document or destinations are empty. Nothing to do...");
 
                 _numberOfSiblings = 0;
-                Database.DocumentTombstoneCleaner.Unsubscribe(this);
+                Database.DocumentTombstoneCleaner?.Unsubscribe(this);
 
                 return;
             }

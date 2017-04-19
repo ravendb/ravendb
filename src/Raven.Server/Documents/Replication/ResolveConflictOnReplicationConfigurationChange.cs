@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Replication
             _log = log;
         }
 
-        public long ConflictsCount => _database.DocumentsStorage.ConflictsStorage.ConflictsCount;
+        public long ConflictsCount => _database.DocumentsStorage?.ConflictsStorage?.ConflictsCount ?? 0;
 
         public void RunConflictResolversOnce()
         {
