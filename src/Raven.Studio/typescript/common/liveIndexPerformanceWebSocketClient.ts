@@ -3,6 +3,7 @@
 import database = require("models/resources/database");
 import d3 = require("d3");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
+import endpoints = require("endpoints");
 
 class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.Client.Documents.Indexes.IndexPerformanceStats[]> {
 
@@ -25,8 +26,8 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.
     }
 
     protected webSocketUrlFactory(token: singleAuthToken) {
-        const connectionString = "singleUseAuthToken=" + token.Token;
-        return "/indexes/performance/live?" + connectionString;
+        const connectionString = "?singleUseAuthToken=" + token.Token;
+        return endpoints.databases.index.indexesPerformanceLive + connectionString;
     }
 
     get autoReconnect() {

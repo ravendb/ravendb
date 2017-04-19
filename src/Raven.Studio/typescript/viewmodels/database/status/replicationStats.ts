@@ -173,8 +173,6 @@ class replicationStats extends viewModelBase {
 
         tracks: {
             "Replication": "#368b74",
-            "IncomingReplication": "#046293",
-            "OutgoingReplication": "#607d8b",
             "Network/Read": "#517993",
             "Network/Write": "#8f5c72",
             "Storage/Read": "#315c78",
@@ -233,8 +231,6 @@ class replicationStats extends viewModelBase {
 
     /* private */
 
-    // For saving current data upon import
-    private currentData: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = []; 
     // The live data from endpoint
     private data: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
 
@@ -429,8 +425,12 @@ class replicationStats extends viewModelBase {
     }
 
     private filterReplications() {
+        this.filteredTrackNames(this.replicationTracksNames());
+
         const criteria = this.searchText().toLowerCase();
-        this.filteredTrackNames(this.replicationTracksNames().filter(x => x.toLowerCase().includes(criteria)));
+        if (criteria !== "") {
+            this.filteredTrackNames(this.replicationTracksNames().filter(x => x.toLowerCase().includes(criteria)));
+        }
     }
 
     private enableLiveView() {
@@ -444,7 +444,6 @@ class replicationStats extends viewModelBase {
             }
 
             this.data = data;
-            this.setDescription();
 
             const [workData, maxConcurrentReplications] = this.prepareTimeData();
 
@@ -567,7 +566,7 @@ class replicationStats extends viewModelBase {
         context.strokeStyle = replicationStats.colors.brushChartStrokeColor;
         context.lineWidth = replicationStats.brushSectionLineWidth;
 
-        // Draw area chart showing indexes work
+        // Draw area chart showing replication work
         let x1: number, x2: number, y0: number = 0, y1: number;
         for (let i = 0; i < workData.length - 1; i++) {
 
@@ -622,7 +621,7 @@ class replicationStats extends viewModelBase {
             this.brushContainer
                 .call(this.brush)
                 .selectAll("rect")
-                .attr("y", 0)
+                .attr("y", 1)
                 .attr("height", replicationStats.brushSectionHeight - 1);
         }
     }
@@ -637,12 +636,7 @@ class replicationStats extends viewModelBase {
     }
 
     private findAndSetReplicationsNames() {
-      
-        // Order data by 'Outgoing' first and than 'Incoming'
-        this.data = _.orderBy(this.data, [ x => x.Description.split(" ")[0],
-                                           x => x.Description.split(" ")[2] 
-                                         ], ["desc", "asc"]);
-       
+        this.data = _.orderBy(this.data, [x => x.Type, x => x.Description], ["desc", "asc"]);
         this.replicationTracksNames(_.uniq(this.data.map(x => x.Description)));
     }
 
@@ -786,7 +780,6 @@ class replicationStats extends viewModelBase {
         this.constructYScale();
 
         const visibleTimeFrame = this.xNumericScale.domain().map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
-
         const xScale = this.gapFinder.trimmedScale(visibleTimeFrame, this.totalWidth, 0);
 
         const canvas = this.canvas.node() as HTMLCanvasElement;
@@ -874,7 +867,7 @@ class replicationStats extends viewModelBase {
             for (let perfIdx = 0; perfIdx < perfLength; perfIdx++) {
                 const perf = performance[perfIdx];   // each performance[i] has:  completed, deteails, DurationInMilliseconds, id, started
 
-                const perfWithCache = perf as ReplicationPerformanceBaseWithCache; // has also: startedAsDate, CompletedAsDate, Type
+                const perfWithCache = perf as ReplicationPerformanceBaseWithCache; // cache has also: startedAsDate, CompletedAsDate, Type
                 const startDate = perfWithCache.StartedAsDate; 
 
                 const x1 = xScale(startDate);
@@ -899,6 +892,11 @@ class replicationStats extends viewModelBase {
         }
 
         throw new Error("Unable to find color for: " + operationName);
+    }
+
+    private getType(replicationName: string): Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType {
+        const replication = this.data.find(x => x.Description === replicationName);
+        return replication.Type;
     }
 
     private drawStripes(context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Replication.ReplicationPerformanceOperation>,
@@ -943,9 +941,7 @@ class replicationStats extends viewModelBase {
 
             // 4. Handle errors if exist..(The very first 'replication' rect will be drawn on top of all others)
             if (perfItemWithCache) {
-                const base = perfItemWithCache as Raven.Client.Documents.Replication.ReplicationPerformanceBase;
-                const baseWithErrors = base as Raven.Client.Documents.Replication.OutgoingReplicationPerformanceStats; // nevermind the type, just downcast to get errors..
-                if (baseWithErrors.Errors) {
+                if (perfItemWithCache.Errors) {
                     context.fillStyle = replicationStats.colors.itemWithError; 
                     context.fillRect(currentX, yStart, dx, replicationStats.trackHeight);
                 }
@@ -962,20 +958,24 @@ class replicationStats extends viewModelBase {
 
         this.filteredTrackNames().forEach((replicationName) => {
             context.font = "bold 12px Lato";
-            const rectWidth = context.measureText(replicationName).width + 2 * 3 /* left right padding */ + 8 /* arrow space */ + 4; /* padding between arrow and text */
+            const replicationType = this.getType(replicationName);
+
+            const directionText = (replicationType === "Outgoing") ? "Outgoing" : "Incoming";
+            const directionTextWidth = context.measureText(directionText).width;
+            let restOfText = (replicationType === "Outgoing") ? " to " : " from ";
+            restOfText += replicationName;
+            const restOfTextWidth = context.measureText(restOfText).width;
+
+            const rectWidth = directionTextWidth + restOfTextWidth + 2 * 3 /* left right padding */ + 8 /* arrow space */ + 4; /* padding between arrow and text */
 
             context.fillStyle = replicationStats.colors.trackNameBg;
             context.fillRect(2, yScale(replicationName) + replicationStats.closedTrackPadding, rectWidth, replicationStats.trackHeight);
             this.hitTest.registerReplicationToggle(2, yScale(replicationName), rectWidth, replicationStats.trackHeight, replicationName);
             
-            const directionText = replicationName.split(" ")[0];
-            const directionTextWidth = context.measureText(directionText);
-            const theOtherText = replicationName.substring(8);
-
-            context.fillStyle = replicationStats.colors.trackDirectionText;
+            context.fillStyle = replicationStats.colors.trackDirectionText; 
             context.fillText(directionText, textStart + 0.5, yScale(replicationName) + textShift);
             context.fillStyle = replicationStats.colors.trackNameFg;
-            context.fillText(theOtherText, textStart + directionTextWidth.width + 0.5, yScale(replicationName) + textShift);
+            context.fillText(restOfText, textStart + directionTextWidth + 0.5, yScale(replicationName) + textShift);
 
             const isOpened = _.includes(this.expandedTracks(), replicationName);
             context.fillStyle = isOpened ? replicationStats.colors.openedTrackArrow : replicationStats.colors.closedTrackArrow;
@@ -1169,20 +1169,16 @@ class replicationStats extends viewModelBase {
         try {
             const importedData: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = JSON.parse(result);
 
-            // Data validation
-            if (!_.isArray(importedData)) { // check !!!!
+            // Data validation (currently only checking if this is an array, may do deeper validation later..
+            if (!_.isArray(importedData)) { 
                 messagePublisher.reportError("Invalid replication stats file format", undefined, undefined);
             }
             else {
-
-                // Save current stauts...to be used when import is closed
-                this.currentData = this.data;
-
                 this.data = importedData;
-                this.setDescription();
-                this.fillCache();
-                this.resetGraphData();
 
+                this.fillCache();
+                this.prepareBrush(); 
+                this.resetGraphData();
                 const [workData, maxConcurrentReplications] = this.prepareTimeData();
                 this.draw(workData, maxConcurrentReplications, true);
 
@@ -1194,38 +1190,22 @@ class replicationStats extends viewModelBase {
         }
     }
 
-    private setDescription() {
-        this.data.forEach(replicationStat => {
-            const desc = replicationStat.Description.split(" ")[0];
-            if (desc !== "Outgoing" && desc !== "Incoming") {
-                const replicationType = replicationStat.Type.toString();
-                const direction = (replicationType === "Incoming") ? " from " : " to ";
-                replicationStat.Description = replicationType + direction + replicationStat.Description;
-
-                // Set description inside cache as well:
-                replicationStat.Performance.forEach(perf => {
-                    let perfWithCach = perf as ReplicationPerformanceBaseWithCache;
-                    perfWithCach.Description = replicationStat.Description;
-                });
-            }
-        });
-    }
-
     private fillCache() {
         this.data.forEach(replicationStat => {
             replicationStat.Performance.forEach(perfStat => {
-                liveReplicationStatsWebSocketClient.fillCache(perfStat, (perfStat as ReplicationPerformanceBaseWithCache).Type, replicationStat.Description);
+                liveReplicationStatsWebSocketClient.fillCache(perfStat, replicationStat.Type, replicationStat.Description);
             });
         });
     }
 
     closeImport() {
-        // TODO: currently I restore previous data from before the import - maybe this should not be
         this.isImport(false);
-        this.data = this.currentData;
+
+        this.data = []; // Must clear because we don't get 'recent' info from endpoint..
         this.resetGraphData();
         const [workData, maxConcurrentReplications] = this.prepareTimeData();
         this.draw(workData, maxConcurrentReplications, true);
+
         this.enableLiveView();
     }
 
@@ -1256,11 +1236,6 @@ class replicationStats extends viewModelBase {
             exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));
         } else {
             exportFileName = `ReplicationStats of ${this.activeDatabase().name} ${moment().format("YYYY-MM-DD HH-mm")}`;
-        }
-
-        // Export the description field as it came from the endpoint..without the 'outgoing/incoming to/from'...
-        for (let i = 0; i < this.data.length; i++) {
-            this.data[i].Description = this.data[i].Description.split(" ")[2];
         }
 
         const keysToIgnore: Array<keyof ReplicationPerformanceBaseWithCache> = ["StartedAsDate", "CompletedAsDate"];

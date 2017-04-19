@@ -4,7 +4,7 @@
             <div class="form-inline toolbar" role="form" style="position:relative">
                 <div class="clearfix">
                     <div class="input-group">
-                        <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" data-bind="textInput: searchText, enable: hasAnyData" />
+                        <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter replications (Alt+/)" data-bind="textInput: searchText, enable: hasAnyData" />
                     </div>
 
                     <button class="btn btn-default" data-bind="click: expandAll, visible: canExpandAll, enable: hasAnyData" title="Expand all replications performance details"><i class="icon-expand"></i><span>Expand all</span></button>
@@ -37,7 +37,9 @@
                 <div class="row">
                     <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
                         <i class="icon-xl icon-empty-set text-muted"></i>
-                        <h2 class="text-center">No data.</h2>
+                        <h2 class="text-center">No current data.</h2>
+                        <h2 class="text-center">Live connection to server was established.</h2>
+                        <h2 class="text-center">Data will show when replication occurs.</h2>
                     </div>
                 </div>
             </div>

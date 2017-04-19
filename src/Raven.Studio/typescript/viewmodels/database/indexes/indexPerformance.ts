@@ -614,7 +614,7 @@ class indexPerformance extends viewModelBase {
             this.brushContainer
                 .call(this.brush)
                 .selectAll("rect")
-                .attr("y", 0)
+                .attr("y", 1)
                 .attr("height", indexPerformance.brushSectionHeight - 1);
         }
     }
