@@ -183,6 +183,7 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
+                options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 
@@ -295,6 +296,7 @@ namespace Raven.Server.Documents.Indexes
                         documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
 
                 options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
+                options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
 
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
@@ -2202,6 +2204,7 @@ namespace Raven.Server.Documents.Indexes
                         DocumentDatabase.CatastrophicFailureNotification);
                     srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                     srcOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
+                    srcOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
                     var wasRunning = _indexingThread != null;
 
                     Dispose();
@@ -2212,6 +2215,7 @@ namespace Raven.Server.Documents.Indexes
                         StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification))
                     {
                         compactOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
+                        compactOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
 
                         compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
 

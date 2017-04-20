@@ -43,35 +43,41 @@ namespace Raven.Server.Documents.ETL
         public abstract EtlPerformanceStats[] GetPerformanceStats();
     }
 
-    public abstract class EtlProcess<TExtracted, TTransformed> : EtlProcess where TExtracted : ExtractedItem
+    public abstract class EtlProcess<TExtracted, TTransformed, TDestination> : EtlProcess where TExtracted : ExtractedItem where TDestination : EtlDestination
     {
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim();
-        private readonly EtlProcessConfiguration _configuration;
         private readonly CancellationTokenSource _cts;
+
         private readonly ConcurrentQueue<EtlStatsAggregator> _lastEtlStats =
             new ConcurrentQueue<EtlStatsAggregator>();
+
         private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
         private NativeMemory.ThreadStats _threadAllocations;
         private Thread _thread;
         private EtlStatsAggregator _lastStats;
+        private int _statsId;
+
+        protected readonly Transformation Transformation;
         protected readonly Logger Logger;
         protected readonly DocumentDatabase Database;
         protected TimeSpan? FallbackTime;
-        private int _statsId;
 
-        protected EtlProcess(DocumentDatabase database, EtlProcessConfiguration configuration, string tag)
+        public readonly TDestination Destination;
+
+        protected EtlProcess(Transformation transformation, TDestination destination, DocumentDatabase database, string tag)
         {
-            _configuration = configuration;
+            Transformation = transformation;
+            Destination = destination;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(database.DatabaseShutdown);
             Tag = tag;
             Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
             Database = database;
-            Statistics = new EtlProcessStatistics(tag, _configuration.Name, Database.NotificationCenter);
+            Statistics = new EtlProcessStatistics(tag, Transformation.Name, Database.NotificationCenter);
         }
 
         protected CancellationToken CancellationToken => _cts.Token;
 
-        public override string Name => _configuration.Name;
+        public override string Name => Transformation.Name;
 
         protected abstract IEnumerator<TExtracted> ConvertDocsEnumerator(IEnumerator<Document> docs);
 
@@ -79,16 +85,30 @@ namespace Raven.Server.Documents.ETL
 
         public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context, EtlStatsScope stats)
         {
-            var documents = Database.DocumentsStorage.GetDocumentsFrom(context, _configuration.Collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue);
-            var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, _configuration.Collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue);
-
-            using (var documentsIt = documents.GetEnumerator())
-            using (var tombstonesIt = tombstones.GetEnumerator())
+            using (var scope = new DisposeableScope())
             {
+                var enumerators = new List<(IEnumerator<Document> Docs, IEnumerator<DocumentTombstone> Tombstones)>(Transformation.Collections.Count);
+
+                foreach (var collection in Transformation.Collections)
+                {
+                    var docs = Database.DocumentsStorage.GetDocumentsFrom(context, collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue).GetEnumerator();
+
+                    scope.EnsureDispose(docs);
+
+                    var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue).GetEnumerator();
+                    
+                    scope.EnsureDispose(tombstones);
+
+                    enumerators.Add((docs, tombstones));
+                }
+
                 using (var merged = new ExtractedItemsEnumerator<TExtracted>(stats))
                 {
-                    merged.AddEnumerator(ConvertDocsEnumerator(documentsIt));
-                    merged.AddEnumerator(ConvertTombstonesEnumerator(tombstonesIt));
+                    foreach (var en in enumerators)
+                    {
+                        merged.AddEnumerator(ConvertDocsEnumerator(en.Docs));
+                        merged.AddEnumerator(ConvertTombstonesEnumerator(en.Tombstones));
+                    }
 
                     while (merged.MoveNext())
                     {
@@ -271,7 +291,7 @@ namespace Raven.Server.Documents.ETL
             if (_thread != null)
                 return;
 
-            if (_configuration.Disabled)
+            if (Transformation.Disabled)
                 return;
 
             _thread = new Thread(() =>

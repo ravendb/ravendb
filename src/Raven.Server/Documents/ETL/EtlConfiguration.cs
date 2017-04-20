@@ -1,17 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Server.Documents.ETL.Providers.Raven;
-using Raven.Server.Documents.ETL.Providers.SQL;
-using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 
 namespace Raven.Server.Documents.ETL
 {
-    public class EtlConfiguration
+    public class EtlConfiguration<T> where T : EtlDestination
     {
-        public List<RavenEtlConfiguration> RavenTargets = new List<RavenEtlConfiguration>();
+        public T Destination { get; set; }
 
-        public List<SqlEtlConfiguration> SqlTargets = new List<SqlEtlConfiguration>();
+        public List<Transformation> Transforms { get; set; } = new List<Transformation>();
+        
+        public virtual bool Validate(out List<string> errors)
+        {
+            errors = new List<string>();
 
-        public Dictionary<string, PredefinedSqlConnection> SqlConnections = new Dictionary<string, PredefinedSqlConnection>(StringComparer.OrdinalIgnoreCase);
+            Destination.Validate(ref errors);
+
+            var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var script in Transforms)
+            {
+                script.Validate(ref errors);
+
+                if (uniqueNames.Add(script.Name) == false)
+                    errors.Add($"Script name '{script.Name}' name is already defined. The script names need to be unique");
+            }
+            
+            return errors.Count == 0;
+        }
     }
 }

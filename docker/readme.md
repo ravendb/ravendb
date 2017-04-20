@@ -26,11 +26,13 @@ Run Windows-based image: [run-nanoserver.ps1](run-nanoserver.ps1)
 
 Above mentioned Powershell scripts are simplifying usage of our images allowing you to pass various switches and options to configure RavenDB inside the container:
 
-- `-ConfigPath [path]` - required - *absolute* path to settings file used by RavenDB inside the container
+- `-ConfigPath [absolute file path]` - required - *absolute* path to settings file used by RavenDB inside the container
+
+- `-DataDir [absolute dir path]` - host directory mounted to the volume used for persistence of RavenDB data (if not provided a regular docker volume is going to be used)
 
 - `-Detached` - runs the image in detached (background) mode - ([Docker's `-d`](https://docs.docker.com/engine/reference/run/#detached--d))
 
-- `-DbVolumeName [volume name]` - default `ravendb` - the name of the volume used for persistance of RavenDB data
+- `-DataVolumeName [volume name]` - default `ravendb` - the name of the volume used for persistence of RavenDB data
 
 - `-Debug` - runs the shell on the container (Ubuntu: bash; Windows: Powershell) allowing you to debug the issue inside the container
 
@@ -38,15 +40,16 @@ Above mentioned Powershell scripts are simplifying usage of our images allowing 
 
 - `-BindTcpPort [port]` - default `38888` - the port number on which RavenDB Server listens for TCP connections exposed on the container
 
-NOTE: Script will attempt to create Docker volume, if does not exist for data persistance.
+NOTE: Script will attempt to create Docker volume, if does not exist for data persistence.
 
 NOTE 2: Due to Windows containers limitations entire directory holding the settings file (passed via `-ConfigPath`) is going to be visible within the container.
 
-Basic usage:
+Basic usage (saving data to `c:\docker\raven\databases` and using settings file mounted from host at `c:\docker\raven\settings.json`):
 ```
-PS run-ubuntu1604.ps1 -ConfigPath C:\path\to\settings.json
+PS .\run-ubuntu1604.ps1 -DataDir "c:\docker\raven\databases" -ConfigPath "c:\docker\raven\settings.json"
 
 Reading configuration from C:\path\to\settings.json.
+Mounting c:\docker\raven\databases as RavenDB data dir.
        _____                       _____  ____
       |  __ \                     |  __ \|  _ \
       | |__) |__ ___   _____ _ __ | |  | | |_) |
@@ -57,7 +60,7 @@ Reading configuration from C:\path\to\settings.json.
 
       Safe by default, optimized for efficiency
 
- Build 40013, Version 4.0, SemVer 4.0.0-alpha-40013, Commit 1091651
+ Build 40013, Version 4.0, SemVer 4.0.0-alpha-40013, Commit abcdefg
  PID 6, 64 bits
  Source Code (git repo): https://github.com/ravendb/ravendb
  Built with love by Hibernating Rhinos and awesome contributors!
@@ -65,6 +68,7 @@ Reading configuration from C:\path\to\settings.json.
 Listening to: http://0.0.0.0:8080
 Server started, listening to requests...
 Running as Service
+Tcp listening on 0.0.0.0:38888
 
 ```
 
@@ -99,7 +103,7 @@ Each of images above makes use of 2 volumes:
 
     Windows container: `C:\raven-config` directory
 
-- databases volume - used for persistance of RavenDB data
+- databases volume - used for persistence of RavenDB data (you can either mount host directory to it using `-DataDir` or use persistent docker volume)
 
     Ubuntu container: `/databases`
 

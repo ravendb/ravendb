@@ -68,26 +68,24 @@
 
     <div class="flex-content scroll">
     <div data-bind="foreach: databases().sortedDatabases">
-        <div class="panel database" data-bind="scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(), attr: { class: 'panel database ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') }">
-            <div class="padding padding-sm">
-                <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                <div class="row">
-                    <div class="col-xs-12 col-sm-grow col-xl-4 info-container">
+        <div class="panel database-item" data-bind="scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(), attr: { class: 'panel database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') }">
+            <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
+            <div class="padding padding-sm database-info">
+                
+                    <div class="info-container">
                         <div class="checkbox">
                             <input type="checkbox" class="styled" data-bind="checked: $root.selectedDatabases, checkedValue: name">
                             <label></label>
                         </div>
-                        <h3 class="database-name">
-                            
-                            <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase(), text: name"></span>
+                        <h3 class="database-name">                            
+                            <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase()"><i class="icon-database"></i><span data-bind="text: name"></span></span>
                             <a data-bind="attr: { title: name, href: $root.databaseUrl($data) }, visible: canNavigateToDatabase()" href="#"><i class="icon-database"></i><span data-bind="text: name"></span></a>
                         </h3>
                     </div>
-
-                    <div class="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container" 
+                    <div class="vertical-divider properties-container" 
                          data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }">
                     </div>
-                    <div class="col-xs-12 col-sm-auto col-xl-3 actions-container">
+                    <div class="actions-container">
                         <span data-bind="visible: isLoading">
                             <span class="global-spinner spinner-sm"></span>&nbsp;&nbsp;&nbsp;&nbsp;
                         </span>
@@ -150,7 +148,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
             </div>
         </div>
         </div>

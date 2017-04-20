@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Sparrow;
 using Voron;
 using Xunit;
 
@@ -29,28 +30,32 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.ReadTransaction())
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
+                Slice str;
+                using (Slice.From(tx.Allocator, "Users", ByteStringType.Immutable, out str))
+                {
+                    var seekResults = docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], str, 0).GetEnumerator();
+                    Assert.True(seekResults.MoveNext());
+                    var reader = seekResults.Current;
 
-                var seekResults = docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], "Users", 0).GetEnumerator();
-                Assert.True(seekResults.MoveNext());
-                var reader = seekResults.Current;
+                    var valueReader = reader.Key.CreateReader();
+                    Assert.Equal("Users", valueReader.ReadString(5));
+                    Assert.Equal(1L, valueReader.ReadBigEndianInt64());
+                    var handle = reader.Result.Reader;
+                    int size;
+                    Assert.Equal("{'Name': 'Oren'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
 
-                var valueReader = reader.Key.CreateReader();
-                Assert.Equal("Users", valueReader.ReadString(5));
-                Assert.Equal(1L, valueReader.ReadBigEndianInt64());
-                var handle = reader.Result.Reader;
-                int size;
-                Assert.Equal("{'Name': 'Oren'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
+                    Assert.True(seekResults.MoveNext());
+                    reader = seekResults.Current;
 
-                Assert.True(seekResults.MoveNext());
-                reader = seekResults.Current;
+                    valueReader = reader.Key.CreateReader();
+                    Assert.Equal("Users", valueReader.ReadString(5));
+                    Assert.Equal(2L, valueReader.ReadBigEndianInt64());
+                    handle = reader.Result.Reader;
+                    Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
 
-                valueReader = reader.Key.CreateReader();
-                Assert.Equal("Users", valueReader.ReadString(5));
-                Assert.Equal(2L, valueReader.ReadBigEndianInt64());
-                handle = reader.Result.Reader;
-                Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Read(3, out size), size));
-
-                Assert.False(seekResults.MoveNext());
+                    Assert.False(seekResults.MoveNext());
+                }
+                    
                 tx.Commit();
             }
         }
@@ -89,8 +94,12 @@ namespace FastTests.Voron.Tables
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
-                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], "Users", 0);
-                Assert.Empty(reader);
+                Slice str;
+                using (Slice.From(tx.Allocator, "Users", ByteStringType.Immutable, out str))
+                {
+                    var reader = docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], str, 0);
+                    Assert.Empty(reader);
+                }
             }
         }
 
@@ -126,19 +135,23 @@ namespace FastTests.Voron.Tables
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
                 bool gotValues = false;
-                foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], "Users", 0))
+                Slice str;
+                using (Slice.From(tx.Allocator, "Users", ByteStringType.Immutable, out str))
                 {
-                    var valueReader = reader.Key.CreateReader();
-                    Assert.Equal("Users", valueReader.ReadString(5));
-                    Assert.Equal(2L, valueReader.ReadBigEndianInt64());
+                    foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[EtagAndCollectionSlice], str, 0))
+                    {
+                        var valueReader = reader.Key.CreateReader();
+                        Assert.Equal("Users", valueReader.ReadString(5));
+                        Assert.Equal(2L, valueReader.ReadBigEndianInt64());
 
-                    var handle = reader.Result;
-                    int size;
-                    Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Reader.Read(3, out size), size));
+                        var handle = reader.Result;
+                        int size;
+                        Assert.Equal("{'Name': 'Eini'}", Encoding.UTF8.GetString(handle.Reader.Read(3, out size), size));
 
-                    tx.Commit();
-                    gotValues = true;
-                    break;
+                        tx.Commit();
+                        gotValues = true;
+                        break;
+                    }
                 }
                 Assert.True(gotValues);
             }

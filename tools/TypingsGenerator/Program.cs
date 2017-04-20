@@ -14,10 +14,8 @@ using Raven.Client.Documents.Transformers;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Server.Commercial;
-using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
-using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -157,9 +155,8 @@ namespace TypingsGenerator
             // versioning
             scripter.AddType(typeof(VersioningConfiguration));
 
-            // sql replication 
-            scripter.AddType(typeof(SqlConnections));
-            scripter.AddType(typeof(SqlEtlConfiguration));
+            // etl
+            scripter.AddType(typeof(SqlDestination));
             scripter.AddType(typeof(EtlProcessStatistics));
             scripter.AddType(typeof(SimulateSqlEtl));
 

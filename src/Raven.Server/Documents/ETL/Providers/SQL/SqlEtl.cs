@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
-using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Raven.Server.Documents.ETL.Providers.SQL.Enumerators;
 using Raven.Server.Documents.ETL.Providers.SQL.Metrics;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
@@ -13,21 +12,15 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    public class SqlEtl : EtlProcess<ToSqlItem, SqlTableWithRecords>
+    public class SqlEtl : EtlProcess<ToSqlItem, SqlTableWithRecords, SqlDestination>
     {
         public const string SqlEtlTag = "SQL ETL";
 
-        public SqlEtlConfiguration SqlConfiguration { get; }
-
-        private readonly PredefinedSqlConnection _predefinedSqlConnection;
-
         public readonly SqlEtlMetricsCountersManager SqlMetrics = new SqlEtlMetricsCountersManager();
 
-        public SqlEtl(DocumentDatabase database, SqlEtlConfiguration configuration, PredefinedSqlConnection predefinedConnection)
-            : base(database, configuration, SqlEtlTag)
+        public SqlEtl(Transformation transformation, SqlDestination destination, DocumentDatabase database)
+            : base(transformation, destination, database, SqlEtlTag)
         {
-            _predefinedSqlConnection = predefinedConnection;
-            SqlConfiguration = configuration;
             Metrics = SqlMetrics;
         }
 
@@ -43,12 +36,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         protected override EtlTransformer<ToSqlItem, SqlTableWithRecords> GetTransformer(DocumentsOperationContext context)
         {
-            return new SqlDocumentTransformer(Database, context, SqlConfiguration);
+            return new SqlDocumentTransformer(Transformation, Database, context, Destination);
         }
 
         protected override void LoadInternal(IEnumerable<SqlTableWithRecords> records, JsonOperationContext context)
         {
-            using (var writer = new RelationalDatabaseWriter(this, _predefinedSqlConnection, Database))
+            using (var writer = new RelationalDatabaseWriter(this, Destination.Connection, Database))
             {
                 foreach (var table in records)
                 {
@@ -101,7 +94,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
             if (simulateSqlEtl.PerformRolledBackTransaction)
             {
-                using (var writer = new RelationalDatabaseWriter(this, _predefinedSqlConnection, Database))
+                using (var writer = new RelationalDatabaseWriter(this, Destination.Connection, Database))
                 {
                     foreach (var records in toWrite)
                     {
@@ -117,7 +110,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
             else
             {
-                var simulatedwriter = new RelationalDatabaseWriterSimulator(_predefinedSqlConnection, SqlConfiguration);
+                var simulatedwriter = new RelationalDatabaseWriterSimulator(Destination.Connection, Destination);
 
                 foreach (var records in toWrite)
                 {
@@ -151,24 +144,17 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             List<string> errors;
             if (simulateSqlEtl.Configuration.Validate(out errors) == false)
             {
-                throw new InvalidOperationException($"Invalid ETL configuration for: '{simulateSqlEtl.Configuration.Name}'. " +
+                throw new InvalidOperationException($"Invalid ETL configuration for destination {simulateSqlEtl.Configuration.Destination}. " +
                                                     $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.");
             }
 
-            PredefinedSqlConnection predefinedConnection;
-            var connectionStringName = simulateSqlEtl.Configuration.ConnectionStringName;
-
-            if (database.EtlLoader.CurrentConfiguration == null)
+            if (simulateSqlEtl.Configuration.Transforms.Count != 1)
             {
-                throw new InvalidOperationException(
-                    $"ETL is not configured. In particular {nameof(EtlConfiguration.SqlConnections)} are not provided, " +
-                    $"while you specified the following connection string name: {connectionStringName}");
+                throw new InvalidOperationException($"Invalid number of transformations. You have provided {simulateSqlEtl.Configuration.Transforms.Count} " +
+                                                    "while SQL ETL simulation expects to get exactly 1 transformation script");
             }
 
-            if (database.EtlLoader.CurrentConfiguration.SqlConnections.TryGetValue(connectionStringName, out predefinedConnection) == false)
-                throw new InvalidOperationException($"Could not find connection string named '{connectionStringName}' in ETL config");
-
-            using (var etl = new SqlEtl(database, simulateSqlEtl.Configuration, predefinedConnection))
+            using (var etl = new SqlEtl(simulateSqlEtl.Configuration.Transforms[0], simulateSqlEtl.Configuration.Destination, database))
             {
                 etl.EnsureThreadAllocationStats();
 

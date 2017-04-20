@@ -215,6 +215,7 @@ class replicationStats extends viewModelBase {
     /* observables */
 
     hasAnyData = ko.observable<boolean>(false);
+    loading: KnockoutComputed<boolean>;
     private searchText = ko.observable<string>();
 
     private liveViewClient = ko.observable<liveReplicationStatsWebSocketClient>();
@@ -283,6 +284,11 @@ class replicationStats extends viewModelBase {
                 this.brushContainer
                     .transition();
             }
+        });
+
+        this.loading = ko.pureComputed(() => {
+            const client = this.liveViewClient();
+            return client ? client.loading() : true;
         });
     }
 
@@ -1198,12 +1204,8 @@ class replicationStats extends viewModelBase {
 
     closeImport() {
         this.isImport(false);
-
-        this.data = []; // Must clear because we don't get 'recent' info from endpoint..
+        this.hasAnyData(false);
         this.resetGraphData();
-        const [workData, maxConcurrentReplications] = this.prepareTimeData();
-        this.draw(workData, maxConcurrentReplications, true);
-
         this.enableLiveView();
     }
 

@@ -4,7 +4,7 @@ import testSqlConnectionCommand = require("commands/database/sqlReplication/test
 
 class predefinedSqlConnection {
 
-    public CONNECTION_STATE_STAND_BY = "stand-by";
+    /*public CONNECTION_STATE_STAND_BY = "stand-by";
     public CONNECTION_STATE_CONNECTING = "connecting";
     public CONNECTION_STATE_CONNECTED = "connected";
 
@@ -50,7 +50,7 @@ class predefinedSqlConnection {
             }).
             always(() => setTimeout(this.connectionTestState, 500, this.CONNECTION_STATE_STAND_BY ));
     }
-
+    */
 }
 
 export =predefinedSqlConnection;

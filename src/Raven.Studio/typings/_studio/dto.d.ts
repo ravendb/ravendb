@@ -233,7 +233,6 @@ interface ReplicationPerformanceBaseWithCache extends Raven.Client.Documents.Rep
     CompletedAsDate: Date;
     Type: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType;
     Description: string;
-    Errors: Array<Raven.Client.Documents.Replication.ReplicationError>;
 }
 
 interface IndexingPerformanceOperationWithParent extends Raven.Client.Documents.Indexes.IndexingPerformanceOperation {

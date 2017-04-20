@@ -4,7 +4,7 @@ import database = require("models/resources/database");
 
 class getSqlReplicationsCommand extends commandBase {
 
-    constructor(private db: database, private sqlReplicationName:string = null) {
+    /*constructor(private db: database, private sqlReplicationName:string = null) {
         super();
     }
 
@@ -18,7 +18,7 @@ class getSqlReplicationsCommand extends commandBase {
 
         return this.query("/docs", args, this.db,
             (dtos: queryResultDto<Raven.Server.Documents.ETL.Providers.SQL.SqlEtlConfiguration>) => dtos.Results.map(dto => new sqlReplication(dto)));//TODO: use endpoints
-    }
+    }*/
 }
 
 export = getSqlReplicationsCommand;

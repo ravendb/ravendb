@@ -10,7 +10,6 @@ namespace Raven.Server.NotificationCenter.Notifications
         SqlEtl_ConnectionError,
         SqlEtl_ProviderError,
         SqlEtl_SlowSql,
-        SqlEtl_ConnectionStringMissing,
         
         Etl_WriteErrorRatio,
         
@@ -25,6 +24,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         WarnIndexOutputsPerDocument,
         ErrorSavingReduceOutputDocuments,
         CatastrophicDatabaseFailure,
-        NonDurableFileSystem
+        NonDurableFileSystem,
+        RecoveryError
     }
 }
