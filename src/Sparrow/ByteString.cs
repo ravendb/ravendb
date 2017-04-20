@@ -9,6 +9,9 @@ using Sparrow.Collections;
 using Sparrow.Global;
 using Sparrow.Json;
 using Sparrow.Utils;
+#if VALIDATE
+using System.Threading;
+#endif
 
 namespace Sparrow
 {
