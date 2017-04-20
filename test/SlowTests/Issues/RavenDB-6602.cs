@@ -22,7 +22,6 @@ namespace FastTests.Issues
         [Fact]
         public async Task RequestExecutor_failover_with_only_one_database_should_properly_fail()
         {
-            NoTimeouts();
             var leader = await CreateRaftClusterAndGetLeader(1);
             const int replicationFactor = 1;
             const string databaseName = "RequestExecutor_failover_with_only_one_database_should_properly_fail";
@@ -57,7 +56,6 @@ namespace FastTests.Issues
         [Fact]
         public async Task RequestExecutor_failover_to_database_topology_should_work()
         {
-            NoTimeouts();
             var leader = await CreateRaftClusterAndGetLeader(3);
             const int replicationFactor = 2;
             const string databaseName = "RequestExecutor_failover_to_database_topology_should_work";

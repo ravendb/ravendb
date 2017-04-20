@@ -20,8 +20,6 @@ namespace FastTests.Server.Replication
         [Fact]
         public async Task DisableDatabaseToggleOperation_should_propagate_through_raft_cluster()
         {
-            NoTimeouts();
-
             var leaderServer = await CreateRaftClusterAndGetLeader(2, shouldRunInMemory:false);
             var slaveServer = Servers.First(srv => ReferenceEquals(srv, leaderServer) == false);
 

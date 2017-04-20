@@ -15,7 +15,6 @@ namespace SlowTests.Server.Rachis
         [Fact]
         public async Task CanCreateAddAndDeleteDatabaseFromNodes()
         {
-            NoTimeouts();
             var clusterSize = 3;
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
             CreateDatabaseResult databaseResult;

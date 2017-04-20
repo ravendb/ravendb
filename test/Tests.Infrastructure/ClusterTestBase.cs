@@ -13,6 +13,7 @@ using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Operations;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
@@ -41,9 +42,10 @@ namespace Tests.Infrastructure
         protected List<RavenServer> Servers = new List<RavenServer>();
         private readonly Random _random = new Random();
 
-        protected void NoTimeouts()
+        protected IDisposable NoTimeouts()
         {
             TimeoutEvent.Disable = true;
+            return new DisposableAction(() => TimeoutEvent.Disable = false);
         }
 
         protected async Task CreateAndWaitForClusterDatabase(string databaseName, IDocumentStore store)
