@@ -73,34 +73,43 @@ namespace Raven.Server.Documents
 
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore)
         {
+            _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
             StartTime = SystemTime.UtcNow;
             Name = name;
             ResourceName = "db/" + name;
             Configuration = configuration;
-            _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
-            IoChanges = new IoChangesNotifications();
-            Changes = new DocumentsChanges();
-            DocumentsStorage = new DocumentsStorage(this);
-            IndexStore = new IndexStore(this, _indexAndTransformerLocker);
-            TransformerStore = new TransformerStore(this, _indexAndTransformerLocker);
-            EtlLoader = new EtlLoader(this);
-            ReplicationLoader = new ReplicationLoader(this);
-            DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
-            SubscriptionStorage = new SubscriptionStorage(this);
-            Operations = new DatabaseOperations(this);
-            Metrics = new MetricsCountersManager();
-            Patcher = new DocumentPatcher(this);
-            TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
-            HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
-                configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
-            ConfigurationStorage = new ConfigurationStorage(this);
-            NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
-            DatabaseInfoCache = serverStore?.DatabaseInfoCache;
-            CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
+
+            try
             {
-                serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailure(name, e);
-            });
+                IoChanges = new IoChangesNotifications();
+                Changes = new DocumentsChanges();
+                DocumentsStorage = new DocumentsStorage(this);
+                IndexStore = new IndexStore(this, _indexAndTransformerLocker);
+                TransformerStore = new TransformerStore(this, _indexAndTransformerLocker);
+                EtlLoader = new EtlLoader(this);
+                ReplicationLoader = new ReplicationLoader(this);
+                DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
+                SubscriptionStorage = new SubscriptionStorage(this);
+                Operations = new DatabaseOperations(this);
+                Metrics = new MetricsCountersManager();
+                Patcher = new DocumentPatcher(this);
+                TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
+                HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
+                    configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
+                ConfigurationStorage = new ConfigurationStorage(this);
+                NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
+                DatabaseInfoCache = serverStore?.DatabaseInfoCache;
+                CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
+                {
+                    serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailure(name, e);
+                });
+            }
+            catch (Exception)
+            {
+                Dispose();
+                throw;
+            }
         }
 
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
@@ -326,7 +335,7 @@ namespace Raven.Server.Documents
 
                 exceptionAggregator.Execute(() =>
                 {
-                    TxMerger.Dispose();
+                    TxMerger?.Dispose();
                 });
 
                 if (_indexStoreTask != null)
