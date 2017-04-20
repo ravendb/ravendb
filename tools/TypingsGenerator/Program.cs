@@ -157,7 +157,7 @@ namespace TypingsGenerator
 
             // sql replication 
             scripter.AddType(typeof(SqlConnections));
-            scripter.AddType(typeof(SqlEtlConfiguration));
+            scripter.AddType(typeof(SqlDestination));
             scripter.AddType(typeof(EtlProcessStatistics));
             scripter.AddType(typeof(SimulateSqlEtl));
 

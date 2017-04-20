@@ -10,7 +10,6 @@ using System.Text;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Extensions.Streams;
-using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
@@ -24,7 +23,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
         private readonly SqlEtl _etl;
         private readonly DocumentDatabase _database;
-        private readonly PredefinedSqlConnection _predefinedSqlConnection;
 
         private readonly DbCommandBuilder _commandBuilder;
         private readonly DbProviderFactory _providerFactory;
@@ -35,17 +33,16 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
         private const int LongStatementWarnThresholdInMilliseconds = 3000;
 
-        public RelationalDatabaseWriter(SqlEtl etl, PredefinedSqlConnection predefinedSqlConnection, DocumentDatabase database)
-            : base(predefinedSqlConnection)
+        public RelationalDatabaseWriter(SqlEtl etl, SqlEtlConnection connection, DocumentDatabase database)
+            : base(connection)
         {
             _etl = etl;
             _database = database;
-            _predefinedSqlConnection = predefinedSqlConnection;
             _logger = LoggingSource.Instance.GetLogger<RelationalDatabaseWriter>(_database.Name);
-            _providerFactory = GetDbProviderFactory(_etl.SqlConfiguration);
+            _providerFactory = GetDbProviderFactory(connection, etl.Destination);
             _commandBuilder = _providerFactory.CreateCommandBuilder();
             _connection = _providerFactory.CreateConnection();
-            _connection.ConnectionString = predefinedSqlConnection.ConnectionString;
+            _connection.ConnectionString = connection.ConnectionString;
 
             try
             {
@@ -85,16 +82,16 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             }
         }
 
-        private DbProviderFactory GetDbProviderFactory(SqlEtlConfiguration configuration)
+        private DbProviderFactory GetDbProviderFactory(SqlEtlConnection connection, SqlDestination destination)
         {
             DbProviderFactory providerFactory;
             try
             {
-                providerFactory = DbProviderFactories.GetFactory(_predefinedSqlConnection.FactoryName);
+                providerFactory = DbProviderFactories.GetFactory(connection.FactoryName);
             }
             catch (Exception e)
             {
-                var message = $"Could not find provider factory {_predefinedSqlConnection.FactoryName} to replicate to sql for {configuration.Name}, ignoring.";
+                var message = $"Could not find provider factory {connection.FactoryName} to replicate to sql for {destination}, ignoring.";
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info(message, e);
@@ -176,7 +173,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     sb.Length = sb.Length - 2;
                     sb.Append(")");
 
-                    if (IsSqlServerFactoryType && _etl.SqlConfiguration.ForceSqlServerQueryRecompile)
+                    if (IsSqlServerFactoryType && _etl.Destination.ForceQueryRecompile)
                     {
                         sb.Append(" OPTION(RECOMPILE)");
                     }
@@ -233,8 +230,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             {
                 cmd.Transaction = _tx;
 
-                if (_etl.SqlConfiguration.CommandTimeout.HasValue)
-                    cmd.CommandTimeout = _etl.SqlConfiguration.CommandTimeout.Value;
+                if (_etl.Destination.CommandTimeout.HasValue)
+                    cmd.CommandTimeout = _etl.Destination.CommandTimeout.Value;
                 else if (_database.Configuration.Etl.SqlCommandTimeout.HasValue)
                     cmd.CommandTimeout = (int)_database.Configuration.Etl.SqlCommandTimeout.Value.AsTimeSpan.TotalSeconds;
 
@@ -247,7 +244,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             }
         }
 
-        public int DeleteItems(string tableName, string pkName, bool doNotParameterize, List<ToSqlItem> toDelete, CancellationToken token, Action<DbCommand> commandCallback = null)
+        public int DeleteItems(string tableName, string pkName, bool parameterize, List<ToSqlItem> toDelete, CancellationToken token, Action<DbCommand> commandCallback = null)
         {
             const int maxParams = 1000;
 
@@ -273,7 +270,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     {
                         if (i != j)
                             sb.Append(", ");
-                        if (doNotParameterize == false)
+
+                        if (parameterize)
                         {
                             var dbParameter = cmd.CreateParameter();
                             dbParameter.ParameterName = GetParameterName("p" + j);
@@ -291,7 +289,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     }
                     sb.Append(")");
 
-                    if (IsSqlServerFactoryType && _etl.SqlConfiguration.ForceSqlServerQueryRecompile)
+                    if (IsSqlServerFactoryType && _etl.Destination.ForceQueryRecompile)
                     {
                         sb.Append(" OPTION(RECOMPILE)");
                     }
@@ -347,7 +345,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
         private string GetTableNameString(string tableName)
         {
-            if (_etl.SqlConfiguration.QuoteTables)
+            if (_etl.Destination.QuoteTables)
             {
                 return string.Join(".", tableName.Split('.').Select(_commandBuilder.QuoteIdentifier).ToArray());
             }
@@ -388,7 +386,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             if (table.InsertOnlyMode == false && table.Deletes.Count > 0)
             {
                 // first, delete all the rows that might already exist there
-                stats.DeletedRecordsCount = DeleteItems(table.TableName, table.DocumentKeyColumn, _etl.SqlConfiguration.ParameterizeDeletesDisabled, table.Deletes, token, collectCommands);
+                stats.DeletedRecordsCount = DeleteItems(table.TableName, table.DocumentKeyColumn, _etl.Destination.ParameterizeDeletes, table.Deletes, token, collectCommands);
             }
 
             if (table.Inserts.Count > 0)
