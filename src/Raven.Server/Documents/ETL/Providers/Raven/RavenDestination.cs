@@ -34,29 +34,5 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             return $"{Database}@{Url}";
         }
-
-        protected bool Equals(RavenDestination other)
-        {
-            return string.Equals(Url, other.Url) && string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase);
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((RavenDestination)obj);
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hashCode = 1;
-                hashCode = (hashCode * 397) ^ (Url != null ? Url.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (Database != null ? Database.GetHashCode() : 0);
-                return hashCode;
-            }
-        }
     }
 }
