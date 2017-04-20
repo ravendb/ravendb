@@ -127,7 +127,7 @@ namespace Raven.Server.Documents
             if (collectionName.IsSystem == false &&
                 (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
             {
-                if(ShouldRecreateAttachment(context, lowerKey, oldDoc, document, flags, nonPersistentFlags))
+                if (ShouldRecreateAttachment(context, lowerKey, oldDoc, document, flags, nonPersistentFlags))
                 {
 #if DEBUG
                     if (document.DebugHash != documentDebugHash)
@@ -212,6 +212,7 @@ namespace Raven.Server.Documents
             };
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string BuildDocumentKey(DocumentsOperationContext context, string key, Table table, long newEtag, out bool knownNewKey)
         {
             if (string.IsNullOrWhiteSpace(key))
@@ -220,14 +221,17 @@ namespace Raven.Server.Documents
                 return Guid.NewGuid().ToString();
             }
 
-            switch (key[key.Length - 1])
+            // We use if instead of switch so the JIT will better inline this method
+            var lastChar = key[key.Length - 1];
+            if (lastChar == '/')
             {
-                case '/':
-                    knownNewKey = true;
-                    return _documentsStorage.Identities.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out _);
-                case '|':
-                    knownNewKey = true;
-                    return _documentsStorage.Identities.AppendNumericValueToKey(key, newEtag);
+                knownNewKey = true;
+                return _documentsStorage.Identities.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out _);
+            }
+            if (lastChar == '|')
+            {
+                knownNewKey = true;
+                return _documentsStorage.Identities.AppendNumericValueToKey(key, newEtag);
             }
 
             knownNewKey = false;
@@ -259,7 +263,7 @@ namespace Raven.Server.Documents
                 }
             }
 
-            if (shouldRecreateAttachment == false && 
+            if (shouldRecreateAttachment == false &&
                 (nonPersistentFlags & NonPersistentDocumentFlags.ResolvedAttachmentConflict) != NonPersistentDocumentFlags.ResolvedAttachmentConflict)
                 return false;
 
