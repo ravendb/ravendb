@@ -1325,7 +1325,7 @@ namespace Voron.Impl.Journal
 
                     write += size;
                     pagesInfo[pageSequencialNumber].Size = size;
-                    pagesInfo[pageSequencialNumber].DiffSize = -1;
+                    pagesInfo[pageSequencialNumber].DiffSize = 0;
                 }
 
                 ++pageSequencialNumber;
@@ -1411,7 +1411,7 @@ namespace Voron.Impl.Journal
         {
             var txHeader = (TransactionHeader*)fullTxBuffer;
 
-            txHeader->Flags = EncryptionFlags.Encrypted;
+            txHeader->Flags |= TransactionPersistenceModeFlags.Encrypted;
             ulong macLen = 16;
             var subKey = stackalloc byte[32];
             fixed (byte* mk = _env.Options.MasterKey)
@@ -1537,7 +1537,7 @@ namespace Voron.Impl.Journal
 
             var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
             var pagePointer = _compressionPager.AcquirePagePointer(tx, 0);
-            Memory.Set(pagePointer, 0, compressionBufferSize);
+            Sodium.ZeroMemory(pagePointer, compressionBufferSize);
         }
 
         private bool ShouldReduceSizeOfCompressionPager()

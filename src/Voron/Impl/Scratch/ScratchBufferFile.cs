@@ -285,12 +285,6 @@ namespace Voron.Impl.Scratch
             return _scratchPager.AcquirePagePointerForNewPage(tx, p, numberOfPages);
         }
 
-        public void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, long p)
-        {
-            var pager = _scratchPager as CryptoPager;
-            pager?.BreakLargeAllocationToSeparatePages(tx, p);
-        }
-
         internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
         {
             return _freePagesBySize.Keys.ToDictionary(size => size, size =>
@@ -310,7 +304,7 @@ namespace Voron.Impl.Scratch
             _scratchPager.Dispose();
         }
 
-        public void BreakLargeAllocationToSeparatePages(PageFromScratchBuffer value)
+        public void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, PageFromScratchBuffer value)
         {
             if (_allocatedPages.Remove(value.PositionInScratchBuffer) == false)
                 InvalidAttemptToBreakupPageThatWasntAllocated(value);
@@ -323,6 +317,8 @@ namespace Voron.Impl.Scratch
                 _allocatedPages.Add(value.PositionInScratchBuffer + i,
                     new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer + i, 0, 1));
             }
+
+            _scratchPager.BreakLargeAllocationToSeparatePages(tx, value.PositionInScratchBuffer);
         }
 
         private static void InvalidAttemptToBreakupPageThatWasntAllocated(PageFromScratchBuffer value)

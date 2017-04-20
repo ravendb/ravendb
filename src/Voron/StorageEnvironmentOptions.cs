@@ -538,6 +538,8 @@ namespace Voron
                 return GetMemoryMapPager(this, initialSize, scratchFile, deleteOnClose: true);
             }
 
+            // This is used for special pagers that are used as temp buffers and don't 
+            // require encryption: compression, recovery, lazyTxBuffer.
             public override AbstractPager CreateTemporaryBufferPager(string name, long initialSize)
             {
                 var scratchFile = Path.Combine(TempPath, name);
@@ -551,9 +553,11 @@ namespace Voron
                 bool deleteOnClose = false,
                 bool usePageProtection = false)
             {
-                return EncryptionEnabled
-                    ? new CryptoPager(GetMemoryMapPagerInternal(options, initialSize, file, deleteOnClose, usePageProtection))
-                    : GetMemoryMapPagerInternal(options, initialSize, file, deleteOnClose, usePageProtection);
+                var pager = GetMemoryMapPagerInternal(options, initialSize, file, deleteOnClose, usePageProtection);
+
+                return EncryptionEnabled == false 
+                    ? pager 
+                    : new CryptoPager(pager);
             }
 
             private AbstractPager GetMemoryMapPagerInternal(StorageEnvironmentOptions options, long? initialSize, string file, bool deleteOnClose = false, bool usePageProtection = false)
@@ -760,11 +764,11 @@ namespace Voron
 
             private AbstractPager GetTempMemoryMapPager(PureMemoryStorageEnvironmentOptions options, string path, long? intialSize, Win32NativeFileAttributes win32NativeFileAttributes)
             {
-                return EncryptionEnabled
-                    ? new CryptoPager(GetTempMemoryMapPagerInternal(options, path, intialSize,
-                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary))
-                    : GetTempMemoryMapPagerInternal(options, path, intialSize,
-                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                var pager = GetTempMemoryMapPagerInternal(options, path, intialSize,
+                    Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                return EncryptionEnabled == false
+                    ? pager
+                    : new CryptoPager(pager);
             }
 
             private AbstractPager GetTempMemoryMapPagerInternal(PureMemoryStorageEnvironmentOptions options, string path, long? intialSize, Win32NativeFileAttributes win32NativeFileAttributes)
@@ -802,6 +806,13 @@ namespace Voron
 
             public override AbstractPager OpenPager(string filename)
             {
+                var pager = OpenPagerInternal(filename);
+
+                return EncryptionEnabled == false ? pager : new CryptoPager(pager);
+            }
+
+            private AbstractPager OpenPagerInternal(string filename)
+            {
                 if (RunningOnPosix)
                 {
                     if (RunningOn32Bits)
@@ -811,12 +822,6 @@ namespace Voron
 
                 if (RunningOn32Bits)
                     return new Windows32BitsMemoryMapPager(this, filename);
-
-                if (EncryptionEnabled)
-                {
-                    var inner = new WindowsMemoryMapPager(this, filename);
-                    return new CryptoPager(inner);
-                }
 
                 return new WindowsMemoryMapPager(this, filename);
             }
@@ -861,6 +866,7 @@ namespace Voron
 
         public abstract AbstractPager CreateScratchPager(string name, long initialSize);
 
+        // Used for special temporary pagers (compression, recovery, lazyTX...) which should not be wrapped by the crypto pager.
         public abstract AbstractPager CreateTemporaryBufferPager(string name, long initialSize);
 
         public abstract AbstractPager OpenJournalPager(long journalNumber);

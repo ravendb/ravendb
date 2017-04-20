@@ -127,11 +127,8 @@ namespace Voron.Impl.Journal
                 _dataPager.EnsureContinuous(pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
                 _dataPager.EnsureMapped(this, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
 
-                // There is a chance the page was not synced to the data file before we crashed.
-                // If encryption is enabled, when recovering, we cannot decrypt an empty (zeroed) page
-                var pagePtr = options.EncryptionEnabled 
-                    ? _dataPager.AcquirePagePointerForNewPage(this, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination) 
-                    : _dataPager.AcquirePagePointer(this, pageInfoPtr[i].PageNumber);
+                // We are going to overwrite the page, so we don't care about its current content
+                var pagePtr = _dataPager.AcquirePagePointerForNewPage(this, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
                 
                 var pageNumber = *(long*)(outputPage + totalRead);
                 if (pageInfoPtr[i].PageNumber != pageNumber)
@@ -139,9 +136,8 @@ namespace Voron.Impl.Journal
                 totalRead += sizeof(long);
 
                 _dataPager.UnprotectPageRange(pagePtr, (ulong)pageInfoPtr[i].Size);
-
-                // When using encryption we copy the entire page from the journal, not just the diff. 
-                if (pageInfoPtr[i].DiffSize == 0 || options.EncryptionEnabled)
+ 
+                if (pageInfoPtr[i].DiffSize == 0)
                 {
                     Memory.Copy(pagePtr, outputPage + totalRead, pageInfoPtr[i].Size);
                     totalRead += pageInfoPtr[i].Size;
@@ -176,9 +172,9 @@ namespace Voron.Impl.Journal
         {
             if (options.EncryptionEnabled == false)
                 return;
-            var compressionBufferSize = _recoveryPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
+            var recoveryBufferSize = _recoveryPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
             var pagePointer = _recoveryPager.AcquirePagePointer(tx, 0);
-            Memory.Set(pagePointer, 0, compressionBufferSize);
+            Sodium.ZeroMemory(pagePointer, recoveryBufferSize);
         }
 
         public void SetStartPage(long value)
@@ -192,7 +188,7 @@ namespace Voron.Impl.Journal
             var num = txHeader->TransactionId;
             ulong macLen = 16;
 
-            if (txHeader->Flags != EncryptionFlags.Encrypted)
+            if ((txHeader->Flags & TransactionPersistenceModeFlags.Encrypted) != TransactionPersistenceModeFlags.Encrypted)
                 throw new InvalidOperationException($"Unable to decrypt transaction {num}, not encrypted");
 
             var subKey = stackalloc byte[32];
@@ -265,10 +261,10 @@ namespace Voron.Impl.Journal
                 //  to hold the transaction before decrypting, and release the buffers afterwards.
                 var size = (4*Constants.Size.Kilobyte) * GetNumberOf4KbFor(sizeof(TransactionHeader) + current->CompressedSize);
 
+                // TODO: need to pool those and register them in the NativeMemory tracking
                 var buffer = new EncryptionBuffer
                 {
-                    Pointer = Win32MemoryProtectMethods.VirtualAlloc(null, (UIntPtr)size, Win32MemoryProtectMethods.AllocationType.COMMIT,
-                        Win32MemoryProtectMethods.MemoryProtection.READWRITE),
+                    Pointer = UnmanagedMemory.Allocate4KAllignedMemory(size),
                     Size = size
                 };
                 _encryptionBuffers.Add(buffer);
@@ -380,7 +376,7 @@ namespace Voron.Impl.Journal
             if (_encryptionBuffers != null) // Encryption enabled
 			{ 
                 foreach (var buffer in _encryptionBuffers)
-                    Win32MemoryProtectMethods.VirtualFree(buffer.Pointer, UIntPtr.Zero, Win32MemoryProtectMethods.FreeType.MEM_RELEASE);
+                    UnmanagedMemory.Free(buffer.Pointer);
 				BeforeCommitFinalization?.Invoke(this);
             }
 			OnDispose?.Invoke(this);

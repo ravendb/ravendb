@@ -355,10 +355,7 @@ namespace Voron.Impl.Scratch
         public void BreakLargeAllocationToSeparatePages(LowLevelTransaction tx, PageFromScratchBuffer value)
         {
             var item = GetScratchBufferFile(value.ScratchFileNumber);
-            item.File.BreakLargeAllocationToSeparatePages(value);
-
-            ScratchBufferFile bufferFile = item.File;
-            bufferFile.BreakLargeAllocationToSeparatePages(tx, value.PositionInScratchBuffer);
+            item.File.BreakLargeAllocationToSeparatePages(tx, value);
         }
 
         public long GetAvailablePagesCount()

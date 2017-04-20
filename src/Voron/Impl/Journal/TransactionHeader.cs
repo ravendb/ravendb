@@ -46,7 +46,7 @@ namespace Voron.Impl.Journal
         public int PageCount;
 
         [FieldOffset(36)]
-        public EncryptionFlags Flags;
+        public TransactionPersistenceModeFlags Flags;
 
         [FieldOffset(40)]
         public ulong Hash;

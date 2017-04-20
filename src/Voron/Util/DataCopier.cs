@@ -40,9 +40,7 @@ namespace Voron.Util
         {
             // In case of encryption bundle, we don't want to decrypt the data for backup, 
             // so let's work directly with the underlying encrypted data (Inner pager).
-            if (src is CryptoPager)
-                src = ((CryptoPager)src).Inner;
-
+         
             if((_buffer.Length % Constants.Storage.PageSize) != 0)
                 throw new ArgumentException("The buffer length must be a multiple of the page size");
 
@@ -55,7 +53,7 @@ namespace Voron.Util
                 {
                     var pagesToCopy = (int) (i + steps > numberOfPages ? numberOfPages - i : steps);
                     src.EnsureMapped(tempTx, i, pagesToCopy);
-                    var ptr = src.AcquirePagePointer(tempTx, i);
+                    var ptr = src.AcquireRawPagePointer(tempTx, i);
                     Memory.Copy(pBuffer, ptr, pagesToCopy* Constants.Storage.PageSize);
                     output.Write(_buffer, 0, pagesToCopy * Constants.Storage.PageSize);
 
