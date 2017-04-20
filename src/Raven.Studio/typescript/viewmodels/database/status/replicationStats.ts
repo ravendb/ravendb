@@ -1062,7 +1062,7 @@ class replicationStats extends viewModelBase {
                 case "Incoming":
                     {
                         const elementWithData = baseElement as Raven.Client.Documents.Replication.IncomingReplicationPerformanceStats;
-                        tooltipHtml += `Recieved Last Etag: ${elementWithData.ReceivedLastEtag}<br/>`;
+                        tooltipHtml += `Received last Etag: ${elementWithData.ReceivedLastEtag}<br/>`;
                         tooltipHtml += `Network input count: ${elementWithData.Network.InputCount}<br/>`; 
                         tooltipHtml += `Documents read count: ${elementWithData.Network.DocumentReadCount}<br/>`;
                         tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentReadCount}<br/>`;
@@ -1071,7 +1071,7 @@ class replicationStats extends viewModelBase {
                 case "Outgoing":
                     {
                         const elementWithData = baseElement as Raven.Client.Documents.Replication.OutgoingReplicationPerformanceStats;
-                        tooltipHtml += `Sent Last Etag: ${elementWithData.SendLastEtag}<br/>`;
+                        tooltipHtml += `Sent last Etag: ${elementWithData.SendLastEtag}<br/>`;
                         tooltipHtml += `Storage input count: ${elementWithData.Storage.InputCount}<br/>`;
                         tooltipHtml += `Documents output count: ${elementWithData.Network.DocumentOutputCount}<br/>`;
                         tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentOutputCount}<br/>`;
