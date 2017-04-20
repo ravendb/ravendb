@@ -118,6 +118,7 @@ namespace Raven.Server.Web.System
                 {
                     if (databaseRecord.Topology.RelevantFor(node))
                         throw new InvalidOperationException($"Can't add node {node} to {name} topology because it is already part of it");
+                    
                     //TODO:add as promotable 
 
                     databaseRecord.Topology.AddMember(node,name);
@@ -134,7 +135,7 @@ namespace Raven.Server.Web.System
                     var rand = new Random().Next();
                     var newNode = allNodes[rand % allNodes.Count];
                     //TODO:add as promotable 
-                    databaseRecord.Topology.AddMember(node, name);
+                    databaseRecord.Topology.AddMember(newNode, name);
                 }
 
                 var topologyJson = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
@@ -197,10 +198,14 @@ namespace Raven.Server.Web.System
 
                 var offset = new Random().Next();
 
+                foreach (var node in allNodes)
+                {
+                    topology.NameToUrlMap[node] = clusterTopology.GetUrlFromTag(node);
+                }
+
                 for (int i = 0; i < Math.Min(allNodes.Length, factor); i++)
                 {
                     var selectedNode = allNodes[(i + offset) % allNodes.Length];
-                    topology.NameToUrlMap[selectedNode] = clusterTopology.GetUrlFromTag(selectedNode);
                     topology.AddMember(selectedNode, name);
                 }
 
