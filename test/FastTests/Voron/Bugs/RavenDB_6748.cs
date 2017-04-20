@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using Voron;
+﻿using Voron;
+using Voron.Impl;
 using Xunit;
 
 namespace FastTests.Voron.Bugs
@@ -50,16 +47,48 @@ namespace FastTests.Voron.Bugs
                 }
             }
 
-            using (var txr = Env.ReadTransaction())
+            Transaction txr2 = null;
+
+            try
             {
-                using (var txw = Env.WriteTransaction())
+                using (var txr1 = Env.ReadTransaction())
                 {
-                    txw.LowLevelTransaction.ModifyPage(trackedPageNumber);
+                    using (var txw = Env.WriteTransaction())
+                    {
+                        txw.LowLevelTransaction.ModifyPage(0);
 
-                    txw.Commit();
+                        txw.Commit();
+                    }
+
+                    txr2 = Env.ReadTransaction();
+
+                    using (var txw = Env.WriteTransaction())
+                    {
+                        txw.LowLevelTransaction.ModifyPage(trackedPageNumber);
+
+                        txw.Commit();
+                    }
+                    
+                    Env.FlushLogToDataFile();
+
+                    using (var txw = Env.WriteTransaction())
+                    {
+                        for (int i = 0; i < 20; i++)
+                        {
+                            txw.LowLevelTransaction.AllocatePage(1, zeroPage: true);
+                        }
+
+                        txw.Commit();
+                    }
+
+                    var page = txr1.LowLevelTransaction.GetPage(13);
+
+                    Assert.Equal(trackedPageNumber, page.PageNumber);
+
+                    Assert.Equal(1, page.DataPointer[0]);
+                    Assert.Equal(2, page.DataPointer[1]);
+                    Assert.Equal(3, page.DataPointer[2]);
                 }
-
-                Env.FlushLogToDataFile();
 
                 using (var txw = Env.WriteTransaction())
                 {
@@ -71,13 +100,17 @@ namespace FastTests.Voron.Bugs
                     txw.Commit();
                 }
 
-                var page = txr.LowLevelTransaction.GetPage(13);
+                var page2 = txr2.LowLevelTransaction.GetPage(13);
 
-                Assert.Equal(trackedPageNumber, page.PageNumber);
+                Assert.Equal(trackedPageNumber, page2.PageNumber);
 
-                Assert.Equal(1, page.DataPointer[0]);
-                Assert.Equal(2, page.DataPointer[1]);
-                Assert.Equal(3, page.DataPointer[2]);
+                Assert.Equal(1, page2.DataPointer[0]);
+                Assert.Equal(2, page2.DataPointer[1]);
+                Assert.Equal(3, page2.DataPointer[2]);
+            }
+            finally
+            {
+                txr2?.Dispose();
             }
         }
     }

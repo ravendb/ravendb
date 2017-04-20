@@ -721,12 +721,12 @@ namespace Voron.Impl.Journal
 
                 foreach (var journalFile in unusedJournals.OrderBy(x => x.Number))
                 {
-                    journalFile.FreeScratchPagesOlderThan(lastSyncedTransactionId);
+                    journalFile.FreeScratchPagesOlderThan(txw, lastSyncedTransactionId);
                 }
 
                 foreach (var jrnl in _waj._files.OrderBy(x => x.Number))
                 {
-                    jrnl.FreeScratchPagesOlderThan(lastSyncedTransactionId);
+                    jrnl.FreeScratchPagesOlderThan(txw, lastSyncedTransactionId);
                 }
 
                 // by forcing a commit, we free the read transaction that held the lazy tx buffer (if existed)

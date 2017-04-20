@@ -481,7 +481,7 @@ namespace Raven.Server.Documents
                     maxLastWork = env.Environment.LastWorkTime;
             }
 
-            return maxLastWork + TimeSpan.FromMilliseconds(dbSize / 1024L);
+            return maxLastWork.AddMilliseconds(dbSize / 1024L);
         }
 
         public void UnloadResourceOnCatastrophicFailue(string databaseName, Exception e)
