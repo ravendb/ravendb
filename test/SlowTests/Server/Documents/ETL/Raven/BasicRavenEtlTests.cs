@@ -18,21 +18,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                SetupEtl(src, new EtlConfiguration
-                {
-                    RavenTargets =
-                    {
-                        new RavenEtlConfiguration
-                        {
-                            Name = "basic test",
-                            Url = dest.Url,
-                            Database = dest.DefaultDatabase,
-                            Collection = "Users",
-                            Script = @"this.Name = 'James Doe';
-                                       loadToUsers(this);"
-                        }
-                    }
-                });
+                SetupEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
+                                       loadToUsers(this);");
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
@@ -82,19 +69,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                SetupEtl(src, new EtlConfiguration
-                {
-                    RavenTargets =
-                        {
-                            new RavenEtlConfiguration
-                            {
-                                Name = "basic test",
-                                Url = dest.Url,
-                                Database = dest.DefaultDatabase,
-                                Collection = "Users"
-                            }
-                        }
-                });
+                SetupEtl(src, dest, "Users", script: null);
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
@@ -453,20 +428,7 @@ loadToOrders(orderData);
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                SetupEtl(src, new EtlConfiguration
-                {
-                    RavenTargets =
-                    {
-                        new RavenEtlConfiguration
-                        {
-                            Name = "basic test",
-                            Url = dest.Url,
-                            Database = dest.DefaultDatabase,
-                            Collection = "Users",
-                            Script = "this.Name = __document_id; loadToUsers(this);"
-                        }
-                    }
-                });
+                SetupEtl(src, dest, "Users", "this.Name = __document_id; loadToUsers(this);");
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
@@ -495,13 +457,22 @@ loadToOrders(orderData);
         [Fact]
         public void Can_put_space_after_loadTo_method_in_script()
         {
-            var config = new RavenEtlConfiguration
+            var config = new EtlConfiguration<RavenDestination>()
             {
-                Name = "test",
-                Url = "http://localhost:8080",
-                Database = "Northwind",
-                Collection = "Users",
-                Script = @"loadToUsers (this);"
+                Destination = new RavenDestination
+                {
+                    Url = "http://localhost:8080",
+                    Database = "Northwind",
+                },
+                Transforms =
+                {
+                    new Transformation
+                    {
+                        Name = "test",
+                        Collections = {"Users"},
+                        Script = @"loadToUsers (this);"
+                    }
+                }
             };
 
             List<string> errors;
@@ -509,7 +480,7 @@ loadToOrders(orderData);
 
             Assert.Equal(0, errors.Count);
 
-            var collections = config.GetCollectionsFromScript();
+            var collections = config.Transforms[0].GetCollectionsFromScript();
 
             Assert.Equal(1, collections.Length);
             Assert.Equal("Users", collections[0]);
@@ -519,13 +490,22 @@ loadToOrders(orderData);
         [Fact]
         public void Error_if_script_does_not_contain_any_loadTo_method()
         {
-            var config = new RavenEtlConfiguration
+            var config = new EtlConfiguration<RavenDestination>()
             {
-                Name = "test",
-                Url = "http://localhost:8080",
-                Database = "Northwind",
-                Collection = "Users",
-                Script = @"this.Name = 'aaa';"
+                Destination = new RavenDestination
+                {
+                    Url = "http://localhost:8080",
+                    Database = "Northwind",
+                },
+                Transforms =
+                {
+                    new Transformation
+                    {
+                        Name = "test",
+                        Collections = {"Users"},
+                        Script = @"this.Name = 'aaa';"
+                    }
+                }
             };
 
             List<string> errors;

@@ -16,16 +16,18 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         private const int DefaultSize = 50;
 
         private const string AttachmentMarker = "$attachment/";
-        
-        private readonly SqlEtlConfiguration _config;
+
+        private readonly Transformation _transformation;
+        private readonly SqlDestination _config;
         private readonly PatchRequest _patchRequest;
         private readonly Dictionary<string, SqlTableWithRecords> _tables;
 
-        public SqlDocumentTransformer(DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
+        public SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlDestination config)
             : base(database, context)
         {
+            _transformation = transformation;
             _config = config;
-            _patchRequest = new PatchRequest { Script = _config.Script };
+            _patchRequest = new PatchRequest { Script = transformation.Script };
             _tables = new Dictionary<string, SqlTableWithRecords>(_config.SqlTables.Count);
             
             var tables = new string[config.SqlTables.Count];
@@ -81,7 +83,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     Type = prop.Token
                 };
 
-                if (_config.HasLoadAttachment && prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
+                if (_transformation.HasLoadAttachment && prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
                 {
                     var attachmentStream = _database.DocumentsStorage.AttachmentsStorage.GetAttachment(
                                                    Context,

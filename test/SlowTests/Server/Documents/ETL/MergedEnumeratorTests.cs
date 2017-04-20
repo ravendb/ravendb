@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using FastTests;
 using Raven.Server.Documents.ETL;
-using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Stats;
 using Xunit;
 

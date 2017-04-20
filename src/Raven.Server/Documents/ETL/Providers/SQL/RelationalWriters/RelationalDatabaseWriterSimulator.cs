@@ -5,21 +5,20 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {
     public class RelationalDatabaseWriterSimulator : RelationalDatabaseWriterBase
     {
-        private readonly SqlEtlConfiguration _configuration;
+        private readonly SqlDestination _configuration;
         private readonly DbProviderFactory _providerFactory;
         private readonly DbCommandBuilder _commandBuilder;
 
-        public RelationalDatabaseWriterSimulator(PredefinedSqlConnection predefinedSqlConnection, SqlEtlConfiguration configuration) 
-            : base(predefinedSqlConnection)
+        public RelationalDatabaseWriterSimulator(SqlEtlConnection connection, SqlDestination configuration) 
+            : base(connection)
         {
             _configuration = configuration;
-            _providerFactory = DbProviderFactories.GetFactory(predefinedSqlConnection.FactoryName);
+            _providerFactory = DbProviderFactories.GetFactory(connection.FactoryName);
             _commandBuilder = _providerFactory.CreateCommandBuilder();
         }
 
@@ -28,7 +27,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             if (records.InsertOnlyMode == false)
             {
                 // first, delete all the rows that might already exist there
-                foreach (var deleteQuery in GenerateDeleteItemsCommandText(records.TableName, records.DocumentKeyColumn, _configuration.ParameterizeDeletesDisabled,
+                foreach (var deleteQuery in GenerateDeleteItemsCommandText(records.TableName, records.DocumentKeyColumn, _configuration.ParameterizeDeletes,
                     records.Deletes, token))
                 {
                     yield return deleteQuery;
@@ -77,7 +76,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                 }
                 sb.Length = sb.Length - 2;
                 sb.Append(")");
-                if (IsSqlServerFactoryType && _configuration.ForceSqlServerQueryRecompile)
+                if (IsSqlServerFactoryType && _configuration.ForceQueryRecompile)
                 {
                     sb.Append(" OPTION(RECOMPILE)");
                 }
@@ -88,7 +87,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             }
         }
 
-        private IEnumerable<string> GenerateDeleteItemsCommandText(string tableName, string pkName, bool doNotParameterize, List<ToSqlItem> toSqlItems, CancellationToken token)
+        private IEnumerable<string> GenerateDeleteItemsCommandText(string tableName, string pkName, bool parameterize, List<ToSqlItem> toSqlItems, CancellationToken token)
         {
             const int maxParams = 1000;
 
@@ -107,7 +106,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                 {
                     if (i != j)
                         sb.Append(", ");
-                    if (doNotParameterize == false)
+                    if (parameterize)
                     {
                         sb.Append(toSqlItems[j].DocumentKey);
                     }
@@ -119,7 +118,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                 }
                 sb.Append(")");
 
-                if (IsSqlServerFactoryType && _configuration.ForceSqlServerQueryRecompile)
+                if (IsSqlServerFactoryType && _configuration.ForceQueryRecompile)
                 {
                     sb.Append(" OPTION(RECOMPILE)");
                 }

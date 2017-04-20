@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using FastTests;
 using Raven.Client;
@@ -10,7 +11,7 @@ namespace SlowTests.Server.Documents.ETL
 {
     public class EtlTestBase : RavenTestBase
     {
-        protected static void SetupEtl(DocumentStore src, EtlConfiguration configuration)
+        protected static void SetupEtl(DocumentStore src, EtlDestinationsConfig configuration)
         {
             using (var session = src.OpenSession())
             {
@@ -24,18 +25,28 @@ namespace SlowTests.Server.Documents.ETL
         {
             using (var session = src.OpenSession())
             {
-                session.Store(new EtlConfiguration()
+                session.Store(new EtlDestinationsConfig()
                 {
-                    RavenTargets =
+                    RavenDestinations =
                     {
-                        new RavenEtlConfiguration
+                        new EtlConfiguration<RavenDestination>()
                         {
-                            Collection = collection,
-                            Database = dst.DefaultDatabase,
-                            Url = dst.Url,
-                            Script = script,
-                            Name = $"{src} to {dst}"
+                            Destination = new RavenDestination
+                            {
+                                Database = dst.DefaultDatabase,
+                                Url = dst.Url
+                            },
+                            Transforms = 
+                            {
+                                new Transformation
+                                {
+                                    Name = $"{src} to {dst}",
+                                    Collections = { collection },
+                                    Script = script
+                                }
+                            }
                         }
+                        
                     }
                 }, Constants.Documents.ETL.RavenEtlDocument);
 

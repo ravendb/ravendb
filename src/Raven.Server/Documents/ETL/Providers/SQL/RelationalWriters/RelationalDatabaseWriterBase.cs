@@ -1,5 +1,4 @@
 using System.Linq;
-using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {
@@ -15,9 +14,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             "System.Data.SqlServerCe.3.5"
         };
 
-        public RelationalDatabaseWriterBase(PredefinedSqlConnection predefinedSqlConnection)
+        public RelationalDatabaseWriterBase(SqlEtlConnection connection)
         {
-            if (SqlServerFactoryNames.Contains(predefinedSqlConnection.FactoryName))
+            if (SqlServerFactoryNames.Contains(connection.FactoryName))
             {
                 IsSqlServerFactoryType = true;
             }
