@@ -876,7 +876,7 @@ class indexPerformance extends viewModelBase {
                     continue;
 
                 const yOffset = isOpened ? indexPerformance.trackHeight + indexPerformance.stackPadding : 0;
-                this.drawStripes(context, [perf.Details], x1, yStart + (isOpened ? yOffset : 0), yOffset, extentFunc);
+                this.drawStripes(context, [perf.Details], x1, yStart + (isOpened ? yOffset : 0), yOffset, extentFunc, perfStat.IndexName);
 
                 if (!perf.Completed) {
                     this.findInProgressAction(context, perf, extentFunc, x1, yStart + (isOpened ? yOffset : 0), yOffset);
@@ -921,7 +921,7 @@ class indexPerformance extends viewModelBase {
     }
 
     private drawStripes(context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>, xStart: number, yStart: number,
-        yOffset: number, extentFunc: (duration: number) => number) {
+        yOffset: number, extentFunc: (duration: number) => number, indexName?: string) {
 
         let currentX = xStart;
         const length = operations.length;
@@ -946,6 +946,10 @@ class indexPerformance extends viewModelBase {
                         context.font = "12px Lato";
                         context.fillText(truncatedText, currentX + 2, yStart + 13, dx - 4);
                     }
+                }
+            } else { // track is closed
+                if (indexName && dx >= 0.8) {
+                    this.hitTest.registerIndexToggle(currentX, yStart, dx, indexPerformance.trackHeight, indexName);
                 }
             }
             
