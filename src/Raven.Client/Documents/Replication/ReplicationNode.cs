@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Replication
     /// <summary>
     /// Data class for replication destination documents
     /// </summary>
-    public class ReplicationNode : IEquatable<ReplicationNode>
+    public class ReplicationNode : IEquatable<ReplicationNode>, IComparable<ReplicationNode>
     {
 
         public string NodeTag;
@@ -113,6 +113,17 @@ namespace Raven.Client.Documents.Replication
                    ((string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(ClientVisibleUrl)) ||
                    (!string.IsNullOrWhiteSpace(ClientVisibleUrl) && string.Equals(ClientVisibleUrl, other.ClientVisibleUrl, StringComparison.OrdinalIgnoreCase))) &&
                    DictionaryExtensions.ContentEquals(SpecifiedCollections, other.SpecifiedCollections);
+        }
+
+        public int CompareTo(ReplicationNode other)
+        {
+            var myValue = GetHashCode();
+            var otherValue = GetHashCode();
+            if (myValue > otherValue)
+                return 1;
+            if (otherValue < myValue)
+                return -1;
+            return 0;
         }
 
         public override bool Equals(object obj)

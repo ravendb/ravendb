@@ -75,10 +75,10 @@ namespace Raven.Server.Documents.Replication
             get
             {
 
-                if (Destinations == null || !Destinations.Any())
+                if (Destinations == null || Destinations.Count == 0)
                     return long.MaxValue;
 
-                if (Destinations.Count() != _lastSendEtagPerDestination.Count)
+                if (Destinations.Count != _lastSendEtagPerDestination.Count)
                     // if we don't have information from all our destinations, we don't know what tombstones
                     // we can remove. Note that this explicitly _includes_ disabled destinations, which prevents
                     // us from doing any tombstone cleanup.
@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Replication
         public ServerStore Server;
         public DatabaseRecord MyDatabaseRecord;
         internal DatabaseTopology ReplicationTopology => MyDatabaseRecord.Topology;
-        public IEnumerable<ReplicationNode> Destinations => ReplicationTopology?.GetDestinations(Server.NodeTag, Database.Name);
+        public List<ReplicationNode> Destinations { get; private set; }
 
         public ReplicationLoader(DocumentDatabase database, ServerStore server)
         {
@@ -120,26 +120,6 @@ namespace Raven.Server.Documents.Replication
             MinimalHeartbeatInterval =
                (int)Database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
 
-        }
-
-        private DatabaseRecord LoadDatabaseRecord()
-        {
-            TransactionOperationContext context;
-            using (Server.ContextPool.AllocateOperationContext(out context))
-            using (context.OpenReadTransaction())
-            {
-                var databaseRecord = Server.Cluster.ReadDatabase(context, Database.Name);
-                if (databaseRecord == null)
-                {
-                    return null;
-                    //throw new FileNotFoundException("Database record is missing!");
-                }
-                if (MyDatabaseRecord == null)
-                {
-                    MyDatabaseRecord = databaseRecord;
-                }
-                return databaseRecord;
-            }
         }
 
         public IReadOnlyDictionary<ReplicationNode, ConnectionShutdownInfo> OutgoingFailureInfo
@@ -391,34 +371,36 @@ namespace Raven.Server.Documents.Replication
             var newRecord = LoadDatabaseRecord();
 
             if (newRecord == null)
+            {
+                DropAllOutgoingConnections();
+                MyDatabaseRecord = null;
                 return;
+            }
 
-            var connectionChanged = ReplicationTopology.MyConnectionChanged(newRecord.Topology, Server.NodeTag, Database.Name);
+            var connectionChanged = ReplicationTopology.FindConnectionChanges(newRecord.Topology, Server.NodeTag, Database.Name);
             var conflictSolverChanged = MyDatabaseRecord.ConflictSolverConfig.ConflictResolutionChanged(newRecord.ConflictSolverConfig);
 
             MyDatabaseRecord = newRecord;
 
-            if (connectionChanged)
+            if (connectionChanged.nodesToRemove.Count > 0)
             {
+                // remove old connections
                 if (_log.IsInfoEnabled)
-                    _log.Info("Replication connection were changed. Starting and stopping outgoing replication threads.");
+                    _log.Info("Stopping obselete outgoing replication threads.");
 
-                //prevent reconnecting to a destination that we shouldn't in case we have flaky network
-                _reconnectQueue.Clear();
-
-                foreach (var instance in _outgoing)
-                {
-                    instance.Failed -= OnOutgoingSendingFailed;
-                    instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
-                    instance.Dispose();
-                }
-
-                _outgoing.Clear();
-                _outgoingFailureInfo.Clear();
-                _lastSendEtagPerDestination.Clear();
-
-                InitializeOutgoingReplications();
+                DropOutgoingConnections(connectionChanged.nodesToRemove);
             }
+
+            if (connectionChanged.nodesToAdd.Count > 0)
+            {
+                // add new connections
+                if (_log.IsInfoEnabled)
+                    _log.Info("Starting new replication threads.");
+
+                StartOutgoingConnections(connectionChanged.nodesToAdd);
+            }
+
+            UpdateDestinations();
 
             if (conflictSolverChanged)
             {
@@ -430,11 +412,60 @@ namespace Raven.Server.Documents.Replication
 
         }
 
+        private void StartOutgoingConnections(IEnumerable<ReplicationNode> connectionsToAdd)
+        {
+            foreach (var destination in connectionsToAdd)
+            {
+                if (destination.Disabled)
+                    continue;
+
+                _numberOfSiblings++;
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Initialized outgoing replication for [{destination.NodeTag}/{destination.Url}]");
+                AddAndStartOutgoingReplication(destination);
+            }
+        }
+
+        private void DropOutgoingConnections(IEnumerable<ReplicationNode> connectionsToRemove)
+        {
+            var outgoingChanged = _outgoing.Where(o => connectionsToRemove.Contains(o.Destination));
+            foreach (var instance in outgoingChanged)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Stopping replication to {instance.Destination.Database} on {instance.Destination.NodeTag}.");
+
+                instance.Failed -= OnOutgoingSendingFailed;
+                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
+                instance.Dispose();
+                _outgoing.TryRemove(instance);
+                _lastSendEtagPerDestination.TryRemove(instance.Destination, out LastEtagPerDestination etag);
+                _outgoingFailureInfo.TryRemove(instance.Destination, out ConnectionShutdownInfo info);
+                _reconnectQueue.TryRemove(info);
+                _numberOfSiblings--;
+            }
+        }
+
+        private void DropAllOutgoingConnections()
+        {
+            _reconnectQueue.Clear();
+            foreach (var instance in _outgoing)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Stopping replication to {instance.Destination.Database} on {instance.Destination.NodeTag}.");
+
+                instance.Failed -= OnOutgoingSendingFailed;
+                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
+                instance.Dispose();
+            }
+            _lastSendEtagPerDestination.Clear();
+            _outgoingFailureInfo.Clear();
+            _reconnectQueue.Clear();
+            _numberOfSiblings = 0;
+        }
+
         private void InitializeOutgoingReplications()
         {
-            // TODO: Replication outside the cluster
-            //            if (ValidateReplicaitonSource() == false)
-            //                return;
+            UpdateDestinations();
 
             if (Destinations == null || //precaution
                 !Destinations.Any())
@@ -470,6 +501,31 @@ namespace Raven.Server.Documents.Replication
 
             if (_log.IsInfoEnabled)
                 _log.Info("Finished initialization of outgoing replications..");
+        }
+
+
+        private void UpdateDestinations()
+        {
+            Destinations = ReplicationTopology?.GetDestinations(Server.NodeTag, Database.Name).ToList();
+        }
+
+        private DatabaseRecord LoadDatabaseRecord()
+        {
+            TransactionOperationContext context;
+            using (Server.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                var databaseRecord = Server.Cluster.ReadDatabase(context, Database.Name);
+                if (databaseRecord == null)
+                {
+                    return null;
+                }
+                if (MyDatabaseRecord == null)
+                {
+                    MyDatabaseRecord = databaseRecord;
+                }
+                return databaseRecord;
+            }
         }
 
         private void AddAndStartOutgoingReplication(ReplicationNode node)

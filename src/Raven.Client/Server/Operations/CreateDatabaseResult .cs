@@ -27,7 +27,7 @@ namespace Raven.Client.Server.Operations
         public DatabaseTopology Topology { get; set; }
     }
 
-    public class UpdateTopologyResult : CreateDatabaseResult
+    public class ModifyDatabaseWatchersResult : CreateDatabaseResult
     {
     }
 

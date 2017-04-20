@@ -242,16 +242,16 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task<long> UpdateDatabaseTopology(
+        public async Task<long> ModifyDatabaseWatchers(
             JsonOperationContext context, 
             string key, 
             BlittableJsonReaderObject val)
         {
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
-                ["Type"] = nameof(UpdateTopologyCommand),
-                [nameof(UpdateTopologyCommand.DatabaseName)] = key,
-                [nameof(UpdateTopologyCommand.Value)] = val,
+                ["Type"] = nameof(ServerWide.ModifyDatabaseWatchers),
+                [nameof(ServerWide.ModifyDatabaseWatchers.DatabaseName)] = key,
+                [nameof(ServerWide.ModifyDatabaseWatchers.Value)] = val,
             }, "update-cmd"))
             {
                 return await SendToLeaderAsync(putCmd);

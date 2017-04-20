@@ -27,6 +27,7 @@ using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Sdk;
+using ModifyDatabaseWatchers = Raven.Client.Server.Operations.ModifyDatabaseWatchers;
 
 namespace FastTests.Server.Replication
 {
@@ -310,11 +311,11 @@ namespace FastTests.Server.Replication
         }
 
 
-        protected static async Task<UpdateTopologyResult> UpdateReplicationTopology(
+        protected static async Task<ModifyDatabaseWatchersResult> UpdateReplicationTopology(
             DocumentStore store,
             List<DatabaseWatcher> watchers)
         {
-            var cmd = new UpdateDatabaseTopology(store.DefaultDatabase, watchers);
+            var cmd = new ModifyDatabaseWatchers(store.DefaultDatabase, watchers);
             return await store.Admin.Server.SendAsync(cmd);
         }
 

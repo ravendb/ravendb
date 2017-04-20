@@ -90,7 +90,7 @@ namespace Raven.Server.ServerWide
                 case nameof(SetTransformerLockModeCommand):
                 case nameof(DeleteTransformerCommand):
                 case nameof(EditVersioningCommand):
-                case nameof(UpdateTopologyCommand):
+                case nameof(ModifyDatabaseWatchers):
                 case nameof(ModifyConflictSolverCommand):
                     UpdateDatabase(context, type, cmd, index, leader);
                     break;
@@ -135,8 +135,8 @@ namespace Raven.Server.ServerWide
                     return;
                 }
 
-                databaseRecord.Topology.Members.Remove(remove.NodeTag);
-                databaseRecord.Topology.Promotables.Remove(remove.NodeTag);
+                databaseRecord.Topology.Members.RemoveAll(m => m.NodeTag == remove.NodeTag);
+                databaseRecord.Topology.Promotables.RemoveAll(p=> p.NodeTag == remove.NodeTag);
                
                 databaseRecord.DeletionInProgress.Remove(remove.NodeTag);
 
@@ -206,8 +206,8 @@ namespace Raven.Server.ServerWide
                 }
                 else
                 {
-                    var allNodes = databaseRecord.Topology.Members
-                        .Concat(databaseRecord.Topology.Promotables);
+                    var allNodes = databaseRecord.Topology.Members.Select(m => m.NodeTag)
+                        .Concat(databaseRecord.Topology.Promotables.Select(p=>p.NodeTag));
 
                     foreach (var node in allNodes)
                     {
@@ -634,13 +634,11 @@ namespace Raven.Server.ServerWide
         void UpdateDatabaseRecord(DatabaseRecord record);
     }
 
-    public class UpdateTopologyCommand : IUpdateDatabaseCommand
+    public class ModifyDatabaseWatchers : IUpdateDatabaseCommand
     {
         public string DatabaseName;
         public BlittableJsonReaderObject Value;
         
-       
-
         public void UpdateDatabaseRecord(DatabaseRecord record)
         {
             Value.TryGet("NewWatchers", out BlittableJsonReaderArray watchers);
@@ -720,7 +718,7 @@ namespace Raven.Server.ServerWide
             [nameof(PutTransformerCommand)] = GenerateJsonDeserializationRoutine<PutTransformerCommand>(),
             [nameof(DeleteTransformerCommand)] = GenerateJsonDeserializationRoutine<DeleteTransformerCommand>(),
             [nameof(SetTransformerLockModeCommand)] = GenerateJsonDeserializationRoutine<SetTransformerLockModeCommand>(),
-            [nameof(UpdateTopologyCommand)] = GenerateJsonDeserializationRoutine<UpdateTopologyCommand>(),
+            [nameof(ModifyDatabaseWatchers)] = GenerateJsonDeserializationRoutine<ModifyDatabaseWatchers>(),
             [nameof(ModifyConflictSolverCommand)] = GenerateJsonDeserializationRoutine<ModifyConflictSolverCommand>(),
         };
 
