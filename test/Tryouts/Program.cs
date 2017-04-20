@@ -17,11 +17,11 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 //LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
-                Parallel.For(0, 1, _ =>
+                Parallel.For(0, 10, _ =>
                 {
-                    using (var a = new FastTests.Server.Documents.Indexing.MapReduce.RavenDB_4323_Replication())
+                    using (var a = new TopologyChangesTests())
                     {
-                        a.ReduceOutputShouldNotBeReplicated().Wait();
+                        a.CanEnforceTopologyOnOldLeader().Wait();
                     }
                 });
                 //LoggingSource.Instance.SetupLogMode(LogMode.None, "logs");

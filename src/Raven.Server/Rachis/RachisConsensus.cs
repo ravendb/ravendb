@@ -351,11 +351,13 @@ namespace Raven.Server.Rachis
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += tx =>
             {
-                TaskExecuter.CompleteAndReplace(ref _stateChanged);
-                foreach (var d in toDispose)
+                TaskExecuter.CompleteReplaceAndExecute(ref _stateChanged, () =>
                 {
-                    d.Dispose();
-                }
+                    foreach (var d in toDispose)
+                    {
+                        d.Dispose();
+                    }
+                });
             };
         }
 
