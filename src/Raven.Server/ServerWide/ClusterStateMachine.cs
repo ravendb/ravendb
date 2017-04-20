@@ -573,6 +573,7 @@ namespace Raven.Server.ServerWide
             var onDatabaseChanged = DatabaseChanged;
             if (onDatabaseChanged != null)
             {
+                _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex);
                 TaskExecuter.Execute(_ =>
                 {
                     foreach (var db in listOfDatabaseName)
@@ -744,7 +745,6 @@ namespace Raven.Server.ServerWide
             }
         }
 
-
         public void NotifyListenersAbout(long index)
         {
             var lastModifed = _lastModifiedIndex;
@@ -752,7 +752,7 @@ namespace Raven.Server.ServerWide
             {
                 lastModifed = Interlocked.CompareExchange(ref _lastModifiedIndex, index, lastModifed);
             }
-            _notifiedListeners.Set();
+            _notifiedListeners.SetAndResetAtomically();
         }
     }
 }
