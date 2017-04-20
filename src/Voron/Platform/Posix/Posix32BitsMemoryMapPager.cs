@@ -53,7 +53,7 @@ namespace Voron.Platform.Posix
             if (_fd == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err, "when opening " + file);
+                Syscall.ThrowLastError(err, "when opening " + file);
             }
 
             _totalAllocationSize = GetFileSize();
@@ -72,7 +72,7 @@ namespace Voron.Platform.Posix
             if (_isSyncDirAllowed && PosixHelper.SyncDirectory(file) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err, "sync dir for " + file);
+                Syscall.ThrowLastError(err, "sync dir for " + file);
             }
 
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
@@ -144,7 +144,7 @@ namespace Voron.Platform.Posix
                 if (result.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
                 {
                     var err = Marshal.GetLastWin32Error();
-                    PosixHelper.ThrowLastError(err,
+                    Syscall.ThrowLastError(err,
                         $"Unable to map (default view size) {sizeToMap/Constants.Size.Kilobyte:#,#} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}");
                 }
 
@@ -169,7 +169,7 @@ namespace Voron.Platform.Posix
                     if (result.ToInt64() == -1)
                     {
                         var err = Marshal.GetLastWin32Error();
-                        PosixHelper.ThrowLastError(err,
+                        Syscall.ThrowLastError(err,
                             $"Unable to map {sizeToMap/Constants.Size.Kilobyte:#,#} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}");
                     }
 
@@ -251,7 +251,7 @@ namespace Voron.Platform.Posix
                 {
                     var err = Marshal.GetLastWin32Error();
 
-                    PosixHelper.ThrowLastError(err,
+                    Syscall.ThrowLastError(err,
                         $"Unable to map {size/Constants.Size.Kilobyte:#,#} kb starting at {startPage} on {FileName}");
                 }
 
@@ -441,7 +441,7 @@ namespace Voron.Platform.Posix
                     if (result == -1)
                     {
                         var err = Marshal.GetLastWin32Error();
-                        PosixHelper.ThrowLastError(err, "msync on " + loadedPage);
+                        Syscall.ThrowLastError(err, "msync on " + loadedPage);
                     }
                 }
 
@@ -465,7 +465,7 @@ namespace Voron.Platform.Posix
                 if (Syscall.fsync(_fd) == -1)
                 {
                     var err = Marshal.GetLastWin32Error();
-                    PosixHelper.ThrowLastError(err, "fsync " + FileName);
+                    Syscall.ThrowLastError(err, "fsync " + FileName);
                 }
             }
         }
@@ -489,7 +489,7 @@ namespace Voron.Platform.Posix
             if (_isSyncDirAllowed && PosixHelper.SyncDirectory(FileName) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
+                Syscall.ThrowLastError(err);
             }
 
             _totalAllocationSize += allocationSize;

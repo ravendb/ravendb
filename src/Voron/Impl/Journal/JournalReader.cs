@@ -264,7 +264,7 @@ namespace Voron.Impl.Journal
                 // TODO: need to pool those and register them in the NativeMemory tracking
                 var buffer = new EncryptionBuffer
                 {
-                    Pointer = UnmanagedMemory.Allocate4KAllignedMemory(size),
+                    Pointer = UnmanagedMemory.Allocate4KbAllignedMemory(size),
                     Size = size
                 };
                 _encryptionBuffers.Add(buffer);

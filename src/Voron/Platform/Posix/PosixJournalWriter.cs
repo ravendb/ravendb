@@ -54,7 +54,7 @@ namespace Voron.Platform.Posix
             if (_fd == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err, "when opening " + filename);
+                Syscall.ThrowLastError(err, "when opening " + filename);
             }
 
             var length = new FileInfo(filename).Length;
@@ -75,7 +75,7 @@ namespace Voron.Platform.Posix
             if (PosixHelper.CheckSyncDirectoryAllowed(_filename) && PosixHelper.SyncDirectory(filename) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err, "when syncing dir for on " + filename);
+                Syscall.ThrowLastError(err, "when syncing dir for on " + filename);
             }
 
             NumberOfAllocated4Kb = (int) (length / (4*Constants.Size.Kilobyte));
@@ -152,7 +152,7 @@ namespace Voron.Platform.Posix
             if (result == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err, "when writing to " + _filename);
+                Syscall.ThrowLastError(err, "when writing to " + _filename);
             }
             else if (result == 0)
             {
@@ -188,7 +188,7 @@ namespace Voron.Platform.Posix
                 if (_fdReads == -1)
                 {
                     var err = Marshal.GetLastWin32Error();
-                    PosixHelper.ThrowLastError(err, "when opening " + _filename);
+                    Syscall.ThrowLastError(err, "when opening " + _filename);
                 }
             }
 
@@ -210,19 +210,19 @@ namespace Voron.Platform.Posix
             if (result == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err, "when truncating " + _filename);
+                Syscall.ThrowLastError(err, "when truncating " + _filename);
             }
             result = Syscall.fsync(_fd);
             if (result == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err, "when fsycning " + _filename);
+                Syscall.ThrowLastError(err, "when fsycning " + _filename);
             }
 
             if (PosixHelper.CheckSyncDirectoryAllowed(_filename) && PosixHelper.SyncDirectory(_filename) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err, "when syncing dir for " + _filename);
+                Syscall.ThrowLastError(err, "when syncing dir for " + _filename);
             }
         }
     }
