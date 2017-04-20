@@ -37,7 +37,6 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             css: 'icon-map-reduce-visualizer',
             dynamicHash: appUrls.visualizer
         }),
-        /* TODO
         new leafMenuItem({
             route: 'databases/indexes/indexErrors',
             moduleId: 'viewmodels/database/indexes/indexErrors',
@@ -45,7 +44,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-index-errors',
             dynamicHash: appUrls.indexErrors
-        }),*/
+        }),
         /* TODO
         new leafMenuItem({
             title: "Merge suggestions",
