@@ -40,9 +40,7 @@ namespace FastTests.Voron.FixedSize
                 {
                     allocator.AllocateSinglePage(0);
                 }
-
-                tx.Commit();
-
+                
                 var fst = new FixedSizeTree(tx.LowLevelTransaction, parent, fstName, valueSize, newPageAllocator: allocator);
 
                 var bytes = new byte[valueSize];
@@ -55,6 +53,8 @@ namespace FastTests.Voron.FixedSize
                         fst.Add(i, val);
                     }
                 }
+
+                tx.Commit();
             }
         }
     }
