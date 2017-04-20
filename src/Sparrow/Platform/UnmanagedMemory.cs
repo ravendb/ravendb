@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -48,21 +49,32 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static byte* Allocate4KAllignedMemory(long size)
+        public static byte* Allocate4KbAllignedMemory(long size)
         {
             Debug.Assert(size >= 0);
 
             if (PlatformDetails.RunningOnPosix)
             {
-                var p = new IntPtr();
-                var pp = new IntPtr(&p);
-                Syscall.posix_memalign(pp, 4096, size);
+                byte* ptr;
+                var rc = Syscall.posix_memalign(&ptr, (IntPtr)4096, (IntPtr)size);
+                if (rc != 0)
+                    Syscall.ThrowLastError(rc, "Could not allocate memory");
                 
-                return (byte*)p.ToPointer();
+                return ptr;
             }
 
-            return Win32MemoryProtectMethods.VirtualAlloc(null, (UIntPtr)size, Win32MemoryProtectMethods.AllocationType.COMMIT,
+            var allocate4KbAllignedMemory = Win32MemoryProtectMethods.VirtualAlloc(null, (UIntPtr)size, Win32MemoryProtectMethods.AllocationType.COMMIT,
                 Win32MemoryProtectMethods.MemoryProtection.READWRITE);
+
+            if (allocate4KbAllignedMemory == null)
+                ThrowFailedToAllocate();
+
+            return allocate4KbAllignedMemory;
+        }
+
+        private static void ThrowFailedToAllocate()
+        {
+            throw new Win32Exception("Could not allocate memory");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -75,7 +87,13 @@ namespace Sparrow
                 return;
             }
 
-            Win32MemoryProtectMethods.VirtualFree(ptr, UIntPtr.Zero, Win32MemoryProtectMethods.FreeType.MEM_RELEASE);
+            if (Win32MemoryProtectMethods.VirtualFree(ptr, UIntPtr.Zero, Win32MemoryProtectMethods.FreeType.MEM_RELEASE) == false)
+                ThrowFailedToFree();
+        }
+
+        private static void ThrowFailedToFree()
+        {
+            throw new Win32Exception("Failed to free memory");
         }
     }
 }

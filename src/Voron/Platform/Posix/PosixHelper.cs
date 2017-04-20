@@ -36,20 +36,6 @@ namespace Voron.Platform.Posix
                 ThrowLastError(result, $"posix_fallocate(\"{file}\", {size})");
         }
 
-        public static void ThrowLastError(int lastError, string msg = null)
-        {
-            if (Enum.IsDefined(typeof(Errno), lastError) == false)
-                throw new InvalidOperationException("Unknown errror ='" + lastError + "'. Message: " + msg);
-            var error = (Errno) lastError;
-            switch (error)
-            {
-                case Errno.ENOMEM:
-                    throw new OutOfMemoryException("ENOMEM on " + msg);
-                default:
-                    throw new InvalidOperationException(error + " " + msg);
-            }
-        }
-
         public static unsafe void WriteFileHeader(FileHeader* header, string path)
         {
             var fd = Syscall.open(path, OpenFlags.O_WRONLY | OpenFlags.O_CREAT,

@@ -81,7 +81,7 @@ namespace Sparrow.Platform.Posix
 		// posix_memalign(3)
         //     int posix_memalign(void** memptr, size_t alignment, size_t size);
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int posix_memalign(IntPtr pPtr, long allignment, long count);
+        public static extern int posix_memalign(byte** pPtr, IntPtr allignment, IntPtr count);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern void free(IntPtr ptr);
