@@ -45,12 +45,12 @@ namespace FastTests.Server.Documents.Indexing
                         Assert.True(filter.Contains(key1));
                         Assert.True(filter.Contains(key2));
                         Assert.Equal(2, filter.Count);
-
-                        tx.Commit();
-
+                        
                         context.ReturnMemory(key1.AllocatedMemoryData);
                         context.ReturnMemory(key2.AllocatedMemoryData);
                     }
+
+                    tx.Commit();
                 }
             }
         }

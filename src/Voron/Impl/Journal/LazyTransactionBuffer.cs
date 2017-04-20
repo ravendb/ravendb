@@ -21,7 +21,7 @@ namespace Voron.Impl.Journal
         private readonly Logger _log;
         public LazyTransactionBuffer(StorageEnvironmentOptions options)
         {
-            _lazyTransactionPager = options.CreateScratchPager("lazy-transactions.buffer", options.InitialFileSize ?? options.InitialLogFileSize);
+            _lazyTransactionPager = options.CreateTemporaryBufferPager("lazy-transactions.buffer", options.InitialFileSize ?? options.InitialLogFileSize);
             _transactionPersistentContext = new TransactionPersistentContext(true);
             _log = LoggingSource.Instance.GetLogger<LazyTransactionBuffer>(options.BasePath);
         }

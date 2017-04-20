@@ -530,9 +530,14 @@ namespace Raven.Server.Documents
 
         private PendingOperations GetPendingOperationsStatus(DocumentsOperationContext context, bool forceCompletion = false)
         {
-            if (sizeof(int) == IntPtr.Size || _parent.Configuration.Storage.ForceUsing32BitsPager) // this optimization is disabled for 32 bits
+            // this optimization is disabled for 32 bits
+            if (sizeof(int) == IntPtr.Size || _parent.Configuration.Storage.ForceUsing32BitsPager) 
                 return PendingOperations.CompletedAll;
 
+            // This optimization is disabled when encryption is on	
+            if (context.Environment.Options.EncryptionEnabled) 
+                return PendingOperations.CompletedAll;
+				
             if (context.Transaction.ModifiedSystemDocuments)
                 // a transaction that modified system documents may cause us to 
                 // do certain actions (for example, initialize trees for versioning)

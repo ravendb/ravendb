@@ -78,7 +78,14 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int munmap(IntPtr start, UIntPtr length);
 
+		// posix_memalign(3)
+        //     int posix_memalign(void** memptr, size_t alignment, size_t size);
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int posix_memalign(IntPtr pPtr, long allignment, long count);
 
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern void free(IntPtr ptr);
+		
         // getpid(2)
         //    pid_t getpid(void);
         [DllImport(LIBC_6, SetLastError = true)]

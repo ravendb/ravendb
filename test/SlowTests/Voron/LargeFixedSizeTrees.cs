@@ -182,8 +182,8 @@ namespace SlowTests.Voron
                     fst.Add(i, slice);
                 }
 
-                tx.Commit();
                 Assert.Equal(count, fst.NumberOfEntries);
+                tx.Commit();
             }
 
             using (var tx = Env.ReadTransaction())

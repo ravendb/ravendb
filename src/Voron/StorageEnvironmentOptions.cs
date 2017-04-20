@@ -189,6 +189,14 @@ namespace Voron
             bool result;
             if (bool.TryParse(shouldForceEnvVar, out result))
                 ForceUsing32BitsPager = result;
+
+            var hardCodedMasterKeyUsedOnlyForDevelopmentUntilWeDoKeyExchangeOfSomeSort = new byte[32]
+            {
+                0x26, 0xce, 0xc8, 0x8c, 0x20, 0xed, 0x18, 0x1d, 0xaa, 0xb2, 0xc7, 0x35, 0x26, 0x75, 0x99, 0x8c,
+                0xe0, 0x8b, 0x24, 0xf0, 0x31, 0xbd, 0x63, 0xc2, 0x46, 0x97, 0xd1, 0x29, 0xdd, 0x97, 0x99, 0xf8
+            };
+            //MasterKey = hardCodedMasterKeyUsedOnlyForDevelopmentUntilWeDoKeyExchangeOfSomeSort;
+			MasterKey = null; // Encryption is disabled until we implement key management
         }
 
         public void SetCatastrophicFailure(ExceptionDispatchInfo exception)
@@ -330,7 +338,7 @@ namespace Voron
 
             public override AbstractPager OpenPager(string filename)
             {
-                return GetMemoryMapPager(this, null, filename);
+                return GetMemoryMapPagerInternal(this, null, filename);
             }
 
 
@@ -521,34 +529,6 @@ namespace Voron
                     File.Delete(file);
             }
 
-            /// <summary>
-            /// This is used to generate a pager that is long lived, in 64 bits, it is the same
-            /// as CreateScratchPager, but in 32 bits, it reserve all the required space ahead
-            /// of time, and doesn't release it per transaction. This is used for the compression
-            /// pager, which requires a large amount of continious space and can grow quickly under
-            /// certain conditions, leading to fragmentation and eventually inability to process
-            /// transactions
-            /// </summary>
-            public override AbstractPager CreateLongLivedScratchPager(string name, long initialSize)
-            {
-                var scratchFile = Path.Combine(TempPath, name);
-                if (File.Exists(scratchFile))
-                    File.Delete(scratchFile);
-
-                if (RunningOnPosix)
-                {
-                    return new PosixMemoryMapPager(this, scratchFile, initialSize)
-                    {
-                        DeleteOnClose = true
-                    };
-                }
-
-                var attributes = Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary |
-                                 Win32NativeFileAttributes.RandomAccess;
-
-                return new WindowsMemoryMapPager(this, scratchFile, initialSize, attributes);
-            }
-
             public override AbstractPager CreateScratchPager(string name, long initialSize)
             {
                 var scratchFile = Path.Combine(TempPath, name);
@@ -558,9 +538,29 @@ namespace Voron
                 return GetMemoryMapPager(this, initialSize, scratchFile, deleteOnClose: true);
             }
 
+            // This is used for special pagers that are used as temp buffers and don't 
+            // require encryption: compression, recovery, lazyTxBuffer.
+            public override AbstractPager CreateTemporaryBufferPager(string name, long initialSize)
+            {
+                var scratchFile = Path.Combine(TempPath, name);
+                if (File.Exists(scratchFile))
+                    File.Delete(scratchFile);
+
+                return GetMemoryMapPagerInternal(this, initialSize, scratchFile, deleteOnClose: true);
+            }
+
             private AbstractPager GetMemoryMapPager(StorageEnvironmentOptions options, long? initialSize, string file,
                 bool deleteOnClose = false,
                 bool usePageProtection = false)
+            {
+                var pager = GetMemoryMapPagerInternal(options, initialSize, file, deleteOnClose, usePageProtection);
+
+                return EncryptionEnabled == false 
+                    ? pager 
+                    : new CryptoPager(pager);
+            }
+
+            private AbstractPager GetMemoryMapPagerInternal(StorageEnvironmentOptions options, long? initialSize, string file, bool deleteOnClose = false, bool usePageProtection = false)
             {
                 if (RunningOnPosix)
                 {
@@ -764,6 +764,15 @@ namespace Voron
 
             private AbstractPager GetTempMemoryMapPager(PureMemoryStorageEnvironmentOptions options, string path, long? intialSize, Win32NativeFileAttributes win32NativeFileAttributes)
             {
+                var pager = GetTempMemoryMapPagerInternal(options, path, intialSize,
+                    Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                return EncryptionEnabled == false
+                    ? pager
+                    : new CryptoPager(pager);
+            }
+
+            private AbstractPager GetTempMemoryMapPagerInternal(PureMemoryStorageEnvironmentOptions options, string path, long? intialSize, Win32NativeFileAttributes win32NativeFileAttributes)
+            {
                 if (RunningOnPosix)
                 {
                     if (RunningOn32Bits)
@@ -779,20 +788,30 @@ namespace Voron
                         Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
             }
 
-            public override AbstractPager CreateLongLivedScratchPager(string name, long initialSize)
-            {
-                return CreateScratchPager(name, initialSize);
-            }
-
-            public override AbstractPager CreateScratchPager(string name, long intialSize)
+            public override AbstractPager CreateScratchPager(string name, long initialSize)
             {
                 var guid = Guid.NewGuid();
                 var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}-{guid}";
 
-                return GetTempMemoryMapPager(this, Path.Combine(TempPath, filename), intialSize, Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                return GetTempMemoryMapPager(this, Path.Combine(TempPath, filename), initialSize, Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+            }
+
+            public override AbstractPager CreateTemporaryBufferPager(string name, long initialSize)
+            {
+                var guid = Guid.NewGuid();
+                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}-{guid}";
+
+                return GetTempMemoryMapPagerInternal(this, Path.Combine(TempPath, filename), initialSize, Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
             }
 
             public override AbstractPager OpenPager(string filename)
+            {
+                var pager = OpenPagerInternal(filename);
+
+                return EncryptionEnabled == false ? pager : new CryptoPager(pager);
+            }
+
+            private AbstractPager OpenPagerInternal(string filename)
             {
                 if (RunningOnPosix)
                 {
@@ -847,11 +866,14 @@ namespace Voron
 
         public abstract AbstractPager CreateScratchPager(string name, long initialSize);
 
-        public abstract AbstractPager CreateLongLivedScratchPager(string name, long initialSize);
+        // Used for special temporary pagers (compression, recovery, lazyTX...) which should not be wrapped by the crypto pager.
+        public abstract AbstractPager CreateTemporaryBufferPager(string name, long initialSize);
 
         public abstract AbstractPager OpenJournalPager(long journalNumber);
 
         public abstract AbstractPager OpenPager(string filename);
+
+        public bool EncryptionEnabled => MasterKey != null;
 
         public static bool RunningOnPosix
             => RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
@@ -865,7 +887,7 @@ namespace Voron
         public Win32NativeFileAttributes WinOpenFlags = SafeWin32OpenFlags;
         public DateTime? NonSafeTransactionExpiration { get; set; }
         public TimeSpan DisposeWaitTime { get; set; }
-
+        public readonly byte[] MasterKey;
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
         public OpenFlags DefaultPosixFlags = PlatformDetails.Is32Bits ? PerPlatformValues.OpenFlags.O_LARGEFILE : 0;

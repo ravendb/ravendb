@@ -137,7 +137,6 @@ namespace FastTests.Voron.Bugs
 
                 tree.Delete(aKey); // this line throws "The page is full and cannot add an entry, this is probably a bug"
 
-                tx.Commit();
 
                 using (var iterator = tree.Iterate(false))
                 {
@@ -158,6 +157,8 @@ namespace FastTests.Voron.Bugs
                     Assert.Equal(fKey, iterator.CurrentKey.ToString());
                     Assert.False(iterator.MoveNext());
                 }
+
+                tx.Commit();
             }
         }
 
@@ -202,9 +203,6 @@ namespace FastTests.Voron.Bugs
 
                 tree.Delete(nKey);  // this line throws "The page is full and cannot add an entry, this is probably a bug"
 
-
-                tx.Commit();
-
                 using (var iterator = tree.Iterate(false))
                 {
                     Assert.True(iterator.Seek(Slices.BeforeAllKeys));
@@ -248,6 +246,8 @@ namespace FastTests.Voron.Bugs
                     Assert.Equal(mKey, iterator.CurrentKey.ToString());
                     Assert.False(iterator.MoveNext());
                 }
+
+                tx.Commit();
             }
         }
     }

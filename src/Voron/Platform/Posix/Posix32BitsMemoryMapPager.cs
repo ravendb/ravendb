@@ -475,7 +475,7 @@ namespace Voron.Platform.Posix
             return "mmap: " + _fd + " " + FileName;
         }
 
-        protected override PagerState AllocateMorePages(long newLength)
+        protected internal override PagerState AllocateMorePages(long newLength)
         {
             var newLengthAfterAdjustment = NearestSizeToAllocationGranularity(newLength);
 
