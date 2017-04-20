@@ -3,7 +3,7 @@ import predefinedConnection = require("models/database/sqlReplication/predefined
 
 class sqlReplicationConnections {
 
-    static sqlProvidersConnectionStrings: { ProviderName: string; ConnectionString: string; }[] = [
+    /*static sqlProvidersConnectionStrings: { ProviderName: string; ConnectionString: string; }[] = [
         { ProviderName: "System.Data.SqlClient", ConnectionString: "Server=[Server Address];Database=[Database Name];User Id=[User ID];Password=[Password];" },
         { ProviderName: "System.Data.SqlServerCe.4.0", ConnectionString: "Data Source=[path of .sdf file];Persist Security Info=False;" },
         { ProviderName: "System.Data.SqlServerCe.3.5", ConnectionString: "Provider=Microsoft.SQLSERVER.CE.OLEDB.3.5;Data Source=[path of .sdf file];" },
@@ -49,7 +49,7 @@ class sqlReplicationConnections {
             Connections: connectionsMap,
             Id: null
         };
-    }
+    }*/
 
 }
 

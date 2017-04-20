@@ -14,7 +14,7 @@ import eventsCollector = require("common/eventsCollector");
 
 class sqlReplications extends viewModelBase {
 
-    replications = ko.observableArray<sqlReplication>();
+    /*replications = ko.observableArray<sqlReplication>();
     loadedSqlReplications: sqlReplication[];
     static sqlReplicationsSelector = "#sqlReplications";
     areAllSqlReplicationsDisabled: KnockoutComputed<boolean>;
@@ -165,7 +165,7 @@ class sqlReplications extends viewModelBase {
                 this.replications(results);
             });
     }
-   
+   */
 }
 
 export = sqlReplications; 

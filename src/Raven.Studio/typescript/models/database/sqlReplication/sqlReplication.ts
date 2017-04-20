@@ -5,7 +5,7 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 
 class sqlReplication extends document {
 
-    CONNECTION_STRING = "Connection String";
+    /*CONNECTION_STRING = "Connection String";
     PREDEFINED_CONNECTION_STRING_NAME = "Predefined Connection String Name";
     CONNECTION_STRING_NAME = "Connection String Name";
     CONNECTION_STRING_SETTING_NAME = "Connection String Setting Name";
@@ -130,7 +130,7 @@ class sqlReplication extends document {
             this.connectionStringType(this.PREDEFINED_CONNECTION_STRING_NAME);
             this.connectionStringValue(dto.PredefinedConnectionStringSettingName);
         }
-    }*/
+    }*
 
     setConnectionStringType(strType: string) {
         this.connectionStringType(strType);
@@ -212,7 +212,7 @@ class sqlReplication extends document {
     /* TODO
     setIdFromName() {
         this.__metadata.id = "Raven/SqlReplication/Configuration/" + this.name();
-    }*/
+    }*
 
     saveNewCollectionName(newCollection: string) {
         this.collection(newCollection);
@@ -224,7 +224,7 @@ class sqlReplication extends document {
             return true;
         }
         return false;
-    }
+    }*/
 }
 
 export = sqlReplication;
