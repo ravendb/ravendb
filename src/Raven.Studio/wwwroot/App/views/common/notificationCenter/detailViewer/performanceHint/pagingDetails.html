@@ -1,0 +1,27 @@
+<div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-content">
+                    <h3 class="modal-title" id="myModalLabel" data-bind="text: hint.title"></h3>
+                </div>
+                <div>
+                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                        <i class="icon-cancel"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div data-bind="text: hint.message"></div>
+            
+            <div style="position: relative; height: 300px">
+                <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController"></virtual-grid>
+            </div>
+            
+          
+        </div>
+        <div class="modal-footer" data-bind="compose: 'common/notificationCenter/detailViewer/performanceHint/footerPartial.html'">
+        </div>
+    </div>
+</div>
