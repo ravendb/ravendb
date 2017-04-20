@@ -2,7 +2,7 @@
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class GetIndexesErrorCommand extends commandBase {
+class getIndexesErrorCommand extends commandBase {
 
     constructor(private db: database) {
         super();
@@ -14,4 +14,4 @@ class GetIndexesErrorCommand extends commandBase {
     }
 }
 
-export = GetIndexesErrorCommand;
+export = getIndexesErrorCommand;
