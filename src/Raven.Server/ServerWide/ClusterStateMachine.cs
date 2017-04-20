@@ -427,7 +427,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<string> GetdatabaseNames(TransactionOperationContext context, int start = 0, int take = Int32.MaxValue)
+        public IEnumerable<string> GetDatabaseNames(TransactionOperationContext context, int start = 0, int take = Int32.MaxValue)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -568,7 +568,7 @@ namespace Raven.Server.ServerWide
 
         public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex)
         {
-            var listOfDatabaseName = GetdatabaseNames(context).ToList();
+            var listOfDatabaseName = GetDatabaseNames(context).ToList();
             //There is potentially a lot of work to be done here so we are responding to the change on a separate task.
             var onDatabaseChanged = DatabaseChanged;
             if (onDatabaseChanged != null)

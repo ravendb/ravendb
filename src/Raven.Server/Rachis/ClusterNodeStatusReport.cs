@@ -12,5 +12,12 @@ namespace Raven.Server.Rachis
         public Dictionary<string, long> LastIndexedDocumentEtagPerDatabase { get; set; }
 
         public Dictionary<string, ChangeVectorEntry[]> LastAttachmentChangeVectorPerDatabase { get; set; }
+
+        public void Clear()
+        {
+            LastAttachmentChangeVectorPerDatabase.Clear();
+            LastIndexedDocumentEtagPerDatabase.Clear();
+            LastAttachmentChangeVectorPerDatabase.Clear();
+        }
     }
 }
