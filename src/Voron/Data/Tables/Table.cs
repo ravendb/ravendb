@@ -714,15 +714,6 @@ namespace Voron.Data.Tables
             reader = new TableValueReader(id, ptr, size);
         }
 
-        public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, string value, int skip, bool startsWith = false)
-        {
-            Slice str;
-            using (Slice.From(_tx.Allocator, value, ByteStringType.Immutable, out str))
-            {
-                return SeekForwardFrom(index, str, skip, startsWith);
-            }
-        }
-
         public long GetNumberEntriesFor(TableSchema.FixedSizeSchemaIndexDef index, long afterValue, out long totalCount)
         {
             var fst = GetFixedSizeTree(index);
