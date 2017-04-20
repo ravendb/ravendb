@@ -6,10 +6,11 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import appUrl = require("common/appUrl");
+import timeHelpers = require("common/timeHelpers");
 
 class indexErrors extends viewModelBase {
 
-    allIndexErrors: IndexErrorPerDocument[] = null; 
+    private allIndexErrors: IndexErrorPerDocument[] = null; 
     private gridController = ko.observable<virtualGridController<IndexErrorPerDocument>>();
     private columnPreview = new columnPreviewPlugin<IndexErrorPerDocument>(); 
     searchText = ko.observable<string>();
@@ -25,54 +26,60 @@ class indexErrors extends viewModelBase {
     }
 
     compositionComplete() {
+        super.compositionComplete();
         const grid = this.gridController();
         grid.headerVisible(true);
         grid.init((s, t) => this.fetchIndexErrors(s, t), () => 
             [
                 new hyperlinkColumn<IndexErrorPerDocument>(x => x.IndexName, x => appUrl.forQuery(this.activeDatabase(), x.IndexName), "Index name", "25%"),
                 new hyperlinkColumn<IndexErrorPerDocument>(x => x.Document, x => appUrl.forEditDoc(x.Document, this.activeDatabase()), "Document id", "25%"),
-                new textColumn<IndexErrorPerDocument>(x => x.Timestamp, "Timestamp", "25%"),
+                new textColumn<IndexErrorPerDocument>(x => this.formatTimestampAsAgo(x.Timestamp), "Timestamp", "25%"),
                 new textColumn<IndexErrorPerDocument>(x => x.Error, "Error", "25%")
             ]
         );
 
         this.columnPreview.install("virtual-grid", ".tooltip", (indexError: IndexErrorPerDocument, column: textColumn<IndexErrorPerDocument>, e: JQueryEventObject, onValue: (context: any) => void) => {
-            const value = column.getCellValue(indexError);
-            if (!_.isUndefined(value)) {
-                onValue(value);
+            if (column.header === "Timestamp") {
+                // for timestamp show 'raw' date in tooltip
+                onValue(indexError.Timestamp);
+            } else {
+                const value = column.getCellValue(indexError);
+                if (!_.isUndefined(value)) {
+                    onValue(value);
+                }
             }
         });
-       
+
+        this.registerDisposable(timeHelpers.utcNowWithMinutePrecision.subscribe(() => this.onTick()));
     }
   
     private initObservables() {
         this.searchText.throttle(200).subscribe(() => this.filterIndexes());
     }
 
-    fetchIndexErrors(start: number, skip: number): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
+    private onTick() {
+        // reset grid on tick - it neighter move scroll position not download data from remote, but it will render contents again, updating time 
+        this.gridController().reset(false);
+    }
+
+    private fetchIndexErrors(start: number, skip: number): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
         if (this.allIndexErrors === null) {
-            return this.fetchRemoteIndexesError().then(list => this.filterItems(list));
+            return this.fetchRemoteIndexesError().then(list => {
+                this.allIndexErrors = list;
+                return this.filterItems(this.allIndexErrors);
+            });
         }
 
         return this.filterItems(this.allIndexErrors);
     }
 
-    fetchRemoteIndexesError(): JQueryPromise<IndexErrorPerDocument[]> {
-        const deferred = $.Deferred<IndexErrorPerDocument[]>();
-        new getIndexesErrorCommand(this.activeDatabase())
+    private fetchRemoteIndexesError(): JQueryPromise<IndexErrorPerDocument[]> {
+        return new getIndexesErrorCommand(this.activeDatabase())
             .execute()
-            .fail((result: JQueryXHR) => this.reportError("getIndexesErrorCommand failed to get index errors",
-                result.responseText,
-                result.statusText))
-            .done((result: Raven.Client.Documents.Indexes.IndexErrors[]) => {
-                this.allIndexErrors = this.mapItems(result);
-                return deferred.resolve(this.allIndexErrors);
-            });
-
-        return deferred.promise();
+            .then((result: Raven.Client.Documents.Indexes.IndexErrors[]) => this.mapItems(result));
     }
 
-    filterItems(list: IndexErrorPerDocument[]): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
+    private filterItems(list: IndexErrorPerDocument[]): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
         const deferred = $.Deferred<pagedResult<IndexErrorPerDocument>>();
         let filteredItems = list;
         if (this.searchText()) {
@@ -88,15 +95,11 @@ class indexErrors extends viewModelBase {
         });
     }
 
-    private reportError(title: string, details?: string, httpStatusText?: string, displayInRecentErrors: boolean = true) {
-        console.error(title, details, httpStatusText);
-    }
-
     private mapItems(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): IndexErrorPerDocument[] {
-        return _.flatMap(indexErrors, (value) => {
+        return _.flatMap(indexErrors, value => {
             return value.Errors.map((error: Raven.Client.Documents.Indexes.IndexingError) =>
                 ({
-                    Timestamp: this.createHumanReadableTime(error.Timestamp)(),
+                    Timestamp: error.Timestamp,
                     Document: error.Document,
                     Error: error.Error,
                     IndexName: value.Name
@@ -108,18 +111,10 @@ class indexErrors extends viewModelBase {
         this.gridController().reset();
     }
 
-    createHumanReadableTime(time: string): KnockoutComputed<string> {
-        if (time) {
-            // Return a computed that returns a humanized string based off the current time, e.g. "7 minutes ago".
-            // It's a computed so that it updates whenever we update this.now field.
-            return ko.pureComputed(() => {
-                const dateMoment = moment(time);
-                const agoInMs = dateMoment.diff(moment.now());
-                return moment.duration(agoInMs).humanize(true) + dateMoment.format(" (MM/DD/YY, h:mma)");
-            });
-        }
-
-        return ko.pureComputed(() => time);
+    private formatTimestampAsAgo(time: string): string {
+        const dateMoment = moment.utc(time).local();
+        const ago = dateMoment.diff(moment());
+        return moment.duration(ago).humanize(true) + dateMoment.format(" (MM/DD/YY, h:mma)");
     }
 }
 
