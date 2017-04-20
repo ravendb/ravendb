@@ -28,7 +28,7 @@
         position: relative;
 
         @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
-            margin-left: 20px;
+            margin-left: 27px;
         }
 
         @media (min-width:@screen-xl) {
@@ -44,48 +44,65 @@
         }
     }
 
-    .database {
+    .database-item {
         padding-left: 30px;
         position: relative;
+
+        @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
+
+            .info-container {
+                order: 1;
+                flex-grow: 1;
+            }
+
+            .properties-container {
+                order: 3;
+                width: 100%;
+            }
+
+            .actions-container {
+                order: 2;
+            }
+        }
 
         &:hover {
             background-color: lighten(@gray-darker, 3%);
             transition: background-color 0.15s ease;
         }
 
-        .info-container {
-            font-size: 19px;
-            display: flex;
-            align-items: flex-start;
-        }
-
-        .row {
+        .database-info {
             display: flex;
             flex-wrap: wrap;
-
-            @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
-                .info-container {
-                    order: 1;
-                }
-
-                .properties-container {
-                    order: 3;
-                }
-
-                .actions-container {
-                    order: 2;
-                }
+            
+            @media (max-width: @screen-xs-max) {
+                flex-direction: column;
             }
         }
-
+        
         .database-name {
-            color: @brand-primary;
             font-size: 118%;
             margin-bottom: 0;
+            font-weight: normal;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             flex-grow: 1;
+        }
+
+        .info-container {
+            font-size: 19px;
+            display: flex;
+            align-items: center;
+            width: 380px;
+            flex-shrink: 0;
+
+            h3 {
+                margin-top: 0px;
+            }
+        }
+
+        .actions-container {
+            flex-shrink: 0;
         }
 
         .checkbox {
@@ -105,6 +122,8 @@
         align-content: flex-start;
         align-items: center;
         overflow: hidden;
+        flex-grow: 1;
+        min-height: 52px;
 
         .properties-item {
 
@@ -128,16 +147,19 @@
         .properties-item {
             min-width: 0;
         }
-        
-        .database  {
 
-            .checkbox {
-                top: -7px;
-            }
+        .info-container {
+            width: 330px;
+        }
 
+        .properties-container {
+            min-height: 0;
+        }
+
+        .database-item {
             .database-name {
                 top: 0;
-                font-size: 85%;
+                font-size: 18px;
                 line-height: 120%;
             }
 
@@ -146,9 +168,6 @@
             }
 
             .properties-container {
-                top: 5px;
-                height: 25px;
-                display: inline;
 
                 .properties-item {
                     width: auto;
@@ -163,12 +182,11 @@
                 }
             }
 
-            .database {
+            .database-item {
                 .btn-group .btn {
                     .btn-sm;
                 }
             }
         }
-
     }
 }
