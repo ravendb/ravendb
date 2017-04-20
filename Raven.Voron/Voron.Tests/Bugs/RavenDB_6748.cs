@@ -53,17 +53,50 @@ namespace Voron.Tests.Bugs
                     txw.Commit();
                 }
             }
+            Transaction txr2 = null;
 
-            using (var txr = Env.NewTransaction(TransactionFlags.Read))
+            try
             {
-                using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+                using (var txr = Env.NewTransaction(TransactionFlags.Read))
                 {
-                    txw.ModifyPage(trackedPageNumber, new Tree(txw, new TreeMutableState()), null);
+                    using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        txw.ModifyPage(0, new Tree(txw, new TreeMutableState()), null);
 
-                    txw.Commit();
+                        txw.Commit();
+                    }
+
+                    txr2 = Env.NewTransaction(TransactionFlags.Read);
+
+                    using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        txw.ModifyPage(trackedPageNumber, new Tree(txw, new TreeMutableState()), null);
+
+                        txw.Commit();
+                    }
+
+                    Env.FlushLogToDataFile();
+
+                    using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
+                    {
+                        for (int i = 0; i < 20; i++)
+                        {
+                            txw.AllocatePage(1, PageFlags.None);
+                        }
+
+                        txw.Commit();
+                    }
+
+                    var page = txr.GetReadOnlyPage(13);
+
+                    Assert.Equal(trackedPageNumber, page.PageNumber);
+
+                    var dataPtr = page.Base + Constants.PageHeaderSize;
+
+                    Assert.Equal(1, dataPtr[0]);
+                    Assert.Equal(2, dataPtr[1]);
+                    Assert.Equal(3, dataPtr[2]);
                 }
-
-                Env.FlushLogToDataFile();
 
                 using (var txw = Env.NewTransaction(TransactionFlags.ReadWrite))
                 {
@@ -75,15 +108,20 @@ namespace Voron.Tests.Bugs
                     txw.Commit();
                 }
 
-                var page = txr.GetReadOnlyPage(13);
+                var page2 = txr2.GetReadOnlyPage(13);
 
-                Assert.Equal(trackedPageNumber, page.PageNumber);
+                Assert.Equal(trackedPageNumber, page2.PageNumber);
 
-                var dataPtr = page.Base + Constants.PageHeaderSize;
+                var dataPtr2 = page2.Base + Constants.PageHeaderSize;
 
-                Assert.Equal(1, dataPtr[0]);
-                Assert.Equal(2, dataPtr[1]);
-                Assert.Equal(3, dataPtr[2]);
+                Assert.Equal(1, dataPtr2[0]);
+                Assert.Equal(2, dataPtr2[1]);
+                Assert.Equal(3, dataPtr2[2]);
+            }
+            finally
+            {
+                if (txr2 != null)
+                    txr2.Dispose();
             }
         }
     }
