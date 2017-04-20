@@ -56,7 +56,7 @@ namespace Voron.Impl.Paging
             }
         }
 
-        public PagerState PagerState
+        public virtual PagerState PagerState
         {
             get
             {
@@ -75,7 +75,7 @@ namespace Voron.Impl.Paging
 
         public const int PageMaxSpace = Constants.Storage.PageSize - Constants.Tree.PageHeaderSize;
 
-        public string FileName;
+        public virtual string FileName { get; protected set; }
 
         protected AbstractPager(StorageEnvironmentOptions options, bool usePageProtection = false)
         {
@@ -96,7 +96,7 @@ namespace Voron.Impl.Paging
             SetPagerState(new PagerState(this));
         }
 
-        public StorageEnvironmentOptions Options => _options;
+        public virtual StorageEnvironmentOptions Options => _options;
 
         public int PageMinSpace
         {
@@ -123,11 +123,10 @@ namespace Voron.Impl.Paging
         }
 
         public const int RequiredSpaceForNewNode = Constants.Tree.NodeHeaderSize + Constants.Tree.NodeOffsetSize;
-
-
+        
         private PagerState _pagerState;
 
-        public long NumberOfAllocatedPages { get; protected set; }
+        public virtual long NumberOfAllocatedPages { get; protected set; }
         public abstract long TotalAllocationSize { get; }
 
         protected abstract string GetSourceName();
@@ -145,6 +144,11 @@ namespace Voron.Impl.Paging
             tx?.EnsurePagerStateReference(state);
 
             return state.MapBase + pageNumber * Constants.Storage.PageSize;
+        }
+
+        public virtual byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null)
+        {
+            return AcquirePagePointer(tx, pageNumber, pagerState);
         }
 
         public abstract void Sync(long totalUnsynced);
@@ -173,13 +177,13 @@ namespace Voron.Impl.Paging
         [Conditional("VALIDATE")]
         internal virtual void ProtectPageRange(byte* start, ulong size, bool force = false)
         {
-            // This method is currently implemented only in Win32MemoryMapPager and POSIX
+            // This method is currently implemented only in WindowsMemoryMapPager and POSIX
         }
 
         [Conditional("VALIDATE")]
         internal virtual void UnprotectPageRange(byte* start, ulong size, bool force = false)
         {
-            // This method is currently implemented only in Win32MemoryMapPager and POSIX
+            // This method is currently implemented only in WindowsMemoryMapPager and POSIX
         }
 
         public bool Disposed { get; private set; }
@@ -209,8 +213,7 @@ namespace Voron.Impl.Paging
             Dispose();
         }
 
-        protected abstract PagerState AllocateMorePages(long newLength);
-
+        protected internal abstract PagerState AllocateMorePages(long newLength);
 
         private long GetNewLength(long current)
         {
@@ -366,6 +369,7 @@ namespace Voron.Impl.Paging
 
             _abstractPager.ProtectPageRange(destination, (ulong)toWrite);
         }
+
 
         public void Dispose()
         {

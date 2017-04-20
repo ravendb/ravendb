@@ -9,6 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Sparrow.Platform.Win32;
+using Voron.Data;
 using Voron.Global;
 using Voron.Impl.Paging;
 #if VALIDATE
@@ -186,17 +188,20 @@ namespace Voron.Impl.Scratch
             long asOfTxId = txId ?? -1;
 
 #if VALIDATE
-            byte* pagePointer = _scratchPager.AcquirePagePointer(null, pageNumber, PagerState);
-
-            PageFromScratchBuffer temporary;
-            if (_allocatedPages.TryGetValue(pageNumber, out temporary) != false)
+            using (var tempTx = new TempPagerTransaction())
             {
-                var page = new Page(pagePointer);
-                ulong pageSize = (ulong)_scratchPager.GetNumberOfPages(page) * Constants.Storage.PageSize;
-                // This has to be forced, as the scratchPager does NOT protect on allocate,
-                // (on the contrary, we force protection/unprotection when freeing a page and allocating it
-                // from the reserve)
-                _scratchPager.ProtectPageRange(pagePointer, pageSize, true);
+                byte* pagePointer = _scratchPager.AcquirePagePointer(tempTx, pageNumber, PagerState);
+
+                PageFromScratchBuffer temporary;
+                if (_allocatedPages.TryGetValue(pageNumber, out temporary) != false)
+                {
+                    var page = new Page(pagePointer);
+                    ulong pageSize = (ulong)_scratchPager.GetNumberOfPages(page) * Constants.Storage.PageSize;
+                    // This has to be forced, as the scratchPager does NOT protect on allocate,
+                    // (on the contrary, we force protection/unprotection when freeing a page and allocating it
+                    // from the reserve)
+                    _scratchPager.ProtectPageRange(pagePointer, pageSize, true);
+                }
             }
 #endif
 
@@ -275,11 +280,16 @@ namespace Voron.Impl.Scratch
             return _scratchPager.AcquirePagePointerWithOverflowHandling(tx, p);
         }
 
-        public byte* AcquirePagePointer(LowLevelTransaction tx, long p)
+        public byte* AcquirePagePointerForNewPage(LowLevelTransaction tx, long p, int numberOfPages)
         {
-            return _scratchPager.AcquirePagePointer(tx, p);
+            return _scratchPager.AcquirePagePointerForNewPage(tx, p, numberOfPages);
         }
 
+        public void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, long p)
+        {
+            var pager = _scratchPager as CryptoPager;
+            pager?.BreakLargeAllocationToSeparatePages(tx, p);
+        }
 
         internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
         {

@@ -5,7 +5,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow.Compression;
+using Sparrow.Platform.Win32;
 using Sparrow.Utils;
+using Voron.Data;
 using Voron.Global;
 using Voron.Impl.Paging;
 
@@ -21,7 +23,7 @@ namespace Voron.Impl.Journal
         private long _readAt4Kb;
         private readonly DiffApplier _diffApplier = new DiffApplier();
         private readonly long _journalPagerNumberOfAllocated4Kb;
-
+        private readonly List<EncryptionBuffer> _encryptionBuffers;
 
         public bool RequireHeaderUpdate { get; private set; }
 
@@ -39,6 +41,9 @@ namespace Voron.Impl.Journal
             LastTransactionHeader = previous;
             _journalPagerNumberOfAllocated4Kb = 
                 _journalPager.TotalAllocationSize /(4*Constants.Size.Kilobyte);
+
+            if (journalPager.Options.EncryptionEnabled)
+                _encryptionBuffers = new List<EncryptionBuffer>();
         }
 
         public TransactionHeader* LastTransactionHeader { get; private set; }
@@ -121,16 +126,22 @@ namespace Voron.Impl.Journal
                 var numberOfPagesOnDestination = GetNumberOfPagesFor(pageInfoPtr[i].Size);
                 _dataPager.EnsureContinuous(pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
                 _dataPager.EnsureMapped(this, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
-                var pagePtr = _dataPager.AcquirePagePointer(this, pageInfoPtr[i].PageNumber);
 
-                var diffPageNumber = *(long*)(outputPage + totalRead);
-                if (pageInfoPtr[i].PageNumber != diffPageNumber)
-                    throw new InvalidDataException($"Expected a diff for page {pageInfoPtr[i].PageNumber} but got one for {diffPageNumber}");
+                // There is a chance the page was not synced to the data file before we crashed.
+                // If encryption is enabled, when recovering, we cannot decrypt an empty (zeroed) page
+                var pagePtr = options.EncryptionEnabled 
+                    ? _dataPager.AcquirePagePointerForNewPage(this, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination) 
+                    : _dataPager.AcquirePagePointer(this, pageInfoPtr[i].PageNumber);
+                
+                var pageNumber = *(long*)(outputPage + totalRead);
+                if (pageInfoPtr[i].PageNumber != pageNumber)
+                    throw new InvalidDataException($"Expected a diff for page {pageInfoPtr[i].PageNumber} but got one for {pageNumber}");
                 totalRead += sizeof(long);
 
                 _dataPager.UnprotectPageRange(pagePtr, (ulong)pageInfoPtr[i].Size);
 
-                if (pageInfoPtr[i].DiffSize == 0)
+                // When using encryption we copy the entire page from the journal, not just the diff. 
+                if (pageInfoPtr[i].DiffSize == 0 || options.EncryptionEnabled)
                 {
                     Memory.Copy(pagePtr, outputPage + totalRead, pageInfoPtr[i].Size);
                     totalRead += pageInfoPtr[i].Size;
@@ -149,6 +160,7 @@ namespace Voron.Impl.Journal
             }
 
             LastTransactionHeader = current;
+            ZeroRecoveryBufferIfNeeded(this, options);
 
             return true;
         }
@@ -160,9 +172,51 @@ namespace Voron.Impl.Journal
             }
         }
 
+        public void ZeroRecoveryBufferIfNeeded(IPagerLevelTransactionState tx, StorageEnvironmentOptions options)
+        {
+            if (options.EncryptionEnabled == false)
+                return;
+            var compressionBufferSize = _recoveryPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
+            var pagePointer = _recoveryPager.AcquirePagePointer(tx, 0);
+            Memory.Set(pagePointer, 0, compressionBufferSize);
+        }
+
         public void SetStartPage(long value)
         {
             _readAt4Kb = value;
+        }
+
+        private void DecryptTransaction(byte* page, StorageEnvironmentOptions options)
+        {
+            var txHeader = (TransactionHeader*)page;
+            var num = txHeader->TransactionId;
+            ulong macLen = 16;
+
+            if (txHeader->Flags != EncryptionFlags.Encrypted)
+                throw new InvalidOperationException($"Unable to decrypt transaction {num}, not encrypted");
+
+            var subKey = stackalloc byte[32];
+            fixed (byte* mk = options.MasterKey)
+            fixed (byte* ctx = Sodium.Context)
+            {
+                if (Sodium.crypto_kdf_derive_from_key(subKey, 32, num, ctx, mk) != 0)
+                    throw new InvalidOperationException("Unable to generate derived key");
+            }
+
+            var rc = Sodium.crypto_aead_chacha20poly1305_decrypt_detached(
+                page + TransactionHeader.SizeOf,
+                null,
+                page + TransactionHeader.SizeOf,
+                (ulong)txHeader->CompressedSize,
+                page + TransactionHeader.SizeOf - macLen,
+                page,
+                TransactionHeader.SizeOf - macLen - sizeof(long),
+                page + TransactionHeader.SizeOf - macLen - sizeof(long),
+                subKey
+            );
+
+            if (rc != 0)
+                throw new InvalidOperationException($"Unable to decrypt transaction {num}, rc={rc}");
         }
 
         private bool TryReadAndValidateHeader(StorageEnvironmentOptions options, out TransactionHeader* current)
@@ -204,6 +258,36 @@ namespace Voron.Impl.Journal
                 return false;
 
             current = EnsureTransactionMapped(current, pageNumber, positionInsidePage);
+
+            if (options.EncryptionEnabled)
+            {
+                // The journal pager is read only, we cannot decrypt in-place. Instead, we use temp buffers
+                //  to hold the transaction before decrypting, and release the buffers afterwards.
+                var size = (4*Constants.Size.Kilobyte) * GetNumberOf4KbFor(sizeof(TransactionHeader) + current->CompressedSize);
+
+                var buffer = new EncryptionBuffer
+                {
+                    Pointer = Win32MemoryProtectMethods.VirtualAlloc(null, (UIntPtr)size, Win32MemoryProtectMethods.AllocationType.COMMIT,
+                        Win32MemoryProtectMethods.MemoryProtection.READWRITE),
+                    Size = size
+                };
+                _encryptionBuffers.Add(buffer);
+
+                Memory.Copy(buffer.Pointer, (byte*)current, size);
+
+                current = (TransactionHeader*)buffer.Pointer;
+
+                try
+                {
+                    DecryptTransaction((byte*)current, options);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    RequireHeaderUpdate = true;
+                    options.InvokeRecoveryError(this, "Transaction " + current->TransactionId + " was not committed", ex);
+                    return false;
+                }
+            }
             bool hashIsValid = ValidatePagesHash(options, current);
 
             if (LastTransactionHeader == null)
@@ -293,7 +377,13 @@ namespace Voron.Impl.Journal
 
         public void Dispose()
         {
-            OnDispose?.Invoke(this);
+            if (_encryptionBuffers != null) // Encryption enabled
+			{ 
+                foreach (var buffer in _encryptionBuffers)
+                    Win32MemoryProtectMethods.VirtualFree(buffer.Pointer, UIntPtr.Zero, Win32MemoryProtectMethods.FreeType.MEM_RELEASE);
+				BeforeCommitFinalization?.Invoke(this);
+            }
+			OnDispose?.Invoke(this);
         }
 
         private static int GetNumberOfPagesFor(long size)
@@ -301,17 +391,26 @@ namespace Voron.Impl.Journal
             return checked((int)(size / Constants.Storage.PageSize) + (size % Constants.Storage.PageSize == 0 ? 0 : 1));
         }
 
-        Dictionary<AbstractPager, TransactionState> IPagerLevelTransactionState.
-            PagerTransactionState32Bits
-        { get; set; }
+        private static int GetNumberOf4KbFor(long size)
+        {
+            return checked((int)(size / (4*Constants.Size.Kilobyte)) + (size % (4 * Constants.Size.Kilobyte) == 0 ? 0 : 1));
+        }
+
+        Dictionary<AbstractPager, TransactionState> IPagerLevelTransactionState.PagerTransactionState32Bits { get; set; }
+
+        Dictionary<AbstractPager, CryptoTransactionState> IPagerLevelTransactionState.CryptoPagerTransactionState { get; set; }
 
         public event Action<IPagerLevelTransactionState> OnDispose;
+        public event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
 
         void IPagerLevelTransactionState.EnsurePagerStateReference(PagerState state)
         {
             //nothing to do
         }
 
-        StorageEnvironment IPagerLevelTransactionState.Environment => null;// not setup yet
+        StorageEnvironment IPagerLevelTransactionState.Environment => null;
+
+        // JournalReader actually writes to the data file
+        bool IPagerLevelTransactionState.IsWriteTransaction => true; 
     }
 }

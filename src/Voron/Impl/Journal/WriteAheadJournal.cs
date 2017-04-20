@@ -156,7 +156,7 @@ namespace Voron.Impl.Journal
             {
                 var initialSize = _env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize;
                 var journalRecoveryName = StorageEnvironmentOptions.JournalRecoveryName(journalNumber);
-                using (var recoveryPager = _env.Options.CreateScratchPager(journalRecoveryName, initialSize))
+                using (var recoveryPager = _env.Options.CreateTemporaryBufferPager(journalRecoveryName, initialSize))
                 using (var pager = _env.Options.OpenJournalPager(journalNumber))
                 {
                     RecoverCurrentJournalSize(pager);
@@ -1237,7 +1237,9 @@ namespace Voron.Impl.Journal
                     CurrentFile = null;
                 }
 
-                ReduceSizeOfCompressionBufferIfNeeded();
+                var reduced = ReduceSizeOfCompressionBufferIfNeeded();
+                if (!reduced)
+                    ZeroCompressionBufferIfNeeded(tx);
 
                 return journalEntry;
             }
@@ -1255,12 +1257,12 @@ namespace Voron.Impl.Journal
 
             // We want to include the Transaction Header straight into the compression buffer.
             var sizeOfPagesHeader = numberOfPages * sizeof(TransactionHeaderPageInfo);
-            var diffOverhead = sizeOfPagesHeader + (long)numberOfPages * sizeof(long);
-            var diffOverheadInPages = checked((int)(diffOverhead / Constants.Storage.PageSize + (diffOverhead % Constants.Storage.PageSize == 0 ? 0 : 1)));
-
+            var overhead = sizeOfPagesHeader + (long)numberOfPages * sizeof(long);
+            var overheadInPages = checked((int)(overhead / Constants.Storage.PageSize + (overhead % Constants.Storage.PageSize == 0 ? 0 : 1)));
+           
             // The pages required includes the intermediate pages and the required output pages. 
             const int transactionHeaderPageOverhead = 1;
-            var pagesRequired = (transactionHeaderPageOverhead + pagesCountIncludingAllOverflowPages + diffOverheadInPages);
+            var pagesRequired = (transactionHeaderPageOverhead + pagesCountIncludingAllOverflowPages + overheadInPages);
             var pagerState = _compressionPager.EnsureContinuous(0, pagesRequired);
             tx.EnsurePagerStateReference(pagerState);
 
@@ -1274,34 +1276,57 @@ namespace Voron.Impl.Journal
             foreach (var txPage in txPages)
             {
                 var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointerWithOverflowHandling(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+            	var pageHeader = (PageHeader*)scratchPage;
                 
-                var pageHeader = (PageHeader*)scratchPage;
-
-                pageHeader->Checksum = _env.CalculatePageChecksum(scratchPage, pageHeader->PageNumber, pageHeader->Flags, pageHeader->OverflowSize);
+				// When encryption is off, we do validation by checksum
+                if (_env.Options.EncryptionEnabled == false)
+				{
+                	pageHeader->Checksum = _env.CalculatePageChecksum(scratchPage, pageHeader->PageNumber, pageHeader->Flags, pageHeader->OverflowSize);
+				}
 
                 pagesInfo[pageSequencialNumber].PageNumber = pageHeader->PageNumber;
 
                 *(long*)write = pageHeader->PageNumber;
                 write += sizeof(long);
 
-                _diffPage.Output = write;
-
-                int diffPageSize = txPage.NumberOfPages * Constants.Storage.PageSize;
-                pagesEncountered += txPage.NumberOfPages;
-                Debug.Assert(pagesEncountered <= pagesCountIncludingAllOverflowPages);
-                if (txPage.PreviousVersion != null)
+                if (_env.Options.EncryptionEnabled == false)
                 {
-                    _diffPage.ComputeDiff(txPage.PreviousVersion.Value.Pointer, scratchPage, diffPageSize);
+                    _diffPage.Output = write;
+
+                    int diffPageSize = txPage.NumberOfPages * Constants.Storage.PageSize;
+                    pagesEncountered += txPage.NumberOfPages;
+                    Debug.Assert(pagesEncountered <= pagesCountIncludingAllOverflowPages);
+                    if (txPage.PreviousVersion != null)
+                    {
+                        _diffPage.ComputeDiff(txPage.PreviousVersion.Value.Pointer, scratchPage, diffPageSize);
+                    }
+                    else
+                    {
+                        _diffPage.ComputeNew(scratchPage, diffPageSize);
+                    }
+
+                    write += _diffPage.OutputSize;
+                    pagesInfo[pageSequencialNumber].Size = _diffPage.OutputSize == 0 ? 0 : diffPageSize;
+                    pagesInfo[pageSequencialNumber].DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
+                    Debug.Assert(Math.Max(pagesInfo[pageSequencialNumber].Size, pagesInfo[pageSequencialNumber].DiffSize) <= diffPageSize);
                 }
                 else
                 {
-                    _diffPage.ComputeNew(scratchPage, diffPageSize);
-                }
+                    // If encryption is enabled we cannot use diffs in the journal. 
+                    // When recovering, we need to compare the page (diff) from the journal to the page on the data file.
+                    // To do that we need to first decrypt the page from the data file, but what happens if it was only partially 
+                    // written when we crashed? We cannot decrypt partial data, therefore we cannot compare the diff to the plaintext on disk.
+                    // The solution is to write the full page to the journal and when recovering, copy the full page to the data file. 
+                    int size = txPage.NumberOfPages * Constants.Storage.PageSize;
+                    pagesEncountered += txPage.NumberOfPages;
+                    Debug.Assert(pagesEncountered <= pagesCountIncludingAllOverflowPages);
 
-                write += _diffPage.OutputSize;
-                pagesInfo[pageSequencialNumber].Size = _diffPage.OutputSize == 0 ? 0 : diffPageSize;
-                pagesInfo[pageSequencialNumber].DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
-                Debug.Assert(Math.Max(pagesInfo[pageSequencialNumber].Size, pagesInfo[pageSequencialNumber].DiffSize) <= diffPageSize);
+                    Memory.Copy(write, scratchPage, size);
+
+                    write += size;
+                    pagesInfo[pageSequencialNumber].Size = size;
+                    pagesInfo[pageSequencialNumber].DiffSize = -1;
+                }
 
                 ++pageSequencialNumber;
             }
@@ -1375,7 +1400,49 @@ namespace Voron.Impl.Journal
             // Copy the transaction header to the output buffer. 
             Memory.Copy(fullTxBuffer, (byte*)txHeader, sizeof(TransactionHeader));
             Debug.Assert(((long)fullTxBuffer % (4 * Constants.Size.Kilobyte)) == 0, "Memory must be 4kb aligned");
+
+            if (_env.Options.EncryptionEnabled)
+                EncryptTransaction(fullTxBuffer);
+
             return prepreToWriteToJournal;
+        }
+
+		private void EncryptTransaction(byte* fullTxBuffer)
+        {
+            var txHeader = (TransactionHeader*)fullTxBuffer;
+
+            txHeader->Flags = EncryptionFlags.Encrypted;
+            ulong macLen = 16;
+            var subKey = stackalloc byte[32];
+            fixed (byte* mk = _env.Options.MasterKey)
+            fixed (byte* ctx = Sodium.Context)
+            {
+                var num = txHeader->TransactionId;
+                if (Sodium.crypto_kdf_derive_from_key(subKey, 32, num, ctx, mk) != 0)
+                    throw new InvalidOperationException("Unable to generate derived key");
+            }
+
+            var npub = fullTxBuffer + TransactionHeader.SizeOf - macLen - sizeof(long);
+            if (*(long*)npub == 0)
+                Sodium.randombytes_buf(npub, sizeof(long));
+            else
+                (*(long*)npub)++;
+
+            var rc = Sodium.crypto_aead_chacha20poly1305_encrypt_detached(
+                fullTxBuffer + TransactionHeader.SizeOf,
+                fullTxBuffer + TransactionHeader.SizeOf - macLen,
+                &macLen,
+                fullTxBuffer + TransactionHeader.SizeOf,
+                (ulong)txHeader->CompressedSize,
+                fullTxBuffer,
+                TransactionHeader.SizeOf - macLen - sizeof(long),
+                null,
+                npub,
+                subKey
+            );
+
+            if (rc != 0)
+                throw new InvalidOperationException("Failed to call crypto_aead_xchacha20poly1305_ietf_encrypt, rc = " + rc);
         }
 
         private class CompressionAccelerationStats
@@ -1434,17 +1501,17 @@ namespace Voron.Impl.Journal
 
         private AbstractPager CreateCompressionPager(long initialSize)
         {
-            return _env.Options.CreateScratchPager($"compression.{_compressionPagerCounter++:D10}.buffers", initialSize);
+            return _env.Options.CreateTemporaryBufferPager($"compression.{_compressionPagerCounter++:D10}.buffers", initialSize);
         }
 
         private DateTime _lastCompressionBufferReduceCheck = DateTime.UtcNow;
         private CompressionAccelerationStats _lastCompressionAccelerationInfo = new CompressionAccelerationStats();
         private string _journalPath;
 
-        public void ReduceSizeOfCompressionBufferIfNeeded()
+        public bool ReduceSizeOfCompressionBufferIfNeeded()
         {
             if (!ShouldReduceSizeOfCompressionPager())
-                return;
+                return false;
 
             // the compression pager is too large, we probably had a big transaction and now can
             // free all of that and come back to more reasonable values.
@@ -1460,6 +1527,17 @@ namespace Voron.Impl.Journal
 
             _compressionPager.Dispose();
             _compressionPager = CreateCompressionPager(_env.Options.MaxScratchBufferSize);
+            return true;
+        }
+
+        public void ZeroCompressionBufferIfNeeded(IPagerLevelTransactionState tx)
+        {
+            if (_env.Options.EncryptionEnabled == false)
+                return;
+
+            var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
+            var pagePointer = _compressionPager.AcquirePagePointer(tx, 0);
+            Memory.Set(pagePointer, 0, compressionBufferSize);
         }
 
         private bool ShouldReduceSizeOfCompressionPager()

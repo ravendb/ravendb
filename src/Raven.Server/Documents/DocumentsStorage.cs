@@ -1366,7 +1366,7 @@ namespace Raven.Server.Documents
                 // this would prevent NREs next time a PUT is run,since if a transaction
                 // is not commited, DocsSchema and TombstonesSchema will not be actually created..
                 // has to happen after the commit, but while we are holding the write tx lock
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += _ =>
+                context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
                 {
                     var collectionNames = new FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer>(_collectionsCache, OrdinalIgnoreCaseStringStructComparer.Instance);
                     collectionNames[name.Name] = name;

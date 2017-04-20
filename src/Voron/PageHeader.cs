@@ -12,6 +12,8 @@ namespace Voron.Data
     public unsafe struct PageHeader
     {
         public static int ChecksumOffset = (int)Marshal.OffsetOf<PageHeader>(nameof(Checksum));
+        public static int NonceOffset = (int)Marshal.OffsetOf<PageHeader>(nameof(Nonce));
+        public static int MacOffset = (int)Marshal.OffsetOf<PageHeader>(nameof(Mac));
 
         public const int SizeOf = 64;
 
@@ -27,8 +29,13 @@ namespace Voron.Data
         [FieldOffset(32)]
         public ulong Checksum;
 
-        [FieldOffset(40)]
-        public fixed byte Padding[24]; // to 64 bytes
+        [FieldOffset(32)]
+        public ulong Nonce;
 
+        [FieldOffset(40)]
+        public fixed byte Reserved[8];
+
+        [FieldOffset(48)]
+        public fixed byte Mac[16];
     }
 }

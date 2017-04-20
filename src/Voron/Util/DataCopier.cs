@@ -38,6 +38,11 @@ namespace Voron.Util
 
         public void ToStream(AbstractPager src, long startPage, long numberOfPages, Stream output)
         {
+            // In case of encryption bundle, we don't want to decrypt the data for backup, 
+            // so let's work directly with the underlying encrypted data (Inner pager).
+            if (src is CryptoPager)
+                src = ((CryptoPager)src).Inner;
+
             if((_buffer.Length % Constants.Storage.PageSize) != 0)
                 throw new ArgumentException("The buffer length must be a multiple of the page size");
 
@@ -46,7 +51,7 @@ namespace Voron.Util
             using(var tempTx = new TempPagerTransaction())
             fixed (byte* pBuffer = _buffer)
             {
-                for (long i = startPage; i < numberOfPages; i += steps)
+                for (long i = startPage; i < startPage + numberOfPages; i += steps)
                 {
                     var pagesToCopy = (int) (i + steps > numberOfPages ? numberOfPages - i : steps);
                     src.EnsureMapped(tempTx, i, pagesToCopy);
