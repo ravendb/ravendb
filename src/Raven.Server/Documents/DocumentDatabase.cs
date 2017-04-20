@@ -62,6 +62,15 @@ namespace Raven.Server.Documents
                 Name));
         }
 
+        internal void HandleOnRecoveryError(object sender, RecoveryErrorEventArgs e)
+        {
+            _serverStore?.NotificationCenter.Add(AlertRaised.Create($"Database Recovery Error - {Name ?? "Unknown Database"}",
+                e.Message,
+                AlertType.RecoveryError,
+                NotificationSeverity.Error,
+                Name));
+        }
+
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore)
         {
             _serverStore = serverStore;

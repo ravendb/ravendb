@@ -25,6 +25,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         WarnIndexOutputsPerDocument,
         ErrorSavingReduceOutputDocuments,
         CatastrophicDatabaseFailure,
-        NonDurableFileSystem
+        NonDurableFileSystem,
+        RecoveryError
     }
 }

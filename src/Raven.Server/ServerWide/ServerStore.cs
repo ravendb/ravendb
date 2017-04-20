@@ -119,7 +119,7 @@ namespace Raven.Server.ServerWide
             var path = Configuration.Core.DataDirectory.Combine("System");
 
 
-            AlertRaised storeAlertForLateRaise = null;
+            List<AlertRaised> storeAlertForLateRaise = new List<AlertRaised>();
 
             var options = Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
@@ -131,14 +131,31 @@ namespace Raven.Server.ServerWide
                     e.Message,
                     AlertType.NonDurableFileSystem,
                     NotificationSeverity.Warning,
-                    "System");
+                    "NonDurable Error System");
                 if (NotificationCenter.IsInitialized)
                 {
                     NotificationCenter.Add(alert);
                 }
                 else
                 {
-                    storeAlertForLateRaise = alert;
+                    storeAlertForLateRaise.Add(alert);
+                }
+            };
+
+            options.OnRecoveryError += (obj, e) =>
+            {
+                var alert = AlertRaised.Create("Database Recovery Error - System Database",
+                    e.Message,
+                    AlertType.NonDurableFileSystem,
+                    NotificationSeverity.Error,
+                    "Recovery Error System");
+                if (NotificationCenter.IsInitialized)
+                {
+                    NotificationCenter.Add(alert);
+                }
+                else
+                {
+                    storeAlertForLateRaise.Add(alert);
                 }
             };
 
@@ -194,9 +211,9 @@ namespace Raven.Server.ServerWide
             DatabaseInfoCache.Initialize(_env, ContextPool);
             
             NotificationCenter.Initialize();
-            if (storeAlertForLateRaise != null)
+            foreach (var alertRaised in storeAlertForLateRaise)
             {
-                NotificationCenter.Add(storeAlertForLateRaise);
+                NotificationCenter.Add(alertRaised);
             }
             LicenseManager.Initialize(_env, ContextPool);
         }

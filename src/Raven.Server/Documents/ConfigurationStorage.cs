@@ -31,6 +31,7 @@ namespace Raven.Server.Documents
                 : StorageEnvironmentOptions.ForPath(path.FullPath, null, null, db.IoChanges, db.CatastrophicFailureNotification);
 
             options.OnNonDurableFileSystemError += db.HandleNonDurableFileSystemError;
+            options.OnRecoveryError += db.HandleOnRecoveryError;
 
             options.SchemaVersion = 1;
             options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
