@@ -513,7 +513,7 @@ namespace Voron.Impl
                     pageFromScratchBuffer.PositionInScratchBuffer,
                     numberOfPages);
             }
-            
+
             var newPagePointer = _env.ScratchBufferPool.AcquirePagePointer(this, pageFromScratchBuffer.ScratchFileNumber,
                 pageFromScratchBuffer.PositionInScratchBuffer);
 
@@ -678,8 +678,8 @@ namespace Voron.Impl
             }
 
             long numberOfOverflowPages;
-            
-            if (_dirtyPages.Remove(pageNumber) == false && 
+
+            if (_dirtyPages.Remove(pageNumber) == false &&
                 _dirtyOverflowPages.TryGetValue(pageNumber, out numberOfOverflowPages))
             {
                 _dirtyOverflowPages.Remove(pageNumber);
@@ -699,8 +699,8 @@ namespace Voron.Impl
 
             public PagerStateCacheItem(int file, PagerState state)
             {
-                this.FileNumber = file;
-                this.State = state;
+                FileNumber = file;
+                State = state;
             }
         }
 
@@ -714,6 +714,7 @@ namespace Voron.Impl
 
             if (WriteToJournalIsRequired())
             {
+                Environment.LastWorkTime = DateTime.UtcNow;
                 CommitStage2_WriteToJournal();
             }
 
@@ -762,7 +763,7 @@ namespace Voron.Impl
                 // then throw as if commit was called normally and the next transaction failed
 
                 _env.DecrementUsageOnTransactionCreationFailure();
-                
+
                 EndAsyncCommit();
 
                 AsyncCommit = null;
@@ -795,6 +796,7 @@ namespace Voron.Impl
             }
 
             AsyncCommit.Wait();
+            Environment.LastWorkTime = DateTime.UtcNow;
             CommitStage3_DisposeTransactionResources();
             OnCommit?.Invoke(this);
         }
@@ -925,7 +927,7 @@ namespace Voron.Impl
                 _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
                 _env.Journal.UpdateCacheForJournalSnapshots();
             }
-            
+
             RolledBack = true;
         }
         public void RetrieveCommitStats(out CommitStats stats)
