@@ -24,7 +24,7 @@ import eventsCollector = require("common/eventsCollector");
 
 class editSqlReplication extends viewModelBase {
     
-    static editSqlReplicationSelector = "#editSQLReplication";
+    /*static editSqlReplicationSelector = "#editSQLReplication";
     static sqlReplicationDocumentPrefix = "Raven/SqlReplication/Configuration/";
 
     editedReplication = ko.observable<sqlReplication>();
@@ -144,7 +144,7 @@ class editSqlReplication extends viewModelBase {
                         this.loadedSqlReplications = results.Results;
                         loadDeferred.resolve();
                     }).
-                    fail(() => loadDeferred.reject());*/
+                    fail(() => loadDeferred.reject());*
             })
             .fail(() => {
                 loadDeferred.reject();
@@ -348,7 +348,7 @@ class editSqlReplication extends viewModelBase {
     getSqlReplicationConnectionStringsUrl(sqlReplicationName: string) {
         return appUrl.forSqlReplicationConnections(this.activeDatabase());
     }
-
+    */
 }
 
 export = editSqlReplication; 

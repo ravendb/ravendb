@@ -3,13 +3,13 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 
 class getSqlReplicationConnectionsCommand extends getDocumentWithMetadataCommand {
 
-    constructor(db: database) {
+    /*constructor(db: database) {
         super("Raven/SqlReplication/Connections", db);
     }
 
     execute(): JQueryPromise<Raven.Server.Documents.ETL.Providers.SQL.Connections.SqlConnections> {
         return super.execute();
-    }
+    }*/
 }
 
 export = getSqlReplicationConnectionsCommand;
