@@ -2,24 +2,23 @@
     <div class="flex-window stretch">
         <div class="flex-header">
             <div class="toolbar clearfix">
-                <div class="input-group" data-bind="visible: allIndexErrors().length > 0" >
-                    <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" />
+                <div class="input-group">
+                    <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter index errors (Alt+/)" data-bind="textInput: searchText"/>
                 </div>
             </div>
         </div>
-        <div class="page-header" data-bind="visible: hasFetchedErrors() && allIndexErrors().length === 0">
-            <h3><small><i class="icon-info"></i></small> No errors have occurred.
-            </h3>
-        </div>
         <div class="flex-window-scroll">
-            <div class="scroll-stretch" data-bind="visible: hasFetchedErrors() && allIndexErrors().length > 0">
+            <div class="scroll-stretch">
                 <div class="panel-body">
-                    <virtual-grid class="resizable virtual-grid" params="controller: gridController, emptyTemplate: 'empty-collection-template'"></virtual-grid>
+                    <virtual-grid class="resizable virtual-grid" params="controller: gridController, emptyTemplate: 'empty-index-errors-template'"></virtual-grid>
                 </div>
             </div>
         </div>
     </div>
 </div>
+<script type="text/html" id="empty-index-errors-template">
+    No errors have occurred.
+</script>
 <div class="tooltip json-preview" style="opacity: 0">
     <pre><code></code></pre>
 </div>
