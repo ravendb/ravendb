@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Replication
 
                 using (_tcpClient = new TcpClient())
                 {
-                    ConnectSocket(connectionInfo, _tcpClient);
+                    TcpUtils.ConnectSocket(connectionInfo, _tcpClient, _log, CancellationToken);
 
                     using (_stream = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo).Result)
                     using (_interruptableRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
@@ -597,51 +597,6 @@ namespace Raven.Server.Documents.Replication
             return replicationBatchReply;
         }
 
-        private void ConnectSocket(TcpConnectionInfo connection, TcpClient tcpClient)
-        {
-            var uri = new Uri(connection.Url);
-            var host = uri.Host;
-            var port = uri.Port;
-
-            try
-            {
-                tcpClient.ConnectAsync(host, port).Wait(CancellationToken);
-            }
-            catch (AggregateException ae) when (ae.InnerException is SocketException)
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info(
-                        $"Failed to connect to remote replication destination {connection.Url}. Socket Error Code = {((SocketException)ae.InnerException).SocketErrorCode}",
-                        ae.InnerException);
-                throw;
-            }
-            catch (AggregateException ae) when (ae.InnerException is OperationCanceledException)
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info(
-                        $@"Tried to connect to remote replication destination {connection.Url}, but the operation was aborted. 
-                            This is not necessarily an issue, it might be that replication destination document has changed at 
-                            the same time we tried to connect. We will try to reconnect later.",
-                        ae.InnerException);
-                throw;
-            }
-            catch (OperationCanceledException e)
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info(
-                        $@"Tried to connect to remote replication destination {connection.Url}, but the operation was aborted. 
-                            This is not necessarily an issue, it might be that replication destination document has changed at 
-                            the same time we tried to connect. We will try to reconnect later.",
-                        e);
-                throw;
-            }
-            catch (Exception e)
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Failed to connect to remote replication destination {connection.Url}", e);
-                throw;
-            }
-        }
 
         private void OnDocumentChange(DocumentChange change)
         {

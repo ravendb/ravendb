@@ -302,7 +302,7 @@ namespace Tests.Infrastructure
                 return slice.ToString() == "values";
             }
 
-            public override async Task<Stream> ConenctToPeer(string url, string apiKey)
+            public override async Task<Stream> ConnectToPeer(string url, string apiKey)
             {
                 var tcpInfo = new Uri(url);
                 var tcpClient = new TcpClient();

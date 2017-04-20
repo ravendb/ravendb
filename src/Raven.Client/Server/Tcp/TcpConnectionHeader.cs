@@ -9,7 +9,8 @@
             Subscription,
             Replication,
             TopologyDiscovery,
-            Cluster
+            Cluster,
+            Heartbeats
         }
 
         public string DatabaseName { get; set; }

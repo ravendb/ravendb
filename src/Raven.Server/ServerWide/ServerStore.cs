@@ -75,7 +75,7 @@ namespace Raven.Server.ServerWide
 
             DatabaseInfoCache = new DatabaseInfoCache();
 
-            _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;
+            _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;            
         }
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }

@@ -513,7 +513,7 @@ namespace Raven.Server.ServerWide
             return doc;
         }
 
-        public override async Task<Stream> ConenctToPeer(string url, string apiKey)
+        public override async Task<Stream> ConnectToPeer(string url, string apiKey)
         {
             var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey);
             var authenticator = new ApiKeyAuthenticator();
