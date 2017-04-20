@@ -1,9 +1,7 @@
 using System;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Replication.Messages;
@@ -23,8 +21,6 @@ namespace Raven.Server.Documents
     {
         private readonly DocumentsStorage _documentsStorage;
         private readonly DocumentDatabase _documentDatabase;
-
-        private readonly StringBuilder _keyBuilder = new StringBuilder();
 
         public DocumentPutAction(DocumentsStorage documentsStorage, DocumentDatabase documentDatabase)
         {
@@ -70,11 +66,11 @@ namespace Raven.Server.Documents
                 switch (key[key.Length - 1])
                 {
                     case '/':
-                        key = GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out _);
+                        key = _documentsStorage.Identities.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out _);
                         knownNewKey = true;
                         break;
                     case '|':
-                        key = AppendNumericValueToKey(key, newEtag);
+                        key = _documentsStorage.Identities.AppendNumericValueToKey(key, newEtag);
                         knownNewKey = true;
                         break;
                 }
@@ -323,75 +319,6 @@ namespace Raven.Server.Documents
                 ActualETag = oldEtag,
                 ExpectedETag = expectedEtag ?? -1
             };
-        }
-
-        public string GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, Table table, DocumentsOperationContext context, out int tries)
-        {
-            var identities = context.Transaction.InnerTransaction.ReadTree(IdentitiesStorage.IdentitiesSlice);
-            var nextIdentityValue = identities.Increment(key, 1);
-            var finalKey = AppendIdentityValueToKey(key, nextIdentityValue);
-            Slice finalKeySlice;
-            tries = 1;
-
-            using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
-            {
-                TableValueReader reader;
-                if (table.ReadByKey(finalKeySlice, out reader) == false)
-                {
-                    return finalKey;
-                }
-            }
-
-            /* We get here if the user inserted a document with a specified id.
-            e.g. your identity is 100
-            but you forced a put with 101
-            so you are trying to insert next document and it would overwrite the one with 101 */
-
-            var lastKnownBusy = nextIdentityValue;
-            var maybeFree = nextIdentityValue * 2;
-            var lastKnownFree = long.MaxValue;
-            while (true)
-            {
-                tries++;
-                finalKey = AppendIdentityValueToKey(key, maybeFree);
-                using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
-                {
-                    TableValueReader reader;
-                    if (table.ReadByKey(finalKeySlice, out reader) == false)
-                    {
-                        if (lastKnownBusy + 1 == maybeFree)
-                        {
-                            nextIdentityValue = identities.Increment(key, lastKnownBusy);
-                            return key + nextIdentityValue;
-                        }
-                        lastKnownFree = maybeFree;
-                        maybeFree = Math.Max(maybeFree - (maybeFree - lastKnownBusy) / 2, lastKnownBusy + 1);
-                    }
-                    else
-                    {
-                        lastKnownBusy = maybeFree;
-                        maybeFree = Math.Min(lastKnownFree, maybeFree * 2);
-                    }
-                }
-            }
-        }
-
-        private string AppendIdentityValueToKey(string key, long val)
-        {
-            _keyBuilder.Length = 0;
-            _keyBuilder.Append(key);
-            _keyBuilder.Append(val);
-            return _keyBuilder.ToString();
-        }
-
-
-        private string AppendNumericValueToKey(string key, long val)
-        {
-            _keyBuilder.Length = 0;
-            _keyBuilder.Append(key);
-            _keyBuilder[_keyBuilder.Length - 1] = '/';
-            _keyBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0:D19}", val);
-            return _keyBuilder.ToString();
         }
 
         private static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, CollectionName collectionName, byte* lowerKey, int lowerSize)
