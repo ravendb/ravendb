@@ -887,7 +887,7 @@ namespace Voron
         public Win32NativeFileAttributes WinOpenFlags = SafeWin32OpenFlags;
         public DateTime? NonSafeTransactionExpiration { get; set; }
         public TimeSpan DisposeWaitTime { get; set; }
-        public readonly byte[] MasterKey;
+        public byte[] MasterKey;
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
         public OpenFlags DefaultPosixFlags = PlatformDetails.Is32Bits ? PerPlatformValues.OpenFlags.O_LARGEFILE : 0;

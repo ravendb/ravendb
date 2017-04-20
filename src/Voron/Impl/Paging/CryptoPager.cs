@@ -33,6 +33,8 @@ namespace Voron.Impl.Paging
 
         public CryptoPager(AbstractPager inner) : base(inner.Options, inner.UsePageProtection)
         {
+            if (inner.Options.EncryptionEnabled == false)
+                throw new InvalidOperationException("Cannot use CryptoPager if EncryptionEnabled is false (no key defined)");
 
             Inner = inner;
             _masterKey = inner.Options.MasterKey;
@@ -168,7 +170,7 @@ namespace Voron.Impl.Paging
         {
             var buffer = new EncryptionBuffer
             {
-                Pointer = UnmanagedMemory.Allocate4KAllignedMemory(size),
+                Pointer = UnmanagedMemory.Allocate4KbAllignedMemory(size),
                 Size = size
             };
             state.LoadedBuffers[pageNumber] = buffer;

@@ -34,7 +34,7 @@ namespace FastTests.Sparrow
 
             var crypt = Sodium.AeadChacha20Poly1305Encrypt(key, nonce, message, additionalData, mac);
 
-            
+
             var plain = Sodium.AeadChacha20Poly1305Decrypt(key, nonce, crypt, additionalData, mac);
 
             var s = Encoding.UTF8.GetString(plain);
@@ -44,31 +44,37 @@ namespace FastTests.Sparrow
         [Fact]
         public unsafe void WriteAndReadPageUsingCryptoPager()
         {
-            AbstractPager cryptoPager;
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
-            using (var innerPager = new WindowsMemoryMapPager(options, Path.Combine(DataDir, "Raven.Voron")))
-            using (cryptoPager = new CryptoPager(innerPager))
             {
-                using (var tx = new TempPagerTransaction(isWriteTransaction: true))
+                options.MasterKey = Sodium.GenerateMasterKey();
+
+                using (var innerPager = new WindowsMemoryMapPager(options, Path.Combine(DataDir, "Raven.Voron")))
                 {
-                    cryptoPager.EnsureContinuous(17, 1); // We're gonna try to read and write to page 17
-                    var pagePointer = cryptoPager.AcquirePagePointerForNewPage(tx, 17, 1);
+                    AbstractPager cryptoPager;
+                    using (cryptoPager = new CryptoPager(innerPager))
+                    {
+                        using (var tx = new TempPagerTransaction(isWriteTransaction: true))
+                        {
+                            cryptoPager.EnsureContinuous(17, 1); // We're gonna try to read and write to page 17
+                            var pagePointer = cryptoPager.AcquirePagePointerForNewPage(tx, 17, 1);
 
-                    var header = (PageHeader*)pagePointer;
-                    header->PageNumber = 17;
-                    header->Flags = PageFlags.Single | PageFlags.FixedSizeTreePage;
+                            var header = (PageHeader*)pagePointer;
+                            header->PageNumber = 17;
+                            header->Flags = PageFlags.Single | PageFlags.FixedSizeTreePage;
 
-                    Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', Constants.Storage.PageSize - PageHeader.SizeOf);
-                }
+                            Memory.Set(pagePointer + PageHeader.SizeOf, (byte)'X', Constants.Storage.PageSize - PageHeader.SizeOf);
+                        }
 
-                using (var tx = new TempPagerTransaction())
-                {
-                    var pagePointer = cryptoPager.AcquirePagePointer(tx, 17);
+                        using (var tx = new TempPagerTransaction())
+                        {
+                            var pagePointer = cryptoPager.AcquirePagePointer(tx, 17);
 
-                    // Making sure that the data was decrypted and still holds those 'X' chars
-                    Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
-                    Assert.True(pagePointer[666] == 'X');
-                    Assert.True(pagePointer[1039] == 'X');
+                            // Making sure that the data was decrypted and still holds those 'X' chars
+                            Assert.True(pagePointer[PageHeader.SizeOf] == 'X');
+                            Assert.True(pagePointer[666] == 'X');
+                            Assert.True(pagePointer[1039] == 'X');
+                        }
+                    }
                 }
             }
         }
