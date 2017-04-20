@@ -194,7 +194,8 @@ namespace Raven.Server.ServerWide
                 throw;
             }
 
-            BooleanQuery.MaxClauseCount = Configuration.Queries.MaxClauseCount;
+            if (Configuration.Queries.MaxClauseCount != null)
+                BooleanQuery.MaxClauseCount = Configuration.Queries.MaxClauseCount.Value;
 
             ContextPool = new TransactionContextPool(_env);
 
