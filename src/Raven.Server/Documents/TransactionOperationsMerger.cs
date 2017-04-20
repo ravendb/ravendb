@@ -237,7 +237,7 @@ namespace Raven.Server.Documents
                     switch (result)
                     {
                         case PendingOperations.CompletedAll:
-                        case PendingOperations.ModifiedsSystemDocuments:
+                        case PendingOperations.ModifiedSystemDocuments:
                             try
                             {
                                 tx.Commit();
@@ -256,7 +256,7 @@ namespace Raven.Server.Documents
                             }
                             return;
                         case PendingOperations.HasMore:
-                            MergeTransactionsWithAsycnCommit(context, pendingOps);
+                            MergeTransactionsWithAsyncCommit(context, pendingOps);
                             return;
                         default:
                             Debug.Assert(false, "Should never happen");
@@ -285,7 +285,7 @@ namespace Raven.Server.Documents
             RunEachOperationIndependently(pendingOps);
         }
 
-        private void MergeTransactionsWithAsycnCommit(
+        private void MergeTransactionsWithAsyncCommit(
             DocumentsOperationContext context,
             List<MergedTransactionCommand> previousPendingOps)
         {
@@ -350,7 +350,7 @@ namespace Raven.Server.Documents
                         switch (result)
                         {
                             case PendingOperations.CompletedAll:
-                            case PendingOperations.ModifiedsSystemDocuments:
+                            case PendingOperations.ModifiedSystemDocuments:
                                 try
                                 {
                                     context.Transaction.Commit();
@@ -416,7 +416,7 @@ namespace Raven.Server.Documents
         private enum PendingOperations
         {
             CompletedAll,
-            ModifiedsSystemDocuments,
+            ModifiedSystemDocuments,
             HasMore
         }
 
@@ -482,7 +482,7 @@ namespace Raven.Server.Documents
                 _log.Info($"Merged {pendingOps.Count} operations in {sp.Elapsed} and there is no more work");
             }
             if (context.Transaction.ModifiedSystemDocuments)
-                return PendingOperations.ModifiedsSystemDocuments;
+                return PendingOperations.ModifiedSystemDocuments;
 
             return GetPendingOperationsStatus(context, pendingOps.Count == 0);
         }
@@ -539,7 +539,7 @@ namespace Raven.Server.Documents
                 // which we can't realy do if we are starting another transaction
                 // immediately. This way, we skip this optimization for this
                 // kind of work
-                return PendingOperations.ModifiedsSystemDocuments;
+                return PendingOperations.ModifiedSystemDocuments;
 
             if (forceCompletion)
                 return PendingOperations.CompletedAll;
