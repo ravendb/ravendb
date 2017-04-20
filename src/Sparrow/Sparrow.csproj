@@ -45,10 +45,6 @@
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
     <PackageReference Include="System.Threading.Timer" Version="4.3.0" />
     <PackageReference Include="System.ValueTuple" Version="4.3.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="System.Threading.ThreadPool">
-      <HintPath>..\..\..\..\Users\ayende\.nuget\packages\system.threading.threadpool\4.3.0\ref\netstandard1.3\System.Threading.ThreadPool.dll</HintPath>
-    </Reference>
+    <PackageReference Include="System.Threading.ThreadPool" Version="4.3.0" />
   </ItemGroup>
 </Project>
