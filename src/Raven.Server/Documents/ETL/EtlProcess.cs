@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.ETL
         public abstract EtlPerformanceStats[] GetPerformanceStats();
     }
 
-    public abstract class EtlProcess<TExtracted, TTransformed> : EtlProcess where TExtracted : ExtractedItem
+    public abstract class EtlProcess<TExtracted, TTransformed, TDestination> : EtlProcess where TExtracted : ExtractedItem where TDestination : EtlDestination
     {
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim();
         private readonly CancellationTokenSource _cts;
@@ -55,15 +55,19 @@ namespace Raven.Server.Documents.ETL
         private NativeMemory.ThreadStats _threadAllocations;
         private Thread _thread;
         private EtlStatsAggregator _lastStats;
+        private int _statsId;
+
         protected readonly Transformation Transformation;
         protected readonly Logger Logger;
         protected readonly DocumentDatabase Database;
         protected TimeSpan? FallbackTime;
-        private int _statsId;
 
-        protected EtlProcess(Transformation transformation, DocumentDatabase database, string tag)
+        public readonly TDestination Destination;
+
+        protected EtlProcess(Transformation transformation, TDestination destination, DocumentDatabase database, string tag)
         {
             Transformation = transformation;
+            Destination = destination;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(database.DatabaseShutdown);
             Tag = tag;
             Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
