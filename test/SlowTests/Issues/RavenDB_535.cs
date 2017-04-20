@@ -29,10 +29,10 @@ namespace SlowTests.Issues
                 {
                     var table = context.Transaction.InnerTransaction.OpenTable(DocumentsStorage.DocsSchema, "Collection.Documents.users");
                     int tries;
-                    var val = documentDatabase.DocumentsStorage.DocumentPut.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("users/", table, context, out tries);
+                    var val = documentDatabase.DocumentsStorage.Identities.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("users/", table, context, out tries);
                     Assert.True(30 > tries);
                     Assert.Equal("users/1338", val);
-                    val = documentDatabase.DocumentsStorage.DocumentPut.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("users/", table, context, out tries);
+                    val = documentDatabase.DocumentsStorage.Identities.GetNextIdentityValueWithoutOverwritingOnExistingDocuments("users/", table, context, out tries);
                     Assert.Equal(1, tries);
                     Assert.Equal("users/1339", val);
                 }
