@@ -176,7 +176,7 @@ namespace SlowTests.Server.Rachis
                     }, "test"));
                 }
             }
-            Assert.True(b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex).Wait(5000));
+            Assert.True(await b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex).WaitAsync(5000));
             TransactionOperationContext context;
             using (b.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
@@ -220,7 +220,7 @@ namespace SlowTests.Server.Rachis
 
                 var waitForCommitIndexChange = b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
 
-                Assert.True(waitForCommitIndexChange.Wait(TimeSpan.FromSeconds(5)));
+                Assert.True(await waitForCommitIndexChange.WaitAsync(TimeSpan.FromSeconds(5)));
 
                 TransactionOperationContext context;
                 using (b.ContextPool.AllocateOperationContext(out context))

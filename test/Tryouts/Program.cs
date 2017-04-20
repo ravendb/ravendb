@@ -19,9 +19,9 @@ namespace Tryouts
                 //LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
                 Parallel.For(0, 10, _ =>
                 {
-                    using (var a = new TopologyChangesTests())
+                    using (var a = new SlowTests.Server.Rachis.ElectionTests())
                     {
-                        a.CanEnforceTopologyOnOldLeader().Wait();
+                        a.OnNetworkDisconnectionANewLeaderIsElectedAfterReconnectOldLeaderStepsDownAndRollBackHisLog(numberOfNodes: 3).Wait();
                     }
                 });
                 //LoggingSource.Instance.SetupLogMode(LogMode.None, "logs");

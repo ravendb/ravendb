@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -17,6 +18,7 @@ using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Sparrow.Json;
+using Sparrow.Platform;
 using Xunit;
 
 namespace Tests.Infrastructure
@@ -24,6 +26,11 @@ namespace Tests.Infrastructure
     [Trait("Category", "Cluster")]
     public abstract class ClusterTestBase : RavenTestBase
     {
+        static ClusterTestBase()
+        {
+            Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {Process.GetCurrentProcess().Id}.");
+        }
+
         private const int PortRangeStart = 9000;
         private const int ElectionTimeoutInMs = 300;
         private static int numberOfPortRequests;
@@ -54,7 +61,7 @@ namespace Tests.Infrastructure
 
             Assert.True((databaseResult.ETag ?? 0) > 0); //sanity check                
 
-            await WaitForEtagInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+            await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
         }
 
         protected static CreateDatabaseResult CreateClusterDatabase(string databaseName, IDocumentStore store, int replicationFactor = 2)
@@ -273,31 +280,33 @@ namespace Tests.Infrastructure
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
         }
 
-        private int FindStoreIndex(IDocumentStore store)
-        {
-            return Servers.FindIndex(srv => srv.WebUrls[0].Equals(store.Url, StringComparison.OrdinalIgnoreCase));
-        }
-
-        public async Task WaitForEtagInCluster(long etag,  TimeSpan timeout)
+        public async Task WaitForRaftIndexToBeAppliedInCluster(long index,  TimeSpan timeout)
         {
             if (Servers.Count == 0)
                 return;
 
-            //maybe we are already at that etag, in this case nothing to do
-            if(Servers.All(server => server.ServerStore.LastRaftCommitEtag >= etag))
-                return;
-            
             var tasks = 
                 Servers
-                .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(etag))
+                .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index))
                 .ToList();
-                        
-            var timeoutTask = Task.Delay(timeout);
-            
-            await Task.WhenAny(timeoutTask, Task.WhenAll(tasks));
 
-            if(timeoutTask.IsCompleted)
-                throw new TimeoutException();
+
+            if (await Task.WhenAll(tasks).WaitAsync(timeout))
+                return;
+
+
+            var message = $"Timed out waiting for {index} after {timeout} because out of {Servers.Count} " + 
+                          $" we got confirmations that it was applied only on {tasks.Count(x=>x.IsCompleted)}";
+
+            Console.ForegroundColor = ConsoleColor.Blue;
+
+            Console.WriteLine(message);
+
+            Console.ReadLine();
+
+            throw new TimeoutException(
+                message
+                );
         }
 
         public override void Dispose()

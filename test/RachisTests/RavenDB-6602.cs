@@ -34,7 +34,7 @@ namespace RachisTests
                 var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
 
                 Assert.True((databaseResult.ETag ?? 0) > 0); //sanity check                
-                await WaitForEtagInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
 
                 //before dispose there is such a document
                 using (var session = store.OpenSession(databaseName))
@@ -68,7 +68,7 @@ namespace RachisTests
                 var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
 
                 Assert.True((databaseResult.ETag ?? 0) > 0); //sanity check                
-                await WaitForEtagInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
 
                 await ((DocumentStore)store).ForceUpdateTopologyFor(databaseName);
                 var requestExecutor = ((DocumentStore)store).GetRequestExecuter(databaseName);

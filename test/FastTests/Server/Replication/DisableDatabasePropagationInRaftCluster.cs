@@ -42,7 +42,7 @@ namespace FastTests.Server.Replication
 
                 //since we have only Raft clusters, it is enough to create database only on one server
                 var databaseResult = master.Admin.Server.Send(new CreateDatabaseOperation(doc, 2));
-                await WaitForEtagInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
 
                 var requestExecutor = master.GetRequestExecuter();
                 await Task.WhenAny(requestExecutor.UpdateTopologyAsync(), Task.Delay(TimeSpan.FromSeconds(10)));
