@@ -168,7 +168,7 @@ body {
     display: flex;
     align-items: center;
 
-    div + div {
+    & > div + div {
         margin-left: @grid-gutter-width/4;
     }
 }
@@ -202,7 +202,6 @@ body {
     background-color: @gray-dark;
     border-top: 1px solid fadeout(gray,60%);
     color: @gray-light;
-
 
     a {
         padding: @grid-gutter-width/8 @grid-gutter-width/2;
@@ -260,6 +259,11 @@ body {
     }
 
     .footer-item {
+        .global-spinner {
+            align-self: center;
+            line-height: 16px;
+        }
+
         & + .footer-item {
             border-left: 1px solid fadeout(gray,60%);
         }
