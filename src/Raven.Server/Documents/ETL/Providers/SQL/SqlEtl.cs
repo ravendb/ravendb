@@ -12,18 +12,15 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    public class SqlEtl : EtlProcess<ToSqlItem, SqlTableWithRecords>
+    public class SqlEtl : EtlProcess<ToSqlItem, SqlTableWithRecords, SqlDestination>
     {
         public const string SqlEtlTag = "SQL ETL";
-
-        public SqlDestination Destination { get; }
 
         public readonly SqlEtlMetricsCountersManager SqlMetrics = new SqlEtlMetricsCountersManager();
 
         public SqlEtl(Transformation transformation, SqlDestination destination, DocumentDatabase database)
-            : base(transformation, database, SqlEtlTag)
+            : base(transformation, destination, database, SqlEtlTag)
         {
-            Destination = destination;
             Metrics = SqlMetrics;
         }
 

@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
-    public class RavenEtl : EtlProcess<RavenEtlItem, ICommandData>
+    public class RavenEtl : EtlProcess<RavenEtlItem, ICommandData, RavenDestination>
     {
         public const string RavenEtlTag = "Raven ETL";
 
@@ -19,15 +19,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private readonly RavenEtlDocumentTransformer.ScriptInput _script;
 
-        public RavenEtl(Transformation transformation, RavenDestination destination, DocumentDatabase database) : base(transformation, database, RavenEtlTag)
+        public RavenEtl(Transformation transformation, RavenDestination destination, DocumentDatabase database) : base(transformation, destination, database, RavenEtlTag)
         {
-            Destination = destination;
             Metrics = new EtlMetricsCountersManager();
             _requestExecutor = RequestExecutor.CreateForSingleNode(Destination.Url, Destination.Database, Destination.ApiKey);
             _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);
         }
-
-        public RavenDestination Destination { get; }
 
         protected override IEnumerator<RavenEtlItem> ConvertDocsEnumerator(IEnumerator<Document> docs)
         {
