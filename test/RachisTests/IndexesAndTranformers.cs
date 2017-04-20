@@ -14,8 +14,6 @@ using Raven.Client.Documents.Transformers;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Server;
-using SlowTests.Bugs;
-using SlowTests.MailingList;
 using Tests.Infrastructure;
 using Xunit;
 

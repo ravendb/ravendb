@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Server;
@@ -17,10 +16,8 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Xunit;
-using Constants = Raven.Client.Constants;
 
 namespace Tests.Infrastructure
 {
@@ -249,7 +246,7 @@ namespace Tests.Infrastructure
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException
-            var condition = await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes* ElectionTimeoutInMs);
+            var condition = await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes* ElectionTimeoutInMs * 5);
             Assert.True(condition,
                 "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.ClusterStatus() );
             return leader;
