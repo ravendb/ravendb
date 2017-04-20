@@ -55,26 +55,7 @@ namespace Raven.Server.Documents
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocumentsStorage.DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
-            bool knownNewKey = false;
-            if (string.IsNullOrWhiteSpace(key))
-            {
-                key = Guid.NewGuid().ToString();
-                knownNewKey = true;
-            }
-            else
-            {
-                switch (key[key.Length - 1])
-                {
-                    case '/':
-                        key = _documentsStorage.Identities.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out _);
-                        knownNewKey = true;
-                        break;
-                    case '|':
-                        key = _documentsStorage.Identities.AppendNumericValueToKey(key, newEtag);
-                        knownNewKey = true;
-                        break;
-                }
-            }
+            key = BuildDocumentKey(context, key, table, newEtag, out bool knownNewKey);
 
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out Slice lowerKey, out Slice keyPtr);
 
@@ -229,6 +210,28 @@ namespace Raven.Server.Documents
                 Collection = collectionName,
                 ChangeVector = changeVector
             };
+        }
+
+        private string BuildDocumentKey(DocumentsOperationContext context, string key, Table table, long newEtag, out bool knownNewKey)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                knownNewKey = true;
+                return Guid.NewGuid().ToString();
+            }
+
+            switch (key[key.Length - 1])
+            {
+                case '/':
+                    knownNewKey = true;
+                    return _documentsStorage.Identities.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out _);
+                case '|':
+                    knownNewKey = true;
+                    return _documentsStorage.Identities.AppendNumericValueToKey(key, newEtag);
+            }
+
+            knownNewKey = false;
+            return key;
         }
 
         private bool ShouldRecreateAttachment(DocumentsOperationContext context, Slice lowerKey, BlittableJsonReaderObject oldDoc, BlittableJsonReaderObject document, DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
