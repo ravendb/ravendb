@@ -6,15 +6,15 @@ import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
 
 class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]> {
-    
-    private readonly onData: (data: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) => void;
 
     private static readonly isoParser = d3.time.format.iso;
-   
+    private readonly onData: (data: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) => void;
+
     private mergedData: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
-   
     private pendingDataToApply: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
+
     private updatesPaused = false;
+    loading = ko.observable<boolean>(true);
 
     constructor(db: database, onData: (data: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) => void) {
         super(db);
@@ -48,7 +48,13 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<Raven.
         this.onData(this.mergedData);
     }
 
+    protected onHeartBeat() {
+        this.loading(false);
+    }
+
     protected onMessage(e: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) {
+        this.loading(false);
+
         if (this.updatesPaused) {
             this.pendingDataToApply.push(...e);
         } else {
@@ -103,7 +109,6 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<Raven.
         withCache.StartedAsDate = liveReplicationStatsWebSocketClient.isoParser.parse(perf.Started);
         withCache.Type = type;
         withCache.Description = description;
-        withCache.Errors = perf.Errors;
     }
 }
 
