@@ -225,12 +225,16 @@ namespace Voron.Impl.Journal
               _pageTranslationTable.RemoveKeysWhereAllPagesOlderThan(lastSyncedTransactionId, unusedPages);
             }
 
+            // use current write tx id to prevent from overriding a scratch page by write tx 
+            // while there might be old read tx looking at it by using PTT from the journal snapshot
+            var availableForAllocationAfterTx = tx.Id; 
+
             foreach (var unusedScratchPage in unusedAndFree)
             {
                 if (unusedScratchPage.IsFreedPageMarker)
                     continue;
 
-                _env.ScratchBufferPool.Free(unusedScratchPage.ScratchNumber, unusedScratchPage.ScratchPos, tx.Id);
+                _env.ScratchBufferPool.Free(unusedScratchPage.ScratchNumber, unusedScratchPage.ScratchPos, availableForAllocationAfterTx);
             }
 
             foreach (var page in unusedPages)
@@ -246,7 +250,7 @@ namespace Voron.Impl.Journal
                     continue;
                 }
 
-                _env.ScratchBufferPool.Free(page.ScratchNumber, page.ScratchPos, tx.Id);
+                _env.ScratchBufferPool.Free(page.ScratchNumber, page.ScratchPos, availableForAllocationAfterTx);
             }
         }
     }
