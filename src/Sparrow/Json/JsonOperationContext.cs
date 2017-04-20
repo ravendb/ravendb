@@ -2,19 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Sparrow.Binary;
 using Sparrow.Collections;
-using Sparrow.Compression;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
-using Sparrow.Platform;
 
 namespace Sparrow.Json
 {
@@ -152,6 +147,7 @@ namespace Sparrow.Json
             _jsonParserState = new JsonParserState();
             _objectJsonParser = new ObjectJsonParser(_jsonParserState, this);
             _documentBuilder = new BlittableJsonDocumentBuilder(this, _jsonParserState, _objectJsonParser);
+
 #if MEM_GUARD_STACK
             ElectricFencedMemory.IncrementConext();
             ElectricFencedMemory.RegisterContextAllocation(this,Environment.StackTrace);
@@ -273,7 +269,9 @@ namespace Sparrow.Json
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue GetLazyStringForFieldWithCaching(StringSegment key)
-        {
+        {            
+            Debug.Assert(key.Length == key.String.Length, "If the segment do not comprise the whole string this method will fail.");
+
             LazyStringValue value;
 
             var field = key.Value;

@@ -717,7 +717,7 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(statistics.LastIndexingTime));
             if (statistics.LastIndexingTime.HasValue)
-                writer.WriteString(statistics.LastIndexingTime.Value.GetDefaultRavenFormat(isUtc: true));
+                writer.WriteDateTime(statistics.LastIndexingTime.Value);
             else
                 writer.WriteNull();
             writer.WriteComma();
@@ -764,7 +764,7 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName(nameof(index.LastIndexingTime));
                 if (index.LastIndexingTime.HasValue)
-                    writer.WriteString(index.LastIndexingTime.Value.GetDefaultRavenFormat(isUtc: true));
+                    writer.WriteDateTime(index.LastIndexingTime.Value, isUtc: true);
                 else
                     writer.WriteNull();
 
@@ -1201,7 +1201,7 @@ namespace Raven.Server.Json
             {
                 writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.LastModified);
-                writer.WriteString(document.LastModified.GetDefaultRavenFormat());
+                writer.WriteDateTime(document.LastModified);
             }
             writer.WriteEndObject();
         }

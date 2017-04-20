@@ -39,7 +39,6 @@ namespace Raven.Server.Json
                 return null;
 
             return Encoding.UTF8.GetString(value.Buffer, value.Size);
-
         }
 
         public void Dispose()
