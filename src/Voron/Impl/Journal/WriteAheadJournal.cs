@@ -1330,7 +1330,7 @@ namespace Voron.Impl.Journal
 
                 ++pageSequencialNumber;
             }
-            var totalSizeWritten = (write - outputBuffer) + sizeOfPagesHeader;
+            var totalSizeWritten = write - outputBuffer;
 
             var outputBufferSize = LZ4.MaximumOutputLength(totalSizeWritten);
 
