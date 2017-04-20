@@ -2,7 +2,7 @@ import app = require("durandal/app");
 import operation = require("common/notifications/models/operation");
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import notificationCenter = require("common/notifications/notificationCenter");
-import abstractOperationDetails = require("viewmodels/common/notificationCenter/detailViewer/abstractOperationDetails");
+import abstractOperationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/abstractOperationDetails");
 
 type smugglerListItemStatus = "processed" | "skipped" | "processing" | "pending";
 

@@ -27,6 +27,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow;
@@ -60,6 +61,7 @@ namespace TypingsGenerator
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(List<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IEnumerable<>))
+                .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(Queue<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IReadOnlyList<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IReadOnlyCollection<>))
                 .WithTypeMapping(TsPrimitive.Any, typeof(TreePage))
@@ -105,6 +107,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseChanged));
             scripter.AddType(typeof(DatabaseStatsChanged));
             scripter.AddType(typeof(PerformanceHint));
+            scripter.AddType(typeof(PagingPerformanceDetails));
 
             // subscriptions
             scripter.AddType(typeof(SubscriptionCriteria));
