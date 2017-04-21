@@ -2,6 +2,8 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import sendFeedbackCommand = require("commands/resources/sendFeedbackCommand");
 import dialog = require("plugins/dialog");
 import router = require("plugins/router");
+import studioSettings = require("common/settings/studioSettings");
+import globalSettings = require("common/settings/globalSettings");
 
 type featureImpression = 'positive' | 'negative';
 
@@ -46,6 +48,7 @@ class feedback extends dialogViewModelBase {
     private readonly serverVersion: string;
     private moduleTitle = ko.observable<string>();
     private moduleId = ko.observable<string>();
+    private globalSettings: globalSettings;
 
     model = new feedbackModel();
 
@@ -62,6 +65,17 @@ class feedback extends dialogViewModelBase {
         if (instruction) {
             this.moduleTitle(instruction.config.title);
             this.moduleId(instruction.config.moduleId);
+        }
+
+        studioSettings.default.globalSettings()
+            .done(settings => this.globalSettings = settings);
+    }
+
+    attached() {
+        const feedback = this.globalSettings.feedback.getValue();
+        if (feedback) {
+            this.model.email(feedback.Email);
+            this.model.name(feedback.Name);
         }
     }
 
@@ -88,6 +102,11 @@ class feedback extends dialogViewModelBase {
         if (this.isValid(this.model.validationGroup)) {
             this.spinners.send(true);
             const dto = this.toDto();
+
+            this.globalSettings.feedback.setValue({
+                Email: dto.User.Email,
+                Name: dto.User.Name
+            });
 
             new sendFeedbackCommand(dto)
                 .execute()

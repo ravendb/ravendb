@@ -287,3 +287,8 @@ interface patchDto extends documentDto {
     Script: string;
     SelectedItem: string;
 }
+
+interface feedbackSavedSettingsDto {
+    Name: string;
+    Email: string;
+}
