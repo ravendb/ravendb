@@ -56,15 +56,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 metadata[Constants.Documents.Metadata.Id] = id;
             }
 
-            //if (_script.IsLoadingToDefaultCollection == false ||
-            //    _script.NonDefaultCollections.Length > 0 && 
-            //    _script.DefaultCollection.Equals(collectionName, StringComparison.OrdinalIgnoreCase) == false)
-            //{
-                
-            //}
-
-            //var id = prefixedId ?? Current.DocumentKey;
-
             var transformResult = Context.ReadObject(transformed, id);
 
             _commands.Add(new PutCommandDataWithBlittableJson(id, null, transformResult));
