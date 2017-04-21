@@ -51,11 +51,19 @@
                         <textarea class="form-control" placeholder="Message" rows="6" data-bind="textInput: message">
                         </textarea>
                     </div>
-                    <div class="text-right">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary" data-bind="css: { 'btn-spinner': $root.spinners.send }, disable: $root.spinners.send">
-                            <i class="icon-rocket"></i> <span>Send</span>
-                        </button>
+                    <div class="flex-horizontal">
+                        <div>
+                            <a class="btn btn-info" href="http://issues.hibernatingrhinos.com/issues/RavenDB" target="_blank">
+                                <i class="icon-bug"></i> <span>Bug tracker</span>
+                            </a>
+                        </div>
+                        <div class="flex-separator"></div>
+                        <div>
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" data-bind="css: { 'btn-spinner': $root.spinners.send }, disable: $root.spinners.send">
+                                <i class="icon-rocket"></i> <span>Send</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

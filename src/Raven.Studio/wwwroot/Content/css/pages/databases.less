@@ -73,12 +73,12 @@
         .database-info {
             display: flex;
             flex-wrap: wrap;
-            
+
             @media (max-width: @screen-xs-max) {
                 flex-direction: column;
             }
         }
-        
+
         .database-name {
             font-size: 118%;
             margin-bottom: 0;
@@ -95,6 +95,15 @@
             align-items: center;
             width: 380px;
             flex-shrink: 0;
+
+            .checkbox {
+                top: -3px;
+            }
+
+            .database-name {
+                top: -3px;
+                position: relative;
+            }
 
             h3 {
                 margin-top: 0px;
@@ -158,7 +167,6 @@
 
         .database-item {
             .database-name {
-                top: 0;
                 font-size: 18px;
                 line-height: 120%;
             }
