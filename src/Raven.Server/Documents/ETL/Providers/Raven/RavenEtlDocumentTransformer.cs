@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
@@ -38,7 +37,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             string id;
 
-            if (string.Compare(Current.Collection, collectionName, StringComparison.OrdinalIgnoreCase) == 0)
+            if (_script.IsLoadedToDefaultCollection(Current, collectionName))
             {
                 id = Current.DocumentKey;
             }
@@ -89,17 +88,18 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (item.IsDelete == false)
             {
-                if (_script.Transformation != null && 
-                    (_script.LoadToCollections.Length > 1 || string.Compare(_script.LoadToCollections[0], item.Collection, StringComparison.OrdinalIgnoreCase) != 0))
-                {
-                    // first, we need to delete docs prefixed by modified document key to properly handle updates of 
-                    // documents loaded to non default collections
-
-                    ApplyDeleteCommands(item, OperationType.Put);
-                }
-
                 if (_script.Transformation != null)
+                {
+                    if (_script.LoadToCollections.Length > 1 || _script.IsLoadedToDefaultCollection(item, _script.LoadToCollections[0]) == false)
+                    {
+                        // first, we need to delete docs prefixed by modified document key to properly handle updates of 
+                        // documents loaded to non default collections
+
+                        ApplyDeleteCommands(item, OperationType.Put);
+                    }
+
                     Apply(Context, Current.Document, _script.Transformation);
+                }
                 else
                     _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentKey, null, item.Document.Data));
             }
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 var collection = _script.LoadToCollections[i];
 
-                if (string.Compare(item.Collection, collection, StringComparison.OrdinalIgnoreCase) == 0)
+                if (_script.IsLoadedToDefaultCollection(item, collection))
                 {
                     if (operation == OperationType.Delete)
                         _commands.Add(new DeleteCommandData(item.DocumentKey, null));
@@ -135,6 +135,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public class ScriptInput
         {
+            private readonly Dictionary<string, Dictionary<string, bool>> _collectionNameComparisons;
+
             public readonly string[] LoadToCollections = new string[0];
 
             public readonly PatchRequest Transformation;
@@ -158,6 +160,23 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 {
                     IdPrefixForCollection[collection] = DocumentConventions.DefaultTransformCollectionNameToDocumentIdPrefix(collection);
                 }
+
+                _collectionNameComparisons = new Dictionary<string, Dictionary<string, bool>>(transformation.Collections.Count);
+
+                foreach (var sourceCollection in transformation.Collections)
+                {
+                    _collectionNameComparisons[sourceCollection] = new Dictionary<string, bool>(transformation.Collections.Count);
+
+                    foreach (var loadToCollection in LoadToCollections)
+                    {
+                        _collectionNameComparisons[sourceCollection][loadToCollection] = string.Compare(sourceCollection, loadToCollection, StringComparison.OrdinalIgnoreCase) == 0;
+                    }
+                }
+            }
+
+            public bool IsLoadedToDefaultCollection(RavenEtlItem item, string loadToCollection)
+            {
+                return _collectionNameComparisons[item.Collection][loadToCollection];
             }
         }
 
