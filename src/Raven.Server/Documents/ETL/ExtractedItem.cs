@@ -9,18 +9,20 @@ namespace Raven.Server.Documents.ETL
             
         }
 
-        protected ExtractedItem(Document document)
+        protected ExtractedItem(Document document, string collection)
         {
             DocumentKey = document.Key;
             Etag = document.Etag;
             Document = document;
+            Collection = collection;
         }
 
-        protected ExtractedItem(DocumentTombstone tombstone)
+        protected ExtractedItem(DocumentTombstone tombstone, string collection)
         {
             Etag = tombstone.Etag;
             DocumentKey = tombstone.LoweredKey;
             IsDelete = true;
+            Collection = collection;
         }
 
         public Document Document { get; protected set; }
@@ -30,5 +32,7 @@ namespace Raven.Server.Documents.ETL
         public long Etag { get; protected set; }
 
         public bool IsDelete { get; protected set; }
+
+        public string Collection { get; protected set; }
     }
 }

@@ -6,10 +6,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
     public class DocumentsToRavenEtlItems : IEnumerator<RavenEtlItem>
     {
         private readonly IEnumerator<Document> _docs;
+        private readonly string _collection;
 
-        public DocumentsToRavenEtlItems(IEnumerator<Document> docs)
+        public DocumentsToRavenEtlItems(IEnumerator<Document> docs, string collection)
         {
             _docs = docs;
+            _collection = collection;
         }
 
         public bool MoveNext()
@@ -17,7 +19,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
             if (_docs.MoveNext() == false)
                 return false;
 
-            Current = new RavenEtlItem(_docs.Current);
+            Current = new RavenEtlItem(_docs.Current, _collection);
 
             return true;
         }
