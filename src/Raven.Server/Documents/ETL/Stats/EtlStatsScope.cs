@@ -19,6 +19,8 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public int NumberOfExtractedItems => _stats.NumberOfExtractedItems;
 
+        public int NumberOfTransformedItems => _stats.NumberOfTransformedItems;
+
         public long LastTransformedEtag => _stats.LastTransformedEtag;
 
         public long LastLoadedEtag => _stats.LastLoadedEtag;
@@ -26,6 +28,11 @@ namespace Raven.Server.Documents.ETL.Stats
         public void RecordExtractedItem()
         {
             _stats.NumberOfExtractedItems++;
+        }
+
+        public void RecordTransformedItem()
+        {
+            _stats.NumberOfTransformedItems++;
         }
 
         public void RecordLastTransformedEtag(long etag)

@@ -89,19 +89,34 @@ namespace Raven.Server.Documents.ETL
             {
                 var enumerators = new List<(IEnumerator<Document> Docs, IEnumerator<DocumentTombstone> Tombstones, string Collection)>(Transformation.Collections.Count);
 
-                foreach (var collection in Transformation.Collections)
+                if (Transformation.ApplyToAllDocuments)
                 {
-                    var docs = Database.DocumentsStorage.GetDocumentsFrom(context, collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue).GetEnumerator();
+                    var docs = Database.DocumentsStorage.GetDocumentsFrom(context, Statistics.LastProcessedEtag + 1, 0, int.MaxValue).GetEnumerator();
 
                     scope.EnsureDispose(docs);
 
-                    var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue).GetEnumerator();
-                    
+                    var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, Statistics.LastProcessedEtag + 1, 0, int.MaxValue).GetEnumerator();
+
                     scope.EnsureDispose(tombstones);
 
-                    enumerators.Add((docs, tombstones, collection));
+                    enumerators.Add((docs, tombstones, "TODO"));
                 }
+                else
+                {
+                    foreach (var collection in Transformation.Collections)
+                    {
+                        var docs = Database.DocumentsStorage.GetDocumentsFrom(context, collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue).GetEnumerator();
 
+                        scope.EnsureDispose(docs);
+
+                        var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue).GetEnumerator();
+
+                        scope.EnsureDispose(tombstones);
+
+                        enumerators.Add((docs, tombstones, collection));
+                    }
+                }
+                
                 using (var merged = new ExtractedItemsEnumerator<TExtracted>(stats))
                 {
                     foreach (var en in enumerators)
@@ -120,12 +135,21 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract EtlTransformer<TExtracted, TTransformed> GetTransformer(DocumentsOperationContext context);
 
-        public IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context, EtlStatsScope stats)
+        public unsafe IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context, EtlStatsScope stats)
         {
             var transformer = GetTransformer(context);
 
             foreach (var item in items)
             {
+                if (Transformation.ApplyToAllDocuments && CollectionName.IsSystemDocument(item.DocumentKey.Buffer, item.DocumentKey.Size, out var hiLoDoc))
+                {
+                    if (ShouldFilterOutSystemDocument(hiLoDoc))
+                    {
+                        stats.RecordLastTransformedEtag(item.Etag);
+                        continue;
+                    }
+                }
+                
                 using (stats.For(EtlOperations.Transform))
                 {
                     CancellationToken.ThrowIfCancellationRequested();
@@ -136,6 +160,7 @@ namespace Raven.Server.Documents.ETL
 
                         Statistics.TransformationSuccess();
 
+                        stats.RecordTransformedItem();
                         stats.RecordLastTransformedEtag(item.Etag);
 
                         if (CanContinueBatch(stats) == false)
@@ -185,7 +210,7 @@ namespace Raven.Server.Documents.ETL
 
                     stats.RecordLastLoadedEtag(stats.LastTransformedEtag);
 
-                    Statistics.LoadSuccess(stats.NumberOfExtractedItems);
+                    Statistics.LoadSuccess(stats.NumberOfTransformedItems);
                 }
                 catch (Exception e)
                 {
@@ -430,6 +455,8 @@ namespace Raven.Server.Documents.ETL
                 }
             }
         }
+
+        protected abstract bool ShouldFilterOutSystemDocument(bool isHilo);
 
         protected void EnsureThreadAllocationStats()
         {
