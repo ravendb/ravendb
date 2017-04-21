@@ -169,20 +169,20 @@ class replicationStats extends viewModelBase {
         openedTrackArrow: "#ca1c59",
         closedTrackArrow: "#98a7b7",
         collectionNameTextColor: "#2c343a",
-        itemWithError: "Crimson",
+        itemWithError: "#98041b",
 
         tracks: {
-            "Replication": "#368b74",
-            "Network/Read": "#517993",
-            "Network/Write": "#8f5c72",
-            "Storage/Read": "#315c78",
-            "Storage/Write": "#d88484", 
-            "Network/DocumentRead": "#8cb1b1",
-            "Network/AttachmentRead": "#86888d",
-            "Network/TombstoneRead": "#b79ec7",
-            "Storage/DocumentRead": "#4c668c",
-            "Storage/TombstoneRead": "#a487ba",
-            "Storage/AttachmentRead": "#aa7139"
+            "Replication": "#0b4971",
+            "Network/Read": "#046293",
+            "Network/Write": "#046293",
+            "Storage/Read": "#66418c",
+            "Storage/Write": "#66418c", 
+            "Network/DocumentRead": "#0077b5",
+            "Network/AttachmentRead": "#008cc9",
+            "Network/TombstoneRead": "#34b3e4",
+            "Storage/DocumentRead": "#0077b5",
+            "Storage/TombstoneRead": "#34b3e4",
+            "Storage/AttachmentRead": "#008cc9"
         }
     }
 
@@ -652,8 +652,8 @@ class replicationStats extends viewModelBase {
 
     private constructYScale() {
         let currentOffset = replicationStats.axisHeight - this.currentYOffset;
-        let domain = [] as Array<string>;
-        let range = [] as Array<number>;
+        const domain = [] as Array<string>;
+        const range = [] as Array<number>;
 
         const replicationsInfo = this.filteredTrackNames();
 
@@ -893,6 +893,7 @@ class replicationStats extends viewModelBase {
 
     private getColorForOperation(operationName: string): string {
         const { tracks } = replicationStats.colors;
+
         if (operationName in tracks) {
             return (tracks as dictionary<string>)[operationName];
         }
