@@ -1,33 +1,35 @@
 <div class="modal-dialog" role="document" id="feedbackModal">
     <form data-bind="submit: send" novalidate>
         <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-body" data-bind="with: model">
+            <div class="modal-content" data-bind="with: model">
+                <div class="modal-body">
                     <div class="clearfix">
                         <div class="feedback-image margin-bottom"></div>
                     </div>
                     <div class="flex-horizontal">
                         <div class="flex-content">
-                            Does your feedback concern <strong>Replication</strong>?
+                            Does your feedback concern <strong data-bind="text: $parent.moduleTitle"></strong>?
                         </div>
                         <div>
-                            <button class="btn">Yes</button>
-                            <button class="btn">No, general topic</button>
+                            <button class="btn btn-default" data-bind="css: { 'active': viewSpecific }, click: _.partial(viewSpecific, true)">Yes</button>
+                            <button class="btn btn-default" data-bind="css: { 'active': !viewSpecific() }, click: _.partial(viewSpecific, false)">No, something else</button>
                         </div>
                     </div>
                 </div>
                 <div class="panel panel-info">
-                    <div class="modal-body">
-                        <div class="row row-sm">
-                            <div class="col-sm-6">
-                                <button class="btn btn-success btn-block">
-                                    <i class="icon-thumb-up"></i> <span>It's Perfect</span>
-                                </button>
-                            </div>
-                            <div class="col-sm-6">
-                                <button class="btn btn-danger btn-block">
-                                    <i class="icon-thumb-down"></i> <span>Something's wrong</span>
-                                </button>
+                    <div class="collapse" data-bind="collapse: viewSpecific">
+                        <div class="modal-body">
+                            <div class="row row-sm">
+                                <div class="col-sm-6">
+                                    <button type="button" class="btn btn-success btn-block" data-bind="click: _.partial(featureImpression, 'positive'), css: { 'active': featureImpression() === 'positive' }">
+                                        <i class="icon-thumb-up"></i> <span>I like it</span>
+                                    </button>
+                                </div>
+                                <div class="col-sm-6">
+                                    <button type="button" class="btn btn-danger btn-block" data-bind="click: _.partial(featureImpression, 'negative'), css: { 'active': featureImpression() === 'negative' }">
+                                        <i class="icon-thumb-down"></i> <span>Could be better</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -58,6 +60,5 @@
                 </div>
             </div>
         </div>
-</div>
     </form>
 </div>
