@@ -6,10 +6,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Enumerators
     public class TombstonesToSqlItems : IEnumerator<ToSqlItem>
     {
         private readonly IEnumerator<DocumentTombstone> _tombstones;
+        private readonly string _collection;
 
-        public TombstonesToSqlItems(IEnumerator<DocumentTombstone> tombstones)
+        public TombstonesToSqlItems(IEnumerator<DocumentTombstone> tombstones, string collection)
         {
             _tombstones = tombstones;
+            _collection = collection;
         }
 
         public bool MoveNext()
@@ -17,7 +19,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Enumerators
             if (_tombstones.MoveNext() == false)
                 return false;
 
-            Current = new ToSqlItem(_tombstones.Current);
+            Current = new ToSqlItem(_tombstones.Current, _collection);
 
             return true;
         }

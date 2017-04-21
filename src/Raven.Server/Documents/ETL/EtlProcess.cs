@@ -79,15 +79,15 @@ namespace Raven.Server.Documents.ETL
 
         public override string Name => Transformation.Name;
 
-        protected abstract IEnumerator<TExtracted> ConvertDocsEnumerator(IEnumerator<Document> docs);
+        protected abstract IEnumerator<TExtracted> ConvertDocsEnumerator(IEnumerator<Document> docs, string collection);
 
-        protected abstract IEnumerator<TExtracted> ConvertTombstonesEnumerator(IEnumerator<DocumentTombstone> tombstones);
+        protected abstract IEnumerator<TExtracted> ConvertTombstonesEnumerator(IEnumerator<DocumentTombstone> tombstones, string collection);
 
         public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context, EtlStatsScope stats)
         {
             using (var scope = new DisposeableScope())
             {
-                var enumerators = new List<(IEnumerator<Document> Docs, IEnumerator<DocumentTombstone> Tombstones)>(Transformation.Collections.Count);
+                var enumerators = new List<(IEnumerator<Document> Docs, IEnumerator<DocumentTombstone> Tombstones, string Collection)>(Transformation.Collections.Count);
 
                 foreach (var collection in Transformation.Collections)
                 {
@@ -99,15 +99,15 @@ namespace Raven.Server.Documents.ETL
                     
                     scope.EnsureDispose(tombstones);
 
-                    enumerators.Add((docs, tombstones));
+                    enumerators.Add((docs, tombstones, collection));
                 }
 
                 using (var merged = new ExtractedItemsEnumerator<TExtracted>(stats))
                 {
                     foreach (var en in enumerators)
                     {
-                        merged.AddEnumerator(ConvertDocsEnumerator(en.Docs));
-                        merged.AddEnumerator(ConvertTombstonesEnumerator(en.Tombstones));
+                        merged.AddEnumerator(ConvertDocsEnumerator(en.Docs, en.Collection));
+                        merged.AddEnumerator(ConvertTombstonesEnumerator(en.Tombstones, en.Collection));
                     }
 
                     while (merged.MoveNext())
