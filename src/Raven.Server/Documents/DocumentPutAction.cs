@@ -342,7 +342,7 @@ namespace Raven.Server.Documents
             ChangeVectorEntry[] oldChangeVector, long newEtag)
         {
             if (oldChangeVector != null)
-                return ReplicationUtils.UpdateChangeVectorWithNewEtag(_documentsStorage.Environment.DbId, newEtag, oldChangeVector);
+                return ChangeVectorUtils.UpdateChangeVectorWithNewEtag(_documentsStorage.Environment.DbId, newEtag, oldChangeVector);
 
             return _documentsStorage.ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, loweredKey, newEtag);
         }
