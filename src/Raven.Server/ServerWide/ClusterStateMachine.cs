@@ -64,7 +64,7 @@ namespace Raven.Server.ServerWide
 
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += transaction =>
             {
                 _rachisLogIndexNotifications.NotifyListenersAbout(index);
             };
@@ -320,7 +320,7 @@ namespace Raven.Server.ServerWide
 
         private void NotifyDatabaseChanged(TransactionOperationContext context, string databaseName, long index)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += transaction =>
             {
                 TaskExecuter.Execute(_ =>
                 {
