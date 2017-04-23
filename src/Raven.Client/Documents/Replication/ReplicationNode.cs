@@ -115,10 +115,11 @@ namespace Raven.Client.Documents.Replication
                    DictionaryExtensions.ContentEquals(SpecifiedCollections, other.SpecifiedCollections);
         }
 
+        // We need a _deterministic_ sorting, so we can efficiently compare between two lists of replication nodes.
         public int CompareTo(ReplicationNode other)
         {
             var myValue = GetHashCode();
-            var otherValue = GetHashCode();
+            var otherValue = other.GetHashCode();
             if (myValue > otherValue)
                 return 1;
             if (otherValue < myValue)
