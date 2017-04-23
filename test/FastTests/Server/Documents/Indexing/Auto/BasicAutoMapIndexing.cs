@@ -236,16 +236,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
             if (database.Configuration.Core.RunInMemory == false)
                 Assert.True(Directory.Exists(path2));
 
-            Assert.Equal(2, database.IndexStore.GetIndexesForCollection("Users").Count());
+            var indexesAfterReset = database.IndexStore.GetIndexesForCollection("Users");
+            Assert.Equal(2, indexesAfterReset.Count());
 
             var index3 = database.IndexStore.ResetIndex(index1);
             var path3 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath, IndexDefinitionBase.GetIndexNameSafeForFileSystem(def1.Name));
-
-            Assert.NotEqual(index3, index1);
+            
             if (database.Configuration.Core.RunInMemory == false)
                 Assert.True(Directory.Exists(path3));
-
-            //Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path1) == false, TimeSpan.FromSeconds(5)));
 
             var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
 
@@ -254,7 +252,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
             var index4 = database.IndexStore.ResetIndex(index2);
             var path4 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath, IndexDefinitionBase.GetIndexNameSafeForFileSystem(def2.Name));
 
-            Assert.NotEqual(index4, index2);
             if (database.Configuration.Core.RunInMemory == false)
                 Assert.True(Directory.Exists(path4));
 

@@ -42,7 +42,6 @@ namespace FastTests.Client.Indexing
 
                 indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
                 Assert.Equal(1, indexes.Count);
-                Assert.NotEqual(indexes[0].Etag, indexId);
             }
         }
 

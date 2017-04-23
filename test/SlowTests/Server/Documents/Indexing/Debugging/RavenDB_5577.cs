@@ -35,6 +35,7 @@ select new
     Count = g.Sum(x=> x.Count),
     Total = g.Sum(x=> x.Total)
 }",
+                    Etag = 1
                 }, database))
                 {
                     var numberOfDocs = 100;
