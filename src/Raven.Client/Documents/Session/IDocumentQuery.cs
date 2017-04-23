@@ -153,5 +153,10 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <returns></returns>
         int Count();
+
+        /// <summary>
+        /// Changes the return type of the query
+        /// </summary>
+        IDocumentQuery<TResult> OfType<TResult>();
     }
 }

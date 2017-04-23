@@ -142,5 +142,10 @@ namespace Raven.Client.Documents.Session
         /// Gets the total count of records for this query
         /// </summary>
         Task<int> CountAsync(CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        /// Changes the return type of the query
+        /// </summary>
+        IAsyncDocumentQuery<TResult> OfType<TResult>();
     }
 }
