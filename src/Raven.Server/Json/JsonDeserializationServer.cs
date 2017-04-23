@@ -14,6 +14,7 @@ using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Expiration;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Versioning;
@@ -94,5 +95,6 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, FeedbackForm> FeedbackForm = GenerateJsonDeserializationRoutine<FeedbackForm>();
 
+        public static readonly Func<BlittableJsonReaderObject, CustomIndexPaths> CustomIndexPaths = GenerateJsonDeserializationRoutine<CustomIndexPaths>();
     }
 }

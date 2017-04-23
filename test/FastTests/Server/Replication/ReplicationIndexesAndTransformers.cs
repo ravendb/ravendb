@@ -602,14 +602,14 @@ namespace FastTests.Server.Replication
                     Assert.NotNull(metadataByName);
 
                     var serversideIndexMetadata = databaseStore.IndexStore.GetIndex(userByName.IndexName);
-                    Assert.Equal(serversideIndexMetadata.IndexId, metadataByName.Id);
+                    Assert.Equal(serversideIndexMetadata.Etag, metadataByName.Id);
 
                     var metadataByAge =
                         databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
                     Assert.NotNull(metadataByAge);
 
                     serversideIndexMetadata = databaseStore.IndexStore.GetIndex(userByAge.IndexName);
-                    Assert.Equal(serversideIndexMetadata.IndexId, metadataByAge.Id);
+                    Assert.Equal(serversideIndexMetadata.Etag, metadataByAge.Id);
                 }
             }
         }

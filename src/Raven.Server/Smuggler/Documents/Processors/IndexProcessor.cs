@@ -133,7 +133,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
 
             var indexDefinition = new IndexDefinition
             {
-                IndexId = legacyIndexDefinition.IndexId,
+                Etag = legacyIndexDefinition.IndexId,
                 LockMode = legacyIndexDefinition.LockMode,
                 Maps = legacyIndexDefinition.Maps,
                 Name = name,

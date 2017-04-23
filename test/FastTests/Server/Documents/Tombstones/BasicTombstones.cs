@@ -75,7 +75,6 @@ namespace FastTests.Server.Documents.Tombstones
                 using (var index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 } }), database))
                 {

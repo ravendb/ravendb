@@ -4,7 +4,7 @@ namespace Raven.Client.Documents.Indexes
 {
     public class IndexProgress
     {
-        public int Id { get; set; }
+        public long Etag { get; set; }
 
         public string Name { get; set; }
 

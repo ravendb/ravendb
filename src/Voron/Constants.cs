@@ -89,6 +89,7 @@ namespace Voron.Global
 
         public const string DatabaseFilename = "Raven.voron";
         public static readonly Slice DatabaseFilenameSlice;
+        public const string DatabaseRecordFileNameInBackup = "___database_record___";
 
         public const int DefaultMaxLogLengthBeforeCompaction = 64; //how much entries in log to keep before compacting it into snapshot       
 

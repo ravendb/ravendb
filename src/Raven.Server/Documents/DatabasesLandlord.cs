@@ -82,7 +82,17 @@ namespace Raven.Server.Documents
 
                         if (deletionInProgress == DeletionInProgressStatus.HardDelete)
                         {
-                            var configuration = CreateDatabaseConfiguration(t.dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, databaseRecord: record);
+                            RavenConfiguration configuration;
+                            try
+                            {
+                                configuration = CreateDatabaseConfiguration(t.dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, databaseRecord: record);
+                            }
+                            catch (Exception ex)
+                            {
+                                configuration = null;
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info("Could not create database configuration",ex);
+                            }
                             //this can happen if the database record was already deleted
                             if (configuration != null)
                             {
@@ -124,6 +134,11 @@ namespace Raven.Server.Documents
                 }
 
                 // if deleted, unload / deleted and then notify leader that we removed it
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Could not react to a cluster database change", e);
             }
             finally
             {
