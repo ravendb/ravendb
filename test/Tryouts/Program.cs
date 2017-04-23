@@ -21,9 +21,12 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                Parallel.For(0, 10, j =>
+                Parallel.For(0, 5, j =>
                 {
-                    
+                    using (var a = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
+                    {
+                        a.CanDelete().Wait();
+                    }
                 });
             }
         }

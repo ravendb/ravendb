@@ -69,31 +69,23 @@ namespace Raven.Server.Documents.Indexes
 
         public void HandleDatabaseRecordChange()
         {
-            try
+            TransactionOperationContext context;
+            using (_serverStore.ContextPool.AllocateOperationContext(out context))
             {
-                TransactionOperationContext context;
-                using (_serverStore.ContextPool.AllocateOperationContext(out context))
+                DatabaseRecord record;
+                using (context.OpenReadTransaction())
                 {
-                    DatabaseRecord record;
-                    using (context.OpenReadTransaction())
-                    {
-                        record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name);
-                        if (record == null)
-                            return;
-                    }
-
-                    lock (_locker)
-                    {
-                        HandleDeletes(record);
-                        HandleChangesForStaticIndexes(record);
-                        HandleChangesForAutoIndexes(record);
-                    }
+                    record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name);
+                    if (record == null)
+                        return;
                 }
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Failed to proccess database changes on index store",e);
+
+                lock (_locker)
+                {
+                    HandleDeletes(record);
+                    HandleChangesForStaticIndexes(record);
+                    HandleChangesForAutoIndexes(record);
+                }
             }
         }
 
@@ -308,7 +300,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 if (record.Indexes.ContainsKey(indexNormalizedName) || record.AutoIndexes.ContainsKey(indexNormalizedName))
                     continue;
-                
+
                 try
                 {
                     DeleteIndexInternal(index);
@@ -387,7 +379,7 @@ namespace Raven.Server.Documents.Indexes
                     await _documentDatabase.WaitForIndexNotification(etag);
 
                     var index = GetIndex(definition.Name); // not all operations are changing Etag, this is why we need to take it directly from the index
-                    if(index == null)
+                    if (index == null)
                         throw new InvalidOperationException("Failed to create index " + definition.Name);
                     return index.Etag;
                 }
@@ -418,19 +410,13 @@ namespace Raven.Server.Documents.Indexes
 
                 var command = PutAutoIndexCommand.Create(definition, _documentDatabase.Name);
 
-                try
-                {
-                    var index = await _serverStore.SendToLeaderAsync(command);
+                var index = await _serverStore.SendToLeaderAsync(command);
 
-                    await _documentDatabase.WaitForIndexNotification(index);
+                await _documentDatabase.WaitForIndexNotification(index);
 
-                    var instance = GetIndex(definition.Name);
-                    return instance.Etag;
-                }
-                catch (CommandExecutionException e)
-                {
-                    throw e.InnerException;
-                }
+                var instance = GetIndex(definition.Name);
+
+                return instance.Etag;
             }
             finally
             {
@@ -798,7 +784,7 @@ namespace Raven.Server.Documents.Indexes
         private long ResetIndexInternal(Index index)
         {
             DeleteIndexInternal(index);
-            
+
             var definitionBase = index.Definition;
             if (definitionBase is AutoMapIndexDefinition)
                 index = AutoMapIndex.CreateNew(index.Etag, (AutoMapIndexDefinition)definitionBase, _documentDatabase);
@@ -838,7 +824,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
 
-        
+
 
 
         private void OpenIndexesFromRecord(PathSetting path, DatabaseRecord record)
@@ -860,7 +846,7 @@ namespace Raven.Server.Documents.Indexes
                 else
                     indexesCustomPaths = new Dictionary<string, string>();
             }
-                
+
             List<Exception> exceptions = null;
             if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)
                 exceptions = new List<Exception>();
@@ -872,7 +858,7 @@ namespace Raven.Server.Documents.Indexes
             //    if (record.Indexes.ContainsKey(indexDirectory.Name) == false)
             //    {
             //        IOExtensions.DeleteDirectory(indexDirectory.FullName);
-                    
+
             //        continue;
             //    }
 
@@ -889,7 +875,7 @@ namespace Raven.Server.Documents.Indexes
             //        }
             //    }
             //}
-            
+
             foreach (var kvp in record.Indexes)
             {
                 if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
