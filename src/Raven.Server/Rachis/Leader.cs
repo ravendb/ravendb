@@ -557,18 +557,18 @@ namespace Raven.Server.Rachis
                 _thread.Join();
 
             var ae = new ExceptionAggregator("Could not properly dispose Leader");
-            foreach (var ambasaddor in _nonVoters)
+            foreach (var ambasaddor in _nonVoters.Values.ToArray())
             {
-                ae.Execute(ambasaddor.Value.Dispose);
+                ae.Execute(ambasaddor.Dispose);
             }
 
-            foreach (var ambasaddor in _promotables)
+            foreach (var ambasaddor in _promotables.Values.ToArray())
             {
-                ae.Execute(ambasaddor.Value.Dispose);
+                ae.Execute(ambasaddor.Dispose);
             }
-            foreach (var ambasaddor in _voters)
+            foreach (var ambasaddor in _voters.Values.ToArray())
             {
-                ae.Execute(ambasaddor.Value.Dispose);
+                ae.Execute(ambasaddor.Dispose);
             }
 
 
