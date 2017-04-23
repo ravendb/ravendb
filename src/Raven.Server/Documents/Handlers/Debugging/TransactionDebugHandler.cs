@@ -44,8 +44,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 [nameof(TxInfoResult.TransactionId)] = lowLevelTransaction.Id,
                 [nameof(TxInfoResult.ThreadId)] = lowLevelTransaction.ThreadId,
-                [nameof(TxInfoResult.TransactionId)] = lowLevelTransaction.TxStartTime,
-                [nameof(TxInfoResult.TotalTime)] = $"{(DateTime.UtcNow - lowLevelTransaction.TxStartTime).Milliseconds} mSecs"
+                [nameof(TxInfoResult.StartTime)] = lowLevelTransaction.TxStartTime,
+                [nameof(TxInfoResult.TotalTime)] = $"{(DateTime.UtcNow - lowLevelTransaction.TxStartTime).Milliseconds} mSecs",
+                [nameof(TxInfoResult.FlushInProgressLockTaken)] = lowLevelTransaction.FlushInProgressLockTaken,
+                [nameof(TxInfoResult.Flags)] = lowLevelTransaction.Flags,
+                [nameof(TxInfoResult.IsLazyTransaction)] = lowLevelTransaction.IsLazyTransaction,
+                [nameof(TxInfoResult.NumberOfModifiedPages)] = lowLevelTransaction.NumberOfModifiedPages,
+                [nameof(TxInfoResult.Committed)] = lowLevelTransaction.Committed
             };
         }
     }
@@ -56,5 +61,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public int ThreadId;
         public int StartTime;
         public int TotalTime;
+        public bool FlushInProgressLockTaken;
+        public TransactionFlags Flags;
+        public bool IsLazyTransaction;
+        public long NumberOfModifiedPages;
+        public bool Committed;
     }
 }
