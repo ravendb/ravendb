@@ -305,7 +305,7 @@ namespace Raven.Server.Documents
             if (oldValue.Pointer != null)
             {
                 var changeVector = DocumentsStorage.GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)MetadataFields.ChangeVector);
-                return ReplicationUtils.UpdateChangeVectorWithNewEtag(_environment.DbId, newEtag, changeVector);
+                return ChangeVectorUtils.UpdateChangeVectorWithNewEtag(_environment.DbId, newEtag, changeVector);
             }
 
             return GetMergedConflictChangeVectorsAndDeleteConflicts(tx, loweredName, newEtag);
@@ -320,7 +320,7 @@ namespace Raven.Server.Documents
             if (conflictChangeVectors.Count == 0)
             {
                 if (existing != null)
-                    return ReplicationUtils.UpdateChangeVectorWithNewEtag(_environment.DbId, newEtag, existing);
+                    return ChangeVectorUtils.UpdateChangeVectorWithNewEtag(_environment.DbId, newEtag, existing);
 
                 return new[]
                 {
@@ -440,7 +440,7 @@ namespace Raven.Server.Documents
         {
             var globalChangeVectorTree = tx.ReadTree(SchemaNameConstants.GlobalChangeVectorTree);
             Debug.Assert(globalChangeVectorTree != null);
-            return ReplicationUtils.ReadChangeVectorFrom(globalChangeVectorTree);
+            return ChangeVectorUtils.ReadChangeVectorFrom(globalChangeVectorTree);
         }
 
         public void SetGlobalChangeVector(Transaction tx, ByteStringContext context, Dictionary<Guid, long> changeVector)
@@ -449,7 +449,7 @@ namespace Raven.Server.Documents
 
             Debug.Assert(tree != null);
 
-            ReplicationUtils.WriteChangeVectorTo(context, changeVector, tree);
+            ChangeVectorUtils.WriteChangeVectorTo(context, changeVector, tree);
         }
 
         public long GetLastReplicateEtagFrom(Transaction tx, string dbId)
@@ -485,12 +485,12 @@ namespace Raven.Server.Documents
             var globalChangeVectorTree = tx.ReadTree(SchemaNameConstants.GlobalChangeVectorTree);
             Debug.Assert(globalChangeVectorTree != null);
 
-            var globalChangeVector = ReplicationUtils.ReadChangeVectorFrom(globalChangeVectorTree);
+            var globalChangeVector = ChangeVectorUtils.ReadChangeVectorFrom(globalChangeVectorTree);
 
             // merge metadata change vector into global change vector
             // --> if we have any entry in global vector smaller than in metadata vector,
             // update the entry in global vector to a larger one
-            foreach (var item in ReplicationUtils.MergeVectors(globalChangeVector, changeVectorForWrite))
+            foreach (var item in ChangeVectorUtils.MergeVectors(globalChangeVector, changeVectorForWrite))
             {
                 var dbId = item.DbId;
                 var etagBigEndian = Bits.SwapBytes(item.Etag);

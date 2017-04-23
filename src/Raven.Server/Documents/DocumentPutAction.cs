@@ -56,27 +56,7 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(DocumentsStorage.DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
             key = BuildDocumentKey(context, key, table, newEtag, out bool knownNewKey);
-
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out Slice lowerKey, out Slice keyPtr);
-
-            if (_documentsStorage.ConflictsStorage.ConflictsCount != 0)
-            {
-                // Since this document resolve the conflict we dont need to alter the change vector.
-                // This way we avoid another replication back to the source
-                if (expectedEtag.HasValue)
-                {
-                    _documentsStorage.ConflictsStorage.ThrowConcurrencyExceptionOnConflict(context, lowerKey.Content.Ptr, lowerKey.Size, expectedEtag);
-                }
-
-                if ((flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication)
-                {
-                    _documentsStorage.ConflictsStorage.DeleteConflictsFor(context, key);
-                }
-                else
-                {
-                    changeVector = _documentsStorage.ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key, newEtag);
-                }
-            }
 
             var oldValue = default(TableValueReader);
             if (knownNewKey == false)
@@ -117,12 +97,7 @@ namespace Raven.Server.Documents
                 }
             }
 
-            if (changeVector == null)
-            {
-                var oldChangeVector = oldValue.Pointer != null ? DocumentsStorage.GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)DocumentsStorage.DocumentsTable.ChangeVector) : null;
-                changeVector = SetDocumentChangeVectorForLocalChange(context, lowerKey, oldChangeVector, newEtag);
-            }
-
+            changeVector = BuildChangeVector(context, key, lowerKey, newEtag, changeVector, expectedEtag, flags, oldValue);
 
             if (collectionName.IsSystem == false &&
                 (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
@@ -213,28 +188,65 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ChangeVectorEntry[] BuildChangeVector(DocumentsOperationContext context, string key, Slice lowerKey, long newEtag, ChangeVectorEntry[] changeVector, long? expectedEtag, DocumentFlags flags, TableValueReader oldValue)
+        {
+            if (_documentsStorage.ConflictsStorage.ConflictsCount != 0)
+            {
+                // Since this document resolve the conflict we dont need to alter the change vector.
+                // This way we avoid another replication back to the source
+                if (expectedEtag.HasValue)
+                {
+                    _documentsStorage.ConflictsStorage.ThrowConcurrencyExceptionOnConflict(context, lowerKey.Content.Ptr, lowerKey.Size, expectedEtag);
+                }
+
+                if ((flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication)
+                {
+                    _documentsStorage.ConflictsStorage.DeleteConflictsFor(context, key);
+                }
+                else
+                {
+                    changeVector = _documentsStorage.ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key, newEtag);
+                }
+            }
+
+            if (changeVector == null)
+            {
+                var oldChangeVector = oldValue.Pointer != null ? DocumentsStorage.GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)DocumentsStorage.DocumentsTable.ChangeVector) : null;
+                changeVector = SetDocumentChangeVectorForLocalChange(context, lowerKey, oldChangeVector, newEtag);
+            }
+
+            return changeVector;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string BuildDocumentKey(DocumentsOperationContext context, string key, Table table, long newEtag, out bool knownNewKey)
         {
             if (string.IsNullOrWhiteSpace(key))
             {
                 knownNewKey = true;
-                return Guid.NewGuid().ToString();
+                key = Guid.NewGuid().ToString();
+            }
+            else
+            {
+                // We use if instead of switch so the JIT will better inline this method
+                var lastChar = key[key.Length - 1];
+                if (lastChar == '/')
+                {
+                    knownNewKey = true;
+                    key = _documentsStorage.Identities.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out _);
+                }
+                else if (lastChar == '|')
+                {
+                    knownNewKey = true;
+                    key = _documentsStorage.Identities.AppendNumericValueToKey(key, newEtag);
+                }
+                else
+                {
+                    knownNewKey = false;
+                }
             }
 
-            // We use if instead of switch so the JIT will better inline this method
-            var lastChar = key[key.Length - 1];
-            if (lastChar == '/')
-            {
-                knownNewKey = true;
-                return _documentsStorage.Identities.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out _);
-            }
-            if (lastChar == '|')
-            {
-                knownNewKey = true;
-                return _documentsStorage.Identities.AppendNumericValueToKey(key, newEtag);
-            }
-
-            knownNewKey = false;
+            // Itentionally have just one return statement here for better inlining
             return key;
         }
 
@@ -342,7 +354,7 @@ namespace Raven.Server.Documents
             ChangeVectorEntry[] oldChangeVector, long newEtag)
         {
             if (oldChangeVector != null)
-                return ReplicationUtils.UpdateChangeVectorWithNewEtag(_documentsStorage.Environment.DbId, newEtag, oldChangeVector);
+                return ChangeVectorUtils.UpdateChangeVectorWithNewEtag(_documentsStorage.Environment.DbId, newEtag, oldChangeVector);
 
             return _documentsStorage.ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, loweredKey, newEtag);
         }

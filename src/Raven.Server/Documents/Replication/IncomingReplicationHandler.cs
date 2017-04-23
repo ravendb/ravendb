@@ -384,7 +384,7 @@ namespace Raven.Server.Documents.Replication
                     var remote = item.ChangeVector;
 
                     ChangeVectorEntry[] conflictingVector;
-                    ReplicationUtils.ConflictStatus conflictStatus;
+                    ConflictsStorage.ConflictStatus conflictStatus;
                     using (configurationContext.OpenReadTransaction())
                         conflictStatus = GetConflictStatusForIndexOrTransformer(configurationContext, item.Name,
                             remote,
@@ -398,10 +398,10 @@ namespace Raven.Server.Documents.Replication
                         {
                             //note : PutIndexOrTransformer() is deleting conflicts and merges chnage vectors
                             //of the conflicts. This can be seen in IndexesEtagsStorage::WriteEntry()
-                            case ReplicationUtils.ConflictStatus.Update:
+                            case ConflictsStorage.ConflictStatus.Update:
                                 PutIndexOrTransformer(configurationContext, item, definition);
                                 break;
-                            case ReplicationUtils.ConflictStatus.Conflict:
+                            case ConflictsStorage.ConflictStatus.Conflict:
                                 using (var txw = configurationContext.OpenWriteTransaction())
                                 {
                                     HandleConflictForIndexOrTransformer(item, definition, conflictingVector, txw, configurationContext);
@@ -411,7 +411,7 @@ namespace Raven.Server.Documents.Replication
                                     txw.Commit();
                                     return; // skip the UpdateIndexesChangeVector below to avoid duplicate calls
                                 }
-                            case ReplicationUtils.ConflictStatus.AlreadyMerged:
+                            case ConflictsStorage.ConflictStatus.AlreadyMerged:
                                 if (_log.IsInfoEnabled)
                                     _log.Info(
                                         $"Conflict check resolved to AlreadyMerged operation, nothing to do for index = {item.Name}, with change vector = {_tempReplicatedChangeVector.Format()}");
@@ -1092,7 +1092,7 @@ namespace Raven.Server.Documents.Replication
         protected void OnDocumentsReceived(IncomingReplicationHandler instance) => DocumentsReceived?.Invoke(instance);
         protected void OnIndexesAndTransformersReceived(IncomingReplicationHandler instance) => IndexesAndTransformersReceived?.Invoke(instance);
 
-        private ReplicationUtils.ConflictStatus GetConflictStatusForIndexOrTransformer(TransactionOperationContext context, string name, ChangeVectorEntry[] remote, out ChangeVectorEntry[] conflictingVector)
+        private ConflictsStorage.ConflictStatus GetConflictStatusForIndexOrTransformer(TransactionOperationContext context, string name, ChangeVectorEntry[] remote, out ChangeVectorEntry[] conflictingVector)
         {
             //tombstones also can be a conflict entry
             conflictingVector = null;
@@ -1101,14 +1101,14 @@ namespace Raven.Server.Documents.Replication
             {
                 foreach (var existingConflict in conflicts)
                 {
-                    if (ReplicationUtils.GetConflictStatus(remote, existingConflict.ChangeVector) == ReplicationUtils.ConflictStatus.Conflict)
+                    if (ConflictsStorage.GetConflictStatus(remote, existingConflict.ChangeVector) == ConflictsStorage.ConflictStatus.Conflict)
                     {
                         conflictingVector = existingConflict.ChangeVector;
-                        return ReplicationUtils.ConflictStatus.Conflict;
+                        return ConflictsStorage.ConflictStatus.Conflict;
                     }
                 }
 
-                return ReplicationUtils.ConflictStatus.Update;
+                return ConflictsStorage.ConflictStatus.Update;
             }
 
             var metadata = _database.IndexMetadataPersistence.GetIndexMetadataByName(context.Transaction.InnerTransaction, context, name, false);
@@ -1117,11 +1117,11 @@ namespace Raven.Server.Documents.Replication
             if (metadata != null)
                 local = metadata.ChangeVector;
             else
-                return ReplicationUtils.ConflictStatus.Update; //index/transformer with 'name' doesn't exist locally, so just do PUT
+                return ConflictsStorage.ConflictStatus.Update; //index/transformer with 'name' doesn't exist locally, so just do PUT
 
 
-            var status = ReplicationUtils.GetConflictStatus(remote, local);
-            if (status == ReplicationUtils.ConflictStatus.Conflict)
+            var status = ConflictsStorage.GetConflictStatus(remote, local);
+            if (status == ConflictsStorage.ConflictStatus.Conflict)
             {
                 conflictingVector = local;
             }
@@ -1228,11 +1228,12 @@ namespace Raven.Server.Documents.Replication
                                     continue;
                                 }
 
-                                var conflictStatus = ReplicationUtils.GetConflictStatusForDocument(context, item.Id, _changeVector, out ChangeVectorEntry[] conflictingVector);
+                                ChangeVectorEntry[] conflictingVector;
+                                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, _changeVector, out conflictingVector);
 
                                 switch (conflictStatus)
                                 {
-                                    case ReplicationUtils.ConflictStatus.Update:
+                                    case ConflictsStorage.ConflictStatus.Update:
                                         if (document != null)
                                         {
                                             if (_incoming._log.IsInfoEnabled)
@@ -1256,13 +1257,13 @@ namespace Raven.Server.Documents.Replication
                                             }
                                         }
                                         break;
-                                    case ReplicationUtils.ConflictStatus.Conflict:
+                                    case ConflictsStorage.ConflictStatus.Conflict:
                                         if (_incoming._log.IsInfoEnabled)
                                             _incoming._log.Info(
                                                 $"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {_changeVector.Format()}");
                                         _incoming._conflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks, document, _changeVector, conflictingVector);
                                         break;
-                                    case ReplicationUtils.ConflictStatus.AlreadyMerged:
+                                    case ConflictsStorage.ConflictStatus.AlreadyMerged:
                                         if (_incoming._log.IsInfoEnabled)
                                             _incoming._log.Info(
                                                 $"Conflict check resolved to AlreadyMerged operation, nothing to do for doc = {item.Id}, with change vector = {_changeVector.Format()}");
