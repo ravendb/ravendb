@@ -286,13 +286,13 @@ namespace Raven.Server.Documents
             AssertTransaction(context);
 
             var tree = context.Transaction.InnerTransaction.ReadTree(ChangeVectorSlice);
-            return ReplicationUtils.ReadChangeVectorFrom(tree);
+            return ChangeVectorUtils.ReadChangeVectorFrom(tree);
         }
 
         public void SetDatabaseChangeVector(DocumentsOperationContext context, Dictionary<Guid, long> changeVector)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(ChangeVectorSlice);
-            ReplicationUtils.WriteChangeVectorTo(context, changeVector, tree);
+            ChangeVectorUtils.WriteChangeVectorTo(context, changeVector, tree);
         }
 
         public static long ReadLastDocumentEtag(Transaction tx)
