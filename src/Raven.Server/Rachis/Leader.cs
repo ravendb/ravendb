@@ -105,12 +105,18 @@ namespace Raven.Server.Rachis
         private void RefreshAmbassadors(ClusterTopology clusterTopology)
         {
             bool lockTaken = false;
-            Monitor.TryEnter(this, ref lockTaken);            
+            Monitor.TryEnter(topologyLocker, ref lockTaken);            
             try
             {
                 //This only means we are been disposed so we can quit now
                 if (lockTaken == false)
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Leader {_engine.Tag}: Skipping refreshing ambassadors because we are been disposed of");
+                    }
                     return;
+                }
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info($"Leader {_engine.Tag}: Refreshing ambassadors");
@@ -201,7 +207,7 @@ namespace Raven.Server.Rachis
             }
             finally
             {
-                Monitor.Exit(this);
+                Monitor.Exit(topologyLocker);
             }
         }
 
@@ -540,6 +546,7 @@ namespace Raven.Server.Rachis
             return tcs.Task;
         }
 
+        private object topologyLocker = new object();
         public void Dispose()
         {
             bool lockTaken = false;
@@ -549,7 +556,15 @@ namespace Raven.Server.Rachis
                 if (lockTaken == false)
                 {
                     //We need to wait that refresh ambassador finish
-                    Monitor.Wait(this);
+                    if (Monitor.Wait(topologyLocker, TimeSpan.FromSeconds(15)) == false)
+                    {
+                        var message = $"Leader {_engine.Tag}: Refresh ambassador is taking the lock for 15 sec giving up on leader dispose";
+                        if (_engine.Log.IsInfoEnabled)
+                        {                            
+                            _engine.Log.Info(message);
+                        }
+                        throw new TimeoutException(message);
+                    }
                 }
                 Running = false;
                 _shutdownRequested.Set();
@@ -604,7 +619,7 @@ namespace Raven.Server.Rachis
             }
             finally
             {
-                Monitor.Exit(this);
+                Monitor.Exit(topologyLocker);
             }
         }
 
