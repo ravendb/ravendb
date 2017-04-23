@@ -250,9 +250,9 @@ namespace Raven.Server.ServerWide
         {
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
-                ["Type"] = nameof(ServerWide.ModifyDatabaseWatchers),
-                [nameof(ServerWide.ModifyDatabaseWatchers.DatabaseName)] = key,
-                [nameof(ServerWide.ModifyDatabaseWatchers.Value)] = val,
+                ["Type"] = nameof(Commands.ModifyDatabaseWatchers),
+                [nameof(Commands.ModifyDatabaseWatchers.DatabaseName)] = key,
+                [nameof(Commands.ModifyDatabaseWatchers.Value)] = val,
             }, "update-cmd"))
             {
                 return await SendToLeaderAsync(putCmd);

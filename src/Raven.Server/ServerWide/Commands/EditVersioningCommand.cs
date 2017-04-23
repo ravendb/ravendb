@@ -1,21 +1,22 @@
 using System;
+using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Server.Documents.Versioning;
+using Raven.Server.Json;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
     public class EditVersioningCommand : UpdateDatabaseCommand
     {
-        public VersioningConfiguration Configuration;
+        // todo: change this back to VersioningConfiguration 
+        public BlittableJsonReaderObject Configuration;
 
-        public EditVersioningCommand() 
-            : base(null)
-        {
-            // for deserialization
-        }
+        // for deserialization
+        public EditVersioningCommand() : base(null){}
 
-        public EditVersioningCommand(VersioningConfiguration configuration, string databaseName)
+        public EditVersioningCommand(BlittableJsonReaderObject configuration, string databaseName)
             : base(databaseName)
         {
             Configuration = configuration;
@@ -23,12 +24,13 @@ namespace Raven.Server.ServerWide.Commands
 
         public override void UpdateDatabaseRecord(DatabaseRecord databaseRecord, long etag)
         {
-            databaseRecord.VersioningConfiguration = Configuration;
+            databaseRecord.VersioningConfiguration = 
+                JsonDeserializationServer.VersioningConfiguration(Configuration);
         }
 
         public override void FillJson(DynamicJsonValue json)
         {
-            throw new NotImplementedException();
+            json[nameof(Configuration)] = Configuration;
         }
     }
 }

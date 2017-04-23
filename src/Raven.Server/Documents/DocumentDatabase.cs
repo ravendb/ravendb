@@ -243,16 +243,10 @@ namespace Raven.Server.Documents
             ConfigurationStorage.InitializeNotificationsStorage();
 
             DatabaseRecord record;
-            using (_serverStore.ContextPool.AllocateOperationContext(out context))
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            {
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext  context))
-                {
-                    context.OpenReadTransaction();
-                    var record = _serverStore.Cluster.ReadDatabase(context, Name);
-                    TransformerStore.Initialize(record);
-                }
-            }
+                record = _serverStore.Cluster.ReadDatabase(context, Name);
+            
 
             _indexStoreTask = IndexStore.InitializeAsync(record);
             _transformerStoreTask = TransformerStore.InitializeAsync(record);

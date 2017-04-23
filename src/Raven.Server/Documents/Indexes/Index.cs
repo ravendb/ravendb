@@ -696,7 +696,7 @@ namespace Raven.Server.Documents.Indexes
                                     _hadRealIndexingWorkToDo |= didWork;
 
                                     if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Finished indexing for '{Name} ({IndexId})'.'");
+                                        _logger.Info($"Finished indexing for '{Name} ({Etag})'.'");
 
                                     if (ShouldReplace())
                                     {
@@ -717,7 +717,7 @@ namespace Raven.Server.Documents.Indexes
                                 catch (OutOfMemoryException oome)
                                 {
                                     if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Out of memory occurred for '{Name} ({IndexId})'.", oome);
+                                        _logger.Info($"Out of memory occurred for '{Name} ({Etag})'.", oome);
                                     // TODO [ppekrol] GC?
 
                                     scope.AddMemoryError(oome);
@@ -746,7 +746,7 @@ namespace Raven.Server.Documents.Indexes
                                 catch (Exception e)
                                 {
                                     if (_logger.IsOperationsEnabled)
-                                        _logger.Operations($"Critical exception occurred for '{Name} ({IndexId})'.", e);
+                                        _logger.Operations($"Critical exception occurred for '{Name} ({Etag})'.", e);
 
                                     HandleCriticalErrors(scope, e);
                                 }
@@ -763,7 +763,7 @@ namespace Raven.Server.Documents.Indexes
                                 catch (Exception e)
                                 {
                                     if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Could not update stats for '{Name} ({IndexId})'.", e);
+                                        _logger.Info($"Could not update stats for '{Name} ({Etag})'.", e);
                                 }
                             }
                         }
