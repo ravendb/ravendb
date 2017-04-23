@@ -12,14 +12,11 @@ namespace FastTests.Server.Documents
 {
     public class DocumentsCrud : RavenLowLevelTestBase
     {
-        private RavenConfiguration _configuration;
         private DocumentDatabase _documentDatabase;
-        private string _path;
 
         public DocumentsCrud()
         {
-            _path = NewDataPath();
-            _documentDatabase = CreateDocumentDatabase(runInMemory: false, dataDirectory: _path);
+            _documentDatabase = CreateDocumentDatabase(runInMemory: false, dataDirectory: NewDataPath());
         }
 
         [Theory]

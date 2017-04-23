@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var id = await _indexStore.CreateIndex(definition);
                 index = _indexStore.GetIndex(id);
 
-                CleanupSupercededAutoIndexes(index, map)
+                var t = CleanupSupercededAutoIndexes(index, map)
                     .ContinueWith(task =>
                     {
                         if (task.Exception != null)
@@ -231,6 +231,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             }
                         }
                     });
+                GC.KeepAlive(t);// we expicitly don't care about this instance, this line is here to make the compiler happy
 
                 if (query.WaitForNonStaleResultsTimeout.HasValue == false)
                     query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
@@ -281,7 +282,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         try
                         {
-                            _indexStore.DeleteIndex(supercededIndex.Etag);
+                            await _indexStore.DeleteIndex(supercededIndex.Etag);
                         }
                         catch (IndexDoesNotExistException)
                         {

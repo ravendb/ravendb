@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Handlers
                 var debug = GetStringQueryString("debug", required: false);
                 if (string.IsNullOrWhiteSpace(debug) == false)
                 {
-                    Debug(context, indexName, debug, token, HttpMethod.Post);
+                    await Debug(context, indexName, debug, token, HttpMethod.Post);
                     return;
                 }
 
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Handlers
                 var debug = GetStringQueryString("debug", required: false);
                 if (string.IsNullOrWhiteSpace(debug) == false)
                 {
-                    Debug(context, indexName, debug, token, HttpMethod.Get);
+                    await Debug(context, indexName, debug, token, HttpMethod.Get);
                     return;
                 }
 
@@ -289,11 +289,11 @@ namespace Raven.Server.Documents.Handlers
         }
 
 
-        private void Debug(DocumentsOperationContext context, string indexName, string debug, OperationCancelToken token, HttpMethod method)
+        private async Task Debug(DocumentsOperationContext context, string indexName, string debug, OperationCancelToken token, HttpMethod method)
         {
             if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
             {
-                IndexEntries(context, indexName, token, method);
+                await IndexEntries(context, indexName, token, method);
                 return;
             }
 

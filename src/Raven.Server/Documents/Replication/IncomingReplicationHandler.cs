@@ -537,7 +537,7 @@ namespace Raven.Server.Documents.Replication
                 _log.Info($"Replicated index with name = {item.Name}");
             }
 
-            _database.IndexStore.TryDeleteIndexIfExists(item.Name);
+            _database.IndexStore.TryDeleteIndexIfExists(item.Name).Wait();
             try
             {
                 IndexProcessor.Import(definition, _database, ServerVersion.BuildType, false);
