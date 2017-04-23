@@ -336,6 +336,8 @@ namespace Raven.Server.Smuggler.Documents
 
                     Debug.Assert(document.Key != null);
 
+                    document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+
                     actions.WriteDocument(document);
 
                     result.RevisionDocuments.LastEtag = document.Etag;

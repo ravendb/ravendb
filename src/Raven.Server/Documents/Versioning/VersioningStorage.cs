@@ -178,57 +178,25 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        public void PutFromDocument(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, 
-            DocumentFlags flags, ChangeVectorEntry[] changeVector, long lastModifiedTicks, VersioningConfigurationCollection configuration = null)
+        public void Put(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, 
+            DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, ChangeVectorEntry[] changeVector, long lastModifiedTicks,
+            VersioningConfigurationCollection configuration = null)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
+            BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
 
-            Slice lowerKey;
-            PutInternal(context, key, document, flags, lastModifiedTicks, table, changeVector, out lowerKey);
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out Slice lowerKey, out Slice keyPtr);
 
-            if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+            // We want the revision's attachments to have a lower etag than the reivion itself
+            var notFromSmuggler = (nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler;
+            if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
+                notFromSmuggler)
             {
                 _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerKey, changeVector);
             }
 
-            if (configuration == null)
-            {
-                var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, key, document);
-                configuration = GetVersioningConfiguration(collectionName);
-            }
-
-            Slice prefixSlice;
-            using (GetKeyPrefix(context, lowerKey, out prefixSlice))
-            {
-                // We delete the old revisions after we put the current one, 
-                // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
-                // which is old. But becasue we put it first, we make sure to clean this document, becuase of the order to the revisions.
-                var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
-                DeleteOldRevisions(context, table, prefixSlice, configuration.MaxRevisions, revisionsCount);
-            }
-        }
-
-        public void PutDirect(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, DocumentFlags flags, 
-            ChangeVectorEntry[] changeVector, long lastModifiedTicks)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
-            PutInternal(context, key, document, flags, lastModifiedTicks, table, changeVector, out var _);
-        }
-
-        private void PutInternal(DocumentsOperationContext context, string key, BlittableJsonReaderObject document, 
-            DocumentFlags flags, long lastModifiedTicks, Table table, ChangeVectorEntry[] changeVector, out Slice lowerKey)
-        {
-            BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
-
             flags |= DocumentFlags.Revision;
-
-            Slice keyPtr;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out keyPtr);
-
             var data = context.ReadObject(document, key);
-
             var newEtag = _database.DocumentsStorage.GenerateNextEtag();
-
             if (changeVector == null)
             {
                 changeVector = new[]
@@ -241,10 +209,10 @@ namespace Raven.Server.Documents.Versioning
                 };
             }
 
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
-                TableValueBuilder tbv;
-                using (table.Allocate(out tbv))
+                using (table.Allocate(out TableValueBuilder tbv))
                 {
                     tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
                     tbv.Add(lowerKey);
@@ -255,6 +223,24 @@ namespace Raven.Server.Documents.Versioning
                     tbv.Add((int)flags);
                     tbv.Add(lastModifiedTicks);
                     table.Set(tbv);
+                }
+            }
+
+            if (notFromSmuggler)
+            {
+                if (configuration == null)
+                {
+                    var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, key, document);
+                    configuration = GetVersioningConfiguration(collectionName);
+                }
+
+                using (GetKeyPrefix(context, lowerKey, out Slice prefixSlice))
+                {
+                    // We delete the old revisions after we put the current one, 
+                    // because in case that MaxRevisions is 3 or lower we may get a revision document from replication
+                    // which is old. But becasue we put it first, we make sure to clean this document, becuase of the order to the revisions.
+                    var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
+                    DeleteOldRevisions(context, table, prefixSlice, configuration.MaxRevisions, revisionsCount);
                 }
             }
         }

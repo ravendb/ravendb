@@ -120,10 +120,10 @@ namespace Raven.Server.Documents
 
                 if (_documentDatabase.BundleLoader.VersioningStorage != null)
                 {
-                    VersioningConfigurationCollection configuration;
-                    if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document, ref flags, out configuration, context, key))
+                    if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document, 
+                        ref flags, out VersioningConfigurationCollection configuration, context, key))
                     {
-                        _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, modifiedTicks, configuration);
+                        _documentDatabase.BundleLoader.VersioningStorage.Put(context, key, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration);
                     }
                 }
             }
