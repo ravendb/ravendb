@@ -1,41 +1,63 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Text;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Server.Routing;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
-using Voron.Debugging;
 using Voron.Impl;
-using Voron.Util;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
     class TransactionDebugHandler : DatabaseRequestHandler
     {
+        public class TransactionInfo
+        {
+            public string Path;
+            public List<LowLevelTransaction> Information;
+        }
+
         [RavenAction("/databases/*/debug/txinfo", "GET")]
         public Task TxInfo()
         {
+            
+            var results = new List<TransactionInfo>();
+
             foreach (var env in Database.GetAllStoragesEnvironment())
             {
-                JsonOperationContext context;
-                using (ContextPool.AllocateOperationContext(out context))
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                var txInfo = new TransactionInfo
                 {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        ["Name"] = env.Name,
-                        ["Information"] = new DynamicJsonArray(env.Environment.ActiveTransactions.AllTransactionsInstances.Select(ToJson))
-                    });
-                }
-                return Task.CompletedTask;
+                    Path = env.Environment.Options.BasePath,
+                    Information = env.Environment.ActiveTransactions.AllTransactionsInstances
+                };
+                results.Add(txInfo);
             }
 
+            JsonOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, ToJson(results));
+            }
             return Task.CompletedTask;
+        }
+
+        private DynamicJsonArray ToJson(List<TransactionInfo> txInfos)
+        {
+            if (txInfos.Count < 1)
+                return  new DynamicJsonArray();
+
+            return new DynamicJsonArray(txInfos.Select(ToJson));
+        }
+
+        private DynamicJsonValue ToJson(TransactionInfo txinfo)
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(StorageEnvironmentOptions.BasePath)] = txinfo.Path,
+                [nameof(TransactionInfo.Information)] = new DynamicJsonArray(txinfo.Information.Select(ToJson))
+            };
         }
 
         private DynamicJsonValue ToJson(LowLevelTransaction lowLevelTransaction)
