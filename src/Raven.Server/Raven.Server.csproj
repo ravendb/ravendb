@@ -31,19 +31,19 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\libs\libsodium\x64\libsodium.dll" Link="libsodium.dll" Condition="($(Platform) == 'x64' OR $(Platform) == 'AnyCPU') AND $(ARM) == ''">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\libs\libsodium\x86\libsodium.dll" Link="libsodium.dll" Condition="$(Platform) == 'x86'">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\libs\libsodium\x64\libsodium.so" Link="libsodium.so" Condition="$(Platform) == 'x64' OR $(Platform) == 'AnyCPU'">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\libs\libsodium\x86\libsodium.so" Link="libsodium.so" Condition="$(Platform) == 'x86' AND $(ARM) == ''">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\libs\libsodium\x86\libsodium.arm.so" Link="libsodium.so" Condition="$(Platform) == 'AnyCPU' AND $(ARM) == 'true'">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>

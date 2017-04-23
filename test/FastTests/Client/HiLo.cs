@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -217,7 +218,7 @@ namespace FastTests.Client
         }
 
         [Fact]
-        public void Should_Resolve_Conflict_With_Highest_Number()
+        public async Task Should_Resolve_Conflict_With_Highest_Number()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -242,7 +243,7 @@ namespace FastTests.Client
                     s2.SaveChanges();
                 }
 
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 WaitForMarkerDocumentAndAllPrecedingDocumentsToReplicate(store2);
 

@@ -19,7 +19,7 @@ namespace FastTests.Client.Attachments
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        public void PutAttachments(bool replicateDocumentFirst)
+        public async Task PutAttachments(bool replicateDocumentFirst)
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
@@ -31,7 +31,7 @@ namespace FastTests.Client.Attachments
                 }
                 if (replicateDocumentFirst)
                 {
-                    SetupAttachmentReplication(store1, store2, false);
+                    await SetupAttachmentReplicationAsync(store1, store2, false);
                     Assert.True(WaitForDocument(store2, "users/1"));
                 }
 
@@ -76,7 +76,7 @@ namespace FastTests.Client.Attachments
                 }
                 if (replicateDocumentFirst == false)
                 {
-                    SetupAttachmentReplication(store1, store2, false);
+                    await SetupAttachmentReplicationAsync(store1, store2, false);
                 }
                 Assert.True(WaitForDocument(store2, "marker"));
 
@@ -177,7 +177,7 @@ namespace FastTests.Client.Attachments
         [InlineData("\\", "\\")]
         [InlineData("/", "/")]
         [InlineData("5", "5")]
-        public void PutAndGetSpecialChar(string nameAndContentType, string expectedContentType)
+        public async Task PutAndGetSpecialChar(string nameAndContentType, string expectedContentType)
         {
             var name = "aA" + nameAndContentType;
             if (expectedContentType != null)
@@ -200,7 +200,7 @@ namespace FastTests.Client.Attachments
                     Assert.Equal(name, result.ContentType);
                 }
 
-                SetupAttachmentReplication(store1, store2, false);
+                await SetupAttachmentReplicationAsync(store1, store2, false);
                 Assert.True(WaitForDocument(store2, "users/1"));
 
                 using (var session = store2.OpenSession())
@@ -228,7 +228,7 @@ namespace FastTests.Client.Attachments
         }
 
         [Fact]
-        public void DeleteAttachments()
+        public async Task DeleteAttachments()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
@@ -248,7 +248,7 @@ namespace FastTests.Client.Attachments
 
                 store1.Operations.Send(new DeleteAttachmentOperation("users/1", "file2"));
 
-                SetupAttachmentReplication(store1, store2);
+                await SetupAttachmentReplicationAsync(store1, store2);
                 AttachmentsCrud.AssertAttachmentCount(store2, 2);
 
                 using (var session = store2.OpenSession())
@@ -300,7 +300,7 @@ namespace FastTests.Client.Attachments
         }
 
         [Fact]
-        public void PutAndDeleteAttachmentsWithTheSameStream_AlsoTestBigStreams()
+        public async Task PutAndDeleteAttachmentsWithTheSameStream_AlsoTestBigStreams()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
@@ -320,7 +320,7 @@ namespace FastTests.Client.Attachments
                 using (var stream2 = new MemoryStream(Enumerable.Range(1, 999 * 1024).Select(x => (byte)x).ToArray()))
                     store1.Operations.Send(new PutAttachmentOperation("users/1", "big-file", stream2, "image/png"));
 
-                SetupAttachmentReplication(store1, store2);
+                await SetupAttachmentReplicationAsync(store1, store2);
                 AttachmentsCrud.AssertAttachmentCount(store2, 2, 4);
 
                 using (var session = store2.OpenSession())
@@ -362,13 +362,13 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        private void SetupAttachmentReplication(DocumentStore store1, DocumentStore store2, bool waitOnMarker = true)
+        private async Task SetupAttachmentReplicationAsync(DocumentStore store1, DocumentStore store2, bool waitOnMarker = true)
         {
             //var database1 = GetDocumentDatabaseInstanceFor(store1).Result;
             var database1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.DefaultDatabase).Result;
             database1.Configuration.Replication.MaxItemsCount = null;
             database1.Configuration.Replication.MaxSizeToSend = null;
-            SetupReplication(store1, store2);
+            await SetupReplicationAsync(store1, store2);
 
             if (waitOnMarker)
             {
@@ -393,7 +393,7 @@ namespace FastTests.Client.Attachments
         }
 
         [Fact]
-        public void DeleteDocumentWithAttachmentsThatHaveTheSameStream()
+        public async Task DeleteDocumentWithAttachmentsThatHaveTheSameStream()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
@@ -412,7 +412,7 @@ namespace FastTests.Client.Attachments
                 using (var profileStream = new MemoryStream(Enumerable.Range(1, 17).Select(x => (byte)x).ToArray()))
                     store1.Operations.Send(new PutAttachmentOperation("users/1", "second-file", profileStream, "image/png"));
 
-                SetupAttachmentReplication(store1, store2);
+                await SetupAttachmentReplicationAsync(store1, store2);
                 AttachmentsCrud.AssertAttachmentCount(store2, 2, 4);
 
                 store1.Commands().Delete("users/2", null);
@@ -474,7 +474,7 @@ namespace FastTests.Client.Attachments
                     Assert.Equal("", result.ContentType);
                     Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", result.Hash);
                 }
-                SetupAttachmentReplication(store1, store2);
+                await SetupAttachmentReplicationAsync(store1, store2);
 
                 WaitForUserToContinueTheTest(store2);
 
@@ -584,8 +584,8 @@ namespace FastTests.Client.Attachments
                     await session.SaveChangesAsync();
                 }
 
-                SetupReplication(store1, store2);
-                SetupReplication(store2, store1);
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
 
                 Assert.True(WaitForDocument(store2, "marker 1"));
                 Assert.True(WaitForDocument(store1, "marker 2"));
@@ -648,8 +648,8 @@ namespace FastTests.Client.Attachments
                     await session.SaveChangesAsync();
                 }
 
-                SetupReplication(store1, store2);
-                SetupReplication(store2, store1);
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
 
                 Assert.True(WaitForDocument(store2, "marker 1"));
                 Assert.True(WaitForDocument(store1, "marker 2"));
@@ -732,9 +732,9 @@ namespace FastTests.Client.Attachments
                         store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
                     }
                 }
-                
-                SetupReplication(store1, store2);
-                SetupReplication(store2, store1);
+
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
 
                 var conflicts = WaitUntilHasConflict(store1, "users/1");
                 Assert.Equal(2, conflicts.Results.Length);
@@ -778,8 +778,8 @@ namespace FastTests.Client.Attachments
                     }
                 }
 
-                SetupReplication(store1, store2);
-                SetupReplication(store2, store1);
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
 
                 var hash1 = "JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50";
                 var hash2 = "PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN";
@@ -864,8 +864,8 @@ namespace FastTests.Client.Attachments
                     await session.SaveChangesAsync();
                 }
 
-                SetupReplication(store1, store2);
-                SetupReplication(store2, store1);
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
 
                 Assert.True(WaitForDocument(store2, "marker 1"));
                 Assert.True(WaitForDocument(store1, "marker 2"));
@@ -916,8 +916,8 @@ namespace FastTests.Client.Attachments
                     await session.SaveChangesAsync();
                 }
 
-                SetupReplication(store1, store2);
-                SetupReplication(store2, store1);
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
 
                 Assert.True(WaitForDocument(store2, "marker 1"));
                 Assert.True(WaitForDocument(store1, "marker 2"));

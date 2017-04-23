@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Xunit;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Server.Replication
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void Master_master_replication_from_etag_zero_without_conflict_should_work(bool useSsl)
+        public async Task Master_master_replication_from_etag_zero_without_conflict_should_work(bool useSsl)
         {
             if (useSsl)
             {
@@ -22,8 +23,8 @@ namespace SlowTests.Server.Replication
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
-                SetupReplication(store1, store2);
-                SetupReplication(store2, store1);
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
                 using (var session = store1.OpenSession())
                 {
                     session.Store(new ReplicationBasicTests.User

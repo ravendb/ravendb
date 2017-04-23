@@ -1,4 +1,5 @@
-﻿using FastTests.Server.Replication;
+﻿using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -8,7 +9,7 @@ namespace SlowTests.Server.Replication
     {
 
         [Fact]
-        public void Tombstones_replication_should_delete_document_at_destination()
+        public async Task Tombstones_replication_should_delete_document_at_destination()
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
@@ -21,7 +22,7 @@ namespace SlowTests.Server.Replication
                     s1.SaveChanges();
                 }
 
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 Assert.True(WaitForDocument(store2, "foo/bar"));
 
@@ -40,7 +41,7 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
-        public void Tombstone_should_replicate_in_master_master()
+        public async Task Tombstone_should_replicate_in_master_master()
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
@@ -53,8 +54,8 @@ namespace SlowTests.Server.Replication
                     s1.SaveChanges();
                 }
 
-                SetupReplication(store1, store2);
-                SetupReplication(store2, store1);
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
 
                 Assert.True(WaitForDocument(store2, "foo/bar"));
 
@@ -75,7 +76,7 @@ namespace SlowTests.Server.Replication
 
 
         [Fact]
-        public void Two_tombstones_should_replicate_in_master_master()
+        public async Task Two_tombstones_should_replicate_in_master_master()
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
@@ -93,8 +94,8 @@ namespace SlowTests.Server.Replication
                     s1.SaveChanges();
                 }
 
-                SetupReplication(store1, store2);
-                SetupReplication(store2, store1);
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
 
                 var timeout = 1000 * Server.ServerStore.DatabasesLandlord.LastRecentlyUsed.Count;
                 Assert.True(WaitForDocument(store2, "foo/bar", timeout));

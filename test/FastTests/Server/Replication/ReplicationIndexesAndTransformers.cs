@@ -304,7 +304,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public void Conflicting_indexes_should_record_conflicts_in_metadata()
+        public async Task Conflicting_indexes_should_record_conflicts_in_metadata()
         {
             using (var nodeA = GetDocumentStore())
             using (var nodeB = GetDocumentStore())
@@ -313,7 +313,7 @@ namespace FastTests.Server.Replication
                 var userByName = new UserByNameIndex(userByAge.IndexName);
                 userByAge.Execute(nodeA);
 
-                SetupReplication(nodeA, nodeB);
+                await SetupReplicationAsync(nodeA, nodeB);
 
                 userByName.Execute(nodeA);
 
@@ -321,12 +321,12 @@ namespace FastTests.Server.Replication
         }
 
         [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public void Can_replicate_index()
+        public async Task Can_replicate_index()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
             {
-                SetupReplication(source, destination);
+                await SetupReplicationAsync(source, destination);
 
                 var userByAge = new UserByAgeIndex();
                 userByAge.Execute(source);
@@ -344,7 +344,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public void Can_replicate_multiple_indexes()
+        public async Task Can_replicate_multiple_indexes()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
@@ -355,7 +355,7 @@ namespace FastTests.Server.Replication
                 var userByName = new UserByNameIndex();
                 userByName.Execute(source);
 
-                SetupReplication(source, destination);
+                await SetupReplicationAsync(source, destination);
 
                 var sw = Stopwatch.StartNew();
                 var destIndexNames = new string[0];
@@ -371,7 +371,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public void Can_replicate_multiple_indexes_and_multiple_transformers()
+        public async Task Can_replicate_multiple_indexes_and_multiple_transformers()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
@@ -388,7 +388,7 @@ namespace FastTests.Server.Replication
                 var usernameToLowerTransformer = new UsernameToLowerTransformer();
                 usernameToLowerTransformer.Execute(source);
 
-                SetupReplication(source, destination);
+                await SetupReplicationAsync(source, destination);
 
                 var sw = Stopwatch.StartNew();
                 var destIndexNames = new string[0];
@@ -414,12 +414,12 @@ namespace FastTests.Server.Replication
         }
 
         [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public void Can_replicate_transformer()
+        public async Task Can_replicate_transformer()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
             {
-                SetupReplication(source, destination);
+                await SetupReplicationAsync(source, destination);
 
                 var usernameToUpperTransformer = new UsernameToUpperTransformer();
                 usernameToUpperTransformer.Execute(source);
@@ -437,7 +437,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public void Can_replicate_multiple_transformers()
+        public async Task Can_replicate_multiple_transformers()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
@@ -448,7 +448,7 @@ namespace FastTests.Server.Replication
                 var usernameToLowerTransformer = new UsernameToLowerTransformer();
                 usernameToLowerTransformer.Execute(source);
 
-                SetupReplication(source, destination);
+                await SetupReplicationAsync(source, destination);
 
                 var sw = Stopwatch.StartNew();
                 var transformerNames = new string[0];

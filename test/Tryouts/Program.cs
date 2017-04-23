@@ -23,9 +23,9 @@ namespace Tryouts
                 Console.WriteLine(i);
                 Parallel.For(0, 10, j =>
                 {
-                    using (var a = new FastTests.Client.Attachments.AttachmentsReplication())
+                    using (var a = new FastTests.Server.Replication.ReplicationBasicTests())
                     {
-                        a.PutSameAttachmentsShouldNotConflict().Wait();
+                        a.Master_slave_replication_with_exceptions_should_work();
                     }
                 });
             }

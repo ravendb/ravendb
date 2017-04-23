@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Xunit;
 
@@ -16,14 +17,14 @@ namespace FastTests.Server.Replication
 
      
         [Fact]
-        public void Master_slave_replication_from_etag_zero_should_work()
+        public async Task Master_slave_replication_from_etag_zero_should_work()
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenSession())
                 {
@@ -56,14 +57,14 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void Master_slave_replication_with_multiple_PUTS_should_work()
+        public async Task Master_slave_replication_with_multiple_PUTS_should_work()
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenSession())
                 {
@@ -124,15 +125,15 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void Master_master_replication_with_multiple_PUTS_should_work()
+        public async Task Master_master_replication_with_multiple_PUTS_should_work()
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
-                SetupReplication(store1, store2);
-                SetupReplication(store2, store1);
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
 
                 using (var session = store1.OpenSession())
                 {
@@ -214,7 +215,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void Master_slave_replication_with_exceptions_should_work()
+        public async Task Master_slave_replication_with_exceptions_should_work()
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
@@ -224,7 +225,7 @@ namespace FastTests.Server.Replication
                 //TODO : configure test code to throw exceptions at server-side during replication
                 //TODO : (find a way to do so)
 
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenSession())
                 {
@@ -257,14 +258,14 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void Can_get_performance_stats()
+        public async Task Can_get_performance_stats()
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
-                SetupReplication(store1, store2); // master-slave
+                await SetupReplicationAsync(store1, store2); // master-slave
 
                 using (var session = store1.OpenSession())
                 {

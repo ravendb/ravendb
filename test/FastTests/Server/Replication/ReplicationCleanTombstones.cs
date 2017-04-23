@@ -12,7 +12,7 @@ namespace FastTests.Server.Replication
     public class ReplicationCleanTombstones : ReplicationTestsBase
     {
         [Fact]
-        public void CleanTombstones()
+        public async Task CleanTombstones()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
@@ -25,7 +25,7 @@ namespace FastTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
                 Assert.True(WaitForDocument(store2, "foo/bar"));
 
                 using (var session = store1.OpenSession())
