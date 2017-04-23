@@ -56,27 +56,7 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(DocumentsStorage.DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
             key = BuildDocumentKey(context, key, table, newEtag, out bool knownNewKey);
-
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out Slice lowerKey, out Slice keyPtr);
-
-            if (_documentsStorage.ConflictsStorage.ConflictsCount != 0)
-            {
-                // Since this document resolve the conflict we dont need to alter the change vector.
-                // This way we avoid another replication back to the source
-                if (expectedEtag.HasValue)
-                {
-                    _documentsStorage.ConflictsStorage.ThrowConcurrencyExceptionOnConflict(context, lowerKey.Content.Ptr, lowerKey.Size, expectedEtag);
-                }
-
-                if ((flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication)
-                {
-                    _documentsStorage.ConflictsStorage.DeleteConflictsFor(context, key);
-                }
-                else
-                {
-                    changeVector = _documentsStorage.ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key, newEtag);
-                }
-            }
 
             var oldValue = default(TableValueReader);
             if (knownNewKey == false)
@@ -117,12 +97,7 @@ namespace Raven.Server.Documents
                 }
             }
 
-            if (changeVector == null)
-            {
-                var oldChangeVector = oldValue.Pointer != null ? DocumentsStorage.GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)DocumentsStorage.DocumentsTable.ChangeVector) : null;
-                changeVector = SetDocumentChangeVectorForLocalChange(context, lowerKey, oldChangeVector, newEtag);
-            }
-
+            changeVector = BuildChangeVector(context, key, lowerKey, newEtag, changeVector, expectedEtag, flags, oldValue);
 
             if (collectionName.IsSystem == false &&
                 (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
@@ -210,6 +185,37 @@ namespace Raven.Server.Documents
                 Collection = collectionName,
                 ChangeVector = changeVector
             };
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ChangeVectorEntry[] BuildChangeVector(DocumentsOperationContext context, string key, Slice lowerKey, long newEtag, ChangeVectorEntry[] changeVector, long? expectedEtag, DocumentFlags flags, TableValueReader oldValue)
+        {
+            if (_documentsStorage.ConflictsStorage.ConflictsCount != 0)
+            {
+                // Since this document resolve the conflict we dont need to alter the change vector.
+                // This way we avoid another replication back to the source
+                if (expectedEtag.HasValue)
+                {
+                    _documentsStorage.ConflictsStorage.ThrowConcurrencyExceptionOnConflict(context, lowerKey.Content.Ptr, lowerKey.Size, expectedEtag);
+                }
+
+                if ((flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication)
+                {
+                    _documentsStorage.ConflictsStorage.DeleteConflictsFor(context, key);
+                }
+                else
+                {
+                    changeVector = _documentsStorage.ConflictsStorage.MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key, newEtag);
+                }
+            }
+
+            if (changeVector == null)
+            {
+                var oldChangeVector = oldValue.Pointer != null ? DocumentsStorage.GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)DocumentsStorage.DocumentsTable.ChangeVector) : null;
+                changeVector = SetDocumentChangeVectorForLocalChange(context, lowerKey, oldChangeVector, newEtag);
+            }
+
+            return changeVector;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

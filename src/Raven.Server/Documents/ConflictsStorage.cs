@@ -251,9 +251,7 @@ namespace Raven.Server.Documents
             if (ConflictsCount == 0)
                 return;
 
-            Slice lowerKey;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out var _);
-
+            DocumentKeyWorker.GetSliceFromKey(context, key, out Slice lowerKey);
             DeleteConflictsFor(context, lowerKey);
         }
 
@@ -447,7 +445,9 @@ namespace Raven.Server.Documents
             }
 
             throw new ConcurrencyException(
-                $"Tried to resolve document conflict with etag = {expectedEtag}, but the current max conflict etag is {currentMaxConflictEtag}. This means that the conflict information with which you are trying to resolve the conflict is outdated. Get conflict information and try resolving again.");
+                $"Tried to resolve document conflict with etag = {expectedEtag}, but the current max conflict etag is {currentMaxConflictEtag}. " +
+                $"This means that the conflict information with which you are trying to resolve the conflict is outdated. " +
+                $"Get conflict information and try resolving again.");
         }
 
         public ChangeVectorEntry[] MergeConflictChangeVectorIfNeededAndDeleteConflicts(ChangeVectorEntry[] documentChangeVector, DocumentsOperationContext context, string key, long newEtag)
