@@ -21,9 +21,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Sparrow.EncryptionTests())
+                using (var a = new FastTests.Server.Replication.ReplicationCleanTombstones())
                 {
-                    a.WriteAndReadPageUsingCryptoPager();
+                    a.DontCleanTombstones();
                 }
             }
         }
