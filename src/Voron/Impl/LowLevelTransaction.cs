@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Collections;
@@ -206,6 +207,8 @@ namespace Voron.Impl
 
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null)
         {
+            TxStartTime = DateTime.UtcNow;
+            ThreadId = Thread.CurrentThread.ManagedThreadId;
             env.Options.AssertNoCatastrophicFailure();
 
             DataPager = env.Options.DataPager;
@@ -950,7 +953,9 @@ namespace Voron.Impl
         private ByteString _txHeaderMemory;
         internal ImmutableAppendOnlyList<JournalFile> JournalFiles;
         internal bool AlreadyAllowedDisposeWithLazyTransactionRunning;
-
+        public DateTime TxStartTime;
+        public int ThreadId;
+        
         public void EnsurePagerStateReference(PagerState state)
         {
             if (state == _lastState || state == null)
