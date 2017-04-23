@@ -111,8 +111,7 @@ namespace Voron
 
             foreach (var mountPoint in _mountPoints)
             {
-                int parallelSyncsPerIo = 3;
-                parallelSyncsPerIo = Math.Min(parallelSyncsPerIo, mountPoint.Value.StorageEnvironments.Count);
+                int parallelSyncsPerIo = Math.Min(StorageEnvironment.NumOfCocurrentSyncsPerPhysDrive, mountPoint.Value.StorageEnvironments.Count);
 
                 for (int i = 0; i < parallelSyncsPerIo; i++)
                 {
@@ -217,7 +216,7 @@ namespace Voron
 
                     // At the same time, we want to avoid excessive flushes, so we'll limit it to once in a while if we don't
                     // have a lot to flush
-                    if ((DateTime.UtcNow - envToFlush.LastFlushTime).TotalSeconds < 30)
+                    if ((DateTime.UtcNow - envToFlush.LastFlushTime).TotalSeconds < StorageEnvironment.TimeToSyncAfterFlashInSeconds)
                         continue;
                 }
 
