@@ -1368,8 +1368,10 @@ namespace Raven.Server.Documents
                 // has to happen after the commit, but while we are holding the write tx lock
                 context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
                 {
-                    var collectionNames = new FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer>(_collectionsCache, OrdinalIgnoreCaseStringStructComparer.Instance);
-                    collectionNames[name.Name] = name;
+                    var collectionNames = new FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer>(_collectionsCache, OrdinalIgnoreCaseStringStructComparer.Instance)
+                    {
+                        [name.Name] = name
+                    };
                     _collectionsCache = collectionNames;
                 };
             }

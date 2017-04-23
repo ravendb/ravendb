@@ -242,9 +242,12 @@ namespace Raven.Server.Rachis
             var leader = new Leader(this);
             SetNewStateInTx(context, State.LeaderElect, leader, electionTerm, "I'm the only one in the cluster, so I'm the leader");
             _currentLeader = leader;
-            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += tx =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
-                leader.Start();
+                if (tx is LowLevelTransaction llt && llt.Committed)
+                {
+                    leader.Start();
+                }
             };
         }
 
@@ -349,15 +352,18 @@ namespace Raven.Server.Rachis
 
             CurrentState = state;
 
-            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += tx =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
-                TaskExecuter.CompleteReplaceAndExecute(ref _stateChanged, () =>
+                if (tx is LowLevelTransaction llt && llt.Committed)
                 {
-                    foreach (var d in toDispose)
+                    TaskExecuter.CompleteReplaceAndExecute(ref _stateChanged, () =>
                     {
-                        d.Dispose();
-                    }
-                });
+                        foreach (var d in toDispose)
+                        {
+                            d.Dispose();
+                        }
+                    });
+                }
             };
         }
 
