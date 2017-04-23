@@ -196,7 +196,7 @@ namespace Voron
                 0xe0, 0x8b, 0x24, 0xf0, 0x31, 0xbd, 0x63, 0xc2, 0x46, 0x97, 0xd1, 0x29, 0xdd, 0x97, 0x99, 0xf8
             };
             //MasterKey = hardCodedMasterKeyUsedOnlyForDevelopmentUntilWeDoKeyExchangeOfSomeSort;
-			MasterKey = null; // Encryption is disabled until we implement key management
+            MasterKey = null; // Encryption is disabled until we implement key management
         }
 
         public void SetCatastrophicFailure(ExceptionDispatchInfo exception)
@@ -887,6 +887,28 @@ namespace Voron
         public Win32NativeFileAttributes WinOpenFlags = SafeWin32OpenFlags;
         public DateTime? NonSafeTransactionExpiration { get; set; }
         public TimeSpan DisposeWaitTime { get; set; }
+
+        public int NumOfCocurrentSyncsPerPhysDrive
+        {
+            get
+            {
+                if (_numOfCocurrentSyncsPerPhysDrive < 1)
+                    _numOfCocurrentSyncsPerPhysDrive = 3;
+                return _numOfCocurrentSyncsPerPhysDrive;
+            }
+            set => _numOfCocurrentSyncsPerPhysDrive = value;
+        }
+
+        public int TimeToSyncAfterFlashInSeconds {
+            get
+            {
+                if (_timeToSyncAfterFlashInSeconds < 1)
+                    _timeToSyncAfterFlashInSeconds = 30;
+                return _timeToSyncAfterFlashInSeconds;
+            }
+            set => _timeToSyncAfterFlashInSeconds = value;
+        }
+
         public byte[] MasterKey;
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
@@ -896,6 +918,9 @@ namespace Voron
 
         private readonly SortedList<DateTime, string> _journalsForReuse =
             new SortedList<DateTime, string>();
+
+        private int _numOfCocurrentSyncsPerPhysDrive;
+        private int _timeToSyncAfterFlashInSeconds;
 
         public virtual void SetPosixOptions()
         {
