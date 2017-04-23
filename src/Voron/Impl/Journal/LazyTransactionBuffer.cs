@@ -19,11 +19,14 @@ namespace Voron.Impl.Journal
         private readonly TransactionPersistentContext _transactionPersistentContext;
         public int NumberOfPages { get; set; }
         private readonly Logger _log;
+        private readonly StorageEnvironmentOptions _options;
+
         public LazyTransactionBuffer(StorageEnvironmentOptions options)
         {
             _lazyTransactionPager = options.CreateTemporaryBufferPager("lazy-transactions.buffer", options.InitialFileSize ?? options.InitialLogFileSize);
             _transactionPersistentContext = new TransactionPersistentContext(true);
             _log = LoggingSource.Instance.GetLogger<LazyTransactionBuffer>(options.BasePath);
+            _options = options;
         }
 
         public void EnsureSize(int sizeInPages)
@@ -77,6 +80,7 @@ namespace Voron.Impl.Journal
                     {
                         _log.Info($"Writing lazy transaction buffer with {_lastUsed4Kbs/4:#,#} kb took {sp.Elapsed}");
                     }
+                    ZeroLazyTransactionBufferIfNeeded(tempTx);
                 }
             }
 
@@ -88,6 +92,15 @@ namespace Voron.Impl.Journal
             _lastUsed4Kbs = 0;
             _readTransaction = null;
             NumberOfPages = 0;
+        }
+
+        public void ZeroLazyTransactionBufferIfNeeded(IPagerLevelTransactionState tx)
+        {
+            if (_options.EncryptionEnabled == false)
+                return;
+            var lazyTxBufferSize = _lazyTransactionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
+            var pagePointer = _lazyTransactionPager.AcquirePagePointer(tx, 0);
+            Sodium.ZeroMemory(pagePointer, lazyTxBufferSize);
         }
 
         public void Dispose()
