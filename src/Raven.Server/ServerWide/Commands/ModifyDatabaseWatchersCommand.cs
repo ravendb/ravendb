@@ -9,28 +9,26 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class ModifyDatabaseWatchers : UpdateDatabaseCommand
+    public class ModifyDatabaseWatchersCommand : UpdateDatabaseCommand
     {
-        public BlittableJsonReaderObject Value;
+        public BlittableJsonReaderArray Watchers;
 
-        public ModifyDatabaseWatchers() : base(null)
+        public ModifyDatabaseWatchersCommand() : base(null)
         {
 
         }
 
-        public ModifyDatabaseWatchers(string databaseName) : base(databaseName)
+        public ModifyDatabaseWatchersCommand(string databaseName) : base(databaseName)
         {
 
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            Value.TryGet("NewWatchers", out BlittableJsonReaderArray watchers);
-
-            if (watchers != null)
+            if (Watchers != null)
             {
                 record.Topology.Watchers = new List<DatabaseWatcher>(
-                    watchers.Items.Select(
+                    Watchers.Items.Select(
                         i => JsonDeserializationRachis<DatabaseWatcher>.Deserialize((BlittableJsonReaderObject)i)
                     ));
             }
@@ -42,7 +40,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(Value)] = Value;
+            json[nameof(Watchers)] = Watchers;
         }
     }
 }

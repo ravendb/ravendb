@@ -246,13 +246,13 @@ namespace Raven.Server.ServerWide
         public async Task<long> ModifyDatabaseWatchers(
             JsonOperationContext context, 
             string key, 
-            BlittableJsonReaderArray val)
+            BlittableJsonReaderArray watchers)
         {
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
-                ["Type"] = nameof(Commands.ModifyDatabaseWatchers),
-                [nameof(Commands.ModifyDatabaseWatchers.DatabaseName)] = key,
-                [nameof(Commands.ModifyDatabaseWatchers.Value)] = val,
+                ["Type"] = nameof(ModifyDatabaseWatchersCommand),
+                [nameof(ModifyDatabaseWatchersCommand.DatabaseName)] = key,
+                [nameof(ModifyDatabaseWatchersCommand.Watchers)] = watchers,
             }, "update-cmd"))
             {
                 return await SendToLeaderAsync(putCmd);
