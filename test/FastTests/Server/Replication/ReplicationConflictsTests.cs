@@ -30,7 +30,7 @@ namespace FastTests.Server.Replication
         private class New_User2: User { }
 
         [Fact]
-        public async Task All_remote_etags_lower_than_local_should_return_AlreadyMerged_at_conflict_status()
+        public void All_remote_etags_lower_than_local_should_return_AlreadyMerged_at_conflict_status()
         {
             var dbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
 
@@ -52,7 +52,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async Task All_local_etags_lower_than_remote_should_return_Update_at_conflict_status()
+        public void All_local_etags_lower_than_remote_should_return_Update_at_conflict_status()
         {
             var dbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
 
@@ -74,7 +74,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async Task Some_remote_etags_lower_than_local_and_some_higher_should_return_Conflict_at_conflict_status()
+        public void Some_remote_etags_lower_than_local_and_some_higher_should_return_Conflict_at_conflict_status()
         {
             var dbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
 
@@ -96,7 +96,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async Task Some_remote_etags_lower_than_local_and_some_higher_should_return_Conflict_at_conflict_status_with_different_order()
+        public void Some_remote_etags_lower_than_local_and_some_higher_should_return_Conflict_at_conflict_status_with_different_order()
         {
             var dbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
 
@@ -118,7 +118,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async Task Remote_change_vector_larger_size_than_local_should_return_Update_at_conflict_status()
+        public void Remote_change_vector_larger_size_than_local_should_return_Update_at_conflict_status()
         {
             var dbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
 
@@ -141,7 +141,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async Task Remote_change_vector_with_different_dbId_set_than_local_should_return_Conflict_at_conflict_status()
+        public void Remote_change_vector_with_different_dbId_set_than_local_should_return_Conflict_at_conflict_status()
         {
             var dbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
             var local = new[]
@@ -158,7 +158,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async Task Remote_change_vector_smaller_than_local_and_all_remote_etags_lower_than_local_should_return_AlreadyMerged_at_conflict_status()
+        public void Remote_change_vector_smaller_than_local_and_all_remote_etags_lower_than_local_should_return_AlreadyMerged_at_conflict_status()
         {
             var dbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
 
@@ -181,7 +181,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async Task Remote_change_vector_smaller_than_local_and_some_remote_etags_higher_than_local_should_return_Conflict_at_conflict_status()
+        public void Remote_change_vector_smaller_than_local_and_some_remote_etags_higher_than_local_should_return_Conflict_at_conflict_status()
         {
             var dbIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
 
