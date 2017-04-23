@@ -109,6 +109,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             string collection;
             var index = MatchIndex(dynamicIndexName, query, false, out collection);
 
+            if (index == null)
+                IndexDoesNotExistException.ThrowFor(dynamicIndexName);
+
             if (existingResultEtag.HasValue)
             {
                 var etag = index.GetIndexEtag();
