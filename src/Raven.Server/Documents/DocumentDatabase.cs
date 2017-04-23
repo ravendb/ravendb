@@ -74,12 +74,15 @@ namespace Raven.Server.Documents
 
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore)
         {
+            _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
             StartTime = SystemTime.UtcNow;
             Name = name;
             ResourceName = "db/" + name;
             Configuration = configuration;
-            _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
+
+            try
+            {
             IoChanges = new IoChangesNotifications();
             Changes = new DocumentsChanges();
             DocumentsStorage = new DocumentsStorage(this);
@@ -104,6 +107,12 @@ namespace Raven.Server.Documents
             {
                 serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailue(name, e);
             });
+        }
+            catch (Exception)
+            {
+                Dispose();
+                throw;
+            }
         }
 
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
@@ -330,7 +339,7 @@ namespace Raven.Server.Documents
 
                 exceptionAggregator.Execute(() =>
                 {
-                    TxMerger.Dispose();
+                    TxMerger?.Dispose();
                 });
 
                 if (_indexStoreTask != null)

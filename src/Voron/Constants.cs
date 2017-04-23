@@ -8,7 +8,7 @@ namespace Voron.Global
 {
     public unsafe class Constants
     {
-        public const int CurrentVersion = 15;
+        public const int CurrentVersion = 16;
 
         public const ulong MagicMarker = 0xB16BAADC0DEF0015;
         public const ulong TransactionHeaderMarker = 0x1A4C92AD90ABC123;

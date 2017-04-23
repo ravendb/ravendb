@@ -551,7 +551,7 @@ namespace Voron.Impl.Paging
             return "MemMap: " + _fileInfo.FullName;
         }
 
-        protected override PagerState AllocateMorePages(long newLength)
+        protected internal override PagerState AllocateMorePages(long newLength)
         {
             var newLengthAfterAdjustment = NearestSizeToAllocationGranularity(newLength);
 

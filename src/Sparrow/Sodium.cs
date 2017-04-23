@@ -351,5 +351,13 @@ namespace Sparrow
                 ? Platform.Posix.PosixSodium.crypto_box_open_easy(m, c, clen, n, pk, sk)
                 : Platform.Win32.WinSodium.crypto_box_open_easy(m, c, clen, n, pk, sk);
         }
+
+        public static void ZeroMemory(byte* ptr, long size)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                Platform.Posix.PosixSodium.sodium_memzero(ptr, (IntPtr)size);
+            else
+                Platform.Win32.WinSodium.sodium_memzero(ptr, (IntPtr)size);
+        }
     }
 }

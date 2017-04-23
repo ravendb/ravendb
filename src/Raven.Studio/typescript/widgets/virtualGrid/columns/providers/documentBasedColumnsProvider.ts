@@ -71,7 +71,8 @@ class documentBasedColumnsProvider {
 
     private showPreview(doc: document) {
         const text = JSON.stringify(doc, null, 4);
-        app.showBootstrapDialog(new showDataDialog("Document: " + doc.getId(), text, "javascript"));
+        const title = doc.getId() ? "Document: " + doc.getId() : "Document preview";
+        app.showBootstrapDialog(new showDataDialog(title, text, "javascript"));
     }
 
     static extractUniquePropertyNames(results: pagedResult<document>) {

@@ -1,0 +1,44 @@
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-content">
+                    <h3 class="modal-title" id="myModalLabel" data-bind="text: hint.title"></h3>
+                </div>
+                <div>
+                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                        <i class="icon-cancel"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div data-bind="text: hint.message"></div>
+            
+            <div data-bind="with: hint.details">
+                <div class="row">
+                    <div class="col-md-6">Number of exceeding documents</div>
+                    <div class="col-md-6" data-bind="text: NumberOfExceedingDocuments"></div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">Sample document id</div>
+                    <div class="col-md-6" data-bind="text: SampleDocumentId"></div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">Suggestion:</div>
+                    <div class="col-md-6" data-bind="text: Suggestion"></div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">Max number outputs per document</div>
+                    <div class="col-md-6" data-bind="text: MaxNumberOutputsPerDocument"></div>
+                </div>
+            </div>
+          
+        </div>
+        <div class="modal-footer" data-bind="compose: 'common/notificationCenter/detailViewer/performanceHint/footerPartial.html'">
+        </div>
+    </div>
+</div>

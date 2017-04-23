@@ -11,6 +11,8 @@ class globalSettings extends abstractSettings {
     dontShowAgain = new dontShowAgainSettings(x => this.saveSetting(x));
     sendUsageStats = new simpleStudioSetting<boolean>("local", false, x => this.saveSetting(x));
 
+    feedback = new simpleStudioSetting<feedbackSavedSettingsDto>("local", null, x => this.saveSetting(x));
+
     constructor(onSettingChanged: (key: string, value: studioSetting<any>) => void) {
         super(onSettingChanged);
     }

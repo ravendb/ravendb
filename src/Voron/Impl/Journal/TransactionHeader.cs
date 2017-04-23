@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Net;
 using System.Runtime.InteropServices;
 using Voron.Data.BTrees;
 using Voron.Global;
@@ -25,8 +26,10 @@ namespace Voron.Impl.Journal
     }
 
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
-    public struct TransactionHeader
+    public unsafe struct TransactionHeader
     {
+        public const int SizeOf = 192;
+
         [FieldOffset(0)]
         public ulong HeaderMarker;
 
@@ -43,7 +46,7 @@ namespace Voron.Impl.Journal
         public int PageCount;
 
         [FieldOffset(36)]
-        public int Reserved1;
+        public TransactionPersistenceModeFlags Flags;
 
         [FieldOffset(40)]
         public ulong Hash;
@@ -65,6 +68,17 @@ namespace Voron.Impl.Journal
 
         [FieldOffset(128)]
         public long TimeStampTicksUtc; // DateTime.UtcNow.Ticks when the tx happened
+
+        [FieldOffset(136)]
+        public fixed byte Reserved[32];
+
+        [FieldOffset(168)]
+        public fixed byte Nonce[8];
+
+        [FieldOffset(176)]
+        public fixed byte Mac[16];
+
+
 
         public override string ToString()
         {

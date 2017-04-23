@@ -12,6 +12,9 @@
             public string Name { get; set; }
             public string Version { get; set; }
             public string StudioVersion { get; set; }
+            public string StudioView { get; set; }
+            public string FeatureName { get; set; }
+            public string FeatureImpression { get; set; } // 'positive' | 'negative' | null
         }
 
         public class FeedbackUser

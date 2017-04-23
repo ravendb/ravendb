@@ -27,6 +27,8 @@ namespace Voron.Impl.Paging
         private readonly object _pagerStateModificationLocker = new object();
         public bool UsePageProtection { get; } = false;
 
+        public Action<PagerState> PagerStateChanged;
+
         public void SetPagerState(PagerState newState)
         {
             if (Disposed)
@@ -38,6 +40,7 @@ namespace Voron.Impl.Paging
                 var oldState = _pagerState;
                 newState.AddRef();
                 _pagerState = newState;
+                PagerStateChanged?.Invoke(newState);
                 oldState?.Release();
             }
         }
@@ -75,7 +78,7 @@ namespace Voron.Impl.Paging
 
         public const int PageMaxSpace = Constants.Storage.PageSize - Constants.Tree.PageHeaderSize;
 
-        public string FileName;
+        public string FileName { get; protected set; }
 
         protected AbstractPager(StorageEnvironmentOptions options, bool usePageProtection = false)
         {
@@ -124,10 +127,9 @@ namespace Voron.Impl.Paging
 
         public const int RequiredSpaceForNewNode = Constants.Tree.NodeHeaderSize + Constants.Tree.NodeOffsetSize;
 
+        protected PagerState _pagerState;
 
-        private PagerState _pagerState;
-
-        public long NumberOfAllocatedPages { get; protected set; }
+        public virtual long NumberOfAllocatedPages { get; protected set; }
         public abstract long TotalAllocationSize { get; }
 
         protected abstract string GetSourceName();
@@ -147,9 +149,18 @@ namespace Voron.Impl.Paging
             return state.MapBase + pageNumber * Constants.Storage.PageSize;
         }
 
+        public virtual byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null)
+        {
+            return AcquirePagePointer(tx, pageNumber, pagerState);
+        }
+
+        public virtual void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, long pageNumber)
+        {
+            // This method is implemented only in Crypto Pager
+        }
+
         public abstract void Sync(long totalUnsynced);
-
-
+        
         public PagerState EnsureContinuous(long requestedPageNumber, int numberOfPages)
         {
             if (Disposed)
@@ -173,13 +184,13 @@ namespace Voron.Impl.Paging
         [Conditional("VALIDATE")]
         internal virtual void ProtectPageRange(byte* start, ulong size, bool force = false)
         {
-            // This method is currently implemented only in Win32MemoryMapPager and POSIX
+            // This method is currently implemented only in WindowsMemoryMapPager and POSIX
         }
 
         [Conditional("VALIDATE")]
         internal virtual void UnprotectPageRange(byte* start, ulong size, bool force = false)
         {
-            // This method is currently implemented only in Win32MemoryMapPager and POSIX
+            // This method is currently implemented only in WindowsMemoryMapPager and POSIX
         }
 
         public bool Disposed { get; private set; }
@@ -209,8 +220,7 @@ namespace Voron.Impl.Paging
             Dispose();
         }
 
-        protected abstract PagerState AllocateMorePages(long newLength);
-
+        protected internal abstract PagerState AllocateMorePages(long newLength);
 
         private long GetNewLength(long current)
         {
@@ -321,6 +331,11 @@ namespace Voron.Impl.Paging
         {
             return new Simple4KbBatchWrites(this);
         }
+
+        public virtual byte* AcquireRawPagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
+        {
+            return AcquirePagePointer(tx, pageNumber, pagerState);
+        }
     }
 
     public interface I4KbBatchWrites : IDisposable
@@ -366,6 +381,7 @@ namespace Voron.Impl.Paging
 
             _abstractPager.ProtectPageRange(destination, (ulong)toWrite);
         }
+
 
         public void Dispose()
         {

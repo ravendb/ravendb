@@ -69,8 +69,23 @@ namespace Raven.Server.Smuggler.Documents
                     currentType = _source.GetNextType();
                 }
 
+                EnsureStepProcessed(result.Documents);
+                EnsureStepProcessed(result.RevisionDocuments);
+                EnsureStepProcessed(result.Indexes);
+                EnsureStepProcessed(result.Transformers);
+                EnsureStepProcessed(result.Identities);
+
                 return result;
             }
+        }
+
+        private static void EnsureStepProcessed(SmugglerProgressBase.Counts counts)
+        {
+            if (counts.Processed)
+                return;
+
+            counts.Processed = true;
+            counts.Skipped = true;
         }
 
         private void ProcessType(DatabaseItemType type, SmugglerResult result, BuildVersionType buildType)

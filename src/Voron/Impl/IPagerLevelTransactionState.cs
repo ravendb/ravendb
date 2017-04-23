@@ -7,9 +7,12 @@ namespace Voron.Impl
     public interface IPagerLevelTransactionState : IDisposable
     {
         Dictionary<AbstractPager, TransactionState> PagerTransactionState32Bits { get; set; }
+        Dictionary<AbstractPager, CryptoTransactionState> CryptoPagerTransactionState { get; set; }
         event Action<IPagerLevelTransactionState> OnDispose;
+        event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
         void EnsurePagerStateReference(PagerState state);
         StorageEnvironment Environment { get; }
+        bool IsWriteTransaction { get; }
     }
 
     public static class PagerLevelTransacionState

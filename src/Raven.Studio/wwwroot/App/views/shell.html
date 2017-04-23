@@ -98,15 +98,15 @@
             -->
         </div>
         <ul class="nav navbar-nav navbar-right">
+            <li><a href="#" title="Send feedback" class="feedback-link" data-bind="click: $data.constructor.openFeedbackForm"><i class="icon-feedback"></i></a></li>
+            <li><a target="_blank" title="Help" data-bind="attr: { href: currentHelpLink }" class="icon-help" style="display:none"></a></li>
+            <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
             <li data-bind="with: notificationCenter">
                 <a title="Notifications center" href="#" id="notification-toggle" class="btn-toggle" data-bind="{ click: showNotifications.toggle.bind(showNotifications), css: { 'active': showNotifications() } }">
                     <span class="icon-notifications"></span>
                     <span class="notification-counter show" data-bind="text: totalItemsCount(), attr: { 'data-count': totalItemsCount() }, css: { 'show': alertCountAnimation() }"></span>
                 </a>
             </li>
-            <li><a target="_blank" title="Help" data-bind="attr: { href: currentHelpLink }" class="icon-help"></a></li>
-            <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
-            <li><a href="#" title="Send feedback" data-bind="click: $data.constructor.openFeedbackForm"><i class="icon-feedback text-warning"></i></a></li>
             <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
         </ul>
     </div><!--/.nav-collapse -->
@@ -223,11 +223,7 @@
             <a title="Indexes" data-bind="attr: { href: $parent.urlForIndexes() }">
                 <i class="icon-index"></i>
                 <span data-bind="text: countOfIndexes"></span>
-            </a>            
-        </div>
-        <div class="footer-item" data-bind="visible: countOfStaleIndexes">
-            <a title="Stale indexes" class="text-warning" data-bind="attr: { href: $parent.urlForIndexes() }">
-                <i class="icon-warning"></i><span data-bind="text: countOfStaleIndexes"></span>
+                <span class="separator">|</span><span title="Stale indexes" data-bind="text: countOfStaleIndexes, css: {'text-warning': countOfStaleIndexes}"></span>
             </a>
         </div>
         <div class="footer-item" data-bind="visible: countOfIndexingErrors">
