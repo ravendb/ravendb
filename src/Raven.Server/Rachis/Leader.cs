@@ -207,7 +207,8 @@ namespace Raven.Server.Rachis
             }
             finally
             {
-                Monitor.Exit(topologyLocker);
+                if(lockTaken)
+                    Monitor.Exit(topologyLocker);
             }
         }
 
@@ -619,7 +620,8 @@ namespace Raven.Server.Rachis
             }
             finally
             {
-                Monitor.Exit(topologyLocker);
+                if(lockTaken)
+                    Monitor.Exit(topologyLocker);
             }
         }
 
