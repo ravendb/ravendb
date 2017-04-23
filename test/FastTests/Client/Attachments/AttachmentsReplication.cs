@@ -692,8 +692,8 @@ namespace FastTests.Client.Attachments
                     await session.SaveChangesAsync();
                 }
                 
-                SetupReplication(store1, store2);
-                SetupReplication(store2, store1);
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
 
                 Assert.True(WaitForDocument(store2, "marker 1"));
                 Assert.True(WaitForDocument(store1, "marker 2"));

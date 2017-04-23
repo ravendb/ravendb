@@ -21,10 +21,13 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Server.Replication.ReplicationCleanTombstones())
+                Parallel.For(0, 10, j =>
                 {
-                    a.DontCleanTombstones();
-                }
+                    using (var a = new FastTests.Client.Attachments.AttachmentsReplication())
+                    {
+                        a.PutSameAttachmentsShouldNotConflict().Wait();
+                    }
+                });
             }
         }
     }

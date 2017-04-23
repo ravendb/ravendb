@@ -356,17 +356,17 @@ namespace FastTests.Server.Replication
                     }
                 }
             };
-            UpdateConflictResolver(store, null, resolveByCollection).ConfigureAwait(false);
+            UpdateConflictResolver(store, null, resolveByCollection).ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         protected static void SetReplicationConflictResolution(DocumentStore store, StraightforwardConflictResolution conflictResolution)
         {
-            UpdateConflictResolver(store, null, null, conflictResolution == StraightforwardConflictResolution.ResolveToLatest).ConfigureAwait(false);
+            UpdateConflictResolver(store, null, null, conflictResolution == StraightforwardConflictResolution.ResolveToLatest).ConfigureAwait(false).GetAwaiter().GetResult(); ;
         }
 
         protected void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
         {
-            SetupReplicationAsync(fromStore, toStores).ConfigureAwait(false);
+            SetupReplicationAsync(fromStore, toStores).ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         protected async Task SetupReplicationAsync(DocumentStore fromStore, ConflictSolver conflictSolver, params DocumentStore[] toStores)
@@ -377,7 +377,7 @@ namespace FastTests.Server.Replication
 
         protected void SetupReplication(DocumentStore fromStore, ConflictSolver conflictSolver, params DocumentStore[] toStores)
         {
-            SetupReplicationAsync(fromStore, conflictSolver, toStores).ConfigureAwait(false);
+            SetupReplicationAsync(fromStore, conflictSolver, toStores).ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         protected virtual void ModifyReplicationDestination(ReplicationNode replicationNode)
