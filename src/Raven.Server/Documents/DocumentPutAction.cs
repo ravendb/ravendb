@@ -218,23 +218,29 @@ namespace Raven.Server.Documents
             if (string.IsNullOrWhiteSpace(key))
             {
                 knownNewKey = true;
-                return Guid.NewGuid().ToString();
+                key = Guid.NewGuid().ToString();
+            }
+            else
+            {
+                // We use if instead of switch so the JIT will better inline this method
+                var lastChar = key[key.Length - 1];
+                if (lastChar == '/')
+                {
+                    knownNewKey = true;
+                    key = _documentsStorage.Identities.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out _);
+                }
+                else if (lastChar == '|')
+                {
+                    knownNewKey = true;
+                    key = _documentsStorage.Identities.AppendNumericValueToKey(key, newEtag);
+                }
+                else
+                {
+                    knownNewKey = false;
+                }
             }
 
-            // We use if instead of switch so the JIT will better inline this method
-            var lastChar = key[key.Length - 1];
-            if (lastChar == '/')
-            {
-                knownNewKey = true;
-                return _documentsStorage.Identities.GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out _);
-            }
-            if (lastChar == '|')
-            {
-                knownNewKey = true;
-                return _documentsStorage.Identities.AppendNumericValueToKey(key, newEtag);
-            }
-
-            knownNewKey = false;
+            // Itentionally have just one return statement here for better inlining
             return key;
         }
 
