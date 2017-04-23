@@ -1,4 +1,5 @@
-﻿using FastTests.Server.Replication;
+﻿using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -8,14 +9,14 @@ namespace SlowTests.Server.Replication
     public class ReplicationSpecialCasesSlow : ReplicationTestsBase
     {
         [Fact]
-        public void IdenticalContentConflictResolution()
+        public async Task IdenticalContentConflictResolution()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
 
-                SetReplicationConflictResolution(slave, StraightforwardConflictResolution.None);
-                SetupReplication(master, slave);
+                await SetReplicationConflictResolutionAsync(slave, StraightforwardConflictResolution.None);
+                await SetupReplicationAsync(master, slave);
 
                 using (var session = slave.OpenSession())
                 {
@@ -54,14 +55,14 @@ namespace SlowTests.Server.Replication
 
 
         [Fact]
-        public void TomstoneToTombstoneConflict()
+        public async Task TomstoneToTombstoneConflict()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
 
-                SetReplicationConflictResolution(slave, StraightforwardConflictResolution.None);
-                SetupReplication(master, slave);
+                await SetReplicationConflictResolutionAsync(slave, StraightforwardConflictResolution.None);
+                await SetupReplicationAsync(master, slave);
 
                 using (var session = master.OpenSession())
                 {

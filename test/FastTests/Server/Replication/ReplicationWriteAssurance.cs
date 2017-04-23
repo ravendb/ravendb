@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace FastTests.Server.Replication
@@ -6,13 +7,13 @@ namespace FastTests.Server.Replication
     public class ReplicationWriteAssurance : ReplicationTestsBase
     {
         [Fact]
-        public void ServerSideWriteAssurance()
+        public async Task ServerSideWriteAssurance()
         {
             var store1 = GetDocumentStore(dbSuffixIdentifier: "dbName1");
             var store2 = GetDocumentStore(dbSuffixIdentifier: "dbName2");
             var store3 = GetDocumentStore(dbSuffixIdentifier: "dbName3");
 
-            SetupReplication(store1, store2, store3);
+            await SetupReplicationAsync(store1, store2, store3);
 
             using (var s1 = store1.OpenSession())
             {

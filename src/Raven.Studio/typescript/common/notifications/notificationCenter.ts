@@ -20,8 +20,11 @@ import killOperationCommand = require("commands/operations/killOperationCommand"
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
-import smugglerDatabaseDetails = require("viewmodels/common/notificationCenter/detailViewer/smugglerDatabaseDetails");
-import patchDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/patchDocumentsDetails");
+import smugglerDatabaseDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/smugglerDatabaseDetails");
+import patchDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/patchDocumentsDetails");
+import deleteDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/deleteDocumentsDetails");
+import indexingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/indexingDetails");
+import pagingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/pagingDetails");
 
 interface customDetailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
@@ -82,8 +85,14 @@ class notificationCenter {
     private initializeObservables() {
 
         this.customDetailsProviders.push(
+            // operations:
             smugglerDatabaseDetails,
-            patchDocumentsDetails
+            patchDocumentsDetails,
+            deleteDocumentsDetails,
+
+            // performance hints:
+            indexingDetails,
+            pagingDetails
         );
 
         this.customOperationMerger.push(smugglerDatabaseDetails);

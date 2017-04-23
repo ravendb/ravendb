@@ -21,7 +21,7 @@ namespace FastTests.Server.Replication
                 await VersioningHelper.SetupVersioning(Server.ServerStore, master.DefaultDatabase);
                 //await VersioningHelper.SetupVersioning(Server.ServerStore, slave.DefaultDatabase);
 
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
 
                 using (var session = master.OpenAsyncSession())
                 {
@@ -78,7 +78,7 @@ namespace FastTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
 
                 Assert.True(WaitForDocument(slave, "foo/bar"));
                 Assert.Equal(4, WaitForValue(() => GetRevisions(slave, "foo/bar").Count, 4));
@@ -119,8 +119,8 @@ namespace FastTests.Server.Replication
                 {
                     ResolveToLatest = true
                 };
-               
-                SetupReplication(storeA, config, storeB);
+
+                await SetupReplicationAsync(storeA, config, storeB);
 
                 Assert.True(WaitForDocument(storeA, "foo/bar"));
                 Assert.True(WaitForDocument(storeB, "foo/bar"));
@@ -151,8 +151,8 @@ namespace FastTests.Server.Replication
                 await session.SaveChangesAsync();
             }
 
-            SetupReplication(storeA, storeB);
-            SetupReplication(storeB, storeA);
+            await SetupReplicationAsync(storeA, storeB);
+            await SetupReplicationAsync(storeB, storeA);
         }
 
         [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-6555")]
@@ -166,7 +166,7 @@ namespace FastTests.Server.Replication
                 await VersioningHelper.SetupVersioning(Server.ServerStore, storeB.DefaultDatabase);
                 await VersioningHelper.SetupVersioning(Server.ServerStore, storeC.DefaultDatabase);
 
-                SetupReplication(storeA, storeB);
+                await SetupReplicationAsync(storeA, storeB);
 
                 using (var session = storeA.OpenAsyncSession())
                 {
@@ -178,8 +178,8 @@ namespace FastTests.Server.Replication
                 Assert.Equal(1, WaitForValue(() => GetRevisions(storeB, "users/1").Count, 1));
                 Assert.True(WaitForDocument(storeB, "users/1"));
 
-                SetupReplication(storeA, storeC);
-                SetupReplication(storeB, storeC);
+                await SetupReplicationAsync(storeA, storeC);
+                await SetupReplicationAsync(storeB, storeC);
 
                 using (var session = storeA.OpenAsyncSession())
                 {

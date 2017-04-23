@@ -71,12 +71,6 @@ namespace Raven.Server.Web.System
             if (configuration.Indexing.StoragePath != null)
                 IOExtensions.DeleteDirectory(configuration.Indexing.StoragePath.FullPath);
 
-            if (configuration.Indexing.AdditionalStoragePaths != null)
-            {
-                foreach (var path in configuration.Indexing.AdditionalStoragePaths)
-                    IOExtensions.DeleteDirectory(path.FullPath);
-            }
-
             if (configuration.Indexing.TempPath != null)
                 IOExtensions.DeleteDirectory(configuration.Indexing.TempPath.FullPath);
 

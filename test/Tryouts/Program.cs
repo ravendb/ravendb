@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Diagnostics;
+using FastTests.Client.Attachments;
+using FastTests.Smuggler;
 using System.Threading.Tasks;
-using FastTests.Issues;
+using FastTests.Server.Documents.Indexing;
+using FastTests.Server.Documents.PeriodicExport;
+using FastTests.Server.OAuth;
 using FastTests.Server.Replication;
-using Lucene.Net.Store;
-using SlowTests.Server.Rachis;
-using Sparrow.Logging;
-using Directory = System.IO.Directory;
+using Sparrow;
 
 namespace Tryouts
 {
@@ -13,20 +15,19 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            Console.WriteLine(Process.GetCurrentProcess().Id);
+            Console.WriteLine();
+
+            for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                //LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
-                Parallel.For(0, 10, _ =>
+                Parallel.For(0, 5, j =>
                 {
-                    using (var a = new SlowTests.Server.Rachis.ElectionTests())
+                    using (var a = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
                     {
-                        a.OnNetworkDisconnectionANewLeaderIsElectedAfterReconnectOldLeaderStepsDownAndRollBackHisLog(numberOfNodes: 3).Wait();
+                        a.CanDelete().Wait();
                     }
                 });
-                //LoggingSource.Instance.SetupLogMode(LogMode.None, "logs");
-                //Directory.Delete("logs", true);
-
             }
         }
     }

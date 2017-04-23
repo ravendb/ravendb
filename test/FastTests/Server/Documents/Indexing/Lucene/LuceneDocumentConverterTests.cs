@@ -33,7 +33,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -59,7 +58,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -85,7 +83,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -111,7 +108,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -146,16 +142,14 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 new IndexField
                 {
                     Name = "Weight",
-                    Highlighted = false,
                     Storage = FieldStorage.No,
-                    SortOption = SortOptions.Numeric
+                    Sort = SortOptions.Numeric
                 },
                 new IndexField
                 {
                     Name = "Age",
-                    Highlighted = false,
                     Storage = FieldStorage.No,
-                    SortOption = SortOptions.Numeric
+                    Sort = SortOptions.Numeric
                 },
             });
 
@@ -195,7 +189,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 new IndexField
                 {
                     Name = "Address.City",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -224,7 +217,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 new IndexField
                 {
                     Name = "Friends,Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -266,7 +258,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 new IndexField
                 {
                     Name = "Companies,Products,Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -325,13 +316,11 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 new IndexField
                 {
                     Name = "Address",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
                 new IndexField
                 {
                     Name = "ResidenceAddress",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -391,7 +380,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 new IndexField
                 {
                     Name = "Friends",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -422,7 +410,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 new IndexField
                 {
                     Name = "Addresses",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });

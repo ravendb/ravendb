@@ -33,21 +33,7 @@ namespace Voron.Platform.Posix
                 throw new DiskFullException(null, file, (long)size);
             }
             if (result != 0)
-                ThrowLastError(result, $"posix_fallocate(\"{file}\", {size})");
-        }
-
-        public static void ThrowLastError(int lastError, string msg = null)
-        {
-            if (Enum.IsDefined(typeof(Errno), lastError) == false)
-                throw new InvalidOperationException("Unknown errror ='" + lastError + "'. Message: " + msg);
-            var error = (Errno) lastError;
-            switch (error)
-            {
-                case Errno.ENOMEM:
-                    throw new OutOfMemoryException("ENOMEM on " + msg);
-                default:
-                    throw new InvalidOperationException(error + " " + msg);
-            }
+                Syscall.ThrowLastError(result, $"posix_fallocate(\"{file}\", {size})");
         }
 
         public static unsafe void WriteFileHeader(FileHeader* header, string path)
@@ -60,7 +46,7 @@ namespace Voron.Platform.Posix
                 if (fd == -1)
                 {
                     var err = Marshal.GetLastWin32Error();
-                    ThrowLastError(err, "when opening " + path);
+                    Syscall.ThrowLastError(err, "when opening " + path);
                 }
 
                 int remaining = sizeof(FileHeader);
@@ -71,7 +57,7 @@ namespace Voron.Platform.Posix
                     if (written == -1)
                     {
                         var err = Marshal.GetLastWin32Error();
-                        ThrowLastError(err, "writing to " + path);
+                        Syscall.ThrowLastError(err, "writing to " + path);
                     }
 
                     remaining -= (int) written;
@@ -80,12 +66,12 @@ namespace Voron.Platform.Posix
                 if (Syscall.fsync(fd) == -1)
                 {
                     var err = Marshal.GetLastWin32Error();
-                    ThrowLastError(err, "fsync " + path);
+                    Syscall.ThrowLastError(err, "fsync " + path);
                 }
                 if (CheckSyncDirectoryAllowed(path) && SyncDirectory(path) == -1)
                 {
                     var err = Marshal.GetLastWin32Error();
-                    ThrowLastError(err, "fsync dir " + path);
+                    Syscall.ThrowLastError(err, "fsync dir " + path);
                 }
             }
             finally
@@ -151,7 +137,7 @@ namespace Voron.Platform.Posix
                     var lastError = Marshal.GetLastWin32Error();
                     if (((Errno) lastError) == Errno.EACCES)
                         return false;
-                    ThrowLastError(lastError);
+                    Syscall.ThrowLastError(lastError);
                 }
                 int remaining = sizeof(FileHeader);
                 var ptr = ((byte*) header);
@@ -161,7 +147,7 @@ namespace Voron.Platform.Posix
                     if (read == -1)
                     {
                         var err = Marshal.GetLastWin32Error();
-                        ThrowLastError(err);
+                        Syscall.ThrowLastError(err);
                     }
 
                     if (read == 0)

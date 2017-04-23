@@ -19,12 +19,12 @@ namespace Raven.Server.Documents.Replication
         private CancellationTokenSource _cts;
         private readonly Task<Task> _task;
 
-        private readonly ConcurrentDictionary<string, ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator>> _incoming = 
+        private readonly ConcurrentDictionary<string, ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator>> _incoming =
             new ConcurrentDictionary<string, ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator>>(StringComparer.OrdinalIgnoreCase);
-       
-        private readonly ConcurrentDictionary<OutgoingReplicationHandler, ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator>> _outgoing = 
+
+        private readonly ConcurrentDictionary<OutgoingReplicationHandler, ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator>> _outgoing =
             new ConcurrentDictionary<OutgoingReplicationHandler, ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator>>();
-        
+
         public LiveReplicationPerformanceCollector(DocumentDatabase database)
         {
             _database = database;
@@ -79,6 +79,12 @@ namespace Raven.Server.Documents.Replication
                 _database.ReplicationLoader.OutgoingReplicationAdded -= OutgoingHandlerAdded;
                 _database.ReplicationLoader.IncomingReplicationRemoved -= IncomingHandlerRemoved;
                 _database.ReplicationLoader.IncomingReplicationAdded -= IncomingHandlerAdded;
+
+                foreach (var kvp in _incoming)
+                    IncomingHandlerRemoved(kvp.Key);
+
+                foreach (var kvp in _outgoing)
+                    OutgoingHandlerRemoved(kvp.Key);
             }
         }
 
@@ -207,8 +213,6 @@ namespace Raven.Server.Documents.Replication
         public void Dispose()
         {
             _cts?.Cancel();
-            _cts?.Dispose();
-            _cts = null;
 
             try
             {
@@ -217,6 +221,9 @@ namespace Raven.Server.Documents.Replication
             catch (OperationCanceledException)
             {
             }
+
+            _cts?.Dispose();
+            _cts = null;
         }
 
         private class ReplicationHandlerAndPerformanceStatsList<THandler, TStatsAggregator>

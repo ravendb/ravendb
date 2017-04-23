@@ -48,12 +48,12 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void CanReplicateDocumentDeletion()
+        public async Task CanReplicateDocumentDeletion()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
             {
-                SetupReplication(source, destination);
+                await SetupReplicationAsync(source, destination);
 
                 using (var sourceCommands = source.Commands())
                 {
@@ -79,7 +79,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void GetConflictsResult_command_should_work_properly()
+        public async Task GetConflictsResult_command_should_work_properly()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
@@ -90,7 +90,7 @@ namespace FastTests.Server.Replication
                     sourceCommands.Put("docs/1", null, new {Key = "Value"}, null);
                     destinationCommands.Put("docs/1", null, new {Key = "Value2"}, null);
 
-                    SetupReplication(source, destination);
+                    await SetupReplicationAsync(source, destination);
 
                     sourceCommands.Put("marker", null, new {Key = "Value"}, null);
 
@@ -107,7 +107,7 @@ namespace FastTests.Server.Replication
 
 
         [Fact]
-        public void ShouldCreateConflictThenResolveIt()
+        public async Task ShouldCreateConflictThenResolveIt()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
@@ -119,7 +119,7 @@ namespace FastTests.Server.Replication
                     sourceCommands.Put("docs/1", null, new { Key = "Value" }, null);
                     destinationCommands.Put("docs/1", null, new { Key = "Value2" }, null);
 
-                    SetupReplication(source, destination);
+                    await SetupReplicationAsync(source, destination);
 
                     sourceCommands.Put("marker", null, new { Key = "Value" }, null);
 

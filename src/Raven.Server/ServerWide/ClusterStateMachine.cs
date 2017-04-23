@@ -12,12 +12,16 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http.OAuth;
+using Raven.Client.Server;
 using Raven.Client.Server.Tcp;
-using Raven.Server.Documents.Versioning;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.ServerWide.Commands.Transformers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -64,7 +68,7 @@ namespace Raven.Server.ServerWide
 
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += transaction =>
             {
                 _rachisLogIndexNotifications.NotifyListenersAbout(index);
             };
@@ -86,9 +90,16 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteValueCommand):
                     DeleteValue(context, cmd, index, leader);
                     break;
+                case nameof(PutIndexCommand):
+                case nameof(PutAutoIndexCommand):
+                case nameof(DeleteIndexCommand):
+                case nameof(SetIndexLockCommand):
+                case nameof(SetIndexPriorityCommand):
+
                 case nameof(PutTransformerCommand):
-                case nameof(SetTransformerLockModeCommand):
+                case nameof(SetTransformerLockCommand):
                 case nameof(DeleteTransformerCommand):
+                case nameof(RenameTransformerCommand):
                 case nameof(EditVersioningCommand):
                 case nameof(ModifyDatabaseWatchers):
                 case nameof(ModifyConflictSolverCommand):
@@ -320,7 +331,7 @@ namespace Raven.Server.ServerWide
 
         private void NotifyDatabaseChanged(TransactionOperationContext context, string databaseName, long index)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += transaction =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += transaction =>
             {
                 TaskExecuter.Execute(_ =>
                 {
@@ -350,7 +361,7 @@ namespace Raven.Server.ServerWide
 
                 if (doc == null)
                 {
-                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
+                    NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
                     return;
                 }
 
@@ -359,12 +370,12 @@ namespace Raven.Server.ServerWide
                 var updateCommand = JsonDeserializationCluster.UpdateDatabaseCommands[type](cmd);
                 try
                 {
-                    updateCommand.UpdateDatabaseRecord(databaseRecord);
+                    updateCommand.UpdateDatabaseRecord(databaseRecord, index);
                     doUpdate = true;
                 }
                 catch (Exception e)
                 {
-                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"Cannot execute command of type {type} for database {databaseName}", e));
+                    NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type} for database {databaseName}", e));
                     doUpdate = false;
                 }
                 if (doUpdate)
@@ -427,7 +438,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<string> GetdatabaseNames(TransactionOperationContext context, int start = 0, int take = Int32.MaxValue)
+        public IEnumerable<string> GetDatabaseNames(TransactionOperationContext context, int start = 0, int take = Int32.MaxValue)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -513,7 +524,7 @@ namespace Raven.Server.ServerWide
             return doc;
         }
 
-        public override async Task<Stream> ConenctToPeer(string url, string apiKey)
+        public override async Task<Stream> ConnectToPeer(string url, string apiKey)
         {
             var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey);
             var authenticator = new ApiKeyAuthenticator();
@@ -568,7 +579,7 @@ namespace Raven.Server.ServerWide
 
         public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex)
         {
-            var listOfDatabaseName = GetdatabaseNames(context).ToList();
+            var listOfDatabaseName = GetDatabaseNames(context).ToList();
             //There is potentially a lot of work to be done here so we are responding to the change on a separate task.
             var onDatabaseChanged = DatabaseChanged;
             if (onDatabaseChanged != null)
@@ -596,18 +607,6 @@ namespace Raven.Server.ServerWide
         public string Name;
     }
 
-    public class EditVersioningCommand : IUpdateDatabaseCommand
-    {
-        public string DatabaseName;
-        public VersioningConfiguration Configuration;
-
-        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
-        {
-            databaseRecord.VersioningConfiguration = Configuration;
-        }
-    }
-
-
     public class DeleteDatabaseCommand
     {
         public string DatabaseName;
@@ -622,107 +621,10 @@ namespace Raven.Server.ServerWide
         public long? Etag;
     }
 
-
     public class RemoveNodeFromDatabaseCommand
     {
         public string DatabaseName;
         public string NodeTag;
-    }
-
-    public interface IUpdateDatabaseCommand
-    {
-        void UpdateDatabaseRecord(DatabaseRecord record);
-    }
-
-    public class ModifyDatabaseWatchers : IUpdateDatabaseCommand
-    {
-        public string DatabaseName;
-        public BlittableJsonReaderObject Value;
-        
-        public void UpdateDatabaseRecord(DatabaseRecord record)
-        {
-            Value.TryGet("NewWatchers", out BlittableJsonReaderArray watchers);
-
-            if (watchers != null)
-            {
-                record.Topology.Watchers = new List<DatabaseWatcher>(
-                    watchers.Items.Select(
-                        i => JsonDeserializationRachis<DatabaseWatcher>.Deserialize((BlittableJsonReaderObject)i)
-                    ));
-            }
-            else
-            {
-                record.Topology.Watchers = new List<DatabaseWatcher>();
-            }
-        }
-    }
-
-    public class ModifyConflictSolverCommand : IUpdateDatabaseCommand
-    {
-        public string DatabaseName;
-        public BlittableJsonReaderObject Value;
-
-        public void UpdateDatabaseRecord(DatabaseRecord record)
-        {
-            record.ConflictSolverConfig = JsonDeserializationServer.ConflictSolver(Value);
-        }
-    }
-
-    public class PutTransformerCommand : IUpdateDatabaseCommand
-    {
-        public string DatabaseName;
-        public TransformerDefinition TransformerDefinition;
-        public void UpdateDatabaseRecord(DatabaseRecord record)
-        {
-            record.AddTransformer(TransformerDefinition);
-        }
-    }
-
-    public class SetTransformerLockModeCommand : IUpdateDatabaseCommand
-    {
-        public string DatabaseName;
-        public string TransformerName;
-        public TransformerLockMode LockMode;
-        public void UpdateDatabaseRecord(DatabaseRecord record)
-        {
-            record.Transformers[TransformerName].LockMode = LockMode;
-        }
-    }
-
-    public class DeleteTransformerCommand : IUpdateDatabaseCommand
-    {
-        public string DatabaseName;
-        public string TransformerName;
-        public void UpdateDatabaseRecord(DatabaseRecord record)
-        {
-            record.Transformers.Remove(TransformerName);
-        }
-    }
-
-    public class JsonDeserializationCluster : JsonDeserializationBase
-    {
-
-        public static readonly Func<BlittableJsonReaderObject, PutValueCommand> PutValueCommand = GenerateJsonDeserializationRoutine<PutValueCommand>();
-
-        public static readonly Func<BlittableJsonReaderObject, DeleteValueCommand> DeleteValueCommand = GenerateJsonDeserializationRoutine<DeleteValueCommand>();
-
-        public static readonly Func<BlittableJsonReaderObject, DeleteDatabaseCommand> DeleteDatabaseCommand = GenerateJsonDeserializationRoutine<DeleteDatabaseCommand>();
-
-        public static readonly Func<BlittableJsonReaderObject, AddDatabaseCommand> AddDatabaseCommand = GenerateJsonDeserializationRoutine<AddDatabaseCommand>();
-        public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecord = GenerateJsonDeserializationRoutine<DatabaseRecord>();
-        public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromDatabaseCommand> RemoveNodeFromDatabaseCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>();
-
-        public static Dictionary<string, Func<BlittableJsonReaderObject, IUpdateDatabaseCommand>> UpdateDatabaseCommands = new Dictionary<string, Func<BlittableJsonReaderObject, IUpdateDatabaseCommand>>()
-        {
-            [nameof(EditVersioningCommand)] = GenerateJsonDeserializationRoutine<EditVersioningCommand>(),
-            [nameof(PutTransformerCommand)] = GenerateJsonDeserializationRoutine<PutTransformerCommand>(),
-            [nameof(DeleteTransformerCommand)] = GenerateJsonDeserializationRoutine<DeleteTransformerCommand>(),
-            [nameof(SetTransformerLockModeCommand)] = GenerateJsonDeserializationRoutine<SetTransformerLockModeCommand>(),
-            [nameof(ModifyDatabaseWatchers)] = GenerateJsonDeserializationRoutine<ModifyDatabaseWatchers>(),
-            [nameof(ModifyConflictSolverCommand)] = GenerateJsonDeserializationRoutine<ModifyConflictSolverCommand>(),
-        };
-
-        public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();
     }
 
     public class RachisLogIndexNotifications

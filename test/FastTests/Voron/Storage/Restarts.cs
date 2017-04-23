@@ -93,9 +93,9 @@ namespace FastTests.Voron.Storage
                     {
                         var tree = tx.CreateTree("test");
                         tree.Add("test", Stream.Null);
-                        tx.Commit();
 
                         Assert.NotNull(tree.Read("test"));
+                        tx.Commit();
                     }
                 }
 

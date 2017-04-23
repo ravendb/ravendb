@@ -71,7 +71,7 @@ class query extends viewModelBase {
     querySummary = ko.observable<string>();
 
     criteria = ko.observable<queryCriteria>(queryCriteria.empty());
-    disableCache = ko.observable<boolean>(false);
+    cacheEnabled = ko.observable<boolean>(true);
 
     filterSettings = {
         searchField: ko.observable<string>(),
@@ -200,7 +200,7 @@ class query extends viewModelBase {
             return stats ? stats.IsStale : false;
         });
 
-        this.disableCache.subscribe(() => {
+        this.cacheEnabled.subscribe(() => {
             eventsCollector.default.reportEvent("query", "toggle-cache");
         });
 
@@ -499,13 +499,13 @@ class query extends viewModelBase {
 
             //TODO: this.currentColumnsParams().enabled(this.showFields() === false && this.indexEntries() === false);
 
-            const queryCommand = new queryIndexCommand(database, 0, 25, this.criteria(), this.disableCache());
+            const queryCommand = new queryIndexCommand(database, 0, 25, this.criteria(), !this.cacheEnabled());
 
             this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCommand.getUrl());
             this.csvUrl(queryCommand.getCsvUrl());
 
             const resultsFetcher = (skip: number, take: number) => {
-                const command = new queryIndexCommand(database, skip, take, this.criteria(), this.disableCache());
+                const command = new queryIndexCommand(database, skip, take, this.criteria(), !this.cacheEnabled());
                 return command.execute()
                     .always(() => {
                         this.isLoading(false);

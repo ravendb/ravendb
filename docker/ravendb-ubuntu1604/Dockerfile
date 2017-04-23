@@ -8,7 +8,7 @@ COPY run-raven.sh /opt/run-raven.sh
 # Prepare container
 RUN apt-get update \
     && apt-get install -y \
-    && apt-get install --no-install-recommends bzip2 libunwind8 libicu55 libcurl3 -y \
+    && apt-get install --no-install-recommends bzip2 libunwind8 libicu55 libcurl3 ca-certificates -y \
     && cd /opt \
     && mkdir RavenDB \
     && tar xjvf RavenDB.tar.bz2 -C RavenDB \

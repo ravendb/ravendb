@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Exceptions;
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Load_of_conflicted_document_with_tombstone_should_result_in_error()
+        public async Task Load_of_conflicted_document_with_tombstone_should_result_in_error()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
@@ -38,7 +39,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                SetupReplication(storeB, storeA);
+                await SetupReplicationAsync(storeB, storeA);
 
                 WaitUntilHasConflict(storeA, "users/1");
 
@@ -54,7 +55,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Load_of_conflicted_document_with_another_document_should_result_in_error()
+        public async Task Load_of_conflicted_document_with_another_document_should_result_in_error()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
@@ -72,7 +73,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                SetupReplication(storeB, storeA);
+                await SetupReplicationAsync(storeB, storeA);
 
                 WaitUntilHasConflict(storeA, "users/1");
 
@@ -88,7 +89,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Delete_of_conflicted_document_should_resolve_conflict()
+        public async Task Delete_of_conflicted_document_should_resolve_conflict()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
@@ -106,7 +107,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                SetupReplication(storeB, storeA);
+                await SetupReplicationAsync(storeB, storeA);
 
                 WaitUntilHasConflict(storeA, "users/1");
 
@@ -122,7 +123,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Load_of_several_conflicted_document_should_result_in_error()
+        public async Task Load_of_several_conflicted_document_should_result_in_error()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
@@ -146,8 +147,8 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                SetupReplication(storeB, storeA);
-                SetupReplication(storeC, storeA);
+                await SetupReplicationAsync(storeB, storeA);
+                await SetupReplicationAsync(storeC, storeA);
 
                 WaitUntilHasConflict(storeA, "users/1", 3);
 

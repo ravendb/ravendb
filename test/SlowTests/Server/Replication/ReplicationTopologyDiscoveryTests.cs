@@ -33,7 +33,7 @@ namespace SlowTests.Server.Replication
                 var masterDocumentDatabase = await GetDocumentDatabaseInstanceFor(master);
                 var slaveDocumentDatabase = await GetDocumentDatabaseInstanceFor(slave);
 
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
                 EnsureReplicating(master, slave);
                 var topologyInfo = GetFullTopology(master);
 
@@ -60,7 +60,7 @@ namespace SlowTests.Server.Replication
                 {
                     var masterDocumentDatabase = await GetDocumentDatabaseInstanceFor(master);
 
-                    SetupReplication(master, slave);
+                    await SetupReplicationAsync(master, slave);
                     EnsureReplicating(master, slave);
                     var topologyInfo = GetFullTopology(master);
 
@@ -110,7 +110,7 @@ namespace SlowTests.Server.Replication
                 var masterDocumentDatabase = await GetDocumentDatabaseInstanceFor(master);
                 var slaveDocumentDatabase = await GetDocumentDatabaseInstanceFor(slave);
 
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
                 EnsureReplicating(master, slave);
                 var topologyInfo = GetFullTopology(master);
 
@@ -148,12 +148,12 @@ namespace SlowTests.Server.Replication
                 var CDocumentDatabase = await GetDocumentDatabaseInstanceFor(C);
                 var DDocumentDatabase = await GetDocumentDatabaseInstanceFor(D);
 
-                SetupReplication(A, B, C);
+                await SetupReplicationAsync(A, B, C);
                 EnsureReplicating(A, B);
                 EnsureReplicating(A, C);
-                SetupReplication(B, D);
+                await SetupReplicationAsync(B, D);
                 EnsureReplicating(B, D);
-                SetupReplication(C, D);
+                await SetupReplicationAsync(C, D);
                 EnsureReplicating(C, D);
 
                 var topologyInfo = GetFullTopology(A);
@@ -185,9 +185,9 @@ namespace SlowTests.Server.Replication
                     var ADocumentDatabase = await GetDocumentDatabaseInstanceFor(A);
                     var BDocumentDatabase = await GetDocumentDatabaseInstanceFor(B);
 
-                    SetupReplication(A, B);
+                    await SetupReplicationAsync(A, B);
                     EnsureReplicating(A, B);
-                    SetupReplication(B, C);
+                    await SetupReplicationAsync(B, C);
                     EnsureReplicating(B, C);
 
                     var topologyInfo = GetFullTopology(A);
@@ -278,7 +278,7 @@ namespace SlowTests.Server.Replication
                 var slave1DocumentDatabase = await GetDocumentDatabaseInstanceFor(slave1);
                 var slave2DocumentDatabase = await GetDocumentDatabaseInstanceFor(slave2);
 
-                SetupReplication(master, slave1, slave2);
+                await SetupReplicationAsync(master, slave1, slave2);
                 EnsureReplicating(master, slave1);
                 EnsureReplicating(master, slave2);
 
@@ -311,8 +311,8 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                SetupReplication(nodeA, nodeB);
-                SetupReplication(nodeB, nodeA);
+                await SetupReplicationAsync(nodeA, nodeB);
+                await SetupReplicationAsync(nodeB, nodeA);
 
                 EnsureReplicating(nodeA, nodeB);
                 EnsureReplicating(nodeB, nodeA);
@@ -350,9 +350,9 @@ namespace SlowTests.Server.Replication
             using (var nodeB = GetDocumentStore())
             using (var nodeC = GetDocumentStore())
             {
-                SetupReplication(nodeA, nodeB);
-                SetupReplication(nodeB, nodeC);
-                SetupReplication(nodeC, nodeA);
+                await SetupReplicationAsync(nodeA, nodeB);
+                await SetupReplicationAsync(nodeB, nodeC);
+                await SetupReplicationAsync(nodeC, nodeA);
 
                 EnsureReplicating(nodeA, nodeB);
                 EnsureReplicating(nodeB, nodeC);
@@ -394,9 +394,9 @@ namespace SlowTests.Server.Replication
             using (var nodeALeaf = GetDocumentStore())
             using (var nodeCLeaf = GetDocumentStore())
             {
-                SetupReplication(nodeA, nodeB, nodeALeaf);
-                SetupReplication(nodeB, nodeC);
-                SetupReplication(nodeC, nodeA, nodeCLeaf);
+                await SetupReplicationAsync(nodeA, nodeB, nodeALeaf);
+                await SetupReplicationAsync(nodeB, nodeC);
+                await SetupReplicationAsync(nodeC, nodeA, nodeCLeaf);
 
                 EnsureReplicating(nodeA, nodeB);
                 EnsureReplicating(nodeA, nodeALeaf);
@@ -436,8 +436,8 @@ namespace SlowTests.Server.Replication
             using (var slave = GetDocumentStore())
             using (var slaveOfSlave = GetDocumentStore())
             {
-                SetupReplication(master, slave);
-                SetupReplication(slave, slaveOfSlave);
+                await SetupReplicationAsync(master, slave);
+                await SetupReplicationAsync(slave, slaveOfSlave);
 
                 EnsureReplicating(master, slave);
 

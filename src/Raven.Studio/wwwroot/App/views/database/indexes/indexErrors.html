@@ -1,63 +1,24 @@
-<section id="indexErrorsContainer" style="width: 100%" data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-    <div class="page-header" data-bind="visible: hasFetchedErrors() && allIndexErrors().length === 0">
-        <h3><small><i class="icon-info"></i></small> No errors have occurred.</h3>
-    </div>
-    <div style="height: 65%; position: relative;" data-bind="visible: hasFetchedErrors() && allIndexErrors().length > 0">
-        <div id="indexErrorsTableContainer" style="overflow-y: auto; position: absolute; bottom: 10px; top: 0; width: 100%;">
-            <table class="table table-condensed single-line-row-table" data-bind="event: { keydown: tableNavigation.tableKeyDown.bind(tableNavigation) }" tabindex="1">
-                <thead>
-                    <tr>
-                        <th style="width: 10%">Index</th>
-                        <th style="width: 10%">Action</th>
-                        <th style="width: 10%">Timestamp</th>
-                        <th style="width: 60%">Error</th>
-                        <th style="width: 10%">Document</th>
-                    </tr>
-                </thead>
-                <tbody data-bind="foreach: allIndexErrors, delegatedHandler: 'click'">
-                    <tr data-click="selectIndexError" data-bind="css: { 'selected': $data === $parent.selectedIndexError() }">
-                        <td data-bind="text: IndexName, attr: { title: IndexName }"></td>
-                        <td data-bind="text: Action, attr: { title: Action }"></td>
-                        <td data-bind="text: TimestampHumanized, attr: { title: TimestampHumanized }"></td>
-                        <td data-bind="text: Error, attr: { title: Error }"></td>
-                        <td data-bind="text: Document, attr: { title: Document }"></td>
-                    </tr>
-                </tbody>
-            </table>
+<div class="errors content-margin">
+    <div class="flex-window stretch">
+        <div class="flex-header">
+            <div class="toolbar clearfix">
+                <div class="input-group">
+                    <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter index errors (Alt+/)" data-bind="textInput: searchText"/>
+                </div>
+            </div>
+        </div>
+        <div class="flex-window-scroll">
+            <div class="scroll-stretch">
+                <div class="panel-body">
+                    <virtual-grid class="resizable virtual-grid" params="controller: gridController, emptyTemplate: 'empty-index-errors-template'"></virtual-grid>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="index-errors-details panel panel-default" style="height: 34%; overflow-y: auto" data-bind="visible: hasFetchedErrors() && allIndexErrors().length > 0, with: selectedIndexError">
-        <form class="form-horizontal form-condensed" role="form">
-            <div class="form-group">
-                <label class="col-md-1 text-right control-label">Index</label>
-                <div class="col-md-10">
-                    <p class="form-control-static" data-bind="text: IndexName"></p>
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="col-md-1 text-right control-label">Error</label>
-                <div class="col-md-10">
-                    <p class="form-control-static exceptionText" data-bind="text: Error"></p>
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="col-md-1 text-right control-label">Timestamp</label>
-                <div class="col-md-10">
-                    <p class="form-control-static" data-bind="text: TimestampHumanized"></p>
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="col-md-1 text-right control-label">Index</label>
-                <div class="col-md-10">
-                    <p class="form-control-static" data-bind="text: IndexName"></p>
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="col-md-1 text-right control-label">Document</label>
-                <div class="col-md-10">
-                    <p class="form-control-static" data-bind="text: Document"></p>
-                </div>
-            </div>
-        </form>
-    </div>
-</section>
+</div>
+<script type="text/html" id="empty-index-errors-template">
+    No errors found.
+</script>
+<div class="tooltip json-preview lg" style="opacity: 0">
+    <pre><code class="white-space-pre"></code></pre>
+</div>

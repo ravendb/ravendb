@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
-            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.SortOption},Highlight:{x.Value.Highlighted}>"))}]";
+            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name},Sort:{x.Value.Sort}>"))}]";
 
             var indexDefinition = new IndexDefinition();
             indexDefinition.Maps.Add(map);
@@ -44,10 +44,17 @@ namespace Raven.Server.Documents.Indexes.Auto
             if (ReferenceEquals(this, other))
                 return IndexDefinitionCompareDifferences.None;
 
+            var result = IndexDefinitionCompareDifferences.None;
             if (Collections.SequenceEqual(otherDefinition.Collections) == false || MapFields.SequenceEqual(otherDefinition.MapFields) == false)
-                return IndexDefinitionCompareDifferences.Maps;
+                result |= IndexDefinitionCompareDifferences.Maps;
 
-            return IndexDefinitionCompareDifferences.None;
+            if (LockMode != other.LockMode)
+                result |= IndexDefinitionCompareDifferences.LockMode;
+
+            if (Priority != other.Priority)
+                result |= IndexDefinitionCompareDifferences.Priority;
+
+            return result;
         }
 
         public override IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition)

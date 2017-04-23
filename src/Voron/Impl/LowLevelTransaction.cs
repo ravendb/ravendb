@@ -7,6 +7,7 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Platform.Win32;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Data.BTrees;
@@ -43,11 +44,15 @@ namespace Voron.Impl
         private readonly WriteAheadJournal _journal;
         internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
 
+        bool IPagerLevelTransactionState.IsWriteTransaction => Flags == TransactionFlags.ReadWrite;
+
         Dictionary<AbstractPager, TransactionState> IPagerLevelTransactionState.PagerTransactionState32Bits
         {
             get;
             set;
         }
+
+        Dictionary<AbstractPager, CryptoTransactionState> IPagerLevelTransactionState.CryptoPagerTransactionState { get; set; }
 
         internal class WriteTransactionPool
         {
@@ -82,7 +87,7 @@ namespace Voron.Impl
         // END: Structures that are safe to pool.
 
 
-        public event Action<LowLevelTransaction> OnCommit;
+        public event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
         public event Action<IPagerLevelTransactionState> OnDispose;
         public event Action AfterCommitWhenNewReadTransactionsPrevented;
 
@@ -431,7 +436,9 @@ namespace Voron.Impl
                     Debug.Assert(p.PageNumber == pageNumber,
                         string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
 
-                    _env.ValidatePageChecksum(pageNumber, (PageHeader*)p.Pointer);
+                    // When encryption is off, we do validation by checksum
+                    if (_env.Options.EncryptionEnabled == false)
+                        _env.ValidatePageChecksum(pageNumber, (PageHeader*)p.Pointer);
                 }
             }
 
@@ -513,9 +520,9 @@ namespace Voron.Impl
                     pageFromScratchBuffer.PositionInScratchBuffer,
                     numberOfPages);
             }
-
-            var newPagePointer = _env.ScratchBufferPool.AcquirePagePointer(this, pageFromScratchBuffer.ScratchFileNumber,
-                pageFromScratchBuffer.PositionInScratchBuffer);
+            
+            var newPagePointer = _env.ScratchBufferPool.AcquirePagePointerForNewPage(this, pageFromScratchBuffer.ScratchFileNumber,
+                pageFromScratchBuffer.PositionInScratchBuffer, numberOfPages);
 
             if (zeroPage)
                 Memory.Set(newPagePointer, 0, Constants.Storage.PageSize * numberOfPages);
@@ -558,7 +565,7 @@ namespace Voron.Impl
                 return;
 
             _transactionPages.Remove(value);
-            _env.ScratchBufferPool.BreakLargeAllocationToSeparatePages(value);
+            _env.ScratchBufferPool.BreakLargeAllocationToSeparatePages(this, value);
 
             for (int i = 0; i < value.NumberOfPages; i++)
             {
@@ -718,8 +725,8 @@ namespace Voron.Impl
                 CommitStage2_WriteToJournal();
             }
 
+            BeforeCommitFinalization?.Invoke(this);
             CommitStage3_DisposeTransactionResources();
-            OnCommit?.Invoke(this);
         }
 
         internal Task AsyncCommit;
@@ -798,7 +805,7 @@ namespace Voron.Impl
             AsyncCommit.Wait();
             Environment.LastWorkTime = DateTime.UtcNow;
             CommitStage3_DisposeTransactionResources();
-            OnCommit?.Invoke(this);
+            BeforeCommitFinalization?.Invoke(this);
         }
 
         private static void ThrowInvalidAsyncEndWithoutBegin()

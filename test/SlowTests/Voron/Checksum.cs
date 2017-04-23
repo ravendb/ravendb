@@ -26,16 +26,6 @@ namespace SlowTests.Voron
 {
     public class Checksum : StorageTest
     {
-        public Checksum()
-        {
-            if (Directory.Exists(DataDir))
-                StorageTest.DeleteDirectory(DataDir);
-
-            var checksumDirPath = Path.Combine(DataDir, "Checksum");
-            if (Directory.Exists(checksumDirPath))
-                StorageTest.DeleteDirectory(checksumDirPath);
-        }
-
         [Fact]
         public unsafe void ValidatePageChecksumShouldDetectDataCorruption()
         {
@@ -90,7 +80,7 @@ namespace SlowTests.Voron
             }
 
             // Now lets try to read it all back and hope we get an exception
-            Assert.Throws<InvalidDataException>(() =>
+            try
             {
                 using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(DataDir)))
                 {
@@ -122,7 +112,11 @@ namespace SlowTests.Voron
                     }
 
                 }
-            });
+            }
+            catch (Exception e)
+            {
+                Assert.True(e is InvalidOperationException || e is InvalidDataException);
+            }
         }
     }
 }

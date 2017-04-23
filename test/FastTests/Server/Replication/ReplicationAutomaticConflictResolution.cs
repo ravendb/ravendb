@@ -6,6 +6,7 @@
 
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Exceptions;
@@ -17,14 +18,14 @@ namespace FastTests.Server.Replication
     public class AutomaticConflictResolution : ReplicationTestsBase
     {
         [Fact]
-        public void ScriptResolveToTombstone()
+        public async Task ScriptResolveToTombstone()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
 
-                SetScriptResolution(slave, "return ResolveToTombstone();", "Users");
-                SetupReplication(master, slave);
+                await SetScriptResolutionAsync(slave, "return ResolveToTombstone();", "Users");
+                await SetupReplicationAsync(master, slave);
 
                 using (var session = slave.OpenSession())
                 {
@@ -50,13 +51,13 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void ScriptComplexResolution()
+        public async Task ScriptComplexResolution()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
 
-                SetScriptResolution(slave, @"
+                await SetScriptResolutionAsync(slave, @"
 
 function onlyUnique(value, index, self) { 
     return self.indexOf(value) === index;
@@ -79,7 +80,7 @@ function onlyUnique(value, index, self) {
 output(out);
 return out;
 ", "Users");
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
                 long? etag;
                 using (var session = slave.OpenSession())
                 {
@@ -122,13 +123,13 @@ return out;
         }
 
         [Fact]
-        public void ScriptUnableToResolve()
+        public async Task ScriptUnableToResolve()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                SetupReplication(master, slave);
-                SetScriptResolution(slave, @"return;", "Users");
+                await SetupReplicationAsync(master, slave);
+                await SetScriptResolutionAsync(slave, @"return;", "Users");
 
                 long? etag;
                 using (var session = slave.OpenSession())
@@ -195,14 +196,14 @@ return out;
         }
 
         [Fact]
-        public void Should_resolve_conflict_with_scripts()
+        public async Task Should_resolve_conflict_with_scripts()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
 
-                SetScriptResolution(slave, "return {Name:docs[0].Name + '123'};", "Users");
-                SetupReplication(master, slave);
+                await SetScriptResolutionAsync(slave, "return {Name:docs[0].Name + '123'};", "Users");
+                await SetupReplicationAsync(master, slave);
 
                 using (var session = master.OpenSession())
                 {
@@ -243,13 +244,13 @@ return out;
         }
 
         [Fact]
-        public void ShouldResolveDocumentConflictInFavorOfLatestVersion()
+        public async Task ShouldResolveDocumentConflictInFavorOfLatestVersion()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                SetReplicationConflictResolution(slave, StraightforwardConflictResolution.ResolveToLatest);
-                SetupReplication(master, slave);
+                await SetReplicationConflictResolutionAsync(slave, StraightforwardConflictResolution.ResolveToLatest);
+                await SetupReplicationAsync(master, slave);
 
                 using (var session = slave.OpenSession())
                 {
@@ -319,7 +320,7 @@ return out;
 
         //resolve conflict between incoming document and tombstone
         [Fact]
-        public void Resolve_to_latest_version_tombstone_is_latest_the_incoming_document_is_replicated()
+        public async Task Resolve_to_latest_version_tombstone_is_latest_the_incoming_document_is_replicated()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -362,8 +363,8 @@ return out;
 
                 //the tombstone on the 'slave' node is latest, so after replication finishes,
                 //the doc should stay deleted since the replication is 'resolve to latest'
-                SetReplicationConflictResolution(slave, StraightforwardConflictResolution.ResolveToLatest);
-                SetupReplication(master, slave);
+                await SetReplicationConflictResolutionAsync(slave, StraightforwardConflictResolution.ResolveToLatest);
+                await SetupReplicationAsync(master, slave);
 
                 Assert.True(WaitForDocument(slave, "marker"));
 

@@ -66,8 +66,9 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
             using (var database = CreateDocumentDatabase())
             {
-                var index = MapReduceIndex.CreateNew(1, new IndexDefinition()
+                var index = MapReduceIndex.CreateNew(new IndexDefinition()
                 {
+                    Etag = 10,
                     Name = "Users_ByCount_GroupByLocation",
                     Maps = { "from user in docs.Users select new { user.Location, Count = 1 }" },
                     Reduce =

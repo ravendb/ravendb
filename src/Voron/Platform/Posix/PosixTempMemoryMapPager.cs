@@ -41,7 +41,7 @@ namespace Voron.Platform.Posix
             if (_fd == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
+                Syscall.ThrowLastError(err);
             }
             DeleteOnClose = true;
 
@@ -72,7 +72,7 @@ namespace Voron.Platform.Posix
             return "shm_open mmap: " + _fd + " " + FileName;
         }
 
-        protected override PagerState AllocateMorePages(long newLength)
+        protected internal override PagerState AllocateMorePages(long newLength)
         {
             if (Disposed)
                 ThrowAlreadyDisposedException();
@@ -116,7 +116,7 @@ namespace Voron.Platform.Posix
             if (startingBaseAddressPtr.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err, "mmap on " + FileName);
+                Syscall.ThrowLastError(err, "mmap on " + FileName);
             }
             NativeMemory.RegisterFileMapping(FileName, startingBaseAddressPtr, _totalAllocationSize);
             var allocationInfo = new PagerState.AllocationInfo
@@ -153,7 +153,7 @@ namespace Voron.Platform.Posix
             if (result == -1)
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
+                Syscall.ThrowLastError(err);
             }
             NativeMemory.UnregisterFileMapping(FileName, ptr, size);
         }

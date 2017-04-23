@@ -175,7 +175,7 @@ namespace Voron.Platform.Win32
             return ((size / AllocationGranularity) + 1) * AllocationGranularity;
         }
 
-        protected override PagerState AllocateMorePages(long newLength)
+        protected internal override PagerState AllocateMorePages(long newLength)
         {
             if (Disposed)
                 ThrowAlreadyDisposedException();

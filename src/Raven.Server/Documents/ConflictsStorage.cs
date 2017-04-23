@@ -251,9 +251,7 @@ namespace Raven.Server.Documents
             if (ConflictsCount == 0)
                 return;
 
-            Slice lowerKey;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out var _);
-
+            DocumentKeyWorker.GetSliceFromKey(context, key, out Slice lowerKey);
             DeleteConflictsFor(context, lowerKey);
         }
 
@@ -426,7 +424,7 @@ namespace Raven.Server.Documents
         private ChangeVectorEntry[] MergeVectorsWithoutConflicts(long newEtag, ChangeVectorEntry[] existing)
         {
             if (existing != null)
-                return ReplicationUtils.UpdateChangeVectorWithNewEtag(_documentsStorage.Environment.DbId, newEtag, existing);
+                return ChangeVectorUtils.UpdateChangeVectorWithNewEtag(_documentsStorage.Environment.DbId, newEtag, existing);
 
             return new[]
             {
@@ -447,7 +445,9 @@ namespace Raven.Server.Documents
             }
 
             throw new ConcurrencyException(
-                $"Tried to resolve document conflict with etag = {expectedEtag}, but the current max conflict etag is {currentMaxConflictEtag}. This means that the conflict information with which you are trying to resolve the conflict is outdated. Get conflict information and try resolving again.");
+                $"Tried to resolve document conflict with etag = {expectedEtag}, but the current max conflict etag is {currentMaxConflictEtag}. " +
+                $"This means that the conflict information with which you are trying to resolve the conflict is outdated. " +
+                $"Get conflict information and try resolving again.");
         }
 
         public ChangeVectorEntry[] MergeConflictChangeVectorIfNeededAndDeleteConflicts(ChangeVectorEntry[] documentChangeVector, DocumentsOperationContext context, string key, long newEtag)
@@ -462,7 +462,7 @@ namespace Raven.Server.Documents
                     firstTime = false;
                     continue;
                 }
-                mergedChangeVectorEntries = ReplicationUtils.MergeVectors(mergedChangeVectorEntries, conflict.ChangeVector);
+                mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, conflict.ChangeVector);
             }
 
             //We had conflicts need to delete them
@@ -470,9 +470,9 @@ namespace Raven.Server.Documents
             {
                 DeleteConflictsFor(context, key);
                 if (documentChangeVector != null)
-                    mergedChangeVectorEntries = ReplicationUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector);
+                    mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector);
 
-                mergedChangeVectorEntries = ReplicationUtils.MergeVectors(mergedChangeVectorEntries, new[]
+                mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, new[]
                 {
                     new ChangeVectorEntry
                     {
@@ -579,15 +579,15 @@ namespace Raven.Server.Documents
                     var conflicts = GetConflictsFor(context, prefixSlice);
                     foreach (var conflict in conflicts)
                     {
-                        var conflictStatus = ReplicationUtils.GetConflictStatus(incomingChangeVector, conflict.ChangeVector);
+                        var conflictStatus = GetConflictStatus(incomingChangeVector, conflict.ChangeVector);
                         switch (conflictStatus)
                         {
-                            case ReplicationUtils.ConflictStatus.Update:
+                            case ConflictStatus.Update:
                                 DeleteConflictsFor(context, conflict.ChangeVector); // delete this, it has been subsumed
                                 break;
-                            case ReplicationUtils.ConflictStatus.Conflict:
+                            case ConflictStatus.Conflict:
                                 break; // we'll add this conflict if no one else also includes it
-                            case ReplicationUtils.ConflictStatus.AlreadyMerged:
+                            case ConflictStatus.AlreadyMerged:
                                 return; // we already have a conflict that includes this version
                             default:
                                 throw new ArgumentOutOfRangeException("Invalid conflict status " + conflictStatus);
@@ -717,10 +717,103 @@ namespace Raven.Server.Documents
                     firstTime = false;
                     continue;
                 }
-                mergedChangeVectorEntries = ReplicationUtils.MergeVectors(mergedChangeVectorEntries, conflict.ChangeVector);
+                mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, conflict.ChangeVector);
             }
 
             return indexOfLargestEtag;
+        }
+
+        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string key, ChangeVectorEntry[] remote, out ChangeVectorEntry[] conflictingVector)
+        {
+            //tombstones also can be a conflict entry
+            conflictingVector = null;
+            var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, key);
+            if (conflicts.Count > 0)
+            {
+                foreach (var existingConflict in conflicts)
+                {
+                    if (GetConflictStatus(remote, existingConflict.ChangeVector) == ConflictStatus.Conflict)
+                    {
+                        conflictingVector = existingConflict.ChangeVector;
+                        return ConflictStatus.Conflict;
+                    }
+                }
+                // this document will resolve the conflicts when putted
+                return ConflictStatus.Update;
+            }
+
+            var result = context.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, key);
+            ChangeVectorEntry[] local;
+
+            if (result.Document != null)
+                local = result.Document.ChangeVector;
+            else if (result.Tombstone != null)
+                local = result.Tombstone.ChangeVector;
+            else
+                return ConflictStatus.Update; //document with 'key' doesnt exist locally, so just do PUT
+
+
+            var status = GetConflictStatus(remote, local);
+            if (status == ConflictStatus.Conflict)
+            {
+                conflictingVector = local;
+            }
+
+            return status;
+        }
+
+        public static ConflictStatus GetConflictStatus(ChangeVectorEntry[] remote, ChangeVectorEntry[] local)
+        {
+            if (local == null)
+                return ConflictStatus.Update;
+
+            //any missing entries from a change vector are assumed to have zero value
+            var remoteHasLargerEntries = local.Length < remote.Length;
+            var localHasLargerEntries = remote.Length < local.Length;
+
+            int remoteEntriesTakenIntoAccount = 0;
+            for (int index = 0; index < local.Length; index++)
+            {
+                if (remote.Length < index && remote[index].DbId == local[index].DbId)
+                {
+                    remoteHasLargerEntries |= remote[index].Etag > local[index].Etag;
+                    localHasLargerEntries |= local[index].Etag > remote[index].Etag;
+                    remoteEntriesTakenIntoAccount++;
+                }
+                else
+                {
+                    var updated = false;
+                    for (var remoteIndex = 0; remoteIndex < remote.Length; remoteIndex++)
+                    {
+                        if (remote[remoteIndex].DbId == local[index].DbId)
+                        {
+                            remoteHasLargerEntries |= remote[remoteIndex].Etag > local[index].Etag;
+                            localHasLargerEntries |= local[index].Etag > remote[remoteIndex].Etag;
+                            remoteEntriesTakenIntoAccount++;
+                            updated = true;
+                        }
+                    }
+
+                    if (!updated)
+                        localHasLargerEntries = true;
+                }
+            }
+            remoteHasLargerEntries |= remoteEntriesTakenIntoAccount < remote.Length;
+
+            if (remoteHasLargerEntries && localHasLargerEntries)
+                return ConflictStatus.Conflict;
+
+            if (remoteHasLargerEntries == false && localHasLargerEntries == false)
+                return ConflictStatus.AlreadyMerged; // change vectors identical
+
+            return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
+        }
+
+        public enum ConflictStatus
+        {
+            Update,
+            Conflict,
+            AlreadyMerged
         }
     }
 }

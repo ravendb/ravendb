@@ -1,10 +1,7 @@
-﻿using System;
-using System.Linq;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Transformers;
+﻿using Raven.Client.Documents.Transformers;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -13,9 +10,10 @@ namespace Raven.Server.Documents.Transformers
 {
     public class Transformer
     {
+        private readonly object _locker = new object();
+
         private readonly TransformerBase _transformer;
         private readonly Logger _log;
-        private readonly object _locker = new object();
 
         protected Transformer(TransformerDefinition definition, TransformerBase transformer, Logger log)
         {
@@ -24,9 +22,11 @@ namespace Raven.Server.Documents.Transformers
             _log = log;
         }
 
+        public virtual long Etag => Definition.Etag;
+
         public virtual string Name => Definition?.Name;
 
-        public virtual long Hash => Definition?.GetHashCode()??Name.GetHashCode();
+        public virtual long Hash => Definition?.GetHashCode() ?? Name.GetHashCode();
 
         public virtual bool HasLoadDocument => _transformer.HasLoadDocument;
 
@@ -40,31 +40,28 @@ namespace Raven.Server.Documents.Transformers
 
         public readonly TransformerDefinition Definition;
 
-        public static Transformer CreateNew(TransformerDefinition definition, Logger log)
+        public virtual void SetLock(TransformerLockMode mode)
         {
-            TransformerBase compiledTransformer;
-            try
+            if (Definition.LockMode == mode)
+                return;
+
+            lock (_locker)
             {
-                compiledTransformer = IndexAndTransformerCompilationCache.GetTransformerInstance(definition);
+                if (Definition.LockMode == mode)
+                    return;
+
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Changing lock mode for '{Name} ({Etag})' from '{Definition.LockMode}' to '{mode}'.");
+
+                Definition.LockMode = mode;
             }
-            catch (Exception e)
-            {
-                return new FaultyInMemoryTransformer(definition.Name, e);
-            }
-            var transformer = new Transformer(definition, compiledTransformer, log);
-            return transformer;
         }
 
-        public static Transformer Open(string transformerName, Logger log, DatabaseRecord record)
+        public static Transformer CreateNew(TransformerDefinition definition, IndexingConfiguration configuration, Logger log)
         {
-            var transformerDefinitions = record.Transformers.Values.Where(x=>x.Name== transformerName).ToList();
-            
-            if (transformerDefinitions.Count == 0)
-                throw new InvalidOperationException($"Could not read transformer definition for name {transformerName}");
+            var compiledTransformer = IndexAndTransformerCompilationCache.GetTransformerInstance(definition);
+            var transformer = new Transformer(definition, compiledTransformer, log);
 
-            var transformerDefinition = transformerDefinitions.First();
-            var compiledTransformer = IndexAndTransformerCompilationCache.GetTransformerInstance(transformerDefinition);
-            var transformer = new Transformer(transformerDefinition, compiledTransformer, log);
             return transformer;
         }
 

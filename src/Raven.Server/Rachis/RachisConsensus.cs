@@ -62,7 +62,7 @@ namespace Raven.Server.Rachis
 
         public override async Task<Stream> ConenctToPeer(string url, string apiKey, TransactionOperationContext context = null)
         {
-            return await StateMachine.ConenctToPeer(url, apiKey);
+            return await StateMachine.ConnectToPeer(url, apiKey);
         }
 
         private class NullDisposable : IDisposable
@@ -242,7 +242,7 @@ namespace Raven.Server.Rachis
             var leader = new Leader(this);
             SetNewStateInTx(context, State.LeaderElect, leader, electionTerm, "I'm the only one in the cluster, so I'm the leader");
             _currentLeader = leader;
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += tx =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += tx =>
             {
                 leader.Start();
             };
@@ -349,7 +349,7 @@ namespace Raven.Server.Rachis
 
             CurrentState = state;
 
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnCommit += tx =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += tx =>
             {
                 TaskExecuter.CompleteReplaceAndExecute(ref _stateChanged, () =>
                 {

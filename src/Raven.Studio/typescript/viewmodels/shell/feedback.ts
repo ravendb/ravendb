@@ -1,11 +1,18 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import sendFeedbackCommand = require("commands/resources/sendFeedbackCommand");
 import dialog = require("plugins/dialog");
+import router = require("plugins/router");
+import studioSettings = require("common/settings/studioSettings");
+import globalSettings = require("common/settings/globalSettings");
+
+type featureImpression = 'positive' | 'negative';
 
 class feedbackModel {
     name = ko.observable<string>();
     email = ko.observable<string>();
     message = ko.observable<string>();
+    viewSpecific = ko.observable<boolean>(false);
+    featureImpression = ko.observable<featureImpression>();
 
     validationGroup = ko.validatedObservable({
         name: this.name,
@@ -28,15 +35,20 @@ class feedbackModel {
         });
 
         this.message.extend({
-            required: true
+            required: {
+                onlyIf: () => !this.viewSpecific() || this.featureImpression() === 'negative'
+            }
         });
     }
 }
 
 class feedback extends dialogViewModelBase {
 
-    private studioVersion: string;
-    private serverVersion: string;
+    private readonly studioVersion: string;
+    private readonly serverVersion: string;
+    private moduleTitle = ko.observable<string>();
+    private moduleId = ko.observable<string>();
+    private globalSettings: globalSettings;
 
     model = new feedbackModel();
 
@@ -48,12 +60,32 @@ class feedback extends dialogViewModelBase {
         super();
         this.studioVersion = studioVersion;
         this.serverVersion = serverVersion;
+
+        const instruction = router.activeInstruction();
+        if (instruction) {
+            this.moduleTitle(instruction.config.title);
+            this.moduleId(instruction.config.moduleId);
+        }
+
+        studioSettings.default.globalSettings()
+            .done(settings => this.globalSettings = settings);
+    }
+
+    attached() {
+        const feedback = this.globalSettings.feedback.getValue();
+        if (feedback) {
+            this.model.email(feedback.Email);
+            this.model.name(feedback.Name);
+        }
     }
 
     private toDto(): Raven.Server.Documents.Studio.FeedbackForm {
         return {
             Message: this.model.message(),
             Product: {
+                FeatureImpression: this.model.viewSpecific() ? this.model.featureImpression() : null,
+                FeatureName: this.model.viewSpecific() ? this.moduleTitle() : null,
+                StudioView: this.moduleId(),
                 StudioVersion: this.studioVersion,
                 Version: this.serverVersion,
                 Name: "RavenDB"
@@ -70,6 +102,11 @@ class feedback extends dialogViewModelBase {
         if (this.isValid(this.model.validationGroup)) {
             this.spinners.send(true);
             const dto = this.toDto();
+
+            this.globalSettings.feedback.setValue({
+                Email: dto.User.Email,
+                Name: dto.User.Name
+            });
 
             new sendFeedbackCommand(dto)
                 .execute()

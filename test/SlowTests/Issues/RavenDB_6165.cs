@@ -50,7 +50,7 @@ namespace SlowTests.Issues
                 var stats = documentStore.Admin.Send(new GetStatisticsOperation());
 
                 Assert.Equal(newIndexName, stats.Indexes[0].Name);
-                Assert.Equal(1, stats.Indexes[0].IndexId);
+                Assert.Equal(1, stats.Indexes[0].Etag);
             }
 
             using (var documentStore = GetDocumentStore(path: path))
@@ -66,7 +66,7 @@ namespace SlowTests.Issues
                 var stats = documentStore.Admin.Send(new GetStatisticsOperation());
 
                 Assert.Equal(newIndexName, stats.Indexes[0].Name);
-                Assert.Equal(1, stats.Indexes[0].IndexId);
+                Assert.Equal(1, stats.Indexes[0].Etag);
             }
         }
 

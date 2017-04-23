@@ -18,6 +18,7 @@ using Raven.Server.Documents;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
@@ -208,7 +209,7 @@ namespace Raven.Server.ServerWide
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             _notificationsStorage.Initialize(_env, ContextPool);
             DatabaseInfoCache.Initialize(_env, ContextPool);
-            
+
             NotificationCenter.Initialize();
             foreach (var alertRaised in storeAlertForLateRaise)
             {
@@ -249,9 +250,9 @@ namespace Raven.Server.ServerWide
         {
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
-                ["Type"] = nameof(ServerWide.ModifyDatabaseWatchers),
-                [nameof(ServerWide.ModifyDatabaseWatchers.DatabaseName)] = key,
-                [nameof(ServerWide.ModifyDatabaseWatchers.Value)] = val,
+                ["Type"] = nameof(Commands.ModifyDatabaseWatchers),
+                [nameof(Commands.ModifyDatabaseWatchers.DatabaseName)] = key,
+                [nameof(Commands.ModifyDatabaseWatchers.Value)] = val,
             }, "update-cmd"))
             {
                 return await SendToLeaderAsync(putCmd);
@@ -467,39 +468,78 @@ namespace Raven.Server.ServerWide
             return _engine.PutAsync(cmd);
         }
 
-        public async Task<long> SendToLeaderAsync(BlittableJsonReaderObject cmd)
+        public bool IsLeader()
         {
-            while (true)
-            {
-                var logChange = _engine.WaitForHeartbeat();
-
-                if (_engine.CurrentState == RachisConsensus.State.Leader)
-                {
-                    return await _engine.PutAsync(cmd);
-                }
-
-                var engineLeaderTag = _engine.LeaderTag;// not actually working
-                try
-                {
-                    return await SendToNodeAsync(engineLeaderTag, cmd);
-                }
-                catch (Exception ex)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Tried to send message to leader, retrying",ex);
-                }
-
-                await logChange;
-            }
+            return _engine.CurrentState == RachisConsensus.State.Leader;
         }
 
-        private async Task<long> SendToNodeAsync(string engineLeaderTag, BlittableJsonReaderObject cmd)
+        public async Task<long> SendToLeaderAsync(UpdateDatabaseCommand cmd)
         {
             TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                context.OpenReadTransaction();
+                var djv = cmd.ToJson();
+                var cmdJson = context.ReadObject(djv, "raft/command");
 
+                while (true)
+                {
+                    var logChange = _engine.WaitForHeartbeat();
+
+                    if (_engine.CurrentState == RachisConsensus.State.Leader)
+                    {
+                        return await _engine.PutAsync(cmdJson);
+                    }
+
+                    var engineLeaderTag = _engine.LeaderTag; // not actually working
+                    try
+                    {
+                        return await SendToNodeAsync(context, engineLeaderTag, cmdJson);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Tried to send message to leader, retrying", ex);
+                    }
+
+                    await logChange;
+                }
+            }
+        }
+
+        public async Task<long> SendToLeaderAsync(BlittableJsonReaderObject cmd)
+        {
+            TransactionOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                while (true)
+                {
+                    var logChange = _engine.WaitForHeartbeat();
+
+                    if (_engine.CurrentState == RachisConsensus.State.Leader)
+                    {
+                        return await _engine.PutAsync(cmd);
+                    }
+
+                    var engineLeaderTag = _engine.LeaderTag; // not actually working
+                    try
+                    {
+                        return await SendToNodeAsync(context, engineLeaderTag, cmd);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Tried to send message to leader, retrying", ex);
+                    }
+
+                    await logChange;
+                }
+            }
+        }
+
+        private async Task<long> SendToNodeAsync(TransactionOperationContext context, string engineLeaderTag, BlittableJsonReaderObject cmd)
+        {
+            using (context.OpenReadTransaction())
+            {
                 var clusterTopology = _engine.GetTopology(context);
                 string leaderUrl;
                 if (clusterTopology.Members.TryGetValue(engineLeaderTag, out leaderUrl) == false)
@@ -512,14 +552,14 @@ namespace Raven.Server.ServerWide
                          _clusterRequestExecutor.ApiKey?.Equals(clusterTopology.ApiKey) == false)
                 {
                     _clusterRequestExecutor.Dispose();
-                    _clusterRequestExecutor = RequestExecutor.CreateForSingleNode(leaderUrl, "Rachis.Server", clusterTopology.ApiKey);                    
+                    _clusterRequestExecutor = RequestExecutor.CreateForSingleNode(leaderUrl, "Rachis.Server", clusterTopology.ApiKey);
                 }
 
                 await _clusterRequestExecutor.ExecuteAsync(command, context, ServerShutdown);
 
                 return command.Result.ETag;
             }
-        }        
+        }
 
         protected internal class PutRaftCommand : RavenCommand<PutRaftCommandResult>
         {
@@ -565,7 +605,7 @@ namespace Raven.Server.ServerWide
         }
 
         public Task WaitForTopology(Leader.TopologyModification state)
-        {                        
+        {
             return _engine.WaitForTopology(state);
         }
 

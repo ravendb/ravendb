@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -59,7 +60,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Name = "Count",
                     Storage = FieldStorage.Yes,
                     MapReduceOperation = FieldMapReduceOperation.Count,
-                    SortOption = SortOptions.Numeric
+                    Sort = SortOptions.Numeric
                 },
             },
             new[]
@@ -68,7 +69,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
-                    SortOption = SortOptions.String
+                    Sort = SortOptions.String
                 }
             });
 
@@ -410,10 +411,9 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 new IndexField
                 {
                     Name = "Price",
-                    Highlighted = false,
                     Storage = FieldStorage.Yes,
                     MapReduceOperation = FieldMapReduceOperation.Sum,
-                    SortOption = SortOptions.String
+                    Sort = SortOptions.String
                 },
             }, new[]
             {
@@ -445,7 +445,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -467,7 +466,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
         protected void add_index(IndexDefinitionBase definition)
         {
-            _documentDatabase.IndexStore.CreateIndex(definition);
+            AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition));
         }
 
         protected Index get_index(string name)

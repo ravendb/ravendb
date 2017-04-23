@@ -50,7 +50,7 @@ abstract class dialogViewModelBase {
         }
     }
 
-    compositionComplete(view: any, parent: any) {
+    compositionComplete(view?: any, parent?: any) {
         setTimeout(() => this.setInitialFocus(), 100); // We have to time-delay this, else it never receives focus.
     }
 

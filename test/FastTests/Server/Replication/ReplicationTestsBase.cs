@@ -345,7 +345,7 @@ namespace FastTests.Server.Replication
             CurrentDatabaseTopology = result.Topology;
         }
 
-        public static void SetScriptResolution(DocumentStore store, string script, string collection)
+        public static async Task SetScriptResolutionAsync(DocumentStore store, string script, string collection)
         {
             var resolveByCollection = new Dictionary<string, ScriptResolver>
             {
@@ -356,17 +356,7 @@ namespace FastTests.Server.Replication
                     }
                 }
             };
-            UpdateConflictResolver(store, null, resolveByCollection).ConfigureAwait(false);
-        }
-
-        protected static void SetReplicationConflictResolution(DocumentStore store, StraightforwardConflictResolution conflictResolution)
-        {
-            UpdateConflictResolver(store, null, null, conflictResolution == StraightforwardConflictResolution.ResolveToLatest).ConfigureAwait(false);
-        }
-
-        protected void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
-        {
-            SetupReplicationAsync(fromStore, toStores).ConfigureAwait(false);
+            await UpdateConflictResolver(store, null, resolveByCollection);
         }
 
         protected async Task SetupReplicationAsync(DocumentStore fromStore, ConflictSolver conflictSolver, params DocumentStore[] toStores)
@@ -375,9 +365,9 @@ namespace FastTests.Server.Replication
             await SetupReplicationAsync(fromStore, toStores);
         }
 
-        protected void SetupReplication(DocumentStore fromStore, ConflictSolver conflictSolver, params DocumentStore[] toStores)
+        protected static async Task SetReplicationConflictResolutionAsync(DocumentStore store, StraightforwardConflictResolution conflictResolution)
         {
-            SetupReplicationAsync(fromStore, conflictSolver, toStores).ConfigureAwait(false);
+            await UpdateConflictResolver(store, null, null, conflictResolution == StraightforwardConflictResolution.ResolveToLatest);
         }
 
         protected virtual void ModifyReplicationDestination(ReplicationNode replicationNode)

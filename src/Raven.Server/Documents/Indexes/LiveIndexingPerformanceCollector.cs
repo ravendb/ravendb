@@ -50,8 +50,8 @@ namespace Raven.Server.Documents.Indexes
             var stats = _perIndexStats.Values
                     .Select(x => new IndexPerformanceStats
                     {
-                        IndexName = x.Index.Name,
-                        IndexId = x.Index.IndexId,
+                        Name = x.Index.Name,
+                        Etag = x.Index.Etag,
                         Performance = x.Index.GetIndexingPerformance()
                     })
                     .ToList();
@@ -103,8 +103,8 @@ namespace Raven.Server.Documents.Indexes
                 {
                     preparedStats.Add(new IndexPerformanceStats
                     {
-                        IndexName = index.Name,
-                        IndexId = index.IndexId,
+                        Name = index.Name,
+                        Etag = index.Etag,
                         Performance = itemsToSend.Select(item => item.ToIndexingPerformanceLiveStatsWithDetails()).ToArray()
                     });
                 }

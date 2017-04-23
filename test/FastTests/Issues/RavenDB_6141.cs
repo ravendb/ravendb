@@ -22,7 +22,6 @@ namespace FastTests.Issues
 
             Assert.Null(config.Indexing.TempPath);
             Assert.Null(config.Indexing.JournalsStoragePath);
-            Assert.Null(config.Indexing.AdditionalStoragePaths);
 
             Assert.Null(config.Storage.TempPath);
             Assert.Null(config.Storage.JournalsStoragePath);
@@ -39,7 +38,6 @@ namespace FastTests.Issues
 
             Assert.Null(config.Indexing.TempPath);
             Assert.Null(config.Indexing.JournalsStoragePath);
-            Assert.Null(config.Indexing.AdditionalStoragePaths);
 
             Assert.Null(config.Storage.TempPath);
             Assert.Null(config.Storage.JournalsStoragePath);

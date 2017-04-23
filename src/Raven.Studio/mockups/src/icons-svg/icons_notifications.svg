@@ -5,17 +5,10 @@
 <style type="text/css">
 	.st0{display:none;}
 	.st1{display:inline;}
-	.st2{fill:none;}
-	.st3{fill:#010101;}
 </style>
 <g class="st0">
 	<rect class="st1" width="64" height="64"/>
 </g>
-<g>
-	<rect x="20.3" y="25" class="st2" width="4.6" height="4.7"/>
-	<rect x="29.6" y="25" class="st2" width="4.7" height="4.7"/>
-	<rect x="39" y="25" class="st2" width="4.7" height="4.7"/>
-	<path d="M8.6,8.6v46.8l9.3-9.3h37.6V8.6H8.6z M24.9,29.7h-4.6V25h4.6V29.7z M34.4,29.7h-4.7V25h4.7V29.7z M39,29.7V25h4.7v4.7H39z"
-		/>
-</g>
+<path d="M5.1,7.1v54.3l10.8-10.8h43.6V7.1H5.1z M37.8,39.7H16v-5.5h21.8V39.7z M48.6,31.5H16V26h32.6V31.5z M48.6,23.4H16v-5.5h32.6
+	V23.4z"/>
 </svg>

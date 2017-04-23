@@ -34,7 +34,7 @@ namespace SlowTests.Issues
             using (var slave = GetDocumentStore())
             {
                 slave.ExecuteIndex(new PersonAndAddressIndex());
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
 
 
                 using (var session = master.OpenAsyncSession())
@@ -68,7 +68,7 @@ namespace SlowTests.Issues
                 }
 
                 // delete replications to slave
-                SetupReplication(master);
+                await SetupReplicationAsync(master);
 
                 using (var session = master.OpenAsyncSession())
                 {
@@ -89,9 +89,9 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync().ConfigureAwait(false);
                 }
 
-                SetReplicationConflictResolution(slave, StraightforwardConflictResolution.ResolveToLatest);
+                await SetReplicationConflictResolutionAsync(slave, StraightforwardConflictResolution.ResolveToLatest);
 
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
 
                 Assert.True(WaitForDocument(slave, "marker2"));
 
