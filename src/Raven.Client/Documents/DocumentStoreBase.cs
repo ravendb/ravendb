@@ -181,6 +181,7 @@ namespace Raven.Client.Documents
         /// Internal notification for integration tools, mainly
         ///</summary>
         public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
+        public event Action<string> TopologyUpdatedInternal;
         public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
         public event EventHandler<AfterStoreEventArgs> OnAfterStore;
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
@@ -229,5 +230,10 @@ namespace Raven.Client.Documents
 
         public abstract AdminOperationExecuter Admin { get; }
         public abstract OperationExecuter Operations { get; }
+
+        protected void OnTopologyUpdatedInternal(string databaseName)
+        {
+            TopologyUpdatedInternal?.Invoke(databaseName);
+        }
     }
 }

@@ -14,10 +14,8 @@ using Raven.Client.Documents.Transformers;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Server.Commercial;
-using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
-using Raven.Server.Documents.ETL.Providers.SQL.Connections;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -27,6 +25,7 @@ using Raven.Server.Documents.Versioning;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -156,12 +155,8 @@ namespace TypingsGenerator
             // versioning
             scripter.AddType(typeof(VersioningConfiguration));
 
-            // replication 
-            scripter.AddType(typeof(ReplicationDocument<>));
-
-            // sql replication 
-            scripter.AddType(typeof(SqlConnections));
-            scripter.AddType(typeof(SqlEtlConfiguration));
+            // etl
+            scripter.AddType(typeof(SqlDestination));
             scripter.AddType(typeof(EtlProcessStatistics));
             scripter.AddType(typeof(SimulateSqlEtl));
 
@@ -195,6 +190,10 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IOMetricsResponse));
             scripter.AddType(typeof(FileStatus));
             scripter.AddType(typeof(IoMetrics.MeterType));
+
+            // replication stats
+            scripter.AddType(typeof(LiveReplicationPerformanceCollector.OutgoingPerformanceStats));
+            scripter.AddType(typeof(LiveReplicationPerformanceCollector.IncomingPerformanceStats));
 
             return scripter;
         }

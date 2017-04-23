@@ -44,7 +44,7 @@ namespace FastTests.Client.Attachments
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
-                    Assert.Equal(2 + (replicateDocumentFirst ? 2 : 0), result.Etag);
+                    Assert.Equal(2, result.Etag);
                     Assert.Equal(names[0], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("image/png", result.ContentType);
@@ -53,7 +53,7 @@ namespace FastTests.Client.Attachments
                 using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
-                    Assert.Equal(4 + (replicateDocumentFirst ? 2 : 0), result.Etag);
+                    Assert.Equal(4, result.Etag);
                     Assert.Equal(names[1], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("ImGgE/jPeG", result.ContentType);
@@ -62,7 +62,7 @@ namespace FastTests.Client.Attachments
                 using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
-                    Assert.Equal(6 + (replicateDocumentFirst ? 2 : 0), result.Etag);
+                    Assert.Equal(6, result.Etag);
                     Assert.Equal(names[2], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("", result.ContentType);
@@ -364,7 +364,8 @@ namespace FastTests.Client.Attachments
 
         private void SetupAttachmentReplication(DocumentStore store1, DocumentStore store2, bool waitOnMarker = true)
         {
-            var database1 = GetDocumentDatabaseInstanceFor(store1).Result;
+            //var database1 = GetDocumentDatabaseInstanceFor(store1).Result;
+            var database1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.DefaultDatabase).Result;
             database1.Configuration.Replication.MaxItemsCount = null;
             database1.Configuration.Replication.MaxSizeToSend = null;
             SetupReplication(store1, store2);
@@ -427,7 +428,7 @@ namespace FastTests.Client.Attachments
 
         [Fact(Skip = "WIP")]
         public async Task AttachmentsVersioningReplication()
-         {
+        {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
@@ -797,7 +798,8 @@ namespace FastTests.Client.Attachments
 
         private async Task SetDatabaseId(DocumentStore store, Guid dbId)
         {
-            var database = await GetDocumentDatabaseInstanceFor(store);
+            //var database = await GetDocumentDatabaseInstanceFor(store);
+            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
             var type = database.GetAllStoragesEnvironment().Single(t => t.Type == StorageEnvironmentWithType.StorageEnvironmentType.Documents);
             type.Environment.DbId = dbId;
         }

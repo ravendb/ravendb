@@ -267,6 +267,7 @@ class ioStats extends viewModelBase {
 
     private autoScroll = ko.observable<boolean>(false);
     private hasAnyData = ko.observable<boolean>(false);
+    private loading: KnockoutComputed<boolean>;
     private clearSelectionVisible = ko.observable<boolean>(false);
     private importFileName = ko.observable<string>();
     private isImport = ko.observable<boolean>(false);
@@ -285,8 +286,8 @@ class ioStats extends viewModelBase {
 
     /* private */
 
-    private liveViewClient: liveIOStatsWebSocketClient;
-    private data: Raven.Server.Documents.Handlers.IOMetricsResponse;    
+    private liveViewClient = ko.observable<liveIOStatsWebSocketClient>();
+    private data: Raven.Server.Documents.Handlers.IOMetricsResponse;
     private commonPathsPrefix: string;     
     private totalWidth: number;
     private totalHeight: number; 
@@ -331,6 +332,11 @@ class ioStats extends viewModelBase {
                 // Cancel transition (if any)
                 this.brushContainer.transition();
             }
+        });
+
+        this.loading = ko.pureComputed(() => {
+            const client = this.liveViewClient();
+            return client ? client.loading() : true;
         });
     }
 
@@ -470,14 +476,14 @@ class ioStats extends viewModelBase {
 
         selection
             .on("mousedown.live", () => {
-                if (this.liveViewClient) {
-                    this.liveViewClient.pauseUpdates();
+                if (this.liveViewClient()) {
+                    this.liveViewClient().pauseUpdates();
                 }
             });
         selection
             .on("mouseup.live", () => {
-                if (this.liveViewClient) {
-                    this.liveViewClient.resumeUpdates();
+                if (this.liveViewClient()) {
+                    this.liveViewClient().resumeUpdates();
                 }
             });
 
@@ -507,10 +513,10 @@ class ioStats extends viewModelBase {
         const criteria = this.searchText().toLowerCase();
         this.allIndexesAreFiltered(false);
 
-        const indexesTracks = this.data.Environments.filter((x) => {
+        const indexesTracks = this.data ? this.data.Environments.filter((x) => {
             const temp = x.Path.substring(this.commonPathsPrefix.length);
             return temp.startsWith(ioStats.indexesString);
-        });                 
+        }) : [];
        
         const indexesTracksNames = indexesTracks.map(x => x.Path.substring(this.commonPathsPrefix.length + 1 + ioStats.indexesString.length));
 
@@ -558,7 +564,7 @@ class ioStats extends viewModelBase {
             }
         };
 
-        this.liveViewClient = new liveIOStatsWebSocketClient(this.activeDatabase(), onDataUpdate);
+        this.liveViewClient(new liveIOStatsWebSocketClient(this.activeDatabase(), onDataUpdate));
     }
 
     scrollToRight() {
@@ -596,9 +602,9 @@ class ioStats extends viewModelBase {
     }
 
     private cancelLiveView() {
-        if (this.liveViewClient) {
-            this.liveViewClient.dispose();
-            this.liveViewClient = null;
+        if (this.liveViewClient()) {
+            this.liveViewClient().dispose();
+            this.liveViewClient(null);
         }
     }   
 
@@ -718,7 +724,7 @@ class ioStats extends viewModelBase {
             this.brushContainer
                 .call(this.brush)
                 .selectAll("rect")
-                .attr("y", 0)
+                .attr("y", 1)
                 .attr("height", ioStats.brushSectionHeight - 1);
         }
     }
@@ -894,6 +900,10 @@ class ioStats extends viewModelBase {
     }
 
     private drawMainSection() {
+        if (!this.data) {
+            return;
+        }
+
         this.hitTest.reset();
         this.calcMaxYOffset();
         this.fixCurrentOffset();
@@ -1252,8 +1262,9 @@ class ioStats extends viewModelBase {
         });
     }
 
-    closeImport() {       
+    closeImport() {
         this.isImport(false);
+        this.hasAnyData(false);
         this.resetGraphData();
         this.enableLiveView();
     }   
@@ -1263,7 +1274,7 @@ class ioStats extends viewModelBase {
         this.searchText("");
         this.hasAnyData(false);   
         this.allIndexesAreFiltered(false);     
-        this.setZoomAndBrush([0, this.totalWidth], brush => brush.clear());                           
+        this.setZoomAndBrush([0, this.totalWidth], brush => brush.clear());
     }
 
     private setZoomAndBrush(scale: [number, number], brushAction: (brush: d3.svg.Brush<any>) => void) {

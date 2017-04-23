@@ -49,7 +49,8 @@
                             </ul>
                             <span class="input-group-btn" style="vertical-align:top">
                                 <button class="btn" type="button" data-bind="click: $root.previewDocument, css: { 'btn-spinner': $root.spinners.preview }, disable: $root.spinners.preview" title="Show preview">
-                                <i class="icon-preview"></i></button>
+                                    <i class="icon-preview"></i>
+                                </button>
                             </span>
                         </div>
                     </div>
@@ -209,7 +210,8 @@
                         </ul>
                         <span class="input-group-btn">
                             <button class="btn btn-default" type="button" data-bind="click: loadDocument, css: { 'btn-spinner': spinners.loadingDocument }, disable: spinners.loadingDocument">
-                            <i class="icon-import"></i> <span>Load</span></button>
+                                <i class="icon-import"></i> <span>Load</span>
+                            </button>
                         </span>
 
 
@@ -322,61 +324,64 @@
         <span class="caret"></span>
     </button>
     <div class="dropdown-menu slidein-style" aria-labelledby="dropdownLoadPatch" data-bind="dropdownPanel: true, with: savedPatches">
-        <div class="loadpatch-dropdown" data-bind="css: { 'show-preview': previewItem() }">
-            <div class="patch-preview-container flex-vertical">
-                <div class="flex-header">
-                    <h3>
-                        Patch preview
-                    </h3>
-                </div>
-                <div class="flex-content flex-vertical scroll">
-                <div class="bg-info padding padding-xs">
-                    <div class="row">
-                        <div class="col-xs-6">
-                            <strong data-bind="text: previewItem() ? previewItem().name() : ''"></strong>
+        <div class="loadpatch-dropdown flex-vertical" data-bind="css: { 'show-preview': previewItem() }">
+            <div class="flex-content loadpatch-container">
+                <div class="patch-preview-container flex-vertical">
+                    <div class="flex-header">
+                        <h3>
+                            Patch preview
+                        </h3>
+                    </div>
+                    <div class="flex-content flex-vertical scroll">
+                        <div class="bg-info padding padding-sm">
+                            <div class="row">
+                                <div class="col-xs-6">
+                                   patch name: &nbsp;<strong data-bind="text: previewItem() ? previewItem().name() : ''"></strong>
+                                </div>
+                                <div class="col-xs-6">
+                                    <div data-bind="with: previewItem()">
+                                        for: &nbsp;<strong data-bind="text: patchOnOption"></strong> - <strong data-bind="text: selectedItem"></strong>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-xs-6">
-                            <div data-bind="with: previewItem()">
-                                <span data-bind="text: patchOnOption"></span> - <span data-bind="text: selectedItem"></span>
+                        <div class="pre-container">
+                            <pre>
+<code data-bind="html: previewCode"></code>
+</pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="patch-list-container flex-vertical">
+                    <div class="flex-header">
+                        <div class="row">
+                            <div class="col-xs-6">
+                                <h3>Select patch</h3>
+                            </div>
+                            <div class="col-xs-6">
+                                <input type="search" class="form-control input-sm patch-filter" data-bind="textInput: filters.searchText" placeholder="filter">
                             </div>
                         </div>
                     </div>
-                </div>
-                    <div class="pre-container">
-                        <pre>
-<code data-bind="html: previewCode"></code>
-</pre>
+                    <div class="flex-content scroll">
+                        <ul class="patch-list" data-bind="foreach: filteredPatches">
+                            <li>
+                                <a href="#" class="patch-link" data-bind="click: $parent.previewPatch">
+                                    <span class="name" data-bind="text: name()"></span>
+                                    <span class="modified" data-bind="text: modificationDate()"></span>
+                                </a>
+                                <a href="#" data-bind="click: $parent.removePatch" class="patch-remove"><i class="icon-trash"></i></a>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
-            <div class="patch-list-container flex-vertical">
-                <div class="flex-header">
-                    <div class="row">
-                        <div class="col-xs-6">
-                            <h3>Select patch</h3>
-                        </div>
-                        <div class="col-xs-6">
-                            <input type="search" class="form-control input-sm patch-filter" data-bind="textInput: filters.searchText" placeholder="filter">
-                        </div>
-                    </div>
-                </div>
-                <div class="flex-content scroll">
-                    <ul class="patch-list" data-bind="foreach: filteredPatches">
-                        <li>
-                            <a href="#" class="patch-link" data-bind="click: $parent.previewPatch">
-                                <span class="name" data-bind="text: name()"></span>
-                                <span class="modified" data-bind="text: modificationDate()"></span>
-                            </a>
-                            <a href="#" data-bind="click: $parent.removePatch" class="patch-remove"><i class="icon-trash"></i></a>
-                        </li>
-                    </ul>
-                </div>
                 <div class="flex-footer">
                     <div class="text-right">
                         <button class="btn btn-success btn-sm close-panel" data-bind="click: usePatch, enable: previewItem()">Load</button>
                     </div>
                 </div>
-            </div>
+            
         </div>
     </div>
 </script>

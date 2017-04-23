@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
-    public class RavenEtl : EtlProcess<RavenEtlItem, ICommandData>
+    public class RavenEtl : EtlProcess<RavenEtlItem, ICommandData, RavenDestination>
     {
         public const string RavenEtlTag = "Raven ETL";
 
@@ -19,15 +19,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private readonly RavenEtlDocumentTransformer.ScriptInput _script;
 
-        public RavenEtl(DocumentDatabase database, RavenEtlConfiguration configuration) : base(database, configuration, RavenEtlTag)
+        public RavenEtl(Transformation transformation, RavenDestination destination, DocumentDatabase database) : base(transformation, destination, database, RavenEtlTag)
         {
-            EtlConfiguration = configuration;
             Metrics = new EtlMetricsCountersManager();
-            _requestExecutor = RequestExecutor.CreateForSingleNode(EtlConfiguration.Url, EtlConfiguration.Database, EtlConfiguration.ApiKey);
-            _script = new RavenEtlDocumentTransformer.ScriptInput(configuration);
+            _requestExecutor = RequestExecutor.CreateForSingleNode(Destination.Url, Destination.Database, Destination.ApiKey);
+            _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);
         }
-
-        public RavenEtlConfiguration EtlConfiguration { get; }
 
         protected override IEnumerator<RavenEtlItem> ConvertDocsEnumerator(IEnumerator<Document> docs)
         {
@@ -54,11 +51,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 return;
 
             BatchOptions options = null;
-            if (EtlConfiguration.LoadRequestTimeoutInSec != null)
+            if (Destination.LoadRequestTimeoutInSec != null)
             {
                 options = new BatchOptions
                 {
-                    RequestTimeout = TimeSpan.FromSeconds(EtlConfiguration.LoadRequestTimeoutInSec.Value)
+                    RequestTimeout = TimeSpan.FromSeconds(Destination.LoadRequestTimeoutInSec.Value)
                 };
             }
 

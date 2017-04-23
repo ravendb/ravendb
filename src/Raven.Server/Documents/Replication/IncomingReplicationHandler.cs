@@ -67,9 +67,8 @@ namespace Raven.Server.Documents.Replication
 
             _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
-
-            var replicationDoc = _parent.ReplicationDocument;
-            _conflictManager = new ConflictManager(_database, replicationDoc, _parent.ConflictResolver);
+            
+            _conflictManager = new ConflictManager(_database, _parent.ConflictResolver);
         }
 
         public IncomingReplicationPerformanceStats[] GetReplicationPerformance()
@@ -125,8 +124,7 @@ namespace Raven.Server.Documents.Replication
             IsIncomingReplicationThread = true;
             try
             {
-
-                using (_connectionOptions.ConnectionProcessingInProgress())
+                using (_connectionOptions.ConnectionProcessingInProgress("Replication"))
                 using (_stream)
                 using (var interruptibleRead = new InterruptibleRead(
                             _database.DocumentsStorage.ContextPool,
@@ -157,12 +155,11 @@ namespace Raven.Server.Documents.Replication
                                 }
                                 else // notify peer about new change vector
                                 {
-                                    DocumentsOperationContext documentsContext;
 
                                     using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(
                                         out configurationContext))
                                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(
-                                            out documentsContext))
+                                            out DocumentsOperationContext documentsContext))
                                     using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
                                     {
                                         SendHeartbeatStatusToSource(
@@ -318,8 +315,7 @@ namespace Raven.Server.Documents.Replication
 
         private void HandleReceivedIndexOrTransformerBatch(TransactionOperationContext configurationContext, BlittableJsonReaderObject message, long lastIndexOrTransformerEtag)
         {
-            int itemsCount;
-            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out itemsCount))
+            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out int itemsCount))
                 throw new InvalidDataException("Expected the 'ItemsCount' field, but had no numeric field of this value, this is likely a bug");
             var replicatedIndexTransformerCount = itemsCount;
 
@@ -332,23 +328,14 @@ namespace Raven.Server.Documents.Replication
 
         private void HandleReceivedDocumentsAndAttachmentsBatch(DocumentsOperationContext documentsContext, BlittableJsonReaderObject message, long lastDocumentEtag, IncomingReplicationStatsScope stats)
         {
-            int itemsCount;
-            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out itemsCount))
+            if (!message.TryGet(nameof(ReplicationMessageHeader.ItemsCount), out int itemsCount))
                 throw new InvalidDataException(
-                    "Expected the 'ItemsCount' field, but had no numeric field of this value, this is likely a bug");
+                    $"Expected the '{nameof(ReplicationMessageHeader.ItemsCount)}' field, but had no numeric field of this value, this is likely a bug");
 
-            int attachmentStreamCount;
-            if (!message.TryGet(nameof(ReplicationMessageHeader.AttachmentStreamsCount), out attachmentStreamCount))
+            if (!message.TryGet(nameof(ReplicationMessageHeader.AttachmentStreamsCount), out int attachmentStreamCount))
                 throw new InvalidDataException(
-                    "Expected the 'AttachmentStreamsCount' field, but had no numeric field of this value, this is likely a bug");
+                    $"Expected the '{nameof(ReplicationMessageHeader.AttachmentStreamsCount)}' field, but had no numeric field of this value, this is likely a bug");
 
-            string resovlerId;
-            int? resolverVersion;
-            if (message.TryGet(nameof(ReplicationMessageHeader.ResolverId), out resovlerId) &&
-                message.TryGet(nameof(ReplicationMessageHeader.ResolverVersion), out resolverVersion))
-            {
-                _parent.UpdateReplicationDocumentWithResolver(resovlerId, resolverVersion);
-            }
 
             ReceiveSingleDocumentsBatch(documentsContext, itemsCount, attachmentStreamCount, lastDocumentEtag, stats);
 
@@ -378,9 +365,7 @@ namespace Raven.Server.Documents.Replication
 
             try
             {
-                byte* buffer;
-                int totalSize;
-                writeBuffer.EnsureSingleChunk(out buffer, out totalSize);
+                writeBuffer.EnsureSingleChunk(out byte* buffer, out int totalSize);
 
                 if (_log.IsInfoEnabled)
                     _log.Info(
@@ -716,9 +701,7 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
 
-                byte* buffer;
-                int totalSize;
-                writeBuffer.EnsureSingleChunk(out buffer, out totalSize);
+                writeBuffer.EnsureSingleChunk(out byte* buffer, out int totalSize);
 
                 if (_log.IsInfoEnabled)
                     _log.Info(
@@ -752,9 +735,8 @@ namespace Raven.Server.Documents.Replication
         {
             for (int i = 0; i < index.ChangeVector.Length; i++)
             {
-                long etag;
-                if (maxReceivedChangeVectorByDatabase.TryGetValue(index.ChangeVector[i].DbId, out etag) == false ||
-                    etag > index.ChangeVector[i].Etag)
+                if (maxReceivedChangeVectorByDatabase.TryGetValue(index.ChangeVector[i].DbId, out long etag) == false ||
+    etag > index.ChangeVector[i].Etag)
                 {
                     maxReceivedChangeVectorByDatabase[index.ChangeVector[i].DbId] = index.ChangeVector[i].Etag;
                 }
@@ -800,7 +782,6 @@ namespace Raven.Server.Documents.Replication
                 _log.Info(
                     $"Sending heartbeat ok => {FromToString} with last document etag = {lastDocumentEtag}, last index/transformer etag = {lastIndexOrTransformerEtag} and document change vector: {databaseChangeVector.Format()}");
             }
-            var defaultResolver = _parent.ReplicationDocument?.DefaultResolver;
             var heartbeat = new DynamicJsonValue
             {
                 [nameof(ReplicationMessageReply.Type)] = "Ok",
@@ -811,8 +792,6 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentChangeVectorAsDynamicJson,
                 [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVectorAsDynamicJson,
                 [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString(),
-                [nameof(ReplicationMessageReply.ResolverId)] = defaultResolver?.ResolvingDatabaseId,
-                [nameof(ReplicationMessageReply.ResolverVersion)] = defaultResolver?.Version
             };
 
             documentsContext.Write(writer, heartbeat);
@@ -1172,8 +1151,7 @@ namespace Raven.Server.Documents.Replication
                             database.DocumentsStorage.AttachmentsStorage.PutFromReplication(context, item.Key, item.Name,
                                 item.ContentType, item.Base64Hash, item.TransactionMarker);
 
-                            ReplicationAttachmentStream attachmentStream;
-                            if (_incoming._replicatedAttachmentStreams.TryGetValue(item.Base64Hash, out attachmentStream))
+                            if (_incoming._replicatedAttachmentStreams.TryGetValue(item.Base64Hash, out ReplicationAttachmentStream attachmentStream))
                             {
                                 using (attachmentStream)
                                 {
@@ -1227,8 +1205,7 @@ namespace Raven.Server.Documents.Replication
                                     continue;
                                 }
 
-                                ChangeVectorEntry[] conflictingVector;
-                                var conflictStatus = ReplicationUtils.GetConflictStatusForDocument(context, item.Id, _changeVector, out conflictingVector);
+                                var conflictStatus = ReplicationUtils.GetConflictStatusForDocument(context, item.Id, _changeVector, out ChangeVectorEntry[] conflictingVector);
 
                                 switch (conflictStatus)
                                 {
@@ -1246,8 +1223,7 @@ namespace Raven.Server.Documents.Replication
                                             if (_incoming._log.IsInfoEnabled)
                                                 _incoming._log.Info(
                                                     $"Conflict check resolved to Update operation, writing tombstone for doc = {item.Id}, with change vector = {_changeVector.Format()}");
-                                            Slice keySlice;
-                                            using (DocumentKeyWorker.GetSliceFromKey(context, item.Id, out keySlice))
+                                            using (DocumentKeyWorker.GetSliceFromKey(context, item.Id, out Slice keySlice))
                                             {
                                                 database.DocumentsStorage.Delete(
                                                     context, keySlice, item.Id, null,
@@ -1300,9 +1276,8 @@ namespace Raven.Server.Documents.Replication
                 {
                     _changeVector[i] = ((ChangeVectorEntry*)(buffer + position))[i];
 
-                    long etag;
-                    if (maxReceivedChangeVectorByDatabase.TryGetValue(_changeVector[i].DbId, out etag) == false ||
-                        etag > _changeVector[i].Etag)
+                    if (maxReceivedChangeVectorByDatabase.TryGetValue(_changeVector[i].DbId, out long etag) == false ||
+    etag > _changeVector[i].Etag)
                     {
                         maxReceivedChangeVectorByDatabase[_changeVector[i].DbId] = _changeVector[i].Etag;
                     }

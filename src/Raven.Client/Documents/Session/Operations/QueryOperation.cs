@@ -52,6 +52,7 @@ namespace Raven.Client.Documents.Session.Operations
             _indexEntriesOnly = indexEntriesOnly;
 
             AssertNotQueryById();
+            AssertPageSizeSet();
         }
 
         public QueryCommand CreateRequest()
@@ -88,6 +89,17 @@ namespace Raven.Client.Documents.Session.Operations
             var value = match.Groups[1].Value;
 
             throw new InvalidOperationException("Attempt to query by id only is blocked, you should use call session.Load(\"" + value + "\"); instead of session.Query().Where(x=>x.Id == \"" + value + "\");" + Environment.NewLine + "You can turn this error off by specifying documentStore.Conventions.AllowQueriesOnId = true;, but that is not recommend and provided for backward compatibility reasons only.");
+        }
+
+        private void AssertPageSizeSet()
+        {
+            if (_session.Conventions.ThrowIfQueryPageSizeIsNotSet == false)
+                return;
+
+            if (_indexQuery.PageSizeSet)
+                return;
+
+            throw new InvalidOperationException("Attempt to query without explicitly specifying a page size. You can use .Take() methods to set maximum number of results. By default the page size is set to int.MaxValue and can cause severe performance degradation.");
         }
 
         private void StartTiming()

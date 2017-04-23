@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
-using Lucene.Net.Documents;
 using Raven.Server.Json;
 using Sparrow.Json;
+using LuceneDocument = Lucene.Net.Documents.Document;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
-    public class LuceneDocumentConverter : LuceneDocumentConverterBase
+    public sealed class LuceneDocumentConverter : LuceneDocumentConverterBase
     {
         private readonly BlittableJsonTraverser _blittableTraverser;
 
@@ -18,20 +18,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             else
                 _blittableTraverser = BlittableJsonTraverser.Default;
         }
-
-        protected override IEnumerable<AbstractField> GetFields(LazyStringValue key, object doc, JsonOperationContext indexContext)
+        
+        protected override int GetFields<T>(T instance, LazyStringValue key, object doc, JsonOperationContext indexContext) 
         {
+            int newFields = 0; 
+
             var document = (Document)doc;
             if (key != null)
             {
                 Debug.Assert(document.LoweredKey == null || (key == document.LoweredKey));
 
-                yield return GetOrCreateKeyField(key);
+                instance.Add(GetOrCreateKeyField(key));
+                newFields++;
             }
 
             if (_reduceOutput)
             {
-                yield return GetReduceResultValueField(document.Data);
+                instance.Add(GetReduceResultValueField(document.Data));
+                newFields++;
             }
 
             foreach (var indexField in _fields.Values)
@@ -40,9 +44,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.Name, out value) == false)
                     continue;
 
-                foreach (var luceneField in GetRegularFields(indexField, value, indexContext))
-                    yield return luceneField;
+                newFields += GetRegularFields(instance, indexField, value, indexContext);
             }
+
+            return newFields;
         }
     }
 }

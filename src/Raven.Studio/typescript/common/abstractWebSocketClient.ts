@@ -95,7 +95,9 @@ abstract class abstractWebSocketClient<T> {
         this.webSocket = new WebSocket(url);
 
         this.webSocket.onmessage = (e) => {
-            if (!this.isHeartBeat(e)) {
+            if (this.isHeartBeat(e)) {
+                this.onHeartBeat();
+            } else {
                 this.onMessage(JSON.parse(e.data));
             }
         }
@@ -133,6 +135,10 @@ abstract class abstractWebSocketClient<T> {
     }
 
     protected onError(e: Event) {
+        // empty by design
+    }
+
+    protected onHeartBeat() {
         // empty by design
     }
 

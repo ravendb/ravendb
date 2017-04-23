@@ -39,6 +39,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-plus',
             dynamicHash: appUrls.etl
         }),*/
+        /* TODO
         new leafMenuItem({
             route: 'databases/settings/sqlReplication',
             moduleId: 'viewmodels/database/settings/sqlReplications',
@@ -46,7 +47,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-sql-replication',
             dynamicHash: appUrls.sqlReplications
-        }),
+        }),*/
         new leafMenuItem({
             route: 'databases/settings/editSqlReplication(/:sqlReplicationName)',
             moduleId: 'viewmodels/database/settings/editSqlReplication',

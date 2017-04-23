@@ -10,7 +10,7 @@ import eventsCollector = require("common/eventsCollector");
 
 class sqlReplicationConnectionStringsManagement extends viewModelBase{
     
-    htmlSelector ="#sqlReplicationConnectionsManagement";
+    /*htmlSelector ="#sqlReplicationConnectionsManagement";
     connections = ko.observable<sqlReplicationConnections>();
     isSaveEnabled: KnockoutComputed<boolean>;
     
@@ -127,7 +127,7 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
             }
         }
     }
-
+    */
 }
 
 export =sqlReplicationConnectionStringsManagement;

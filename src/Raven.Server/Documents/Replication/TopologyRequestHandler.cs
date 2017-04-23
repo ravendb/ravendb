@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
@@ -13,11 +14,11 @@ namespace Raven.Server.Documents.Replication
 {
     public class TopologyRequestHandler
     {
-        public void AcceptIncomingConnectionAndRespond(TcpConnectionOptions tcp)
+        public void AcceptIncomingConnectionAndRespond(TcpConnectionOptions tcp, string debugTag)
         {
             DocumentsOperationContext context;
             using (tcp)
-            using(tcp.ConnectionProcessingInProgress())
+            using(tcp.ConnectionProcessingInProgress(debugTag))
             using (tcp.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 TopologyDiscoveryRequest header;
@@ -42,41 +43,34 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 header.AlreadyVisited.Add(localDbId);
+                var destinations = tcp.DocumentDatabase.ReplicationLoader?.Destinations?.ToList();
 
-                ReplicationDocument replicationDocument = null;
-                using (context.OpenReadTransaction())
+                //This is the case where we don't have real replication topology.
+                if (destinations == null || destinations.Count == 0)
                 {
-                    var configurationDocument = tcp.DocumentDatabase.DocumentsStorage.Get(context, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                    if (configurationDocument != null)
-                        replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
-
-                    //This is the case where we don't have real replication topology.
-                    if (replicationDocument?.Destinations == null || replicationDocument.Destinations.Count == 0)
+                    //return record of node without any incoming or outgoing connections
+                    var localNodeTopologyInfo = new NodeTopologyInfo();
+                    var topology = new FullTopologyInfo
                     {
-                        //return record of node without any incoming or outgoing connections
-                        var localNodeTopologyInfo = new NodeTopologyInfo();
-                        var topology = new FullTopologyInfo
+                        DatabaseId = localDbId,
+                        NodesById =
                         {
-                            DatabaseId = localDbId,
-                            NodesById =
-                            {
-                                { tcp.DocumentDatabase.DbId.ToString(), localNodeTopologyInfo }
-                            }
-                        };
-                        ReplicationUtils.GetLocalIncomingTopology(tcp.DocumentDatabase.ReplicationLoader, localNodeTopologyInfo);
-                        WriteDiscoveryResponse(tcp, context, topology, null, TopologyDiscoveryResponseHeader.Status.Ok);
+                            { tcp.DocumentDatabase.DbId.ToString(), localNodeTopologyInfo }
+                        }
+                    };
+                    ReplicationUtils.GetLocalIncomingTopology(tcp.DocumentDatabase.ReplicationLoader, localNodeTopologyInfo);
+                    WriteDiscoveryResponse(tcp, context, topology, null, TopologyDiscoveryResponseHeader.Status.Ok);
 
-                        return;
-                    }
+                    return;
                 }
 
-                var localTopology = ReplicationUtils.GetLocalTopology(tcp.DocumentDatabase, replicationDocument);
+                var localTopology = ReplicationUtils.GetLocalTopology(tcp.DocumentDatabase, tcp.DocumentDatabase.ReplicationLoader.Destinations);
 
                 using (var topologyDiscoverer = new ClusterTopologyExplorer(
                     tcp.DocumentDatabase,
                     header.AlreadyVisited,
                     TimeSpan.FromMilliseconds(header.Timeout),
-                    replicationDocument.Destinations))
+                    destinations))
                 {
                     try
                     {

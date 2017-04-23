@@ -232,7 +232,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     using (var tx = _context.OpenWriteTransaction())
                     {
-                        _database.DocumentsStorage.UpdateIdentities(_context, _identities);
+                        _database.DocumentsStorage.Identities.Update(_context, _identities);
 
                         tx.Commit();
                     }

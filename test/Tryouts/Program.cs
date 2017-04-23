@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FastTests.Client.Queries;
 using FastTests.Issues;
 using FastTests.Server.Replication;
 using Lucene.Net.Store;
@@ -17,13 +16,16 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
+                //LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
                 Parallel.For(0, 10, _ =>
                 {
-                    using (var a = new FullTextSearchOnTags())
+                    using (var a = new SlowTests.Server.Rachis.ElectionTests())
                     {
-                        a.CanSearchUsingPhrase_MultipleSearches();
+                        a.OnNetworkDisconnectionANewLeaderIsElectedAfterReconnectOldLeaderStepsDownAndRollBackHisLog(numberOfNodes: 3).Wait();
                     }
                 });
+                //LoggingSource.Instance.SetupLogMode(LogMode.None, "logs");
+                //Directory.Delete("logs", true);
 
             }
         }

@@ -6,7 +6,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 using Raven.Client.Extensions;
+using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Replication
@@ -14,8 +16,11 @@ namespace Raven.Client.Documents.Replication
     /// <summary>
     /// Data class for replication destination documents
     /// </summary>
-    public class ReplicationDestination : IEquatable<ReplicationDestination>
+    public class ReplicationNode : IEquatable<ReplicationNode>, IComparable<ReplicationNode>
     {
+
+        public string NodeTag;
+
         /// <summary>
         /// The name of the connection string specified in the 
         /// server configuration file. 
@@ -36,21 +41,6 @@ namespace Raven.Client.Documents.Replication
                 _url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
             }
         }
-
-        /// <summary>
-        /// The replication server username to use
-        /// </summary>
-        public string Username { get; set; }
-
-        /// <summary>
-        /// The replication server password to use
-        /// </summary>
-        public string Password { get; set; }
-
-        /// <summary>
-        /// The replication server domain to use
-        /// </summary>
-        public string Domain { get; set; }
 
         /// <summary>
         /// The database to use
@@ -79,10 +69,6 @@ namespace Raven.Client.Documents.Replication
         /// </summary>
         public bool Disabled { get; set; }
 
-        public string AuthenticationScheme { get; set; }
-
-        public string ApiKey; // TODO: remove me
-
         /// <summary>
         /// Gets or sets the Client URL of the replication destination
         /// </summary>
@@ -99,28 +85,28 @@ namespace Raven.Client.Documents.Replication
             {
                 if (string.IsNullOrEmpty(_url))
                     return null;
-                return _url + " " + Database;
+                return _url + " " + NodeTag;
             }
         }
 
         public bool CanBeFailover() =>
             IgnoredClient == false && Disabled == false && (SpecifiedCollections == null || SpecifiedCollections.Count == 0);
 
-        public override string ToString() => $"{nameof(Url)}: {Url}, {nameof(Database)}: {Database}";
+        public override string ToString() => $"{nameof(Url)}: {Url}, {nameof(NodeTag)}: {NodeTag}";
 
-        public bool Equals(ReplicationDestination other) => IsEqualTo(other);
+        public bool Equals(ReplicationNode other) => IsEqualTo(other);
 
-        public bool IsMatch(ReplicationDestination other)
+        public bool IsMatch(ReplicationNode other)
         {
             return
                 string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase);
+                string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(NodeTag, other.NodeTag, StringComparison.OrdinalIgnoreCase);
         }
 
-        public bool IsEqualTo(ReplicationDestination other)
+        public bool IsEqualTo(ReplicationNode other)
         {
-            return string.Equals(Username, other.Username) && string.Equals(Password, other.Password) &&
-                   string.Equals(Domain, other.Domain)&&
+            return string.Equals(NodeTag, other.NodeTag, StringComparison.OrdinalIgnoreCase) &&
                    string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase) &&
                    TransitiveReplicationBehavior == other.TransitiveReplicationBehavior &&
                    IgnoredClient.Equals(other.IgnoredClient) && Disabled.Equals(other.Disabled) &&
@@ -129,46 +115,64 @@ namespace Raven.Client.Documents.Replication
                    DictionaryExtensions.ContentEquals(SpecifiedCollections, other.SpecifiedCollections);
         }
 
+        public int CompareTo(ReplicationNode other)
+        {
+            var myValue = GetHashCode();
+            var otherValue = GetHashCode();
+            if (myValue > otherValue)
+                return 1;
+            if (otherValue < myValue)
+                return -1;
+            return 0;
+        }
+
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != GetType()) return false;
-            return Equals((ReplicationDestination)obj);
+            return Equals((ReplicationNode)obj);
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                var hashCode = Username?.GetHashCode() ?? 0;
-                hashCode = (hashCode * 397) ^ (Password?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (Domain?.GetHashCode() ?? 0);
+                var hashCode = (NodeTag?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Database?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (int)TransitiveReplicationBehavior;
-                hashCode = (hashCode * 397) ^ IgnoredClient.GetHashCode();
-                hashCode = (hashCode * 397) ^ Disabled.GetHashCode();
                 hashCode = (hashCode * 397) ^ (ClientVisibleUrl?.GetHashCode() ?? 0);
                 return hashCode;
             }
+        }
+
+        public virtual ulong GetTaskKey()
+        {
+            var hashCode = CalculateStringHash(NodeTag);
+            hashCode = (hashCode * 397) ^ CalculateStringHash(Database);
+            hashCode = (hashCode * 397) ^ (ulong)TransitiveReplicationBehavior;
+            hashCode = (hashCode * 397) ^ CalculateStringHash(ClientVisibleUrl);
+            return hashCode;
+        }
+
+        protected static ulong CalculateStringHash(string s)
+        {
+            return string.IsNullOrEmpty(s) ? 0 : Hashing.XXHash64.Calculate(s, Encoding.UTF8);
         }
 
         public DynamicJsonValue ToJson()
         {
             var json = new DynamicJsonValue
             {
-                [nameof(AuthenticationScheme)] = AuthenticationScheme,
                 [nameof(ClientVisibleUrl)] = ClientVisibleUrl,
                 [nameof(Database)] = Database,
+                [nameof(NodeTag)] = NodeTag,
                 [nameof(Disabled)] = Disabled,
-                [nameof(Domain)] = Domain,
                 [nameof(Humane)] = Humane,
                 [nameof(IgnoredClient)] = IgnoredClient,
-                [nameof(Password)] = Password,
                 [nameof(SkipIndexReplication)] = SkipIndexReplication,
                 [nameof(TransitiveReplicationBehavior)] = TransitiveReplicationBehavior,
                 [nameof(Url)] = Url,
-                [nameof(Username)] = Username
             };
 
             if (SpecifiedCollections != null)

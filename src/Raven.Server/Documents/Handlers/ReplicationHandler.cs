@@ -11,7 +11,6 @@ using System.Net.WebSockets;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Utils;

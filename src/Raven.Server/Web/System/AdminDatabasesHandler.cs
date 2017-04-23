@@ -13,6 +13,7 @@ using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
@@ -109,18 +110,19 @@ namespace Raven.Server.Web.System
             ServerStore.EnsureNotPassive();
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
-                context.OpenReadTransaction();
-
                 long etag;
                 var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
                 //The case where an explicit node was requested 
                 if (string.IsNullOrEmpty(node) == false)
                 {
-                    if(databaseRecord.Topology.RelevantFor(node))
+                    if (databaseRecord.Topology.RelevantFor(node))
                         throw new InvalidOperationException($"Can't add node {node} to {name} topology because it is already part of it");
+                    
                     //TODO:add as promotable 
-                    databaseRecord.Topology.Members.Add(node);
+
+                    databaseRecord.Topology.AddMember(node,name);
                 }
                 //The case were we don't care where the database will be added to
                 else
@@ -134,13 +136,13 @@ namespace Raven.Server.Web.System
                     var rand = new Random().Next();
                     var newNode = allNodes[rand % allNodes.Count];
                     //TODO:add as promotable 
-                    databaseRecord.Topology.Members.Add(newNode);
+                    databaseRecord.Topology.AddMember(newNode, name);
                 }
+
                 var topologyJson = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
                 var index = await ServerStore.WriteDbAsync(context, name, topologyJson, etag);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
-
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -187,7 +189,7 @@ namespace Raven.Server.Web.System
                 }
                 var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required: false) ?? 0);
                 var topology = new DatabaseTopology();
-
+                
                 var clusterTopology = ServerStore.GetClusterTopology(context);
 
                 var allNodes = clusterTopology.Members.Keys
@@ -197,10 +199,15 @@ namespace Raven.Server.Web.System
 
                 var offset = new Random().Next();
 
+                foreach (var node in allNodes)
+                {
+                    topology.NameToUrlMap[node] = clusterTopology.GetUrlFromTag(node);
+                }
+
                 for (int i = 0; i < Math.Min(allNodes.Length, factor); i++)
                 {
                     var selectedNode = allNodes[(i + offset) % allNodes.Length];
-                    topology.Members.Add(selectedNode);
+                    topology.AddMember(selectedNode, name);
                 }
 
                 var topologyJson = EntityToBlittable.ConvertEntityToBlittable(topology, DocumentConventions.Default, context);
@@ -208,7 +215,7 @@ namespace Raven.Server.Web.System
                 json.Modifications = new DynamicJsonValue(json)
                 {
                     [nameof(DatabaseRecord.DatabaseName)] = name,
-                    [nameof(DatabaseRecord.Topology)] = topologyJson
+                    [nameof(DatabaseRecord.Topology)] = topologyJson,
                 };
 
                 var index = await ServerStore.WriteDbAsync(context, name, json, etag);
@@ -224,9 +231,86 @@ namespace Raven.Server.Web.System
                     {
                         ["ETag"] = index,
                         ["Key"] = name,
-                        [nameof(DatabaseRecord.Topology)] = topology.ToJson()
+                        [nameof(DatabaseRecord.Topology)] = topology.ToJson(),
                     });
                     writer.Flush();
+                }
+            }
+        }
+        
+        [RavenAction("/admin/modify-watchers", "POST", "/admin/modify-watchers?name={databaseName:string}")]
+        public async Task Update()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");  
+
+            string errorMessage;
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            ServerStore.EnsureNotPassive();
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            {
+                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-watchers");          
+                using (context.OpenReadTransaction())
+                {              
+                    long etag;
+                    var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
+                    var index = await ServerStore.ModifyDatabaseWatchers(context, name, updateJson);
+                    await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                    ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));
+
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["ETag"] = index,
+                            ["Key"] = name,
+                            [nameof(DatabaseRecord.Topology)] = databaseRecord.Topology.ToJson()
+                        });
+                        writer.Flush();
+                    }
+                }
+            }
+        }
+
+        [RavenAction("/admin/update-resolver", "POST", "/admin/update-resolver?name={databaseName:string}")]
+        public async Task ChangeConflictResolver()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            string errorMessage;
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            ServerStore.EnsureNotPassive();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "read-conflict-resolver");
+                using (context.OpenReadTransaction())
+                {
+                    long etag;
+                    var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
+                    var index = await ServerStore.ModifyConflictSolverAsync(context, name, json);
+                    await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                    ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));
+
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["ETag"] = index,
+                            ["Key"] = name,
+                            [nameof(DatabaseRecord.ConflictSolverConfig)] = databaseRecord.ConflictSolverConfig.ToJson()
+                        });
+                        writer.Flush();
+                    }
                 }
             }
         }
@@ -274,8 +358,7 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-
-
+        
         [RavenAction("/admin/databases/disable", "POST", "/admin/databases/disable?name={resourceName:string|multiple}")]
         public async Task DisableDatabases()
         {

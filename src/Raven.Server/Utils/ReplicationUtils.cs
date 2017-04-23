@@ -120,7 +120,7 @@ namespace Raven.Server.Utils
 
         public static NodeTopologyInfo GetLocalTopology(
             DocumentDatabase database,
-            ReplicationDocument replicationDocument)
+            IEnumerable<ReplicationNode> destinations)
         {
             var topologyInfo = new NodeTopologyInfo { DatabaseId = database.DbId.ToString() };
             topologyInfo.InitializeOSInformation();
@@ -129,7 +129,7 @@ namespace Raven.Server.Utils
 
             GetLocalIncomingTopology(replicationLoader, topologyInfo);
 
-            foreach (var destination in replicationDocument.Destinations)
+            foreach (var destination in destinations)
             {
                 OutgoingReplicationHandler outgoingHandler;
                 ReplicationLoader.ConnectionShutdownInfo connectionFailureInfo;
@@ -200,15 +200,15 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static bool TryGetActiveDestination(ReplicationDestination destination,
+        public static bool TryGetActiveDestination(ReplicationNode node,
             IEnumerable<OutgoingReplicationHandler> outgoingReplicationHandlers,
             out OutgoingReplicationHandler handler)
         {
             handler = null;
             foreach (var outgoing in outgoingReplicationHandlers)
             {
-                if (outgoing.Destination.Url.Equals(destination.Url, StringComparison.OrdinalIgnoreCase) &&
-                    outgoing.Destination.Database.Equals(destination.Database, StringComparison.OrdinalIgnoreCase))
+                if (outgoing.Node.Url.Equals(node.Url, StringComparison.OrdinalIgnoreCase) &&
+                    outgoing.Node.Database.Equals(node.Database, StringComparison.OrdinalIgnoreCase))
                 {
                     handler = outgoing;
                     return true;
@@ -306,18 +306,6 @@ namespace Raven.Server.Utils
             int size;
             var storageTypeNum = *(int*)tvr.Read(index, out size);
             return (TEnum)Enum.ToObject(typeof(TEnum), storageTypeNum);
-        }
-
-        public static unsafe ChangeVectorEntry[] GetChangeVectorEntriesFromTableValueReader(ref TableValueReader tvr, int index)
-        {
-            int size;
-            var pChangeVector = (ChangeVectorEntry*)tvr.Read(index, out size);
-            var changeVector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
-            for (int i = 0; i < changeVector.Length; i++)
-            {
-                changeVector[i] = pChangeVector[i];
-            }
-            return changeVector;
         }
 
         public static unsafe ChangeVectorEntry[] ReadChangeVectorFrom(Tree tree)

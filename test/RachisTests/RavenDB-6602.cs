@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -9,7 +8,7 @@ using Raven.Client.Server.Operations;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace FastTests.Issues
+namespace RachisTests
 {
     // ReSharper disable once InconsistentNaming
     public class RavenDB_6602 : ClusterTestBase
@@ -22,7 +21,6 @@ namespace FastTests.Issues
         [Fact]
         public async Task RequestExecutor_failover_with_only_one_database_should_properly_fail()
         {
-            NoTimeouts();
             var leader = await CreateRaftClusterAndGetLeader(1);
             const int replicationFactor = 1;
             const string databaseName = "RequestExecutor_failover_with_only_one_database_should_properly_fail";
@@ -36,7 +34,7 @@ namespace FastTests.Issues
                 var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
 
                 Assert.True((databaseResult.ETag ?? 0) > 0); //sanity check                
-                await WaitForEtagInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
 
                 //before dispose there is such a document
                 using (var session = store.OpenSession(databaseName))
@@ -57,7 +55,6 @@ namespace FastTests.Issues
         [Fact]
         public async Task RequestExecutor_failover_to_database_topology_should_work()
         {
-            NoTimeouts();
             var leader = await CreateRaftClusterAndGetLeader(3);
             const int replicationFactor = 2;
             const string databaseName = "RequestExecutor_failover_to_database_topology_should_work";
@@ -71,13 +68,10 @@ namespace FastTests.Issues
                 var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
 
                 Assert.True((databaseResult.ETag ?? 0) > 0); //sanity check                
-                await WaitForEtagInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
 
                 await ((DocumentStore)store).ForceUpdateTopologyFor(databaseName);
                 var requestExecutor = ((DocumentStore)store).GetRequestExecuter(databaseName);
-
-                //TODO for Karmel: refactor this test so it uses replication when raft based topology replication is implemented
-                SetupReplicationOnDatabaseTopology(requestExecutor.TopologyNodes);
 
                 using (var session = store.OpenSession(databaseName))
                 {

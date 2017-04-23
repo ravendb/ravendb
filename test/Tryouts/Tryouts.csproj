@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
+    <ProjectReference Include="..\RachisTests\RachisTests.csproj" />
     <ProjectReference Include="..\SlowTests\SlowTests.csproj" />
     <ProjectReference Include="..\FastTests\FastTests.csproj" />
     <ProjectReference Include="..\StressTests\StressTests.csproj" />

@@ -539,8 +539,6 @@ namespace FastTests.Server.Documents
                 }
                 ctx.Transaction.Commit();
             }
-
-
         }
 
         public override void Dispose()

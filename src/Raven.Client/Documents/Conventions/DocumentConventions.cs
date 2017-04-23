@@ -102,12 +102,20 @@ namespace Raven.Client.Documents.Conventions
         public int MaxLengthOfQueryUsingGetUrl { get; set; }
 
         /// <summary>
-        ///     Whatever to allow queries on document id.
+        ///     Whether to allow queries on document id.
         ///     By default, queries on id are disabled, because it is far more efficient
         ///     to do a Load() than a Query() if you already know the id.
         ///     This is NOT recommended and provided for backward compatibility purposes only.
         /// </summary>
         public bool AllowQueriesOnId { get; set; }
+
+        /// <summary>
+        ///     If set to 'true' then it will throw an exception when any query is performed (in session)
+        ///     without explicit page size set.
+        ///     This can be useful for development purposes to pinpoint all the possible performance bottlenecks
+        ///     since from 4.0 there is no limitation for number of results returned from server.
+        /// </summary>
+        public bool ThrowIfQueryPageSizeIsNotSet { get; set; }
 
         /// <summary>
         ///     Whether UseOptimisticConcurrency is set to true by default for all opened sessions

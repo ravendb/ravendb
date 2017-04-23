@@ -17,6 +17,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -34,6 +35,7 @@ namespace Raven.Server.Documents
 {
     public class DocumentDatabase : IResourceStore
     {
+        private readonly ServerStore _serverStore;
         private readonly Logger _logger;
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
@@ -54,8 +56,27 @@ namespace Raven.Server.Documents
             _lastIdleTicks = DateTime.MinValue.Ticks;
         }
 
+        internal void HandleNonDurableFileSystemError(object sender, NonDurabilitySupportEventArgs e)
+        {
+            _serverStore?.NotificationCenter.Add(AlertRaised.Create($"Non Durable File System - {Name ?? "Unknown Database"}",
+                e.Message,
+                AlertType.NonDurableFileSystem,
+                NotificationSeverity.Warning,
+                Name));
+        }
+
+        internal void HandleOnRecoveryError(object sender, RecoveryErrorEventArgs e)
+        {
+            _serverStore?.NotificationCenter.Add(AlertRaised.Create($"Database Recovery Error - {Name ?? "Unknown Database"}",
+                e.Message,
+                AlertType.RecoveryError,
+                NotificationSeverity.Error,
+                Name));
+        }
+
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore)
         {
+            _serverStore = serverStore;
             StartTime = SystemTime.UtcNow;
             Name = name;
             ResourceName = "db/" + name;
@@ -67,7 +88,8 @@ namespace Raven.Server.Documents
             IndexStore = new IndexStore(this, serverStore, _indexAndTransformerLocker);
             TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
             EtlLoader = new EtlLoader(this);
-            ReplicationLoader = new ReplicationLoader(this);
+            if(serverStore != null)
+                ReplicationLoader = new ReplicationLoader(this, serverStore);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
             SubscriptionStorage = new SubscriptionStorage(this);
             Operations = new DatabaseOperations(this);
@@ -79,7 +101,6 @@ namespace Raven.Server.Documents
             ConfigurationStorage = new ConfigurationStorage(this);
             NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
-            _serverStore = serverStore;
             _rachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
             CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
             {
@@ -222,11 +243,15 @@ namespace Raven.Server.Documents
             ConfigurationStorage.InitializeNotificationsStorage();
 
             DatabaseRecord record;
-            TransactionOperationContext context;
             using (_serverStore.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                record = _serverStore.Cluster.ReadDatabase(context, Name);
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext  context))
+                {
+                    context.OpenReadTransaction();
+                    var record = _serverStore.Cluster.ReadDatabase(context, Name);
+                    TransformerStore.Initialize(record);
+                }
             }
 
             _indexStoreTask = IndexStore.InitializeAsync(record);
@@ -262,7 +287,7 @@ namespace Raven.Server.Documents
             //so replication of both documents and indexes/transformers can be made within one transaction
             ConfigurationStorage.Initialize(IndexStore, TransformerStore);
 
-            ReplicationLoader.Initialize();
+            ReplicationLoader?.Initialize();
 
             NotificationCenter.Initialize(this);
         }
@@ -419,7 +444,6 @@ namespace Raven.Server.Documents
         }
 
         private static readonly string CachedDatabaseInfo = "CachedDatabaseInfo";
-        private ServerStore _serverStore;
 
         public DynamicJsonValue GenerateDatabaseInfo()
         {
@@ -538,6 +562,7 @@ namespace Raven.Server.Documents
                 TransformerStore.HandleDatabaseRecordChange();
                 BundleLoader.HandleDatabaseRecordChange();
                 IndexStore.HandleDatabaseRecordChange();
+                ReplicationLoader?.HandleDatabaseRecordChange();
             }
             finally
             {
@@ -554,7 +579,6 @@ namespace Raven.Server.Documents
             yield return TxMerger.GeneralWaitPerformanceMetrics;
             yield return TxMerger.TransactionPerformanceMetrics;
         }
-        
     }
 
     public class StorageEnvironmentWithType

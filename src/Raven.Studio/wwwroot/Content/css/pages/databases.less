@@ -1,10 +1,8 @@
 .databases {
 
     .databasesToolbar-toggleCompactView {
-
         display: inline-block;
-        margin-left:10px;
-
+        margin-left: 10px;
     }
 
     .databasesToolbar-actions {
@@ -28,9 +26,11 @@
 
     .vertical-divider {
         position: relative;
+
         @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
-            margin-left: 20px;
+            margin-left: 27px;
         }
+
         @media (min-width:@screen-xl) {
             &:before {
                 content: '';
@@ -44,62 +44,73 @@
         }
     }
 
-    .database {
+    .database-item {
         padding-left: 30px;
         position: relative;
+
+        @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
+
+            .info-container {
+                order: 1;
+                flex-grow: 1;
+            }
+
+            .properties-container {
+                order: 3;
+                width: 100%;
+            }
+
+            .actions-container {
+                order: 2;
+            }
+        }
 
         &:hover {
             background-color: lighten(@gray-darker, 3%);
             transition: background-color 0.15s ease;
         }
 
-        .info-container {
-            font-size: 19px;
-
-            .icon-database {
-               // color: @brand-database-color;
-            }
-
-        }
-
-        .row {
+        .database-info {
             display: flex;
             flex-wrap: wrap;
-
-            @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
-                .info-container {
-                    order: 1;
-                }
-
-                .properties-container {
-                    order: 3;
-                }
-
-                .actions-container {
-                    order: 2;
-                }
+            
+            @media (max-width: @screen-xs-max) {
+                flex-direction: column;
             }
         }
-
+        
         .database-name {
-            color: @brand-primary;
             font-size: 118%;
-            margin-left: 30px;
             margin-bottom: 0;
+            font-weight: normal;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            flex-grow: 1;
+        }
+
+        .info-container {
+            font-size: 19px;
+            display: flex;
+            align-items: center;
+            width: 380px;
+            flex-shrink: 0;
+
+            h3 {
+                margin-top: 0px;
+            }
+        }
+
+        .actions-container {
+            flex-shrink: 0;
         }
 
         .checkbox {
             position: relative;
             margin: 0;
-            top: -2px;
-            float: left;
         }
 
         .state {
-            cursor: pointer;
         }
 
         .state.state-warning {
@@ -108,10 +119,11 @@
     }
 
     .properties-container {
-        flex-direction: column;
-        height: 80px;
         align-content: flex-start;
+        align-items: center;
         overflow: hidden;
+        flex-grow: 1;
+        min-height: 52px;
 
         .properties-item {
 
@@ -127,15 +139,27 @@
         .panel {
             margin-bottom: 10px;
         }
-        .database  {
 
-            .checkbox {
-                top: -7px;
-            }
+        .hidden-compact {
+            display: none;
+        }
 
+        .properties-item {
+            min-width: 0;
+        }
+
+        .info-container {
+            width: 330px;
+        }
+
+        .properties-container {
+            min-height: 0;
+        }
+
+        .database-item {
             .database-name {
                 top: 0;
-                font-size: 85%;
+                font-size: 18px;
                 line-height: 120%;
             }
 
@@ -144,9 +168,6 @@
             }
 
             .properties-container {
-                top: 5px;
-                height: 25px;
-                display: inline;
 
                 .properties-item {
                     width: auto;
@@ -161,12 +182,11 @@
                 }
             }
 
-            .database {
+            .database-item {
                 .btn-group .btn {
                     .btn-sm;
                 }
             }
         }
-
     }
 }

@@ -199,35 +199,37 @@ namespace FastTests.Server.Replication
         [Fact]
         public void CreateConflictAndResolveItWithTombstone()
         {
-            var store1 = GetDocumentStore();
-            var store2 = GetDocumentStore();
-
-            using (var sessoin = store1.OpenSession())
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
             {
-                sessoin.Store(new User {Name = "foo"},"foo/bar");
-                sessoin.SaveChanges();
+
+                using (var sessoin = store1.OpenSession())
+                {
+                    sessoin.Store(new User {Name = "foo"}, "foo/bar");
+                    sessoin.SaveChanges();
+                }
+
+                using (var sessoin = store2.OpenSession())
+                {
+                    sessoin.Store(new User {Name = "bar"}, "foo/bar");
+                    sessoin.SaveChanges();
+                }
+
+                SetupReplication(store1, store2);
+                SetupReplication(store2, store1);
+
+                Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
+                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
+
+                using (var sessoin = store1.OpenSession())
+                {
+                    sessoin.Delete("foo/bar");
+                    sessoin.SaveChanges();
+                }
+
+                Assert.Equal(1, WaitUntilHasTombstones(store1).Count);
+                Assert.Equal(1, WaitUntilHasTombstones(store2).Count);
             }
-
-            using (var sessoin = store2.OpenSession())
-            {
-                sessoin.Store(new User { Name = "bar" }, "foo/bar");
-                sessoin.SaveChanges();
-            }
-
-            SetupReplication(store1,store2);
-            SetupReplication(store2,store1);
-
-            Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
-            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
-
-            using (var sessoin = store1.OpenSession())
-            {
-                sessoin.Delete("foo/bar");
-                sessoin.SaveChanges();
-            }
-
-            Assert.Equal(1,WaitUntilHasTombstones(store1).Count);
-            Assert.Equal(1,WaitUntilHasTombstones(store2).Count);
         }
     }
 }

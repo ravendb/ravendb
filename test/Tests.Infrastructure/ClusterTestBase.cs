@@ -3,25 +3,34 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Raven.Client.Server;
 using Raven.Client.Server.Commands;
+using Raven.Client.Server.Operations;
+using Raven.Client.Util;
 using Raven.Server;
+using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Sparrow.Json;
+using Sparrow.Platform;
 using Xunit;
-using Constants = Raven.Client.Constants;
 
 namespace Tests.Infrastructure
 {
     [Trait("Category", "Cluster")]
     public abstract class ClusterTestBase : RavenTestBase
     {
+        static ClusterTestBase()
+        {
+            Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {Process.GetCurrentProcess().Id}.");
+        }
+
         private const int PortRangeStart = 9000;
         private const int ElectionTimeoutInMs = 300;
         private static int numberOfPortRequests;
@@ -37,10 +46,31 @@ namespace Tests.Infrastructure
         protected List<RavenServer> Servers = new List<RavenServer>();
         private readonly Random _random = new Random();
 
-        protected void NoTimeouts()
+        protected IDisposable NoTimeouts()
         {
             TimeoutEvent.Disable = true;
+            return new DisposableAction(() => TimeoutEvent.Disable = false);
         }
+
+        protected async Task CreateAndWaitForClusterDatabase(string databaseName, IDocumentStore store)
+        {
+            if (Servers.Count == 0)
+                throw new InvalidOperationException("You cannot create a database on an empty cluster...");
+
+            var databaseResult = CreateClusterDatabase(databaseName, store);
+
+            Assert.True((databaseResult.ETag ?? 0) > 0); //sanity check                
+
+            await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+        }
+
+        protected static CreateDatabaseResult CreateClusterDatabase(string databaseName, IDocumentStore store, int replicationFactor = 2)
+        {
+            var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+            var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+            return databaseResult;
+        }
+
 
         protected async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, bool isLoaded, string databaseName = null)
         {
@@ -132,17 +162,6 @@ namespace Tests.Infrastructure
             mre.Wait();
         }
 
-        protected void SetupReplicationOnDatabaseTopology(IReadOnlyList<ServerNode> topologyNodes)
-        {
-            var stores = GetStoresFromTopology(topologyNodes);
-
-            //setup replication -> all nodes to all nodes
-            foreach (var store in stores)
-            {
-                SetupReplication_TEMP(store, new ReplicationDocument(), stores.Except(new[] { store }).ToArray());
-            }
-        }
-
         protected List<DocumentStore> GetStoresFromTopology(IReadOnlyList<ServerNode> topologyNodes)
         {
             var stores = new List<DocumentStore>();
@@ -167,25 +186,39 @@ namespace Tests.Infrastructure
             return stores;
         }
 
-        protected void SetupReplication_TEMP(DocumentStore fromStore, ReplicationDocument configOptions, params DocumentStore[] toStores)
+        protected async Task<RavenServer> SetupRaftClusterOnExistingServers(params RavenServer[] servers)
         {
-            using (var session = fromStore.OpenSession())
+            RavenServer leader = null;
+            var numberOfNodes = servers.Length;
+            var serversToPorts = new Dictionary<RavenServer, string>();
+            var leaderIndex = _random.Next(0, numberOfNodes);
+            for (var i = 0; i < numberOfNodes; i++)
             {
-                var destinations = new List<ReplicationDestination>();
-                foreach (var store in toStores)
+                var server = servers[i];
+                serversToPorts.Add(server, server.WebUrls[0]);
+                if (i == leaderIndex)
                 {
-                    var replicationDestination = new ReplicationDestination
-                    {
-                        Database = store.DefaultDatabase,
-                        Url = store.Url
-                    };
-                    destinations.Add(replicationDestination);
+                    server.ServerStore.EnsureNotPassive();
+                    leader = server;
+                    break;
                 }
-
-                configOptions.Destinations = destinations;
-                session.Store(configOptions, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                session.SaveChanges();
             }
+
+            for (var i = 0; i < numberOfNodes; i++)
+            {
+                if (i == leaderIndex)
+                {
+                    continue;
+                }
+                var follower = Servers[i];
+                // ReSharper disable once PossibleNullReferenceException
+                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower]);
+                await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
+            }
+            // ReSharper disable once PossibleNullReferenceException
+            Assert.True(await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes * ElectionTimeoutInMs),
+                "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.ClusterStatus());
+            return leader;
         }
 
         protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true)
@@ -220,11 +253,9 @@ namespace Tests.Infrastructure
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException
-            var condition = await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes* ElectionTimeoutInMs);
-            if(condition == false)
-                Console.WriteLine("Failed on " + leader.ServerStore.Engine.a);
+            var condition = await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes* ElectionTimeoutInMs * 5);
             Assert.True(condition,
-                "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.ClusterStatus() + " " + +leader.ServerStore.Engine.a);
+                "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.ClusterStatus() );
             return leader;
         }
 
@@ -241,19 +272,41 @@ namespace Tests.Infrastructure
                 throw new TimeoutException();
         }
 
-        public async Task WaitForEtagInCluster(long etag,  TimeSpan timeout)
+        protected override Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store)
         {
+            //var index = FindStoreIndex(store);
+            //Assert.False(index == -1, "Didn't find store index, most likely it doesn't belong to the cluster. Did you setup Raft cluster properly?");
+            //return Servers[index].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+        }
+
+        public async Task WaitForRaftIndexToBeAppliedInCluster(long index,  TimeSpan timeout)
+        {
+            if (Servers.Count == 0)
+                return;
+
             var tasks = 
                 Servers
-                .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(etag))
+                .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index))
                 .ToList();
 
-            var timeoutTask = Task.Delay(timeout);
-            
-            await Task.WhenAny(timeoutTask, Task.WhenAll(tasks));
 
-            if(timeoutTask.IsCompleted)
-                throw new TimeoutException();
+            if (await Task.WhenAll(tasks).WaitAsync(timeout))
+                return;
+
+
+            var message = $"Timed out waiting for {index} after {timeout} because out of {Servers.Count} " + 
+                          $" we got confirmations that it was applied only on {tasks.Count(x=>x.IsCompleted)}";
+
+            Console.ForegroundColor = ConsoleColor.Blue;
+
+            Console.WriteLine(message);
+
+            Console.ReadLine();
+
+            throw new TimeoutException(
+                message
+                );
         }
 
         public override void Dispose()

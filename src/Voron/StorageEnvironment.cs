@@ -59,7 +59,7 @@ namespace Voron
 
         internal LowLevelTransaction.WriteTransactionPool WriteTransactionPool =
             new LowLevelTransaction.WriteTransactionPool();
-        
+
         private readonly WriteAheadJournal _journal;
         private readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1, 1);
         private NativeMemory.ThreadStats _currentTransactionHolder;
@@ -83,8 +83,7 @@ namespace Voron
 
         internal DateTime LastFlushTime;
 
-        private long _lastWorkTimeTicks;
-        public DateTime LastWorkTime => new DateTime(_lastWorkTimeTicks);
+        public DateTime LastWorkTime;
 
         private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
         public bool Disposed;
@@ -114,7 +113,7 @@ namespace Voron
                 var remainingBits = _dataPager.NumberOfAllocatedPages % (8 * sizeof(long));
 
                 _validPages = new long[_dataPager.NumberOfAllocatedPages / (8 * sizeof(long)) + (remainingBits == 0 ? 0 : 1)];
-                _validPages[_validPages.Length - 1] |= unchecked (((long)ulong.MaxValue << (int)remainingBits));
+                _validPages[_validPages.Length - 1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
 
                 _decompressionBuffers = new DecompressionBuffersPool(options);
                 var isNew = _headerAccessor.Initialize();
@@ -590,8 +589,6 @@ namespace Voron
         internal void WriteTransactionStarted()
         {
             _writeTransactionRunning.SetInAsyncMannerFireAndForget();
-
-            _lastWorkTimeTicks = DateTime.UtcNow.Ticks;
         }
 
         private void ThrowOnTimeoutWaitingForWriteTxLock(TimeSpan wait)
@@ -604,7 +601,7 @@ namespace Voron
 
             var message = $"Waited for {wait} for transaction write lock, but could not get it";
             if (copy != null)
-                message += @", the tx is currenly owned by thread {copy.Id} - {copy.Name}";
+                message += $", the tx is currenly owned by thread {copy.Id} - {copy.Name}";
 
             throw new TimeoutException(message);
         }
@@ -1091,7 +1088,7 @@ namespace Voron
 
         public void ResetLastWorkTime()
         {
-            _lastWorkTimeTicks = DateTime.MinValue.Ticks;
+            LastWorkTime = DateTime.MinValue;
         }
 
         internal void AllowDisposeWithLazyTransactionRunning(LowLevelTransaction tx)

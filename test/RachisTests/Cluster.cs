@@ -15,7 +15,6 @@ namespace SlowTests.Server.Rachis
         [Fact]
         public async Task CanCreateAddAndDeleteDatabaseFromNodes()
         {
-            NoTimeouts();
             var clusterSize = 3;
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
             CreateDatabaseResult databaseResult;
@@ -40,7 +39,7 @@ namespace SlowTests.Server.Rachis
                 var startReplicationFactor = replicationFactor;
                 while (replicationFactor>0)
                 {
-                    var serverTagToBeDeleted = databaseResult.Topology.Members[startReplicationFactor-replicationFactor];
+                    var serverTagToBeDeleted = databaseResult.Topology.Members[startReplicationFactor-replicationFactor].NodeTag;
                     replicationFactor--;
                     deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted));
                     //The +1 is for NotifyLeaderAboutRemoval

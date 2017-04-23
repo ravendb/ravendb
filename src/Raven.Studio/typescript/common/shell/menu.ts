@@ -17,9 +17,16 @@ class menu {
         });
 
     private $mainMenuLevels: JQuery;
+    private menuElement: HTMLElement;
 
     private type: string = 'menu';
     private items: KnockoutObservable<Array<menuItem>> = ko.observable(null);
+
+    private resetMenuLevelToActiveItem: {
+        isActive: boolean,
+        windowClickHandler: (e?: MouseEvent) => void;
+        menuClickHandler: (e?: MouseEvent) => void;
+    };
 
     private itemsFlattened: KnockoutComputed<Array<menuItem>> = ko.pureComputed(() => {
         return this.flattenItems(this.items() || []);
@@ -76,6 +83,8 @@ class menu {
         }
 
         this.open(item, $event);
+
+        this.toggleResetLevelBehavior(item);
     }
 
     open(item: intermediateMenuItem, $event: JQueryEventObject) {
@@ -139,23 +148,78 @@ class menu {
             return;
         }
 
-        let itemAtCurrentLevel = this.deepestOpenItem();
-
-        while (this.level() > targetLevelValue) {
-            itemAtCurrentLevel.isOpen(false);
-            itemAtCurrentLevel = itemAtCurrentLevel.parent() as intermediateMenuItem;
-            this.deepestOpenItem(itemAtCurrentLevel);
-        }
+        this.closeOpenLevels(targetLevelValue);
     }
 
     initialize() {
         this.$mainMenuLevels = $('#main-menu [data-level]');
+        this.menuElement = document.getElementById("main-menu");
 
         router.on('router:navigation:complete', () => {
             this.setActiveMenuItem();
         });
 
         this.setActiveMenuItem();
+        this.initializeOnClickOutsideOfMenuResetLevelToActiveItem();
+    }
+
+    private toggleResetLevelBehavior(item: intermediateMenuItem) {
+        const activeItem = this.activeItem();
+        if (!activeItem) {
+            return;
+        }
+
+        const activeItemParent = activeItem.parent();
+        this.toggleResetLevelToActiveItem(activeItemParent !== item);
+    }
+
+    private initializeOnClickOutsideOfMenuResetLevelToActiveItem() {
+        let scheduleResetTimer: number = null;
+
+        const menuClickHandler = () => {
+            if (scheduleResetTimer) {
+                clearTimeout(scheduleResetTimer);
+                scheduleResetTimer = null;
+            }
+        };
+
+        const windowClickHandler = () => {
+            scheduleResetTimer = setTimeout(() => {
+                    this.closeOpenLevels();
+                    this.setLevelToActiveItem();
+                }, 0);
+        };
+
+        this.resetMenuLevelToActiveItem = {
+            isActive: false,
+            menuClickHandler,
+            windowClickHandler
+        };
+    }
+
+    private toggleResetLevelToActiveItem(toggle: boolean) {
+        const opts = this.resetMenuLevelToActiveItem;
+        const alreadyActive = opts.isActive;
+
+        if (toggle && !alreadyActive) {
+            opts.isActive = true;
+            window.addEventListener('click', opts.windowClickHandler, true);
+            this.menuElement.addEventListener('click', opts.menuClickHandler, true);
+        } else if (!toggle && alreadyActive) {
+            opts.isActive = false;
+            window.removeEventListener('click', opts.windowClickHandler, true);
+            this.menuElement.removeEventListener('click', opts.menuClickHandler, true);
+        }
+    }
+
+    private closeOpenLevels(targetLevel = 0) {
+        let itemAtCurrentLevel = this.deepestOpenItem();
+
+        while (this.level() > targetLevel) {
+            itemAtCurrentLevel.isOpen(false);
+            itemAtCurrentLevel = itemAtCurrentLevel.parent() as intermediateMenuItem;
+            this.deepestOpenItem(itemAtCurrentLevel);
+        }
     }
 
     private setActiveMenuItem() {

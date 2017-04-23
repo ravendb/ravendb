@@ -72,9 +72,8 @@ namespace SlowTests.Issues
                 store
                     .Admin
                     .Server
-                    .Send(new CreateDatabaseOperation(new DatabaseRecord
+                    .Send(new CreateDatabaseOperation(new DatabaseRecord("DB1")
                     {
-                        DatabaseName = "DB1",
                         Settings = new Dictionary<string, string>
                         {
                             {RavenConfiguration.GetKey(x => x.Storage.TempPath), tempPath2}

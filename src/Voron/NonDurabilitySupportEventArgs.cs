@@ -1,10 +1,10 @@
-namespace Voron
+﻿namespace Voron
 {
     using System;
 
-    public class NonDurabalitySupportEventArgs : EventArgs
+    public class NonDurabilitySupportEventArgs : EventArgs
     {
-        internal NonDurabalitySupportEventArgs(string message, Exception exception)
+        internal NonDurabilitySupportEventArgs(string message, Exception exception)
         {
             Message = message;
             Exception = exception;

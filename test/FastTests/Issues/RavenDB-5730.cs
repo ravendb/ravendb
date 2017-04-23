@@ -49,24 +49,18 @@ namespace FastTests.Issues
 
         private void DoReplicationTest(DocumentStore storeA, DocumentStore storeB, string url)
         {
-            using (var session = storeA.OpenSession())
+
+            var watchers = new List<DatabaseWatcher>
             {
-                var destinations = new List<ReplicationDestination>
+                new DatabaseWatcher
                 {
-                    new ReplicationDestination
-                    {
-                        Database = storeB.DefaultDatabase,
-                        Url = url, //whitespace at the start of url
-                    }
-                };
+                    Database = storeB.DefaultDatabase,
+                    Url = url,
+                }
+            };
 
-                session.Store(new ReplicationDocument
-                {
-                    Destinations = destinations
-                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                session.SaveChanges();
-            }
-
+            UpdateReplicationTopology(storeA, watchers).ConfigureAwait(false);
+            
             using (var session = storeA.OpenSession())
             {
                 session.Store(new User {Name = "foo/bar"}, "foo-id");

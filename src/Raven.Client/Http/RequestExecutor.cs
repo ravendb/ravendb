@@ -384,10 +384,9 @@ namespace Raven.Client.Http
                     if (++command.AuthenticationRetries > 1)
                         throw AuthorizationException.Unauthorized(url);
 
-                    IEnumerable<string> values;
 
 #if DEBUG && FIDDLER
-// Make sure to avoid a cross DNS security issue, when running with Fiddler
+                // Make sure to avoid a cross DNS security issue, when running with Fiddler
                 if (string.IsNullOrEmpty(oauthSource) == false)
                     oauthSource = oauthSource.Replace("localhost:", "localhost.fiddler:");
 #endif

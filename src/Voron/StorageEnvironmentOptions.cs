@@ -34,7 +34,7 @@ namespace Voron
         
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
-        public event EventHandler<NonDurabalitySupportEventArgs> OnNonDurabaleFileSystemError;
+        public event EventHandler<NonDurabilitySupportEventArgs> OnNonDurableFileSystemError;
         private long _reuseCounter;
         public abstract override string ToString();
 
@@ -67,17 +67,17 @@ namespace Voron
             handler(this, new RecoveryErrorEventArgs(message, e));
         }
 
-        public void InvokeNonDurabaleFileSystemError(object sender, string message, Exception e)
+        public void InvokeNonDurableFileSystemError(object sender, string message, Exception e)
         {
-            var handler = OnNonDurabaleFileSystemError;
+            var handler = OnNonDurableFileSystemError;
             if (handler == null)
             {
                 throw new InvalidDataException(message + Environment.NewLine +
-                                               "An exception has been thrown because there isn't a listener to the OnNonDurabaleFileSystemError event on the storage options.",
+                                               "An exception has been thrown because there isn't a listener to the OnNonDurableFileSystemError event on the storage options.",
                     e);
             }
 
-            handler(this, new NonDurabalitySupportEventArgs(message, e));
+            handler(this, new NonDurabilitySupportEventArgs(message, e));
         }
 
         public long? InitialFileSize { get; set; }
@@ -884,7 +884,7 @@ namespace Voron
                 SafePosixOpenFlags &= ~PerPlatformValues.OpenFlags.O_DIRECT;
                 var message = "Path " + BasePath +
                               " not supporting O_DIRECT writes. As a result - data durability is not guarenteed";
-                InvokeNonDurabaleFileSystemError(this, message, null);
+                InvokeNonDurableFileSystemError(this, message, new NonDurableFileSystemException(message));
             }
 
             PosixOpenFlags = SafePosixOpenFlags;

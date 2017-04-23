@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -56,8 +57,19 @@ namespace Sparrow.Utils
 
         public static void CompleteAndReplace(ref TaskCompletionSource<object> task)
         {
-            task = Interlocked.Exchange(ref task, new TaskCompletionSource<object>());
-            Execute(TaskCompletionCallback, task);
+            var task2 = Interlocked.Exchange(ref task, new TaskCompletionSource<object>());
+            Execute(TaskCompletionCallback, task2);
+        }
+
+        public static void CompleteReplaceAndExecute(ref TaskCompletionSource<object> task, Action act)
+        {
+            var task2 = Interlocked.Exchange(ref task, new TaskCompletionSource<object>());
+            Execute(state =>
+            {
+                var (tcs, action) = ((TaskCompletionSource<object>, Action))state;
+                tcs.TrySetResult(null);
+                act();
+            }, (task2, act));
         }
 
         public static void Complete(TaskCompletionSource<object> task)

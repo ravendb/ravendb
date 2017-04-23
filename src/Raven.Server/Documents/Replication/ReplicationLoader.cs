@@ -2,16 +2,19 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -38,13 +41,13 @@ namespace Raven.Server.Documents.Replication
         private readonly Timer _reconnectAttemptTimer;
         internal int MinimalHeartbeatInterval;
 
-        public ResolveConflictOnReplicationConfigurationChange ConflictResolver { get; }
+        public ResolveConflictOnReplicationConfigurationChange ConflictResolver;
 
         private readonly ConcurrentSet<OutgoingReplicationHandler> _outgoing =
             new ConcurrentSet<OutgoingReplicationHandler>();
 
-        private readonly ConcurrentDictionary<ReplicationDestination, ConnectionShutdownInfo> _outgoingFailureInfo =
-            new ConcurrentDictionary<ReplicationDestination, ConnectionShutdownInfo>();
+        private readonly ConcurrentDictionary<ReplicationNode, ConnectionShutdownInfo> _outgoingFailureInfo =
+            new ConcurrentDictionary<ReplicationNode, ConnectionShutdownInfo>();
 
         private readonly ConcurrentDictionary<string, IncomingReplicationHandler> _incoming =
             new ConcurrentDictionary<string, IncomingReplicationHandler>();
@@ -64,22 +67,18 @@ namespace Raven.Server.Documents.Replication
             public long LastEtag;
         }
 
-
         private int _replicationStatsId;
-
-        private readonly ConcurrentDictionary<ReplicationDestination, LastEtagPerDestination> _lastSendEtagPerDestination =
-            new ConcurrentDictionary<ReplicationDestination, LastEtagPerDestination>();
-
+        private readonly ConcurrentDictionary<ReplicationNode, LastEtagPerDestination> _lastSendEtagPerDestination =
+            new ConcurrentDictionary<ReplicationNode, LastEtagPerDestination>();
         public long MinimalEtagForReplication
         {
             get
             {
-                var replicationDocument = ReplicationDocument;// thread safe copy
 
-                if (replicationDocument?.Destinations == null || replicationDocument.Destinations.Count == 0)
+                if (Destinations == null || Destinations.Count == 0)
                     return long.MaxValue;
 
-                if (replicationDocument.Destinations.Count != _lastSendEtagPerDestination.Count)
+                if (Destinations.Count != _lastSendEtagPerDestination.Count)
                     // if we don't have information from all our destinations, we don't know what tombstones
                     // we can remove. Note that this explicitly _includes_ disabled destinations, which prevents
                     // us from doing any tombstone cleanup.
@@ -96,29 +95,34 @@ namespace Raven.Server.Documents.Replication
         }
 
         private readonly Logger _log;
-        internal ReplicationDocument ReplicationDocument;
         private int _numberOfSiblings;
 
         public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Values.Select(x => x.ConnectionInfo);
-        public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Select(x => x.Destination);
+        public IEnumerable<ReplicationNode> OutgoingConnections => _outgoing.Select(x => x.Node);
         public IEnumerable<OutgoingReplicationHandler> OutgoingHandlers => _outgoing;
         public IEnumerable<IncomingReplicationHandler> IncomingHandlers => _incoming.Values;
 
         private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks =
             new ConcurrentQueue<TaskCompletionSource<object>>();
 
-        public ReplicationLoader(DocumentDatabase database)
+        public ServerStore Server;
+        public DatabaseRecord MyDatabaseRecord;
+        internal DatabaseTopology ReplicationTopology => MyDatabaseRecord.Topology;
+        public List<ReplicationNode> Destinations { get; private set; }
+
+        public ReplicationLoader(DocumentDatabase database, ServerStore server)
         {
+            Server = server;
             Database = database;
             _log = LoggingSource.Instance.GetLogger<ReplicationLoader>(Database.Name);
             _reconnectAttemptTimer = new Timer(AttemptReconnectFailedOutgoing,
                 null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
             MinimalHeartbeatInterval =
                (int)Database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
-            ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
+
         }
 
-        public IReadOnlyDictionary<ReplicationDestination, ConnectionShutdownInfo> OutgoingFailureInfo
+        public IReadOnlyDictionary<ReplicationNode, ConnectionShutdownInfo> OutgoingFailureInfo
             => _outgoingFailureInfo;
 
         public IReadOnlyDictionary<IncomingConnectionInfo, DateTime> IncomingLastActivityTime
@@ -127,13 +131,13 @@ namespace Raven.Server.Documents.Replication
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>
             IncomingRejectionStats => _incomingRejectionStats;
 
-        public IEnumerable<ReplicationDestination> ReconnectQueue => _reconnectQueue.Select(x => x.Destination);
+        public IEnumerable<ReplicationNode> ReconnectQueue => _reconnectQueue.Select(x => x.Node);
 
-        public long? GetLastReplicatedEtagForDestination(ReplicationDestination dest)
+        public long? GetLastReplicatedEtagForDestination(ReplicationNode dest)
         {
             foreach (var replicationHandler in _outgoing)
             {
-                if (replicationHandler.Destination.IsMatch(dest))
+                if (replicationHandler.Node.IsMatch(dest))
                     return replicationHandler._lastSentDocumentEtag;
             }
             return null;
@@ -162,9 +166,6 @@ namespace Raven.Server.Documents.Replication
             try
             {
                 AssertValidConnection(connectionInfo);
-                UpdateReplicationDocumentWithResolver(
-                    getLatestEtagMessage.ResolverId,
-                    getLatestEtagMessage.ResolverVersion);
             }
             catch (Exception e)
             {
@@ -239,11 +240,6 @@ namespace Raven.Server.Documents.Replication
                             getLatestEtagMessage.SourceDatabaseId),
                         [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentsChangeVector,
                         [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVector,
-                        [nameof(ReplicationMessageReply.ResolverId)] =
-                        ReplicationDocument?.DefaultResolver?.ResolvingDatabaseId,
-                        [nameof(ReplicationMessageReply.ResolverVersion)] =
-                        ReplicationDocument?.DefaultResolver?.Version,
-                        [nameof(ReplicationMessageReply.DatabaseId)] = Database.DbId.ToString()
                     };
 
                     documentsOperationContext.Write(writer, response);
@@ -298,13 +294,13 @@ namespace Raven.Server.Documents.Replication
                     try
                     {
                         _reconnectQueue.TryRemove(failure);
-                        AddAndStartOutgoingReplication(failure.Destination);
+                        AddAndStartOutgoingReplication(failure.Node);
                     }
                     catch (Exception e)
                     {
                         if (_log.IsInfoEnabled)
                         {
-                            _log.Info($"Failed to start outgoing replication to {failure.Destination}", e);
+                            _log.Info($"Failed to start outgoing replication to {failure.Node}", e);
                         }
                     }
                 }
@@ -364,27 +360,121 @@ namespace Raven.Server.Documents.Replication
 
             _isInitialized = true;
 
-            Database.Changes.OnSystemDocumentChange += OnSystemDocumentChange;
-
+            MyDatabaseRecord = LoadDatabaseRecord();
+            ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
             InitializeOutgoingReplications();
             ConflictResolver.RunConflictResolversOnce();
         }
 
+        public void HandleDatabaseRecordChange()
+        {
+            var newRecord = LoadDatabaseRecord();
+
+            if (newRecord == null)
+            {
+                DropAllOutgoingConnections();
+                MyDatabaseRecord = null;
+                return;
+            }
+
+            var connectionChanged = ReplicationTopology.FindConnectionChanges(newRecord.Topology, Server.NodeTag, Database.Name);
+            var conflictSolverChanged = MyDatabaseRecord.ConflictSolverConfig.ConflictResolutionChanged(newRecord.ConflictSolverConfig);
+
+            MyDatabaseRecord = newRecord;
+
+            if (connectionChanged.nodesToRemove.Count > 0)
+            {
+                // remove old connections
+                if (_log.IsInfoEnabled)
+                    _log.Info("Stopping obselete outgoing replication threads.");
+
+                DropOutgoingConnections(connectionChanged.nodesToRemove);
+            }
+
+            if (connectionChanged.nodesToAdd.Count > 0)
+            {
+                // add new connections
+                if (_log.IsInfoEnabled)
+                    _log.Info("Starting new replication threads.");
+
+                StartOutgoingConnections(connectionChanged.nodesToAdd);
+            }
+
+            UpdateDestinations();
+
+            if (conflictSolverChanged)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info("Conflict resolution was change.");
+
+                ConflictResolver.RunConflictResolversOnce();
+            }
+
+        }
+
+        private void StartOutgoingConnections(IEnumerable<ReplicationNode> connectionsToAdd)
+        {
+            foreach (var destination in connectionsToAdd)
+            {
+                if (destination.Disabled)
+                    continue;
+
+                _numberOfSiblings++;
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Initialized outgoing replication for [{destination.NodeTag}/{destination.Url}]");
+                AddAndStartOutgoingReplication(destination);
+            }
+        }
+
+        private void DropOutgoingConnections(IEnumerable<ReplicationNode> connectionsToRemove)
+        {
+            var outgoingChanged = _outgoing.Where(o => connectionsToRemove.Contains(o.Destination));
+            foreach (var instance in outgoingChanged)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Stopping replication to {instance.Destination.Database} on {instance.Destination.NodeTag}.");
+
+                instance.Failed -= OnOutgoingSendingFailed;
+                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
+                instance.Dispose();
+                _outgoing.TryRemove(instance);
+                _lastSendEtagPerDestination.TryRemove(instance.Destination, out LastEtagPerDestination etag);
+                _outgoingFailureInfo.TryRemove(instance.Destination, out ConnectionShutdownInfo info);
+                _reconnectQueue.TryRemove(info);
+                _numberOfSiblings--;
+            }
+        }
+
+        private void DropAllOutgoingConnections()
+        {
+            _reconnectQueue.Clear();
+            foreach (var instance in _outgoing)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Stopping replication to {instance.Destination.Database} on {instance.Destination.NodeTag}.");
+
+                instance.Failed -= OnOutgoingSendingFailed;
+                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
+                instance.Dispose();
+            }
+            _lastSendEtagPerDestination.Clear();
+            _outgoingFailureInfo.Clear();
+            _reconnectQueue.Clear();
+            _numberOfSiblings = 0;
+        }
+
         private void InitializeOutgoingReplications()
         {
-            ReplicationDocument = GetReplicationDocument();
+            UpdateDestinations();
 
-            if (ValidateReplicaitonSource() == false)
-                return;
-
-            if (ReplicationDocument?.Destinations == null || //precaution
-                ReplicationDocument.Destinations.Count == 0)
+            if (Destinations == null || //precaution
+                !Destinations.Any())
             {
                 if (_log.IsInfoEnabled)
                     _log.Info("Tried to initialize outgoing replications, but there is no replication document or destinations are empty. Nothing to do...");
 
                 _numberOfSiblings = 0;
-                Database.DocumentTombstoneCleaner.Unsubscribe(this);
+                Database.DocumentTombstoneCleaner?.Unsubscribe(this);
 
                 return;
             }
@@ -392,10 +482,10 @@ namespace Raven.Server.Documents.Replication
             Database.DocumentTombstoneCleaner.Subscribe(this);
 
             if (_log.IsInfoEnabled)
-                _log.Info($"Initializing {ReplicationDocument.Destinations.Count:#,#} outgoing replications..");
+                _log.Info($"Initializing {Destinations.Count():#,#} outgoing replications..");
 
             var countOfDestinations = 0;
-            foreach (var destination in ReplicationDocument.Destinations)
+            foreach (var destination in Destinations)
             {
                 if (destination.Disabled)
                     continue;
@@ -404,7 +494,7 @@ namespace Raven.Server.Documents.Replication
 
                 AddAndStartOutgoingReplication(destination);
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Initialized outgoing replication for [{destination.Database}/{destination.Url}]");
+                    _log.Info($"Initialized outgoing replication for [{destination.NodeTag}/{destination.Url}]");
             }
 
             _numberOfSiblings = countOfDestinations;
@@ -413,71 +503,43 @@ namespace Raven.Server.Documents.Replication
                 _log.Info("Finished initialization of outgoing replications..");
         }
 
-        private readonly AlertRaised _databaseMismatchAlert = AlertRaised.Create(
-                   "Replication source mismatch",
-                   $"Replication source does not match this database, outgoing replication is disabled until this will be fixed at {Constants.Documents.Replication.ReplicationConfigurationDocument}.",
-                   AlertType.Replication,
-                   NotificationSeverity.Error,
-                   "DatabaseMismatch"
-               );
 
-        private bool ValidateReplicaitonSource()
+        private void UpdateDestinations()
         {
-            var replicationDocument = ReplicationDocument;
-            if (replicationDocument == null)
-            {
-                return true;
-            }
-
-            if (replicationDocument.Source == null)
-            {
-                replicationDocument.Source = Database.DbId.ToString();
-                DocumentsOperationContext context;
-                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenWriteTransaction())
-                {
-                    var djv = replicationDocument.ToJson();
-                    using (var doc = context.ReadObject(djv,
-                        Constants.Documents.Replication.ReplicationConfigurationDocument))
-                    {
-                        Database.DocumentsStorage.Put(context, Constants.Documents.Replication.ReplicationConfigurationDocument,
-                            null, doc);
-                        tx.Commit();
-                    }
-                }
-                // this is going to return false, because we modifed the configuration doc
-                // which will cause the code to recurse, so we just avoid running this instance
-                // because the instance we just run because we committed the update have already
-                // done all the work
-                return false;
-            }
-
-            Guid sourceDbId;
-            if (Guid.TryParse(replicationDocument.Source, out sourceDbId) == false ||
-                sourceDbId != Database.DbId)
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Replication source '{replicationDocument.Source}' does not match this database, outgoing replication is disabled until this will be fixed.");
-
-                Database.NotificationCenter.Add(_databaseMismatchAlert);
-                return false;
-            }
-            Database.NotificationCenter.Dismiss(_databaseMismatchAlert.Id);
-            return true;
+            Destinations = ReplicationTopology?.GetDestinations(Server.NodeTag, Database.Name).ToList();
         }
 
-        private void AddAndStartOutgoingReplication(ReplicationDestination destination)
+        private DatabaseRecord LoadDatabaseRecord()
         {
-            var outgoingReplication = new OutgoingReplicationHandler(this, Database, destination);
+            TransactionOperationContext context;
+            using (Server.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                var databaseRecord = Server.Cluster.ReadDatabase(context, Database.Name);
+                if (databaseRecord == null)
+                {
+                    return null;
+                }
+                if (MyDatabaseRecord == null)
+                {
+                    MyDatabaseRecord = databaseRecord;
+                }
+                return databaseRecord;
+            }
+        }
+
+        private void AddAndStartOutgoingReplication(ReplicationNode node)
+        {
+            var outgoingReplication = new OutgoingReplicationHandler(this, Database, node);
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
 
-            destination.Url = destination.Url.Trim();
+            node.Url = node.Url.Trim();
 
-            _outgoingFailureInfo.TryAdd(destination, new ConnectionShutdownInfo
+            _outgoingFailureInfo.TryAdd(node, new ConnectionShutdownInfo
             {
-                Destination = destination
+                Node = node
             });
             outgoingReplication.Start();
 
@@ -512,7 +574,7 @@ namespace Raven.Server.Documents.Replication
                 OutgoingReplicationRemoved?.Invoke(instance);
 
                 ConnectionShutdownInfo failureInfo;
-                if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo) == false)
+                if (_outgoingFailureInfo.TryGetValue(instance.Node, out failureInfo) == false)
                     return;
 
                 UpdateLastEtag(instance);
@@ -526,17 +588,17 @@ namespace Raven.Server.Documents.Replication
                 _reconnectQueue.Add(failureInfo);
 
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Document replication connection ({instance.Destination}) failed, and the connection will be retried later.",
+                    _log.Info($"Document replication connection ({instance.Node}) failed, and the connection will be retried later.",
                         e);
 
-                ReplicationFailed?.Invoke(instance.Destination.ToString(), e);
+                ReplicationFailed?.Invoke(instance.Node.ToString(), e);
             }
         }
 
         private void UpdateLastEtag(OutgoingReplicationHandler instance)
         {
             var etagPerDestination = _lastSendEtagPerDestination.GetOrAdd(
-                instance.Destination,
+                instance.Node,
                 _ => new LastEtagPerDestination());
 
             if (etagPerDestination.LastEtag == instance._lastSentDocumentEtag)
@@ -550,7 +612,7 @@ namespace Raven.Server.Documents.Replication
             UpdateLastEtag(instance);
 
             ConnectionShutdownInfo failureInfo;
-            if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo))
+            if (_outgoingFailureInfo.TryGetValue(instance.Node, out failureInfo))
                 failureInfo.Reset();
             TaskCompletionSource<object> result;
             while (_waitForReplicationTasks.TryDequeue(out result))
@@ -569,141 +631,13 @@ namespace Raven.Server.Documents.Replication
                     handler.OnReplicationFromAnotherSource();
             }
         }
-
-        private void OnSystemDocumentChange(DocumentChange change)
-        {
-            if (!change.Key.Equals(Constants.Documents.Replication.ReplicationConfigurationDocument, StringComparison.OrdinalIgnoreCase))
-                return;
-
-            if (_log.IsInfoEnabled)
-                _log.Info("System document change detected. Starting and stopping outgoing replication threads.");
-
-            //prevent reconnecting to a destination that we shouldn't in case we have flaky network
-            _reconnectQueue.Clear();
-
-            foreach (var instance in _outgoing)
-            {
-                instance.Failed -= OnOutgoingSendingFailed;
-                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
-
-                OutgoingReplicationRemoved?.Invoke(instance);
-
-                instance.Dispose();
-            }
-
-            _outgoing.Clear();
-            _outgoingFailureInfo.Clear();
-            _lastSendEtagPerDestination.Clear();
-
-            InitializeOutgoingReplications();
-
-            ConflictResolver.RunConflictResolversOnce();
-
-            if (_log.IsInfoEnabled)
-                _log.Info($"Replication configuration was changed: {change.Key}");
-        }
-
-        internal void UpdateReplicationDocumentWithResolver(string uid, int? version)
-        {
-            if (version == null || ReplicationDocument?.DefaultResolver?.Version > version)
-            {
-                return; // nothing to do
-            }
-
-            if (ReplicationDocument?.DefaultResolver != null &&
-                ReplicationDocument.DefaultResolver.Version == version &&
-                ReplicationDocument.DefaultResolver.ResolvingDatabaseId != uid)
-                ThrowConflictingResolvers(uid, version, ReplicationDocument.DefaultResolver.ResolvingDatabaseId);
-
-            DocumentsOperationContext context;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            using (context.OpenWriteTransaction())
-            {
-                var configurationDocument = Database.DocumentsStorage.Get(context, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                ReplicationDocument replicationDoc = null;
-
-                if (configurationDocument != null)
-                {
-                    using (configurationDocument.Data)
-                    {
-                        replicationDoc = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
-                    }
-                }
-                if (replicationDoc == null)
-                {
-                    replicationDoc = new ReplicationDocument
-                    {
-                        DefaultResolver = new DatabaseResolver
-                        {
-                            ResolvingDatabaseId = uid,
-                            Version = version.Value
-                        }
-                    };
-                }
-                else
-                {
-                    if (replicationDoc.DefaultResolver == null)
-                    {
-                        replicationDoc.DefaultResolver = new DatabaseResolver();
-                    }
-
-                    if (replicationDoc.DefaultResolver.Version >= version)
-                        return;
-
-                    replicationDoc.DefaultResolver.Version = version.Value;
-                    replicationDoc.DefaultResolver.ResolvingDatabaseId = uid;
-                }
-
-                if (replicationDoc.DefaultResolver.Version == version &&
-                    replicationDoc.DefaultResolver.ResolvingDatabaseId != uid)
-                    ThrowConflictingResolvers(uid, version, replicationDoc.DefaultResolver.ResolvingDatabaseId);
-
-                var djv = replicationDoc.ToJson();
-                var replicatedBlittable = context.ReadObject(djv, Constants.Documents.Replication.ReplicationConfigurationDocument);
-
-                Database.DocumentsStorage.Put(context, Constants.Documents.Replication.ReplicationConfigurationDocument, null, replicatedBlittable);
-
-                context.Transaction.Commit();// will force reload of all connections as side affect
-            }
-            ReplicationDocument = GetReplicationDocument();
-        }
-
-        private void ThrowConflictingResolvers(string uid, int? version, string existingResolverDbId)
-        {
-            throw new InvalidOperationException(
-                $"Resolver versions are conflicted. Same version {version}, but different database are set " +
-                $"{uid} and {existingResolverDbId} as resovlers. " +
-                "Increment the version of the preferred database resolver.");
-        }
-
-
-        private ReplicationDocument GetReplicationDocument()
-        {
-            DocumentsOperationContext context;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            using (context.OpenReadTransaction())
-            {
-                var configurationDocument = Database.DocumentsStorage.Get(context, Constants.Documents.Replication.ReplicationConfigurationDocument);
-
-                if (configurationDocument == null)
-                    return null;
-
-                using (configurationDocument.Data)
-                {
-                    return JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
-                }
-            }
-        }
-
         public void Dispose()
         {
             var ea = new ExceptionAggregator("Failed during dispose of document replication loader");
 
             ea.Execute(_reconnectAttemptTimer.Dispose);
 
-            Database.Changes.OnSystemDocumentChange -= OnSystemDocumentChange;
-
-            ea.Execute(() => ConflictResolver.ResolveConflictsTask.Wait());
+            ea.Execute(() => ConflictResolver?.ResolveConflictsTask.Wait());
 
             if (_log.IsInfoEnabled)
                 _log.Info("Closing and disposing document replication connections.");
@@ -719,7 +653,6 @@ namespace Raven.Server.Documents.Replication
             ea.ThrowIfNeeded();
         }
 
-
         public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
             var minEtag = MinimalEtagForReplication;
@@ -728,16 +661,15 @@ namespace Raven.Server.Documents.Replication
                 {Constants.Documents.Replication.AllDocumentsCollection, minEtag}
             };
 
-            var replicationDocument = ReplicationDocument;//thread safe copy
-            if (replicationDocument?.Destinations == null)
+            if (Destinations == null)
                 return result;
-            ReplicationDestination disabledReplicationDestination = null;
+            ReplicationNode disabledReplicationNode = null;
             bool hasDisabled = false;
-            foreach (var replicationDocumentDestination in replicationDocument.Destinations)
+            foreach (var replicationDocumentDestination in Destinations)
             {
                 if (replicationDocumentDestination.Disabled)
                 {
-                    disabledReplicationDestination = replicationDocumentDestination;
+                    disabledReplicationNode = replicationDocumentDestination;
                     hasDisabled = true;
                     break;
                 }
@@ -763,12 +695,12 @@ namespace Raven.Server.Documents.Replication
                 PerformanceHint.Create(
                     title: "Large number of tombstones because of disabled replication destination",
                     msg:
-                        $"The disabled replication destination {disabledReplicationDestination.Database} on " +
-                        $"{disabledReplicationDestination.Url} prevents from cleaning large number of tombstones.",
+                        $"The disabled replication destination {disabledReplicationNode.NodeTag} on " +
+                        $"{disabledReplicationNode.Url} prevents from cleaning large number of tombstones.",
 
                     type: PerformanceHintType.Replication,
                     notificationSeverity: NotificationSeverity.Warning,
-                    source: $"{disabledReplicationDestination.Database} on {disabledReplicationDestination.Url}"
+                    source: $"{disabledReplicationNode.NodeTag} on {disabledReplicationNode.Url}"
                 ));
 
             return result;
@@ -797,7 +729,7 @@ namespace Raven.Server.Documents.Replication
 
             public DateTime RetryOn { get; set; }
 
-            public ReplicationDestination Destination { get; set; }
+            public ReplicationNode Node { get; set; }
 
             public void Reset()
             {

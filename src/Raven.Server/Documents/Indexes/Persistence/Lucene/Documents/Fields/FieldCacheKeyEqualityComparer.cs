@@ -1,43 +1,43 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Lucene.Net.Documents;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 {
-    public class FieldCacheKeyEqualityComparer : IEqualityComparer<FieldCacheKey>
+    public class FieldCacheKeyEqualityComparer<T> : IEqualityComparer<CachedFieldItem<T>> where T : AbstractField
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Equals(FieldCacheKey x, FieldCacheKey y)
-        {
-            if (x.HashKey != y.HashKey)
-            {
-                return false;
-            }
-            else // We are thinking it is possible to have collisions. This may not be true ever!
-            {
-                if (x.index == y.index &&
-                     x.store == y.store &&
-                     x.termVector == y.termVector &&
-                     string.Equals(x.name, y.name))
-                {
-                    if (x.multipleItemsSameField.Length != y.multipleItemsSameField.Length)
-                        return false;
+        public static readonly FieldCacheKeyEqualityComparer<T> Default = new FieldCacheKeyEqualityComparer<T>();
 
-                    int count = x.multipleItemsSameField.Length;
-                    for (int i = 0; i < count; i++)
-                    {
-                        if (x.multipleItemsSameField[i] != y.multipleItemsSameField[i])
-                            return false;
-                    }
-                    return true;
-                }
-                else return false;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(CachedFieldItem<T> xx, CachedFieldItem<T> yy)
+        {
+            var x = xx.Key;
+            var y = yy.Key;
+            if (x.HashKey != y.HashKey)
+                return false;
+
+            // We are thinking it is possible to have collisions. This may not be true ever!
+            if (x.index != y.index || x.store != y.store || x.termVector != y.termVector || !string.Equals(x.name, y.name))
+                return false;
+
+            if (x.multipleItemsSameField.Length != y.multipleItemsSameField.Length)
+                return false;
+
+            int count = x.multipleItemsSameField.Length;
+            for (int i = 0; i < count; i++)
+            {
+                if (x.multipleItemsSameField[i] != y.multipleItemsSameField[i])
+                    return false;
             }
+
+            return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetHashCode(FieldCacheKey obj)
+        public int GetHashCode(CachedFieldItem<T> obj)
         {
-            return obj.HashKey;
+            return obj.Key.HashKey;
         }
     }
 }

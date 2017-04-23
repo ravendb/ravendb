@@ -14,8 +14,6 @@ using Raven.Client.Documents.Transformers;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Server;
-using SlowTests.Bugs;
-using SlowTests.MailingList;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -64,8 +62,9 @@ namespace SlowTests.Server.Rachis
                 {
 
                 }
-
             }
+            if(numberOfInstances != replicationFactor)
+                throw new InvalidOperationException("Couldn't create the db on all nodes, just on " + numberOfInstances + " out of " + replicationFactor);
             return Tuple.Create(databaseResult.ETag.Value,
                 Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToList());
             
@@ -79,18 +78,18 @@ namespace SlowTests.Server.Rachis
 
             var defaultDatabase = "BasicTransformerCreation";
             var databaseCreationResult = await CreateDatabaseInCluster(defaultDatabase, 5, leader.WebUrls[0]);
-            var index = databaseCreationResult.Item1;
             using (var store = new DocumentStore()
             {
                 Url =  databaseCreationResult.Item2[0].WebUrls[0],
                 DefaultDatabase = defaultDatabase
             }.Initialize())
             {
-                for (var i = 0; i < databaseCreationResult.Item2.Count; i++)
+                var relevantServers = databaseCreationResult.Item2;
+                for (var i = 0; i < relevantServers.Count; i++)
                 {
-                    var serverToStoreAt = databaseCreationResult.Item2[i];
+                    var serverToStoreAt = relevantServers[i];
                     LambdaExpression tranformResults = (Expression<Func<IEnumerable<Person>, IEnumerable>>)(docs => from doc in docs
-                        select new {Nmae = doc.Name});
+                        select new {doc.Name});
                     var curTransformerDefinition = new TransformerDefinition
                     {
                         Name = "Trans" + i,
@@ -107,9 +106,10 @@ namespace SlowTests.Server.Rachis
                         var putTransformerResult = await serverToStoreAtStore.Admin.SendAsync(new PutTransformerOperation(curTransformerDefinition),
                             CancellationToken.None);
 
-                        foreach (var serverToCheckAt in this.Servers)
+                        foreach (var serverToCheckAt in relevantServers)
                         {
-                            Assert.True(serverToCheckAt.ServerStore.Cluster.WaitForIndexNotification(putTransformerResult.Etag).Wait(WaitInterval));
+                            var db = await serverToCheckAt.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+                            Assert.True(await db.WaitForIndexNotification(putTransformerResult.Etag).WaitAsync(WaitInterval));
                             using (var currentServerStore = new DocumentStore
                             {
                                 Url = serverToCheckAt.WebUrls[0],

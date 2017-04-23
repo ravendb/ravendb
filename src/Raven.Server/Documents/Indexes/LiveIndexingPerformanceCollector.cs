@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Indexes
                     break;
             }
 
-            if (change.Type != IndexChangeTypes.BatchCompleted)
+            if (change.Type != IndexChangeTypes.BatchCompleted && change.Type != IndexChangeTypes.IndexPaused)
                 return;
 
             if (_perIndexStats.TryGetValue(change.Name, out indexAndPerformanceStats) == false)

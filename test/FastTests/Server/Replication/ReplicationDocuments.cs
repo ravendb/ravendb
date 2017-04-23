@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,11 +24,12 @@ namespace FastTests.Server.Replication
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
             {
-                SetupReplication(source, destination);
+
+                await SetupReplicationAsync(source, destination);
                 string id;
                 using (var session = source.OpenAsyncSession())
                 {
-                    var user = new User { Name = "Arek" };
+                    var user = new User {Name = "Arek"};
 
                     await session.StoreAsync(user);
 
@@ -38,7 +40,7 @@ namespace FastTests.Server.Replication
                     //await source.Replication.WaitAsync(etag: session.Advanced.GetEtagFor(user));
                 }
 
-                var fetchedUser = WaitForDocumentToReplicate<User>(destination, id, 2000);
+                var fetchedUser = WaitForDocumentToReplicate<User>(destination, id, 2_000);
                 Assert.NotNull(fetchedUser);
 
                 Assert.Equal("Arek", fetchedUser.Name);

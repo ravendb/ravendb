@@ -161,10 +161,10 @@ namespace FastTests.Sparrow
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
             {
-                var first = context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage));
+                context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage), out var first);
                 context.Release(ref first);
 
-                var repeat = context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage));
+                context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage), out var repeat);
                 Assert.NotEqual(first.Key, repeat._pointer->Key);
                 Assert.Equal(first.Key >> 32, repeat._pointer->Key >> 32);
                 context.Release(ref repeat);
@@ -177,7 +177,7 @@ namespace FastTests.Sparrow
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
             using (var otherContext = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
             {
-                var first = context.Allocate(1);
+                context.Allocate(1, out var first);
                 Assert.Throws<ByteStringValidationException>(() => otherContext.Release(ref first));
             }
         }
@@ -187,7 +187,7 @@ namespace FastTests.Sparrow
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
             {
-                var first = context.Allocate(1);
+                context.Allocate(1, out var first);
                 var firstAlias = first;
                 context.Release(ref first);
 

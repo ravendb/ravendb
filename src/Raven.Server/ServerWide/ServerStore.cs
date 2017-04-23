@@ -6,6 +6,8 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Replication;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
@@ -15,6 +17,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
@@ -80,6 +83,16 @@ namespace Raven.Server.ServerWide
 
         public TransactionContextPool ContextPool;
 
+        public long LastRaftCommitEtag
+        {
+            get
+            {
+                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                    return _engine.GetLastCommitIndex(context);
+            }
+        }
+
         public ClusterStateMachine Cluster => _engine.StateMachine;
         public string LeaderTag => _engine.LeaderTag;
 
@@ -117,9 +130,46 @@ namespace Raven.Server.ServerWide
 
             var path = Configuration.Core.DataDirectory.Combine("System");
 
+
+            List<AlertRaised> storeAlertForLateRaise = new List<AlertRaised>();
+
             var options = Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly()
                 : StorageEnvironmentOptions.ForPath(path.FullPath);
+
+            options.OnNonDurableFileSystemError += (obj, e) =>
+            {
+                var alert = AlertRaised.Create("Non Durable File System - System Database",
+                    e.Message,
+                    AlertType.NonDurableFileSystem,
+                    NotificationSeverity.Warning,
+                    "NonDurable Error System");
+                if (NotificationCenter.IsInitialized)
+                {
+                    NotificationCenter.Add(alert);
+                }
+                else
+                {
+                    storeAlertForLateRaise.Add(alert);
+                }
+            };
+
+            options.OnRecoveryError += (obj, e) =>
+            {
+                var alert = AlertRaised.Create("Database Recovery Error - System Database",
+                    e.Message,
+                    AlertType.NonDurableFileSystem,
+                    NotificationSeverity.Error,
+                    "Recovery Error System");
+                if (NotificationCenter.IsInitialized)
+                {
+                    NotificationCenter.Add(alert);
+                }
+                else
+                {
+                    storeAlertForLateRaise.Add(alert);
+                }
+            };
 
             options.SchemaVersion = 2;
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
@@ -145,7 +195,8 @@ namespace Raven.Server.ServerWide
                 throw;
             }
 
-            BooleanQuery.MaxClauseCount = Configuration.Queries.MaxClauseCount;
+            if (Configuration.Queries.MaxClauseCount != null)
+                BooleanQuery.MaxClauseCount = Configuration.Queries.MaxClauseCount.Value;
 
             ContextPool = new TransactionContextPool(_env);
 
@@ -160,6 +211,10 @@ namespace Raven.Server.ServerWide
             DatabaseInfoCache.Initialize(_env, ContextPool);
 
             NotificationCenter.Initialize();
+            foreach (var alertRaised in storeAlertForLateRaise)
+            {
+                NotificationCenter.Add(alertRaised);
+            }
             LicenseManager.Initialize(_env, ContextPool);
 
             TransactionOperationContext context;
@@ -183,6 +238,35 @@ namespace Raven.Server.ServerWide
                 [nameof(DeleteDatabaseCommand.HardDelete)] = hardDelete,
                 [nameof(DeleteDatabaseCommand.FromNode)] = fromNode
             }, "del-cmd"))
+            {
+                return await SendToLeaderAsync(putCmd);
+            }
+        }
+
+        public async Task<long> ModifyDatabaseWatchers(
+            JsonOperationContext context, 
+            string key, 
+            BlittableJsonReaderObject val)
+        {
+            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            {
+                ["Type"] = nameof(ServerWide.ModifyDatabaseWatchers),
+                [nameof(ServerWide.ModifyDatabaseWatchers.DatabaseName)] = key,
+                [nameof(ServerWide.ModifyDatabaseWatchers.Value)] = val,
+            }, "update-cmd"))
+            {
+                return await SendToLeaderAsync(putCmd);
+            }
+        }
+
+        public async Task<long> ModifyConflictSolverAsync(JsonOperationContext context, string key, BlittableJsonReaderObject solver)
+        {
+            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            {
+                ["Type"] = nameof(ModifyConflictSolverCommand),
+                [nameof(ModifyConflictSolverCommand.DatabaseName)] = key,
+                [nameof(ModifyConflictSolverCommand.Value)] = solver
+            }, "update-conflict-resolver-cmd"))
             {
                 return await SendToLeaderAsync(putCmd);
             }

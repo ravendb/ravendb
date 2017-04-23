@@ -20,8 +20,6 @@ namespace FastTests.Server.Replication
         [Fact]
         public async Task DisableDatabaseToggleOperation_should_propagate_through_raft_cluster()
         {
-            NoTimeouts();
-
             var leaderServer = await CreateRaftClusterAndGetLeader(2, shouldRunInMemory:false);
             var slaveServer = Servers.First(srv => ReferenceEquals(srv, leaderServer) == false);
 
@@ -44,14 +42,11 @@ namespace FastTests.Server.Replication
 
                 //since we have only Raft clusters, it is enough to create database only on one server
                 var databaseResult = master.Admin.Server.Send(new CreateDatabaseOperation(doc, 2));
-                await WaitForEtagInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
 
                 var requestExecutor = master.GetRequestExecuter();
                 await Task.WhenAny(requestExecutor.UpdateTopologyAsync(), Task.Delay(TimeSpan.FromSeconds(10)));
-
-                //TODO for Karmel: refactor this test so it uses replication when raft based topology replication is implemented
-                SetupReplicationOnDatabaseTopology(requestExecutor.TopologyNodes);
-
+                
                 using (var session = master.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges();

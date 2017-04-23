@@ -228,6 +228,13 @@ interface IOMetricsRecentStatsWithCache extends Raven.Server.Documents.Handlers.
     CompletedAsDate: Date; // used for caching
 }
 
+interface ReplicationPerformanceBaseWithCache extends Raven.Client.Documents.Replication.ReplicationPerformanceBase {
+    StartedAsDate: Date;
+    CompletedAsDate: Date;
+    Type: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType;
+    Description: string;
+}
+
 interface IndexingPerformanceOperationWithParent extends Raven.Client.Documents.Indexes.IndexingPerformanceOperation {
     Parent: Raven.Client.Documents.Indexes.IndexingPerformanceStats;
 }

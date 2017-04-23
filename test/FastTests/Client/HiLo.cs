@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Identity;
@@ -12,7 +13,7 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class Hilo : RavenTestBase
+    public class Hilo : ReplicationTestsBase
     {
         private class HiloDoc
         {
@@ -264,27 +265,6 @@ namespace FastTests.Client
                 }
                 if (sp.Elapsed.TotalSeconds > (Debugger.IsAttached ? 60 * 1024 : 30))
                     throw new TimeoutException("waited too long");
-            }
-        }
-
-        protected static void SetupReplication(DocumentStore fromStore,
-             DocumentStore toStore)
-        {
-            using (var session = fromStore.OpenSession())
-            {
-                session.Store(new ReplicationDocument
-                {
-                    Destinations = new List<ReplicationDestination>
-                    {
-                        new ReplicationDestination
-                        {
-                            Database = toStore.DefaultDatabase,
-                            Url = toStore.Url,
-                        }
-                    },
-                    DocumentConflictResolution = StraightforwardConflictResolution.None
-                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                session.SaveChanges();
             }
         }
 

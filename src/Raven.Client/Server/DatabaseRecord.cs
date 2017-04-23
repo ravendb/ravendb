@@ -1,18 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using Raven.Client.Documents;
+﻿using System.Collections.Generic;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
 using Raven.Server.Documents.Versioning;
 
-namespace Raven.Client.Server
+
+namespace Raven.Client.Documents
 {
     public class DatabaseRecord
     {
         public DatabaseRecord()
         {
-
         }
 
         public DatabaseRecord(string databaseName)
@@ -27,8 +25,10 @@ namespace Raven.Client.Server
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress;
 
         public string DataDirectory;
-
+        
         public DatabaseTopology Topology;
+
+        public ConflictSolver ConflictSolverConfig = new ConflictSolver();
 
         public Dictionary<string, IndexDefinition> Indexes;
 

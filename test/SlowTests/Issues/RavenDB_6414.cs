@@ -32,7 +32,7 @@ namespace SlowTests.Issues
 
                     try
                     {
-                        throw new Exception("Carastrophy");
+                        throw new Exception("Catastrophy");
                     }
                     catch (Exception e)
                     {
@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                         }
                     });
 
-                    Assert.Equal("Carastrophy", ex.Message);
+                    Assert.Equal("Catastrophy", ex.Message);
 
                     // db unloaded
                     Assert.True(SpinWait.SpinUntil(() => Server.ServerStore.DatabasesLandlord.DatabasesCache.Any() == false, TimeSpan.FromMinutes(1)));
@@ -64,7 +64,7 @@ namespace SlowTests.Issues
                     var alert = await notifications.TryDequeueOfTypeAsync<AlertRaised>(TimeSpan.Zero);
 
                     Assert.True(alert.Item1);
-                    Assert.Equal(AlertType.CatastrophicDatabaseFailue, alert.Item2.AlertType);
+                    Assert.Equal(AlertType.CatastrophicDatabaseFailure, alert.Item2.AlertType);
                     Assert.Contains(database.Name, alert.Item2.Title);
                 }
 

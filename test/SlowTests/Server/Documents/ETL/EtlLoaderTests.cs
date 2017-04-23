@@ -11,7 +11,7 @@ namespace SlowTests.Server.Documents.ETL
     public class EtlLoaderTests : EtlTestBase
     {
         [Fact]
-        public async Task Raises_alert_if_process_has_invalid_name()
+        public async Task Raises_alert_if_script_has_invalid_name()
         {
             using (var store = GetDocumentStore())
             {
@@ -20,30 +20,40 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<Notification>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    SetupEtl(store, new EtlConfiguration
+                    SetupEtl(store, new EtlDestinationsConfig
                     {
-                        RavenTargets =
+                        RavenDestinations =
+                        {
+                            new EtlConfiguration<RavenDestination>()
                             {
-                                new RavenEtlConfiguration
+                                Destination =
+                                    new RavenDestination
+                                    {
+                                        Url = "http://127.0.0.1:8080",
+                                        Database = "Northwind",
+                                    },
+                                Transforms =
                                 {
-                                    Url = "http://127.0.0.1:8080",
-                                    Database = "Northwind",
-                                    Collection = "Users"
+                                    new Transformation()
+                                    {
+                                        Collections = {"Users"}
+                                    }
                                 }
                             }
+                        }
                     });
-                    
+
                     var alert = await notifications.TryDequeueOfTypeAsync<AlertRaised>(TimeSpan.FromSeconds(30));
 
                     Assert.True(alert.Item1);
 
-                    Assert.Equal("Invalid ETL configuration for: ''. Reason: Name cannot be empty.", alert.Item2.Message);
+                    Assert.Equal("Invalid ETL configuration for destination: Northwind@http://127.0.0.1:8080. Reason: Script name cannot be empty.", alert.Item2.Message);
                 }
             }
         }
 
         [Fact]
-        public async Task Raises_alert_if_processes_have_non_unique_names()
+        public async Task Raises_alert_if_scipts_have_non_unique_names()
         {
             using (var store = GetDocumentStore())
             {
@@ -52,23 +62,30 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<Notification>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    SetupEtl(store, new EtlConfiguration
+                    SetupEtl(store, new EtlDestinationsConfig
                     {
-                        RavenTargets =
+                        RavenDestinations =
                             {
-                                new RavenEtlConfiguration
+                                new EtlConfiguration<RavenDestination>()
                                 {
-                                    Url = "http://127.0.0.1:8080",
-                                    Database = "Northwind",
-                                    Name = "MyEtl",
-                                    Collection = "Users"
-                                },
-                                new RavenEtlConfiguration
-                                {
-                                    Url = "http://127.0.0.1:8080",
-                                    Database = "Northwind",
-                                    Name = "MyEtl",
-                                    Collection = "People"
+                                    Destination = new RavenDestination()
+                                    {
+                                        Url = "http://127.0.0.1:8080",
+                                        Database = "Northwind",
+                                    },
+                                    Transforms =
+                                    {
+                                        new Transformation()
+                                        {
+                                            Name = "MyEtl",
+                                            Collections = { "Users"}
+                                        },
+                                        new Transformation()
+                                        {
+                                            Name = "MyEtl",
+                                            Collections = {"People"}
+                                        }
+                                    }
                                 }
                             }
                     });
@@ -77,7 +94,7 @@ namespace SlowTests.Server.Documents.ETL
 
                     Assert.True(alert.Item1);
 
-                    Assert.Equal("Invalid ETL configuration for: 'MyEtl'. Reason: 'MyEtl' name is already defined for different ETL process.", alert.Item2.Message);
+                    Assert.Equal("Invalid ETL configuration for destination: Northwind@http://127.0.0.1:8080. Reason: Script name 'MyEtl' name is already defined. The script names need to be unique.", alert.Item2.Message);
                 }
             }
         }

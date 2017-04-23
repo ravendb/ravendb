@@ -67,8 +67,8 @@ namespace SlowTests.Issues
                     Assert.NotEmpty(session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults()).ToList());
                 }
 
-                DeleteReplication(master, slave);
-
+                // delete replications to slave
+                SetupReplication(master);
 
                 using (var session = master.OpenAsyncSession())
                 {

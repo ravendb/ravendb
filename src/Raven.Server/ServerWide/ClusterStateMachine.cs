@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Security;
@@ -99,6 +100,8 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteTransformerCommand):
                 case nameof(RenameTransformerCommand):
                 case nameof(EditVersioningCommand):
+                case nameof(ModifyDatabaseWatchers):
+                case nameof(ModifyConflictSolverCommand):
                     UpdateDatabase(context, type, cmd, index, leader);
                     break;
                 case nameof(PutValueCommand):
@@ -142,10 +145,9 @@ namespace Raven.Server.ServerWide
                     return;
                 }
 
-                databaseRecord.Topology.Members.Remove(remove.NodeTag);
-                databaseRecord.Topology.Promotables.Remove(remove.NodeTag);
-                databaseRecord.Topology.Watchers.Remove(remove.NodeTag);
-
+                databaseRecord.Topology.Members.RemoveAll(m => m.NodeTag == remove.NodeTag);
+                databaseRecord.Topology.Promotables.RemoveAll(p=> p.NodeTag == remove.NodeTag);
+               
                 databaseRecord.DeletionInProgress.Remove(remove.NodeTag);
 
                 if (databaseRecord.Topology.Members.Count == 0 &&
@@ -214,9 +216,8 @@ namespace Raven.Server.ServerWide
                 }
                 else
                 {
-                    var allNodes = databaseRecord.Topology.Members
-                        .Concat(databaseRecord.Topology.Promotables)
-                        .Concat(databaseRecord.Topology.Watchers);
+                    var allNodes = databaseRecord.Topology.Members.Select(m => m.NodeTag)
+                        .Concat(databaseRecord.Topology.Promotables.Select(p=>p.NodeTag));
 
                     foreach (var node in allNodes)
                     {
@@ -582,6 +583,7 @@ namespace Raven.Server.ServerWide
             var onDatabaseChanged = DatabaseChanged;
             if (onDatabaseChanged != null)
             {
+                _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex);
                 TaskExecuter.Execute(_ =>
                 {
                     foreach (var db in listOfDatabaseName)
@@ -624,6 +626,102 @@ namespace Raven.Server.ServerWide
         public string NodeTag;
     }
 
+    public interface IUpdateDatabaseCommand
+    {
+        void UpdateDatabaseRecord(DatabaseRecord record);
+    }
+
+    public class ModifyDatabaseWatchers : IUpdateDatabaseCommand
+    {
+        public string DatabaseName;
+        public BlittableJsonReaderObject Value;
+        
+        public void UpdateDatabaseRecord(DatabaseRecord record)
+        {
+            Value.TryGet("NewWatchers", out BlittableJsonReaderArray watchers);
+
+            if (watchers != null)
+            {
+                record.Topology.Watchers = new List<DatabaseWatcher>(
+                    watchers.Items.Select(
+                        i => JsonDeserializationRachis<DatabaseWatcher>.Deserialize((BlittableJsonReaderObject)i)
+                    ));
+            }
+            else
+            {
+                record.Topology.Watchers = new List<DatabaseWatcher>();
+            }
+        }
+    }
+
+    public class ModifyConflictSolverCommand : IUpdateDatabaseCommand
+    {
+        public string DatabaseName;
+        public BlittableJsonReaderObject Value;
+
+        public void UpdateDatabaseRecord(DatabaseRecord record)
+        {
+            record.ConflictSolverConfig = JsonDeserializationServer.ConflictSolver(Value);
+        }
+    }
+
+    public class PutTransformerCommand : IUpdateDatabaseCommand
+    {
+        public string DatabaseName;
+        public TransformerDefinition TransformerDefinition;
+        public void UpdateDatabaseRecord(DatabaseRecord record)
+        {
+            record.AddTransformer(TransformerDefinition);
+        }
+    }
+
+    public class SetTransformerLockModeCommand : IUpdateDatabaseCommand
+    {
+        public string DatabaseName;
+        public string TransformerName;
+        public TransformerLockMode LockMode;
+        public void UpdateDatabaseRecord(DatabaseRecord record)
+        {
+            record.Transformers[TransformerName].LockMode = LockMode;
+        }
+    }
+
+    public class DeleteTransformerCommand : IUpdateDatabaseCommand
+    {
+        public string DatabaseName;
+        public string TransformerName;
+        public void UpdateDatabaseRecord(DatabaseRecord record)
+        {
+            record.Transformers.Remove(TransformerName);
+        }
+    }
+
+    public class JsonDeserializationCluster : JsonDeserializationBase
+    {
+
+        public static readonly Func<BlittableJsonReaderObject, PutValueCommand> PutValueCommand = GenerateJsonDeserializationRoutine<PutValueCommand>();
+
+        public static readonly Func<BlittableJsonReaderObject, DeleteValueCommand> DeleteValueCommand = GenerateJsonDeserializationRoutine<DeleteValueCommand>();
+
+        public static readonly Func<BlittableJsonReaderObject, DeleteDatabaseCommand> DeleteDatabaseCommand = GenerateJsonDeserializationRoutine<DeleteDatabaseCommand>();
+
+        public static readonly Func<BlittableJsonReaderObject, AddDatabaseCommand> AddDatabaseCommand = GenerateJsonDeserializationRoutine<AddDatabaseCommand>();
+        public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecord = GenerateJsonDeserializationRoutine<DatabaseRecord>();
+        public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromDatabaseCommand> RemoveNodeFromDatabaseCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>();
+
+        public static Dictionary<string, Func<BlittableJsonReaderObject, IUpdateDatabaseCommand>> UpdateDatabaseCommands = new Dictionary<string, Func<BlittableJsonReaderObject, IUpdateDatabaseCommand>>()
+        {
+            [nameof(EditVersioningCommand)] = GenerateJsonDeserializationRoutine<EditVersioningCommand>(),
+            [nameof(PutTransformerCommand)] = GenerateJsonDeserializationRoutine<PutTransformerCommand>(),
+            [nameof(DeleteTransformerCommand)] = GenerateJsonDeserializationRoutine<DeleteTransformerCommand>(),
+            [nameof(SetTransformerLockModeCommand)] = GenerateJsonDeserializationRoutine<SetTransformerLockModeCommand>(),
+            [nameof(ModifyDatabaseWatchers)] = GenerateJsonDeserializationRoutine<ModifyDatabaseWatchers>(),
+            [nameof(ModifyConflictSolverCommand)] = GenerateJsonDeserializationRoutine<ModifyConflictSolverCommand>(),
+        };
+
+        public static readonly Func<BlittableJsonReaderObject, ServerStore.PutRaftCommandResult> PutRaftCommandResult = GenerateJsonDeserializationRoutine<ServerStore.PutRaftCommandResult>();
+    }
+
     public class RachisLogIndexNotifications
     {
         private long _lastModifiedIndex;
@@ -642,7 +740,6 @@ namespace Raven.Server.ServerWide
             }
         }
 
-
         public void NotifyListenersAbout(long index)
         {
             var lastModifed = _lastModifiedIndex;
@@ -650,7 +747,7 @@ namespace Raven.Server.ServerWide
             {
                 lastModifed = Interlocked.CompareExchange(ref _lastModifiedIndex, index, lastModifed);
             }
-            _notifiedListeners.Set();
+            _notifiedListeners.SetAndResetAtomically();
         }
     }
 }

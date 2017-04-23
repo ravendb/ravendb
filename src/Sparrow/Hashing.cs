@@ -1,5 +1,6 @@
 using Sparrow.Binary;
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -314,6 +315,24 @@ namespace Sparrow
             internal const ulong PRIME64_5 = 2870177450012600261UL;
         }
 
+        public static class JumpConsistentHash
+        {
+            //A Fast, Minimal Memory, Consistent Hash Algorithm
+            //by John Lamping, Eric Veach
+            //relevant article: https://arxiv.org/abs/1406.2294
+            public static long Calculate(ulong key, int numBuckets)
+            {
+                long b = 1L;
+                long j = 0;
+                while (j < numBuckets)
+                {
+                    b = j;
+                    key = key * 2862933555777941757UL + 1;
+                    j = (long)((b + 1) * ((1L << 31) / ((double)(key >> 33) + 1)));
+                }
+                return b;
+            }
+        }
 
         /// <summary>
         /// A port of the original XXHash algorithm from Google in 64bits 
@@ -804,6 +823,76 @@ namespace Sparrow
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static uint CalculateInline(int[] buffer, ulong seed = 0x5D70D359C498B3F8ul)
+            {
+                uint high = (uint)(seed >> 32);
+                uint low = (uint)seed;
+
+                for (uint i = 0; i < buffer.Length; i++)
+                {
+                    MarvinMix(ref high, ref low, (uint)buffer[i]);
+                }
+
+                MarvinMix(ref high, ref low, 0x80);
+                MarvinMix(ref high, ref low, 0);
+
+                return low ^ high;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static uint CalculateInline(uint[] buffer, ulong seed = 0x5D70D359C498B3F8ul)
+            {
+                uint high = (uint)(seed >> 32);
+                uint low = (uint)seed;
+
+                for (uint i = 0; i < buffer.Length; i++)
+                {
+                    MarvinMix(ref high, ref low, (uint)buffer[i]);
+                }
+
+                MarvinMix(ref high, ref low, 0x80);
+                MarvinMix(ref high, ref low, 0);
+
+                return low ^ high;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static uint CalculateInline(List<uint> buffer, ulong seed = 0x5D70D359C498B3F8ul)
+            {
+                uint high = (uint)(seed >> 32);
+                uint low = (uint)seed;
+
+                int len = buffer.Count;
+                for (int i = 0; i < len; i++)
+                {
+                    MarvinMix(ref high, ref low, buffer[i]);
+                }
+
+                MarvinMix(ref high, ref low, 0x80);
+                MarvinMix(ref high, ref low, 0);
+
+                return low ^ high;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static uint CalculateInline(List<int> buffer, ulong seed = 0x5D70D359C498B3F8ul)
+            {
+                uint high = (uint)(seed >> 32);
+                uint low = (uint)seed;
+
+                int len = buffer.Count;
+                for (int i = 0; i < len; i++)
+                {
+                    MarvinMix(ref high, ref low, (uint)buffer[i]);
+                }
+
+                MarvinMix(ref high, ref low, 0x80);
+                MarvinMix(ref high, ref low, 0);
+
+                return low ^ high;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static uint CalculateInline(byte* buffer, int len, ulong seed = 0x5D70D359C498B3F8ul)
             {
                 uint high = (uint)(seed >> 32);
@@ -811,8 +900,8 @@ namespace Sparrow
 
                 byte* ptr = buffer;
                 byte* bEnd = ptr + len;
-                byte* loopEnd = bEnd - sizeof(uint);        
-                
+                byte* loopEnd = bEnd - sizeof(uint);
+
                 while (ptr <= loopEnd)
                 {
                     MarvinMix(ref high, ref low, *(uint*)ptr);

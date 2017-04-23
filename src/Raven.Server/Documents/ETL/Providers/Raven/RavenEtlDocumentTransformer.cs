@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Jint;
+using System.Linq;
 using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
@@ -116,18 +116,16 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             public readonly Dictionary<string, string> IdPrefixForCollection = new Dictionary<string, string>();
 
-            public ScriptInput(RavenEtlConfiguration configuration)
+            public ScriptInput(Transformation transformation)
             {
-                DefaultCollection = configuration.Collection;
+                DefaultCollection = transformation.Collections.First(); // TODO arek
 
-                if (string.IsNullOrEmpty(configuration.Script))
-                {
+                if (string.IsNullOrEmpty(transformation.Script))
                     return;
-                }
 
-                Transformation = new PatchRequest { Script = configuration.Script };
+                Transformation = new PatchRequest { Script = transformation.Script };
 
-                AllCollections = configuration.GetCollectionsFromScript();
+                AllCollections = transformation.GetCollectionsFromScript();
 
                 if (AllCollections.Length > 1)
                 {

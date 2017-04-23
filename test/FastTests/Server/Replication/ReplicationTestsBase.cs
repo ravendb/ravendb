@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -18,16 +20,20 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
+using Raven.Client.Server.Operations;
+using Raven.Server.Documents.Replication;
+using Raven.Server.ServerWide;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Sdk;
+using ModifyDatabaseWatchers = Raven.Client.Server.Operations.ModifyDatabaseWatchers;
 
 namespace FastTests.Server.Replication
 {
-    public class ReplicationTestsBase : RavenTestBase
+    public class ReplicationTestsBase : ClusterTestBase
     {
-
-        protected List<object> GetRevisions(DocumentStore store,string id)
+        protected List<object> GetRevisions(DocumentStore store, string id)
         {
             using (var commands = store.Commands())
             {
@@ -50,7 +56,6 @@ namespace FastTests.Server.Replication
             WaitForDocumentToReplicate<object>(dst, id, 15 * 1000);
         }
 
-
         protected Dictionary<string, string[]> GetConnectionFaliures(DocumentStore store)
         {
             using (var commands = store.Commands())
@@ -63,7 +68,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected GetConflictsResult GetConflicts(DocumentStore store, string docId)
+        protected GetConflictsResult GetConflicts(IDocumentStore store, string docId)
         {
             using (var commands = store.Commands())
             {
@@ -75,7 +80,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected GetConflictsResult WaitUntilHasConflict(DocumentStore store, string docId, int count = 2)
+        protected GetConflictsResult WaitUntilHasConflict(IDocumentStore store, string docId, int count = 2)
         {
             int timeout = 5000;
 
@@ -134,7 +139,7 @@ namespace FastTests.Server.Replication
             return false;
         }
 
-        protected bool WaitForDocument<T>(DocumentStore store,
+        protected bool WaitForDocument<T>(IDocumentStore store,
             string docId,
             Func<T, bool> predicate,
             int timeout = 10000)
@@ -225,7 +230,7 @@ namespace FastTests.Server.Replication
         }
 
         protected List<string> WaitUntilHasTombstones(
-                DocumentStore store,
+                IDocumentStore store,
                 int count = 1)
         {
 
@@ -252,7 +257,7 @@ namespace FastTests.Server.Replication
         }
 
 
-        protected List<string> GetTombstones(DocumentStore store)
+        protected List<string> GetTombstones(IDocumentStore store)
         {
             using (var commands = store.Commands())
             {
@@ -264,7 +269,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected FullTopologyInfo GetFullTopology(DocumentStore store)
+        protected FullTopologyInfo GetFullTopology(IDocumentStore store)
         {
             using (var commands = store.Commands())
             {
@@ -276,7 +281,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected T WaitForDocumentToReplicate<T>(DocumentStore store, string id, int timeout)
+        protected T WaitForDocumentToReplicate<T>(IDocumentStore store, string id, int timeout)
             where T : class
         {
             var sw = Stopwatch.StartNew();
@@ -293,160 +298,106 @@ namespace FastTests.Server.Replication
             return default(T);
         }
 
+        public class SetupResult : IDisposable
+        {
+            public IReadOnlyList<ServerNode> Nodes;
+            public IDocumentStore LeaderStore;
+            public string Database;
+
+            public void Dispose()
+            {
+                LeaderStore?.Dispose();
+            }
+        }
+
+
+        protected static async Task<ModifyDatabaseWatchersResult> UpdateReplicationTopology(
+            DocumentStore store,
+            List<DatabaseWatcher> watchers)
+        {
+            var cmd = new ModifyDatabaseWatchers(store.DefaultDatabase, watchers);
+            return await store.Admin.Server.SendAsync(cmd);
+        }
+
+        protected static async Task<ModifySolverResult> UpdateConflictResolver(IDocumentStore store, string resovlerDbId = null, Dictionary<string, ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
+        {
+            var cmd = new ModifyConflictSolverOperation(store.DefaultDatabase,
+                resovlerDbId, collectionByScript, resolveToLatest);
+            return await store.Admin.Server.SendAsync(cmd);
+        }
+
+        public DatabaseTopology CurrentDatabaseTopology;
+
+        public async Task SetupReplicationAsync(DocumentStore fromStore, params DocumentStore[] toStores)
+        {
+            var watchers = new List<DatabaseWatcher>();
+            foreach (var store in toStores)
+            {
+                var databaseWatcher = new DatabaseWatcher
+                {
+                    Database = store.DefaultDatabase,
+                    Url = store.Url,
+                };
+                ModifyReplicationDestination(databaseWatcher);
+                watchers.Add(databaseWatcher);
+            }
+            var result = await UpdateReplicationTopology(fromStore, watchers);
+            CurrentDatabaseTopology = result.Topology;
+        }
+
         public static void SetScriptResolution(DocumentStore store, string script, string collection)
         {
-            using (var session = store.OpenSession())
+            var resolveByCollection = new Dictionary<string, ScriptResolver>
             {
-                session.Store(new ReplicationDocument
                 {
-                    DocumentConflictResolution = StraightforwardConflictResolution.None,
-                    ResolveByCollection = new Dictionary<string, ScriptResolver>{
-                            { collection, new ScriptResolver
-                                {
-                                    Script = script
-                                }
-                            }
-                        }
-                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
-
-                session.SaveChanges();
-            }
+                    collection, new ScriptResolver
+                    {
+                        Script = script
+                    }
+                }
+            };
+            UpdateConflictResolver(store, null, resolveByCollection).ConfigureAwait(false);
         }
 
-        protected static void SetReplicationConflictResolution(DocumentStore store,
-            StraightforwardConflictResolution conflictResolution)
+        protected static void SetReplicationConflictResolution(DocumentStore store, StraightforwardConflictResolution conflictResolution)
         {
-            using (var session = store.OpenSession())
-            {
-                var destinations = new List<ReplicationDestination>();
-                session.Store(new ReplicationDocument
-                {
-                    Destinations = destinations,
-                    DocumentConflictResolution = conflictResolution
-                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                session.SaveChanges();
-            }
+            UpdateConflictResolver(store, null, null, conflictResolution == StraightforwardConflictResolution.ResolveToLatest).ConfigureAwait(false);
         }
-
-        protected static void SetupReplication(DocumentStore fromStore, StraightforwardConflictResolution builtinConflictResolution = StraightforwardConflictResolution.None, params DocumentStore[] toStores)
-        {
-            using (var session = fromStore.OpenSession())
-            {
-                var destinations = new List<ReplicationDestination>();
-                foreach (var store in toStores)
-                    destinations.Add(
-                        new ReplicationDestination
-                        {
-                            Database = store.DefaultDatabase,
-                            Url = store.Url,
-
-                        });
-                session.Store(new ReplicationDocument
-                {
-                    Destinations = destinations,
-                    DocumentConflictResolution = builtinConflictResolution
-                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                session.SaveChanges();
-            }
-        }
-
-        protected static void SetupReplication(DocumentStore fromStore, Dictionary<string, string> etlScripts, params DocumentStore[] toStores)
-        {
-            using (var session = fromStore.OpenSession())
-            {
-                var destinations = new List<ReplicationDestination>();
-                foreach (var store in toStores)
-                    destinations.Add(
-                        new ReplicationDestination
-                        {
-                            Database = store.DefaultDatabase,
-                            Url = store.Url,
-                            SpecifiedCollections = etlScripts
-                        });
-                session.Store(new ReplicationDocument
-                {
-                    Destinations = destinations
-                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                session.SaveChanges();
-            }
-        }
-
 
         protected void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
         {
-            SetupReplication(fromStore,
-                new ReplicationDocument
+            SetupReplicationAsync(fromStore, toStores).ConfigureAwait(false);
+        }
+
+        protected async Task SetupReplicationAsync(DocumentStore fromStore, ConflictSolver conflictSolver, params DocumentStore[] toStores)
+        {
+            await UpdateConflictResolver(fromStore, conflictSolver.DatabaseResolverId, conflictSolver.ResolveByCollection, conflictSolver.ResolveToLatest);
+            await SetupReplicationAsync(fromStore, toStores);
+        }
+
+        protected void SetupReplication(DocumentStore fromStore, ConflictSolver conflictSolver, params DocumentStore[] toStores)
+        {
+            SetupReplicationAsync(fromStore, conflictSolver, toStores).ConfigureAwait(false);
+        }
+
+        protected virtual void ModifyReplicationDestination(ReplicationNode replicationNode)
+        {
+        }
+
+        protected static async Task SetupReplicationWithCustomDestinations(DocumentStore fromStore, params ReplicationNode[] toNodes)
+        {
+            var watchers = new List<DatabaseWatcher>();
+            foreach (var node in toNodes)
+            {
+                watchers.Add(new DatabaseWatcher
                 {
-
-                },
-                toStores);
-        }
-
-        protected void SetupReplication(DocumentStore fromStore, ReplicationDocument configOptions, params DocumentStore[] toStores)
-        {
-            using (var session = fromStore.OpenSession())
-            {
-                var destinations = new List<ReplicationDestination>();
-                foreach (var store in toStores)
-                {
-                    var replicationDestination = new ReplicationDestination
-                    {
-                        Database = store.DefaultDatabase,
-                        Url = store.Url
-                    };
-                    ModifyReplicationDestination(replicationDestination);
-                    destinations.Add(replicationDestination);
-                }
-
-                configOptions.Destinations = destinations;
-                session.Store(configOptions, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                session.SaveChanges();
+                    Database = node.Database,
+                    Url = node.Url,
+                });
             }
+            await UpdateReplicationTopology(fromStore, watchers);
         }
 
-        protected static void DeleteReplication(DocumentStore fromStore, DocumentStore deletedStoreDestination)
-        {
-            ReplicationDocument replicationConfigDocument;
-
-            using (var session = fromStore.OpenSession())
-            {
-                replicationConfigDocument =
-                    session.Load<ReplicationDocument>(Constants.Documents.Replication.ReplicationConfigurationDocument);
-
-                if (replicationConfigDocument == null)
-                    return;
-
-                session.Delete(replicationConfigDocument);
-                session.SaveChanges();
-            }
-
-            using (var session = fromStore.OpenSession())
-            {
-
-                replicationConfigDocument.Destinations.RemoveAll(
-                    x => x.Database == deletedStoreDestination.DefaultDatabase);
-
-                session.Store(replicationConfigDocument);
-                session.SaveChanges();
-            }
-        }
-
-        protected virtual void ModifyReplicationDestination(ReplicationDestination replicationDestination)
-        {
-        }
-
-        protected static void SetupReplicationWithCustomDestinations(DocumentStore fromStore, params ReplicationDestination[] toDestinations)
-        {
-            using (var session = fromStore.OpenSession())
-            {
-                session.Store(new ReplicationDocument
-                {
-                    Destinations = toDestinations.ToList()
-                }, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                session.SaveChanges();
-            }
-        }
-        
         private class GetRevisionsCommand : RavenCommand<List<object>>
         {
             private readonly string _id;
@@ -620,7 +571,7 @@ namespace FastTests.Server.Replication
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
                 if (response == null)
-                    ThrowInvalidResponse();               
+                    ThrowInvalidResponse();
 
                 Result = JsonDeserializationClient.GetConflictsResult(response);
             }

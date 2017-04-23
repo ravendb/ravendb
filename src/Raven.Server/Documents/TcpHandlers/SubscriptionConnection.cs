@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 using (tcpConnectionOptions)
                 using (var connection = new SubscriptionConnection(tcpConnectionOptions))
-                using (tcpConnectionOptions.ConnectionProcessingInProgress())
+                using (tcpConnectionOptions.ConnectionProcessingInProgress("Subscription"))
                 {
                     try
                     {

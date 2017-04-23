@@ -10,7 +10,6 @@ namespace Raven.Server.NotificationCenter.Notifications
         SqlEtl_ConnectionError,
         SqlEtl_ProviderError,
         SqlEtl_SlowSql,
-        SqlEtl_ConnectionStringMissing,
         
         Etl_WriteErrorRatio,
         
@@ -24,6 +23,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         TransformerStore_TransformerCouldNotBeCreated,
         WarnIndexOutputsPerDocument,
         ErrorSavingReduceOutputDocuments,
-        CatastrophicDatabaseFailue
+        CatastrophicDatabaseFailure,
+        NonDurableFileSystem,
+        RecoveryError
     }
 }

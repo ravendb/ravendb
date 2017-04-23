@@ -115,10 +115,12 @@ namespace FastTests.Server.Replication
                 Assert.Equal(2, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 2));
                 Assert.Equal(2, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 2));
 
-                SetupReplication(storeA, new ReplicationDocument
+                var config = new ConflictSolver
                 {
-                    DocumentConflictResolution = StraightforwardConflictResolution.ResolveToLatest
-                }, storeB);
+                    ResolveToLatest = true
+                };
+               
+                SetupReplication(storeA, config, storeB);
 
                 Assert.True(WaitForDocument(storeA, "foo/bar"));
                 Assert.True(WaitForDocument(storeB, "foo/bar"));

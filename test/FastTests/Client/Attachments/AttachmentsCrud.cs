@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Xunit;
 using Raven.Client;
@@ -411,6 +412,47 @@ namespace FastTests.Client.Attachments
 
                 store.Commands().Delete("users/3", null);
                 AssertAttachmentCount(store, 0);
+            }
+        }
+
+        [Fact]
+        public async Task CanPatchWithoutConflictsOnAttachments()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Fitzchak"}, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
+                {
+                    store.Operations.Send(new PutAttachmentOperation("users/1", "profile", profileStream, "image/png"));
+                }
+
+                await store.Operations.SendAsync(new PatchOperation("users/1", null, new PatchRequest
+                {
+                    Script = "this.Country = newUser.Country;",
+                    Values =
+                    {
+                        {"newUser", new {Country = "Israel"}}
+                    }
+                }));
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    Assert.Equal("Israel", user.Country);
+
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                    var attachment = attachments.Single();
+                    Assert.Equal("profile", attachment.GetString(nameof(Attachment.Name)));
+                    var hash = attachment.GetString(nameof(AttachmentResult.Hash));
+                    Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", hash);
+                }
             }
         }
     }

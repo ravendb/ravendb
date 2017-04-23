@@ -218,7 +218,6 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.alerts
         }),
         ,*/
-        /*
         new leafMenuItem({
             route: 'databases/status/replicationStats',
             moduleId: 'viewmodels/database/status/replicationStats',
@@ -226,7 +225,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-versioning',
             dynamicHash: appUrls.replicationStats
-        }),*/
+        }),
         /* TODO
         new leafMenuItem({
             route: 'databases/status/sqlReplicationPerfStats',

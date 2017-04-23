@@ -471,7 +471,7 @@ namespace Raven.Server
                     break;
                 case TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery:
                     var responder = new TopologyRequestHandler();
-                    responder.AcceptIncomingConnectionAndRespond(tcp);
+                    responder.AcceptIncomingConnectionAndRespond(tcp, "topology");
                     break;
                 default:
                     throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);
