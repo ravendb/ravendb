@@ -32,6 +32,7 @@ using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Exceptions;
+using Voron.Impl;
 
 namespace Raven.Server.ServerWide
 {
@@ -68,9 +69,12 @@ namespace Raven.Server.ServerWide
 
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += transaction =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
-                _rachisLogIndexNotifications.NotifyListenersAbout(index);
+                if (transaction is LowLevelTransaction llt && llt.Committed)
+                {
+                    _rachisLogIndexNotifications.NotifyListenersAbout(index);
+                }
             };
 
             string type;
@@ -331,12 +335,15 @@ namespace Raven.Server.ServerWide
 
         private void NotifyDatabaseChanged(TransactionOperationContext context, string databaseName, long index)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += transaction =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
-                TaskExecuter.Execute(_ =>
+                if (transaction is LowLevelTransaction llt && llt.Committed)
                 {
-                    DatabaseChanged?.Invoke(this, (databaseName, index));
-                }, null);
+                    TaskExecuter.Execute(_ =>
+                    {
+                        DatabaseChanged?.Invoke(this, (databaseName, index));
+                    }, null);
+                }
             };
         }
 

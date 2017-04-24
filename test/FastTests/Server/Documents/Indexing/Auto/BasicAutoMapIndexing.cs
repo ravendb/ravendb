@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Server;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -1043,7 +1044,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 var definition3 = new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name", Storage = FieldStorage.Yes } });
 
-                var e = await Assert.ThrowsAsync<NotSupportedException>(() => database.IndexStore.CreateIndex(definition3));
+                var e = (await Assert.ThrowsAsync<CommandExecutionException>(() => database.IndexStore.CreateIndex(definition3))).InnerException;
 
                 Assert.Contains("Can not update auto-index", e.Message);
                 Assert.NotNull(database.IndexStore.GetIndex(indexId1));
