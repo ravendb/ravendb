@@ -152,6 +152,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     IdPrefixForCollection[collection] = DocumentConventions.DefaultTransformCollectionNameToDocumentIdPrefix(collection);
                 }
 
+                if (transformation.Collections == null)
+                    return;
+
                 _collectionNameComparisons = new Dictionary<string, Dictionary<string, bool>>(transformation.Collections.Count);
 
                 foreach (var sourceCollection in transformation.Collections)
@@ -167,6 +170,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             public bool IsLoadedToDefaultCollection(RavenEtlItem item, string loadToCollection)
             {
+                if (item.Collection == null)
+                    return false;
+
                 return _collectionNameComparisons[item.Collection][loadToCollection];
             }
         }

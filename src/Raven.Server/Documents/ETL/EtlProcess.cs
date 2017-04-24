@@ -96,17 +96,17 @@ namespace Raven.Server.Documents.ETL
 
                     scope.EnsureDispose(tombstones);
 
-                    enumerators.Add((docs, tombstones, "TODO"));
+                    enumerators.Add((docs, tombstones, null));
                 }
                 else
                 {
                     foreach (var collection in Transformation.Collections)
                     {
-                        var docs = Database.DocumentsStorage.GetDocumentsFrom(context, collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue).GetEnumerator();
+                        var docs = Database.DocumentsStorage.GetDocumentsFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
 
                         scope.EnsureDispose(docs);
 
-                        var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, collection, Statistics.LastProcessedEtag + 1, 0, int.MaxValue).GetEnumerator();
+                        var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
 
                         scope.EnsureDispose(tombstones);
 
