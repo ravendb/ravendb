@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Queries
             if (extractAllFields)
             {
                 AnyExtractableFromIndex = true;
-                ExtractAllFromIndex = true; // we want to add dynamic fields also to the result (stored-only)
+                ExtractAllFromIndex = true; // we want to add dynamic fields also to the result (stored only)
                 IsProjection = true;
             }
 
@@ -75,18 +75,22 @@ namespace Raven.Server.Documents.Queries
 
                 if (fieldToFetch[0] == '_' && fieldToFetch == Constants.Documents.Indexing.Fields.AllFields)
                 {
+                    if (result.Count > 0)
+                        result.Clear(); // __all_fields should only return stored fields so we are ensuring that no other fields will be returned
+
                     extractAllFields = true;
 
                     foreach (var kvp in indexDefinition.MapFields)
                     {
                         var stored = kvp.Value.Storage == FieldStorage.Yes;
-                        if (stored)
-                            anyExtractableFromIndex = true;
+                        if (stored == false)
+                            continue;
 
-                        result[kvp.Key] = new FieldToFetch(kvp.Key, stored | indexDefinition.HasDynamicFields);
+                        anyExtractableFromIndex = true;
+                        result[kvp.Key] = new FieldToFetch(kvp.Key, canExtractFromIndex: true);
                     }
 
-                    continue;
+                    return result;
                 }
 
                 IndexField value;
