@@ -253,9 +253,11 @@ namespace Raven.Server.Documents.Handlers
                                 [Constants.Documents.Metadata.Etag] = putResult.Etag,
                                 [Constants.Documents.Metadata.Collection] = putResult.Collection.Name,
                                 [Constants.Documents.Metadata.ChangeVector] = changeVector,
-                                [Constants.Documents.Metadata.Flags] = putResult.Flags,
                                 [Constants.Documents.Metadata.LastModified] = putResult.LastModified,
                             };
+
+                            if (putResult.Flags != DocumentFlags.None)
+                                putReply[Constants.Documents.Metadata.Flags] = putResult.Flags;
 
                             Reply.Add(putReply);
                             break;

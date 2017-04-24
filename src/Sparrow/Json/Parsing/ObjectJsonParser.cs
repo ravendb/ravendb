@@ -151,6 +151,8 @@ namespace Sparrow.Json.Parsing
         private bool _disposed;
         private AllocatedMemoryData _currentStateBuffer;
 
+        // ThreadLocalSeenIndex and _seenIndex added for making sure that we seen this element in the 
+        //current instance and not in another read
         [ThreadStatic]
         private static int ThreadLocalSeenIndex;
 
