@@ -82,12 +82,12 @@ namespace Raven.Server.Config.Categories
 
         [Description("Time To Sync After Flash In Seconds")]
         [DefaultValue(30)]
-        [ConfigurationEntry("Raven/TimeToSyncAfterFlashInSeconds")]
+        [ConfigurationEntry("Raven/Storage/TimeToSyncAfterFlashInSeconds")]
         public int TimeToSyncAfterFlashInSeconds { get; set; }
 
         [Description("Num Of Cocurrent Syncs Per Physical Drive")]
         [DefaultValue(3)]
-        [ConfigurationEntry("Raven/NumOfCocurrentSyncsPerPhysDrive")]
+        [ConfigurationEntry("Raven/Storage/NumOfConcurrentSyncsPerPhysicalDrive")]
         public int NumOfCocurrentSyncsPerPhysDrive { get; set; }
 
         public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
