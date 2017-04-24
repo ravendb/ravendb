@@ -296,18 +296,16 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "read-conflict-resolver");
-                var latest = (bool)json[nameof(ConflictSolver.ResolveToLatest)];
-                var resolverDbId = json[nameof(ConflictSolver.DatabaseResolverId)]?.ToString();
-                var scripsts = json[nameof(ConflictSolver.ResolveByCollection)] as BlittableJsonReaderObject;
-             
+                var conflictResolver = (ConflictSolver)EntityToBlittable.ConvertToEntity(typeof(ConflictSolver), "convert-conflict-resolver", json, DocumentConventions.Default);
+                var conflictResolverJson = EntityToBlittable.ConvertEntityToBlittable(conflictResolver, DocumentConventions.Default, context);
                 using (context.OpenReadTransaction())
                 {
                     long etag;
                     var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
 
-                    var index = await ServerStore.ModifyConflictSolverAsync(context, name,resolverDbId,scripsts,latest);
+                    var index = await ServerStore.ModifyConflictSolverAsync(context, name, conflictResolverJson);
                     await ServerStore.Cluster.WaitForIndexNotification(index);
-
+                    
                     ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;

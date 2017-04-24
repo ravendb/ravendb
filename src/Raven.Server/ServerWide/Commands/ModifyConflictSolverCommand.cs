@@ -11,9 +11,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class ModifyConflictSolverCommand : UpdateDatabaseCommand
     {
-        public string DatabaseResolverId;
-        public BlittableJsonReaderObject ResolveByCollection;
-        public bool ResolveToLatest;
+        public BlittableJsonReaderObject Solver;
 
         public ModifyConflictSolverCommand():base(null){}
 
@@ -21,28 +19,13 @@ namespace Raven.Server.ServerWide.Commands
         
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.ConflictSolverConfig.DatabaseResolverId = DatabaseResolverId;
-            record.ConflictSolverConfig.ResolveToLatest = ResolveToLatest;
-
-            record.ConflictSolverConfig.ResolveByCollection = new Dictionary<string, ScriptResolver>();
-            if (ResolveByCollection != null)
-            {
-                foreach (var propertyName in ResolveByCollection.GetPropertyNames())
-                {
-                    var script = ResolveByCollection[propertyName] as BlittableJsonReaderObject;
-                    record.ConflictSolverConfig.ResolveByCollection.Add(
-                        propertyName,
-                        JsonDeserializationRachis<ScriptResolver>.Deserialize(script));
-                }
-            }
+            record.ConflictSolverConfig = JsonDeserializationRachis<ConflictSolver>.Deserialize(Solver);
         }
 
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(DatabaseName)] = DatabaseName;
-            json[nameof(DatabaseResolverId)] = DatabaseResolverId;
-            json[nameof(ResolveToLatest)] = ResolveToLatest;
-            json[nameof(ResolveByCollection)] = ResolveByCollection;
+            json[nameof(ConflictSolver)] = Solver;
         }
     }
 }
