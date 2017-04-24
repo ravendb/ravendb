@@ -104,94 +104,112 @@ namespace Raven.Server.Rachis
 
         private void RefreshAmbassadors(ClusterTopology clusterTopology)
         {
-            if (_engine.Log.IsInfoEnabled)
+            bool lockTaken = false;
+            Monitor.TryEnter(topologyLocker, ref lockTaken);            
+            try
             {
-                _engine.Log.Info($"Leader {_engine.Tag}: Refreshing ambassadors");
-            }
-            var old = new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
-            foreach (var peers in new[] { _voters, _promotables, _nonVoters })
-            {
-                foreach (var peer in peers)
+                //This only means we are been disposed so we can quit now
+                if (lockTaken == false)
                 {
-                    old[peer.Key] = peer.Value;
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Leader {_engine.Tag}: Skipping refreshing ambassadors because we are been disposed of");
+                    }
+                    return;
                 }
-                peers.Clear();
-            }
-
-            foreach (var voter in clusterTopology.Members)
-            {
-                if (voter.Key == _engine.Tag)
-                    continue; // we obviously won't be applying to ourselves
-
-                FollowerAmbassador existingInstance;
-                if (old.TryGetValue(voter.Key, out existingInstance))
-                {
-                    existingInstance.UpdateLeaderWake(_voterResponded);
-                    _voters.Add(voter.Key, existingInstance);
-                    old.Remove(voter.Key);
-                    continue; // already here
-                }
-
-                var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, clusterTopology.ApiKey);
-                _voters.Add(voter.Key, ambasaddor);
-                _engine.AppendStateDisposable(this, ambasaddor);
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for voter {voter.Key} {voter.Value}");
+                    _engine.Log.Info($"Leader {_engine.Tag}: Refreshing ambassadors");
                 }
-                ambasaddor.Start();
+                var old = new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
+                foreach (var peers in new[] { _voters, _promotables, _nonVoters })
+                {
+                    foreach (var peer in peers)
+                    {
+                        old[peer.Key] = peer.Value;
+                    }
+                    peers.Clear();
+                }
+
+                foreach (var voter in clusterTopology.Members)
+                {
+                    if (voter.Key == _engine.Tag)
+                        continue; // we obviously won't be applying to ourselves
+
+                    FollowerAmbassador existingInstance;
+                    if (old.TryGetValue(voter.Key, out existingInstance))
+                    {
+                        existingInstance.UpdateLeaderWake(_voterResponded);
+                        _voters.Add(voter.Key, existingInstance);
+                        old.Remove(voter.Key);
+                        continue; // already here
+                    }
+
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, clusterTopology.ApiKey);
+                    _voters.Add(voter.Key, ambasaddor);
+                    _engine.AppendStateDisposable(this, ambasaddor);
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for voter {voter.Key} {voter.Value}");
+                    }
+                    ambasaddor.Start();
+                }
+
+                foreach (var promotable in clusterTopology.Promotables)
+                {
+                    FollowerAmbassador existingInstance;
+                    if (old.TryGetValue(promotable.Key, out existingInstance))
+                    {
+                        existingInstance.UpdateLeaderWake(_promotableUpdated);
+                        _promotables.Add(promotable.Key, existingInstance);
+                        old.Remove(promotable.Key);
+                        continue; // already here
+                    }
+
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value, clusterTopology.ApiKey);
+                    _promotables.Add(promotable.Key, ambasaddor);
+                    _engine.AppendStateDisposable(this, ambasaddor);
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for promotable {promotable.Key} {promotable.Value}");
+                    }
+                    ambasaddor.Start();
+                }
+
+                foreach (var nonVoter in clusterTopology.Watchers)
+                {
+                    FollowerAmbassador existingInstance;
+                    if (_nonVoters.TryGetValue(nonVoter.Key, out existingInstance))
+                    {
+                        existingInstance.UpdateLeaderWake(_noop);
+
+                        _nonVoters.Add(nonVoter.Key, existingInstance);
+                        old.Remove(nonVoter.Key);
+                        continue; // already here
+                    }
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value, clusterTopology.ApiKey);
+                    _nonVoters.Add(nonVoter.Key, ambasaddor);
+                    _engine.AppendStateDisposable(this, ambasaddor);
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for watcher {nonVoter.Key} {nonVoter.Value}");
+                    }
+                    ambasaddor.Start();
+                }
+                TaskExecuter.Execute(_ =>
+                {
+                    foreach (var ambasaddor in old)
+                    {
+                        // it is not used by anything else, so we can close it
+                        ambasaddor.Value.Dispose();
+                    }
+                }, null);
             }
-
-            foreach (var promotable in clusterTopology.Promotables)
+            finally
             {
-                FollowerAmbassador existingInstance;
-                if (old.TryGetValue(promotable.Key, out existingInstance))
-                {
-                    existingInstance.UpdateLeaderWake(_promotableUpdated);
-                    _promotables.Add(promotable.Key, existingInstance);
-                    old.Remove(promotable.Key);
-                    continue; // already here
-                }
-
-                var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value, clusterTopology.ApiKey);
-                _promotables.Add(promotable.Key, ambasaddor);
-                _engine.AppendStateDisposable(this, ambasaddor);
-                if (_engine.Log.IsInfoEnabled)
-                {
-                    _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for promotable {promotable.Key} {promotable.Value}");
-                }
-                ambasaddor.Start();
+                if(lockTaken)
+                    Monitor.Exit(topologyLocker);
             }
-
-            foreach (var nonVoter in clusterTopology.Watchers)
-            {
-                FollowerAmbassador existingInstance;
-                if (_nonVoters.TryGetValue(nonVoter.Key, out existingInstance))
-                {
-                    existingInstance.UpdateLeaderWake(_noop);
-
-                    _nonVoters.Add(nonVoter.Key, existingInstance);
-                    old.Remove(nonVoter.Key);
-                    continue; // already here
-                }
-                var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value, clusterTopology.ApiKey);
-                _nonVoters.Add(nonVoter.Key, ambasaddor);
-                _engine.AppendStateDisposable(this, ambasaddor);
-                if (_engine.Log.IsInfoEnabled)
-                {
-                    _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for watcher {nonVoter.Key} {nonVoter.Value}");
-                }
-                ambasaddor.Start();
-            }
-
-            Task.Run(() =>
-            {
-                foreach (var ambasaddor in old)
-                {
-                    // it is not used by anything else, so we can close it
-                    ambasaddor.Value.Dispose();
-                }
-            });
         }
 
         /// <summary>
@@ -529,57 +547,81 @@ namespace Raven.Server.Rachis
             return tcs.Task;
         }
 
+        private object topologyLocker = new object();
         public void Dispose()
         {
-            Running = false;
-            _shutdownRequested.Set();
-            TaskExecuter.Execute(_ =>
+            bool lockTaken = false;
+            Monitor.TryEnter(this, ref lockTaken);
+            try
             {
-                _newEntriesArrived.TrySetCanceled();
-                var lastStateChangeReason = _engine.LastStateChangeReason;
-                TimeoutException te = null;
-                if (string.IsNullOrEmpty(lastStateChangeReason) == false)
-                    te = new TimeoutException(lastStateChangeReason);
-                foreach (var entry in _entries)
+                if (lockTaken == false)
                 {
-                    if (te == null)
+                    //We need to wait that refresh ambassador finish
+                    if (Monitor.Wait(topologyLocker, TimeSpan.FromSeconds(15)) == false)
                     {
-                        entry.Value.TaskCompletionSource.TrySetCanceled();
-                    }
-                    else
-                    {
-                        entry.Value.TaskCompletionSource.TrySetException(te);
+                        var message = $"Leader {_engine.Tag}: Refresh ambassador is taking the lock for 15 sec giving up on leader dispose";
+                        if (_engine.Log.IsInfoEnabled)
+                        {                            
+                            _engine.Log.Info(message);
+                        }
+                        throw new TimeoutException(message);
                     }
                 }
-            }, null);
+                Running = false;
+                _shutdownRequested.Set();
+                TaskExecuter.Execute(_ =>
+                {
+                    _newEntriesArrived.TrySetCanceled();
+                    var lastStateChangeReason = _engine.LastStateChangeReason;
+                    TimeoutException te = null;
+                    if (string.IsNullOrEmpty(lastStateChangeReason) == false)
+                        te = new TimeoutException(lastStateChangeReason);
+                    foreach (var entry in _entries)
+                    {
+                        if (te == null)
+                        {
+                            entry.Value.TaskCompletionSource.TrySetCanceled();
+                        }
+                        else
+                        {
+                            entry.Value.TaskCompletionSource.TrySetException(te);
+                        }
+                    }
+                }, null);
 
-            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-                _thread.Join();
+                if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                    _thread.Join();
 
-            var ae = new ExceptionAggregator("Could not properly dispose Leader");
-            foreach (var ambasaddor in _nonVoters)
-            {
-                ae.Execute(ambasaddor.Value.Dispose);
+                var ae = new ExceptionAggregator("Could not properly dispose Leader");
+                foreach (var ambasaddor in _nonVoters)
+                {
+                    ae.Execute(ambasaddor.Value.Dispose);
+                }
+
+                foreach (var ambasaddor in _promotables)
+                {
+                    ae.Execute(ambasaddor.Value.Dispose);
+                }
+                foreach (var ambasaddor in _voters)
+                {
+                    ae.Execute(ambasaddor.Value.Dispose);
+                }
+
+
+                _newEntry.Dispose();
+                _voterResponded.Dispose();
+                _promotableUpdated.Dispose();
+                _shutdownRequested.Dispose();
+                _noop.Dispose();
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"Leader {_engine.Tag}: Dispose");
+                }
             }
-
-            foreach (var ambasaddor in _promotables)
+            finally
             {
-                ae.Execute(ambasaddor.Value.Dispose);
-            }
-            foreach (var ambasaddor in _voters)
-            {
-                ae.Execute(ambasaddor.Value.Dispose);
-            }
-
-
-            _newEntry.Dispose();
-            _voterResponded.Dispose();
-            _promotableUpdated.Dispose();
-            _shutdownRequested.Dispose();
-            _noop.Dispose();
-            if (_engine.Log.IsInfoEnabled)
-            {
-                _engine.Log.Info($"Leader {_engine.Tag}: Dispose");
+                if(lockTaken)
+                    Monitor.Exit(topologyLocker);
             }
         }
 
