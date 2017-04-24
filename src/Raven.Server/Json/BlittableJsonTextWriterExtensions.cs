@@ -1179,7 +1179,6 @@ namespace Raven.Server.Json
             }
             writer.WritePropertyName(Constants.Documents.Metadata.ChangeVector);
             writer.WriteChangeVector(document.ChangeVector);
-            first = false;
 
             if (document.Flags != DocumentFlags.None)
             {

@@ -183,7 +183,9 @@ namespace Raven.Server.Documents
                 Etag = newEtag,
                 Key = key,
                 Collection = collectionName,
-                ChangeVector = changeVector
+                ChangeVector = changeVector,
+                Flags = flags,
+                LastModified = new DateTime(modifiedTicks) 
             };
         }
 

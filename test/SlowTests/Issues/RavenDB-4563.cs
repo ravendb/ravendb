@@ -54,7 +54,7 @@ namespace SlowTests.Issues
                             case 2:
                             case 3:
                             case 4:
-                                Assert.Equal("An error occurred while sending the request.", exp.InnerException.Message);
+                                Assert.Contains("Leader node was failed to make this request", exp.Message);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();

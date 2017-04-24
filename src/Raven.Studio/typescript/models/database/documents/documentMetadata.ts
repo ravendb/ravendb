@@ -16,6 +16,7 @@ class documentMetadata {
     lastModifiedFullDate: KnockoutComputed<string>;
 
     attachments: Array<documentAttachmentDto>;
+    changeVector: Array<changeVectorDto>;
 
     constructor(dto?: documentMetadataDto) {
         if (dto) {
@@ -38,6 +39,8 @@ class documentMetadata {
 
             this.attachments = dto['@attachments'];
 
+            this.changeVector = dto['@change-vector'];
+            
             for (let property in dto) {
                 if (property.toUpperCase() !== '@collection'.toUpperCase() &&
                     property.toUpperCase() !== '@flags'.toUpperCase() &&
@@ -48,7 +51,8 @@ class documentMetadata {
                     property.toUpperCase() !== '@last-modified'.toUpperCase() &&
                     property.toUpperCase() !== '@attachments'.toUpperCase() &&
                     property.toUpperCase() !== '@etag'.toUpperCase() &&
-                    property.toUpperCase() !== 'toDto'.toUpperCase()) {
+                    property.toUpperCase() !== 'toDto'.toUpperCase() &&
+                    property.toUpperCase() !=='@change-vector'.toUpperCase()) {
                     this.nonStandardProps = this.nonStandardProps || [];
                     (<any>this)[property] = (<any>dto)[property];
                     this.nonStandardProps.push(property as any);
@@ -71,8 +75,9 @@ class documentMetadata {
             'Temp-Index-Score': this.tempIndexScore,
             '@last-modified': this.lastModified(),
             '@etag': this.etag(),
-            '@attachments': this.attachments
-        };
+            '@attachments': this.attachments,
+            '@change-vector': this.changeVector
+    };
 
         if (this.nonStandardProps) {
             this.nonStandardProps.forEach(p => dto[p] = (<any>this)[p]);
