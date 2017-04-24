@@ -887,6 +887,28 @@ namespace Voron
         public Win32NativeFileAttributes WinOpenFlags = SafeWin32OpenFlags;
         public DateTime? NonSafeTransactionExpiration { get; set; }
         public TimeSpan DisposeWaitTime { get; set; }
+
+        public int NumOfCocurrentSyncsPerPhysDrive
+        {
+            get
+            {
+                if (_numOfCocurrentSyncsPerPhysDrive < 1)
+                    _numOfCocurrentSyncsPerPhysDrive = 3;
+                return _numOfCocurrentSyncsPerPhysDrive;
+            }
+            set => _numOfCocurrentSyncsPerPhysDrive = value;
+        }
+
+        public int TimeToSyncAfterFlashInSeconds {
+            get
+            {
+                if (_timeToSyncAfterFlashInSeconds < 1)
+                    _timeToSyncAfterFlashInSeconds = 30;
+                return _timeToSyncAfterFlashInSeconds;
+            }
+            set => _timeToSyncAfterFlashInSeconds = value;
+        }
+
         public byte[] MasterKey;
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
@@ -896,6 +918,9 @@ namespace Voron
 
         private readonly SortedList<DateTime, string> _journalsForReuse =
             new SortedList<DateTime, string>();
+
+        private int _numOfCocurrentSyncsPerPhysDrive;
+        private int _timeToSyncAfterFlashInSeconds;
 
         public virtual void SetPosixOptions()
         {

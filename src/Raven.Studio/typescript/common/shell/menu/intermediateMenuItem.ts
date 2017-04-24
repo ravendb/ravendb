@@ -11,7 +11,7 @@ class intermediateMenuItem implements menuItem {
     dynamicHash: dynamicHashType;
     path: KnockoutObservable<string>;
 
-    depth: KnockoutComputed<number> = ko.computed(() => {
+    depth: KnockoutComputed<number> = ko.pureComputed(() => {
         let next = this.parent(),
             result = 0;
         while (next) {

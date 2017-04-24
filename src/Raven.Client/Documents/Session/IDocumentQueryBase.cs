@@ -726,6 +726,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// Sorts the query results by distance.
         /// </summary>
         TSelf SortByDistance(double lat, double lng);
+
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>

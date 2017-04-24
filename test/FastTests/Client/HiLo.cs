@@ -211,7 +211,7 @@ namespace FastTests.Client
                 {
                     var hiloDoc = session.Load<HiloDoc>("Raven/Hilo/users");
                     var max = hiloDoc.Max;
-                    Assert.Equal(max, 34);
+                    Assert.Equal(34, max);
                 }
                 newStore.Dispose();
             }

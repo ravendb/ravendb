@@ -26,7 +26,7 @@ namespace Raven.Server.Web.System
 {
     public class StudioHandler : RequestHandler
     {
-        private static readonly ConcurrentDictionary<string, string> ZipLastChangedDate = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private static readonly ConcurrentDictionary<string, long> ZipLastChangedDate = new ConcurrentDictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 
         private static DateTime _lastFileNamesUpdate = DateTime.MinValue;
 
@@ -162,11 +162,15 @@ namespace Raven.Server.Web.System
 
         private void WriteFileFromZip(string zipPath, string fileName)
         {
-            var etagValue = GetHeader("If-None-Match") ?? GetHeader("If-Match");
-            var currentFileEtag = ZipLastChangedDate.GetOrAdd(zipPath, f => File.GetLastWriteTime(f).Ticks.ToString("G")) + fileName;
-            if (etagValue == $"\"{ currentFileEtag }\"")
+            var etagValue = GetLongFromHeaders("If-None-Match") ?? 
+                GetLongFromHeaders("If-Match");
+            var currentFileEtag = ZipLastChangedDate.GetOrAdd(
+                zipPath, 
+                f => File.GetLastWriteTime(f).Ticks);
+
+            if (etagValue == currentFileEtag)
             {
-                WriteEmptyMessage(HttpStatusCode.NotModified);
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                 return;
             }
 
@@ -211,20 +215,9 @@ namespace Raven.Server.Web.System
             return null;
         }
 
-        public virtual void WriteEmptyMessage(HttpStatusCode code = HttpStatusCode.OK, long? etag = null)
+        protected void WriteETag(long etag)
         {
-            HttpContext.Response.StatusCode = (int)code;
-            WriteETag(etag);
-        }
-
-        protected void WriteETag(long? etag)
-        {
-            WriteETag(etag.ToInvariantString());
-        }
-
-        protected void WriteETag(string etag)
-        {
-            HttpContext.Response.Headers[Constants.Headers.Etag] = etag.ToInvariantString();
+            HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + etag + "\"";
         }
 
         private void WriteEmbeddedFileNotFound(string docPath)

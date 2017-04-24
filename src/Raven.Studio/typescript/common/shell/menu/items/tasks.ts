@@ -7,10 +7,10 @@ export = getTasksMenuItem;
 
 function getTasksMenuItem(appUrls: computedAppUrls) {
     let activeDatabase = activeDatabaseTracker.default.database;
-    var importDatabaseUrl = ko.computed(() => appUrl.forImportDatabase(activeDatabase()));
-    var exportDatabaseUrl = ko.computed(() => appUrl.forExportDatabase(activeDatabase()));
-    var sampleDataUrl = ko.computed(() => appUrl.forSampleData(activeDatabase()));
-    var csvImportUrl = ko.computed(() => appUrl.forCsvImport(activeDatabase()));
+    var importDatabaseUrl = ko.pureComputed(() => appUrl.forImportDatabase(activeDatabase()));
+    var exportDatabaseUrl = ko.pureComputed(() => appUrl.forExportDatabase(activeDatabase()));
+    var sampleDataUrl = ko.pureComputed(() => appUrl.forSampleData(activeDatabase()));
+    var csvImportUrl = ko.pureComputed(() => appUrl.forCsvImport(activeDatabase()));
 
     var submenu: leafMenuItem[] = [
         new leafMenuItem({

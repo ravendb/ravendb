@@ -110,6 +110,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var tuple = await MatchIndex(dynamicIndexName, query, false);
             var index = tuple.Index;
 
+            if (index == null)
+                IndexDoesNotExistException.ThrowFor(dynamicIndexName);
+
             if (existingResultEtag.HasValue)
             {
                 var etag = index.GetIndexEtag();

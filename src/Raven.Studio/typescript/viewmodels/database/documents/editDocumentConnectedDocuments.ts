@@ -44,6 +44,7 @@ class connectedDocuments {
     searchInput = ko.observable<string>("");
     searchInputVisible: KnockoutObservable<boolean>;
     clearSearchInputSubscription: KnockoutSubscription;
+    gridResetSubscription: KnockoutSubscription;
 
     docsColumns: virtualColumn[];
     attachmentsColumns: virtualColumn[];
@@ -148,11 +149,12 @@ class connectedDocuments {
             return this.docsColumns;
         });
 
-        connectedDocuments.currentTab.subscribe(() => this.gridController().reset());
+        this.gridResetSubscription = connectedDocuments.currentTab.subscribe(() => this.gridController().reset());
     }
 
     dispose() {
         this.clearSearchInputSubscription.dispose();
+        this.gridResetSubscription.dispose();
     }
 
     private fetchCurrentTabItems(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument | attachmentItem>> {

@@ -60,32 +60,34 @@ namespace Raven.Client.Documents.Session.Operations
                     continue;
 
                 long? etag;
-                if (batchResult.TryGet("Etag", out etag) == false || etag == null)
-                    throw new InvalidOperationException("PUT response is invalid. Etag is missing.");
+                if (batchResult.TryGet(Constants.Documents.Metadata.Etag, out etag) == false || etag == null)
+                    throw new InvalidOperationException("PUT response is invalid. @etag is missing.");
 
                 string key;
-                if (batchResult.TryGet("Key", out key) == false || key == null)
-                    throw new InvalidOperationException("PUT response is invalid. Key is missing.");
+                if (batchResult.TryGet(Constants.Documents.Metadata.Id, out key) == false || key == null)
+                    throw new InvalidOperationException("PUT response is invalid. @id is missing.");
 
-                string collection;
-                if (batchResult.TryGet("Collection", out collection) == false || collection == null)
-                    throw new InvalidOperationException("PUT response is invalid. Collection is missing.");
 
-                BlittableJsonReaderArray changeVectorArray;
-                if (batchResult.TryGet("ChangeVector", out changeVectorArray) == false || changeVectorArray == null)
-                    throw new InvalidOperationException("PUT response is invalid. ChangeVector is missing.");
+                documentInfo.Metadata.Modifications = null;
+                documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
 
-                if (documentInfo.Metadata.Modifications == null)
-                    documentInfo.Metadata.Modifications = new DynamicJsonValue();
+                foreach (var propertyName in batchResult.GetPropertyNames())
+                {
+                    if(propertyName == "Method")
+                        continue;
 
-                documentInfo.Metadata.Modifications[Constants.Documents.Metadata.Id] = key;
-                documentInfo.Metadata.Modifications[Constants.Documents.Metadata.Etag] = etag;
-                documentInfo.Metadata.Modifications[Constants.Documents.Metadata.Collection] = collection;
-                documentInfo.Metadata.Modifications[Constants.Documents.Metadata.ChangeVector] = changeVectorArray;
+                    documentInfo.Metadata.Modifications[propertyName] = batchResult[propertyName];
+                }
 
                 documentInfo.Id = key;
                 documentInfo.ETag = etag;
                 documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, key);
+                documentInfo.Document.Modifications = null;
+                documentInfo.Document.Modifications = new DynamicJsonValue(documentInfo.Document)
+                {
+                    [Constants.Documents.Metadata.Key] = documentInfo.Metadata
+                };
+                documentInfo.Document = _session.Context.ReadObject(documentInfo.Document, key);
                 documentInfo.MetadataInstance = null;
 
                 _session.DocumentsById.Add(documentInfo);

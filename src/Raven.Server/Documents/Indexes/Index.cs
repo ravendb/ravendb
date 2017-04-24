@@ -186,6 +186,9 @@ namespace Raven.Server.Documents.Indexes
                 options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
+                options.TimeToSyncAfterFlashInSeconds = documentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
+                options.NumOfCocurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+
 
                 environment = new StorageEnvironment(options);
 
@@ -300,6 +303,9 @@ namespace Raven.Server.Documents.Indexes
 
                 options.SchemaVersion = 1;
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
+                options.TimeToSyncAfterFlashInSeconds = documentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
+                options.NumOfCocurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+
 
                 try
                 {
@@ -2207,6 +2213,9 @@ namespace Raven.Server.Documents.Indexes
                     srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                     srcOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
                     srcOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
+                    srcOptions.TimeToSyncAfterFlashInSeconds = DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
+                    srcOptions.NumOfCocurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+
                     var wasRunning = _indexingThread != null;
 
                     Dispose();
@@ -2220,6 +2229,9 @@ namespace Raven.Server.Documents.Indexes
                         compactOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
 
                         compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
+                        compactOptions.TimeToSyncAfterFlashInSeconds = DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
+                        compactOptions.NumOfCocurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+
 
                         StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
                         {

@@ -52,7 +52,7 @@ class shell extends viewModelBase {
     static studioConfigDocumentId = "Raven/StudioConfig";
 
     renewOAuthTokenTimeoutId: number;
-    showContinueTestButton = ko.computed(() => viewModelBase.hasContinueTestOption()); //TODO:
+    showContinueTestButton = ko.pureComputed(() => viewModelBase.hasContinueTestOption()); //TODO:
     showLogOutButton: KnockoutComputed<boolean>; //TODO:
     
     notificationCenter = notificationCenter.instance;

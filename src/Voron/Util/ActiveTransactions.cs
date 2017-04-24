@@ -126,6 +126,30 @@ namespace Voron.Util
             }
         }
 
+        internal List<LowLevelTransaction> AllTransactionsInstances
+        {
+            get
+            {
+                var list = new List<LowLevelTransaction>();
+
+                foreach (var threadActiveTransactions in _activeTransactions.Values)
+                {
+                    var array = threadActiveTransactions.Items;
+                    var len = Math.Min(array.Length, threadActiveTransactions.Length);
+                    for (int i = 0; i < len; i++)
+                    {
+                        var node = array[i];
+                        var transaction = node?.Transaction;
+                        if (transaction == null)
+                            continue;
+
+                        list.Add(transaction);
+                    };
+                    }
+                return list;
+            }
+        }
+
         public bool Contains(LowLevelTransaction tx)
         {
             return Volatile.Read(ref tx.ActiveTransactionNode.Transaction) == tx;

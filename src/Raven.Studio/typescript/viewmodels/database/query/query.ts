@@ -73,6 +73,8 @@ class query extends viewModelBase {
     criteria = ko.observable<queryCriteria>(queryCriteria.empty());
     cacheEnabled = ko.observable<boolean>(true);
 
+    private indexEntrieStateWasTrue: boolean = false; // Used to save current query settings when switching to a 'dynamic' index
+
     filterSettings = {
         searchField: ko.observable<string>(),
         type: ko.observable<filterType>(),
@@ -120,6 +122,7 @@ class query extends viewModelBase {
 
     isIndexMapReduce: KnockoutComputed<boolean>;
     isAutoIndex = ko.observable<boolean>(false);
+    isDynamicIndex = ko.observable<boolean>(false);
     isStaticIndexSelected: KnockoutComputed<boolean>;
     isLoading = ko.observable<boolean>(false);
     containsAsterixQuery: KnockoutComputed<boolean>; // query contains: *.* ?
@@ -129,8 +132,6 @@ class query extends viewModelBase {
     isTestIndex = ko.observable<boolean>(false);
     
     selectedResultIndices = ko.observableArray<number>();
-    
-    isDynamicIndex: KnockoutComputed<boolean>;
     
     enableDeleteButton: KnockoutComputed<boolean>;
     warningText = ko.observable<string>();
@@ -175,7 +176,8 @@ class query extends viewModelBase {
         this.indexPerformanceUrl = ko.pureComputed(() => this.criteria().selectedIndex() ? appUrl.forIndexPerformance(this.activeDatabase(), this.criteria().selectedIndex()) : null);
         this.termsUrl = ko.pureComputed(() => this.criteria().selectedIndex() ? appUrl.forTerms(this.criteria().selectedIndex(), this.activeDatabase()) : null);
         this.visualizerUrl = ko.pureComputed(() => this.criteria().selectedIndex() ? appUrl.forVisualizer(this.activeDatabase(), this.criteria().selectedIndex()) : null);
-        this.isIndexMapReduce = ko.computed(() => {
+
+        this.isIndexMapReduce = ko.pureComputed(() => {
             const currentIndex = this.indexes().find(i => i.name === this.criteria().selectedIndex());
             return !!currentIndex && currentIndex.isMapReduce;
         });
@@ -187,7 +189,6 @@ class query extends viewModelBase {
         this.isInFilter = ko.pureComputed(() => this.filterSettings.type() === "in");
         this.isStringFilter = ko.pureComputed(() => this.filterSettings.type() === "string");
         this.isRangeFilter = ko.pureComputed(() => this.filterSettings.type() === "range");
-        
 
         const dateToString = (input: moment.Moment) => input ? input.format("YYYY-MM-DDTHH:mm:00.0000000") : "";
 
@@ -220,8 +221,17 @@ class query extends viewModelBase {
 
         const criteria = this.criteria();
 
-        criteria.showFields.subscribe(() => this.runQuery());
-        criteria.indexEntries.subscribe(() => this.runQuery());
+        criteria.showFields.subscribe(() => this.runQuery());   
+      
+        criteria.indexEntries.subscribe((checked) => {
+            if (checked && this.isDynamicIndex()) { 
+                criteria.indexEntries(false);
+            } else {
+                // run index entries option only if not dynamic index
+                this.runQuery();
+            }
+        });  
+
         criteria.useAndOperator.subscribe(() => this.runQuery());
 
          /* TODO
@@ -230,11 +240,6 @@ class query extends viewModelBase {
         });
 
         this.selectedIndex.subscribe(index => this.onIndexChanged(index));
-
-        this.isDynamicIndex = ko.computed(() => {
-            var currentIndex = this.indexes().find(i => i.name === this.selectedIndex());
-            return !!currentIndex && currentIndex.name.startsWith("Auto/");
-        });
 
         this.enableDeleteButton = ko.computed(() => {
             var currentIndex = this.indexes().find(i => i.name === this.selectedIndex());
@@ -433,7 +438,10 @@ class query extends viewModelBase {
     }
 
     setSelectedIndex(indexName: string) {
-        this.isAutoIndex(indexName.toLowerCase().startsWith(query.autoPrefix));
+        const indexNameLowerCase = indexName.toLowerCase();
+
+        this.isAutoIndex(indexNameLowerCase.startsWith(query.autoPrefix));
+        this.isDynamicIndex(indexNameLowerCase.startsWith("dynamic/") || indexName === "dynamic"); 
         this.criteria().setSelectedIndex(indexName);
         this.resetFilterSettings();
         this.uiTransformer(null);
@@ -441,6 +449,16 @@ class query extends viewModelBase {
 
         this.columnsSelector.reset();    
         
+        if (this.isDynamicIndex() && this.criteria().indexEntries()) {
+            this.criteria().indexEntries(false);
+            this.indexEntrieStateWasTrue = true; // save the state..
+        }
+
+        if ((!this.isDynamicIndex() && this.indexEntrieStateWasTrue)) {
+            this.criteria().indexEntries(true);
+            this.indexEntrieStateWasTrue = false;
+        }
+
         this.runQuery();
 
         const indexQuery = query.getIndexUrlPartFromIndexName(indexName);
@@ -448,6 +466,7 @@ class query extends viewModelBase {
         this.updateUrl(url);
 
         queryUtil.fetchIndexFields(this.activeDatabase(), indexName, this.indexFields);
+       
     }
 
     private resetFilterSettings() {
@@ -491,7 +510,9 @@ class query extends viewModelBase {
         const criteria = this.criteria();
         const selectedIndex = criteria.selectedIndex();
         this.requestedIndexForQuery(selectedIndex);
+
         if (selectedIndex) {
+
             //TODO: this.isWarning(false);
             this.isLoading(true);
 

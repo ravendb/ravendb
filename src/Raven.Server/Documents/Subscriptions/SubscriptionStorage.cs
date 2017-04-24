@@ -47,6 +47,9 @@ namespace Raven.Server.Documents.Subscriptions
             options.SchemaVersion = 1;
             options.TransactionsMode = TransactionsMode.Lazy;
             options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
+            options.TimeToSyncAfterFlashInSeconds = db.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
+            options.NumOfCocurrentSyncsPerPhysDrive = db.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+
 
             _environment = new StorageEnvironment(options);
             var databaseName = db.Name;

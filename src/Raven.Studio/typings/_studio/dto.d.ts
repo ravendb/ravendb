@@ -57,8 +57,13 @@ interface documentMetadataDto {
     '@etag'?: number;
     '@flags': string;
     '@attachments': Array<documentAttachmentDto>;
+    '@change-vector'?: Array<changeVectorDto>;
 }
 
+interface changeVectorDto {
+    DbId: string;
+    Etag: number;
+}
 interface documentAttachmentDto {
     ContentType: string;
     Hash: string;
@@ -118,7 +123,6 @@ interface saveDocumentResponseItemDto {
     Etag: number;
     Method: string;
     AdditionalData: any;
-    Metadata?: documentMetadataDto; 
     PatchResult: string;
     Deleted: boolean;
 }
