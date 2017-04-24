@@ -84,7 +84,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                await Assert.ThrowsAsync<RavenException>(() => index.ExecuteAsync(store));
+                await Assert.ThrowsAsync<IndexOrTransformerAlreadyExistException>(() => index.ExecuteAsync(store));
             }
         }
     }

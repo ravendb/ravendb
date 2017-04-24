@@ -21,6 +21,7 @@ namespace SlowTests.Bugs.Async
                 {
                     var queryResultAsync = await s.Advanced.AsyncDocumentQuery<dynamic>()
                         .WhereEquals("Name", "Ayende")
+                        .WaitForNonStaleResults()
                         .ToListAsync();
 
                     var result = queryResultAsync;
