@@ -105,7 +105,7 @@ namespace Raven.Server.Rachis
         private void RefreshAmbassadors(ClusterTopology clusterTopology)
         {
             bool lockTaken = false;
-            Monitor.TryEnter(topologyLocker, ref lockTaken);            
+            Monitor.TryEnter(this, ref lockTaken);            
             try
             {
                 //This only means we are been disposed so we can quit now
@@ -208,7 +208,7 @@ namespace Raven.Server.Rachis
             finally
             {
                 if(lockTaken)
-                    Monitor.Exit(topologyLocker);
+                    Monitor.Exit(this);
             }
         }
 
@@ -547,7 +547,6 @@ namespace Raven.Server.Rachis
             return tcs.Task;
         }
 
-        private object topologyLocker = new object();
         public void Dispose()
         {
             bool lockTaken = false;
@@ -557,7 +556,7 @@ namespace Raven.Server.Rachis
                 if (lockTaken == false)
                 {
                     //We need to wait that refresh ambassador finish
-                    if (Monitor.Wait(topologyLocker, TimeSpan.FromSeconds(15)) == false)
+                    if (Monitor.Wait(this, TimeSpan.FromSeconds(15)) == false)
                     {
                         var message = $"Leader {_engine.Tag}: Refresh ambassador is taking the lock for 15 sec giving up on leader dispose";
                         if (_engine.Log.IsInfoEnabled)
@@ -621,7 +620,7 @@ namespace Raven.Server.Rachis
             finally
             {
                 if(lockTaken)
-                    Monitor.Exit(topologyLocker);
+                    Monitor.Exit(this);
             }
         }
 
