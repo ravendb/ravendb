@@ -155,6 +155,8 @@ namespace Raven.Client
 
                     public const string AllFields = "__all_fields";
 
+                    public const string AllStoredFields = "__all_stored_fields";
+
                     public const string DefaultSpatialFieldName = "__spatial";
 
                     public const string SpatialShapeFieldName = "__spatial_shape";
