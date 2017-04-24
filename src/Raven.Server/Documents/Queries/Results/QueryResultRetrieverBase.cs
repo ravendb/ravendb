@@ -4,6 +4,7 @@ using Lucene.Net.Documents;
 using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using System.Collections.Generic;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
 using System.IO;
@@ -48,33 +49,52 @@ namespace Raven.Server.Documents.Queries.Results
             if (_fieldsToFetch.IsDistinct == false && string.IsNullOrEmpty(id) == false)
                 result[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = id;
 
-            Dictionary<string, FieldsToFetch.FieldToFetch> fields;
-            if (_fieldsToFetch.ExtractAllFromIndexAndDocument)
+            Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
+            if (_fieldsToFetch.ExtractAllFromIndex || _fieldsToFetch.ExtractAllFromDocument)
             {
-                fields = input.GetFields()
-                    .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName && 
-                                x.Name != Constants.Documents.Indexing.Fields.ReduceKeyFieldName &&
-                                x.Name != Constants.Documents.Indexing.Fields.ReduceValueFieldName)
-                    .Distinct(UniqueFieldNames.Instance)
-                    .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, x.IsStored));
-
-                doc = DirectGet(input, id);
-                documentLoaded = true;
-
-                if (doc != null)
+                if (_fieldsToFetch.ExtractAllFromIndex)
                 {
-                    foreach (var name in doc.Data.GetPropertyNames())
-                    {
-                        if (fields.ContainsKey(name))
-                            continue;
+                    fields = input.GetFields()
+                        .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName
+                                    && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyFieldName
+                                    && x.Name != Constants.Documents.Indexing.Fields.ReduceValueFieldName
+                                    && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
+                        .Distinct(UniqueFieldNames.Instance)
+                        .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, x.IsStored));
+                }
 
-                        fields[name] = new FieldsToFetch.FieldToFetch(name, canExtractFromIndex: false);
+                if (_fieldsToFetch.ExtractAllFromDocument)
+                {
+                    if (fields == null)
+                        fields = new Dictionary<string, FieldsToFetch.FieldToFetch>();
+
+                    doc = DirectGet(input, id);
+                    documentLoaded = true;
+
+                    if (doc != null)
+                    {
+                        foreach (var name in doc.Data.GetPropertyNames())
+                        {
+                            if (fields.ContainsKey(name))
+                                continue;
+
+                            fields[name] = new FieldsToFetch.FieldToFetch(name, canExtractFromIndex: false);
+                        }
                     }
                 }
             }
-            else
-            {
+
+            if (fields == null)
                 fields = _fieldsToFetch.Fields;
+            else if (_fieldsToFetch.Fields != null && _fieldsToFetch.Fields.Count > 0)
+            {
+                foreach (var kvp in _fieldsToFetch.Fields)
+                {
+                    if (fields.ContainsKey(kvp.Key))
+                        continue;
+
+                    fields[kvp.Key] = kvp.Value;
+                }
             }
 
             foreach (var fieldToFetch in fields.Values)
