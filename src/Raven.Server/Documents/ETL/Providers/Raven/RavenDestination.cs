@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
     public class RavenDestination : EtlDestination
     {
         private string _url;
+        private string _uniqueName;
 
         public string Url
         {
@@ -30,9 +30,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return errors.Count == 0;
         }
 
-        public override string ToString()
-        {
-            return $"{Database}@{Url}";
-        }
+        public override string UniqueName => _uniqueName ?? (_uniqueName = $"{Database}@{Url}");
     }
 }

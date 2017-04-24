@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
         }
 
-        protected override bool ShouldFilterOutSystemDocument(bool hiLoDoc)
+        protected override bool ShouldFilterOutSystemDocument(bool isHiLo)
         {
             return true;
         }
