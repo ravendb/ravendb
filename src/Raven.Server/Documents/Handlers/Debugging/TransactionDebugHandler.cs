@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -45,9 +46,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         private DynamicJsonArray ToJson(List<TransactionInfo> txInfos)
         {
-            if (txInfos.Count < 1)
-                return  new DynamicJsonArray();
-
             return new DynamicJsonArray(txInfos.Select(ToJson));
         }
 
@@ -65,8 +63,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return new DynamicJsonValue
             {
                 [nameof(TxInfoResult.TransactionId)] = lowLevelTransaction.Id,
-                [nameof(TxInfoResult.ThreadId)] = lowLevelTransaction.ThreadId,
-                [nameof(TxInfoResult.StartTime)] = lowLevelTransaction.TxStartTime,
+                [nameof(TxInfoResult.ThreadId)] = lowLevelTransaction.CurrentTransactionHolder?.Id,
+                [nameof(TxInfoResult.ThreadName)] = lowLevelTransaction.CurrentTransactionHolder?.Name,
+                [nameof(TxInfoResult.StartTime)] = lowLevelTransaction.TxStartTime.GetDefaultRavenFormat(),
                 [nameof(TxInfoResult.TotalTime)] = $"{(DateTime.UtcNow - lowLevelTransaction.TxStartTime).Milliseconds} mSecs",
                 [nameof(TxInfoResult.FlushInProgressLockTaken)] = lowLevelTransaction.FlushInProgressLockTaken,
                 [nameof(TxInfoResult.Flags)] = lowLevelTransaction.Flags,
@@ -81,6 +80,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
     {
         public int TransactionId;
         public int ThreadId;
+        public string ThreadName;
         public int StartTime;
         public int TotalTime;
         public bool FlushInProgressLockTaken;

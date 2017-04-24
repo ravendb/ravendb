@@ -146,6 +146,8 @@ namespace Voron.Impl
             env.Options.AssertNoCatastrophicFailure();
 
             FlushInProgressLockTaken = previous.FlushInProgressLockTaken;
+            CurrentTransactionHolder = previous.CurrentTransactionHolder;
+            TxStartTime = previous.TxStartTime;
             DataPager = env.Options.DataPager;
             _env = env;
             _journal = env.Journal;
@@ -208,7 +210,6 @@ namespace Voron.Impl
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null)
         {
             TxStartTime = DateTime.UtcNow;
-            ThreadId = Thread.CurrentThread.ManagedThreadId;
             env.Options.AssertNoCatastrophicFailure();
 
             DataPager = env.Options.DataPager;
@@ -627,6 +628,7 @@ namespace Voron.Impl
 
 
         public bool IsDisposed => _disposed;
+        public NativeMemory.ThreadStats CurrentTransactionHolder { get; set; }
 
         public void Dispose()
         {
@@ -954,7 +956,6 @@ namespace Voron.Impl
         internal ImmutableAppendOnlyList<JournalFile> JournalFiles;
         internal bool AlreadyAllowedDisposeWithLazyTransactionRunning;
         public DateTime TxStartTime;
-        public int ThreadId;
         
         public void EnsurePagerStateReference(PagerState state)
         {
