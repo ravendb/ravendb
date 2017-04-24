@@ -6,6 +6,11 @@ namespace Raven.Server.Documents.ETL
     {
         public abstract bool Validate(ref List<string> errors);
 
-        public abstract override string ToString();
+        public abstract string UniqueName { get; }
+
+        public override string ToString()
+        {
+            return UniqueName;
+        }
     }
 }

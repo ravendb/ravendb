@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Transformers;
@@ -21,6 +22,8 @@ namespace Raven.Server.Documents
         public OperationsStorage OperationsStorage { get; }
 
         public StorageEnvironment Environment { get; }
+
+        public EtlStorage EtlStorage { get; }
 
         public ConfigurationStorage(DocumentDatabase db)
         {
@@ -47,6 +50,8 @@ namespace Raven.Server.Documents
 
             OperationsStorage = new OperationsStorage();
 
+            EtlStorage = new EtlStorage(db.Name);
+
             _contextPool = new TransactionContextPool(Environment);
         }
 
@@ -59,6 +64,7 @@ namespace Raven.Server.Documents
         {
             IndexesEtagsStorage.Initialize(Environment, _contextPool, indexStore, transformerStore);
             OperationsStorage.Initialize(Environment, _contextPool);
+            EtlStorage.Initialize(Environment, _contextPool);
         }
 
         public void Dispose()
