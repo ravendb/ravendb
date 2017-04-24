@@ -438,8 +438,10 @@ class query extends viewModelBase {
     }
 
     setSelectedIndex(indexName: string) {
-        this.isAutoIndex(indexName.toLowerCase().startsWith(query.autoPrefix));
-        this.isDynamicIndex(indexName.toLowerCase().startsWith("dynamic")); // Note: this includes the all_documents options which is w/o the slash..
+        const indexNameLowerCase = indexName.toLowerCase();
+
+        this.isAutoIndex(indexNameLowerCase.startsWith(query.autoPrefix));
+        this.isDynamicIndex(indexNameLowerCase.startsWith("dynamic/") || indexName === "dynamic"); 
         this.criteria().setSelectedIndex(indexName);
         this.resetFilterSettings();
         this.uiTransformer(null);
