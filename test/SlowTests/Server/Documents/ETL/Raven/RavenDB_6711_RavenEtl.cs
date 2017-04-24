@@ -247,6 +247,98 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         }
 
+        [Fact]
+        public void Script_defined_for_all_documents_with_filtering_and_loads_to_the_same_collection_for_some_docs()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses >= 3);
+
+                SetupEtl(src, dest, collections: new string[0], script: @"
+if (this['@metadata']['@collection'] != 'Orders')
+    loadToPeople({Name: this.Name})"
+                    , applyToAllDocuments: true);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Agent Smith"
+                    });
+
+                    session.Store(new User
+                    {
+                        Name = "Neo"
+                    });
+
+                    session.Store(new Order
+                    {
+                        Id = "orders/1"
+                    });
+
+                    session.SaveChanges();
+                }
+
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+
+                using (var session = dest.OpenSession())
+                {
+                    var stats = dest.Admin.Send(new GetStatisticsOperation());
+
+                    Assert.Equal(2, stats.CountOfDocuments);
+
+                    var smith = session.Load<Person>("people/1");
+                    Assert.NotNull(smith);
+
+                    var neo = session.Advanced.LoadStartingWith<Person>("users/1/people")[0];
+                    Assert.NotNull(neo);
+                }
+
+                // update
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    user.Name = "James Doe";
+
+                    session.SaveChanges();
+                }
+
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+
+                {
+                    var stats = dest.Admin.Send(new GetStatisticsOperation());
+
+                    Assert.Equal(2, stats.CountOfDocuments);
+                }
+
+                // delete
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    session.Delete(user);
+
+                    session.SaveChanges();
+                }
+
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+
+                {
+                    var stats = dest.Admin.Send(new GetStatisticsOperation());
+
+                    Assert.Equal(1, stats.CountOfDocuments);
+                }
+            }
+        }
+
         private class AuditItem
         {
             public string Id { get; set; }
