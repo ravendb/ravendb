@@ -48,7 +48,18 @@ namespace FastTests.Server
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
-                    Assert.True(HasEtagInDatabaseDocumentResponse(store.Url, store.DefaultDatabase, context));
+                    var command = new GetDatabaseDocumentTestCommand();
+                    using (var requestExecuter = RequestExecutor.Create(store.Url, store.DefaultDatabase, null))
+                    {
+                        requestExecuter.Execute(command, context);
+                    }
+
+                    var result = command.Result;
+                    BlittableJsonReaderObject metadata;
+                    var hasMetadataProperty = result.TryGet("@metadata", out metadata);
+                    long etag;
+                    var hasEtagProperty = metadata.TryGet("@etag", out etag);
+                    Assert.True(hasMetadataProperty && hasEtagProperty && etag > 0, $"{hasMetadataProperty} - {hasEtagProperty} - {etag}");
                 }
             }
         }
@@ -108,22 +119,6 @@ namespace FastTests.Server
             }
 
             public override bool IsReadRequest => true;
-        }
-
-        private bool HasEtagInDatabaseDocumentResponse(string url, string databaseName, JsonOperationContext context)
-        {
-            var command = new GetDatabaseDocumentTestCommand();
-            using (var requestExecuter = RequestExecutor.Create(url, databaseName, null))
-            {
-                requestExecuter.Execute(command, context);
-            }
-
-            var result = command.Result;
-            BlittableJsonReaderObject metadata;
-            var hasMetadataProperty = result.TryGet("@metadata", out metadata);
-            long etag;
-            var hasEtagProperty = metadata.TryGet("@etag", out etag);
-            return hasMetadataProperty && hasEtagProperty && etag > 0;
         }
 
         [Fact]
