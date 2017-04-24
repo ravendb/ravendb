@@ -260,15 +260,13 @@ namespace Raven.Server.ServerWide
         }
 
         public async Task<long> ModifyConflictSolverAsync(JsonOperationContext context, string key, 
-            string resolveDbId,BlittableJsonReaderObject scriptResolver, bool latest)
+            BlittableJsonReaderObject solver)
         {
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
                 ["Type"] = nameof(ModifyConflictSolverCommand),
                 [nameof(ModifyConflictSolverCommand.DatabaseName)] = key,
-                [nameof(ModifyConflictSolverCommand.ResolveToLatest)] = latest,
-                [nameof(ModifyConflictSolverCommand.DatabaseResolverId)] = resolveDbId,
-                [nameof(ModifyConflictSolverCommand.ResolveByCollection)] = scriptResolver
+                [nameof(ModifyConflictSolverCommand.Solver)] = solver
             }, "update-conflict-resolver-cmd"))
             {
                 return await SendToLeaderAsync(putCmd);
