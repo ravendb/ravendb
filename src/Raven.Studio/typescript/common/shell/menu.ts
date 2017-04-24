@@ -11,7 +11,7 @@ class menu {
     activeItem: KnockoutObservable<menuItem> = ko.observable(null);
     deepestOpenItem: KnockoutObservable<intermediateMenuItem> = ko.observable(null);
     level: KnockoutComputed<number> =
-        ko.computed(() => {
+        ko.pureComputed(() => {
             let item = this.deepestOpenItem();
             return item ? item.depth() + 1 : 0;
         });
@@ -62,7 +62,7 @@ class menu {
             }, new Map<RegExp, leafMenuItem>());
     });
 
-    private registeredRoutes: KnockoutComputed<Array<RegExp>> = ko.computed(() => {
+    private registeredRoutes: KnockoutComputed<Array<RegExp>> = ko.pureComputed(() => {
         return Array.from(this.routeToItemCache().keys());
     });
 

@@ -1,12 +1,17 @@
-<div class="checkbox pull-left">
-    <input data-bind="attr: { id: 'dont-show-' + hint.id }, checked: hint.dontShowAgain" class="styled" type="checkbox">
-    <label data-bind="attr: { for: 'dont-show-' + hint.id }">
-        Don't show again
-    </label>
-</div>
-<div class="pull-right">
-    <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
-    <button type="button" class="btn btn-default" data-bind="click: $root.dismiss">
-        <i class="icon-cancel"></i> <span>Dismiss</span>
-    </button>
+<div class="flex-horizontal">
+    <div>
+        <div class="checkbox">
+            <input data-bind="attr: { id: 'dont-show-' + hint.id }, checked: hint.dontShowAgain" class="styled" type="checkbox">
+            <label data-bind="attr: { for: 'dont-show-' + hint.id }">
+                Don't show again
+            </label>
+        </div>
+    </div>
+    <div class="flex-separator"></div>
+    <div>
+        <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
+        <button type="button" class="btn btn-default" data-bind="click: $root.dismiss">
+            <i class="icon-cancel"></i> <span>Dismiss</span>
+        </button>
+    </div>
 </div>

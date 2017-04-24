@@ -13,7 +13,7 @@ class oauthContext {
         oauthContext.authHeader(null);
     }
 
-    static apiKeyName = ko.computed(() => {
+    static apiKeyName = ko.pureComputed(() => {
         var key = oauthContext.apiKey();
         if (key === null) {
             return null;
@@ -25,7 +25,7 @@ class oauthContext {
         return null;
     });
 
-    static apiKeySecret = ko.computed(() => {
+    static apiKeySecret = ko.pureComputed(() => {
         var key = oauthContext.apiKey();
         if (key === null) {
             return null;

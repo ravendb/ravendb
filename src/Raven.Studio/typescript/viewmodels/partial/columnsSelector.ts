@@ -167,7 +167,7 @@ class columnsSelector<T> {
         const list = $(".columns-list-container .column-list")[0];
 
         // ReSharper disable once WrongExpressionStatement
-        new Sortable(list,
+        const sort = new Sortable(list,
         {
             handle: ".column-rearrange",
             onEnd: (event: { oldIndex: number, newIndex: number }) => {
@@ -175,6 +175,10 @@ class columnsSelector<T> {
                 layout.splice(event.newIndex, 0, layout.splice(event.oldIndex, 1)[0]);
                 this.columnLayout(layout);
             }
+        });
+
+        ko.utils.domNodeDisposal.addDisposeCallback(list, () => {
+            sort.destroy();
         });
     }
 
