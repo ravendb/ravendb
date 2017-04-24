@@ -26,7 +26,7 @@ class queryIndexCommand extends commandBase {
             start: this.skip,
             pageSize: this.take,
             sort: criteria.sorts().filter(x => x.fieldName()).map(x => x.toQuerySortString()),
-            fetch: criteria.showFields() ? "__all_fields" : undefined,
+            fetch: criteria.showFields() ? "__all_stored_fields" : undefined,
             debug: criteria.indexEntries() ? "entries" : undefined,
             operator: criteria.useAndOperator() ? "AND" : undefined, 
             disableCache: this.disableCache ? Date.now() : undefined
@@ -42,7 +42,7 @@ class queryIndexCommand extends commandBase {
         const urlArgs = this.urlEncodeArgs({
             query: criteria.queryText() || undefined,
             sort: criteria.sorts().filter(x => x.fieldName()).map(x => x.toQuerySortString()),
-            fetch: criteria.showFields() ? "__all_fields" : undefined,
+            fetch: criteria.showFields() ? "__all_stored_fields" : undefined,
             debug: criteria.indexEntries() ? "entries" : undefined,
             operator: criteria.useAndOperator() ? "AND" : undefined,
             format: "excel",
