@@ -251,14 +251,16 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize,  ChangeVectorEntry[] changeVector, (LazyStringValue name, LazyStringValue contentType, Slice base64Hash) attachment)
+        private void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, 
+            ChangeVectorEntry[] changeVector, (LazyStringValue name, LazyStringValue contentType, Slice base64Hash) attachment)
         {
             var attachmenEtag = _documentsStorage.GenerateNextEtag();
 
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, attachment.name, out Slice lowerName, out Slice namePtr);
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, attachment.contentType, out Slice lowerContentType, out Slice contentTypePtr);
 
-            using (GetAttachmentKey(context, lowerKey, lowerKeySize, lowerName.Content.Ptr, lowerName.Size, attachment.base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size,  AttachmentType.Revision, changeVector, out Slice keySlice))
+            using (GetAttachmentKey(context, lowerKey, lowerKeySize, lowerName.Content.Ptr, lowerName.Size, attachment.base64Hash, 
+                lowerContentType.Content.Ptr, lowerContentType.Size,  AttachmentType.Revision, changeVector, out Slice keySlice))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                 using (table.Allocate(out TableValueBuilder tbv))
