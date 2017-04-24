@@ -346,6 +346,7 @@ namespace Raven.Server.Web.System
                         ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Delete));
                     }
                 }
+                await ServerStore.Cluster.WaitForIndexNotification(newEtag);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

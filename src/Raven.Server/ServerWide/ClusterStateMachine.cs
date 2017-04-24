@@ -69,14 +69,6 @@ namespace Raven.Server.ServerWide
 
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
-            {
-                if (transaction is LowLevelTransaction llt && llt.Committed)
-                {
-                    _rachisLogIndexNotifications.NotifyListenersAbout(index);
-                }
-            };
-
             string type;
             if (cmd.TryGet("Type", out type) == false)
                 return;
@@ -99,7 +91,6 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteIndexCommand):
                 case nameof(SetIndexLockCommand):
                 case nameof(SetIndexPriorityCommand):
-
                 case nameof(PutTransformerCommand):
                 case nameof(SetTransformerLockCommand):
                 case nameof(DeleteTransformerCommand):
@@ -151,8 +142,8 @@ namespace Raven.Server.ServerWide
                 }
 
                 databaseRecord.Topology.Members.RemoveAll(m => m.NodeTag == remove.NodeTag);
-                databaseRecord.Topology.Promotables.RemoveAll(p=> p.NodeTag == remove.NodeTag);
-               
+                databaseRecord.Topology.Promotables.RemoveAll(p => p.NodeTag == remove.NodeTag);
+
                 databaseRecord.DeletionInProgress.Remove(remove.NodeTag);
 
                 if (databaseRecord.Topology.Members.Count == 0 &&
@@ -222,7 +213,7 @@ namespace Raven.Server.ServerWide
                 else
                 {
                     var allNodes = databaseRecord.Topology.Members.Select(m => m.NodeTag)
-                        .Concat(databaseRecord.Topology.Promotables.Select(p=>p.NodeTag));
+                        .Concat(databaseRecord.Topology.Promotables.Select(p => p.NodeTag));
 
                     foreach (var node in allNodes)
                     {
@@ -250,87 +241,118 @@ namespace Raven.Server.ServerWide
 
         private unsafe void AddDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
-
-            TableValueBuilder builder;
-            Slice valueName, valueNameLowered;
-            using (items.Allocate(out builder))
-            using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out valueName))
-            using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out valueNameLowered))
-            using (var rec = context.ReadObject(addDatabaseCommand.Value, "inner-val"))
+            try
             {
-                if (addDatabaseCommand.Etag != null)
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+                TableValueBuilder builder;
+                Slice valueName, valueNameLowered;
+                using (items.Allocate(out builder))
+                using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out valueName))
+                using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out valueNameLowered))
+                using (var rec = context.ReadObject(addDatabaseCommand.Value, "inner-val"))
                 {
-                    TableValueReader reader;
-                    if (items.ReadByKey(valueNameLowered, out reader) == false && addDatabaseCommand.Etag != 0)
+                    if (addDatabaseCommand.Etag != null)
                     {
-                        NotifyLeaderAboutError(index, leader, new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " does not exists, but had a non zero etag"));
-                        return;
+                        TableValueReader reader;
+                        if (items.ReadByKey(valueNameLowered, out reader) == false && addDatabaseCommand.Etag != 0)
+                        {
+                            NotifyLeaderAboutError(index, leader, new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " does not exists, but had a non zero etag"));
+                            return;
+                        }
+
+                        int size;
+                        var actualEtag = *(long*)reader.Read(3, out size);
+                        Debug.Assert(size == sizeof(long));
+
+                        if (actualEtag != addDatabaseCommand.Etag.Value)
+                        {
+                            NotifyLeaderAboutError(index, leader,
+                                new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag + " but was expecting " + addDatabaseCommand.Etag));
+                            return;
+                        }
                     }
 
-                    int size;
-                    var actualEtag = *(long*)reader.Read(3, out size);
-                    Debug.Assert(size == sizeof(long));
+                    builder.Add(valueNameLowered);
+                    builder.Add(valueName);
+                    builder.Add(rec.BasePointer, rec.Size);
+                    builder.Add(index);
 
-                    if (actualEtag != addDatabaseCommand.Etag.Value)
-                    {
-                        NotifyLeaderAboutError(index, leader,
-                            new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag + " but was expecting " + addDatabaseCommand.Etag));
-                        return;
-                    }
+                    items.Set(builder);
                 }
-
-                builder.Add(valueNameLowered);
-                builder.Add(valueName);
-                builder.Add(rec.BasePointer, rec.Size);
-                builder.Add(index);
-
-                items.Set(builder);
+            }
+            finally
+            {
                 NotifyDatabaseChanged(context, addDatabaseCommand.Name, index);
             }
         }
 
-        private static void DeleteValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private void DeleteValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            var delCmd = JsonDeserializationCluster.DeleteValueCommand(cmd);
-            if (delCmd.Name.StartsWith("db/"))
+            try
             {
-                NotifyLeaderAboutError(index, leader, new InvalidOperationException("Cannot set " + delCmd.Name + " using DeleteValueCommand, only via dedicated Database calls"));
-                return;
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                var delCmd = JsonDeserializationCluster.DeleteValueCommand(cmd);
+                if (delCmd.Name.StartsWith("db/"))
+                {
+                    NotifyLeaderAboutError(index, leader, new InvalidOperationException("Cannot set " + delCmd.Name + " using DeleteValueCommand, only via dedicated Database calls"));
+                    return;
+                }
+                Slice str;
+                using (Slice.From(context.Allocator, delCmd.Name, out str))
+                {
+                    items.DeleteByKey(str);
+                }
             }
-            Slice str;
-            using (Slice.From(context.Allocator, delCmd.Name, out str))
+            finally
             {
-                items.DeleteByKey(str);
+                NotifyIndexProcessed(context, index);
             }
         }
 
-        private static unsafe void PutValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private unsafe void PutValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            var putVal = JsonDeserializationCluster.PutValueCommand(cmd);
-            if (putVal.Name.StartsWith("db/"))
+            try
             {
-                NotifyLeaderAboutError(index, leader, new InvalidOperationException("Cannot set " + putVal.Name + " using PutValueCommand, only via dedicated Database calls"));
-                return;
-            }
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                var putVal = JsonDeserializationCluster.PutValueCommand(cmd);
+                if (putVal.Name.StartsWith("db/"))
+                {
+                    NotifyLeaderAboutError(index, leader, new InvalidOperationException("Cannot set " + putVal.Name + " using PutValueCommand, only via dedicated Database calls"));
+                    return;
+                }
 
-            TableValueBuilder builder;
-            Slice valueName, valueNameLowered;
-            using (items.Allocate(out builder))
-            using (Slice.From(context.Allocator, putVal.Name, out valueName))
-            using (Slice.From(context.Allocator, putVal.Name.ToLowerInvariant(), out valueNameLowered))
-            using (var rec = context.ReadObject(putVal.Value, "inner-val"))
+                TableValueBuilder builder;
+                Slice valueName, valueNameLowered;
+                using (items.Allocate(out builder))
+                using (Slice.From(context.Allocator, putVal.Name, out valueName))
+                using (Slice.From(context.Allocator, putVal.Name.ToLowerInvariant(), out valueNameLowered))
+                using (var rec = context.ReadObject(putVal.Value, "inner-val"))
+                {
+                    builder.Add(valueNameLowered);
+                    builder.Add(valueName);
+                    builder.Add(rec.BasePointer, rec.Size);
+                    builder.Add(index);
+
+                    items.Set(builder);
+                }
+            }
+            finally
             {
-                builder.Add(valueNameLowered);
-                builder.Add(valueName);
-                builder.Add(rec.BasePointer, rec.Size);
-                builder.Add(index);
-
-                items.Set(builder);
+                NotifyIndexProcessed(context, index);
             }
+        }
+
+        private void NotifyIndexProcessed(TransactionOperationContext context, long index)
+        {
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
+            {
+                if (transaction is LowLevelTransaction llt && llt.Committed)
+                {
+                    _rachisLogIndexNotifications.NotifyListenersAbout(index);
+                }
+            };
         }
 
         private void NotifyDatabaseChanged(TransactionOperationContext context, string databaseName, long index)
@@ -341,7 +363,15 @@ namespace Raven.Server.ServerWide
                 {
                     TaskExecuter.Execute(_ =>
                     {
-                        DatabaseChanged?.Invoke(this, (databaseName, index));
+                        try
+                        {
+
+                            DatabaseChanged?.Invoke(this, (databaseName, index));
+                        }
+                        finally
+                        {
+                            _rachisLogIndexNotifications.NotifyListenersAbout(index);
+                        }
                     }, null);
                 }
             };
@@ -355,53 +385,61 @@ namespace Raven.Server.ServerWide
             if (cmd.TryGet(DatabaseName, out databaseName) == false)
                 throw new ArgumentException("Update database command must contain a DatabaseName property");
 
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            var dbKey = "db/" + databaseName;
-
-            Slice valueName;
-            Slice valueNameLowered;
-            using (Slice.From(context.Allocator, dbKey, out valueName))
-            using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out valueNameLowered))
+            try
             {
-                long etag;
-                var doc = ReadInternal(context, out etag, valueNameLowered);
+               
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                var dbKey = "db/" + databaseName;
 
-                if (doc == null)
+                Slice valueName;
+                Slice valueNameLowered;
+                using (Slice.From(context.Allocator, dbKey, out valueName))
+                using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out valueNameLowered))
                 {
-                    NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
-                    return;
-                }
+                    long etag;
+                    var doc = ReadInternal(context, out etag, valueNameLowered);
 
-                bool doUpdate;
-                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
-                var updateCommand = JsonDeserializationCluster.UpdateDatabaseCommands[type](cmd);
-                try
-                {
-                    updateCommand.UpdateDatabaseRecord(databaseRecord, index);
-                    doUpdate = true;
-                }
-                catch (Exception e)
-                {
-                    NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type} for database {databaseName}", e));
-                    doUpdate = false;
-                }
-                if (doUpdate)
-                {
-                    var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
-
-                    TableValueBuilder builder;
-                    using (items.Allocate(out builder))
+                    if (doc == null)
                     {
-                        builder.Add(valueNameLowered);
-                        builder.Add(valueName);
+                        NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
+                        return;
+                    }
 
-                        builder.Add(updatedDatabaseBlittable.BasePointer, updatedDatabaseBlittable.Size);
-                        builder.Add(index);
-                        items.Set(builder);
+                    bool doUpdate;
+                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
+                    var updateCommand = JsonDeserializationCluster.UpdateDatabaseCommands[type](cmd);
+                    try
+                    {
+                        updateCommand.UpdateDatabaseRecord(databaseRecord, index);
+                        doUpdate = true;
+                    }
+                    catch (Exception e)
+                    {
+                        NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type} for database {databaseName}", e));
+                        doUpdate = false;
+                    }
+                    if (doUpdate)
+                    {
+                        var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
+
+                        TableValueBuilder builder;
+                        using (items.Allocate(out builder))
+                        {
+                            builder.Add(valueNameLowered);
+                            builder.Add(valueName);
+
+                            builder.Add(updatedDatabaseBlittable.BasePointer, updatedDatabaseBlittable.Size);
+                            builder.Add(index);
+                            items.Set(builder);
+                        }
                     }
                 }
             }
-            NotifyDatabaseChanged(context, databaseName, index);
+            finally
+            {
+                NotifyDatabaseChanged(context, databaseName, index);
+
+            }
         }
 
         private static void NotifyLeaderAboutError(long index, Leader leader, Exception e)
