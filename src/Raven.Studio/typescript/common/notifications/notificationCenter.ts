@@ -305,15 +305,10 @@ class notificationCenter {
 
     openDetails(notification: abstractNotification) {
         //TODO: it is only temporary solution to display progress/details as JSON in dialog
-        const notificationCenterOpened = this.showNotifications();
-
         for (let i = 0; i < this.customDetailsProviders.length; i++) {
             const provider = this.customDetailsProviders[i];
             if (provider.supportsDetailsFor(notification)) {
-                provider.showDetailsFor(notification, this)
-                    .done(() => {
-                        this.showNotifications(notificationCenterOpened);
-                    });
+                provider.showDetailsFor(notification, this);
                 return;
             }
         }
@@ -322,17 +317,11 @@ class notificationCenter {
             const currentAlert = notification as alert;
             const text = JSON.stringify(currentAlert.details(), null, 4);
 
-            app.showBootstrapDialog(new showDataDialog("Alert", text, "javascript"))
-                .done(() => {
-                    this.showNotifications(notificationCenterOpened);
-                });
+            app.showBootstrapDialog(new showDataDialog("Alert", text, "javascript"));
         } else if (notification instanceof performanceHint) {
             const currentHint = notification as performanceHint;
             const text = JSON.stringify(currentHint.details(), null, 4);
-            app.showBootstrapDialog(new showDataDialog("Performance Hint", text, "javascript"))
-                .done(() => {
-                    this.showNotifications(notificationCenterOpened);
-                });
+            app.showBootstrapDialog(new showDataDialog("Performance Hint", text, "javascript"));
         } else if (notification instanceof operation) {
             const op = notification as operation;
             
@@ -341,21 +330,14 @@ class notificationCenter {
 
                 return completed ? op.result() : op.progress();
             });
-            app.showBootstrapDialog(new tempStatDialog(dialogText))
-                .done(() => {
-                    this.showNotifications(notificationCenterOpened);
-                });
+            app.showBootstrapDialog(new tempStatDialog(dialogText));
         } else if (notification instanceof recentError) {
             const error = notification as recentError;
             const recentErrorDetails = {
                 httpStatus: error.httpStatus(),
                 details: error.details()
             };
-            app.showBootstrapDialog(new tempStatDialog(recentErrorDetails))
-                .done(() => {
-                    this.showNotifications(notificationCenterOpened);
-                });
-
+            app.showBootstrapDialog(new tempStatDialog(recentErrorDetails));
         } else {
             throw new Error("Unable to handle details for: " + notification);
         }
@@ -363,7 +345,8 @@ class notificationCenter {
 
     private shouldConsumeHideEvent(e: Event) {
         return $(e.target).closest(".notification-center-container").length === 0
-            && $(e.target).closest("#notification-toggle").length === 0;
+            && $(e.target).closest("#notification-toggle").length === 0
+            && $(e.target).closest(".modal.in").length === 0;
     }
 }
 

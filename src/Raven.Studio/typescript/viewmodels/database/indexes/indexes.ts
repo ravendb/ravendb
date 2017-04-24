@@ -90,7 +90,7 @@ class indexes extends viewModelBase {
     private initObservables() {
         this.searchText.throttle(200).subscribe(() => this.filterIndexes());
 
-        this.sortedGroups = ko.computed<indexGroup[]>(() => {
+        this.sortedGroups = ko.pureComputed<indexGroup[]>(() => {
             var groups = this.indexGroups().slice(0).sort((l, r) => l.entityName.toLowerCase() > r.entityName.toLowerCase() ? 1 : -1);
 
             groups.forEach((group: { entityName: string; indexes: KnockoutObservableArray<index> }) => {
@@ -100,7 +100,7 @@ class indexes extends viewModelBase {
             return groups;
         });
 
-        this.lockModeCommon = ko.computed(() => {
+        this.lockModeCommon = ko.pureComputed(() => {
             const selectedIndexes = this.getSelectedIndexes();
             if (selectedIndexes.length === 0)
                 return "None";

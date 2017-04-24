@@ -1,6 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
-class inProgressAnimator {
+class inProgressAnimator implements disposable {
 
     private inProgressArea: number[][] = [];
     private canvas: HTMLCanvasElement;
@@ -9,7 +9,7 @@ class inProgressAnimator {
     private inMemoryStripesCanvas: HTMLCanvasElement;
 
     private hasTimerRunning = false;
-    private startTime: number;
+    private disposed = false;
 
     private static readonly stripesPadding = 10;
 
@@ -48,6 +48,10 @@ class inProgressAnimator {
         this.inProgressArea.push(input);
     }
 
+    dispose() {
+        this.disposed = true;
+    }
+
     animate() {
         if (this.hasTimerRunning) {
             return;
@@ -55,8 +59,6 @@ class inProgressAnimator {
 
         if (this.inProgressArea.length) {
             this.hasTimerRunning = true;
-
-            this.startTime = new Date().getTime();
 
             d3.timer(() => this.onFrame());
         } else {
@@ -70,7 +72,7 @@ class inProgressAnimator {
     }
 
     private onFrame() {
-        if (this.inProgressArea.length === 0) {
+        if (this.disposed || this.inProgressArea.length === 0) {
             this.clear();
             this.hasTimerRunning = false;
             return true;

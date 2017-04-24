@@ -341,6 +341,8 @@ class indexPerformance extends viewModelBase {
 
         this.inProgressAnimator = new inProgressAnimator(inProgressCanvasNode);
 
+        this.registerDisposable(this.inProgressAnimator);
+
         this.svg = metricsContainer
             .append("svg")
             .attr("width", this.totalWidth + 1)

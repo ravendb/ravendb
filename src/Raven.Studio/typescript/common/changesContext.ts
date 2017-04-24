@@ -20,7 +20,8 @@ class changesContext {
     databaseNotifications = ko.observable<databaseNotificationCenterClient>();
 
     databaseChangesApi = ko.observable<changesApi>();
-    afterChangesApiConnection = $.Deferred<changesApi>();
+    private pendingAfterChangesApiConnectedHandlers = [] as Function[];
+    private hasChangesApiConnected = false;
 
     private globalDatabaseSubscriptions: changeSubscription[] = [];
 
@@ -36,13 +37,23 @@ class changesContext {
 
         this.databaseChangesApi.subscribe(newValue => {
             if (!newValue) {
-                if (this.afterChangesApiConnection.state() === "resolved") {
-                    this.afterChangesApiConnection = $.Deferred<changesApi>();
-                }
+                this.hasChangesApiConnected = false;
             } else {
-                this.afterChangesApiConnection.resolve(newValue);
+                this.hasChangesApiConnected = true;
+
+                this.pendingAfterChangesApiConnectedHandlers.forEach(handler => handler());
+                this.pendingAfterChangesApiConnectedHandlers = [];
             }
         });
+    }
+
+    afterChangesApiConnected(func: Function) {
+        if (this.hasChangesApiConnected) {
+            func();
+            return;
+        }
+
+        this.pendingAfterChangesApiConnectedHandlers.push(func);
     }
 
     connectServerWideNotificationCenter(): JQueryPromise<void> {

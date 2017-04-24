@@ -177,7 +177,7 @@ class query extends viewModelBase {
         this.termsUrl = ko.pureComputed(() => this.criteria().selectedIndex() ? appUrl.forTerms(this.criteria().selectedIndex(), this.activeDatabase()) : null);
         this.visualizerUrl = ko.pureComputed(() => this.criteria().selectedIndex() ? appUrl.forVisualizer(this.activeDatabase(), this.criteria().selectedIndex()) : null);
 
-        this.isIndexMapReduce = ko.computed(() => {
+        this.isIndexMapReduce = ko.pureComputed(() => {
             const currentIndex = this.indexes().find(i => i.name === this.criteria().selectedIndex());
             return !!currentIndex && currentIndex.isMapReduce;
         });
