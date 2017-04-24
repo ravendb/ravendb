@@ -37,7 +37,7 @@ namespace Raven.Client.Server.Operations
 
         private class ModifyConflictSolverCommand : RavenCommand<ModifySolverResult>
         {
-            private readonly Operations.ModifyConflictSolverOperation _solver;
+            private readonly ModifyConflictSolverOperation _solver;
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
@@ -46,7 +46,7 @@ namespace Raven.Client.Server.Operations
                 DocumentConventions conventions,
                 JsonOperationContext context,
                 string database,
-                Operations.ModifyConflictSolverOperation solver)
+                ModifyConflictSolverOperation solver)
             {
                 _context = context ?? throw new ArgumentNullException(nameof(context));
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));

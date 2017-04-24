@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using Raven.Client.Documents.Replication;
@@ -41,19 +42,16 @@ namespace Raven.Client.Documents
 
         public DynamicJsonValue ToJson()
         {
+            var resolveByCollection = new DynamicJsonValue();
+            foreach (var scriptResolver in ResolveByCollection)
+            {
+                resolveByCollection[scriptResolver.Key] = scriptResolver.Value.ToJson();
+            }
             return new DynamicJsonValue
             {
                 [nameof(DatabaseResolverId)] = DatabaseResolverId,
                 [nameof(ResolveToLatest)] = ResolveToLatest,
-                [nameof(ResolveByCollection)] = new DynamicJsonArray
-                {
-                    ResolveByCollection != null ? 
-                        ResolveByCollection.Select( item => new DynamicJsonValue
-                        {
-                            [nameof(item.Key)] = item.Value.ToJson()
-                        }) :
-                        new DynamicJsonValue[0]
-                }
+                [nameof(ResolveByCollection)] = resolveByCollection
             };
         }
     }
@@ -112,13 +110,6 @@ namespace Raven.Client.Documents
         public List<DatabasePromotable> Promotables = new List<DatabasePromotable>();
         public List<DatabaseWatcher> Watchers = new List<DatabaseWatcher>();
 
-        public class ConnectionChangeStatus
-        {
-            public bool Add;
-            public bool Remove => !Add;
-            public ReplicationNode Node;
-        }
-
         public Dictionary<string,string> NameToUrlMap = new Dictionary<string, string>();
         public bool RelevantFor(string nodeTag)
         {
@@ -130,9 +121,9 @@ namespace Raven.Client.Documents
         public IEnumerable<ReplicationNode> GetDestinations(string nodeTag, string databaseName)
         {
             var list = new List<ReplicationNode>();
-            list.AddRange(Watchers.Where(w => IsItMyTask(w, nodeTag)));
-            list.AddRange(Promotables.Where(p => IsItMyTask(p, nodeTag)));
             list.AddRange(Members.Where(m => m.NodeTag != nodeTag));
+            list.AddRange(Promotables.Where(p => IsItMyTask(p, nodeTag)));
+            list.AddRange(Watchers.Where(w => IsItMyTask(w, nodeTag)));
             list.Sort();
             return list;
         }
@@ -159,40 +150,43 @@ namespace Raven.Client.Documents
             using (var oldEnum = oldDestinations.GetEnumerator())
             using (var newEnum = newDestinations.GetEnumerator())
             {
-                newEnum.MoveNext();
-                oldEnum.MoveNext();
-                while (oldEnum.Current != null && newEnum.Current != null)
+                var hasNewValues = newEnum.MoveNext();
+                var hasOldValues = oldEnum.MoveNext();
+                
+                while (hasNewValues && hasOldValues)
                 {
-                    if (oldEnum.Current.CompareTo(newEnum.Current) > 0)
+                    var res = oldEnum.Current.CompareTo(newEnum.Current);
+                    switch (res)
                     {
-                        // add new
-                        addDestinations.Add(newEnum.Current);
-                        newEnum.MoveNext();
-                        continue;
+                        case 1: 
+                            addDestinations.Add(newEnum.Current);
+                            hasNewValues = newEnum.MoveNext();
+                            break;
+                        case -1:
+                            removeDestinations.Add(oldEnum.Current);
+                            hasOldValues = oldEnum.MoveNext();
+                            break;
+                        case 0:
+                            hasNewValues = newEnum.MoveNext();
+                            hasOldValues = oldEnum.MoveNext();
+                            break;
+                        default:// should never happend
+                            throw new InvalidDataException($"{res} is an invalid comperison result between {oldEnum.Current.Humane} and {newEnum.Current.Humane}");
                     }
-                    if (oldEnum.Current.CompareTo(newEnum.Current) < 0)
-                    {
-                        // remove old
-                        removeDestinations.Add(oldEnum.Current);
-                        oldEnum.MoveNext();
-                        continue;
-                    }
-                    newEnum.MoveNext();
-                    oldEnum.MoveNext();
                 }
 
                 // the remaining nodes of the old destinations should be removed
-                while (oldEnum.Current != null)
+                while (hasOldValues)
                 {
                     removeDestinations.Add(oldEnum.Current);
-                    oldEnum.MoveNext();
+                    hasOldValues = oldEnum.MoveNext();
                 }
 
                 // the remaining nodes of the new destinations should be added
-                while (newEnum.Current != null)
+                while (hasNewValues)
                 {
                     addDestinations.Add(newEnum.Current);
-                    newEnum.MoveNext();
+                    hasNewValues = newEnum.MoveNext();
                 }
             }
             return (addDestinations,removeDestinations);
@@ -230,8 +224,9 @@ namespace Raven.Client.Documents
 
         public void RemoveFromTopology(string delDbFromNode)
         {
+            Members.RemoveAll(m => m.NodeTag == delDbFromNode);
             Promotables.RemoveAll(p=> p.NodeTag == delDbFromNode);
-            Members.RemoveAll(m=> m.NodeTag == delDbFromNode);
+            Watchers.RemoveAll(w=> w.NodeTag == delDbFromNode);
         }
 
         public bool IsItMyTask(IDatabaseTask task, string nodeTag)
