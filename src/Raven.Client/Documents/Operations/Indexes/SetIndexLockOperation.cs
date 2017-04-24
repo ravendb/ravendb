@@ -14,10 +14,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         public SetIndexLockOperation(string indexName, IndexLockMode mode)
         {
-            if (indexName == null)
-                throw new ArgumentNullException(nameof(indexName));
-
-            _indexName = indexName;
+            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
             _mode = mode;
         }
 
@@ -33,10 +30,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
             public SetIndexLockCommand(string indexName, IndexLockMode mode)
             {
-                if (indexName == null)
-                    throw new ArgumentNullException(nameof(indexName));
-
-                _indexName = indexName;
+                _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
                 _mode = mode;
             }
 
