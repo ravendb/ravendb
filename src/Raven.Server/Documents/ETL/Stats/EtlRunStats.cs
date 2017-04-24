@@ -4,6 +4,8 @@
     {
         public int NumberOfExtractedItems;
 
+        public int NumberOfTransformedItems;
+
         public long LastTransformedEtag;
 
         public long LastLoadedEtag;

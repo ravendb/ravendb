@@ -10,14 +10,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             DocumentKey = item.DocumentKey;
             Document = item.Document;
             IsDelete = item.IsDelete;
+            Collection = item.Collection;
         }
 
-
-        public ToSqlItem(Document document) : base(document)
+        public ToSqlItem(Document document, string collection) : base(document, collection)
         {
         }
 
-        public ToSqlItem(DocumentTombstone tombstone) : base(tombstone)
+        public ToSqlItem(DocumentTombstone tombstone, string collection) : base(tombstone, collection)
         {
         }
 
