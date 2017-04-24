@@ -13,6 +13,7 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions.Cluster;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
@@ -185,7 +186,7 @@ namespace Raven.Server.ServerWide
                 TableValueReader reader;
                 if (items.ReadByKey(loweredKey, out reader) == false)
                 {
-                    NotifyLeaderAboutError(index, leader, new InvalidOperationException($"The database {databaseName} does not exists, cannot delete it"));
+                    NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"The database {databaseName} does not exists, cannot delete it"));
                     return;
                 }
 

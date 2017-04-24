@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Util;
@@ -66,6 +67,20 @@ namespace FastTests
             }
         }
 
+        protected void DeleteDatabase(string dbName)
+        {
+            using (var store = new DocumentStore
+            {
+                Url = UseFiddler(Server.WebUrls[0]),
+                DefaultDatabase = dbName
+            })
+            {
+                store.Initialize();
+
+                store.Admin.Server.Send(new DeleteDatabaseOperation(dbName, true));
+            }
+        }
+
         protected override void Dispose(ExceptionAggregator exceptionAggregator)
         {
             if (_databases.Count == 0)
@@ -83,7 +98,16 @@ namespace FastTests
 
                     exceptionAggregator.Execute(() =>
                     {
-                        AsyncHelpers.RunSync(() => Server.ServerStore.DeleteDatabaseAsync(context, database, hardDelete: true, fromNode: Server.ServerStore.NodeTag));
+                        AsyncHelpers.RunSync(async () =>
+                        {
+                            try
+                            {
+                                await Server.ServerStore.DeleteDatabaseAsync(context, database, hardDelete: true, fromNode: Server.ServerStore.NodeTag);
+                            }
+                            catch (DatabaseDoesNotExistException)
+                            {
+                            }
+                        });
                     });
                 }
             }

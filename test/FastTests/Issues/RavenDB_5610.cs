@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
@@ -48,14 +49,10 @@ namespace FastTests.Issues
         [Fact]
         public async Task WillUpdate()
         {
-            string indexName;
-            var path = NewDataPath();
-            string dbName;
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            var database = CreateDocumentDatabase(runInMemory: false);
+            try
             {
-                dbName = database.Name;
-
                 var indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "33";
 
@@ -74,15 +71,18 @@ namespace FastTests.Issues
                 index = database.IndexStore.GetIndex(etag);
                 Assert.Equal(30, index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
 
-                indexName = index.Name;
-            }
+                var indexName = index.Name;
 
-            Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(database.Name);
 
-            using (var database = await GetDatabase(dbName))
-            {
-                var index = database.IndexStore.GetIndex(indexName);
+                database = await GetDatabase(database.Name);
+
+                index = database.IndexStore.GetIndex(indexName);
                 Assert.Equal(30, index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
+            }
+            finally
+            {
+                DeleteDatabase(database.Name);
             }
         }
 
