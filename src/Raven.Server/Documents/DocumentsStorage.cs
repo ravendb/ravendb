@@ -1109,7 +1109,9 @@ namespace Raven.Server.Documents
             public string Key;
             public long Etag;
             public CollectionName Collection;
+            public DateTime LastModified;
             public ChangeVectorEntry[] ChangeVector;
+            public DocumentFlags Flags;
         }
 
         public void DeleteWithoutCreatingTombstone(DocumentsOperationContext context, string collection, long storageId, bool isTombstone)
