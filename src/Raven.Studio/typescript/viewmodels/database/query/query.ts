@@ -73,7 +73,7 @@ class query extends viewModelBase {
     criteria = ko.observable<queryCriteria>(queryCriteria.empty());
     cacheEnabled = ko.observable<boolean>(true);
 
-    private indexEntrieStateWasTrue: boolean = false;
+    private indexEntrieStateWasTrue: boolean = false; // Used to save current query settings when switching to a 'dynamic' index
 
     filterSettings = {
         searchField: ko.observable<string>(),
