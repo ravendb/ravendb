@@ -26,41 +26,5 @@ namespace SlowTests.Issues
                 Assert.Contains(otherPath, e.Message);
             }
         }
-
-        [Fact]
-        public async Task CanCreateInMemoryIndex()
-        {
-            var index = new Users_ByCity();
-
-            var path = NewDataPath();
-            using (var store = GetDocumentStore(path: path))
-            {
-
-                var indexDefinition1 = index.CreateIndexDefinition();
-                indexDefinition1.Configuration[RavenConfiguration.GetKey(x => x.Indexing.RunInMemory)] = "true";
-                indexDefinition1.Name = index.IndexName + "_1";
-                store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition1 }));
-
-                var indexDefinition2 = index.CreateIndexDefinition();
-                indexDefinition1.Configuration[RavenConfiguration.GetKey(x => x.Indexing.RunInMemory)] = "false";
-                indexDefinition2.Name = index.IndexName + "_2";
-                store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition2 }));
-
-                var database = await GetDocumentDatabaseInstanceFor(store);
-
-                var directories = Directory.GetDirectories(database.Configuration.Indexing.StoragePath.FullPath);
-
-                Assert.Equal(1, directories.Length); // 1 index
-            }
-
-            using (var store = GetDocumentStore(path: path))
-            {
-                var indexDefinition = store.Admin.Send(new GetIndexOperation(index.IndexName + "_1"));
-                Assert.Null(indexDefinition);
-
-                indexDefinition = store.Admin.Send(new GetIndexOperation(index.IndexName + "_2"));
-                Assert.NotNull(indexDefinition);
-            }
-        }
     }
 }

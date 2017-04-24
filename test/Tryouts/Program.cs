@@ -21,11 +21,11 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                Parallel.For(0, 5, j =>
+                Parallel.For(0, 2, j =>
                 {
-                    using (var a = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
+                    using (var a = new SlowTests.Issues.RavenDB_5998())
                     {
-                        a.CanDelete().Wait();
+                        a.CanImportNorthwind("SlowTests.Smuggler.Northwind_3.5.35168.ravendbdump");
                     }
                 });
             }
