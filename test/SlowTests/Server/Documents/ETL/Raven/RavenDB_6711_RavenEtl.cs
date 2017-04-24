@@ -100,10 +100,51 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 etlDone.Reset();
 
+                using (var session = src.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    user.Name = "James Doe";
+
+                    session.SaveChanges();
+                }
+
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+
+                using (var session = dest.OpenSession())
+                {
+                    var stats = dest.Admin.Send(new GetStatisticsOperation());
+
+                    Assert.Equal(5, stats.CountOfDocuments); // 3 docs and 2 HiLo 
+
+                    var user = session.Load<User>("users/1");
+                    Assert.Equal("James Doe", user.Name);
+                }
 
                 // delete
 
                 etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    session.Delete(user);
+
+                    session.SaveChanges();
+                }
+
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+
+                using (var session = dest.OpenSession())
+                {
+                    var stats = dest.Admin.Send(new GetStatisticsOperation());
+
+                    Assert.Equal(4, stats.CountOfDocuments); // 3 docs and 2 HiLo 
+
+                    var user = session.Load<User>("users/1");
+                    Assert.Null(user);
+                }
             }
         }
 
