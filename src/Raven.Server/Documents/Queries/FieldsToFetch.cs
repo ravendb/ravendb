@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
@@ -56,6 +57,20 @@ namespace Raven.Server.Documents.Queries
                 if (indexDefinition == null)
                 {
                     result[fieldToFetch] = new FieldToFetch(fieldToFetch, false);
+                    continue;
+                }
+
+                if (fieldToFetch[0] == '_' && fieldToFetch == Constants.Documents.Indexing.Fields.AllFields)
+                {
+                    foreach (var kvp in indexDefinition.MapFields)
+                    {
+                        var stored = kvp.Value.Storage == FieldStorage.Yes;
+                        if (stored)
+                            anyExtractableFromIndex = true;
+
+                        result[kvp.Key] = new FieldToFetch(kvp.Key, stored | indexDefinition.HasDynamicFields);
+                    }
+
                     continue;
                 }
 

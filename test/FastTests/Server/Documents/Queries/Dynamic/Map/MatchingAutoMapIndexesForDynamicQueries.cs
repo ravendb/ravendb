@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -40,7 +42,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -62,7 +63,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -85,7 +85,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -95,13 +94,11 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
                 new IndexField
                 {
                     Name = "Age",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 }
             });
@@ -125,7 +122,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -148,19 +144,16 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
                 new IndexField
                 {
                     Name = "Address.Street",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
                 new IndexField
                 {
                     Name = "Friends,Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -183,7 +176,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -210,9 +202,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 new IndexField
                 {
                     Name = "Address.ZipCode",
-                    Highlighted = false,
                     Storage = FieldStorage.No,
-                    SortOption = SortOptions.Numeric
+                    Sort = SortOptions.Numeric
                 },
             });
 
@@ -237,7 +228,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 new IndexField
                 {
                     Name = "Weight",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -263,7 +253,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -290,9 +279,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 new IndexField
                 {
                     Name = "Age",
-                    Highlighted = false,
                     Storage = FieldStorage.No,
-                    SortOption = SortOptions.Numeric
+                    Sort = SortOptions.Numeric
                 },
             });
 
@@ -329,7 +317,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 new IndexField
                 {
                     Name = "Name",
-                    Highlighted = false,
                     Storage = FieldStorage.No
                 },
             });
@@ -366,7 +353,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
         private void add_index(AutoMapIndexDefinition definition)
         {
-            _documentDatabase.IndexStore.CreateIndex(definition);
+            AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition));
         }
 
         private Index get_index(string name)

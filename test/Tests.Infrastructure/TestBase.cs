@@ -5,8 +5,10 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -35,6 +37,26 @@ namespace FastTests
         private bool _doNotReuseServer;
 
         private IDictionary<string, string> _customServerSettings;
+
+        static TestBase()
+        {
+#if DEBUG2
+            TaskScheduler.UnobservedTaskException += (sender, args) =>
+            {
+                if (args.Observed)
+                    return;
+
+                var e = args.Exception.ExtractSingleInnerException();
+                
+                var sb = new StringBuilder();
+                sb.AppendLine("===== UNOBSERVED TASK EXCEPTION =====");
+                sb.AppendLine(e.ExceptionToString(null));
+                sb.AppendLine("=====================================");
+
+                Console.WriteLine(sb.ToString());
+            };
+#endif
+        }
 
         public void DoNotReuseServer(IDictionary<string, string> customSettings = null)
         {

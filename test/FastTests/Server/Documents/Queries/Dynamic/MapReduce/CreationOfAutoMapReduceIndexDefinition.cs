@@ -200,8 +200,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.True(definition.ContainsField("Age"));
             Assert.True(definition.GroupByFields.ContainsKey("Location"));
 
-            Assert.Equal(SortOptions.Numeric, definition.GetField("Count").SortOption);
-            Assert.Equal(SortOptions.Numeric, definition.GetField("Age").SortOption);
+            Assert.Equal(SortOptions.Numeric, definition.GetField("Count").Sort);
+            Assert.Equal(SortOptions.Numeric, definition.GetField("Age").Sort);
 
             Assert.Equal("Auto/Users/ByAgeAndCountSortByAgeCountReducedByLocation", definition.Name);
         }

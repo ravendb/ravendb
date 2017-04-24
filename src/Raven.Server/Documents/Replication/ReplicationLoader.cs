@@ -372,7 +372,10 @@ namespace Raven.Server.Documents.Replication
 
             if (newRecord == null)
             {
-                DropAllOutgoingConnections();
+                if (_log.IsInfoEnabled)
+                    _log.Info("Database record is not found, so we drop all outgoing connections.");
+
+                DropOutgoingConnections(Destinations);
                 MyDatabaseRecord = null;
                 return;
             }
@@ -384,19 +387,11 @@ namespace Raven.Server.Documents.Replication
 
             if (connectionChanged.nodesToRemove.Count > 0)
             {
-                // remove old connections
-                if (_log.IsInfoEnabled)
-                    _log.Info("Stopping obselete outgoing replication threads.");
-
                 DropOutgoingConnections(connectionChanged.nodesToRemove);
             }
 
             if (connectionChanged.nodesToAdd.Count > 0)
             {
-                // add new connections
-                if (_log.IsInfoEnabled)
-                    _log.Info("Starting new replication threads.");
-
                 StartOutgoingConnections(connectionChanged.nodesToAdd);
             }
 
@@ -445,30 +440,12 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void DropAllOutgoingConnections()
-        {
-            _reconnectQueue.Clear();
-            foreach (var instance in _outgoing)
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Stopping replication to {instance.Destination.Database} on {instance.Destination.NodeTag}.");
-
-                instance.Failed -= OnOutgoingSendingFailed;
-                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
-                instance.Dispose();
-            }
-            _lastSendEtagPerDestination.Clear();
-            _outgoingFailureInfo.Clear();
-            _reconnectQueue.Clear();
-            _numberOfSiblings = 0;
-        }
-
         private void InitializeOutgoingReplications()
         {
             UpdateDestinations();
 
             if (Destinations == null || //precaution
-                !Destinations.Any())
+                Destinations.Count == 0)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info("Tried to initialize outgoing replications, but there is no replication document or destinations are empty. Nothing to do...");
@@ -484,21 +461,19 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
                 _log.Info($"Initializing {Destinations.Count():#,#} outgoing replications..");
 
-            var countOfDestinations = 0;
+            _numberOfSiblings = 0;
             foreach (var destination in Destinations)
             {
                 if (destination.Disabled)
                     continue;
 
-                countOfDestinations++;
+                _numberOfSiblings++;
 
                 AddAndStartOutgoingReplication(destination);
                 if (_log.IsInfoEnabled)
                     _log.Info($"Initialized outgoing replication for [{destination.NodeTag}/{destination.Url}]");
             }
-
-            _numberOfSiblings = countOfDestinations;
-
+            
             if (_log.IsInfoEnabled)
                 _log.Info("Finished initialization of outgoing replications..");
         }
@@ -515,16 +490,7 @@ namespace Raven.Server.Documents.Replication
             using (Server.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var databaseRecord = Server.Cluster.ReadDatabase(context, Database.Name);
-                if (databaseRecord == null)
-                {
-                    return null;
-                }
-                if (MyDatabaseRecord == null)
-                {
-                    MyDatabaseRecord = databaseRecord;
-                }
-                return databaseRecord;
+                return Server.Cluster.ReadDatabase(context, Database.Name);
             }
         }
 

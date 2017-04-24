@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -12,7 +13,7 @@ namespace SlowTests.Server.Documents.Replication
     public class ReplicateLargeDatabase : ReplicationTestsBase
     {
         [Fact]
-        public void AutomaticResolveWithIdenticalContent()
+        public async Task AutomaticResolveWithIdenticalContent()
         {
             DocumentStore store1;
             DocumentStore store2;
@@ -20,7 +21,7 @@ namespace SlowTests.Server.Documents.Replication
             CreateSampleDatabase(out store1);
             CreateSampleDatabase(out store2);
 
-            SetupReplication(store1, store2);
+            await SetupReplicationAsync(store1, store2);
             Assert.Equal(1, WaitForValue(() => store2.Admin.Send(new GetReplicationPerformanceStatisticsOperation()).Incoming.Length, 1));
             var stats = store2.Admin.Send(new GetReplicationPerformanceStatisticsOperation());
             var errors = stats.Incoming

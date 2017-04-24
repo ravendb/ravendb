@@ -246,7 +246,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
                 await store1.ExecuteIndexAsync(new RavenDB_4323.DailyInvoicesIndex());
 
                 using (var session = store1.OpenAsyncSession())

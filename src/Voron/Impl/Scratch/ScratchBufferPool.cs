@@ -291,12 +291,12 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public byte* AcquirePagePointer(LowLevelTransaction tx, int scratchNumber, long p)
+        public byte* AcquirePagePointerForNewPage(LowLevelTransaction tx, int scratchNumber, long p, int numberOfPages)
         {
             var item = GetScratchBufferFile(scratchNumber);
 
             ScratchBufferFile bufferFile = item.File;
-            return bufferFile.AcquirePagePointer(tx, p);
+            return bufferFile.AcquirePagePointerForNewPage(tx, p, numberOfPages);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -352,10 +352,10 @@ namespace Voron.Impl.Scratch
                 $"Could not remove a scratch file from the scratch buffers collection. Number: {scratchBufferItem.Number}");
         }
 
-        public void BreakLargeAllocationToSeparatePages(PageFromScratchBuffer value)
+        public void BreakLargeAllocationToSeparatePages(LowLevelTransaction tx, PageFromScratchBuffer value)
         {
             var item = GetScratchBufferFile(value.ScratchFileNumber);
-            item.File.BreakLargeAllocationToSeparatePages(value);
+            item.File.BreakLargeAllocationToSeparatePages(tx, value);
         }
 
         public long GetAvailablePagesCount()

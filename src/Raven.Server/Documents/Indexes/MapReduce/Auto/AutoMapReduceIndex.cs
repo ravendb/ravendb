@@ -29,25 +29,25 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             new MapResult()
         };
 
-        private AutoMapReduceIndex(int indexId, AutoMapReduceIndexDefinition definition)
-            : base(indexId, IndexType.AutoMapReduce, definition)
+        private AutoMapReduceIndex(long etag, AutoMapReduceIndexDefinition definition)
+            : base(etag, IndexType.AutoMapReduce, definition)
         {
         }
 
-        public static AutoMapReduceIndex CreateNew(int indexId, AutoMapReduceIndexDefinition definition,
+        public static AutoMapReduceIndex CreateNew(long etag, AutoMapReduceIndexDefinition definition,
             DocumentDatabase documentDatabase)
         {
-            var instance = new AutoMapReduceIndex(indexId, definition);
+            var instance = new AutoMapReduceIndex(etag, definition);
             instance.Initialize(documentDatabase, documentDatabase.Configuration.Indexing, documentDatabase.Configuration.PerformanceHints);
 
             return instance;
         }
 
-        public static AutoMapReduceIndex Open(int indexId, StorageEnvironment environment,
+        public static AutoMapReduceIndex Open(long etag, StorageEnvironment environment,
             DocumentDatabase documentDatabase)
         {
             var definition = AutoMapReduceIndexDefinition.Load(environment);
-            var instance = new AutoMapReduceIndex(indexId, definition);
+            var instance = new AutoMapReduceIndex(etag, definition);
             instance.Initialize(environment, documentDatabase, documentDatabase.Configuration.Indexing, documentDatabase.Configuration.PerformanceHints);
 
             return instance;
@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public override void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
         {
-            throw new NotSupportedException($"{Type} index does not support updating it's definition and configuration.");
+            SetPriority(definition.Priority);
         }
 
         public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

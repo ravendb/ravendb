@@ -26,3 +26,4 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("SlowTests")]
 [assembly: InternalsVisibleTo("StressTests")]
 [assembly: InternalsVisibleTo("RachisTests")]
+[assembly: InternalsVisibleTo("TypingsGenerator")]

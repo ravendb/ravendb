@@ -40,7 +40,7 @@ namespace Voron.Data.Compression
 
         public AbstractPager CreateDecompressionPager(long initialSize)
         {
-            return _options.CreateScratchPager($"decompression.{_decompressionPagerCounter++:D10}.buffers", initialSize);
+            return _options.CreateTemporaryBufferPager($"decompression.{_decompressionPagerCounter++:D10}.buffers", initialSize);
         }
 
         public DecompressedLeafPage GetPage(LowLevelTransaction tx, int pageSize, DecompressionUsage usage, TreePage original)

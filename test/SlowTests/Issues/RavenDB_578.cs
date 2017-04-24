@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Exceptions;
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
         }
 
         [Fact(Skip = "Waiting for RavenDB-6018")]
-        public void DeletingConflictedDocumentOnServer1ShouldCauseConflictOnServer2AndResolvingItOnServer2ShouldRecreateDocumentOnServer1()
+        public async Task DeletingConflictedDocumentOnServer1ShouldCauseConflictOnServer2AndResolvingItOnServer2ShouldRecreateDocumentOnServer1()
         {
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
@@ -35,12 +36,12 @@ namespace SlowTests.Issues
                 session.Store(new Person { FirstName = "Doe" });
                 session.SaveChanges();
             }
-            SetupReplication(store1, store2);
+            await SetupReplicationAsync(store1, store2);
 
             var conflicts = WaitUntilHasConflict(store2, "people/1");
             Assert.Equal(2, conflicts.Results.Length);
 
-            SetupReplication(store2, store1);
+            await SetupReplicationAsync(store2, store1);
 
             conflicts = WaitUntilHasConflict(store1, "people/1");
             Assert.Equal(2, conflicts.Results.Length);

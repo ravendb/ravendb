@@ -239,7 +239,7 @@ namespace Raven.Server.Documents.Replication
             if (resolved == null)
                 return false;
 
-            resolved.ChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+            resolved.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
             PutResolvedDocumentBackToStorage(context, resolved);
             return true;
         }
@@ -357,7 +357,7 @@ namespace Raven.Server.Documents.Replication
 
             updatedConflict.Doc = resolved;
             updatedConflict.Collection = collection;
-            updatedConflict.ChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+            updatedConflict.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
             PutResolvedDocumentBackToStorage(context, updatedConflict);
             return true;
         }
@@ -378,7 +378,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            latestDoc.ChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+            latestDoc.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
             PutResolvedDocumentBackToStorage(context, latestDoc);
         }
     }

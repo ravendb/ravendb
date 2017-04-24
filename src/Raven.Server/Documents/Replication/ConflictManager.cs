@@ -243,7 +243,7 @@ namespace Raven.Server.Documents.Replication
                     return false;
 
                 // no real conflict here, both documents have identical content
-                var mergedChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
+                var mergedChangeVector = ChangeVectorUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
                 var nonPersistnetFlags = (compareResult & DocumentCompareResult.ShouldRecreateDocument) == DocumentCompareResult.ShouldRecreateDocument 
                     ? NonPersistentDocumentFlags.ResolvedAttachmentConflict : NonPersistentDocumentFlags.None;
                 _database.DocumentsStorage.Put(context, key, null, incomingDoc, lastModifiedTicks, mergedChangeVector, nonPersistentFlags: nonPersistnetFlags);
@@ -253,7 +253,7 @@ namespace Raven.Server.Documents.Replication
             if (existingTombstone != null && incomingDoc == null)
             {
                 // Conflict between two tombstones resolves to the local tombstone
-                existingTombstone.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
+                existingTombstone.ChangeVector = ChangeVectorUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
                 Slice loweredKey;
                 using (Slice.External(context.Allocator, existingTombstone.LoweredKey, out loweredKey))
                 {

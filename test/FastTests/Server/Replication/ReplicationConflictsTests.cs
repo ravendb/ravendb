@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Utils;
@@ -47,7 +49,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 3 },
             };
 
-            Assert.Equal(ReplicationUtils.ConflictStatus.AlreadyMerged, ReplicationUtils.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictsStorage.ConflictStatus.AlreadyMerged, ConflictsStorage.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -69,7 +71,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 30 },
             };
 
-            Assert.Equal(ReplicationUtils.ConflictStatus.Update, ReplicationUtils.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictsStorage.ConflictStatus.Update, ConflictsStorage.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -91,7 +93,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 2 },
             };
 
-            Assert.Equal(ReplicationUtils.ConflictStatus.Conflict, ReplicationUtils.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictsStorage.ConflictStatus.Conflict, ConflictsStorage.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -113,7 +115,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[0], Etag = 10 },
             };
 
-            Assert.Equal(ReplicationUtils.ConflictStatus.Conflict, ReplicationUtils.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictsStorage.ConflictStatus.Conflict, ConflictsStorage.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -136,7 +138,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 40 }
             };
 
-            Assert.Equal(ReplicationUtils.ConflictStatus.Update, ReplicationUtils.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictsStorage.ConflictStatus.Update, ConflictsStorage.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -153,7 +155,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[1], Etag = 10 }
             };
 
-            Assert.Equal(ReplicationUtils.ConflictStatus.Conflict, ReplicationUtils.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictsStorage.ConflictStatus.Conflict, ConflictsStorage.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -176,7 +178,7 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 3 }
             };
 
-            Assert.Equal(ReplicationUtils.ConflictStatus.AlreadyMerged, ReplicationUtils.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictsStorage.ConflictStatus.AlreadyMerged, ConflictsStorage.GetConflictStatus(remote, local));
         }
 
         [Fact]
@@ -199,12 +201,12 @@ namespace FastTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 300 }
             };
 
-            Assert.Equal(ReplicationUtils.ConflictStatus.Conflict, ReplicationUtils.GetConflictStatus(remote, local));
+            Assert.Equal(ConflictsStorage.ConflictStatus.Conflict, ConflictsStorage.GetConflictStatus(remote, local));
         }
 
 
         [Fact]
-        public void Conflict_same_time_with_master_slave()
+        public async Task Conflict_same_time_with_master_slave()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -220,7 +222,7 @@ namespace FastTests.Server.Replication
                     s2.SaveChanges();
                 }
 
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 var conflicts = WaitUntilHasConflict(store2, "foo/bar");
                 Assert.Equal(2, conflicts.Results.Length);
@@ -228,7 +230,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void Conflict_insensitive_check()
+        public async Task Conflict_insensitive_check()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -253,7 +255,7 @@ namespace FastTests.Server.Replication
                     s2.SaveChanges();
                 }
 
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 Assert.Equal(2, WaitUntilHasConflict(store2, "users/3").Results.Length);
                 Assert.Equal(2, WaitUntilHasConflict(store2, "users/2").Results.Length);
@@ -264,7 +266,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void Conflict_then_data_query_will_return_409_and_conflict_data()
+        public async Task Conflict_then_data_query_will_return_409_and_conflict_data()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -284,7 +286,7 @@ namespace FastTests.Server.Replication
                     s2.SaveChanges();
                 }
                 WaitForIndexing(store2);
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
@@ -298,7 +300,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void Conflict_then_delete_query_will_return_409_and_conflict_data()
+        public async Task Conflict_then_delete_query_will_return_409_and_conflict_data()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -318,7 +320,7 @@ namespace FastTests.Server.Replication
                     s2.SaveChanges();
                 }
                 WaitForIndexing(store2);
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
@@ -329,7 +331,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void Conflict_then_patching_query_will_return_409_and_conflict_data()
+        public async Task Conflict_then_patching_query_will_return_409_and_conflict_data()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -349,7 +351,7 @@ namespace FastTests.Server.Replication
                     s2.SaveChanges();
                 }
                 WaitForIndexing(store2);
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
@@ -367,7 +369,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void Conflict_then_load_by_id_will_return_409_and_conflict_data()
+        public async Task Conflict_then_load_by_id_will_return_409_and_conflict_data()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -384,7 +386,7 @@ namespace FastTests.Server.Replication
                     s2.SaveChanges();
                 }
 
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
@@ -397,7 +399,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void Conflict_then_patch_request_will_return_409_and_conflict_data()
+        public async Task Conflict_then_patch_request_will_return_409_and_conflict_data()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -414,7 +416,7 @@ namespace FastTests.Server.Replication
                     s2.SaveChanges();
                 }
 
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
@@ -434,7 +436,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void Conflict_should_work_on_master_slave_slave()
+        public async Task Conflict_should_work_on_master_slave_slave()
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
@@ -459,15 +461,15 @@ namespace FastTests.Server.Replication
                     s3.SaveChanges();
                 }
 
-                SetupReplication(store1, store3);
-                SetupReplication(store2, store3);
+                await SetupReplicationAsync(store1, store3);
+                await SetupReplicationAsync(store2, store3);
 
                 Assert.Equal(3, WaitUntilHasConflict(store3, "foo/bar", 3).Results.Length);
             }
         }
 
         [Fact]
-        public void Conflict_should_be_created_for_document_in_different_collections()
+        public async Task Conflict_should_be_created_for_document_in_different_collections()
         {
             const string dbName1 = "FooBar-1";
             const string dbName2 = "FooBar-2";
@@ -485,14 +487,14 @@ namespace FastTests.Server.Replication
                     s2.SaveChanges();
                 }
 
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
             }
         }
 
         [Fact]
-        public void Conflict_should_be_created_and_resolved_for_document_in_different_collections()
+        public async Task Conflict_should_be_created_and_resolved_for_document_in_different_collections()
         {
             const string dbName1 = "FooBar-1";
             const string dbName2 = "FooBar-2";
@@ -511,8 +513,8 @@ namespace FastTests.Server.Replication
                     s1.SaveChanges();
                 }
 
-                SetReplicationConflictResolution(store2, StraightforwardConflictResolution.ResolveToLatest);
-                SetupReplication(store1, store2);
+                await SetReplicationConflictResolutionAsync(store2, StraightforwardConflictResolution.ResolveToLatest);
+                await SetupReplicationAsync(store1, store2);
 
                 var newCollection = WaitForValue(() =>
                 {
@@ -529,7 +531,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void Conflict_should_be_resolved_for_document_in_different_collections_after_setting_new_resolution()
+        public async Task Conflict_should_be_resolved_for_document_in_different_collections_after_setting_new_resolution()
         {
             const string dbName1 = "FooBar-1";
             const string dbName2 = "FooBar-2";
@@ -548,11 +550,11 @@ namespace FastTests.Server.Replication
                     s1.SaveChanges();
                 }
 
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 WaitUntilHasConflict(store2, "foo/bar", 2);
 
-                SetReplicationConflictResolution(store2, StraightforwardConflictResolution.ResolveToLatest);
+                await SetReplicationConflictResolutionAsync(store2, StraightforwardConflictResolution.ResolveToLatest);
 
                 var count = WaitForValue(() => GetConflicts(store2, "foo/bar").Results.Length, 0);
                 Assert.Equal(count, 0);
@@ -572,7 +574,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void Conflict_should_be_resolved_for_document_in_different_collections_after_saving_in_new_collection()
+        public async Task Conflict_should_be_resolved_for_document_in_different_collections_after_saving_in_new_collection()
         {
             const string dbName1 = "FooBar-1";
             const string dbName2 = "FooBar-2";
@@ -591,7 +593,7 @@ namespace FastTests.Server.Replication
                     s1.SaveChanges();
                 }
 
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 WaitUntilHasConflict(store2, "foo/bar", 2);
 
@@ -622,7 +624,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void Should_not_resolve_conflcit_with_script_when_they_from_different_collection()
+        public async Task Should_not_resolve_conflcit_with_script_when_they_from_different_collection()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
@@ -639,8 +641,8 @@ namespace FastTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                SetScriptResolution(store2, "return {Name:docs[0].Name + '123'};", "Users");
-                SetupReplication(store1, store2);
+                await SetScriptResolutionAsync(store2, "return {Name:docs[0].Name + '123'};", "Users");
+                await SetupReplicationAsync(store1, store2);
                 var db2 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.DefaultDatabase).Result.NotificationCenter;
 
                 Assert.Equal(1, WaitForValue(() => db2.GetAlertCount(), 1));

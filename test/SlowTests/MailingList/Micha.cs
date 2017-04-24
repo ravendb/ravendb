@@ -43,10 +43,10 @@ delete this.EntityType
 "
                     }));
 
-                var id = store.Admin.Send(new GetIndexOperation("EntityEntityIdPatch")).IndexId;
+                var id = store.Admin.Send(new GetIndexOperation("EntityEntityIdPatch")).Etag;
                 store.Admin.Send(new DeleteIndexOperation("EntityEntityIdPatch"));
 
-                Assert.False(store.Admin.Send(new GetStatisticsOperation()).Indexes.Any(x => x.IndexId == id));
+                Assert.False(store.Admin.Send(new GetStatisticsOperation()).Indexes.Any(x => x.Etag == id));
             }
         }
     }

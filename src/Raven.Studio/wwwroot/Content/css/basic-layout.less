@@ -245,6 +245,10 @@ body {
         margin-right: @grid-gutter-width/4;
     }
 
+    .separator {
+        color: fadeout(@gray,30%);
+    }
+
     .footer-right, .footer-left {
         display: flex;
         align-items: stretch;
@@ -258,14 +262,14 @@ body {
         padding: @grid-gutter-width/8 @grid-gutter-width/2;
     }
 
-    .footer-item {
-        .global-spinner {
-            align-self: center;
-            line-height: 16px;
-        }
+    .global-spinner {
+        align-self: center;
+        line-height: 15px;
+    }
 
+    .footer-item {
         & + .footer-item {
-            border-left: 1px solid fadeout(gray,60%);
+            border-left: 1px solid fadeout(@gray,60%);
         }
     }
 }

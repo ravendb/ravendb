@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Indexes
         private IndexingStatsScope _statsInstance;
         private readonly MapStats _stats = new MapStats();
 
-        protected MapIndexBase(int indexId, IndexType type, T definition) : base(indexId, type, definition)
+        protected MapIndexBase(long etag, IndexType type, T definition) : base(etag, type, definition)
         {
         }
 

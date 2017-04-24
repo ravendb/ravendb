@@ -11,7 +11,7 @@ namespace FastTests.Server.Replication
     public class ReplicationOfConflicts : ReplicationBasicTests
     {
         [Fact]
-        public void ReplicateAConflictThenResolveIt()
+        public async Task ReplicateAConflictThenResolveIt()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
@@ -29,11 +29,11 @@ namespace FastTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
 
-                SetupReplication(store2, store1);
+                await SetupReplicationAsync(store2, store1);
 
                 Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
 
@@ -52,12 +52,12 @@ namespace FastTests.Server.Replication
         }  
 
         [Fact]
-        public void CanManuallyResolveConflict_with_tombstone()
+        public async Task CanManuallyResolveConflict_with_tombstone()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
 
                 using (var session = master.OpenSession())
                 {
@@ -108,7 +108,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void ReplicateAConflictOnThreeDBsAndResolve()
+        public async Task ReplicateAConflictOnThreeDBsAndResolve()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
@@ -127,11 +127,11 @@ namespace FastTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                SetupReplication(store1, store2, store3);
+                await SetupReplicationAsync(store1, store2, store3);
 
                 Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
 
-                SetupReplication(store2, store1);
+                await SetupReplicationAsync(store2, store1);
 
                 Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
                 Assert.Equal(2, WaitUntilHasConflict(store3, "foo/bar").Results.Length);
@@ -148,12 +148,12 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void ReplicateTombstoneConflict()
+        public async Task ReplicateTombstoneConflict()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
 
                 using (var session = store1.OpenSession())
                 {
@@ -177,7 +177,7 @@ namespace FastTests.Server.Replication
 
                 Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
 
-                SetupReplication(store2, store1);
+                await SetupReplicationAsync(store2, store1);
 
                 Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
             }

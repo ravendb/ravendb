@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 using (var collectionStats = stats.For("Collection_" + collection))
                 {
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing cleanup for '{_index.Name} ({_index.IndexId})'. Collection: {collection}.");
+                        _logger.Info($"Executing cleanup for '{_index.Name} ({_index.Etag})'. Collection: {collection}.");
 
                     var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
                     var lastTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction,

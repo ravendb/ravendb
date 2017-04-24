@@ -1,78 +1,120 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import moment = require("moment");
-import tableNavigationTrait = require("common/tableNavigationTrait");
+import getIndexesErrorCommand = require("commands/database/index/getIndexesErrorCommand");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
+import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
+import appUrl = require("common/appUrl");
+import timeHelpers = require("common/timeHelpers");
 
 class indexErrors extends viewModelBase {
 
-    allIndexErrors = ko.observableArray<serverErrorDto>();
-    hasFetchedErrors = ko.observable(false);
-    selectedIndexError = ko.observable<serverErrorDto>();
-    now = ko.observable<moment.Moment>();
-    updateNowTimeoutHandle = 0;
-
-    tableNavigation: tableNavigationTrait<serverErrorDto>;
+    private allIndexErrors: IndexErrorPerDocument[] = null; 
+    private gridController = ko.observable<virtualGridController<IndexErrorPerDocument>>();
+    private columnPreview = new columnPreviewPlugin<IndexErrorPerDocument>(); 
+    searchText = ko.observable<string>();
 
     constructor() {
         super();
-
-        this.updateCurrentNowTime();
-
-        this.tableNavigation = new tableNavigationTrait<serverErrorDto>("#indexErrorsTableContainer", this.selectedIndexError, this.allIndexErrors, i => "#indexErrorsTableContainer table tbody tr:nth-child(" + (i + 1) + ")");
-    }
-
-    afterClientApiConnected(): void {
-        const changesApi = this.changesContext.databaseChangesApi();
-        this.addNotification(changesApi.watchAllIndexes(() => this.fetchIndexErrors()));
+        this.initObservables();
     }
 
     activate(args: any) {
         super.activate(args);
         this.updateHelpLink('ABUXGF');
-        this.fetchIndexErrors();
     }
 
-    deactivate() {
-        clearTimeout(this.updateNowTimeoutHandle);
+    compositionComplete() {
+        super.compositionComplete();
+        const grid = this.gridController();
+        grid.headerVisible(true);
+        grid.init((s, t) => this.fetchIndexErrors(s, t), () => 
+            [
+                new hyperlinkColumn<IndexErrorPerDocument>(x => x.IndexName, x => appUrl.forQuery(this.activeDatabase(), x.IndexName), "Index name", "25%"),
+                new hyperlinkColumn<IndexErrorPerDocument>(x => x.Document, x => appUrl.forEditDoc(x.Document, this.activeDatabase()), "Document id", "25%"),
+                new textColumn<IndexErrorPerDocument>(x => this.formatTimestampAsAgo(x.Timestamp), "Timestamp", "25%"),
+                new textColumn<IndexErrorPerDocument>(x => x.Error, "Error", "25%")
+            ]
+        );
+
+        this.columnPreview.install("virtual-grid", ".tooltip", (indexError: IndexErrorPerDocument, column: textColumn<IndexErrorPerDocument>, e: JQueryEventObject, onValue: (context: any) => void) => {
+            if (column.header === "Timestamp") {
+                // for timestamp show 'raw' date in tooltip
+                onValue(indexError.Timestamp);
+            } else {
+                const value = column.getCellValue(indexError);
+                if (!_.isUndefined(value)) {
+                    onValue(value);
+                }
+            }
+        });
+
+        this.registerDisposable(timeHelpers.utcNowWithMinutePrecision.subscribe(() => this.onTick()));
+    }
+  
+    private initObservables() {
+        this.searchText.throttle(200).subscribe(() => this.filterIndexes());
     }
 
-    fetchIndexErrors(): JQueryPromise<any> { //TODO: use type
-        var db = this.activeDatabase();
-        if (db) {
-            /* TODO
-            // Index errors are actually the .ServerErrors returned from the database statistics query.
-            return new getDatabaseStatsCommand(db)
-                .execute()
-                .done((stats: databaseStatisticsDto) => {
-                    stats.Errors.forEach((e: any) => e['TimestampHumanized'] = this.createHumanReadableTime(e.Timestamp));
-                    this.allIndexErrors(stats.Errors);
-                    this.hasFetchedErrors(true);
-                });*/
-        }
-
-        return null;
+    private onTick() {
+        // reset grid on tick - it neighter move scroll position not download data from remote, but it will render contents again, updating time 
+        this.gridController().reset(false);
     }
 
-    selectIndexError(indexError: serverErrorDto) {
-        this.selectedIndexError(indexError);
-    }
-
-    createHumanReadableTime(time: string): KnockoutComputed<string> {
-        if (time) {
-            // Return a computed that returns a humanized string based off the current time, e.g. "7 minutes ago".
-            // It's a computed so that it updates whenever we update this.now field.
-            return ko.computed(() => {
-                var dateMoment = moment(time);
-                var agoInMs = dateMoment.diff(this.now());
-                return moment.duration(agoInMs).humanize(true) + dateMoment.format(" (MM/DD/YY, h:mma)");
+    private fetchIndexErrors(start: number, skip: number): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
+        if (this.allIndexErrors === null) {
+            return this.fetchRemoteIndexesError().then(list => {
+                this.allIndexErrors = list;
+                return this.filterItems(this.allIndexErrors);
             });
         }
 
-        return ko.computed(() => time);
+        return this.filterItems(this.allIndexErrors);
     }
 
-    updateCurrentNowTime() {
-        this.now(moment());
-        this.updateNowTimeoutHandle = setTimeout(() => this.updateCurrentNowTime(), 60000);
+    private fetchRemoteIndexesError(): JQueryPromise<IndexErrorPerDocument[]> {
+        return new getIndexesErrorCommand(this.activeDatabase())
+            .execute()
+            .then((result: Raven.Client.Documents.Indexes.IndexErrors[]) => this.mapItems(result));
+    }
+
+    private filterItems(list: IndexErrorPerDocument[]): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
+        const deferred = $.Deferred<pagedResult<IndexErrorPerDocument>>();
+        let filteredItems = list;
+        if (this.searchText()) {
+            filteredItems = list.filter((error) => {
+                return (error.Document.toLowerCase().indexOf(this.searchText().toLowerCase()) !== -1 || 
+                    error.Error.toLowerCase().indexOf(this.searchText().toLowerCase()) !== -1);
+            });
+        }
+
+        return deferred.resolve({
+            items: filteredItems,
+            totalResultCount: filteredItems.length
+        });
+    }
+
+    private mapItems(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): IndexErrorPerDocument[] {
+        return _.flatMap(indexErrors, value => {
+            return value.Errors.map((error: Raven.Client.Documents.Indexes.IndexingError) =>
+                ({
+                    Timestamp: error.Timestamp,
+                    Document: error.Document,
+                    Error: error.Error,
+                    IndexName: value.Name
+                } as IndexErrorPerDocument));
+        });
+    }
+
+    private filterIndexes() {
+        this.gridController().reset();
+    }
+
+    private formatTimestampAsAgo(time: string): string {
+        const dateMoment = moment.utc(time).local();
+        const ago = dateMoment.diff(moment());
+        return moment.duration(ago).humanize(true) + dateMoment.format(" (MM/DD/YY, h:mma)");
     }
 }
 

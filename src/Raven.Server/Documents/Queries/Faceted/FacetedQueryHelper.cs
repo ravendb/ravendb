@@ -79,10 +79,10 @@ namespace Raven.Server.Documents.Queries.Faceted
             field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
 
             IndexField value;
-            if (fields.TryGetValue(field, out value) == false || value.SortOption.HasValue == false)
+            if (fields.TryGetValue(field, out value) == false || value.Sort.HasValue == false)
                 return SortOptions.None;
 
-            return value.SortOption.Value;
+            return value.Sort.Value;
         }
 
         public static bool IsStringNumber(string value)

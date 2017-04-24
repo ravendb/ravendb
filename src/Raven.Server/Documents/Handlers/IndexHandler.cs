@@ -18,8 +18,8 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Extensions;
 using Raven.Server.Utils;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var createdIndexes = new List<KeyValuePair<string, int>>();
+                var createdIndexes = new List<KeyValuePair<string, long>>();
                 var tuple = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "Indexes", BlittableJsonDocumentBuilder.UsageMode.None);
                 using (tuple.Item2)
                 {
@@ -43,8 +43,8 @@ namespace Raven.Server.Documents.Handlers
 
                         if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
                             throw new ArgumentException("Index must have a 'Maps' fields");
-                        var indexId = Database.IndexStore.CreateIndex(indexDefinition);
-                        createdIndexes.Add(new KeyValuePair<string, int>(indexDefinition.Name, indexId));
+                        var etag = await Database.IndexStore.CreateIndex(indexDefinition);
+                        createdIndexes.Add(new KeyValuePair<string, long>(indexDefinition.Name, etag));
                     }
                 }
 
@@ -397,15 +397,13 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/indexes", "DELETE")]
-        public Task Delete()
+        public async Task Delete()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            HttpContext.Response.StatusCode = Database.IndexStore.TryDeleteIndexIfExists(name)
+            HttpContext.Response.StatusCode = await Database.IndexStore.TryDeleteIndexIfExists(name)
                 ? (int)HttpStatusCode.NoContent
                 : (int)HttpStatusCode.NotFound;
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/indexes/c-sharp-index-definition", "GET")]
@@ -478,7 +476,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/indexes/set-lock", "POST")]
-        public Task SetLockMode()
+        public async Task SetLockMode()
         {
             var names = GetStringValuesQueryString("name");
             var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
@@ -489,18 +487,14 @@ namespace Raven.Server.Documents.Handlers
 
             foreach (var name in names)
             {
-                var index = Database.IndexStore.GetIndex(name);
-                if (index == null)
-                    IndexDoesNotExistException.ThrowFor(name);
-
-                index.SetLock(mode);
+                await Database.IndexStore.SetLock(name, mode);
             }
 
-            return NoContent();
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/indexes/set-priority", "POST")]
-        public Task SetPriority()
+        public async Task SetPriority()
         {
             var names = GetStringValuesQueryString("name");
             var priorityStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("priority");
@@ -511,14 +505,10 @@ namespace Raven.Server.Documents.Handlers
 
             foreach (var name in names)
             {
-                var index = Database.IndexStore.GetIndex(name);
-                if (index == null)
-                    IndexDoesNotExistException.ThrowFor(name);
-
-                index.SetPriority(priority);
+                await Database.IndexStore.SetPriority(name, priority);
             }
 
-            return NoContent();
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/indexes/errors", "GET")]
@@ -541,7 +531,7 @@ namespace Raven.Server.Documents.Handlers
                     indexes.Add(index);
                 }
             }
-
+            
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -549,47 +539,32 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteArray(context, indexes, (w, c, index) =>
                 {
                     w.WriteStartObject();
-
                     w.WritePropertyName("Name");
                     w.WriteString(index.Name);
                     w.WriteComma();
-
                     w.WritePropertyName("Errors");
                     w.WriteArray(c, index.GetErrors(), (ew, ec, error) =>
                     {
                         ew.WriteStartObject();
-
                         ew.WritePropertyName(nameof(error.Timestamp));
                         ew.WriteString(error.Timestamp.GetDefaultRavenFormat());
                         ew.WriteComma();
 
                         ew.WritePropertyName(nameof(error.Document));
-                        if (string.IsNullOrWhiteSpace(error.Document) == false)
-                            ew.WriteString(error.Document);
-                        else
-                            ew.WriteNull();
+                        ew.WriteString(error.Document);
                         ew.WriteComma();
 
                         ew.WritePropertyName(nameof(error.Action));
-                        if (string.IsNullOrWhiteSpace(error.Action) == false)
-                            ew.WriteString(error.Action);
-                        else
-                            ew.WriteNull();
+                        ew.WriteString(error.Action); 
                         ew.WriteComma();
 
                         ew.WritePropertyName(nameof(error.Error));
-                        if (string.IsNullOrWhiteSpace(error.Error) == false)
-                            ew.WriteString(error.Error);
-                        else
-                            ew.WriteNull();
-
+                        ew.WriteString(error.Error);
                         ew.WriteEndObject();
                     });
-
                     w.WriteEndObject();
                 });
             }
-
             return Task.CompletedTask;
         }
 
@@ -682,8 +657,8 @@ namespace Raven.Server.Documents.Handlers
             var stats = GetIndexesToReportOn()
                 .Select(x => new IndexPerformanceStats
                 {
-                    IndexName = x.Name,
-                    IndexId = x.IndexId,
+                    Name = x.Name,
+                    Etag = x.Etag,
                     Performance = x.GetIndexingPerformance()
                 })
                 .ToArray();
@@ -749,7 +724,7 @@ namespace Raven.Server.Documents.Handlers
             if (names.Count == 0)
                 indexes = Database.IndexStore
                     .GetIndexes()
-                    .OrderBy(x => x.IndexId);
+                    .OrderBy(x => x.Etag);
             else
             {
                 indexes = Database.IndexStore

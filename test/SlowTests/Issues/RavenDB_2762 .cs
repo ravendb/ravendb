@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
             var dataDir = NewDataPath();
             IndexingError[] errors;
-            using (var store = GetDocumentStore(path: dataDir))
+            using (var store = GetDocumentStore(path: dataDir, deleteDatabaseWhenDisposed:false))
             {
                 using (var session = store.OpenSession())
                 {

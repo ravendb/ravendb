@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -17,6 +18,7 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -239,7 +241,7 @@ namespace Raven.Server.Web.System
         }
         
         [RavenAction("/admin/modify-watchers", "POST", "/admin/modify-watchers?name={databaseName:string}")]
-        public async Task Update()
+        public async Task ModifyWathcers()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");  
 
@@ -251,12 +253,17 @@ namespace Raven.Server.Web.System
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
-                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-watchers");          
+                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-watchers");
+                if (updateJson.TryGet(nameof(DatabaseTopology.Watchers), out BlittableJsonReaderArray watchers) == false)
+                {
+                    throw new InvalidDataException("NewWatchers property was not found.");
+                }
                 using (context.OpenReadTransaction())
                 {              
                     long etag;
                     var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
-                    var index = await ServerStore.ModifyDatabaseWatchers(context, name, updateJson);
+                    
+                    var index = await ServerStore.ModifyDatabaseWatchers(context, name, watchers);
                     await ServerStore.Cluster.WaitForIndexNotification(index);
 
                     ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));
@@ -290,11 +297,16 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "read-conflict-resolver");
+                var latest = (bool)json[nameof(ConflictSolver.ResolveToLatest)];
+                var resolverDbId = json[nameof(ConflictSolver.DatabaseResolverId)]?.ToString();
+                var scripsts = json[nameof(ConflictSolver.ResolveByCollection)] as BlittableJsonReaderObject;
+             
                 using (context.OpenReadTransaction())
                 {
                     long etag;
                     var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out etag);
-                    var index = await ServerStore.ModifyConflictSolverAsync(context, name, json);
+
+                    var index = await ServerStore.ModifyConflictSolverAsync(context, name,resolverDbId,scripsts,latest);
                     await ServerStore.Cluster.WaitForIndexNotification(index);
 
                     ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));
@@ -346,6 +358,7 @@ namespace Raven.Server.Web.System
                         ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Delete));
                     }
                 }
+                await ServerStore.Cluster.WaitForIndexNotification(newEtag);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

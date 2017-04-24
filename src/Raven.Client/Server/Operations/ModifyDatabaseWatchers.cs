@@ -62,11 +62,10 @@ namespace Raven.Client.Server.Operations
                     {
                         var json = new DynamicJsonValue
                         {
-                            ["NewWatchers"] = new DynamicJsonArray(_newWatchers?.Select( w=> w.ToJson())),
+                            [nameof(DatabaseTopology.Watchers)] = new DynamicJsonArray(_newWatchers?.Select( w=> w.ToJson())),
                         };
 
                         _context.Write(stream, _context.ReadObject(json, "modify-watchers"));
-;
                     })
                 };
 

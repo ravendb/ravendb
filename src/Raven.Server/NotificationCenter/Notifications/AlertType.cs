@@ -20,7 +20,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         LicenseManager_LeaseLicenseError,
         LicenseManager_LicenseUpdated,
         IndexStore_IndexCouldNotBeOpened,
-        TransformerStore_TransformerCouldNotBeOpened,
+        TransformerStore_TransformerCouldNotBeCreated,
         WarnIndexOutputsPerDocument,
         ErrorSavingReduceOutputDocuments,
         CatastrophicDatabaseFailure,

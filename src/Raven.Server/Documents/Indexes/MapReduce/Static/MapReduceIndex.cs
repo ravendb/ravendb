@@ -32,8 +32,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public PropertyAccessor OutputReduceToCollectionPropertyAccessor;
 
-        private MapReduceIndex(int indexId, MapReduceIndexDefinition definition, StaticIndexBase compiled)
-            : base(indexId, IndexType.MapReduce, definition)
+        private MapReduceIndex(long etag, MapReduceIndexDefinition definition, StaticIndexBase compiled)
+            : base(etag, IndexType.MapReduce, definition)
         {
             _compiled = compiled;
 
@@ -51,10 +51,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Count > 1);
 
-        public static MapReduceIndex CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
+        public static MapReduceIndex CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
         {
-            var instance = CreateIndexInstance(indexId, definition);
-            ValidateReduceResultsCollectionName(instance, documentDatabase);
+            var instance = CreateIndexInstance(definition);
+            ValidateReduceResultsCollectionName(definition, instance._compiled, documentDatabase);
 
             instance.Initialize(documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
@@ -63,26 +63,28 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return instance;
         }
 
-        private static void ValidateReduceResultsCollectionName(MapReduceIndex index, DocumentDatabase documentDatabase)
+        public static void ValidateReduceResultsCollectionName(IndexDefinition definition, StaticIndexBase index, DocumentDatabase database)
         {
-            var outputReduceToCollection = index.Definition.OutputReduceToCollection;
+            var outputReduceToCollection = definition.OutputReduceToCollection;
             if (string.IsNullOrWhiteSpace(outputReduceToCollection))
                 return;
 
-            if (index.Collections.Contains(Constants.Documents.Indexing.AllDocumentsCollection, StringComparer.OrdinalIgnoreCase))
+            var collections = index.Maps.Keys.ToArray();
+
+            if (collections.Contains(Constants.Documents.Indexing.AllDocumentsCollection, StringComparer.OrdinalIgnoreCase))
             {
-                throw new IndexInvalidException($"Cannot output documents from index ({index.Name}) to the collection name ({outputReduceToCollection}) because the index is mapping all documents and this will result in an infinite loop.");
+                throw new IndexInvalidException($"Cannot output documents from index ({definition.Name}) to the collection name ({outputReduceToCollection}) because the index is mapping all documents and this will result in an infinite loop.");
             }
-            if (index.Collections.Contains(outputReduceToCollection, StringComparer.OrdinalIgnoreCase))
+            if (collections.Contains(outputReduceToCollection, StringComparer.OrdinalIgnoreCase))
             {
-                throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) cannot be used as this index ({index.Name}) is mapping this collection and this will result in an infinite loop.");
+                throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) cannot be used as this index ({definition.Name}) is mapping this collection and this will result in an infinite loop.");
             }
 
-            var indexes = documentDatabase.IndexStore.GetIndexes()
+            var indexes = database.IndexStore.GetIndexes()
                 .Where(x => x.Type == IndexType.MapReduce)
                 .Cast<MapReduceIndex>()
                 .Where(mapReduceIndex => string.IsNullOrWhiteSpace(mapReduceIndex.Definition.OutputReduceToCollection) == false &&
-                                         mapReduceIndex.Name != index.Definition.Name)
+                                         mapReduceIndex.Name != definition.Name)
                 .ToList();
 
             foreach (var otherIndex in indexes)
@@ -92,9 +94,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                 string description;
                 if (otherIndex.Collections.Contains(outputReduceToCollection, StringComparer.OrdinalIgnoreCase) &&
-                    CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(otherIndex, index.Collections.ToArray() /* todo:*/, indexes, out description))
+                    CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(otherIndex, collections, indexes, out description))
                 {
-                    description += Environment.NewLine + $"--> {index.Name}: {string.Join(",", index.Collections)} => *{outputReduceToCollection}*";
+                    description += Environment.NewLine + $"--> {definition.Name}: {string.Join(",", collections)} => *{outputReduceToCollection}*";
                     throw new IndexInvalidException($"The collection name ({outputReduceToCollection}) cannot be used to output documents results as it is consumed by other index that will also output results which will lead to an infinite loop:" + Environment.NewLine + description);
                 }
             }
@@ -126,10 +128,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return false;
         }
 
-        public static Index Open(int indexId, StorageEnvironment environment, DocumentDatabase documentDatabase)
+        public static Index Open(long etag, StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
             var definition = MapIndexDefinition.Load(environment);
-            var instance = CreateIndexInstance(indexId, definition);
+            var instance = CreateIndexInstance(definition);
 
             instance.Initialize(environment, documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
@@ -148,13 +150,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
-        private static MapReduceIndex CreateIndexInstance(int indexId, IndexDefinition definition)
+        private static MapReduceIndex CreateIndexInstance(IndexDefinition definition)
         {
             var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
 
             var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
                 staticIndex.GroupByFields, staticIndex.HasDynamicFields);
-            var instance = new MapReduceIndex(indexId, staticMapIndexDefinition, staticIndex);
+            var instance = new MapReduceIndex(definition.Etag, staticMapIndexDefinition, staticIndex);
 
             return instance;
         }
