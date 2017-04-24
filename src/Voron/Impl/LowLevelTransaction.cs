@@ -147,7 +147,7 @@ namespace Voron.Impl
 
             FlushInProgressLockTaken = previous.FlushInProgressLockTaken;
             CurrentTransactionHolder = previous.CurrentTransactionHolder;
-            TxStartTime = previous.TxStartTime;
+            TxStartTime = DateTime.UtcNow;
             DataPager = env.Options.DataPager;
             _env = env;
             _journal = env.Journal;
