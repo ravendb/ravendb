@@ -106,6 +106,7 @@ select new
             {
                 using (var index = MapReduceIndex.CreateNew(new IndexDefinition
                 {
+                    Etag = 1,
                     Name = "Users_ByCount_GroupByProduct",
                     Maps = { @"from order in docs.Orders
 from line in order.Lines
