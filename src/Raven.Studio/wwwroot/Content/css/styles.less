@@ -288,6 +288,18 @@ a {
     }
 }
 
+.flex-form {
+    .form-group {
+        display: flex;
+
+        .control-label {
+            width: 130px;
+            text-align: right;
+            margin-right: @grid-gutter-width/2;
+        }
+    }
+}
+
 .text-elipsis {
     overflow:hidden;
     text-overflow:ellipsis;
@@ -1489,3 +1501,4 @@ pre {
 @import "pages/export-progress.less";
 @import "pages/stats.less";
 @import "pages/versioning.less";
+@import "pages/etl.less";
