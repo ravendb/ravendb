@@ -25,11 +25,12 @@ namespace Raven.Server.Documents.Replication
         public Task ResolveConflictsTask = Task.CompletedTask;
 
         internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
-        public ConflictSolver ConflictSolver => _replicationLoader?.MyDatabaseRecord?.ConflictSolverConfig;
+        public ConflictSolver ConflictSolver => _replicationLoader.ConflictSolverConfig;
 
         public ResolveConflictOnReplicationConfigurationChange(ReplicationLoader replicationLoader, Logger log)
         {
-            _replicationLoader = replicationLoader;
+            _replicationLoader = replicationLoader ?? 
+                throw new ArgumentNullException($"ResolveConflictOnReplicationConfigurationChange must have replicationLoader instance");
             _database = _replicationLoader.Database;
             _log = log;
         }

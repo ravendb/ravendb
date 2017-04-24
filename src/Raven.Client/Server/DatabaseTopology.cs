@@ -118,7 +118,7 @@ namespace Raven.Client.Documents
                    Watchers.Exists(w => w.NodeTag == nodeTag);
         }
 
-        public IEnumerable<ReplicationNode> GetDestinations(string nodeTag, string databaseName)
+        public List<ReplicationNode> GetDestinations(string nodeTag, string databaseName)
         {
             var list = new List<ReplicationNode>();
             list.AddRange(Members.Where(m => m.NodeTag != nodeTag));
@@ -138,27 +138,33 @@ namespace Raven.Client.Documents
             });
         }
 
-        public (List<ReplicationNode> nodesToAdd, List<ReplicationNode> nodesToRemove) FindConnectionChanges(DatabaseTopology other, string nodeTag, string databaseName)
+        public static (List<ReplicationNode> nodesToAdd, List<ReplicationNode> nodesToRemove) FindConnectionChanges(List<ReplicationNode> oldDestinations, List<ReplicationNode> newDestinations)
         {
-            var oldDestinations = GetDestinations(nodeTag, databaseName);
-            var newDestinations = other.GetDestinations(nodeTag, databaseName);
-
             var addDestinations = new List<ReplicationNode>();
             var removeDestinations = new List<ReplicationNode>();
-            
+
+            if (oldDestinations == null)
+            {
+                oldDestinations = new List<ReplicationNode>();
+            }
+            if (newDestinations == null)
+            {
+                newDestinations = new List<ReplicationNode>();
+            }
+
             // this will work because the destinations are sorted. 
             using (var oldEnum = oldDestinations.GetEnumerator())
             using (var newEnum = newDestinations.GetEnumerator())
             {
                 var hasNewValues = newEnum.MoveNext();
                 var hasOldValues = oldEnum.MoveNext();
-                
+
                 while (hasNewValues && hasOldValues)
                 {
                     var res = oldEnum.Current.CompareTo(newEnum.Current);
                     switch (res)
                     {
-                        case 1: 
+                        case 1:
                             addDestinations.Add(newEnum.Current);
                             hasNewValues = newEnum.MoveNext();
                             break;
@@ -189,7 +195,7 @@ namespace Raven.Client.Documents
                     hasNewValues = newEnum.MoveNext();
                 }
             }
-            return (addDestinations,removeDestinations);
+            return (addDestinations, removeDestinations);
         }
    
         public IEnumerable<string> AllNodes
