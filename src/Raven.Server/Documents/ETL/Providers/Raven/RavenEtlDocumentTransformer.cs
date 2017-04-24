@@ -170,10 +170,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             public bool IsLoadedToDefaultCollection(RavenEtlItem item, string loadToCollection)
             {
-                if (item.Collection == null)
-                    return false;
+                if (item.Collection != null)
+                    return _collectionNameComparisons[item.Collection][loadToCollection];
 
-                return _collectionNameComparisons[item.Collection][loadToCollection];
+                var calculated = item.CalculatedCollectionName;
+
+                return calculated?.Value.CompareTo(loadToCollection) == 0;
             }
         }
 
