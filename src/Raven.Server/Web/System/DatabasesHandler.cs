@@ -54,7 +54,7 @@ namespace Raven.Server.Web.System
                         }
 
                         WriteDatabaseInfo(databaseName, dbDoc.Item2, context, w);
-                    }); 
+                    });
 
                     writer.WriteEndObject();
                 }
@@ -67,7 +67,8 @@ namespace Raven.Server.Web.System
         public Task GetTopology()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var url = GetStringQueryString("url", false);
+            // TODO: need to figure out who am I and then return this URL for me
+            // var url = GetStringQueryString("url", false);
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             {
@@ -90,12 +91,12 @@ namespace Raven.Server.Web.System
                         }
                         return Task.CompletedTask;
                     }
-                    
+
                     var clusterTopology = ServerStore.GetClusterTopology(context);
                     var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbBlit);
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        GenerateTopology(context, writer, dbRecord, clusterTopology, etag,url);
+                        GenerateTopology(context, writer, dbRecord, clusterTopology, etag);
                     }
                 }
             }
@@ -104,7 +105,7 @@ namespace Raven.Server.Web.System
         }
 
         private DynamicJsonValue GetServerNodeFromClusterTag(string tag, ClusterTopology clusterTopology, DatabaseRecord dbRecord)
-        {            
+        {
             return new DynamicJsonValue
             {
                 [nameof(ServerNode.Url)] = clusterTopology.GetUrlFromTag(tag),
@@ -113,17 +114,17 @@ namespace Raven.Server.Web.System
             };
         }
 
-        private void GenerateTopology(JsonOperationContext context, 
-            BlittableJsonTextWriter writer, 
-            DatabaseRecord dbRecord, 
-            ClusterTopology clusterTopology, 
-            long etag = 0, string url = null)
-        {              
+        private void GenerateTopology(JsonOperationContext context,
+            BlittableJsonTextWriter writer,
+            DatabaseRecord dbRecord,
+            ClusterTopology clusterTopology,
+            long etag)
+        {
             context.Write(writer, new DynamicJsonValue
-            {                
+            {
                 [nameof(Topology.Nodes)] = new DynamicJsonArray(
-                    dbRecord.Topology.AllNodes.OrderBy(x => x) //temporary, until Senators are implemented. Then the first here would be a Senator
-                                              .Select(x => GetServerNodeFromClusterTag(x,clusterTopology,dbRecord))),
+                    dbRecord.Topology.Members.Select(x => GetServerNodeFromClusterTag(x.NodeTag, clusterTopology, dbRecord))
+                    ),
                 [nameof(Topology.ReadBehavior)] =
                     ReadBehavior.CurrentNodeWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
                 [nameof(Topology.WriteBehavior)] = WriteBehavior.LeaderOnly.ToString(),
