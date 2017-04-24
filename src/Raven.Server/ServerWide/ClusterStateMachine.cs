@@ -26,6 +26,7 @@ using Raven.Server.ServerWide.Commands.Transformers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -158,18 +159,23 @@ namespace Raven.Server.ServerWide
 
                 var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                TableValueBuilder builder;
-                using (items.Allocate(out builder))
-                {
-                    builder.Add(loweredKey);
-                    builder.Add(key);
-                    builder.Add(updated.BasePointer, updated.Size);
-                    builder.Add(index);
-
-                    items.Set(builder);
-                }
+                UpdateDatabaseRecord(index, items, loweredKey, key, updated);
 
                 NotifyDatabaseChanged(context, databaseName, index);
+            }
+        }
+
+        private static unsafe void UpdateDatabaseRecord(long index, Table items, Slice loweredKey, Slice key, BlittableJsonReaderObject updated)
+        {
+            TableValueBuilder builder;
+            using (items.Allocate(out builder))
+            {
+                builder.Add(loweredKey);
+                builder.Add(key);
+                builder.Add(updated.BasePointer, updated.Size);
+                builder.Add(Bits.SwapBytes(index));
+
+                items.Set(builder);
             }
         }
 
@@ -223,18 +229,9 @@ namespace Raven.Server.ServerWide
 
                     databaseRecord.Topology = new DatabaseTopology();
                 }
-
-                TableValueBuilder builder;
+                
                 using (var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
-                using (items.Allocate(out builder))
-                {
-                    builder.Add(loweredKey);
-                    builder.Add(key);
-                    builder.Add(updated.BasePointer, updated.Size);
-                    builder.Add(index);
-
-                    items.Set(builder);
-                }
+                    UpdateDatabaseRecord(index, items, loweredKey, key, updated);
 
                 NotifyDatabaseChanged(context, databaseName, index);
             }
@@ -247,9 +244,7 @@ namespace Raven.Server.ServerWide
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
-                TableValueBuilder builder;
                 Slice valueName, valueNameLowered;
-                using (items.Allocate(out builder))
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out valueName))
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out valueNameLowered))
                 using (var rec = context.ReadObject(addDatabaseCommand.Value, "inner-val"))
@@ -275,12 +270,7 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    builder.Add(valueNameLowered);
-                    builder.Add(valueName);
-                    builder.Add(rec.BasePointer, rec.Size);
-                    builder.Add(index);
-
-                    items.Set(builder);
+                    UpdateDatabaseRecord(index, items, valueNameLowered, valueName, rec);
                 }
             }
             finally
@@ -331,12 +321,7 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, putVal.Name.ToLowerInvariant(), out valueNameLowered))
                 using (var rec = context.ReadObject(putVal.Value, "inner-val"))
                 {
-                    builder.Add(valueNameLowered);
-                    builder.Add(valueName);
-                    builder.Add(rec.BasePointer, rec.Size);
-                    builder.Add(index);
-
-                    items.Set(builder);
+                    UpdateDatabaseRecord(index, items, valueNameLowered, valueName, rec);
                 }
             }
             finally
@@ -423,16 +408,7 @@ namespace Raven.Server.ServerWide
                     {
                         var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                        TableValueBuilder builder;
-                        using (items.Allocate(out builder))
-                        {
-                            builder.Add(valueNameLowered);
-                            builder.Add(valueName);
-
-                            builder.Add(updatedDatabaseBlittable.BasePointer, updatedDatabaseBlittable.Size);
-                            builder.Add(index);
-                            items.Set(builder);
-                        }
+                       UpdateDatabaseRecord(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                     }
                 }
             }
