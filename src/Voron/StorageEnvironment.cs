@@ -530,11 +530,15 @@ namespace Voron
                 {
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
+                    if (_currentTransactionHolder == null)
+                        _currentTransactionHolder = NativeMemory.ThreadAllocations.Value;
+
                     long txId = flags == TransactionFlags.ReadWrite ? NextWriteTransactionId : CurrentReadTransactionId;
                     tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling,
                         context)
                     {
-                        FlushInProgressLockTaken = flushInProgressReadLockTaken
+                        FlushInProgressLockTaken = flushInProgressReadLockTaken,
+                        CurrentTransactionHolder = _currentTransactionHolder
                     };
                     ActiveTransactions.Add(tx);
                 }
