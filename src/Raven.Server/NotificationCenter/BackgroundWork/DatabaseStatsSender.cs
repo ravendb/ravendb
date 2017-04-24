@@ -30,8 +30,16 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             {
                 try
                 {
-                    await Task.Delay(_notificationCenter.Options.DatabaseStatsThrottle, CancellationToken);
+                    try
+                    {
+                        await Task.Delay(_notificationCenter.Options.DatabaseStatsThrottle, CancellationToken);
 
+                    }
+                    catch (Exception)
+                    {
+                        // can happen if there is an invalid timespan
+                        return;
+                    }
                     if (_database.DatabaseShutdown.IsCancellationRequested)
                         break;
 

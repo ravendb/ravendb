@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -126,7 +127,7 @@ namespace FastTests.Server
         }
 
         [Fact]
-        public void Server_store_basic_read_write_should_work()
+        public async Task Server_store_basic_read_write_should_work()
         {
             using (GetDocumentStore())
             {
@@ -138,8 +139,7 @@ namespace FastTests.Server
                         ["Foo"] = "Bar"
                     };
 
-                    Server.ServerStore.PutValueInClusterAsync(context, "foo/bar", context.ReadObject(foo, "read test stuff"))
-                        .Wait();
+                    await Server.ServerStore.PutValueInClusterAsync(context, "foo/bar", context.ReadObject(foo, "read test stuff"));
                 }
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))

@@ -302,7 +302,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private unsafe void PutValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private void PutValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             try
             {
@@ -314,9 +314,7 @@ namespace Raven.Server.ServerWide
                     return;
                 }
 
-                TableValueBuilder builder;
                 Slice valueName, valueNameLowered;
-                using (items.Allocate(out builder))
                 using (Slice.From(context.Allocator, putVal.Name, out valueName))
                 using (Slice.From(context.Allocator, putVal.Name.ToLowerInvariant(), out valueNameLowered))
                 using (var rec = context.ReadObject(putVal.Value, "inner-val"))
