@@ -25,9 +25,9 @@ namespace Tryouts
                 Console.WriteLine(i);
                 Parallel.For(0, 1, j =>
                 {
-                    using (var a = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
+                    using (var a = new FastTests.Server.OAuth.CanAuthenticate())
                     {
-                        a.CanReset().Wait();
+                        a.CanGetTokenFromServer().Wait();
                     }
                 });
             }
