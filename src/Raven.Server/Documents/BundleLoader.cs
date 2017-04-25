@@ -29,7 +29,6 @@ namespace Raven.Server.Documents
             _database = database;
             _serverStore = serverStore;
             
-            _database.Changes.OnSystemDocumentChange += HandleSystemDocumentChange;
             _logger = LoggingSource.Instance.GetLogger<BundleLoader>(_database.Name);
 
             if (_serverStore == null)
@@ -40,7 +39,18 @@ namespace Raven.Server.Documents
 
         public void HandleDatabaseRecordChange()
         {
-            VersioningStorage = VersioningStorage.LoadConfigurations(_database, _serverStore, VersioningStorage);
+            TransactionOperationContext context;
+            using (_serverStore.ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenReadTransaction();
+                var dbRecord = _serverStore.Cluster.ReadDatabase(context, _database.Name);
+                if (dbRecord == null)
+                    return;
+                VersioningStorage = VersioningStorage.LoadConfigurations(_database, dbRecord, VersioningStorage);
+                ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database, dbRecord, ExpiredDocumentsCleaner);
+                PeriodicExportRunner = PeriodicExportRunner.LoadConfigurations(_database, dbRecord, PeriodicExportRunner);
+            }
+                
         }
 
         /// <summary>
@@ -48,53 +58,17 @@ namespace Raven.Server.Documents
         /// </summary>
         public void InitializeBundles()
         {
-            //TODO: read database document and init all bundles from it
-            VersioningStorage = VersioningStorage.LoadConfigurations(_database, _serverStore, VersioningStorage);
-            DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+
+            TransactionOperationContext context;
+            using (_serverStore.ContextPool.AllocateOperationContext(out context))
             {
-                context.OpenReadTransaction();                
-
-                var expirationConfiguration = _database.DocumentsStorage.Get(context,
-                    Constants.Documents.Expiration.ConfigurationKey);
-                if (expirationConfiguration != null)
-                {
-                    ExpiredDocumentsCleaner?.Dispose();
-                    ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database);
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Expiration configuration enabled");
-                }
-
-                var periodicExportConfiguration = _database.DocumentsStorage.Get(context,
-                    Constants.Documents.PeriodicExport.ConfigurationKey);
-                if (periodicExportConfiguration != null)
-                {
-                    PeriodicExportRunner?.Dispose();
-                    PeriodicExportRunner = PeriodicExportRunner.LoadConfigurations(_database);
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("PeriodicExport configuration enabled");
-                }
-            }
-        }
-
-        public void HandleSystemDocumentChange(DocumentChange change)
-        {
-            var key = change.Key;
-            if (key.Equals(Constants.Documents.Expiration.ConfigurationKey, StringComparison.OrdinalIgnoreCase))
-            {
-                ExpiredDocumentsCleaner?.Dispose();
-                ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database);
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Expiration configuration was {(ExpiredDocumentsCleaner != null ? "enabled" : "disabled")}");
-            }
-            else if (key.Equals(Constants.Documents.PeriodicExport.ConfigurationKey, StringComparison.OrdinalIgnoreCase))
-            {
-                PeriodicExportRunner?.Dispose();
-                PeriodicExportRunner = PeriodicExportRunner.LoadConfigurations(_database);
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"PeriodicExport configuration was {(PeriodicExportRunner != null ? "enabled" : "disabled")}");
+                context.OpenReadTransaction();
+                var dbRecord = _serverStore.Cluster.ReadDatabase(context, _database.Name);
+                if (dbRecord == null)
+                    return;
+                VersioningStorage = VersioningStorage.LoadConfigurations(_database, dbRecord, VersioningStorage);                                   
+                ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database, dbRecord, ExpiredDocumentsCleaner);
+                PeriodicExportRunner = PeriodicExportRunner.LoadConfigurations(_database, dbRecord, PeriodicExportRunner);
             }
         }
 
@@ -120,7 +94,6 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
-            _database.Changes.OnSystemDocumentChange -= HandleSystemDocumentChange;
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(BundleLoader)}");
             exceptionAggregator.Execute(() =>
             {

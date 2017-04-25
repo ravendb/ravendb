@@ -17,7 +17,11 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
+using Raven.Client.Server.expiration;
+using Raven.Client.Server.PeriodicExport;
 using Raven.Client.Server.Tcp;
+using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Versioning;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
@@ -98,6 +102,8 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteTransformerCommand):
                 case nameof(RenameTransformerCommand):
                 case nameof(EditVersioningCommand):
+                case nameof(EditPeriodicBackupCommand):
+                case nameof(EditExpirationCommand):
                 case nameof(ModifyDatabaseWatchersCommand):
                 case nameof(ModifyConflictSolverCommand):
                     UpdateDatabase(context, type, cmd, index, leader);
@@ -625,6 +631,37 @@ namespace Raven.Server.ServerWide
     public class DeleteValueCommand
     {
         public string Name;
+    }
+
+    public class EditVersioningCommand 
+    {
+        public string DatabaseName;
+        public VersioningConfiguration Configuration;
+
+        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
+        {
+            databaseRecord.VersioningConfiguration = Configuration;
+        }
+    }
+
+    public class EditExpirationCommand 
+    {
+        public string DatabaseName;
+        public ExpirationConfiguration Configuration;
+        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
+        {
+            databaseRecord.ExpirationConfiguration = Configuration;
+        }
+    }
+
+    public class EditPeriodicBackupCommand
+    {
+        public string DatabaseName;
+        public PeriodicExportConfiguration Configuration;
+        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
+        {
+            databaseRecord.PeriodicExportConfiguration = Configuration;
+        }
     }
 
     public class DeleteDatabaseCommand

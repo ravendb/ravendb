@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
@@ -104,37 +105,28 @@ namespace Raven.Server.Documents.Versioning
             });
         }
 
-        public static VersioningStorage LoadConfigurations(DocumentDatabase database, ServerStore serverStore, VersioningStorage versioningStorage)
+        public static VersioningStorage LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, VersioningStorage versioningStorage)
         {
-            TransactionOperationContext context;
-            using (serverStore.ContextPool.AllocateOperationContext(out context))
+            try
             {
-                context.OpenReadTransaction();
-                var dbDoc = serverStore.Cluster.ReadDatabase(context, database.Name);
-                if (dbDoc == null)
+                if (dbRecord.VersioningConfiguration == null)
                     return null;
-                try
-                {
-                    var versioningConfiguration = dbDoc.VersioningConfiguration;
-                    if (versioningConfiguration == null)
-                        return null;
-                    if (versioningConfiguration.Equals(versioningStorage?.VersioningConfiguration))
-                        return versioningStorage;                    
-                    var config = new VersioningStorage(database, versioningConfiguration);
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Versioning configuration changed");
-                    return config;
-                }
-                catch (Exception e)
-                {
-                    //TODO: This should generate an alert, so admin will know that something is very bad
-                    //TODO: Or this should throw and we should have a config flag to ignore the error
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations(
-                            $"Cannot enable versioning for documents as the versioning configuration in the database record is missing or not valid: {dbDoc}",
-                            e);
-                    return null;
-                }
+                if (dbRecord.VersioningConfiguration.Equals(versioningStorage?.VersioningConfiguration))
+                    return versioningStorage;                    
+                var config = new VersioningStorage(database, dbRecord.VersioningConfiguration);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Versioning configuration changed");
+                return config;
+            }
+            catch (Exception e)
+            {
+                //TODO: This should generate an alert, so admin will know that something is very bad
+                //TODO: Or this should throw and we should have a config flag to ignore the error
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations(
+                        $"Cannot enable versioning for documents as the versioning configuration" +
+                        $" in the database record is missing or not valid: {dbRecord}", e);
+                return null;
             }
         }
 

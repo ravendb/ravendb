@@ -14,9 +14,10 @@ namespace Raven.Server.Documents.Versioning
 
         public Dictionary<string, VersioningConfigurationCollection> Collections { get; set; }
 
-     
-        protected bool Equals(VersioningConfiguration other)
+        public bool Equals(VersioningConfiguration other)
         {
+            if (other == null)
+                return false;
             if (other.Default.Equals(Default) == false)
                 return false;
             foreach (var keyValue in Collections)

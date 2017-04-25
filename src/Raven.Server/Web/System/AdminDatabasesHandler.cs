@@ -238,7 +238,65 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-        
+
+        [RavenAction("/admin/config-expiration-bundle", "POST", "/admin/config-expiration-bundle?name={databaseName:string}")]
+        public async Task SetupExpirationBundle()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            string errorMessage;
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            ServerStore.EnsureNotPassive();
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            {
+                var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-expiration-setup");
+                var index = await ServerStore.ModifyDatabaseExpirationBundle(context, name, configurationJson);
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+                ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["ETag"] = index
+                    });
+                    writer.Flush();
+                }
+            }
+        }
+
+        [RavenAction("/admin/config-periodic-export-bundle", "POST", "/admin/config-periodic-export-bundle?name={databaseName:string}")]
+        public async Task SetupPeriodicBackupBundle()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            string errorMessage;
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            ServerStore.EnsureNotPassive();
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            {
+                var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-periodic-export-setup");
+                var index = await ServerStore.ModifyDatabasePeriodicExportBundle(context, name, configurationJson);
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+                ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Update));
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["ETag"] = index
+                    });
+                    writer.Flush();
+                }
+            }
+        }
+
         [RavenAction("/admin/modify-watchers", "POST", "/admin/modify-watchers?name={databaseName:string}")]
         public async Task ModifyWathcers()
         {

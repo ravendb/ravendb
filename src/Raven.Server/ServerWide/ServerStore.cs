@@ -298,6 +298,32 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public async Task<long> ModifyDatabaseExpirationBundle(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
+        {
+            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            {
+                ["Type"] = nameof(EditExpirationCommand),
+                [nameof(EditExpirationCommand.DatabaseName)] = name,
+                [nameof(EditExpirationCommand.Configuration)] = configurationJson,
+            }, "expiration-cmd"))
+            {
+                return await SendToLeaderAsync(putCmd);
+            }
+        }
+
+        public async Task<long> ModifyDatabasePeriodicExportBundle(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
+        {
+            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            {
+                ["Type"] = nameof(EditPeriodicBackupCommand),
+                [nameof(EditExpirationCommand.DatabaseName)] = name,
+                [nameof(EditExpirationCommand.Configuration)] = configurationJson,
+            }, "periodic-export-cmd"))
+            {
+                return await SendToLeaderAsync(putCmd);
+            }
+        }
+		
         public async Task PutEditVersioningCommandAsync(JsonOperationContext context, string databaseName, BlittableJsonReaderObject val)
         {
             using (var editVersioningCmd = context.ReadObject(new DynamicJsonValue

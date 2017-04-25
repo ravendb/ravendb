@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Server.Operations;
+using Raven.Client.Server.PeriodicExport;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -31,13 +33,13 @@ namespace SlowTests.Server.Documents.PeriodicExport
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "oren" });
-                    await session.StoreAsync(new PeriodicExportConfiguration
+                    var config = new PeriodicExportConfiguration
                     {
                         Active = true,
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
-                    }, Constants.Documents.PeriodicExport.ConfigurationKey);
-
+                    };
+                    await store.Admin.Server.SendAsync(new ConfigurePeriodicExportBundleOperation(config, store.DefaultDatabase));                    
                     await session.SaveChangesAsync();
                 }
 
@@ -54,17 +56,17 @@ namespace SlowTests.Server.Documents.PeriodicExport
 
                 using (var commands = store.Commands())
                 {
+                    var operation = new GetPeriodicExportStatusOperation(store.DefaultDatabase);
+                        //await store.Admin.Server.SendAsync(new ConfigurePeriodicExportBundleOperation(config, store.DefaultDatabase));
                     SpinWait.SpinUntil(() =>
                     {
-                        var jsonDocument = commands.Get(Constants.Documents.PeriodicExport.StatusKey);
-                        if (jsonDocument == null)
+                        var result = store.Admin.Server.Send(operation);
+                        if (result.Status == null)
                             return false;
-                        var periodicExportStatus = (PeriodicExportStatus)store.Conventions.DeserializeEntityFromBlittable(typeof(PeriodicExportStatus), jsonDocument.BlittableJson);
-                        return periodicExportStatus.LastDocsEtag > 0;
+                        return result.Status.LastDocsEtag > 0;
                     }, TimeSpan.FromSeconds(10));
 
-                    dynamic statusDocument = await commands.GetAsync(Constants.Documents.PeriodicExport.StatusKey);
-                    var etagForExports = statusDocument.Etag;
+                    var etagForExports = store.Admin.Server.Send(operation).Status.LastDocsEtag;
                     using (var session = store.OpenAsyncSession())
                     {
                         await session.StoreAsync(new User { Name = "ayende" });
@@ -73,8 +75,8 @@ namespace SlowTests.Server.Documents.PeriodicExport
 
                     SpinWait.SpinUntil(() =>
                     {
-                        dynamic document = commands.Get(Constants.Documents.PeriodicExport.StatusKey);
-                        return document.Etag != etagForExports;
+                        var newLastEtag = store.Admin.Server.Send(operation).Status.LastDocsEtag;
+                        return newLastEtag != etagForExports;
                     }, 10000);
                 }
             }
@@ -97,15 +99,18 @@ namespace SlowTests.Server.Documents.PeriodicExport
         {
             using (var store = GetDocumentStore())
             {
+                
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "oren" });
-                    await session.StoreAsync(new PeriodicExportConfiguration
+                    var config = new PeriodicExportConfiguration
                     {
                         Active = true,
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
-                    }, Constants.Documents.PeriodicExport.ConfigurationKey);
+                    };
+                    var operation = new ConfigurePeriodicExportBundleOperation(config, store.DefaultDatabase);
+                    await store.Admin.Server.SendAsync(operation);
                     await session.SaveChangesAsync();
                 }
 
@@ -119,10 +124,10 @@ namespace SlowTests.Server.Documents.PeriodicExport
                 typeof(PeriodicExportRunner)
                     .GetField(nameof(PeriodicExportRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
                     .SetValue(periodicExportRunner, TimeSpan.FromMilliseconds(5));
-
+                var getPeriodicBackupStatus = new GetPeriodicExportStatusOperation(store.DefaultDatabase);
                 using (var commands = store.Commands())
                 {
-                    SpinWait.SpinUntil(() => commands.Get(Constants.Documents.PeriodicExport.StatusKey) != null, 10000);
+                    SpinWait.SpinUntil(() => store.Admin.Server.Send(getPeriodicBackupStatus).Status != null, 10000);
                 }
             }
 
@@ -147,30 +152,30 @@ namespace SlowTests.Server.Documents.PeriodicExport
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "oren" });
-                    await session.StoreAsync(new PeriodicExportConfiguration
+                    var config = new PeriodicExportConfiguration
                     {
                         Active = true,
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
-                    }, Constants.Documents.PeriodicExport.ConfigurationKey);
-
+                    };
+                    var operation = new ConfigurePeriodicExportBundleOperation(config, store.DefaultDatabase);
+                    await store.Admin.Server.SendAsync(operation);
                     await session.SaveChangesAsync();
                 }
-
+                var getPeriodicBackupStatus = new GetPeriodicExportStatusOperation(store.DefaultDatabase);
                 using (var commands = store.Commands())
                 {
                     SpinWait.SpinUntil(() =>
                     {
-                        var jsonDocument = commands.Get(Constants.Documents.PeriodicExport.StatusKey);
-                        if (jsonDocument == null)
-                            return false;
-                        var periodicExportStatus = (PeriodicExportStatus)store.Conventions.DeserializeEntityFromBlittable(typeof(PeriodicExportStatus), jsonDocument.BlittableJson);
-                        return periodicExportStatus.LastDocsEtag > 0;
+                        var result = store.Admin.Server.Send(getPeriodicBackupStatus);
+                        if (result.Status == null)
+                            return false;                        
+                        return result.Status.LastDocsEtag > 0;
                     }, TimeSpan.FromSeconds(10));
 
 
-                    dynamic statusDocument = await commands.GetAsync(Constants.Documents.PeriodicExport.StatusKey);
-                    var etagForExports = statusDocument.Etag;
+                    var res = await store.Admin.Server.SendAsync(getPeriodicBackupStatus);
+                    var etagForExports = res.Status.LastDocsEtag;
                     using (var session = store.OpenAsyncSession())
                     {
                         await session.StoreAsync(new User { Name = "ayende" });
@@ -179,8 +184,8 @@ namespace SlowTests.Server.Documents.PeriodicExport
 
                     SpinWait.SpinUntil(() =>
                     {
-                        dynamic document = commands.Get(Constants.Documents.PeriodicExport.StatusKey);
-                        return document.Etag != etagForExports;
+                        res = store.Admin.Server.Send(getPeriodicBackupStatus);
+                        return res.Status.LastDocsEtag != etagForExports;
                     }, 10000);
                 }
             }

@@ -11,6 +11,8 @@ using System.Globalization;
 using System.Net;
 using System.Threading;
 using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Server.expiration;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -30,8 +32,11 @@ namespace Raven.Server.Documents.Expiration
         private readonly Timer _timer;
         private readonly object _locker = new object();
 
+        public ExpirationConfiguration Configuration { get; }
+
         private ExpiredDocumentsCleaner(DocumentDatabase database, ExpirationConfiguration configuration)
         {
+            Configuration = configuration;
             _database = database;
             _logger = LoggingSource.Instance.GetLogger<ExpiredDocumentsCleaner>(database.Name);
             var deleteFrequencyInSeconds = configuration.DeleteFrequencySeconds ?? 60;
@@ -42,33 +47,30 @@ namespace Raven.Server.Documents.Expiration
             _timer = new Timer(TimerCallback, null, period, period);
         }
 
-        public static ExpiredDocumentsCleaner LoadConfigurations(DocumentDatabase database)
+        public static ExpiredDocumentsCleaner LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, ExpiredDocumentsCleaner expiredDocumentsCleaner)
         {
-            DocumentsOperationContext context;
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            try
             {
-                context.OpenReadTransaction();
-
-                var configuration = database.DocumentsStorage.Get(context, Constants.Documents.Expiration.ConfigurationKey);
-                if (configuration == null)
-                    return null;
-
-                try
+                if (dbRecord.ExpirationConfiguration == null)
                 {
-                    var expirationConfiguration = JsonDeserializationServer.ExpirationConfiguration(configuration.Data);
-                    if (expirationConfiguration.Active == false)
-                        return null;
-
-                    return new ExpiredDocumentsCleaner(database, expirationConfiguration);
-                }
-                catch (Exception e)
-                {
-                    //TODO: Raise alert, or maybe handle this via a db load error that can be turned off with 
-                    //TODO: a config
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Cannot enable expired documents cleaner as the configuration document {Constants.Documents.Expiration.ConfigurationKey} is not valid: {configuration.Data}", e);
+                    expiredDocumentsCleaner?.Dispose();
                     return null;
                 }
+                if (dbRecord.ExpirationConfiguration.Equals(expiredDocumentsCleaner?.Configuration))
+                    return expiredDocumentsCleaner;
+                expiredDocumentsCleaner?.Dispose();
+                if (dbRecord.ExpirationConfiguration.Active == false)
+                    return null;
+
+                return new ExpiredDocumentsCleaner(database, dbRecord.ExpirationConfiguration);
+            }
+            catch (Exception e)
+            {
+                //TODO: Raise alert, or maybe handle this via a db load error that can be turned off with 
+                //TODO: a config
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Cannot enable expired documents cleaner as the configuration document is not valid.", e);
+                return null;
             }
         }
 

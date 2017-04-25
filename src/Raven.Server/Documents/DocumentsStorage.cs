@@ -10,7 +10,10 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Server.PeriodicExport;
+using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Versioning;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -39,6 +42,7 @@ namespace Raven.Server.Documents
         private static readonly Slice ChangeVectorSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
+        private static readonly Slice PeriodicExportStatusSlice;
 
         private static readonly Slice AllTombstonesEtagsSlice;
         private static readonly Slice TombstonesPrefix;
@@ -91,7 +95,7 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "ChangeVector", ByteStringType.Immutable, out ChangeVectorSlice);
-
+            Slice.From(StorageEnvironment.LabelsContext, "PeriodicExportStatus", ByteStringType.Immutable, out PeriodicExportStatusSlice);
             /*
             Collection schema is:
             full name
@@ -256,6 +260,8 @@ namespace Raven.Server.Documents
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(ChangeVectorSlice);
 
+                    tx.CreateTree(PeriodicExportStatusSlice);
+
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
                     Identities = new IdentitiesStorage(_documentDatabase, tx);
@@ -298,6 +304,26 @@ namespace Raven.Server.Documents
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(ChangeVectorSlice);
             ChangeVectorUtils.WriteChangeVectorTo(context, changeVector, tree);
+        }
+
+        public BlittableJsonReaderObject GetDatabasePeriodicExportStatus(DocumentsOperationContext context)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(PeriodicExportStatusSlice);
+            var result = tree.Read(PeriodicExportStatusSlice);
+            if (result == null)
+                return null;
+            return new BlittableJsonReaderObject(result.Reader.Base, result.Reader.Length, context);
+        }
+
+        public void SetDatabasePeriodicExportStatus(DocumentsOperationContext context, PeriodicExportStatus periodicExportStatus)
+        {
+            var jsonVal = periodicExportStatus.ToJson();
+            var tree = context.Transaction.InnerTransaction.CreateTree(PeriodicExportStatusSlice);
+            using(var json = context.ReadObject(jsonVal, "backup status"))
+            using (tree.DirectAdd(PeriodicExportStatusSlice, json.Size, out byte* dest))
+            {
+                json.CopyTo(dest);
+            }
         }
 
         public static long ReadLastDocumentEtag(Transaction tx)
