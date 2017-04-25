@@ -251,6 +251,12 @@ namespace Sparrow.Binary
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsPowerOf2(long num)
+        {
+            return (num & (num - 1)) == 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint RotateLeft32(uint value, int count)
         {
             return (value << count) | (value >> (32 - count));

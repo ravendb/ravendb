@@ -49,7 +49,7 @@ namespace Sparrow
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static byte* Allocate4KbAllignedMemory(long size)
+        public static byte* Allocate4KbAlignedMemory(long size)
         {
             Debug.Assert(size >= 0);
 
