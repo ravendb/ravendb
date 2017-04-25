@@ -52,10 +52,12 @@ namespace Raven.Server.Documents.ETL
                 return;
 
             var processes = new List<EtlProcess>();
-            
+
+            var uniqueDestinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
             foreach (var config in Destinations.RavenDestinations)
             {
-                if (ValidateConfiguration(config) == false)
+                if (ValidateConfiguration(config, uniqueDestinations) == false)
                     continue;
 
                 foreach (var transform in config.Transforms)
@@ -68,7 +70,7 @@ namespace Raven.Server.Documents.ETL
 
             foreach (var config in Destinations.SqlDestinations)
             {
-                if (ValidateConfiguration(config) == false)
+                if (ValidateConfiguration(config, uniqueDestinations) == false)
                     continue;
 
                 foreach (var transform in config.Transforms)
@@ -88,24 +90,39 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        private bool ValidateConfiguration<T>(EtlConfiguration<T> config) where T : EtlDestination
+        private bool ValidateConfiguration<T>(EtlConfiguration<T> config, HashSet<string> uniqueDestinations) where T : EtlDestination
         {
             List<string> errors;
             if (config.Validate(out errors) == false)
             {
-                var errorMessage = $"Invalid ETL configuration for destination: {config.Destination}. " +
-                                   $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.";
+                LogConfigurationError(config, errors);
+                return false;
+            }
 
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(errorMessage);
-
-                var alert = AlertRaised.Create(AlertTitle, errorMessage, AlertType.Etl_Error, NotificationSeverity.Error);
-
-                _database.NotificationCenter.Add(alert);
+            if (uniqueDestinations.Add(config.Destination.UniqueName) == false)
+            {
+                LogConfigurationError(config,
+                    new List<string>
+                    {
+                        "ETL to this destination is already defined. Please just combine transformation scripts for the same destination"
+                    });
                 return false;
             }
 
             return true;
+        }
+
+        private void LogConfigurationError<T>(EtlConfiguration<T> config, List<string> errors) where T : EtlDestination
+        {
+            var errorMessage = $"Invalid ETL configuration for destination: {config.Destination}. " +
+                               $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.";
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info(errorMessage);
+
+            var alert = AlertRaised.Create(AlertTitle, errorMessage, AlertType.Etl_Error, NotificationSeverity.Error);
+
+            _database.NotificationCenter.Add(alert);
         }
 
         private void LoadConfiguration()
