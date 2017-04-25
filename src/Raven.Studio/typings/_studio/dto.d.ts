@@ -13,6 +13,7 @@ interface valueAndLabelItem<V, L> {
     label: L;
 }
 
+
 interface queryResultDto<T> {
     Results: T[];
     Includes: any[];
@@ -51,13 +52,14 @@ interface documentMetadataDto {
     '@collection'?: string;
     'Raven-Clr-Type'?: string;
     'Non-Authoritative-Information'?: boolean;
-    '@id'?: string;
+    '@id': string;
     'Temp-Index-Score'?: number;
     '@last-modified'?: string;
-    '@etag'?: number;
-    '@flags': string;
-    '@attachments': Array<documentAttachmentDto>;
+    '@etag': number;
+    '@flags'?: string;
+    '@attachments'?: Array<documentAttachmentDto>;
     '@change-vector'?: Array<changeVectorDto>;
+
 }
 
 interface changeVectorDto {
@@ -114,17 +116,12 @@ interface chagesApiConfigureRequestDto {
     Param?: string;
 }
 
-interface saveDocumentResponseDto {
-    Results: Array<saveDocumentResponseItemDto>;
+interface changedOnlyMetadataFieldsDto extends documentMetadataDto {
+    Method: string;
 }
 
-interface saveDocumentResponseItemDto {
-    Key: string;
-    Etag: number;
-    Method: string;
-    AdditionalData: any;
-    PatchResult: string;
-    Deleted: boolean;
+interface saveDocumentResponseDto {
+    Results: Array<changedOnlyMetadataFieldsDto>;
 }
 
 interface transformerParamInfo {

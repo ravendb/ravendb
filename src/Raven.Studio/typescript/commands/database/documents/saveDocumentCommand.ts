@@ -19,7 +19,7 @@ class saveDocumentCommand extends commandBase {
         const saveTask = this.post<saveDocumentResponseDto>(url, args, this.db);
 
         if (this.reportSaveProgress) {
-            saveTask.done((result: saveDocumentResponseDto) => this.reportSuccess("Saved " + result.Results[0].Key));
+            saveTask.done((result: saveDocumentResponseDto) => this.reportSuccess("Saved " + result.Results[0]["@id"]));
             saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save " + this.id, response.responseText, response.statusText));
         }
 
