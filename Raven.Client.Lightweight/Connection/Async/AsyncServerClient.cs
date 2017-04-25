@@ -1354,11 +1354,11 @@ namespace Raven.Client.Connection.Async
         }
 
         private async Task<GetResponse[]> MultiGetAsyncInternal(OperationMetadata operationMetadata,
-            IRequestTimeMetric requestTimeMetric, GetRequest[] requests, CancellationToken token)
+            IRequestTimeMetric requestTimeMetric, GetRequest[] requests, CancellationToken token, bool avoidCachingRequest = false)
         {
             var multiGetOperation = new MultiGetOperation(this, convention, operationMetadata.Url, requests);
 
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.RequestUri, HttpMethod.Post, operationMetadata.Credentials, convention, requestTimeMetric).AddOperationHeaders(OperationsHeaders)))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, multiGetOperation.RequestUri, HttpMethod.Post, operationMetadata.Credentials, convention, requestTimeMetric) { AvoidCachingRequest = avoidCachingRequest }.AddOperationHeaders(OperationsHeaders)))
             {
                 request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url, operationMetadata.ClusterInformation.WithClusterFailoverHeader);
 
@@ -1489,7 +1489,7 @@ namespace Raven.Client.Connection.Async
                             Query = stringBuilder.ToString(),
                             Url = "/indexes/" + index
                         }
-                    }, token).ConfigureAwait(false);
+                    }, token, query.DisableCaching).ConfigureAwait(false);
                 res = result[0];
                 var json = (RavenJObject)result[0].Result;
                 var queryResult = SerializationHelper.ToQueryResult(json, result[0].Headers["Temp-Request-Time"], -1);
