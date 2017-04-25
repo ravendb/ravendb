@@ -30,6 +30,8 @@ namespace Raven.Database.Commercial
         private readonly ILog logger = LogManager.GetCurrentClassLogger();
         private Timer timer;
 
+        private object validationLockObject = new object();
+
         private static readonly Dictionary<string, string> AlwaysOnAttributes = new Dictionary<string, string>
         {
             {"periodicBackup", "false"},
@@ -77,105 +79,120 @@ namespace Raven.Database.Commercial
 
         private void ExecuteInternal(InMemoryRavenConfiguration config, bool firstTime = false, bool forceUpdate = false)
         {
-            var licensePath = GetLicensePath(config);
-            var licenseText = GetLicenseText(config);
-
-            if (TryLoadLicense(config) == false)
-                return;
-
-            string errorMessage = string.Empty;
+            bool validationLockAcquired = false;
             try
             {
-
-                try
+                // Thread will execute code only if validationLockAcquired is false upon entering method, else it will return and not wait
+                Monitor.TryEnter(validationLockObject, ref validationLockAcquired);
+                if (validationLockAcquired)
                 {
-                    licenseValidator.AssertValidLicense(() =>
-                    {
-                        string value;
+                    var licensePath = GetLicensePath(config);
+                    var licenseText = GetLicenseText(config);
 
-                        errorMessage = AssertLicenseAttributes(licenseValidator.LicenseAttributes, licenseValidator.LicenseType);
-                        if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out value) &&
-                            "true".Equals(value, StringComparison.OrdinalIgnoreCase))
+                    if (TryLoadLicense(config) == false)
+                        return;
+
+                    string errorMessage = string.Empty;
+                    try
+                    {
+                        try
                         {
-                            licenseValidator.MultipleLicenseUsageBehavior = AbstractLicenseValidator.MultipleLicenseUsage.AllowSameLicense;
-                        }
-                        string allowExternalBundles;
-                        if (licenseValidator.LicenseAttributes.TryGetValue("allowExternalBundles", out allowExternalBundles) &&
-                            bool.Parse(allowExternalBundles) == false)
-                        {
-                            var directoryCatalogs = config.Catalog.Catalogs.OfType<DirectoryCatalog>().ToArray();
-                            foreach (var catalog in directoryCatalogs)
+                            licenseValidator.AssertValidLicense(() =>
                             {
-                                config.Catalog.Catalogs.Remove(catalog);
-                            }
+                                string value;
+
+                                errorMessage = AssertLicenseAttributes(licenseValidator.LicenseAttributes, licenseValidator.LicenseType);
+                                if (licenseValidator.LicenseAttributes.TryGetValue("OEM", out value) &&
+                                    "true".Equals(value, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    licenseValidator.MultipleLicenseUsageBehavior = AbstractLicenseValidator.MultipleLicenseUsage.AllowSameLicense;
+                                }
+                                string allowExternalBundles;
+                                if (licenseValidator.LicenseAttributes.TryGetValue("allowExternalBundles", out allowExternalBundles) &&
+                                    bool.Parse(allowExternalBundles) == false)
+                                {
+                                    var directoryCatalogs = config.Catalog.Catalogs.OfType<DirectoryCatalog>().ToArray();
+                                    foreach (var catalog in directoryCatalogs)
+                                    {
+                                        config.Catalog.Catalogs.Remove(catalog);
+                                    }
+                                }
+                            }, config.TurnOffDiscoveryClient, firstTime, forceUpdate);
                         }
-                    }, config.TurnOffDiscoveryClient,firstTime,forceUpdate);
-                }
-                catch (LicenseExpiredException ex)
-                {
-                    errorMessage = ex.Message;
-                }
+                        catch (LicenseExpiredException ex)
+                        {
+                            errorMessage = ex.Message;
+                        }
 
-                var attributes = new Dictionary<string, string>(AlwaysOnAttributes, StringComparer.OrdinalIgnoreCase);
-                foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
-                {
-                    attributes[licenseAttribute.Key] = licenseAttribute.Value;
-                }
-                attributes["UserId"] = licenseValidator.UserId.ToString();
-                var message = "Valid license at " + licensePath;
-                var status = "Commercial";
-                if (licenseValidator.LicenseType != LicenseType.Standard)
-                    status += " - " + licenseValidator.LicenseType;
+                        var attributes = new Dictionary<string, string>(AlwaysOnAttributes, StringComparer.OrdinalIgnoreCase);
+                        foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
+                        {
+                            attributes[licenseAttribute.Key] = licenseAttribute.Value;
+                        }
+                        attributes["UserId"] = licenseValidator.UserId.ToString();
+                        var message = "Valid license at " + licensePath;
+                        var status = "Commercial";
+                        if (licenseValidator.LicenseType != LicenseType.Standard)
+                            status += " - " + licenseValidator.LicenseType;
 
-                if (licenseValidator.IsOemLicense() && licenseValidator.ExpirationDate < SystemTime.UtcNow)
-                {
-                    message = string.Format("Expired ({0}) OEM/ISV license at {1}", licenseValidator.ExpirationDate.ToShortDateString(), licensePath);
-                    status += " (Expired)";
-                }
+                        if (licenseValidator.IsOemLicense() && licenseValidator.ExpirationDate < SystemTime.UtcNow)
+                        {
+                            message = string.Format("Expired ({0}) OEM/ISV license at {1}", licenseValidator.ExpirationDate.ToShortDateString(), licensePath);
+                            status += " (Expired)";
+                        }
 
-                CurrentLicense = new LicensingStatus
-                {
-                    Status = status,
-                    Error = !String.IsNullOrEmpty(errorMessage),
-                    Message = String.IsNullOrEmpty(errorMessage) ? message : errorMessage,
-                    
-                    Attributes = attributes,
-                    LicensePath = licensePath
-                };
-                if (CurrentLicenseChanged != null)
-                    CurrentLicenseChanged(CurrentLicense);
-            }
-            catch (Exception e)
-            {
-                logger.ErrorException("Could not validate license at " + licensePath + ", " + licenseText, e);
+                        CurrentLicense = new LicensingStatus
+                        {
+                            Status = status,
+                            Error = !String.IsNullOrEmpty(errorMessage),
+                            Message = String.IsNullOrEmpty(errorMessage) ? message : errorMessage,
 
-                try
-                {
-                    var xmlDocument = new XmlDocument();
-                    xmlDocument.Load(licensePath);
-                    var ns = new XmlNamespaceManager(xmlDocument.NameTable);
-                    ns.AddNamespace("sig", "http://www.w3.org/2000/09/xmldsig#");
-                    var sig = xmlDocument.SelectSingleNode("/license/sig:Signature", ns);
-                    if (sig != null)
-                    {
-                        sig.RemoveAll();
+                            Attributes = attributes,
+                            LicensePath = licensePath
+                        };
+                        if (CurrentLicenseChanged != null)
+                            CurrentLicenseChanged(CurrentLicense);
                     }
-                    licenseText = xmlDocument.InnerXml;
-                }
-                catch (Exception)
-                {
-                    // couldn't remove the signature, maybe not XML?
-                }
+                    catch (Exception e)
+                    {
+                        logger.ErrorException("Could not validate license at " + licensePath + ", " + licenseText, e);
 
-                CurrentLicense = new LicensingStatus
+                        try
+                        {
+                            var xmlDocument = new XmlDocument();
+                            xmlDocument.Load(licensePath);
+                            var ns = new XmlNamespaceManager(xmlDocument.NameTable);
+                            ns.AddNamespace("sig", "http://www.w3.org/2000/09/xmldsig#");
+                            var sig = xmlDocument.SelectSingleNode("/license/sig:Signature", ns);
+                            if (sig != null)
+                            {
+                                sig.RemoveAll();
+                            }
+                            licenseText = xmlDocument.InnerXml;
+                        }
+                        catch (Exception)
+                        {
+                            // couldn't remove the signature, maybe not XML?
+                        }
+
+                        CurrentLicense = new LicensingStatus
+                        {
+                            Status = "AGPL - Open Source",
+                            Error = true,
+                            LicensePath = licensePath,
+                            Details = "License Path: " + licensePath + Environment.NewLine + ", License Text: " + licenseText + Environment.NewLine + ", Exception: " + e,
+                            Message = "Could not validate license: " + e.Message,
+                            Attributes = new Dictionary<string, string>(AlwaysOnAttributes, StringComparer.OrdinalIgnoreCase)
+                        };
+                    }
+                }
+            }
+            finally
+            {
+                if (validationLockAcquired)
                 {
-                    Status = "AGPL - Open Source",
-                    Error = true,
-                    LicensePath = licensePath,
-                    Details = "License Path: " + licensePath + Environment.NewLine + ", License Text: " + licenseText + Environment.NewLine + ", Exception: " + e,
-                    Message = "Could not validate license: " + e.Message,
-                    Attributes = new Dictionary<string, string>(AlwaysOnAttributes, StringComparer.OrdinalIgnoreCase)
-                };
+                    Monitor.Exit(validationLockObject);
+                }
             }
         }
 
