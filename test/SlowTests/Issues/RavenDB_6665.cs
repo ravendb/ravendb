@@ -70,7 +70,7 @@ namespace SlowTests.Issues
                 Assert.False(token.Token.IsCancellationRequested);
 
 
-                await Task.Delay(TimeSpan.FromMilliseconds(800));
+                await Task.Delay(TimeSpan.FromMilliseconds(1500));
 
                 Assert.True(token.Token.IsCancellationRequested);
             }
