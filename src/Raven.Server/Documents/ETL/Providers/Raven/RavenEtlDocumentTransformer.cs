@@ -173,9 +173,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (item.Collection != null)
                     return _collectionNameComparisons[item.Collection][loadToCollection];
 
-                var calculated = item.CalculatedCollectionName;
+                var collection = item.CollectionFromMetadata;
 
-                return calculated?.Value.CompareTo(loadToCollection) == 0;
+                return collection?.CompareTo(loadToCollection) == 0;
             }
         }
 
