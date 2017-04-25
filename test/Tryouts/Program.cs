@@ -23,11 +23,11 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                Parallel.For(0, 10, j =>
+                Parallel.For(0, 1, j =>
                 {
-                    using (var a = new FastTests.Server.ServerStore())
+                    using (var a = new SlowTests.Server.Rachis.IndexesAndTransformers())
                     {
-                        a.Admin_databases_endpoint_should_fetch_document_with_etag_in_metadata_property();
+                        a.BasicTransformerCreation().Wait();
                     }
                 });
             }

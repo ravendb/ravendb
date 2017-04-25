@@ -298,11 +298,11 @@ namespace Tests.Infrastructure
             var message = $"Timed out waiting for {index} after {timeout} because out of {Servers.Count} " + 
                           $" we got confirmations that it was applied only on {tasks.Count(x=>x.IsCompleted)}";
 
-            Console.ForegroundColor = ConsoleColor.Blue;
+            //Console.ForegroundColor = ConsoleColor.Blue;
 
-            Console.WriteLine(message);
+            //Console.WriteLine(message);
 
-            Console.ReadLine();
+            //Console.ReadLine();
 
             throw new TimeoutException(
                 message
