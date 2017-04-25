@@ -317,7 +317,7 @@
         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
                 data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
                 enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name)">
-            <span class="text-warning" data-bind="visible: isPausedState()">
+            <span class="text-warning" data-bind="visible: isPausedState() && !isErrorState()">
                 <i class="icon-cancel"></i>
                 <span>Paused until restart</span>
             </span>
