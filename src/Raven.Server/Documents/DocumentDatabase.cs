@@ -162,8 +162,6 @@ namespace Raven.Server.Documents
 
         public ConfigurationStorage ConfigurationStorage { get; }
 
-        public IndexesEtagsStorage IndexMetadataPersistence => ConfigurationStorage.IndexesEtagsStorage;
-
         public ReplicationLoader ReplicationLoader { get; private set; }
 
         public EtlLoader EtlLoader { get; private set; }

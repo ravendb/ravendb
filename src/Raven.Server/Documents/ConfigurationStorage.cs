@@ -15,8 +15,6 @@ namespace Raven.Server.Documents
 
         public TransactionContextPool ContextPool => _contextPool;
 
-        public IndexesEtagsStorage IndexesEtagsStorage { get; }
-
         public NotificationsStorage NotificationsStorage { get; }
 
         public OperationsStorage OperationsStorage { get; }
@@ -45,8 +43,6 @@ namespace Raven.Server.Documents
             Environment = new StorageEnvironment(options);
             
             NotificationsStorage = new NotificationsStorage(db.Name);
-            
-            IndexesEtagsStorage = new IndexesEtagsStorage(db.Name);
 
             OperationsStorage = new OperationsStorage();
 
@@ -62,7 +58,6 @@ namespace Raven.Server.Documents
 
         public void Initialize(IndexStore indexStore, TransformerStore transformerStore)
         {
-            IndexesEtagsStorage.Initialize(Environment, _contextPool, indexStore, transformerStore);
             OperationsStorage.Initialize(Environment, _contextPool);
             EtlStorage.Initialize(Environment, _contextPool);
         }

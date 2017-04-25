@@ -11,13 +11,7 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Replication/ActiveConnectionTimeout")]
         public TimeSetting ActiveConnectionTimeout { get; set; }
-
-        [DefaultValue(600)]
-        [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Raven/Replication/IndexAndTransformerReplicationLatencyInSec")]
-        [LegacyConfigurationEntry("Raven/Replication/IndexAndTransformerReplicationLatency")]
-        public TimeSetting IndexAndTransformerReplicationLatency { get; set; }
-
+        
         [Description("Number of seconds after which replication will stop reading documents from disk")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]

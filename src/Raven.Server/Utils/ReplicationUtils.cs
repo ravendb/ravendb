@@ -42,7 +42,6 @@ namespace Raven.Server.Utils
                             Url = destination.Url,
                             SpecifiedCollections = destination.SpecifiedCollections ?? new Dictionary<string, string>(),
                             LastDocumentEtag = outgoingHandler._lastSentDocumentEtag,
-                            LastIndexTransformerEtag = outgoingHandler._lastSentIndexOrTransformerEtag,
                             LastHeartbeatTicks = outgoingHandler.LastHeartbeatTicks,
                             NodeStatus = ActiveNodeStatus.Status.Online
                         });
@@ -90,7 +89,6 @@ namespace Raven.Server.Utils
                         IsCurrentlyConnected = true,
                         NodeStatus = ActiveNodeStatus.Status.Online,
                         LastDocumentEtag = incomingHandler.LastDocumentEtag,
-                        LastIndexTransformerEtag = incomingHandler.LastIndexOrTransformerEtag,
                         LastHeartbeatTicks = incomingHandler.LastHeartbeatTicks
                     });
             }

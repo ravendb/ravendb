@@ -313,7 +313,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
 
         protected override void ModifyReplicationDestination(ReplicationNode replicationNode)
         {
-            replicationNode.SkipIndexReplication = true;
+            //replicationNode.SkipIndexReplication = true;
         }
 
         public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
