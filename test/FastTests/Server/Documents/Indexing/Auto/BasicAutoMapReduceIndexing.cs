@@ -230,9 +230,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public async Task DefinitionOfAutoMapReduceIndexIsPersisted()
         {
-            var path = NewDataPath();
             string dbName;
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 dbName = database.Name;
 

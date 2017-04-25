@@ -33,7 +33,7 @@ using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents
 {
-    public class DocumentDatabase : IResourceStore
+    public class DocumentDatabase : IDisposable
     {
         private readonly ServerStore _serverStore;
         private readonly Logger _logger;
@@ -80,7 +80,6 @@ namespace Raven.Server.Documents
             _serverStore = serverStore;
             StartTime = SystemTime.UtcNow;
             Name = name;
-            ResourceName = "db/" + name;
             Configuration = configuration;
 
             try
@@ -132,8 +131,6 @@ namespace Raven.Server.Documents
         public string Name { get; }
 
         public Guid DbId => DocumentsStorage.Environment?.DbId ?? Guid.Empty;
-
-        public string ResourceName { get; }
 
         public RavenConfiguration Configuration { get; }
 

@@ -99,7 +99,7 @@ namespace Raven.Server.Routing
             {
                 var authResult = TryAuthorize(context, _ravenServer.Configuration, reqCtx.Database);
                 if (authResult == false)
-                    return reqCtx.Database?.ResourceName;
+                    return reqCtx.Database?.Name;
             }
 
             if (reqCtx.Database != null)
@@ -114,7 +114,7 @@ namespace Raven.Server.Routing
 
             Interlocked.Decrement(ref _serverMetrics.ConcurrentRequestsCount);
 
-            return reqCtx.Database?.ResourceName;
+            return reqCtx.Database?.Name;
         }
 
         private bool TryAuthorize(HttpContext context, RavenConfiguration configuration,
@@ -186,7 +186,7 @@ namespace Raven.Server.Routing
                 return false;
             }
 
-            var resourceName = database?.ResourceName;
+            var resourceName = database?.Name;
 
             if (resourceName == null)
                 return true;

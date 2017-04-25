@@ -123,11 +123,12 @@ namespace FastTests.Server.Documents.Indexing.Static
         [Fact]
         public async Task CanPersist()
         {
-            var path = NewDataPath();
+            
             IndexDefinition indexDefinition1, indexDefinition2;
             string dbName;
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 dbName = database.Name;
 

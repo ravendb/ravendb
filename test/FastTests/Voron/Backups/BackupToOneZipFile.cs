@@ -22,8 +22,8 @@ namespace FastTests.Voron.Backups
         {
             var tempFileName = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             Directory.CreateDirectory(tempFileName);
-
-            using (var database = CreateDocumentDatabase(runInMemory: false))
+            
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 var context = DocumentsOperationContext.ShortTermSingleUse(database);
                 await VersioningHelper.SetupVersioning(Server.ServerStore, database.Name, false, 13);
@@ -81,7 +81,7 @@ namespace FastTests.Voron.Backups
                 database.FullBackupTo(Path.Combine(tempFileName, "backup-test.backup"));
                 BackupMethods.Full.Restore(Path.Combine(tempFileName, "backup-test.backup"), Path.Combine(tempFileName, "backup-test.data"));
             }
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: Path.Combine(tempFileName, "backup-test.data")))
+            using (CreatePersistentDocumentDatabase(Path.Combine(tempFileName, "backup-test.data"), out var database))
             {
                 var context = DocumentsOperationContext.ShortTermSingleUse(database);
                 using (var tx = context.OpenReadTransaction())
@@ -213,7 +213,8 @@ namespace FastTests.Voron.Backups
                     }, options => options.ForceUsing32BitsPager = forceUsing32BitsPager);
                 }
             }
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: Path.Combine(tempFileName, "backup-test.data")))
+
+            using (CreatePersistentDocumentDatabase(Path.Combine(tempFileName, "backup-test.data"), out var database))
             {
                 var context = DocumentsOperationContext.ShortTermSingleUse(database);
                 using (var tx = context.OpenReadTransaction())

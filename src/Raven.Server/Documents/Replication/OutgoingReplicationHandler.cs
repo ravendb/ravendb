@@ -449,7 +449,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public string FromToString => $"from {_database.ResourceName} to {Destination.NodeTag}({Destination.Database}) at {Destination.Url}";
+        public string FromToString => $"from {_database.Name} to {Destination.NodeTag}({Destination.Database}) at {Destination.Url}";
 
         public ReplicationNode Node => Destination;
         public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";

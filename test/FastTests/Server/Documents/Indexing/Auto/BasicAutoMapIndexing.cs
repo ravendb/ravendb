@@ -74,7 +74,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public async Task CanDispose()
         {
-            using (var database = CreateDocumentDatabase(runInMemory: false))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 Assert.True(await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
@@ -92,9 +92,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public async Task CanPersist()
         {
-            var path = NewDataPath();
             string dbName;
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 dbName = database.Name;
 
@@ -161,8 +160,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             using (var database = CreateDocumentDatabase())
                 await CanDelete(database);
 
-            var path = NewDataPath();
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
                 await CanDelete(database);
         }
 
@@ -214,8 +212,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             using (var database = CreateDocumentDatabase())
                 await CanReset(database);
 
-            var path = NewDataPath();
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
                 await CanReset(database);
         }
 
@@ -1076,12 +1073,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public async Task IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert()
         {
-            var path = NewDataPath();
             string indexStoragePath;
             string indexName;
             string dbName;
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 dbName = database.Name;
 
@@ -1128,13 +1124,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public async Task CanDeleteFaultyIndex()
         {
-            var path = NewDataPath();
             string indexStoragePath;
             string indexSafeName;
             string dbName;
             long etag;
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 dbName = database.Name;
 

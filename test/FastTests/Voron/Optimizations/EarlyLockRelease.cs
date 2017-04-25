@@ -11,8 +11,8 @@ namespace FastTests.Voron.Optimizations
         [Fact]
         public void ShouldWork()
         {
-            var path = NewDataPath();
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 var tableSchema = new TableSchema();
 

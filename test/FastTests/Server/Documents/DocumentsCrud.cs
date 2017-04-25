@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -13,10 +15,11 @@ namespace FastTests.Server.Documents
     public class DocumentsCrud : RavenLowLevelTestBase
     {
         private DocumentDatabase _documentDatabase;
+        private IDisposable _disposeDatabase;
 
         public DocumentsCrud()
         {
-            _documentDatabase = CreateDocumentDatabase(runInMemory: false, dataDirectory: NewDataPath());
+            _disposeDatabase = CreatePersistentDocumentDatabase(NewDataPath(), out _documentDatabase);
         }
 
         [Theory]
@@ -540,7 +543,7 @@ namespace FastTests.Server.Documents
 
         public override void Dispose()
         {
-            _documentDatabase.Dispose();
+            _disposeDatabase.Dispose();
 
             base.Dispose();
         }

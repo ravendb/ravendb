@@ -23,11 +23,11 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                Parallel.For(0, 5, j =>
+                Parallel.For(0, 1, j =>
                 {
-                    using (var a = new SlowTests.Issues.RavenDB_4446())
+                    using (var a = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
                     {
-                        a.can_index_collections_smaller_than_32768();
+                        a.CanReset().Wait();
                     }
                 });
             }
