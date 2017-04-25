@@ -23,12 +23,12 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                Parallel.For(0, 1, j =>
+                Parallel.For(0, 10, j =>
                 {
-                    using (var a = new SlowTests.Issues.RavenDB_6259())
-                    {
-                        a.ToLatestConflictResolutionOfTumbstoneAndUpdateShouldNotReviveTubmstone_And_ShouldNotCauseInfiniteIndexingLoop().Wait();
-                    }
+                    //using (var a = new SlowTests.Issues.RavenDB_6665())
+                    //{
+                    //    a.CanDelayTimeout().Wait();
+                    //}
                 });
             }
         }

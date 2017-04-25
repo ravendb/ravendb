@@ -53,30 +53,6 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task CanDelayTimeout()
-        {
-            using (var token = new OperationCancelToken(TimeSpan.FromSeconds(1), CancellationToken.None))
-            {
-                Assert.False(token.Token.IsCancellationRequested);
-
-                await Task.Delay(TimeSpan.FromMilliseconds(250));
-
-                Assert.False(token.Token.IsCancellationRequested);
-
-                token.Delay();
-
-                await Task.Delay(TimeSpan.FromMilliseconds(400));
-
-                Assert.False(token.Token.IsCancellationRequested);
-
-
-                await Task.Delay(TimeSpan.FromMilliseconds(1500));
-
-                Assert.True(token.Token.IsCancellationRequested);
-            }
-        }
-
-        [Fact]
         public void WillThrowWhenDelayingInfiniteTimeout()
         {
             using (var token = new OperationCancelToken(CancellationToken.None))
