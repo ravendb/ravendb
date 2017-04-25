@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -11,11 +13,13 @@ using Raven.Client.Documents.Operations.Transformers;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions;
+using Raven.Client.Server;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Raven.Client.Server.Operations;
 
 namespace FastTests.Server.Replication
 {
@@ -118,15 +122,40 @@ namespace FastTests.Server.Replication
                                             };
             }
         }
+
+        public async Task<(DocumentStore source, DocumentStore destination)> CreateDuoCluster([CallerMemberName] string caller = null)
+        {
+            var leader = await CreateRaftClusterAndGetLeader(2);
+            var follower = Servers.First(srv => ReferenceEquals(srv, leader) == false);
+            var dbName = "Can_replicate_index";
+            var source = new DocumentStore
+            {
+                Url = leader.WebUrls[0],
+                DefaultDatabase = dbName
+            };
+            var destination = new DocumentStore
+            {
+                Url = follower.WebUrls[0],
+                DefaultDatabase = dbName
+            };
+
+            var doc = MultiDatabase.CreateDatabaseDocument(dbName);
+            var databaseResult = source.Admin.Server.Send(new CreateDatabaseOperation(doc, 2));
+            await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+            return (source, destination);
+        }
         
+
+
 
         [Fact]
         public async Task Can_replicate_index()
         {
-            using (var source = GetDocumentStore())
-            using (var destination = GetDocumentStore())
+            var (source, destination) = await CreateDuoCluster();
+            
+            using (source)
+            using (destination)
             {
-                await SetupReplicationAsync(source, destination);
 
                 var userByAge = new UserByAgeIndex();
                 userByAge.Execute(source);
@@ -146,8 +175,10 @@ namespace FastTests.Server.Replication
         [Fact]
         public async Task Can_replicate_multiple_indexes()
         {
-            using (var source = GetDocumentStore())
-            using (var destination = GetDocumentStore())
+            var (source, destination) = await CreateDuoCluster();
+
+            using (source)
+            using (destination)
             {
                 var userByAge = new UserByAgeIndex();
                 userByAge.Execute(source);
@@ -173,8 +204,10 @@ namespace FastTests.Server.Replication
         [Fact]
         public async Task Can_replicate_multiple_indexes_and_multiple_transformers()
         {
-            using (var source = GetDocumentStore())
-            using (var destination = GetDocumentStore())
+            var (source, destination) = await CreateDuoCluster();
+
+            using (source)
+            using (destination)
             {
                 var userByAge = new UserByAgeIndex();
                 userByAge.Execute(source);
@@ -216,8 +249,10 @@ namespace FastTests.Server.Replication
         [Fact]
         public async Task Can_replicate_transformer()
         {
-            using (var source = GetDocumentStore())
-            using (var destination = GetDocumentStore())
+            var (source, destination) = await CreateDuoCluster();
+
+            using (source)
+            using (destination)
             {
                 await SetupReplicationAsync(source, destination);
 
@@ -239,8 +274,10 @@ namespace FastTests.Server.Replication
         [Fact]
         public async Task Can_replicate_multiple_transformers()
         {
-            using (var source = GetDocumentStore())
-            using (var destination = GetDocumentStore())
+            var (source, destination) = await CreateDuoCluster();
+
+            using (source)
+            using (destination)
             {
                 var usernameToUpperTransformer = new UsernameToUpperTransformer();
                 usernameToUpperTransformer.Execute(source);
