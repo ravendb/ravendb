@@ -257,14 +257,12 @@ namespace Voron.Impl.Journal
 
             if (options.EncryptionEnabled)
             {
-                // The journal pager is read only, we cannot decrypt in-place. Instead, we use temp buffers
-                //  to hold the transaction before decrypting, and release the buffers afterwards.
+                // We use temp buffers to hold the transaction before decrypting, and release the buffers afterwards.
                 var size = (4*Constants.Size.Kilobyte) * GetNumberOf4KbFor(sizeof(TransactionHeader) + current->CompressedSize);
 
-                // TODO: need to pool those and register them in the NativeMemory tracking
                 var buffer = new EncryptionBuffer
                 {
-                    Pointer = UnmanagedMemory.Allocate4KbAllignedMemory(size),
+                    Pointer = UnmanagedMemory.Allocate4KbAlignedMemory(size),
                     Size = size
                 };
                 _encryptionBuffers.Add(buffer);
