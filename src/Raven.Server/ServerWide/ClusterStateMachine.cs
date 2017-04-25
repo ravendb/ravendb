@@ -210,7 +210,7 @@ namespace Raven.Server.ServerWide
                 {
                     if (databaseRecord.Topology.RelevantFor(delDb.FromNode) == false)
                     {
-                        NotifyLeaderAboutError(index, leader, new InvalidOperationException($"The database {databaseName} does not exists on node {delDb.FromNode}"));
+                        NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"The database {databaseName} does not exists on node {delDb.FromNode}"));
                         return;
                     }
                     databaseRecord.Topology.RemoveFromTopology(delDb.FromNode);
