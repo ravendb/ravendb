@@ -31,18 +31,7 @@ namespace Raven.Server.Documents.Indexes.Configuration
 
         public override bool Disabled => _databaseConfiguration.Indexing.Disabled;
 
-        public override bool RunInMemory
-        {
-            get
-            {
-                if (_runInMemory == null)
-                    _runInMemory = _databaseConfiguration.Indexing.RunInMemory;
-
-                return _runInMemory.Value;
-            }
-
-            protected set { _runInMemory = value; }
-        }
+        public override bool RunInMemory => _databaseConfiguration.Indexing.RunInMemory;
 
         public override PathSetting StoragePath
         {
