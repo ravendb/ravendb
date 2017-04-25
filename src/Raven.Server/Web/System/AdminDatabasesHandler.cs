@@ -57,7 +57,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/databases", "GET", "/admin/databases/{databaseName:string}")]
+        [RavenAction("/admin/databases", "GET", "/admin/databases?name={databaseName:string}")]
         public Task Get()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");

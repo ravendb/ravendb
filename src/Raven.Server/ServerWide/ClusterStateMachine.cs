@@ -259,7 +259,7 @@ namespace Raven.Server.ServerWide
                         }
 
                         int size;
-                        var actualEtag = *(long*)reader.Read(3, out size);
+                        var actualEtag = Bits.SwapBytes(*(long*)reader.Read(3, out size));
                         Debug.Assert(size == sizeof(long));
 
                         if (actualEtag != addDatabaseCommand.Etag.Value)
@@ -538,9 +538,9 @@ namespace Raven.Server.ServerWide
             var ptr = reader.Read(2, out size);
             var doc = new BlittableJsonReaderObject(ptr, size, context);
 
-            etag = *(long*)reader.Read(3, out size);
+            etag = Bits.SwapBytes(*(long*)reader.Read(3, out size));
             Debug.Assert(size == sizeof(long));
-
+            
             return doc;
         }
 

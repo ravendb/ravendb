@@ -25,10 +25,10 @@ namespace Tryouts
                 Console.WriteLine(i);
                 Parallel.For(0, 10, j =>
                 {
-                    //using (var a = new SlowTests.Issues.RavenDB_6665())
-                    //{
-                    //    a.CanDelayTimeout().Wait();
-                    //}
+                    using (var a = new FastTests.Server.ServerStore())
+                    {
+                        a.Admin_databases_endpoint_should_fetch_document_with_etag_in_metadata_property();
+                    }
                 });
             }
         }
