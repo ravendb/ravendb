@@ -1,4 +1,5 @@
-﻿using FastTests.Server.Replication;
+﻿using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Exceptions;
 using Xunit;
@@ -13,7 +14,7 @@ namespace FastTests.Issues
         }
 
         [Fact]
-        public void PUT_of_conflicted_document_with_outdated_etag_throws_concurrency_exception()
+        public async Task PUT_of_conflicted_document_with_outdated_etag_throws_concurrency_exception()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
@@ -30,8 +31,8 @@ namespace FastTests.Issues
                     session.SaveChanges();
                 }
 
-                SetupReplication(storeA, storeB);
-                SetupReplication(storeB, storeA);
+                await SetupReplicationAsync(storeA, storeB);
+                await SetupReplicationAsync(storeB, storeA);
 
                 WaitUntilHasConflict(storeA, "users/1");
 
@@ -59,7 +60,7 @@ namespace FastTests.Issues
         }
 
         [Fact]
-        public void DELETE_of_conflicted_document_with_outdated_etag_throws_concurrency_exception()
+        public async Task DELETE_of_conflicted_document_with_outdated_etag_throws_concurrency_exception()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
@@ -76,8 +77,8 @@ namespace FastTests.Issues
                     session.SaveChanges();
                 }
 
-                SetupReplication(storeA, storeB);
-                SetupReplication(storeB, storeA);
+                await SetupReplicationAsync(storeA, storeB);
+                await SetupReplicationAsync(storeB, storeA);
 
                 WaitUntilHasConflict(storeA, "users/1");
 

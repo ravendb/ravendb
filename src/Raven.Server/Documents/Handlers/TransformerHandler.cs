@@ -25,7 +25,8 @@ namespace Raven.Server.Documents.Handlers
                 var transformerDefinition = JsonDeserializationServer.TransformerDefinition(json);
                 transformerDefinition.Name = name;
 
-                var transformerId = Database.TransformerStore.CreateTransformer(transformerDefinition);
+                var index = await Database.TransformerStore.CreateTransformer(transformerDefinition);
+                await Database.WaitForIndexNotification(index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -33,12 +34,12 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName("Transformer");
+                    writer.WritePropertyName(nameof(PutTransformerResult.Transformer));
                     writer.WriteString(name);
                     writer.WriteComma();
 
-                    writer.WritePropertyName("TransformerId");
-                    writer.WriteInteger(transformerId);
+                    writer.WritePropertyName(nameof(PutTransformerResult.Etag));
+                    writer.WriteInteger(index);
 
                     writer.WriteEndObject();
                 }
@@ -98,18 +99,18 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/transformers/rename", "POST")]
-        public Task Rename()
+        public async Task Rename()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var newName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("newName");
 
-            Database.TransformerStore.Rename(name, newName);
+            await Database.TransformerStore.Rename(name, newName);
 
-            return NoContent();
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/transformers/set-lock", "POST")]
-        public Task SetLockMode()
+        public async Task SetLockMode()
         {
             var names = GetStringValuesQueryString("name");
             var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
@@ -120,24 +121,20 @@ namespace Raven.Server.Documents.Handlers
 
             foreach (var name in names)
             {
-                var transformer = Database.TransformerStore.GetTransformer(name);
-                if (transformer == null)
-                    TransformerDoesNotExistException.ThrowFor(name);
-
-                transformer.SetLock(mode);
+                await Database.TransformerStore.SetLock(name, mode);
             }
 
-            return NoContent();
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/transformers", "DELETE")]
-        public Task Delete()
+        public async Task Delete()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            Database.TransformerStore.DeleteTransformer(name);
+            await Database.TransformerStore.DeleteTransformer(name);
 
-            return NoContent();
+            NoContentStatus();
         }
     }
 }

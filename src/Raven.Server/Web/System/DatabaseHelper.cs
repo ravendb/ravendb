@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Reflection;
+using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
+using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
 
@@ -69,12 +71,6 @@ namespace Raven.Server.Web.System
             if (configuration.Indexing.StoragePath != null)
                 IOExtensions.DeleteDirectory(configuration.Indexing.StoragePath.FullPath);
 
-            if (configuration.Indexing.AdditionalStoragePaths != null)
-            {
-                foreach (var path in configuration.Indexing.AdditionalStoragePaths)
-                    IOExtensions.DeleteDirectory(path.FullPath);
-            }
-
             if (configuration.Indexing.TempPath != null)
                 IOExtensions.DeleteDirectory(configuration.Indexing.TempPath.FullPath);
 
@@ -82,24 +78,24 @@ namespace Raven.Server.Web.System
                 IOExtensions.DeleteDirectory(configuration.Indexing.JournalsStoragePath.FullPath);
         }
 
-        public static void Validate(string name, DatabaseDocument document)
+        public static void Validate(string name, DatabaseRecord record)
         {
             if (name == null)
                 throw new ArgumentNullException(nameof(name));
-            if (document == null)
-                throw new ArgumentNullException(nameof(document));
+            if (record == null)
+                throw new ArgumentNullException(nameof(record));
 
-            if (document.Id != null && string.Equals(name, document.Id, StringComparison.OrdinalIgnoreCase) == false)
+            if (record.DatabaseName != null && string.Equals(name, record.DatabaseName, StringComparison.OrdinalIgnoreCase) == false)
                 throw new InvalidOperationException("Name does not match.");
 
             foreach (var key in ServerWideOnlyConfigurationKeys.Value)
             {
                 string _;
-                if (document.Settings != null && document.Settings.TryGetValue(key, out _))
-                    throw new InvalidOperationException($"Detected '{key}' key in {nameof(DatabaseDocument.Settings)}. This is a server-wide configuration key and can only be set at server level.");
+                if (record.Settings != null && record.Settings.TryGetValue(key, out _))
+                    throw new InvalidOperationException($"Detected '{key}' key in {nameof(DatabaseRecord.Settings)}. This is a server-wide configuration key and can only be set at server level.");
 
-                if (document.SecuredSettings != null && document.SecuredSettings.TryGetValue(key, out _))
-                    throw new InvalidOperationException($"Detected '{key}' key in {nameof(DatabaseDocument.SecuredSettings)}. This is a server-wide configuration key and can only be set at server level.");
+                if (record.SecuredSettings != null && record.SecuredSettings.TryGetValue(key, out _))
+                    throw new InvalidOperationException($"Detected '{key}' key in {nameof(DatabaseRecord.SecuredSettings)}. This is a server-wide configuration key and can only be set at server level.");
             }
         }
     }

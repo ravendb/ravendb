@@ -315,6 +315,24 @@ namespace Sparrow
             internal const ulong PRIME64_5 = 2870177450012600261UL;
         }
 
+        public static class JumpConsistentHash
+        {
+            //A Fast, Minimal Memory, Consistent Hash Algorithm
+            //by John Lamping, Eric Veach
+            //relevant article: https://arxiv.org/abs/1406.2294
+            public static long Calculate(ulong key, int numBuckets)
+            {
+                long b = 1L;
+                long j = 0;
+                while (j < numBuckets)
+                {
+                    b = j;
+                    key = key * 2862933555777941757UL + 1;
+                    j = (long)((b + 1) * ((1L << 31) / ((double)(key >> 33) + 1)));
+                }
+                return b;
+            }
+        }
 
         /// <summary>
         /// A port of the original XXHash algorithm from Google in 64bits 

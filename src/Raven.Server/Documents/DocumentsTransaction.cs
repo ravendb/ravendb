@@ -5,6 +5,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Utils;
 using Voron.Impl;
 
 namespace Raven.Server.Documents
@@ -92,10 +93,7 @@ namespace Raven.Server.Documents
             if (_documentNotifications == null)
                 return;
 
-            if (ThreadPool.QueueUserWorkItem(state => ((DocumentsTransaction)state).RaiseNotifications(), this) == false)
-            {
-                RaiseNotifications(); // raise immediately
-            }
+            TaskExecuter.Execute(state => ((DocumentsTransaction)state).RaiseNotifications(), this);
         }
 
         public bool ModifiedSystemDocuments => _systemDocumentChangeNotifications?.Count > 0;

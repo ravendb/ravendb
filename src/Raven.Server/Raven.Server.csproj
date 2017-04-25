@@ -31,19 +31,19 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\libs\libsodium\x64\libsodium.dll" Link="libsodium.dll" Condition="($(Platform) == 'x64' OR $(Platform) == 'AnyCPU') AND $(ARM) == ''">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\libs\libsodium\x86\libsodium.dll" Link="libsodium.dll" Condition="$(Platform) == 'x86'">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\libs\libsodium\x64\libsodium.so" Link="libsodium.so" Condition="$(Platform) == 'x64' OR $(Platform) == 'AnyCPU'">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\libs\libsodium\x86\libsodium.so" Link="libsodium.so" Condition="$(Platform) == 'x86' AND $(ARM) == ''">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\libs\libsodium\x86\libsodium.arm.so" Link="libsodium.so" Condition="$(Platform) == 'AnyCPU' AND $(ARM) == 'true'">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -54,7 +54,7 @@
   <ItemGroup>
     <PackageReference Include="AsyncFriendlyStackTrace" Version="1.4.1" />
     <PackageReference Include="HtmlAgilityPack.NetCore" Version="1.5.0.1" />
-    <PackageReference Include="Jint" Version="2.10.99" />
+    <PackageReference Include="Jint" Version="2.10.100" />
     <PackageReference Include="Lucene.Net" Version="3.0.5" />
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="1.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.WebSockets.Server" Version="0.1.0" />
@@ -76,7 +76,9 @@
     <DebugType>portable</DebugType>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'" />
 </Project>

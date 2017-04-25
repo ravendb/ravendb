@@ -176,21 +176,8 @@ namespace Voron.Data.Tables
                 // We must read before we call TryWriteDirect, because it will modify the size
                 int oldDataSize;
                 var oldData = DirectRead(id, out oldDataSize);
-#if DEBUG
-                for (int i = 0; i < builder.Count; i++)
-                {
-                    Slice slice;
-                    using (builder.SliceFromLocation(_tx.Allocator, i, out slice))
-                    {
-                        if (slice.Content.Ptr >= oldData &&
-                            slice.Content.Ptr < oldData + oldDataSize)
-                        {
-                            throw new InvalidOperationException(
-                                "Invalid attempt to update data with the source equals to the range we are modifying. This is not permitted since it can cause data corruption when table defrag happens");
-                        }
-                    }
-                }
-#endif
+
+                AssertNoReferenceToOldData(builder, oldData, oldDataSize);
 
                 byte* pos;
                 if (prevIsSmall && ActiveDataSmallSection.TryWriteDirect(id, size, out pos))
@@ -215,15 +202,18 @@ namespace Voron.Data.Tables
                 {
                     page = _tx.LowLevelTransaction.ModifyPage(pageNumber);
 
-                    page.OverflowSize = size;
 
                     var pos = page.Pointer + PageHeader.SizeOf;
 
-                    var tvr = new TableValueReader(pos, size);
-                    UpdateValuesFromIndex(id,
-                     ref tvr,
-                     builder);
+                    var tvr = new TableValueReader(pos, page.OverflowSize);
+
+                    AssertNoReferenceToOldData(builder, pos, size);
+
+                    UpdateValuesFromIndex(id, ref tvr, builder);
+
                     // MemoryCopy into final position.
+                    page.OverflowSize = size;
+
                     builder.CopyTo(pos);
 
                     return id;
@@ -233,6 +223,24 @@ namespace Voron.Data.Tables
             // can't fit in place, will just delete & insert instead
             Delete(id);
             return Insert(builder);
+        }
+
+        [Conditional("DEBUG")]
+        private void AssertNoReferenceToOldData(TableValueBuilder builder, byte* oldData, int oldDataSize)
+        {
+            for (int i = 0; i < builder.Count; i++)
+            {
+                Slice slice;
+                using (builder.SliceFromLocation(_tx.Allocator, i, out slice))
+                {
+                    if (slice.Content.Ptr >= oldData &&
+                        slice.Content.Ptr < oldData + oldDataSize)
+                    {
+                        throw new InvalidOperationException(
+                            "Invalid attempt to update data with the source equals to the range we are modifying. This is not permitted since it can cause data corruption when table defrag happens");
+                    }
+                }
+            }
         }
 
         public void Delete(long id)
@@ -377,6 +385,7 @@ namespace Voron.Data.Tables
                 pos = page.Pointer + PageHeader.SizeOf;
 
                 builder.CopyTo(pos);
+                
                 id = page.PageNumber * Constants.Storage.PageSize;
             }
 

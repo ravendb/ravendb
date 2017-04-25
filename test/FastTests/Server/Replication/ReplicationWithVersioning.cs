@@ -9,7 +9,7 @@ namespace FastTests.Server.Replication
 {
     public class ReplicationWithVersioning : ReplicationTestsBase
     {
-        [Fact]
+        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-6555")]
         public async Task CanReplicateVersions()
         {
             var company = new Company {Name = "Company Name"};
@@ -18,10 +18,10 @@ namespace FastTests.Server.Replication
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(master);
-                await VersioningHelper.SetupVersioning(slave);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, master.DefaultDatabase);
+                //await VersioningHelper.SetupVersioning(Server.ServerStore, slave.DefaultDatabase);
 
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
 
                 using (var session = master.OpenAsyncSession())
                 {
@@ -40,7 +40,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-6555")]
         public async Task CreateVersionsAndReplicateThemAll()
         {
             var company = new Company {Name = "Company Name"};
@@ -51,8 +51,8 @@ namespace FastTests.Server.Replication
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(master);
-                await VersioningHelper.SetupVersioning(slave);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, master.DefaultDatabase);
+                //await VersioningHelper.SetupVersioning(Server.ServerStore, slave.DefaultDatabase);
 
                 using (var session = master.OpenAsyncSession())
                 {
@@ -78,14 +78,14 @@ namespace FastTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
 
                 Assert.True(WaitForDocument(slave, "foo/bar"));
                 Assert.Equal(4, WaitForValue(() => GetRevisions(slave, "foo/bar").Count, 4));
             }
         }
 
-        [Fact]
+        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-6555")]
         public async Task ReplicateVersionsIgnoringConflicts()
         {
             using (var storeA = GetDocumentStore())
@@ -101,7 +101,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-6555")]
         public async Task CreateConflictAndResolveItIncreaseTheVersion()
         {
             using (var storeA = GetDocumentStore())
@@ -115,10 +115,12 @@ namespace FastTests.Server.Replication
                 Assert.Equal(2, WaitForValue(() => GetRevisions(storeA, "foo/bar").Count, 2));
                 Assert.Equal(2, WaitForValue(() => GetRevisions(storeB, "foo/bar").Count, 2));
 
-                SetupReplication(storeA, new ReplicationDocument
+                var config = new ConflictSolver
                 {
-                    DocumentConflictResolution = StraightforwardConflictResolution.ResolveToLatest
-                }, storeB);
+                    ResolveToLatest = true
+                };
+
+                await SetupReplicationAsync(storeA, config, storeB);
 
                 Assert.True(WaitForDocument(storeA, "foo/bar"));
                 Assert.True(WaitForDocument(storeB, "foo/bar"));
@@ -134,8 +136,8 @@ namespace FastTests.Server.Replication
             var user = new User { Name = "Name" };
             var user2 = new User { Name = "Name2" };
             
-            await VersioningHelper.SetupVersioning(storeA);
-            await VersioningHelper.SetupVersioning(storeB);
+            await VersioningHelper.SetupVersioning(Server.ServerStore, storeA.DefaultDatabase);
+            //await VersioningHelper.SetupVersioning(Server.ServerStore, storeB.DefaultDatabase);
 
             using (var session = storeA.OpenAsyncSession())
             {
@@ -149,22 +151,22 @@ namespace FastTests.Server.Replication
                 await session.SaveChangesAsync();
             }
 
-            SetupReplication(storeA, storeB);
-            SetupReplication(storeB, storeA);
+            await SetupReplicationAsync(storeA, storeB);
+            await SetupReplicationAsync(storeB, storeA);
         }
 
-        [Fact]
+        [Fact(Skip = "http://issues.hibernatingrhinos.com/issue/RavenDB-6555")]
         public async Task UpdateTheSameRevisoinWhenGettingExistingRevision()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             using (var storeC = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(storeA);
-                await VersioningHelper.SetupVersioning(storeB);
-                await VersioningHelper.SetupVersioning(storeC);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, storeA.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, storeB.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, storeC.DefaultDatabase);
 
-                SetupReplication(storeA, storeB);
+                await SetupReplicationAsync(storeA, storeB);
 
                 using (var session = storeA.OpenAsyncSession())
                 {
@@ -176,8 +178,8 @@ namespace FastTests.Server.Replication
                 Assert.Equal(1, WaitForValue(() => GetRevisions(storeB, "users/1").Count, 1));
                 Assert.True(WaitForDocument(storeB, "users/1"));
 
-                SetupReplication(storeA, storeC);
-                SetupReplication(storeB, storeC);
+                await SetupReplicationAsync(storeA, storeC);
+                await SetupReplicationAsync(storeB, storeC);
 
                 using (var session = storeA.OpenAsyncSession())
                 {

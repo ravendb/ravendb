@@ -153,16 +153,16 @@ namespace Raven.Client.Util
 
                     var databaseNameAndFailoverDestination = value.Split('|');
 
-                    ReplicationDestination destination;
+                    ReplicationNode node;
                     if (databaseNameAndFailoverDestination.Length == 1)
                     {
-                        destination = JsonConvert.DeserializeObject<ReplicationDestination>(databaseNameAndFailoverDestination[0]);
-                        options.FailoverServers.AddForDefaultDatabase(destination);
+                        node = JsonConvert.DeserializeObject<ReplicationNode>(databaseNameAndFailoverDestination[0]);
+                        options.FailoverServers.AddForDefaultDatabase(node);
                     }
                     else
                     {
-                        destination = JsonConvert.DeserializeObject<ReplicationDestination>(databaseNameAndFailoverDestination[1]);
-                        options.FailoverServers.AddForDatabase(databaseName: databaseNameAndFailoverDestination[0], destinations: destination);
+                        node = JsonConvert.DeserializeObject<ReplicationNode>(databaseNameAndFailoverDestination[1]);
+                        options.FailoverServers.AddForDatabase(databaseName: databaseNameAndFailoverDestination[0], nodes: node);
                     }
                     break;
 

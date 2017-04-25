@@ -66,9 +66,9 @@ namespace Raven.Server.Rachis
                             clusterTopology = _engine.GetTopology(context) ;
                         }
 
-                        if (clusterTopology.Voters.Contains(rv.Source) == false &&
-                            clusterTopology.Promotables.Contains(rv.Source) == false &&
-                            clusterTopology.NonVotingMembers.Contains(rv.Source) == false)
+                        if (clusterTopology.Members.ContainsKey(rv.Source) == false &&
+                            clusterTopology.Promotables.ContainsKey(rv.Source) == false &&
+                            clusterTopology.Watchers.ContainsKey(rv.Source) == false)
                         {
                             _connection.Send(context, new RequestVoteResponse
                             {
@@ -145,8 +145,7 @@ namespace Raven.Server.Rachis
                                 _thread = new Thread(HandleVoteRequest)
                                 {
                                     Name =
-                                        "Elector thread for " +
-                                        (new Uri(rv.Source).Fragment ?? rv.Source) + " > " + (new Uri(_engine.Url).Fragment ?? _engine.Url),
+                                        $"Elector thread for {rv.Source} > {_engine.Tag}",
                                     IsBackground = true
                                 };
                                 _thread.Start();
@@ -208,7 +207,7 @@ namespace Raven.Server.Rachis
             {
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info("Failed to talk to leader: " + _engine.Url, e);
+                    _engine.Log.Info("Failed to talk to leader: " + _engine.Tag, e);
                 }
             }
         }

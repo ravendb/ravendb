@@ -1,4 +1,5 @@
-﻿using FastTests.Server.Basic.Entities;
+﻿using System.Threading.Tasks;
+using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -9,14 +10,13 @@ namespace FastTests.Server.Replication
     {
 
         [Fact]
-        public void NonIdenticalContentConflict()
+        public async Task NonIdenticalContentConflict()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
 
-                SetReplicationConflictResolution(slave, StraightforwardConflictResolution.None);
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
 
                 using (var session = slave.OpenSession())
                 {
@@ -42,14 +42,13 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void NonIdenticalMetadataConflict()
+        public async Task NonIdenticalMetadataConflict()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
 
-                SetReplicationConflictResolution(slave, StraightforwardConflictResolution.None);
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
 
                 using (var session = slave.OpenSession())
                 {
@@ -84,13 +83,12 @@ namespace FastTests.Server.Replication
 
 
         [Fact]
-        public void UpdateConflictOnParentDocumentArrival()
+        public async Task UpdateConflictOnParentDocumentArrival()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                SetReplicationConflictResolution(slave, StraightforwardConflictResolution.None);
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
 
                 using (var session = slave.OpenSession())
                 {

@@ -92,7 +92,7 @@ class databaseCreationModel {
         this.setupPathValidation(this.indexesPath, "Indexes");
     }
 
-    toDto(): Raven.Client.Server.DatabaseDocument {
+    toDto(): Raven.Client.Documents.DatabaseRecord {
         const settings: dictionary<string> = {};
         const securedSettings: dictionary<string> = {};
 
@@ -129,10 +129,16 @@ class databaseCreationModel {
         */
 
         return {
-            Id: this.name(),
+            DatabaseName: this.name(),
             Settings: settings,
             SecuredSettings: securedSettings,
-            Disabled: false
+            Disabled: false,
+            DeletionInProgress: null,
+            Indexes: null,
+            Transformers: null,
+            VersioningConfiguration:null,
+            DataDirectory: null,
+            Topology: null,
         };
     }
 

@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Replication
             DocumentDatabase database,
             List<string> alreadyVisited,
             TimeSpan timeout,
-            List<ReplicationDestination> replicationDestinations)
+            List<ReplicationNode> replicationDestinations)
         {
             _database = database;
             _timeout = timeout;
@@ -60,8 +60,8 @@ namespace Raven.Server.Documents.Replication
                 {
                     topology.FailedToReach.Add(new InactiveNodeStatus
                     {
-                        Database = d.Destination.Database,
-                        Url = d.Destination.Url,
+                        Database = d.Node.Database,
+                        Url = d.Node.Url,
                         Exception = e.ToString(),
                         Message = e.Message
                     });
@@ -90,8 +90,8 @@ namespace Raven.Server.Documents.Replication
                     ObserveTaskException(discoveryTask);
                     topology.FailedToReach.Add(new InactiveNodeStatus
                     {
-                        Database = kvp.Key.Destination.Database,
-                        Url = kvp.Key.Destination.Url,
+                        Database = kvp.Key.Node.Database,
+                        Url = kvp.Key.Node.Url,
                         Exception = $"Timed out trying to reach destination after {_timeout} ms"
                     });
                 }
@@ -99,8 +99,8 @@ namespace Raven.Server.Documents.Replication
                 {
                     topology.FailedToReach.Add(new InactiveNodeStatus
                     {
-                        Database = kvp.Key.Destination.Database,
-                        Url = kvp.Key.Destination.Url,
+                        Database = kvp.Key.Node.Database,
+                        Url = kvp.Key.Node.Url,
                         Message = discoveryTask.Exception?.Message,
                         Exception = discoveryTask.Exception?.ExtractSingleInnerException().ToString()
                     });
@@ -115,8 +115,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             var localTopology = ReplicationUtils.GetLocalTopology(_database,
-                _database.ReplicationLoader.ReplicationDocument);
-
+				_database.ReplicationLoader.Destinations);
             topology.NodesById[localTopology.DatabaseId] = localTopology;
             return topology;
         }

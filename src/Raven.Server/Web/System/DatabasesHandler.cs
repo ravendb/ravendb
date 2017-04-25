@@ -1,15 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Http;
+using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -38,23 +44,96 @@ namespace Raven.Server.Web.System
                     writer.WriteStartObject();
 
                     writer.WritePropertyName(nameof(DatabasesInfo.Databases));
-                    writer.WriteArray(context, ServerStore.StartingWith(context, Constants.Documents.Prefix, GetStart(), GetPageSize()), (w, c, dbDoc) =>
+                    writer.WriteArray(context, ServerStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, GetStart(), GetPageSize()), (w, c, dbDoc) =>
                     {
-                        var databaseName = dbDoc.Key.Substring(Constants.Documents.Prefix.Length);
+                        var databaseName = dbDoc.Item1.Substring(Constants.Documents.Prefix.Length);
                         if (namesOnly)
                         {
                             w.WriteString(databaseName);
                             return;
                         }
 
-                        WriteDatabaseInfo(databaseName, dbDoc.Data, context, w);
-                    }); 
+                        WriteDatabaseInfo(databaseName, dbDoc.Item2, context, w);
+                    });
 
                     writer.WriteEndObject();
                 }
             }
 
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/topology", "GET", "/topology?name={databaseName:string}&url={url:string}")]
+        public Task GetTopology()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            // TODO: need to figure out who am I and then return this URL for me
+            // var url = GetStringQueryString("url", false);
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            {
+                var dbId = Constants.Documents.Prefix + name;
+                long etag;
+                using (context.OpenReadTransaction())
+                using (var dbBlit = ServerStore.Cluster.Read(context, dbId, out etag))
+                {
+                    if (dbBlit == null)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                        using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
+                        {
+                            context.Write(writer,
+                                new DynamicJsonValue
+                                {
+                                    ["Type"] = "Error",
+                                    ["Message"] = "Database " + name + " wasn't found"
+                                });
+                        }
+                        return Task.CompletedTask;
+                    }
+
+                    var clusterTopology = ServerStore.GetClusterTopology(context);
+                    var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbBlit);
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        GenerateTopology(context, writer, dbRecord, clusterTopology, etag);
+                    }
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private DynamicJsonValue GetServerNodeFromClusterTag(string tag, ClusterTopology clusterTopology, DatabaseRecord dbRecord)
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(ServerNode.Url)] = clusterTopology.GetUrlFromTag(tag),
+                [nameof(ServerNode.ClusterTag)] = tag,
+                [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
+            };
+        }
+
+        private void GenerateTopology(JsonOperationContext context,
+            BlittableJsonTextWriter writer,
+            DatabaseRecord dbRecord,
+            ClusterTopology clusterTopology,
+            long etag)
+        {
+            context.Write(writer, new DynamicJsonValue
+            {
+                [nameof(Topology.Nodes)] = new DynamicJsonArray(
+                    dbRecord.Topology.Members.Select(x => GetServerNodeFromClusterTag(x.NodeTag, clusterTopology, dbRecord))
+                    ),
+                [nameof(Topology.ReadBehavior)] =
+                    ReadBehavior.CurrentNodeWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
+                [nameof(Topology.WriteBehavior)] = WriteBehavior.LeaderOnly.ToString(),
+                [nameof(Topology.SLA)] = new DynamicJsonValue
+                {
+                    [nameof(TopologySla.RequestTimeThresholdInMilliseconds)] = 100,
+                },
+                [nameof(Topology.Etag)] = etag,
+            });
         }
 
         private Task DbInfo(string dbName)
@@ -67,7 +146,7 @@ namespace Raven.Server.Web.System
                 {
                     var dbId = Constants.Documents.Prefix + dbName;
                     long etag;
-                    using (var dbDoc = ServerStore.Read(context, dbId, out etag))
+                    using (var dbDoc = ServerStore.Cluster.Read(context, dbId, out etag))
                     {
                         WriteDatabaseInfo(dbName, dbDoc, context, writer);
                         return Task.CompletedTask;
@@ -84,7 +163,7 @@ namespace Raven.Server.Web.System
 
             Task<DocumentDatabase> dbTask;
             var online =
-                ServerStore.DatabasesLandlord.ResourcesStoresCache.TryGetValue(databaseName, out dbTask) &&
+                ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out dbTask) &&
                 dbTask != null && dbTask.IsCompleted;
 
             if (dbTask != null && dbTask.IsFaulted)

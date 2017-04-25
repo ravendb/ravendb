@@ -16,7 +16,7 @@ namespace Raven.Server.Utils
     {
         public static NodeTopologyInfo GetLocalTopology(
             DocumentDatabase database,
-            ReplicationDocument replicationDocument)
+            IEnumerable<ReplicationNode> destinations)
         {
             var topologyInfo = new NodeTopologyInfo { DatabaseId = database.DbId.ToString() };
             topologyInfo.InitializeOSInformation();
@@ -25,7 +25,7 @@ namespace Raven.Server.Utils
 
             GetLocalIncomingTopology(replicationLoader, topologyInfo);
 
-            foreach (var destination in replicationDocument.Destinations)
+            foreach (var destination in destinations)
             {
                 OutgoingReplicationHandler outgoingHandler;
                 ReplicationLoader.ConnectionShutdownInfo connectionFailureInfo;
@@ -96,15 +96,15 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static bool TryGetActiveDestination(ReplicationDestination destination,
+        public static bool TryGetActiveDestination(ReplicationNode node,
             IEnumerable<OutgoingReplicationHandler> outgoingReplicationHandlers,
             out OutgoingReplicationHandler handler)
         {
             handler = null;
             foreach (var outgoing in outgoingReplicationHandlers)
             {
-                if (outgoing.Destination.Url.Equals(destination.Url, StringComparison.OrdinalIgnoreCase) &&
-                    outgoing.Destination.Database.Equals(destination.Database, StringComparison.OrdinalIgnoreCase))
+                if (outgoing.Node.Url.Equals(node.Url, StringComparison.OrdinalIgnoreCase) &&
+                    outgoing.Node.Database.Equals(node.Database, StringComparison.OrdinalIgnoreCase))
                 {
                     handler = outgoing;
                     return true;

@@ -261,7 +261,7 @@ namespace Raven.Server
                 Console.Write($"| {Math.Round(reqCounter.OneSecondRate, 1),-14:#,#.#;;0} ");
 
                 long allDocs = 0;
-                foreach (var value in server.ServerStore.DatabasesLandlord.ResourcesStoresCache.Values)
+                foreach (var value in server.ServerStore.DatabasesLandlord.DatabasesCache.Values)
                 {
                     if(value.Status != TaskStatus.RanToCompletion)
                         continue;

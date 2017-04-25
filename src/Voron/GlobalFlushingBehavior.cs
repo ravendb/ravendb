@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using Voron.Impl.Journal;
 
 namespace Voron
@@ -115,10 +116,7 @@ namespace Voron
 
                 for (int i = 0; i < parallelSyncsPerIo; i++)
                 {
-                    if (ThreadPool.QueueUserWorkItem(SyncAllEnvironmentsInMountPoint, mountPoint.Value) == false)
-                    {
-                        SyncAllEnvironmentsInMountPoint(mountPoint.Value);
-                    }
+                    TaskExecuter.Execute(SyncAllEnvironmentsInMountPoint, mountPoint.Value); 
                 }
             }
         }
@@ -225,7 +223,7 @@ namespace Voron
 
                 _concurrentFlushes.Wait();
 
-                if (ThreadPool.QueueUserWorkItem(env =>
+                TaskExecuter.Execute(env =>
                 {
                     var storageEnvironment = ((StorageEnvironment)env);
                     try
@@ -247,12 +245,7 @@ namespace Voron
                     {
                         _concurrentFlushes.Release();
                     }
-                }, envToFlush) == false)
-                {
-                    _concurrentFlushes.Release();
-                    MaybeFlushEnvironment(envToFlush);// re-register if the thread pool is full
-                    Thread.Sleep(0); // but let it give up the execution slice so we'll let the TP time to run
-                }
+                }, envToFlush);
             }
         }
 

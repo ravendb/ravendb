@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
@@ -10,12 +11,12 @@ namespace FastTests.Server.Replication
     public class AutomaticConflictResolvingOnPut : ReplicationTestsBase
     {
         [Fact]
-        public void CanAutomaticlyResolveConflict()
+        public async Task CanAutomaticlyResolveConflict()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
 
                 using (var session = slave.OpenSession())
                 {

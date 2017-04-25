@@ -16,8 +16,7 @@ namespace FastTests.Client
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var entityToBlittable = new EntityToBlittable(null);
-                var json = entityToBlittable.ConvertEntityToBlittable(new Order
+                var json = EntityToBlittable.ConvertEntityToBlittable(new Order
                 {
                     CustomerId = "1",
                     Number = "abc"
@@ -41,8 +40,7 @@ namespace FastTests.Client
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var entityToBlittable = new EntityToBlittable(null);
-                var json = entityToBlittable.ConvertEntityToBlittable(new Order
+                var json = EntityToBlittable.ConvertEntityToBlittable(new Order
                 {
                     CustomerId = "1",
                     Number = "abc"

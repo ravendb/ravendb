@@ -18,7 +18,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [Fact(Skip = "wait for implementing etl over raft")]
         public async Task Topology_should_fetch_ETL_destinations_properly()
         {
             using (var storeA = GetDocumentStore())
@@ -43,7 +43,7 @@ namespace FastTests.Issues
                     { "bars", "this.Foo = 'bar'" } //dummy script
                 };
 
-                SetupReplication(storeA, etl, storeB);
+                /*SetupReplication(storeA, etl, storeB);
 
                 using (var session = storeA.OpenSession())
                 {
@@ -51,7 +51,7 @@ namespace FastTests.Issues
                         session.Load<ReplicationDocument>(Constants.Documents.Replication.ReplicationConfigurationDocument);
 
                     //add non-etl destination
-                    replicationDocument.Destinations.Add(new ReplicationDestination
+                    replicationDocument.Destinations.Add(new ReplicationNode
                     {
                         Database = storeD.DefaultDatabase,
                         Url = storeD.Url
@@ -60,7 +60,7 @@ namespace FastTests.Issues
                     session.SaveChanges();
                 }
 
-                SetupReplication(storeB, etl, storeC);
+                SetupReplication(storeB, etl, storeC);*/
 
                 WaitForDocumentToReplicate<Bar>(storeC, "bar", 10000);
 

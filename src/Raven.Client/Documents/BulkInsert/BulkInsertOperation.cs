@@ -127,7 +127,6 @@ namespace Raven.Client.Documents.BulkInsert
         private Task _bulkInsertExecuteTask;
 
         private readonly JsonOperationContext _context;
-        private readonly EntityToBlittable _convertor = new EntityToBlittable(null);
         private readonly IDisposable _resetContext;
 
         private BlittableJsonTextWriter _jsonWriter;
@@ -187,8 +186,8 @@ namespace Raven.Client.Documents.BulkInsert
             }
 
             JsonOperationContext tempContext;
-            using (_requestExecuter.ContextPool.AllocateOperationContext(out tempContext))
-            using (var doc = _convertor.ConvertEntityToBlittable(entity, _conventions, tempContext, new DocumentInfo
+            using(_requestExecuter.ContextPool.AllocateOperationContext(out tempContext))
+            using (var doc = EntityToBlittable.ConvertEntityToBlittable(entity, _conventions, tempContext, new DocumentInfo
             {
                 Collection = _conventions.GetCollectionName(entity)
             }))

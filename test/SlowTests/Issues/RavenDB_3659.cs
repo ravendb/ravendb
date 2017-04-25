@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Server.Config;
@@ -71,10 +72,9 @@ namespace SlowTests.Issues
                 store
                     .Admin
                     .Server
-                    .Send(new CreateDatabaseOperation(new DatabaseDocument
+                    .Send(new CreateDatabaseOperation(new DatabaseRecord("DB1")
                     {
-                        Id = "DB1",
-                        Settings =
+                        Settings = new Dictionary<string, string>
                         {
                             {RavenConfiguration.GetKey(x => x.Storage.TempPath), tempPath2}
                         }

@@ -11,9 +11,5 @@
         public int ItemsCount { get; set; }
 
         public int AttachmentStreamsCount { get; set; }
-
-        public string ResolverId { get; set; }
-
-        public int? ResolverVersion { get; set; }
     }
 }

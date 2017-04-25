@@ -15,13 +15,8 @@ namespace Raven.Client.Server.Operations.ApiKeys
 
         public PutApiKeyOperation(string name, ApiKeyDefinition apiKey)
         {
-            if (name == null)
-                throw new ArgumentNullException(nameof(name));
-            if (apiKey == null)
-                throw new ArgumentNullException(nameof(apiKey));
-
-            _name = name;
-            _apiKey = apiKey;
+            _name = name ?? throw new ArgumentNullException(nameof(name));
+            _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
         }
 
         public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -39,16 +34,12 @@ namespace Raven.Client.Server.Operations.ApiKeys
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
-                if (context == null)
-                    throw new ArgumentNullException(nameof(context));
-                if (name == null)
-                    throw new ArgumentNullException(nameof(name));
                 if (apiKey == null)
                     throw new ArgumentNullException(nameof(apiKey));
 
-                _context = context;
-                _name = name;
-                _apiKey = new EntityToBlittable(null).ConvertEntityToBlittable(apiKey, conventions, context);
+                _context = context ?? throw new ArgumentNullException(nameof(context));
+                _name = name ?? throw new ArgumentNullException(nameof(name));
+                _apiKey = EntityToBlittable.ConvertEntityToBlittable(apiKey, conventions, context);
             }
 
             public override bool IsReadRequest => false;

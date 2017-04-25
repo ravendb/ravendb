@@ -92,7 +92,7 @@ class createDatabase extends dialogViewModelBase {
     private createDatabaseInternal() {
         const databaseDocument = this.databaseModel.toDto();
 
-        databasesManager.default.activateAfterCreation(databaseDocument.Id);
+        databasesManager.default.activateAfterCreation(databaseDocument.DatabaseName);
 
         new createDatabaseCommand(databaseDocument)
             .execute()

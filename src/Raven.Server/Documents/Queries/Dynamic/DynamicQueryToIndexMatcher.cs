@@ -210,9 +210,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 Debug.Assert(indexField != null);
 
-                if (sortInfo.FieldType != indexField.SortOption)
+                if (sortInfo.FieldType != indexField.Sort)
                 {
-                    if (indexField.SortOption == null)
+                    if (indexField.Sort == null)
                     {
                         switch (sortInfo.FieldType) // if field is not sorted, we check if we asked for the default sorting
                         {
@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     }
 
                     explanations?.Add(new Explanation(indexName,
-                            $"The specified sort type ({sortInfo.FieldType}) is different than the one specified for field '{sortFieldName}' ({indexField.SortOption})"));
+                            $"The specified sort type ({sortInfo.FieldType}) is different than the one specified for field '{sortFieldName}' ({indexField.Sort})"));
                     return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
                 }
             }

@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var dynamicNull = (DynamicNullObject)value;
                 if (dynamicNull.IsExplicitNull)
                 {
-                    var sort = field.SortOption;
+                    var sort = field.Sort;
                     if (sort == null
                         || sort.Value == SortOptions.None
                         || sort.Value == SortOptions.String

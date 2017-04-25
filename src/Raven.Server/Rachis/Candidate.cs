@@ -38,7 +38,10 @@ namespace Raven.Server.Rachis
                 try
                 {
                     Running = true;
-
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Candidate {_engine.Tag}:Starting elections");
+                    }
                     TransactionOperationContext context;
                     ClusterTopology clusterTopology;
                     using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -56,11 +59,11 @@ namespace Raven.Server.Rachis
                         CastVoteForSelf();
                     }
 
-                    foreach (var voter in clusterTopology.Voters)
+                    foreach (var voter in clusterTopology.Members)
                     {
-                        if (voter == _engine.Url)
+                        if (voter.Key == _engine.Tag)
                             continue; // we already voted for ourselves
-                        var candidateAmbassador = new CandidateAmbassador(_engine, this, voter, clusterTopology.ApiKey);
+                        var candidateAmbassador = new CandidateAmbassador(_engine, this, voter.Key, voter.Value, clusterTopology.ApiKey);
                         _voters.Add(candidateAmbassador);
                         try
                         {
@@ -113,7 +116,7 @@ namespace Raven.Server.Rachis
                         {
                             if (_engine.Log.IsInfoEnabled)
                             {
-                                _engine.Log.Info($"A leader node has indicated that I'm not in their topology, I was probably kicked out. Moving to passive mode");
+                                _engine.Log.Info($"Candidate {_engine.Tag}:A leader node has indicated that I'm not in their topology, I was probably kicked out. Moving to passive mode");
                             }
                             var engineCurrentTerm = _engine.CurrentTerm;
                             using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -148,7 +151,7 @@ namespace Raven.Server.Rachis
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info("Failure during candidacy run", e);
+                        _engine.Log.Info($"Candidate {_engine.Tag}:Failure during candidacy run", e);
                     }
                 }
             }
@@ -162,13 +165,16 @@ namespace Raven.Server.Rachis
             {
                 ElectionTerm = _engine.CurrentTerm + 1;
 
-                _engine.CastVoteInTerm(context, ElectionTerm, _engine.Url);
+                _engine.CastVoteInTerm(context, ElectionTerm, _engine.Tag);
 
                 RunRealElectionAtTerm = ElectionTerm;
 
                 tx.Commit();
             }
-
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"Candidate {_engine.Tag}: casting vote for self ElectionTerm={ElectionTerm} RunRealElectionAtTerm={RunRealElectionAtTerm}");
+            }
             StateChange();
         }
 
@@ -190,7 +196,7 @@ namespace Raven.Server.Rachis
         {
             _thread = new Thread(Run)
             {
-                Name = "Candidate for - " + (new Uri(_engine.Url).Fragment ?? _engine.Url),
+                Name = "Candidate for - " + _engine.Tag,
                 IsBackground = true
             };
             _thread.Start();
@@ -202,6 +208,10 @@ namespace Raven.Server.Rachis
             _stateChange.TrySetCanceled();
             _peersWaiting.Set();
             //TODO: shutdown notification of some kind?
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"Candidate {_engine.Tag}: Dispose");
+            }
             if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                 _thread.Join();
         }

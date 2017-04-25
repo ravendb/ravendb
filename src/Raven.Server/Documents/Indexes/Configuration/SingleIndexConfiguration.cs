@@ -27,41 +27,11 @@ namespace Raven.Server.Documents.Indexes.Configuration
                 databaseConfiguration.ResourceType, 
                 databaseConfiguration.ResourceName, 
                 throwIfThereIsNoSetMethod: false);
-
-            Validate();
-        }
-
-        private void Validate()
-        {
-            if (string.Equals(StoragePath.FullPath, _databaseConfiguration.Indexing.StoragePath.FullPath, StringComparison.OrdinalIgnoreCase))
-                return;
-
-            if (_databaseConfiguration.Indexing.AdditionalStoragePaths != null)
-            {
-                foreach (var path in _databaseConfiguration.Indexing.AdditionalStoragePaths)
-                {
-                    if (string.Equals(StoragePath.FullPath, path.FullPath, StringComparison.OrdinalIgnoreCase))
-                        return;
-                }
-            }
-
-            throw new InvalidOperationException($"Given index path ('{StoragePath}') is not defined in '{RavenConfiguration.GetKey(x => x.Indexing.StoragePath)}' or '{RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths)}'");
         }
 
         public override bool Disabled => _databaseConfiguration.Indexing.Disabled;
 
-        public override bool RunInMemory
-        {
-            get
-            {
-                if (_runInMemory == null)
-                    _runInMemory = _databaseConfiguration.Indexing.RunInMemory;
-
-                return _runInMemory.Value;
-            }
-
-            protected set { _runInMemory = value; }
-        }
+        public override bool RunInMemory => _databaseConfiguration.Indexing.RunInMemory;
 
         public override PathSetting StoragePath
         {
@@ -81,8 +51,6 @@ namespace Raven.Server.Documents.Indexes.Configuration
         public override PathSetting TempPath => _databaseConfiguration.Indexing.TempPath;
 
         public override PathSetting JournalsStoragePath => _databaseConfiguration.Indexing.JournalsStoragePath;
-
-        public override PathSetting[] AdditionalStoragePaths => _databaseConfiguration.Indexing.AdditionalStoragePaths;
 
         public IndexUpdateType CalculateUpdateType(SingleIndexConfiguration newConfiguration)
         {

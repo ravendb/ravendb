@@ -28,7 +28,7 @@ namespace SlowTests.Issues
                 {
                     var database = await GetDatabase(store.DefaultDatabase);
 
-                    Assert.Equal(1, Server.ServerStore.DatabasesLandlord.ResourcesStoresCache.Count());
+                    Assert.Equal(1, Server.ServerStore.DatabasesLandlord.DatabasesCache.Count());
 
                     try
                     {
@@ -59,7 +59,7 @@ namespace SlowTests.Issues
                     Assert.Equal("Catastrophy", ex.Message);
 
                     // db unloaded
-                    Assert.True(SpinWait.SpinUntil(() => Server.ServerStore.DatabasesLandlord.ResourcesStoresCache.Any() == false, TimeSpan.FromMinutes(1)));
+                    Assert.True(SpinWait.SpinUntil(() => Server.ServerStore.DatabasesLandlord.DatabasesCache.Any() == false, TimeSpan.FromMinutes(1)));
 
                     var alert = await notifications.TryDequeueOfTypeAsync<AlertRaised>(TimeSpan.Zero);
 
@@ -76,7 +76,7 @@ namespace SlowTests.Issues
                 }
 
                 // db loaded again
-                Assert.Equal(1, Server.ServerStore.DatabasesLandlord.ResourcesStoresCache.Count());
+                Assert.Equal(1, Server.ServerStore.DatabasesLandlord.DatabasesCache.Count());
             }
             
         }

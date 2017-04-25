@@ -27,7 +27,6 @@ namespace SlowTests.Issues
                 }));
 
                 var transformers = store.Admin.Send(new GetTransformersOperation(0, 10));
-                var transformerId = transformers[0].TransfomerId;
 
                 store.Admin.Send(new PutTransformerOperation(new TransformerDefinition
                 {
@@ -39,7 +38,6 @@ namespace SlowTests.Issues
 
                 Assert.Equal(1, transformers.Length);
                 Assert.Equal("from user in results select new { Name = user.Name }", transformers[0].TransformResults);
-                Assert.NotEqual(transformerId, transformers[0].TransfomerId);
             }
         }
     }

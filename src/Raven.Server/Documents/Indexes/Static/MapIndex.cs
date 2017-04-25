@@ -22,8 +22,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private HandleReferences _handleReferences;
 
-        private MapIndex(int indexId, MapIndexDefinition definition, StaticIndexBase compiled)
-            : base(indexId, IndexType.Map, definition)
+        private MapIndex(long etag, MapIndexDefinition definition, StaticIndexBase compiled)
+            : base(etag, IndexType.Map, definition)
         {
             _compiled = compiled;
 
@@ -73,7 +73,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected override void HandleDocumentChange(DocumentChange change)
         {
-            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false && _referencedCollections.Contains(change.CollectionName) == false)
+            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false && 
+                _referencedCollections.Contains(change.CollectionName) == false)
                 return;
 
             _mre.Set();
@@ -164,9 +165,9 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public static Index CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
+        public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
         {
-            var instance = CreateIndexInstance(indexId, definition);
+            var instance = CreateIndexInstance(definition);
             instance.Initialize(documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
                 documentDatabase.Configuration.PerformanceHints);
@@ -174,10 +175,10 @@ namespace Raven.Server.Documents.Indexes.Static
             return instance;
         }
 
-        public static Index Open(int indexId, StorageEnvironment environment, DocumentDatabase documentDatabase)
+        public static Index Open(long etag, StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
             var definition = MapIndexDefinition.Load(environment);
-            var instance = CreateIndexInstance(indexId, definition);
+            var instance = CreateIndexInstance(definition);
 
             instance.Initialize(environment, documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
@@ -195,12 +196,12 @@ namespace Raven.Server.Documents.Indexes.Static
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
-        private static MapIndex CreateIndexInstance(int indexId, IndexDefinition definition)
+        private static MapIndex CreateIndexInstance(IndexDefinition definition)
         {
             var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
 
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
-            var instance = new MapIndex(indexId, staticMapIndexDefinition, staticIndex);
+            var instance = new MapIndex(definition.Etag, staticMapIndexDefinition, staticIndex);
             return instance;
         }
     }

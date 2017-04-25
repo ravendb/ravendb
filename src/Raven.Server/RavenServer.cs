@@ -58,6 +58,8 @@ namespace Raven.Server
 
         private readonly LatestVersionCheck _latestVersionCheck;
 
+        public event Action AfterDisposal;    
+
         public RavenServer(RavenConfiguration configuration)
         {
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
@@ -67,7 +69,7 @@ namespace Raven.Server
             if (Configuration.Initialized == false)
                 throw new InvalidOperationException("Configuration must be initialized");
 
-            ServerStore = new ServerStore(Configuration);
+            ServerStore = new ServerStore(Configuration, this);
             Metrics = new MetricsCountersManager();
             ServerMaintenanceTimer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 
@@ -297,6 +299,7 @@ namespace Raven.Server
                 case "+":
                     return new[] { IPAddress.Any };
                 case "localhost":
+                case "localhost.fiddler":
                     return new[] { IPAddress.Loopback };
                 default:
                     try
@@ -393,47 +396,14 @@ namespace Raven.Server
                         }
 
                         tcp.Operation = header.Operation;
-                        var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
-                        if (databaseLoadingTask == null)
+                        if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
                         {
-                            ThrowNoSuchDatabase(header);
-                            return;// never hit
+                            ServerStore.ClusterAcceptNewConnection(tcpClient);
+                            tcp = null; //the cluster will dispose of the TcpClient
+                            return;
                         }
 
-                        var databaseLoadTimeout = ServerStore.DatabasesLandlord.DatabaseLoadTimeout;
-
-                        if (databaseLoadingTask.IsCompleted == false)
-                        {
-                            var resultingTask = await Task.WhenAny(databaseLoadingTask, Task.Delay(databaseLoadTimeout));
-                            if (resultingTask != databaseLoadingTask)
-                                ThrowTimeoutOnDatabaseLoad(header);
-                        }
-
-                        tcp.DocumentDatabase = await databaseLoadingTask;
-
-                        tcp.DocumentDatabase.RunningTcpConnections.Add(tcp);
-
-                        switch (header.Operation)
-                        {
-                            case TcpConnectionHeaderMessage.OperationTypes.Subscription:
-                                SubscriptionConnection.SendSubscriptionDocuments(tcp);
-                                break;
-                            case TcpConnectionHeaderMessage.OperationTypes.Replication:
-                                var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;
-                                documentReplicationLoader.AcceptIncomingConnection(tcp);
-                                break;
-                            case TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery:
-                                var responder = new TopologyRequestHandler();
-                                responder.AcceptIncomingConnectionAndRespond(tcp);
-                                break;
-                            default:
-                                throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);
-                        }
-
-                        //since the responsers to TCP connections mostly continue to run
-                        //beyond this point, no sense to dispose the connection now, so set it to null.
-                        //this way the responders are responsible to dispose the connection and the context                    
-                        tcp = null;
+                        await DispatchDatabaseTcpConnection(tcp, header);
                     }
                     catch (Exception e)
                     {
@@ -463,15 +433,57 @@ namespace Raven.Server
                     {
                         _tcpLogger.Info("Failure when processing tcp connection", e);
                     }
-                }
-                finally
-                {
-                    tcp?.Dispose();
-                }
-
+                }               
             });
         }
 
+        private async Task<bool> DispatchDatabaseTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
+        {
+            var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
+            if (databaseLoadingTask == null)
+            {
+                ThrowNoSuchDatabase(header);
+                return true;
+            }
+
+            var databaseLoadTimeout = ServerStore.DatabasesLandlord.DatabaseLoadTimeout;
+
+            if (databaseLoadingTask.IsCompleted == false)
+            {
+                var resultingTask = await Task.WhenAny(databaseLoadingTask, Task.Delay(databaseLoadTimeout));
+                if (resultingTask != databaseLoadingTask)
+                    ThrowTimeoutOnDatabaseLoad(header);
+            }
+
+            tcp.DocumentDatabase = await databaseLoadingTask;
+
+            tcp.DocumentDatabase.RunningTcpConnections.Add(tcp);
+
+            switch (header.Operation)
+            {
+             
+                case TcpConnectionHeaderMessage.OperationTypes.Subscription:
+                    SubscriptionConnection.SendSubscriptionDocuments(tcp);
+                    break;
+                case TcpConnectionHeaderMessage.OperationTypes.Replication:
+                    var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;
+                    documentReplicationLoader.AcceptIncomingConnection(tcp);
+                    break;
+                case TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery:
+                    var responder = new TopologyRequestHandler();
+                    responder.AcceptIncomingConnectionAndRespond(tcp, "topology");
+                    break;
+                default:
+                    throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);
+            }
+
+            //since the responses to TCP connections mostly continue to run
+            //beyond this point, no sense to dispose the connection now, so set it to null.
+            //this way the responders are responsible to dispose the connection and the context                    
+            tcp = null;
+            return false;
+        }
+                   
         private async Task<Stream> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
             if (Configuration.Encryption.UseSsl)
@@ -605,6 +617,8 @@ namespace Raven.Server
                 ServerStore?.Dispose();
                 ServerMaintenanceTimer?.Dispose();
                 _latestVersionCheck?.Dispose();
+
+                AfterDisposal?.Invoke();
             }
         }
 

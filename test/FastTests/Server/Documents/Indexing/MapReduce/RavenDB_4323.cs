@@ -246,7 +246,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                SetupReplication(store1, store2);
+                await SetupReplicationAsync(store1, store2);
                 await store1.ExecuteIndexAsync(new RavenDB_4323.DailyInvoicesIndex());
 
                 using (var session = store1.OpenAsyncSession())
@@ -265,7 +265,6 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     await session.StoreAsync(new RavenDB_4323.Marker { Name = "Marker" }, "marker");
                     await session.SaveChangesAsync();
                 }
-
                 Assert.True(WaitForDocument(store2, "marker"));
 
                 var collectionStatistics = await store1.Admin.SendAsync(new GetCollectionStatisticsOperation());
@@ -283,7 +282,8 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 database.DocumentTombstoneCleaner.Subscribe(this);
                 database2.DocumentTombstoneCleaner.Subscribe(this);
 
-                await store1.Operations.SendAsync(new DeleteCollectionOperation("Invoices"));
+                var operation = await store1.Operations.SendAsync(new DeleteCollectionOperation("Invoices"));
+                await operation.WaitForCompletionAsync();
                 using (var session = store1.OpenAsyncSession())
                 {
                     await session.StoreAsync(new RavenDB_4323.Marker { Name = "Marker 2" }, "marker2");
@@ -311,9 +311,9 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        protected override void ModifyReplicationDestination(ReplicationDestination replicationDestination)
+        protected override void ModifyReplicationDestination(ReplicationNode replicationNode)
         {
-            replicationDestination.SkipIndexReplication = true;
+            replicationNode.SkipIndexReplication = true;
         }
 
         public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()

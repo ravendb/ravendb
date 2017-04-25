@@ -9,8 +9,8 @@ namespace Sparrow
 {
     public class AsyncManualResetEvent
     {
-        private volatile TaskCompletionSource<bool> _tcs = new TaskCompletionSource<bool>();
-        private readonly CancellationToken _token;
+        private volatile TaskCompletionSource<bool> _tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private CancellationToken _token;
 
         public AsyncManualResetEvent()
         {
@@ -24,10 +24,18 @@ namespace Sparrow
         }
         public Task<bool> WaitAsync()
         {
+            _token.ThrowIfCancellationRequested();
             return _tcs.Task;
         }
 
+        public bool IsSet => _tcs.Task.IsCompleted;
+
         public Task<bool> WaitAsync(TimeSpan timeout)
+        {
+            return new FrozenAwaiter(_tcs, this).WaitAsync(timeout);
+        }
+
+        public Task<bool> WaitAsync(int timeout)
         {
             return new FrozenAwaiter(_tcs, this).WaitAsync(timeout);
         }
@@ -54,12 +62,25 @@ namespace Sparrow
                 return _tcs.Task;
             }
 
+
             [Pure]
             public async Task<bool> WaitAsync(TimeSpan timeout)
             {
                 Debug.Assert(timeout != TimeSpan.MaxValue);
-
                 var waitAsync = _tcs.Task;
+                _parent._token.ThrowIfCancellationRequested();
+                var result = await Task.WhenAny(waitAsync, Task.Delay(timeout, _parent._token));
+                if (_parent._token != CancellationToken.None)
+                    return result == waitAsync && !_parent._token.IsCancellationRequested;
+
+                return result == waitAsync;
+            }
+
+            [Pure]
+            public async Task<bool> WaitAsync(int timeout)
+            {
+                var waitAsync = _tcs.Task;
+                _parent._token.ThrowIfCancellationRequested();
                 var result = await Task.WhenAny(waitAsync, Task.Delay(timeout, _parent._token));
                 if (_parent._token != CancellationToken.None)
                     return result == waitAsync && !_parent._token.IsCancellationRequested;
@@ -86,7 +107,7 @@ namespace Sparrow
                 var tcs = _tcs;
                 if ((tcs.Task.IsCompleted == false && force == false) ||
 #pragma warning disable 420
-                    Interlocked.CompareExchange(ref _tcs, new TaskCompletionSource<bool>(), tcs) == tcs)
+                    Interlocked.CompareExchange(ref _tcs, new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously), tcs) == tcs)
 #pragma warning restore 420
                     return;
             }

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -29,6 +30,7 @@ using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.Rachis;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow;
 using Sparrow.Json;
@@ -91,7 +93,7 @@ namespace TypingsGenerator
 
             scripter.AddType(typeof(BatchRequestParser.CommandData));
 
-            scripter.AddType(typeof(DatabaseDocument));
+            scripter.AddType(typeof(DatabaseRecord));
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(FooterStatistics));
             scripter.AddType(typeof(IndexDefinition));
@@ -134,6 +136,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexProgress));
             scripter.AddType(typeof(IndexErrors));
 
+            // cluster 
+            scripter.AddType(typeof(ClusterTopology));
+
             // query 
             scripter.AddType(typeof(QueryResult<>));
 
@@ -153,9 +158,6 @@ namespace TypingsGenerator
 
             // versioning
             scripter.AddType(typeof(VersioningConfiguration));
-
-            // replication 
-            scripter.AddType(typeof(ReplicationDocument<>));
 
             // etl
             scripter.AddType(typeof(SqlDestination));

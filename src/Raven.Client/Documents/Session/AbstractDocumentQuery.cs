@@ -408,29 +408,29 @@ namespace Raven.Client.Documents.Session
         protected TSelf GenerateSpatialQueryData(string fieldName, SpatialCriteria criteria)
         {
             throw new NotImplementedException();
-            var wkt = criteria.Shape as string;
-            if (wkt == null && criteria.Shape != null)
-            {
-                var jsonSerializer = Conventions.CreateSerializer();
+            //var wkt = criteria.Shape as string;
+            //if (wkt == null && criteria.Shape != null)
+            //{
+            //    var jsonSerializer = Conventions.CreateSerializer();
 
-                /*using (var jsonWriter = new RavenJTokenWriter())
-                {
-                    var converter = new ShapeConverter();
-                    jsonSerializer.Serialize(jsonWriter, criteria.Shape);
-                    if (!converter.TryConvert(jsonWriter.Token, out wkt))
-                        throw new ArgumentException("Shape");
-                }*/
-            }
+            //    /*using (var jsonWriter = new RavenJTokenWriter())
+            //    {
+            //        var converter = new ShapeConverter();
+            //        jsonSerializer.Serialize(jsonWriter, criteria.Shape);
+            //        if (!converter.TryConvert(jsonWriter.Token, out wkt))
+            //            throw new ArgumentException("Shape");
+            //    }*/
+            //}
 
-            if (wkt == null)
-                throw new ArgumentException("Shape");
+            //if (wkt == null)
+            //    throw new ArgumentException("Shape");
 
-            IsSpatialQuery = true;
-            SpatialFieldName = fieldName;
-            QueryShape = new WktSanitizer().Sanitize(wkt);
-            SpatialRelation = criteria.Relation;
-            DistanceErrorPct = criteria.DistanceErrorPct;
-            return (TSelf)this;
+            //IsSpatialQuery = true;
+            //SpatialFieldName = fieldName;
+            //QueryShape = new WktSanitizer().Sanitize(wkt);
+            //SpatialRelation = criteria.Relation;
+            //DistanceErrorPct = criteria.DistanceErrorPct;
+            //return (TSelf)this;
         }
 
         /// <summary>

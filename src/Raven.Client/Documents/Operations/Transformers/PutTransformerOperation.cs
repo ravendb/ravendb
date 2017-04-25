@@ -16,10 +16,7 @@ namespace Raven.Client.Documents.Operations.Transformers
 
         public PutTransformerOperation(TransformerDefinition transformerDefinition)
         {
-            if (transformerDefinition == null)
-                throw new ArgumentNullException(nameof(transformerDefinition));
-            
-            _transformerDefinition = transformerDefinition;
+            _transformerDefinition = transformerDefinition ?? throw new ArgumentNullException(nameof(transformerDefinition));
         }
 
         public RavenCommand<PutTransformerResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -37,16 +34,12 @@ namespace Raven.Client.Documents.Operations.Transformers
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
-                if (context == null)
-                    throw new ArgumentNullException(nameof(context));
                 if (transformerDefinition == null)
                     throw new ArgumentNullException(nameof(transformerDefinition));
-                if (transformerDefinition.Name == null)
-                    throw new ArgumentNullException(nameof(transformerDefinition.Name));
 
-                _context = context;
-                _transformerName = transformerDefinition.Name;
-                _transformerDefinition = new EntityToBlittable(null).ConvertEntityToBlittable(transformerDefinition, conventions, _context);
+                _context = context ?? throw new ArgumentNullException(nameof(context));
+                _transformerName = transformerDefinition.Name ?? throw new ArgumentNullException(nameof(transformerDefinition.Name));
+                _transformerDefinition = EntityToBlittable.ConvertEntityToBlittable(transformerDefinition, conventions, _context);
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

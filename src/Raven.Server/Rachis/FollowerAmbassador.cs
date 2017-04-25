@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
+using Raven.Client.Server.Tcp;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -20,6 +22,7 @@ namespace Raven.Server.Rachis
         private readonly RachisConsensus _engine;
         private readonly Leader _leader;
         private ManualResetEvent _wakeLeader;
+        private readonly string _tag;
         private readonly string _url;
         private readonly string _apiKey;
 
@@ -32,7 +35,7 @@ namespace Raven.Server.Rachis
         private Thread _thread;
         private RemoteConnection _connection;
 
-        public string Url => _url;
+        public string Tag => _tag;
 
         public long FollowerMatchIndex => Interlocked.Read(ref _followerMatchIndex);
 
@@ -40,6 +43,7 @@ namespace Raven.Server.Rachis
         public DateTime LastSendToFollower => new DateTime(Interlocked.Read(ref _lastSendToFollower));
         public string LastSendMsg => _lastSentMsg;
         public bool ForceElectionsNow { get; set; }
+        public string Url => _url;
 
         private void UpdateLastSend(string msg)
         {
@@ -54,11 +58,12 @@ namespace Raven.Server.Rachis
             _wakeLeader.Set();
         }
 
-        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string url, string apiKey)
+        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, string apiKey)
         {
             _engine = engine;
             _leader = leader;
             _wakeLeader = wakeLeader;
+            _tag = tag;
             _url = url;
             _apiKey = apiKey;
             Status = "Started";
@@ -85,21 +90,25 @@ namespace Raven.Server.Rachis
                     {
                         try
                         {
-                            stream = _engine.ConenctToPeer(_url, _apiKey);
+                            TransactionOperationContext context;
+                            using (_engine.ContextPool.AllocateOperationContext(out context))
+                            {
+                                stream = _engine.ConenctToPeer(_url, _apiKey, context).Result;
+                            }
                         }
                         catch (Exception e)
                         {
                             Status = "Failed - " + e.Message;
                             if (_engine.Log.IsInfoEnabled)
                             {
-                                _engine.Log.Info("Failed to connect to remote follower: " + _url, e);
+                                _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Failed to connect to remote follower: {_tag} {_url}", e);
                             }
                             // wait a bit
                             _leader.WaitForNewEntries().Wait(_engine.ElectionTimeoutMs / 2);
                             continue; // we'll retry connecting
                         }
                         Status = "Connected";
-                        _connection = new RemoteConnection(_url, _engine.Url, stream);
+                        _connection = new RemoteConnection(_tag, _engine.Tag, stream);
                         using (_connection)
                         {
                             _engine.AppendStateDisposable(_leader, _connection);
@@ -144,7 +153,8 @@ namespace Raven.Server.Rachis
                                                 Term = _engine.CurrentTerm,
                                                 TruncateLogBefore = _leader.LowestIndexInEntireCluster,
                                                 PrevLogTerm = _engine.GetTermFor(context, _followerMatchIndex) ?? 0,
-                                                PrevLogIndex = _followerMatchIndex
+                                                PrevLogIndex = _followerMatchIndex,
+                                                TimeAsLeader = _leader.LeaderShipDuration
                                             };
                                         }
                                     }
@@ -155,6 +165,14 @@ namespace Raven.Server.Rachis
                                             ? "Append Entries"
                                             : "Heartbeat"
                                     );
+                                    if (_engine.Log.IsInfoEnabled && entries.Count > 0)
+                                    {
+                                        _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending {entries.Count} entries to {_tag}"
+#if DEBUG
+                                            + $" [{string.Join(" ,", entries.Select(x => x.ToString()))}]"
+#endif
+                                            );
+                                    }
                                     _connection.Send(context, appendEntries, entries);
                                     var aer = _connection.Read<AppendEntriesResponse>(context);
 
@@ -166,7 +184,7 @@ namespace Raven.Server.Rachis
                                             aer.Message;
                                         if (_engine.Log.IsInfoEnabled)
                                         {
-                                            _engine.Log.Info("BUG? " + msg);
+                                            _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: failure to append entries to {_tag} because: " + msg);
                                         }
                                         throw new InvalidOperationException(msg);
                                     }
@@ -191,7 +209,7 @@ namespace Raven.Server.Rachis
                         Status = "Failed - " + e.Message;
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info("Failed to talk to remote follower: " + _url, e);
+                            _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
                         }
                         _leader.WaitForNewEntries().Wait(_engine.ElectionTimeoutMs / 2);
                     }
@@ -220,13 +238,13 @@ namespace Raven.Server.Rachis
                 Status = "Failed - " + e.Message;
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info("Failed to talk to remote follower: " + _url, e);
+                    _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
                 }
             }
         }
 
         private void SendSnapshot(Stream stream)
-        {
+        {            
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
@@ -236,13 +254,16 @@ namespace Raven.Server.Rachis
                 {
                     // we don't need a snapshot, so just send updated topology
                     UpdateLastSend("Send empty snapshot");
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending empty snapshot to {_tag}");
+                    }
                     _connection.Send(context, new InstallSnapshot
                     {
                         LastIncludedIndex = earliestIndexEtry,
                         LastIncludedTerm = _engine.GetTermForKnownExisting(context, earliestIndexEtry),
                         Topology = _engine.GetTopologyRaw(context),
                     });
-
                     using (var binaryWriter = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))
                     {
                         binaryWriter.Write(-1);
@@ -253,7 +274,10 @@ namespace Raven.Server.Rachis
                     long index;
                     long term;
                     _engine.GetLastCommitIndex(context, out index, out term);
-
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending snapshot to {_tag} with index={index} term={term}");
+                    }
                     // we make sure that we routinely update LastReplyFromFollower here
                     // so we'll not leave the leader thinking we abandoned it
                     UpdateLastMatchFromFollower(_followerMatchIndex);
@@ -264,7 +288,6 @@ namespace Raven.Server.Rachis
                         LastIncludedTerm = term,
                         Topology = _engine.GetTopologyRaw(context),
                     });
-
                     WriteSnapshotToFile(context, new BufferedStream(stream));
 
                     UpdateLastMatchFromFollower(_followerMatchIndex);
@@ -279,6 +302,10 @@ namespace Raven.Server.Rachis
                         break;
                     }
                     UpdateLastMatchFromFollower(_followerMatchIndex);
+                }
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:done sending snapshot to {_tag}");
                 }
             }
         }
@@ -475,11 +502,16 @@ namespace Raven.Server.Rachis
                     };
                 }
                 UpdateLastSend("Hello");
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending Rachis hello to {_tag}");
+                }
                 _connection.Send(context, new RachisHello
                 {
                     TopologyId = clusterTopology.TopologyId,
                     InitialMessageType = InitialMessageType.AppendEntries,
-                    DebugSourceIdentifier = _engine.GetDebugInformation()
+                    DebugDestinationIdentifier = _tag,
+                    DebugSourceIdentifier = _engine.Tag,
                 });
 
                 UpdateLastSend("Negotiation");
@@ -501,18 +533,34 @@ namespace Raven.Server.Rachis
 
                     if (llr.Status == LogLengthNegotiationResponse.ResponseStatus.Acceptable)
                     {
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: {_tag} agreed on term={llr.CurrentTerm} index={llr.LastLogIndex}");
+                        }
                         return llr.LastLogIndex;
                     }
 
                     if (llr.Status == LogLengthNegotiationResponse.ResponseStatus.Rejected)
-                        throw new InvalidOperationException("Failed to get acceptable status from " + _url + " because " + llr.Message);
+                    {
+                        var message = "Failed to get acceptable status from " + _tag + " because " + llr.Message;
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: {message}");
+                        }
+                        throw new InvalidOperationException(message);
+                    }
 
                     UpdateLastMatchFromFollower(0);
 
                     using (context.OpenReadTransaction())
                     {
-                        if (llr.MidpointTerm ==
-                            _engine.GetTermForKnownExisting(context, llr.MidpointIndex))// we know that we have longer / equal log tot the follower
+                        var termForMidpointIndex = _engine.GetTermFor(context, llr.MidpointIndex);
+                        bool truncated = false;
+                        if (termForMidpointIndex == null) //follower has this log entry but we already truncated it.
+                        {
+                            truncated = true;
+                        }
+                        else if (llr.MidpointTerm == termForMidpointIndex)
                         {
                             llr.MinIndex = llr.MidpointIndex + 1;
                         }
@@ -521,11 +569,13 @@ namespace Raven.Server.Rachis
                             llr.MaxIndex = llr.MidpointIndex - 1;
                         }
                         var midIndex = (llr.MinIndex + llr.MaxIndex) / 2;
+                        var termFor = _engine.GetTermFor(context, midIndex);
                         lln = new LogLengthNegotiation
                         {
                             Term = engineCurrentTerm,
                             PrevLogIndex = midIndex,
-                            PrevLogTerm = _engine.GetTermForKnownExisting(context, midIndex),
+                            PrevLogTerm = termFor??0,
+                            Truncated = truncated || termFor == null
                         };
                     }
                     UpdateLastSend("Negotiation 2");
@@ -540,17 +590,24 @@ namespace Raven.Server.Rachis
             UpdateLastMatchFromFollower(0);
             _thread = new Thread(Run)
             {
-                Name =
-                    $"Follower Ambassador for {(new Uri(_engine.Url).Fragment ?? _engine.Url)} > {(new Uri(_url).Fragment ?? _url)} in term {_engine.CurrentTerm}",
+                Name = ToString(),
                 IsBackground = true
             };
             _thread.Start();
         }
 
+        public override string ToString()
+        {
+            return $"Follower Ambassador for {_engine.Tag} > {_tag} in term {_engine.CurrentTerm}";
+        }
+
         public void Dispose()
         {
             _connection?.Dispose();
-
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Dispose");
+            }
             if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                 _thread.Join();
         }

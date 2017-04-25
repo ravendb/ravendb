@@ -2,9 +2,9 @@
 {
     public class IndexPerformanceStats
     {
-        public string IndexName { get; set; }
+        public string Name { get; set; }
 
-        public int IndexId { get; set; }
+        public long Etag { get; set; }
 
         public IndexingPerformanceStats[] Performance { get; set; }
     }

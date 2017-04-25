@@ -49,9 +49,15 @@ namespace Raven.Server.Documents.TcpHandlers
         public JsonOperationContext.ManagedPinnedBuffer PinnedBuffer;
 
         private readonly SemaphoreSlim _running = new SemaphoreSlim(1);
+        private string _debugTag;
 
-        public IDisposable ConnectionProcessingInProgress()
+        public override string ToString()
         {
+            return "Tcp Connection " + _debugTag;
+        }
+        public IDisposable ConnectionProcessingInProgress(string debugTag)
+        {
+            _debugTag = debugTag;
             _running.Wait();
             return new DisposableAction(() => _running.Release());
         }

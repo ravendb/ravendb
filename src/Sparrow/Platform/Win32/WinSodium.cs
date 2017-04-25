@@ -142,8 +142,8 @@ namespace Sparrow.Platform.Win32
             byte* n,
             byte* pk,
             byte* sk);
-			
-		[DllImport(LIB_SODIUM)]
+            
+        [DllImport(LIB_SODIUM)]
         public static extern void sodium_memzero(byte* pnt, IntPtr len);
     }
 }

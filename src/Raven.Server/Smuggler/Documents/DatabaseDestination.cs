@@ -75,7 +75,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public void WriteTransformer(TransformerDefinition transformerDefinition)
             {
-                _database.TransformerStore.CreateTransformer(transformerDefinition);
+                AsyncHelpers.RunSync(() => _database.TransformerStore.CreateTransformer(transformerDefinition));
             }
 
             public void Dispose()
@@ -94,12 +94,12 @@ namespace Raven.Server.Smuggler.Documents
 
             public void WriteIndex(IndexDefinitionBase indexDefinition, IndexType indexType)
             {
-                _database.IndexStore.CreateIndex(indexDefinition);
+                AsyncHelpers.RunSync(() => _database.IndexStore.CreateIndex(indexDefinition));
             }
 
             public void WriteIndex(IndexDefinition indexDefinition)
             {
-                _database.IndexStore.CreateIndex(indexDefinition);
+                AsyncHelpers.RunSync(() => _database.IndexStore.CreateIndex(indexDefinition));
             }
 
             public void Dispose()
@@ -275,7 +275,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public override int Execute(DocumentsOperationContext context)
             {
-                if(_log.IsInfoEnabled)
+                if (_log.IsInfoEnabled)
                     _log.Info($"Importing {Documents.Count:#,#} documents");
 
                 foreach (var document in Documents)

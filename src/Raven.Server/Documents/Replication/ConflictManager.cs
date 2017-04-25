@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.ServerWide.Context;
@@ -17,12 +18,10 @@ namespace Raven.Server.Documents.Replication
         private readonly DocumentDatabase _database;
 
         private readonly Logger _log;
-        private readonly ReplicationDocument _replicationDocument;
         private readonly ResolveConflictOnReplicationConfigurationChange _conflictResolver;
 
-        public ConflictManager(DocumentDatabase database, ReplicationDocument replicationDocument, ResolveConflictOnReplicationConfigurationChange conflictResolver)
+        public ConflictManager(DocumentDatabase database, ResolveConflictOnReplicationConfigurationChange conflictResolver)
         {
-            _replicationDocument = replicationDocument;
             _conflictResolver = conflictResolver;
             _database = database;
             _log = LoggingSource.Instance.GetLogger<ConflictManager>(_database.Name);
@@ -66,42 +65,40 @@ namespace Raven.Server.Documents.Replication
                 doc))
                 return;
 
-            switch (_replicationDocument?.DocumentConflictResolution ?? StraightforwardConflictResolution.None)
+            if (_conflictResolver.ConflictSolver.ResolveToLatest)
             {
-                case StraightforwardConflictResolution.ResolveToLatest:
-                    if (otherChangeVector == null) //precaution
-                        throw new InvalidOperationException(
-                            "Detected conflict on replication, but could not figure out conflicted vector. This is not supposed to happen and is likely a bug.");
+                if (otherChangeVector == null) //precaution
+                    throw new InvalidOperationException(
+                        "Detected conflict on replication, but could not figure out conflicted vector. This is not supposed to happen and is likely a bug.");
 
-                    var conflicts = new List<DocumentConflict>
+                var conflicts = new List<DocumentConflict>
+                {
+                    new DocumentConflict
                     {
-                        new DocumentConflict
-                        {
-                            Doc = doc,
-                            Collection = documentsContext.GetLazyStringForFieldWithCaching(
-                                collection ??
-                                CollectionName.GetCollectionName(doc)
-                            ),
-                            LastModified = new DateTime(lastModifiedTicks),
-                            LoweredKey = documentsContext.GetLazyString(id),
-                            ChangeVector = changeVector
-                        }
-                    };
-                    conflicts.AddRange(documentsContext.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(
-                        documentsContext, id));
-                    var localDocumentTuple =
-                        documentsContext.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(documentsContext,
-                            id, false);
-                    var local = DocumentConflict.From(documentsContext, localDocumentTuple.Document) ?? DocumentConflict.From(localDocumentTuple.Tombstone);
-                    if (local != null)
-                        conflicts.Add(local);
+                        Doc = doc,
+                        Collection = documentsContext.GetLazyStringForFieldWithCaching(
+                            collection ??
+                            CollectionName.GetCollectionName(doc)
+                        ),
+                        LastModified = new DateTime(lastModifiedTicks),
+                        LoweredKey = documentsContext.GetLazyString(id),
+                        ChangeVector = changeVector
+                    }
+                };
+                conflicts.AddRange(documentsContext.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(
+                    documentsContext, id));
+                var localDocumentTuple =
+                    documentsContext.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(documentsContext,
+                        id, false);
+                var local = DocumentConflict.From(documentsContext, localDocumentTuple.Document) ?? DocumentConflict.From(localDocumentTuple.Tombstone);
+                if (local != null)
+                    conflicts.Add(local);
 
-                    _conflictResolver.ResolveToLatest(documentsContext, conflicts);
-                    break;
-                default:
-                    _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection);
-                    break;
+                _conflictResolver.ResolveToLatest(documentsContext, conflicts);
+                return;
+
             }
+            _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection);
         }
 
         private bool TryResovleConflictByScript(
@@ -167,7 +164,7 @@ namespace Raven.Server.Documents.Replication
             ChangeVectorEntry[] incomingChangeVector,
             BlittableJsonReaderObject doc)
         {
-            if (_replicationDocument?.DefaultResolver?.ResolvingDatabaseId == null)
+            if (_conflictResolver.ConflictSolver?.DatabaseResolverId == null)
                 return false;
 
             var conflicts = new List<DocumentConflict>(_database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id));
@@ -188,7 +185,7 @@ namespace Raven.Server.Documents.Replication
 
             return _conflictResolver.TryResolveUsingDefaultResolverInternal(
                 context,
-                _replicationDocument?.DefaultResolver,
+                _conflictResolver.ConflictSolver.DatabaseResolverId,
                 conflicts);
         }
 

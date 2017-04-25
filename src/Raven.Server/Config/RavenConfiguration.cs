@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
+using Raven.Client.Documents.Conventions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -214,16 +215,27 @@ namespace Raven.Server.Config
 
         public static RavenConfiguration CreateFrom(RavenConfiguration parent, string name, ResourceType type)
         {
+            var dataDirectory = parent.Core.DataDirectory;
+            var dataDirectoryPath = dataDirectory != null ? parent.Core.DataDirectory.Combine(Inflector.Pluralize(type.ToString())).Combine(name).ToFullPath() :
+                      GenerateDefaultDataDirectory(parent.Core.GetDefaultValue<CoreConfiguration>(v => v.DataDirectory).ToString(),type,name);
+
             var result = new RavenConfiguration(name, type)
             {
                 ServerWideSettings = parent.Settings,
                 Settings = new ConfigurationRoot(new List<IConfigurationProvider> { new MemoryConfigurationProvider(new MemoryConfigurationSource()) })
                 {
-                    [GetKey(x => x.Core.RunInMemory)] = parent.Core.RunInMemory.ToString()
+                    [GetKey(x => x.Core.RunInMemory)] = parent.Core.RunInMemory.ToString(),
+                    [GetKey(x => x.Core.DataDirectory)] = dataDirectoryPath
                 }
             };
 
             return result;
+        }
+
+        private static string GenerateDefaultDataDirectory(string template, ResourceType type,string name)
+        {
+            return template.Replace("{pluralizedResourceType}", Inflector.Pluralize(type.ToString()))
+                           .Replace("{name}", name);
         }
 
         public void AddCommandLine(string[] args)

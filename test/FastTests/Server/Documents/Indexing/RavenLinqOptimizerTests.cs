@@ -53,15 +53,15 @@ namespace FastTests.Server.Documents.Indexing
     }
 }")]
         [InlineData(@"docs.SelectMany(barn => barn.Households, 
-					                  (barn, household) => new { barn = barn, household = household })
-		                  .SelectMany(this0 => this0.household.Members,
-					                  (this0, member) => new 
+                                      (barn, household) => new { barn = barn, household = household })
+                          .SelectMany(this0 => this0.household.Members,
+                                      (this0, member) => new 
                                                          {
-											                  InternalId = this0.barn.InternalId,
-											                  Name = this0.barn.Name,
-											                  HouseholdId = this0.household.InternalId,
-											                  MemberId = member.InternalId,
-											                  MembersName = member.Name 
+                                                              InternalId = this0.barn.InternalId,
+                                                              Name = this0.barn.Name,
+                                                              HouseholdId = this0.household.InternalId,
+                                                              MemberId = member.InternalId,
+                                                              MembersName = member.Name 
                                                           })"
 , @"foreach (var barn in docs)
 {
@@ -85,10 +85,10 @@ namespace FastTests.Server.Documents.Indexing
     }
 }")]
         [InlineData(@"docs.SelectMany((Func<dynamic, IEnumerable<dynamic>>)
-					                        (user => (IEnumerable<dynamic>)user.Aliases)
-				                      ,(Func<dynamic, dynamic, dynamic>)
-					                        ((user, alias) => new {user = user, alias = alias}))
-	                      .Where((Func<dynamic, bool>)(this0 => this0.alias.Length > 3))
+                                            (user => (IEnumerable<dynamic>)user.Aliases)
+                                      ,(Func<dynamic, dynamic, dynamic>)
+                                            ((user, alias) => new {user = user, alias = alias}))
+                          .Where((Func<dynamic, bool>)(this0 => this0.alias.Length > 3))
                           .Select((Func<dynamic, dynamic>)(this0 => new
                           {
                               Length = this0.alias.Length,

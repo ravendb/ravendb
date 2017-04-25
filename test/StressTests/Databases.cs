@@ -99,7 +99,7 @@ namespace StressTests
                         }
 
                     }
-                    catch (ObjectDisposedException de)
+                    catch (ObjectDisposedException)
                     {
                     }
                 }

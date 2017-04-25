@@ -11,51 +11,53 @@ namespace FastTests.Server.Replication
     public class ReplicationOfConflicts : ReplicationBasicTests
     {
         [Fact]
-        public void ReplicateAConflictThenResolveIt()
+        public async Task ReplicateAConflictThenResolveIt()
         {
-            var store1 = GetDocumentStore();
-            var store2 = GetDocumentStore();
-
-            using (var session = store1.OpenSession())
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
             {
-                session.Store(new User {Name = "Karmel"},"foo/bar");
-                session.SaveChanges();
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store2.OpenSession())
+                {
+                    session.Store(new User {Name = "Oren"}, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store1, store2);
+
+                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
+
+                await SetupReplicationAsync(store2, store1);
+
+                Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
+
+                // adding new document, resolve the conflict
+                using (var session = store2.OpenSession())
+                {
+                    session.Store(new User {Name = "Resolved"}, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument(store1, "foo/bar"));
+
+                Assert.Empty(GetConflicts(store1, "foo/bar").Results);
+                Assert.Empty(GetConflicts(store2, "foo/bar").Results);
             }
-
-            using (var session = store2.OpenSession())
-            {
-                session.Store(new User { Name = "Oren" }, "foo/bar");
-                session.SaveChanges();
-            }
-
-            SetupReplication(store1,store2);
-
-            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
-
-            SetupReplication(store2, store1);
-
-            Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
-
-            // adding new document, resolve the conflict
-            using (var session = store2.OpenSession())
-            {
-                session.Store(new User { Name = "Resolved" }, "foo/bar");
-                session.SaveChanges();
-            }
-
-            Assert.True(WaitForDocument(store1, "foo/bar"));
-
-            Assert.Empty(GetConflicts(store1, "foo/bar").Results);
-            Assert.Empty(GetConflicts(store2, "foo/bar").Results);
         }  
 
         [Fact]
-        public void CanManuallyResolveConflict_with_tombstone()
+        public async Task CanManuallyResolveConflict_with_tombstone()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
 
                 using (var session = master.OpenSession())
                 {
@@ -106,76 +108,79 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void ReplicateAConflictOnThreeDBsAndResolve()
+        public async Task ReplicateAConflictOnThreeDBsAndResolve()
         {
-            var store1 = GetDocumentStore();
-            var store2 = GetDocumentStore();
-            var store3 = GetDocumentStore();
-
-            using (var session = store1.OpenSession())
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            using (var store3 = GetDocumentStore())
             {
-                session.Store(new User { Name = "Karmel" }, "foo/bar");
-                session.SaveChanges();
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store2.OpenSession())
+                {
+                    session.Store(new User {Name = "Oren"}, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store1, store2, store3);
+
+                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
+
+                await SetupReplicationAsync(store2, store1);
+
+                Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
+                Assert.Equal(2, WaitUntilHasConflict(store3, "foo/bar").Results.Length);
+
+                using (var session = store2.OpenSession())
+                {
+                    session.Store(new User {Name = "Resolved"}, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument(store1, "foo/bar"));
+                Assert.True(WaitForDocument(store3, "foo/bar"));
             }
-
-            using (var session = store2.OpenSession())
-            {
-                session.Store(new User { Name = "Oren" }, "foo/bar");
-                session.SaveChanges();
-            }
-
-            SetupReplication(store1, store2, store3);
-
-            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
-
-            SetupReplication(store2, store1);
-
-            Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
-            Assert.Equal(2, WaitUntilHasConflict(store3, "foo/bar").Results.Length);
-
-            using (var session = store2.OpenSession())
-            {
-                session.Store(new User { Name = "Resolved" }, "foo/bar");
-                session.SaveChanges();
-            }
-
-            Assert.True(WaitForDocument(store1, "foo/bar"));
-            Assert.True(WaitForDocument(store3, "foo/bar"));
         }
 
         [Fact]
-        public void ReplicateTombstoneConflict()
+        public async Task ReplicateTombstoneConflict()
         {
-            var store1 = GetDocumentStore();
-            var store2 = GetDocumentStore();
-
-            SetupReplication(store1, store2);
-
-            using (var session = store1.OpenSession())
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
             {
-                session.Store(new User { Name = "Karmel" }, "foo/bar");
-                session.SaveChanges();
+                await SetupReplicationAsync(store1, store2);
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "foo/bar");
+                    session.SaveChanges();
+                }
+                Assert.True(WaitForDocument(store2, "foo/bar"));
+
+                using (var session = store2.OpenSession())
+                {
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+                Assert.True(WaitForDocumentDeletion(store2, "foo/bar"));
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User {Name = "Oren"}, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
+
+                await SetupReplicationAsync(store2, store1);
+
+                Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
             }
-            Assert.True(WaitForDocument(store2,"foo/bar"));
-
-            using (var session = store2.OpenSession())
-            {
-                session.Delete("foo/bar");
-                session.SaveChanges();
-            }
-            Assert.True(WaitForDocumentDeletion(store2,"foo/bar"));
-
-            using (var session = store1.OpenSession())
-            {
-                session.Store(new User { Name = "Oren" }, "foo/bar");
-                session.SaveChanges();
-            }
-
-            Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
-
-            SetupReplication(store2, store1);
-         
-            Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
         }
     }
 }

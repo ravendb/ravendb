@@ -66,8 +66,9 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
             using (var database = CreateDocumentDatabase())
             {
-                var index = MapReduceIndex.CreateNew(1, new IndexDefinition()
+                var index = MapReduceIndex.CreateNew(new IndexDefinition()
                 {
+                    Etag = 10,
                     Name = "Users_ByCount_GroupByLocation",
                     Maps = { "from user in docs.Users select new { user.Location, Count = 1 }" },
                     Reduce =
@@ -84,7 +85,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
                 {
                     var indexStorage = new IndexStorage(index, contextPool, database);
-                    var reducer = new ReduceMapResultsOfStaticIndex(index,index._compiled.Reduce, index.Definition, indexStorage, new MetricsCountersManager(), mapReduceContext);
+                    var reducer = new ReduceMapResultsOfStaticIndex(index,index.Compiled.Reduce, index.Definition, indexStorage, new MetricsCountersManager(), mapReduceContext);
 
                     await ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database);
                 }

@@ -17,7 +17,7 @@ namespace Raven.Server.Web.Authentication
     public class AdminApiKeysHandler : RequestHandler
     {
         [RavenAction("/admin/api-keys", "PUT", "/admin/api-keys?name={api-key-name:string}")]
-        public Task Put()
+        public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
@@ -28,14 +28,12 @@ namespace Raven.Server.Web.Authentication
 
                 var errorTask = ValidateApiKeyStructure(name, apiKey);
                 if (errorTask != null)
-                    return errorTask;
-
-                using (var tx = ctx.OpenWriteTransaction())
                 {
-                    ServerStore.Write(ctx, Constants.ApiKeys.Prefix + name, apiKey);
-
-                    tx.Commit();
+                    await errorTask;
+                    return;
                 }
+
+                await ServerStore.PutValueInClusterAsync(ctx, Constants.ApiKeys.Prefix + name, apiKey);
 
                 AccessToken value;
                 if (Server.AccessTokensByName.TryRemove(name, out value))
@@ -44,24 +42,18 @@ namespace Raven.Server.Web.Authentication
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                return Task.CompletedTask;
             }
         }
 
         [RavenAction("/admin/api-keys", "DELETE", "/admin/api-keys?name={api-key-name:string}")]
-        public Task Delete()
+        public async Task Delete()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             TransactionOperationContext ctx;
             using (ServerStore.ContextPool.AllocateOperationContext(out ctx))
             {
-                using (var tx = ctx.OpenWriteTransaction())
-                {
-                    ServerStore.Delete(ctx, Constants.ApiKeys.Prefix + name);
-
-                    tx.Commit();
-                }
+                await ServerStore.DeleteValueInClusterAsync(ctx, Constants.ApiKeys.Prefix + name);
 
                 AccessToken value;
                 if (Server.AccessTokensByName.TryRemove(name, out value))
@@ -69,7 +61,7 @@ namespace Raven.Server.Web.Authentication
                     Server.AccessTokensById.TryRemove(value.Token, out value);
                 }
 
-                return NoContent();
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             }
         }
 
@@ -86,17 +78,16 @@ namespace Raven.Server.Web.Authentication
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                ServerStore.Item[] apiKeys = null;
+                Tuple<string, BlittableJsonReaderObject>[] apiKeys = null;
                 try
                 {
                     if (string.IsNullOrEmpty(name))
-                        apiKeys = ServerStore
-                            .StartingWith(context, Constants.ApiKeys.Prefix, start, pageSize)
+                        apiKeys = ServerStore.Cluster.ItemsStartingWith(context, Constants.ApiKeys.Prefix, start, pageSize)
                             .ToArray();
                     else
                     {
                         var key = Constants.ApiKeys.Prefix + name;
-                        var apiKey = ServerStore.Read(context, key);
+                        var apiKey = ServerStore.Cluster.Read(context, key);
                         if (apiKey == null)
                         {
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -105,11 +96,7 @@ namespace Raven.Server.Web.Authentication
 
                         apiKeys = new[]
                         {
-                            new ServerStore.Item
-                            {
-                                Data = apiKey,
-                                Key = key
-                            }
+                            Tuple.Create(key, apiKey)
                         };
                     }
 
@@ -118,14 +105,14 @@ namespace Raven.Server.Web.Authentication
                         writer.WriteStartObject();
                         writer.WriteResults(context, apiKeys, (w, c, apiKey) =>
                         {
-                            var username = apiKey.Key.Substring(Constants.ApiKeys.Prefix.Length);
+                            var username = apiKey.Item1.Substring(Constants.ApiKeys.Prefix.Length);
 
-                            apiKey.Data.Modifications = new DynamicJsonValue(apiKey.Data)
+                            apiKey.Item2.Modifications = new DynamicJsonValue(apiKey.Item2)
                             {
                                 [nameof(NamedApiKeyDefinition.UserName)] = username
                             };
 
-                            c.Write(w, apiKey.Data);
+                            c.Write(w, apiKey.Item2);
                         });
 
                         writer.WriteEndObject();
@@ -137,7 +124,7 @@ namespace Raven.Server.Web.Authentication
                     if (apiKeys != null)
                     {
                         foreach(var apiKey in apiKeys)
-                            apiKey.Data?.Dispose();
+                            apiKey.Item2?.Dispose();
                     }
                 }
             }

@@ -5,10 +5,10 @@ namespace Raven.Server.Config.Categories
 {
     public class QueryConfiguration : ConfigurationCategory
     {
-        [DefaultValue(1024)] //1024 is Lucene.net default - so if the setting is not set it will be the same as not touching Lucene's settings at all
+        [DefaultValue(null)]//1024 is Lucene.net default, but we don't set it by default
         [ConfigurationEntry("Raven/Query/MaxClauseCount", isServerWideOnly: true)]
         [LegacyConfigurationEntry("Raven/MaxClauseCount")]
-        public int MaxClauseCount { get; set; }
+        public int? MaxClauseCount { get; set; }
 
         [DefaultValue(true)] //Defaults to use our own implementation of the Lucene query parser
         [ConfigurationEntry("Raven/Query/UseLuceneASTParser")]

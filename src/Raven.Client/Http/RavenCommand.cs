@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Sparrow.Json;
 
@@ -15,14 +16,14 @@ namespace Raven.Client.Http
     public abstract class RavenCommand<TResult>
     {
         public CancellationToken CancellationToken = CancellationToken.None;
-        public HashSet<ServerNode> FailedNodes;
+        public Dictionary<ServerNode, ExceptionDispatcher.ExceptionSchema> FailedNodes;
 
         public TResult Result;
         public int AuthenticationRetries;
         public abstract bool IsReadRequest { get; }
         public HttpStatusCode StatusCode;
 
-        public bool AvoidFailover;
+        public bool AvoidFailover;        
 
         public RavenCommandResponseType ResponseType { get; protected set; } = RavenCommandResponseType.Object;
 
@@ -58,10 +59,9 @@ namespace Raven.Client.Http
                 throw new ArgumentException($"{name} cannot be null or empty", name);
         }
 
-        public bool IsFailedWithNode(ServerNode leaderNode)
+        public bool IsFailedWithNode(ServerNode node)
         {
-            return FailedNodes != null && FailedNodes.Contains(leaderNode);
-        }
+			return FailedNodes != null && FailedNodes.ContainsKey(node);        }
 
         public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
@@ -76,7 +76,10 @@ namespace Raven.Client.Http
                     // we intentionally don't dispose the reader here, we'll be using it
                     // in the command, any associated memory will be released on context reset
                     var json = await context.ReadForMemoryAsync(stream, "response/object");
-                    CacheResponse(cache, url, response, json);
+                    if (cache != null) //precaution
+                    {
+                        CacheResponse(cache, url, response, json);
+                    }
                     SetResponse(json, fromCache: false);
                     return;
                 }

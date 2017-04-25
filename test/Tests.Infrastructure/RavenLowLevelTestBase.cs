@@ -1,26 +1,29 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
-
+using Raven.Client.Documents;
+using Raven.Client.Exceptions.Database;
+using Raven.Client.Server;
+using Raven.Client.Server.Operations;
+using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests
 {
-    public abstract class RavenLowLevelTestBase : IDisposable
+    public abstract class RavenLowLevelTestBase : TestBase
     {
-        private readonly ConcurrentSet<string> _pathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly List<string> _databases = new List<string>();
 
         protected static void WaitForIndexMap(Index index, long etag)
         {
@@ -30,54 +33,94 @@ namespace FastTests
 
         private static int _counter;
 
-        protected DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory = true, string dataDirectory = null, Action<RavenConfiguration> modifyConfiguration = null)
+        protected IDisposable CreatePersistentDocumentDatabase(string dataDirectory, out DocumentDatabase db)
+        {
+            var database = CreateDocumentDatabase(runInMemory2: false, dataDirectory: dataDirectory);
+            db = database;
+            return new DisposableAction(() =>
+            {
+                DeleteDatabase(database.Name);
+            });
+        }
+
+        protected DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory2 = true, string dataDirectory = null, Action<Dictionary<string, string>> modifyConfiguration = null)
         {
             var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
+
+            _databases.Add(name);
 
             if (string.IsNullOrEmpty(dataDirectory))
                 dataDirectory = NewDataPath(name);
 
-            _pathsToDelete.Add(dataDirectory);
-
-            var configuration = new RavenConfiguration(name, ResourceType.Database);
-            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory), int.MaxValue.ToString());
-            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), dataDirectory);
-            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), runInMemory.ToString());
-            configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true;
+            var configuration = new Dictionary<string, string>();
+            configuration.Add(RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory), int.MaxValue.ToString());
+            configuration.Add(RavenConfiguration.GetKey(x => x.Core.DataDirectory), dataDirectory);
+            configuration.Add(RavenConfiguration.GetKey(x => x.Core.RunInMemory), runInMemory2.ToString());
+            configuration.Add(RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened), "true");
 
             modifyConfiguration?.Invoke(configuration);
-            
-            configuration.Initialize();
 
-            var documentDatabase = new DocumentDatabase(name, configuration, null);
-            documentDatabase.Initialize();
+            using (var store = new DocumentStore
+            {
+                Url = UseFiddler(Server.WebUrls[0]),
+                DefaultDatabase = name
+            })
+            {
+                store.Initialize();
 
-            return documentDatabase;
+                var doc = MultiDatabase.CreateDatabaseDocument(name);
+                doc.Settings = configuration;
+
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor: 1));
+
+                return AsyncHelpers.RunSync(() => GetDatabase(name));
+            }
         }
 
-        protected string NewDataPath([CallerMemberName]string prefix = null, bool forceCreateDir = false)
+        protected void DeleteDatabase(string dbName)
         {
-            var path = RavenTestHelper.NewDataPath(prefix, 9999, forceCreateDir);
+            using (var store = new DocumentStore
+            {
+                Url = UseFiddler(Server.WebUrls[0]),
+                DefaultDatabase = dbName
+            })
+            {
+                store.Initialize();
 
-            _pathsToDelete.Add(path);
-            return path;
+                store.Admin.Server.Send(new DeleteDatabaseOperation(dbName, true));
+            }
         }
 
-        public virtual void Dispose()
+        protected override void Dispose(ExceptionAggregator exceptionAggregator)
         {
-            GC.SuppressFinalize(this);
+            if (_databases.Count == 0)
+                return;
 
-            GC.Collect(2);
-            GC.WaitForPendingFinalizers();
+            TransactionOperationContext context;
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+            {
+                foreach (var database in _databases)
+                {
+                    exceptionAggregator.Execute(() =>
+                    {
+                        Server.ServerStore.DatabasesLandlord.UnloadDatabase(database);
+                    });
 
-#pragma warning disable 618 // Yes, I know this is obselete
-            var alreadyHasException = Marshal.GetExceptionCode() == 0;
-#pragma warning restore 618
-            var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
-
-            RavenTestHelper.DeletePaths(_pathsToDelete, exceptionAggregator);
-            if (alreadyHasException == false)
-                exceptionAggregator.ThrowIfNeeded();
+                    exceptionAggregator.Execute(() =>
+                    {
+                        AsyncHelpers.RunSync(async () =>
+                        {
+                            try
+                            {
+                                await Server.ServerStore.DeleteDatabaseAsync(context, database, hardDelete: true, fromNode: Server.ServerStore.NodeTag);
+                            }
+                            catch (DatabaseDoesNotExistException)
+                            {
+                            }
+                        });
+                    });
+                }
+            }
         }
 
         protected static BlittableJsonReaderObject CreateDocument(JsonOperationContext context, string key, DynamicJsonValue value)

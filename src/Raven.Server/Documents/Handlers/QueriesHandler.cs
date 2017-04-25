@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Handlers
                 var debug = GetStringQueryString("debug", required: false);
                 if (string.IsNullOrWhiteSpace(debug) == false)
                 {
-                    Debug(context, indexName, debug, token, HttpMethod.Post);
+                    await Debug(context, indexName, debug, token, HttpMethod.Post);
                     return;
                 }
 
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Handlers
                 var debug = GetStringQueryString("debug", required: false);
                 if (string.IsNullOrWhiteSpace(debug) == false)
                 {
-                    Debug(context, indexName, debug, token, HttpMethod.Get);
+                    await Debug(context, indexName, debug, token, HttpMethod.Get);
                     return;
                 }
 
@@ -289,11 +289,11 @@ namespace Raven.Server.Documents.Handlers
         }
 
 
-        private void Debug(DocumentsOperationContext context, string indexName, string debug, OperationCancelToken token, HttpMethod method)
+        private async Task Debug(DocumentsOperationContext context, string indexName, string debug, OperationCancelToken token, HttpMethod method)
         {
             if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
             {
-                IndexEntries(context, indexName, token, method);
+                await IndexEntries(context, indexName, token, method);
                 return;
             }
 
@@ -307,14 +307,14 @@ namespace Raven.Server.Documents.Handlers
             throw new NotSupportedException($"Not supported query debug operation: '{debug}'");
         }
 
-        private void IndexEntries(DocumentsOperationContext context, string indexName, OperationCancelToken token, HttpMethod method)
+        private async Task IndexEntries(DocumentsOperationContext context, string indexName, OperationCancelToken token, HttpMethod method)
         {
             var indexQuery = GetIndexQuery(context, method);
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
             var queryRunner = new QueryRunner(Database, context);
 
-            var result = queryRunner.ExecuteIndexEntriesQuery(indexName, indexQuery, existingResultEtag, token);
+            var result = await queryRunner.ExecuteIndexEntriesQuery(indexName, indexQuery, existingResultEtag, token);
 
             if (result.NotModified)
             {

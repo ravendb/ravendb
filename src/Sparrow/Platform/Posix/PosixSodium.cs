@@ -94,7 +94,7 @@ namespace Sparrow.Platform.Posix
 
         [DllImport(LIB_SODIUM)]
         public static extern void sodium_memzero(byte* pnt, IntPtr len);
-		
+        
         [DllImport(LIB_SODIUM)]
         public static extern int crypto_box_secretkeybytes();
 

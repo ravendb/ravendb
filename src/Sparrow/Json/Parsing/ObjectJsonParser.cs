@@ -83,6 +83,19 @@ namespace Sparrow.Json.Parsing
                 return null;
             }
         }
+
+        public static DynamicJsonValue Convert(Dictionary<string, string> dictionary)
+        {
+            if (dictionary == null)
+                return null;
+
+            var djv = new DynamicJsonValue();
+            foreach (var kvp in dictionary)
+            {
+                djv[kvp.Key] = kvp.Value;
+            }
+            return djv;
+        }
     }
 
     public class DynamicJsonArray : IEnumerable<object>

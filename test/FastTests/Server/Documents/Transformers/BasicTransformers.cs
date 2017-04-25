@@ -1,48 +1,50 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Transformers;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Transformers;
-using Raven.Server.Documents.Transformers;
+using Raven.Client.Exceptions;
+using Raven.Server.ServerWide.Context;
 using Xunit;
 
 namespace FastTests.Server.Documents.Transformers
 {
-    public class BasicTransformers : RavenLowLevelTestBase
+    public class BasicTransformers : RavenTestBase
     {
         [Fact]
-        public void CanPersist()
+        public async Task CanPersist()
         {
-            var path = NewDataPath();
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (var server = GetNewServer(runInMemory: false, partialPath: "CanPersist"))
+            using (var store = GetDocumentStore(modifyName: x => "CanPersistDB", defaultServer: server, deleteDatabaseWhenDisposed: false, modifyDatabaseRecord: x => x.Settings["Raven/RunInMemory"] = "False"))
             {
-                var transformerId1 = database.TransformerStore.CreateTransformer(new TransformerDefinition
+                var task1 = store.Admin.SendAsync(new PutTransformerOperation(new TransformerDefinition
                 {
                     TransformResults = "results.Select(x => new { Name = x.Name })",
                     LockMode = TransformerLockMode.LockedIgnore,
-                    Temporary = true,
                     Name = "Transformer1"
-                });
+                }));
 
-                Assert.Equal(1, transformerId1);
-
-                var transformerId2 = database.TransformerStore.CreateTransformer(new TransformerDefinition
+                var task2 = store.Admin.SendAsync(new PutTransformerOperation(new TransformerDefinition
                 {
                     TransformResults = "results.Select(x => new { Name = x.Email })",
                     LockMode = TransformerLockMode.Unlock,
-                    Temporary = false,
                     Name = "Transformer2"
-                });
+                }));
 
-                Assert.Equal(2, transformerId2);
+                await Task.WhenAll(task1, task2);
             }
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true))
+            using (var server = GetNewServer(runInMemory: false, deletePrevious: false, partialPath: "CanPersist"))
             {
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("CanPersistDB");
+
                 var transformers = database
                     .TransformerStore
                     .GetTransformers()
-                    .OrderBy(x => x.TransformerId)
+                    .OrderBy(x => x.Name)
                     .ToList();
 
                 Assert.Equal(2, transformers.Count);
@@ -50,86 +52,87 @@ namespace FastTests.Server.Documents.Transformers
                 var transformer = transformers[0];
                 Assert.Equal("Transformer1", transformer.Name);
                 Assert.Equal("Transformer1", transformer.Definition.Name);
-                Assert.Equal(1, transformer.TransformerId);
-                Assert.Equal(1, transformer.Definition.TransfomerId);
                 Assert.Equal("results.Select(x => new { Name = x.Name })", transformer.Definition.TransformResults);
                 Assert.Equal(TransformerLockMode.LockedIgnore, transformer.Definition.LockMode);
-                Assert.True(transformer.Definition.Temporary);
 
                 transformer = transformers[1];
                 Assert.Equal("Transformer2", transformer.Name);
                 Assert.Equal("Transformer2", transformer.Definition.Name);
-                Assert.Equal(2, transformer.TransformerId);
-                Assert.Equal(2, transformer.Definition.TransfomerId);
                 Assert.Equal("results.Select(x => new { Name = x.Email })", transformer.Definition.TransformResults);
                 Assert.Equal(TransformerLockMode.Unlock, transformer.Definition.LockMode);
-                Assert.False(transformer.Definition.Temporary);
             }
         }
 
+
         [Fact]
-        public void WillLoadAsFaulty()
+        public async Task WillLoadAsFaulty()
         {
-            var path = NewDataPath();
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (var store = GetDocumentStore())
             {
-                var transformerId1 = database.TransformerStore.CreateTransformer(new TransformerDefinition
+                await store.Admin.SendAsync(new PutTransformerOperation(new TransformerDefinition
                 {
                     TransformResults = "results.Select(x => new { Name = x.Name })",
                     LockMode = TransformerLockMode.LockedIgnore,
-                    Temporary = true,
                     Name = "Transformer1"
-                });
+                }));
 
-                Assert.Equal(1, transformerId1);
-            }
+                TransactionOperationContext context;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+                {
+                    context.OpenReadTransaction();
 
-            var encodedName = Convert.ToBase64String(Encoding.UTF8.GetBytes("Transformer1"));
-            var transformerFilePath = Path.Combine(path, "Indexes", "Transformers", $"1.{encodedName}{Transformer.FileExtension}");
-            Assert.True(File.Exists(transformerFilePath));
+                    var databaseRecord = Server.ServerStore.Cluster.ReadDatabase(context, store.DefaultDatabase);
+                    databaseRecord.Transformers["Transformer1"].TransformResults = "yellow world";
 
-            File.WriteAllText(transformerFilePath, string.Empty);
+                    var blittableJsonReaderObject = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false))
-            {
+                    var index = await Server.ServerStore.WriteDbAsync(context, store.DefaultDatabase, blittableJsonReaderObject, null);
+                    await Server.ServerStore.Cluster.WaitForIndexNotification(index);
+
+                }
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
                 var transformers = database
                     .TransformerStore
                     .GetTransformers()
-                    .OrderBy(x => x.TransformerId)
+                    .OrderBy(x => x.Name)
                     .ToList();
 
-                Assert.Equal(1, transformers.Count);
+                Assert.Equal
+                (
+                    1,
+                    transformers.Count
+                );
 
                 var transformer = transformers[0];
-                Assert.Equal("Transformer1", transformer.Name);
-                Assert.Equal(1, transformer.TransformerId);
+                Assert.Equal
+                (
+                    "Transformer1",
+                    transformer.Name
+                );
 
-                var e = Assert.Throws<NotSupportedException>(() => transformer.SetLock(TransformerLockMode.LockedIgnore));
-                Assert.Equal("Transformer with id 1 is in-memory implementation of a faulty transformer", e.Message);
+                Assert.Throws<RavenException>(() => store.Admin.Send(new SetTransformerLockOperation("Transformer1", TransformerLockMode.LockedIgnore)));
+
             }
         }
 
         [Fact]
-        public void CanDelete()
+        public async Task CanDelete()
         {
-            var path = NewDataPath();
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (var store = GetDocumentStore())
             {
-                var transformerId1 = database.TransformerStore.CreateTransformer(new TransformerDefinition
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TransformerStore.CreateTransformer(new TransformerDefinition
                 {
                     TransformResults = "results.Select(x => new { Name = x.Name })",
                     LockMode = TransformerLockMode.LockedIgnore,
-                    Temporary = true,
                     Name = "Transformer1"
                 });
 
-                Assert.Equal(1, transformerId1);
-
-                var encodedName = Convert.ToBase64String(Encoding.UTF8.GetBytes("Transformer1"));
-
                 Assert.Equal(1, database.TransformerStore.GetTransformers().Count());
 
-                database.TransformerStore.DeleteTransformer("Transformer1");
+                await database.TransformerStore.DeleteTransformer("Transformer1");
 
                 Assert.Equal(0, database.TransformerStore.GetTransformers().Count());
             }

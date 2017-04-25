@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Replication;
@@ -40,9 +41,8 @@ namespace Raven.Server.Documents.Handlers
                         GenerateTopology(context, writer);
                         return Task.CompletedTask;
                     }
-                    //here we need to construct the topology from the replication document 
-                    var replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocumentData);
-                    var nodes = GenerateNodesFromReplicationDocument(replicationDocument);
+                    //here we need to fetch the topology from database 
+                    var nodes = GenerateNodesFromReplicationDocument(Database.ReplicationLoader?.Destinations?.ToList());
                     GenerateTopology(context, writer, nodes, configurationDocument.Etag);
                 }
                 return Task.CompletedTask;
@@ -57,26 +57,13 @@ namespace Raven.Server.Documents.Handlers
         public async Task GetFullTopology()
         {
             var sp = Stopwatch.StartNew();
-            DocumentsOperationContext context;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+           
+            TransactionOperationContext context;
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+            using(context.OpenReadTransaction())
             {
-                ReplicationDocument replicationDocument;
-                using (context.OpenReadTransaction())
-                {
-                    var configurationDocument = Database.DocumentsStorage.Get(context, Constants.Documents.Replication.ReplicationConfigurationDocument);
-                    if (configurationDocument == null)
-                    {
-                        WriteEmptyTopology(context);
-                        return;
-                    }
+                var databaseRecord = Server.ServerStore.Cluster.ReadDatabase(context, Database.Name);
 
-                    replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
-                    if (replicationDocument.Destinations?.Count == 0)
-                    {
-                        WriteEmptyTopology(context);
-                        return;
-                    }
-                }
                 var replicationDiscovertTimeout = Database.Configuration
                     .Replication
                     .ReplicationTopologyDiscoveryTimeout
@@ -88,7 +75,7 @@ namespace Raven.Server.Documents.Handlers
                         Database.DbId.ToString()
                     },
                     replicationDiscovertTimeout,
-                    replicationDocument.Destinations))
+                    databaseRecord?.Topology.GetDestinations(Server.ServerStore.NodeTag, Database.Name).ToList()))
                 {
                     var topology = await clusterTopologyExplorer.DiscoverTopologyAsync();
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -117,16 +104,10 @@ namespace Raven.Server.Documents.Handlers
         private void GenerateTopology(DocumentsOperationContext context, BlittableJsonTextWriter writer, IEnumerable<DynamicJsonValue> nodes = null, long etag = -1)
         {
             context.Write(writer, new DynamicJsonValue
-            {
-                [nameof(Topology.LeaderNode)] = new DynamicJsonValue
-                {
-                    [nameof(ServerNode.Url)] = GetStringQueryString("url", required: false) ?? Server.Configuration.Core.ServerUrl,
-                    [nameof(ServerNode.Database)] = Database.Name,
-                },
+            {                
                 [nameof(Topology.Nodes)] = (nodes == null)? new DynamicJsonArray(): new DynamicJsonArray(nodes),
                 [nameof(Topology.ReadBehavior)] =
-                ReadBehavior.LeaderWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
-                [nameof(Topology.WriteBehavior)] = WriteBehavior.LeaderOnly.ToString(),
+				ReadBehavior.CurrentNodeWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),                [nameof(Topology.WriteBehavior)] = WriteBehavior.LeaderOnly.ToString(),
                 [nameof(Topology.SLA)] = new DynamicJsonValue
                 {
                     [nameof(TopologySla.RequestTimeThresholdInMilliseconds)] = 100,
@@ -135,13 +116,13 @@ namespace Raven.Server.Documents.Handlers
             });
         }
 
-        private IEnumerable<DynamicJsonValue> GenerateNodesFromReplicationDocument(ReplicationDocument replicationDocument)
+        private IEnumerable<DynamicJsonValue> GenerateNodesFromReplicationDocument(List<ReplicationNode> nodes)
         {
-            var destinations = new DynamicJsonValue[replicationDocument.Destinations.Count];
-            var etags = new long[replicationDocument.Destinations.Count];
-            for (int index = 0; index < replicationDocument.Destinations.Count; index++)
+            var destinations = new DynamicJsonValue[nodes.Count];
+            var etags = new long[nodes.Count];
+            for (int index = 0; index < nodes.Count; index++)
             {
-                var des = replicationDocument.Destinations[index];
+                var des = nodes[index];
                 if (des.CanBeFailover() == false || des.Disabled || des.IgnoredClient ||
                     des.SpecifiedCollections?.Count > 0)
                     continue;
@@ -150,9 +131,7 @@ namespace Raven.Server.Documents.Handlers
                 destinations[index] = new DynamicJsonValue
                 {
                     [nameof(ServerNode.Url)] = des.Url,
-                    [nameof(ServerNode.ApiKey)] = des.ApiKey,
-                    [nameof(ServerNode.Database)] = des.Database
-                };
+					[nameof(ServerNode.Database)] = des.Database                };
             }
 
             // We want to have the client failover to the most up to date destination if it needs to, so we sort

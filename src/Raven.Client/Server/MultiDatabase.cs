@@ -1,5 +1,6 @@
 using System;
 using System.Text.RegularExpressions;
+using Raven.Client.Documents;
 
 namespace Raven.Client.Server
 {
@@ -8,11 +9,14 @@ namespace Raven.Client.Server
     ///</summary>
     public static class MultiDatabase
     {
-        public static DatabaseDocument CreateDatabaseDocument(string name)
+        public static DatabaseRecord CreateDatabaseDocument(string name)
         {
             AssertValidName(name);
 
-            return new DatabaseDocument(name);
+            return new DatabaseRecord(name)
+            {
+                Settings = new System.Collections.Generic.Dictionary<string, string>(),
+            };
         }
 
 

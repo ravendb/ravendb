@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -12,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Voron;
 using Voron.Data;
 using Xunit;
@@ -22,6 +24,10 @@ namespace Tests.Infrastructure
     public class RachisConsensusTestBase : IDisposable
     {
         protected bool PredictableSeeds;
+
+        protected Logger Log = LoggingSource.Instance.GetLogger<RachisConsensusTestBase>("RachisConsensusTest");
+
+        protected int LongWaitTime = 15000; //under stress the thread pool may take time to schedule the task to complete the set of the TCS
 
         protected async Task<RachisConsensus<CountingStateMachine>> CreateNetworkAndGetLeader(int nodeCount, [CallerMemberName] string caller = null)
         {
@@ -97,19 +103,36 @@ namespace Tests.Infrastructure
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, port);
             tcpListener.Start();
-            var ch = (char)(65 + (_count++));
-            var url = "http://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port + "/?" + caller + "#" + ch;
+            var ch = (char)(66 + _count++);
+            if (bootstrap)
+            {
+                ch = (char)65;
+                _count--;
+            }
+
+
+            var url = "tcp://localhost:" + ((IPEndPoint)tcpListener.LocalEndpoint).Port + "/?" + caller + "#" + ch;
+
 
             var server = StorageEnvironmentOptions.CreateMemoryOnly();
-            if (bootstrap)
-                RachisConsensus.Bootstarp(server, url);
+        
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : _count;
-            var rachis = new RachisConsensus<CountingStateMachine>(server, url, seed);
-            rachis.Initialize();
+            var rachis = new RachisConsensus<CountingStateMachine>(seed);
+            var storageEnvironment = new StorageEnvironment(server);
+            rachis.Initialize(storageEnvironment);
+            rachis.OnDispose += (sender, args) =>
+            {
+                storageEnvironment.Dispose();
+            };
+            if (bootstrap)
+            {
+                rachis.Bootstarp(url);
+            }
+                
+            rachis.Url = url;
             _listeners.Add(tcpListener);
             RachisConsensuses.Add(rachis);
             var task = AcceptConnection(tcpListener, rachis);
-            _mustBeSuccessfulTasks.Add(task);
             return rachis;
         }
 
@@ -133,8 +156,13 @@ namespace Tests.Infrastructure
                     lock (this)
                     {
                         ConcurrentSet<string> set;
-                        if (_rejectionList.TryGetValue(rachis.Url, out set) && set.Contains(hello.DebugSourceIdentifier))
-                            throw new InvalidComObjectException("Simulated failure");
+                        if (_rejectionList.TryGetValue(rachis.Url, out set))
+                        {
+                            if (set.Contains(hello.DebugSourceIdentifier))
+                            {
+                                throw new InvalidComObjectException("Simulated failure");
+                            }
+                        }                            
                         var connections = _connections.GetOrAdd(rachis.Url, _ => new ConcurrentSet<Tuple<string, TcpClient>>());
                         connections.Add(Tuple.Create(hello.DebugSourceIdentifier, tcpClient));
                     }
@@ -147,14 +175,15 @@ namespace Tests.Infrastructure
             lock (this)
             {
                 var rejections = _rejectionList.GetOrAdd(to, _ => new ConcurrentSet<string>());
+                var fromTag = from.Substring(from.IndexOf('#') + 1);
+                rejections.Add(fromTag);
                 rejections.Add(from);
-
                 ConcurrentSet<Tuple<string, TcpClient>> set;
                 if (_connections.TryGetValue(to, out set))
-                {
+                {                    
                     foreach (var tuple in set)
                     {
-                        if (tuple.Item1 == from)
+                        if (tuple.Item1 == from || tuple.Item1 == fromTag)
                         {
                             set.TryRemove(tuple);
                             tuple.Item2.Dispose();
@@ -171,8 +200,9 @@ namespace Tests.Infrastructure
                 ConcurrentSet<string> rejectionList;
                 if (_rejectionList.TryGetValue(to, out rejectionList) == false)
                     return;
-
+                var fromTag = from.Substring(from.IndexOf('#') + 1);
                 rejectionList.TryRemove(from);
+                rejectionList.TryRemove(fromTag);
             }
         }
 
@@ -235,6 +265,7 @@ namespace Tests.Infrastructure
 
             foreach (var mustBeSuccessfulTask in _mustBeSuccessfulTasks)
             {
+
                 Assert.True(mustBeSuccessfulTask.Wait(250));
             }
         }
@@ -250,7 +281,7 @@ namespace Tests.Infrastructure
                 return read.Reader.ReadLittleEndianInt64();
             }
 
-            protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd)
+            protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
             {
                 int val;
                 string name;
@@ -260,15 +291,19 @@ namespace Tests.Infrastructure
                 tree.Increment(name, val);
 
             }
-
-            public override void OnSnapshotInstalled(TransactionOperationContext context)
-            {
-
-            }
+            
 
             public override bool ShouldSnapshot(Slice slice, RootObjectType type)
             {
                 return slice.ToString() == "values";
+            }
+
+            public override async Task<Stream> ConnectToPeer(string url, string apiKey)
+            {
+                var tcpInfo = new Uri(url);
+                var tcpClient = new TcpClient();
+                await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
+                return tcpClient.GetStream();
             }
         }
     }

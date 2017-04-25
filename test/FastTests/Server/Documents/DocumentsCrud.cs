@@ -1,15 +1,12 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
-using Raven.Client.Util;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Raven.Server.Config;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow;
 using Voron.Exceptions;
 using Xunit;
 
@@ -17,19 +14,12 @@ namespace FastTests.Server.Documents
 {
     public class DocumentsCrud : RavenLowLevelTestBase
     {
-        private RavenConfiguration _configuration;
         private DocumentDatabase _documentDatabase;
+        private IDisposable _disposeDatabase;
 
         public DocumentsCrud()
         {
-            _configuration = new RavenConfiguration("foo", ResourceType.Database);
-            _configuration.Initialize();
-
-            _configuration.Core.RunInMemory = true;
-            _configuration.Core.DataDirectory = new PathSetting(Path.GetTempPath() + @"\crud");
-
-            _documentDatabase = new DocumentDatabase("foo", _configuration, null);
-            _documentDatabase.Initialize();
+            _disposeDatabase = CreatePersistentDocumentDatabase(NewDataPath(), out _documentDatabase);
         }
 
         [Theory]
@@ -171,7 +161,7 @@ namespace FastTests.Server.Documents
         }
 
         [Fact]
-        public void EtagsArePersisted()
+        public async Task EtagsArePersisted()
         {
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
@@ -193,7 +183,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            Restart();
+            await Restart();
 
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
@@ -217,7 +207,7 @@ namespace FastTests.Server.Documents
         }
 
         [Fact]
-        public void EtagsArePersistedWithDeletes()
+        public async Task EtagsArePersistedWithDeletes()
         {
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
@@ -240,7 +230,7 @@ namespace FastTests.Server.Documents
                 ctx.Transaction.Commit();
             }
 
-            Restart();
+            await Restart();
 
             using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
             {
@@ -266,20 +256,13 @@ namespace FastTests.Server.Documents
             }
         }
 
-        private void Restart()
+        private async Task Restart()
         {
-            var options = _documentDatabase.DocumentsStorage.Environment.Options;
-            options.OwnsPagers = false;
             _documentDatabase.Dispose();
-            options.OwnsPagers = true;
 
-            _configuration = new RavenConfiguration("test", ResourceType.Database);
-            _configuration.Core.DataDirectory = new PathSetting(Path.GetTempPath() + @"\crud");
-            _configuration.Initialize();
-            _configuration.Core.RunInMemory = true;
+            Server.ServerStore.DatabasesLandlord.UnloadDatabase(_documentDatabase.Name);
 
-            _documentDatabase = new DocumentDatabase("test", _configuration, null);
-            _documentDatabase.Initialize(options);
+            _documentDatabase = await GetDatabase(_documentDatabase.Name);
         }
 
         [Fact]
@@ -560,7 +543,7 @@ namespace FastTests.Server.Documents
 
         public override void Dispose()
         {
-            _documentDatabase.Dispose();
+            _disposeDatabase.Dispose();
 
             base.Dispose();
         }

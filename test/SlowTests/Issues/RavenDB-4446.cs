@@ -49,9 +49,6 @@ namespace SlowTests.Issues
                         bulk.Store(new Order { CompanyId = i.ToString() });
                 }
 
-                //wait for indexing of Raven/DocumentsByEntityName
-                WaitForIndexing(store);
-
                 var index = new Orders_Index();
                 index.Execute(store);
 

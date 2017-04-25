@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -9,6 +10,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Rachis
 {
@@ -24,8 +26,15 @@ namespace Raven.Server.Rachis
 
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>();
 
-        private readonly ConcurrentDictionary<long, Tuple<long, TaskCompletionSource<long>>> _entries =
-            new ConcurrentDictionary<long, Tuple<long, TaskCompletionSource<long>>>();
+        private readonly ConcurrentDictionary<long, CommandState> _entries =
+            new ConcurrentDictionary<long, CommandState>();
+
+        private class CommandState
+        {
+            public long CommandIndex;
+            public TaskCompletionSource<long> TaskCompletionSource;
+            public Action<TaskCompletionSource<long>> OnNotify;
+        }
 
         private int _hasNewTopology;
         private readonly ManualResetEvent _newEntry = new ManualResetEvent(false);
@@ -77,7 +86,7 @@ namespace Raven.Server.Rachis
             _thread = new Thread(Run)
             {
                 Name =
-                    $"Consensus Leader - {(new Uri(_engine.Url).Fragment ?? _engine.Url)} in term {_engine.CurrentTerm}",
+                    $"Consensus Leader - {_engine.Tag} in term {_engine.CurrentTerm}",
                 IsBackground = true
             };
             _thread.Start();
@@ -85,9 +94,9 @@ namespace Raven.Server.Rachis
 
         public void StepDown()
         {
-            if(_voters.Count == 0)
+            if (_voters.Count == 0)
                 throw new InvalidOperationException("Cannot step down when I'm the only voter int he cluster");
-            var nextLeader = _voters.Values.OrderByDescending(x => x.FollowerMatchIndex).ThenByDescending(x=>x.LastReplyFromFollower).First();
+            var nextLeader = _voters.Values.OrderByDescending(x => x.FollowerMatchIndex).ThenByDescending(x => x.LastReplyFromFollower).First();
             nextLeader.ForceElectionsNow = true;
             var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>());
             old.TrySetResult(null);
@@ -95,78 +104,112 @@ namespace Raven.Server.Rachis
 
         private void RefreshAmbassadors(ClusterTopology clusterTopology)
         {
-            var old = new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
-            foreach (var peers in new[] { _voters, _promotables, _nonVoters })
+            bool lockTaken = false;
+            Monitor.TryEnter(this, ref lockTaken);            
+            try
             {
-                foreach (var peer in peers)
+                //This only means we are been disposed so we can quit now
+                if (lockTaken == false)
                 {
-                    old[peer.Key] = peer.Value;
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Leader {_engine.Tag}: Skipping refreshing ambassadors because we are been disposed of");
+                    }
+                    return;
                 }
-                peers.Clear();
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"Leader {_engine.Tag}: Refreshing ambassadors");
+                }
+                var old = new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
+                foreach (var peers in new[] { _voters, _promotables, _nonVoters })
+                {
+                    foreach (var peer in peers)
+                    {
+                        old[peer.Key] = peer.Value;
+                    }
+                    peers.Clear();
+                }
+
+                foreach (var voter in clusterTopology.Members)
+                {
+                    if (voter.Key == _engine.Tag)
+                        continue; // we obviously won't be applying to ourselves
+
+                    FollowerAmbassador existingInstance;
+                    if (old.TryGetValue(voter.Key, out existingInstance))
+                    {
+                        existingInstance.UpdateLeaderWake(_voterResponded);
+                        _voters.Add(voter.Key, existingInstance);
+                        old.Remove(voter.Key);
+                        continue; // already here
+                    }
+
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, clusterTopology.ApiKey);
+                    _voters.Add(voter.Key, ambasaddor);
+                    _engine.AppendStateDisposable(this, ambasaddor);
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for voter {voter.Key} {voter.Value}");
+                    }
+                    ambasaddor.Start();
+                }
+
+                foreach (var promotable in clusterTopology.Promotables)
+                {
+                    FollowerAmbassador existingInstance;
+                    if (old.TryGetValue(promotable.Key, out existingInstance))
+                    {
+                        existingInstance.UpdateLeaderWake(_promotableUpdated);
+                        _promotables.Add(promotable.Key, existingInstance);
+                        old.Remove(promotable.Key);
+                        continue; // already here
+                    }
+
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value, clusterTopology.ApiKey);
+                    _promotables.Add(promotable.Key, ambasaddor);
+                    _engine.AppendStateDisposable(this, ambasaddor);
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for promotable {promotable.Key} {promotable.Value}");
+                    }
+                    ambasaddor.Start();
+                }
+
+                foreach (var nonVoter in clusterTopology.Watchers)
+                {
+                    FollowerAmbassador existingInstance;
+                    if (_nonVoters.TryGetValue(nonVoter.Key, out existingInstance))
+                    {
+                        existingInstance.UpdateLeaderWake(_noop);
+
+                        _nonVoters.Add(nonVoter.Key, existingInstance);
+                        old.Remove(nonVoter.Key);
+                        continue; // already here
+                    }
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value, clusterTopology.ApiKey);
+                    _nonVoters.Add(nonVoter.Key, ambasaddor);
+                    _engine.AppendStateDisposable(this, ambasaddor);
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for watcher {nonVoter.Key} {nonVoter.Value}");
+                    }
+                    ambasaddor.Start();
+                }
+                TaskExecuter.Execute(_ =>
+                {
+                    foreach (var ambasaddor in old)
+                    {
+                        // it is not used by anything else, so we can close it
+                        ambasaddor.Value.Dispose();
+                    }
+                }, null);
             }
-
-            foreach (var voter in clusterTopology.Voters)
+            finally
             {
-                if (voter == _engine.Url)
-                    continue; // we obviously won't be applying to ourselves
-
-                FollowerAmbassador existingInstance;
-                if (old.TryGetValue(voter, out existingInstance))
-                {
-                    existingInstance.UpdateLeaderWake(_voterResponded);
-                    _voters.Add(voter, existingInstance);
-                    old.Remove(voter);
-                    continue; // already here
-                }
-
-                var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter, clusterTopology.ApiKey);
-                _voters.Add(voter, ambasaddor);
-                _engine.AppendStateDisposable(this, ambasaddor);
-                ambasaddor.Start();
+                if(lockTaken)
+                    Monitor.Exit(this);
             }
-
-            foreach (var promotable in clusterTopology.Promotables)
-            {
-                FollowerAmbassador existingInstance;
-                if (old.TryGetValue(promotable, out existingInstance))
-                {
-                    existingInstance.UpdateLeaderWake(_promotableUpdated);
-                    _promotables.Add(promotable, existingInstance);
-                    old.Remove(promotable);
-                    continue; // already here
-                }
-
-                var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable, clusterTopology.ApiKey);
-                _promotables.Add(promotable, ambasaddor);
-                _engine.AppendStateDisposable(this, ambasaddor);
-                ambasaddor.Start();
-            }
-
-            foreach (var nonVoter in clusterTopology.NonVotingMembers)
-            {
-                FollowerAmbassador existingInstance;
-                if (_nonVoters.TryGetValue(nonVoter, out existingInstance))
-                {
-                    existingInstance.UpdateLeaderWake(_noop);
-
-                    _nonVoters.Add(nonVoter, existingInstance);
-                    old.Remove(nonVoter);
-                    continue; // already here
-                }
-                var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter, clusterTopology.ApiKey);
-                _nonVoters.Add(nonVoter, ambasaddor);
-                _engine.AppendStateDisposable(this, ambasaddor);
-                ambasaddor.Start();
-            }
-
-            Task.Run(() =>
-            {
-                foreach (var ambasaddor in old)
-                {
-                    // it is not used by anything else, so we can close it
-                    ambasaddor.Value.Dispose();
-                }
-            });
         }
 
         /// <summary>
@@ -197,15 +240,14 @@ namespace Raven.Server.Rachis
                     tx.Commit();
                 }
                 _newEntry.Set(); //This is so the noop would register right away
-                while (true)
+                while (_running)
                 {
                     switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeoutMs))
                     {
                         case 0: // new entry
                             _newEntry.Reset();
                             // release any waiting ambassadors to send immediately
-                            var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>());
-                            ThreadPool.QueueUserWorkItem(o => ((TaskCompletionSource<object>)o).TrySetResult(null), old);
+                            TaskExecuter.CompleteAndReplace(ref _newEntriesArrived);
                             if (_voters.Count == 0)
                                 goto case 1;
                             break;
@@ -216,11 +258,14 @@ namespace Raven.Server.Rachis
                         case 2: // promotable updated
                             _promotableUpdated.Reset();
                             CheckPromotables();
-
                             break;
                         case WaitHandle.WaitTimeout:
                             break;
                         case 3: // shutdown requested
+                            if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
+                            {
+                                _engine.Log.Info($"Leader {_engine.Tag}: shutting down");
+                            }
                             return;
                     }
                     EnsureThatWeHaveLeadership(VotersMajority);
@@ -265,20 +310,28 @@ namespace Raven.Server.Rachis
 
             var sb = new StringBuilder();
             var now = DateTime.UtcNow;
+            sb.AppendLine("Triggered because of:");
+            foreach (var timeoutsForVoter in _timeoutsForVoters)
+            {
+                sb.Append($"\t{timeoutsForVoter.voter.Tag} - {Math.Round(timeoutsForVoter.time, 3)} ms").AppendLine();
+            }
             foreach (var ambassador in _voters)
             {
                 var followerAmbassador = ambassador.Value;
                 var sinceLastReply = (long)(now - followerAmbassador.LastReplyFromFollower).TotalMilliseconds;
-                var sinceLastSend = (long) (now - followerAmbassador.LastSendToFollower).TotalMilliseconds;
+                var sinceLastSend = (long)(now - followerAmbassador.LastSendToFollower).TotalMilliseconds;
                 var lastMsg = followerAmbassador.LastSendMsg;
                 sb.AppendLine(
-                    $"{followerAmbassador.Url}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.Status}");
+                    $"{followerAmbassador.Tag}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.Status}");
             }
-
+            if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
+            {
+                _engine.Log.Info($"Leader {_engine.Tag}:VoteOfNoConfidence{Environment.NewLine } {sb}");
+            }
             throw new TimeoutException(
                 "Too long has passed since we got a confirmation from the majority of the cluster that this node is still the leader." +
                 Environment.NewLine +
-                "Assuming that I'm not the leader and stepping down." + 
+                "Assuming that I'm not the leader and stepping down." +
                 Environment.NewLine +
                 sb
                 );
@@ -320,7 +373,7 @@ namespace Raven.Server.Rachis
 
                 _lastCommit = maxIndexOnQuorum;
 
-                _engine.Apply(context, maxIndexOnQuorum);
+                _engine.Apply(context, maxIndexOnQuorum, this);
 
                 _lastCommit = maxIndexOnQuorum;
 
@@ -332,13 +385,18 @@ namespace Raven.Server.Rachis
                 if (kvp.Key > _lastCommit)
                     continue;
 
-                Tuple<long, TaskCompletionSource<long>> value;
+                CommandState value;
                 if (_entries.TryRemove(kvp.Key, out value))
                 {
-                    ThreadPool.QueueUserWorkItem(o =>
+                    TaskExecuter.Execute(o =>
                     {
-                        var tuple = (Tuple<long, TaskCompletionSource<long>>)o;
-                        tuple.Item2.TrySetResult(tuple.Item1);
+                        var tuple = (CommandState)o;
+                        if (tuple.OnNotify != null)
+                        {
+                            tuple.OnNotify(tuple.TaskCompletionSource);
+                            return;
+                        }
+                        tuple.TaskCompletionSource.TrySetResult(tuple.CommandIndex);
                     }, value);
                 }
             }
@@ -350,13 +408,17 @@ namespace Raven.Server.Rachis
             }
         }
 
+        private readonly List<(FollowerAmbassador voter, double time)> _timeoutsForVoters = new List<(FollowerAmbassador, double)>();
         private void EnsureThatWeHaveLeadership(int majority)
         {
             var now = DateTime.UtcNow;
             var peersHeardFromInElectionTimeout = 1; // we count as a node :-)
+            _timeoutsForVoters.Clear();
             foreach (var voter in _voters.Values)
             {
-                if ((now - voter.LastReplyFromFollower).TotalMilliseconds < _engine.ElectionTimeoutMs)
+                var time = (now - voter.LastReplyFromFollower).TotalMilliseconds;
+                _timeoutsForVoters.Add((voter, time));
+                if (time < _engine.ElectionTimeoutMs)
                     peersHeardFromInElectionTimeout++;
             }
             if (peersHeardFromInElectionTimeout < majority)
@@ -378,7 +440,10 @@ namespace Raven.Server.Rachis
         private readonly SortedList<long, int> _nodesPerIndex = new SortedList<long, int>();
 
         private bool _running;
-        private int VotersMajority => (_voters.Count + 1) / 2 + 1;
+        private readonly Stopwatch _leadership = Stopwatch.StartNew();
+        private int VotersMajority => _voters.Count / 2 + 1;
+
+        public long LeaderShipDuration => _leadership.ElapsedMilliseconds;
 
         protected long GetLowestIndexInEntireCluster()
         {
@@ -452,7 +517,7 @@ namespace Raven.Server.Rachis
                     continue;
 
                 Task task;
-                TryModifyTopology(ambasaddor.Key, TopologyModification.Voter, out task);
+                TryModifyTopology(ambasaddor.Key, ambasaddor.Value.Url, TopologyModification.Voter, out task);
 
                 _promotableUpdated.Set();
                 break;
@@ -472,7 +537,11 @@ namespace Raven.Server.Rachis
                 context.Transaction.Commit();
             }
             var tcs = new TaskCompletionSource<long>();
-            _entries[index] = Tuple.Create(index, tcs);
+            _entries[index] = new CommandState
+            {
+                CommandIndex = index,
+                TaskCompletionSource = tcs
+            };
 
             _newEntry.Set();
             return tcs.Task;
@@ -480,52 +549,79 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
-            Running = false;
-            _shutdownRequested.Set();
-            ThreadPool.QueueUserWorkItem(_ =>
+            bool lockTaken = false;
+            Monitor.TryEnter(this, ref lockTaken);
+            try
             {
-                _newEntriesArrived.TrySetCanceled();
-                var lastStateChangeReason = _engine.LastStateChangeReason;
-                TimeoutException te = null;
-                if (string.IsNullOrEmpty(lastStateChangeReason) == false)
-                    te = new TimeoutException(lastStateChangeReason);
-                foreach (var entry in _entries)
+                if (lockTaken == false)
                 {
-                    if (te == null)
+                    //We need to wait that refresh ambassador finish
+                    if (Monitor.Wait(this, TimeSpan.FromSeconds(15)) == false)
                     {
-                        entry.Value.Item2.TrySetCanceled();
-                    }
-                    else
-                    {
-                        entry.Value.Item2.TrySetException(te);
+                        var message = $"Leader {_engine.Tag}: Refresh ambassador is taking the lock for 15 sec giving up on leader dispose";
+                        if (_engine.Log.IsInfoEnabled)
+                        {                            
+                            _engine.Log.Info(message);
+                        }
+                        throw new TimeoutException(message);
                     }
                 }
-            });
+                Running = false;
+                _shutdownRequested.Set();
+                TaskExecuter.Execute(_ =>
+                {
+                    _newEntriesArrived.TrySetCanceled();
+                    var lastStateChangeReason = _engine.LastStateChangeReason;
+                    TimeoutException te = null;
+                    if (string.IsNullOrEmpty(lastStateChangeReason) == false)
+                        te = new TimeoutException(lastStateChangeReason);
+                    foreach (var entry in _entries)
+                    {
+                        if (te == null)
+                        {
+                            entry.Value.TaskCompletionSource.TrySetCanceled();
+                        }
+                        else
+                        {
+                            entry.Value.TaskCompletionSource.TrySetException(te);
+                        }
+                    }
+                }, null);
 
-            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-                _thread.Join();
+                if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                    _thread.Join();
 
-            var ae = new ExceptionAggregator("Could not properly dispose Leader");
-            foreach (var ambasaddor in _nonVoters)
-            {
-                ae.Execute(ambasaddor.Value.Dispose);
+                var ae = new ExceptionAggregator("Could not properly dispose Leader");
+                foreach (var ambasaddor in _nonVoters)
+                {
+                    ae.Execute(ambasaddor.Value.Dispose);
+                }
+
+                foreach (var ambasaddor in _promotables)
+                {
+                    ae.Execute(ambasaddor.Value.Dispose);
+                }
+                foreach (var ambasaddor in _voters)
+                {
+                    ae.Execute(ambasaddor.Value.Dispose);
+                }
+
+
+                _newEntry.Dispose();
+                _voterResponded.Dispose();
+                _promotableUpdated.Dispose();
+                _shutdownRequested.Dispose();
+                _noop.Dispose();
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"Leader {_engine.Tag}: Dispose");
+                }
             }
-
-            foreach (var ambasaddor in _promotables)
+            finally
             {
-                ae.Execute(ambasaddor.Value.Dispose);
+                if(lockTaken)
+                    Monitor.Exit(this);
             }
-            foreach (var ambasaddor in _voters)
-            {
-                ae.Execute(ambasaddor.Value.Dispose);
-            }
-        
-
-            _newEntry.Dispose();
-            _voterResponded.Dispose();
-            _promotableUpdated.Dispose();
-            _shutdownRequested.Dispose();
-            _noop.Dispose();
         }
 
         public Task WaitForNewEntries()
@@ -541,7 +637,7 @@ namespace Raven.Server.Rachis
             Remove
         }
 
-        public bool TryModifyTopology(string node, TopologyModification modification, out Task task, bool validateNotInTopology = false)
+        public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false)
         {
             TransactionOperationContext context;
             using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -555,56 +651,69 @@ namespace Raven.Server.Rachis
                 }
 
                 var clusterTopology = _engine.GetTopology(context);
-                if (validateNotInTopology && clusterTopology.Contains(node))
+
+                //We need to validate that the node doesn't exists before we generate the nodeTag
+                if (validateNotInTopology && (nodeTag != null && clusterTopology.Contains(nodeTag) || clusterTopology.HasUrl(nodeUrl).hasUrl))
                 {
-                    throw new InvalidOperationException($"Was requested to modify the topology for node={node} " +
+                    throw new InvalidOperationException($"Was requested to modify the topology for node={nodeTag} " +
                                                         $"with validation that it is not contained by the topology but current topology contains it.");
                 }
+
+                if (nodeTag == null)
+                {
+                    nodeTag = GenerateNodeTag(clusterTopology);
+                }
+
+                var newVotes = new Dictionary<string, string>(clusterTopology.Members);
+                newVotes.Remove(nodeTag);
+                var newPromotables = new Dictionary<string, string>(clusterTopology.Promotables);
+                newPromotables.Remove(nodeTag);
+                var newNonVotes = new Dictionary<string, string>(clusterTopology.Watchers);
+                newNonVotes.Remove(nodeTag);
+
+                var highestNodeId = newVotes.Keys.Concat(newPromotables.Keys).Concat(newNonVotes.Keys).Concat(new[] { nodeTag }).Max();
 
                 switch (modification)
                 {
                     case TopologyModification.Voter:
-                        clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Concat(new[] { node }).OrderBy(x=>x).ToArray(),
-                            clusterTopology.Promotables.Except(new[] { node }).OrderBy(x => x).ToArray(),
-                            clusterTopology.NonVotingMembers.Except(new[] { node }).OrderBy(x => x).ToArray()
-                        );
+                        Debug.Assert(nodeUrl != null);
+                        newVotes[nodeTag] = nodeUrl;
                         break;
                     case TopologyModification.Promotable:
-                        clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Except(new[] { node }).OrderBy(x => x).ToArray(),
-                            clusterTopology.Promotables.Concat(new[] { node }).OrderBy(x => x).ToArray(),
-                            clusterTopology.NonVotingMembers.Except(new[] { node }).OrderBy(x => x).ToArray()
-                        );
+                        Debug.Assert(nodeUrl != null);
+                        newPromotables[nodeTag] = nodeUrl;
                         break;
                     case TopologyModification.NonVoter:
-                        clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Except(new[] { node }).OrderBy(x => x).ToArray(),
-                            clusterTopology.Promotables.Except(new[] { node }).OrderBy(x => x).ToArray(),
-                            clusterTopology.NonVotingMembers.Concat(new[] { node }).OrderBy(x => x).ToArray()
-                        );
+                        Debug.Assert(nodeUrl != null);
+                        newNonVotes[nodeTag] = nodeUrl;
                         break;
                     case TopologyModification.Remove:
-                        if (clusterTopology.Contains(node) == false)
+                        if (clusterTopology.Contains(nodeTag) == false)
                         {
-                            throw new InvalidOperationException($"Was requested to remove node={node} from the topology " +
+                            throw new InvalidOperationException($"Was requested to remove node={nodeTag} from the topology " +
                                                         $"but it is not contained by the topology.");
                         }
-                        clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
-                            clusterTopology.Voters.Except(new[] { node }).OrderBy(x => x).ToArray(),
-                            clusterTopology.Promotables.Except(new[] { node }).OrderBy(x => x).ToArray(),
-                            clusterTopology.NonVotingMembers.Except(new[] { node }).OrderBy(x => x).ToArray()
-                        );
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(modification), modification, null);
                 }
 
+                clusterTopology = new ClusterTopology(clusterTopology.TopologyId, clusterTopology.ApiKey,
+                      newVotes,
+                      newPromotables,
+                      newNonVotes,
+                      highestNodeId
+                  );
+
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
 
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
                 var tcs = new TaskCompletionSource<long>();
-                _entries[index] =Tuple.Create(index, tcs);
+                _entries[index] = new CommandState
+                {
+                    TaskCompletionSource = tcs,
+                    CommandIndex = index
+                };
                 _topologyModification = task = tcs.Task.ContinueWith(_ =>
                 {
                     Interlocked.Exchange(ref _topologyModification, null);
@@ -616,6 +725,31 @@ namespace Raven.Server.Rachis
             _newEntry.Set();
 
             return true;
+        }
+
+        private static string GenerateNodeTag(ClusterTopology clusterTopology)
+        {
+            if (clusterTopology.LastNodeId.Length == 0)
+            {
+                return "A";
+            }
+
+            if (clusterTopology.LastNodeId[clusterTopology.LastNodeId.Length - 1] + 1 > 'Z')
+            {
+                return clusterTopology.LastNodeId + "A";
+            }
+
+            var lastChar = (char)(clusterTopology.LastNodeId[clusterTopology.LastNodeId.Length - 1] + 1);
+            return clusterTopology.LastNodeId.Substring(0, clusterTopology.LastNodeId.Length - 1) + lastChar;
+        }
+
+        public void SetStateOf(long index, Action<TaskCompletionSource<long>> onNotify)
+        {
+            CommandState value;
+            if (_entries.TryGetValue(index, out value))
+            {
+                value.OnNotify = onNotify;
+            }
         }
     }
 }

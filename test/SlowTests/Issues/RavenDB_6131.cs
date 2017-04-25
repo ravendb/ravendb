@@ -34,7 +34,7 @@ namespace SlowTests.Issues
             var path3 = NewDataPath();
             var path4 = NewDataPath();
 
-            using (var store = GetDocumentStore(path: path1, modifyDatabaseDocument: document =>
+            using (var store = GetDocumentStore(path: path1, modifyDatabaseRecord: document =>
             {
                 document.Settings[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = path2;
                 document.Settings[RavenConfiguration.GetKey(x => x.Indexing.TempPath)] = path3;
@@ -51,7 +51,7 @@ namespace SlowTests.Issues
                 Assert.Equal(path4, database.Configuration.Indexing.JournalsStoragePath.FullPath);
 
                 var indexInstance = database.IndexStore.GetIndex(index.IndexName);
-                var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(indexInstance.IndexId, indexInstance.Name);
+                var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(indexInstance.Name);
                 var storagePath = Path.Combine(path2, safeName);
                 var tempPath = Path.Combine(path3, safeName);
                 var journalsStoragePath = Path.Combine(path4, safeName);
@@ -97,7 +97,7 @@ namespace SlowTests.Issues
                     Assert.Equal(Path.Combine(path4, "Databases", store.DefaultDatabase), database.Configuration.Indexing.JournalsStoragePath.FullPath);
 
                     var indexInstance = database.IndexStore.GetIndex(index.IndexName);
-                    var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(indexInstance.IndexId, indexInstance.Name);
+                    var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(indexInstance.Name);
                     var storagePath = Path.Combine(path2, "Databases", store.DefaultDatabase, safeName);
                     var tempPath = Path.Combine(path3, "Databases", store.DefaultDatabase, safeName);
                     var journalsStoragePath = Path.Combine(path4, "Databases", store.DefaultDatabase, safeName);

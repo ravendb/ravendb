@@ -438,7 +438,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 case IndexType.Map:
                     return ((MapIndex)self)._compiled.OutputFields;
                 case IndexType.MapReduce:
-                    return ((MapReduceIndex)self)._compiled.OutputFields;
+                    return ((MapReduceIndex)self).Compiled.OutputFields;
                 case IndexType.AutoMap:
                     return ((AutoMapIndex)self).Definition.MapFields.Keys.ToArray();
                 case IndexType.AutoMapReduce:

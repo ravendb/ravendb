@@ -36,8 +36,8 @@ namespace SlowTests.Issues
                 Assert.Equal(IndexState.Normal, store.Admin.Send(new GetStatisticsOperation()).Indexes[0].State);
 
                 var database = await GetDatabase(store.DefaultDatabase);
-                var index = database.IndexStore.GetIndex(1);
-                index._indexStorage._simulateCorruption = true;
+                var index = database.IndexStore.GetIndex("Users/ByName");
+                index._indexStorage.SimulateCorruption = true;
 
                 using (var session = store.OpenSession())
                 {

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
@@ -15,10 +14,7 @@ namespace Raven.Client.Server.Operations
 
         public DisableDatabaseToggleOperation(string databaseName, bool ifDisableRequest)
         {
-            if(databaseName == null)
-                throw new ArgumentNullException(nameof(databaseName));
-
-            _databaseName = databaseName;
+            _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
             _ifDisableRequest = ifDisableRequest;
         }
 

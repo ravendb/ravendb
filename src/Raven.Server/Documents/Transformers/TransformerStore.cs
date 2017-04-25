@@ -1,15 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Transformers;
-using Raven.Server.Config.Settings;
+using Raven.Client.Exceptions.Cluster;
+using Raven.Client.Server;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.Transformers;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Transformers
@@ -19,67 +24,147 @@ namespace Raven.Server.Documents.Transformers
         private readonly Logger _log;
 
         private readonly DocumentDatabase _documentDatabase;
+        private readonly ServerStore _serverStore;
 
         private readonly CollectionOfTransformers _transformers = new CollectionOfTransformers();
 
         /// <summary>
         /// The current lock, used to make sure indexes/transformers have a unique names
         /// </summary>
-        private readonly object _indexAndTransformerLocker;
+        private readonly object _locker = new object();
+
+        private readonly SemaphoreSlim _indexAndTransformerLocker;
 
         private bool _initialized;
 
-        private PathSetting _path;
-
-        public TransformerStore(DocumentDatabase documentDatabase, object indexAndTransformerLocker)
+        public TransformerStore(DocumentDatabase documentDatabase, ServerStore serverStore, SemaphoreSlim indexAndTransformerLocker)
         {
             _documentDatabase = documentDatabase;
+            _serverStore = serverStore;
             _log = LoggingSource.Instance.GetLogger<TransformerStore>(_documentDatabase.Name);
             _indexAndTransformerLocker = indexAndTransformerLocker;
         }
 
-        public Task InitializeAsync()
+        public void HandleDatabaseRecordChange()
+        {
+            try
+            {
+                TransactionOperationContext context;
+                using (_serverStore.ContextPool.AllocateOperationContext(out context))
+                {
+                    DatabaseRecord record;
+                    using (context.OpenReadTransaction())
+                    {
+                        record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name);
+                        if (record == null)
+                            return;
+                    }
+
+                    lock (_locker)
+                    {
+                        HandleDeletes(record);
+                        HandleChanges(record);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info("Could not proccess database change for TransformerStore",e);
+            }
+        }
+
+        private void HandleChanges(DatabaseRecord record)
+        {
+            foreach (var kvp in record.Transformers)
+            {
+                var name = kvp.Key;
+                var definition = kvp.Value;
+
+                var existingTransformer = GetTransformer(name);
+                if (existingTransformer != null)
+                {
+                    var result = definition.Compare(existingTransformer.Definition);
+                    result &= ~TransformerDefinitionCompareDifferences.Etag;
+
+                    if (result == TransformerDefinitionCompareDifferences.None)
+                        continue;
+
+                    if (result.HasFlag(TransformerDefinitionCompareDifferences.LockMode))
+                    {
+                        existingTransformer.Definition.LockMode = definition.LockMode;
+                        continue;
+                    }
+
+                    DeleteTransformerInternal(existingTransformer);
+                }
+
+                try
+                {
+                    var transformer = Transformer.CreateNew(definition, _documentDatabase.Configuration.Indexing, LoggingSource.Instance.GetLogger<Transformer>(_documentDatabase.Name));
+                    CreateTransformerInternal(transformer);
+                }
+                catch (Exception e)
+                {
+                    var fakeTransformer = new FaultyInMemoryTransformer(kvp.Key, definition.Etag, e);
+
+                    var message = $"Could not create transformer with etag {definition.Etag}. Created in-memory, fake instance: {fakeTransformer.Name}";
+
+                    if (_log.IsOperationsEnabled)
+                        _log.Operations(message, e);
+
+                    _documentDatabase.NotificationCenter.Add(AlertRaised.Create("Transformer creation failed",
+                        message,
+                        AlertType.TransformerStore_TransformerCouldNotBeCreated,
+                        NotificationSeverity.Error,
+                        key: fakeTransformer.Name,
+                        details: new ExceptionDetails(e)));
+
+                    CreateTransformerInternal(fakeTransformer);
+                }
+            }
+        }
+
+        private void HandleDeletes(DatabaseRecord record)
+        {
+            foreach (var transformer in _transformers)
+            {
+                if (record.Transformers.ContainsKey(transformer.Name))
+                    continue;
+
+                DeleteTransformerInternal(transformer);
+            }
+        }
+
+        public Task InitializeAsync(DatabaseRecord record)
         {
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(TransformerStore)} was already initialized.");
 
-            lock (_indexAndTransformerLocker)
+            lock (_locker)
             {
                 if (_initialized)
                     throw new InvalidOperationException($"{nameof(TransformerStore)} was already initialized.");
 
-                if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
-                {
-                    _path = _documentDatabase.Configuration.Indexing.StoragePath.Combine("Transformers");
-
-                    if (Directory.Exists(_path.FullPath) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
-                        Directory.CreateDirectory(_path.FullPath);
-                }
-
                 _initialized = true;
 
-                return Task.Factory.StartNew(OpenTransformers, TaskCreationOptions.LongRunning);
+                return Task.Factory.StartNew(() => OpenTransformers(record), TaskCreationOptions.LongRunning);
             }
         }
 
-        private void OpenTransformers()
+        private void OpenTransformers(DatabaseRecord record)
         {
             if (_documentDatabase.Configuration.Indexing.RunInMemory)
                 return;
 
-            lock (_indexAndTransformerLocker)
+            lock (_locker)
             {
-                foreach (var transformerFile in new DirectoryInfo(_path.FullPath).GetFiles())
+                foreach (var kvp in record.Transformers)
                 {
                     if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
                         return;
 
-                    if (string.Equals(transformerFile.Extension, Transformer.FileExtension, StringComparison.OrdinalIgnoreCase) == false)
-                        continue;
-
-                    int transformerId;
-                    if (Transformer.TryReadIdFromFile(transformerFile.Name, out transformerId) == false)
-                        continue;
+                    var definition = kvp.Value;
 
                     List<Exception> exceptions = null;
                     if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)
@@ -87,23 +172,23 @@ namespace Raven.Server.Documents.Transformers
 
                     try
                     {
-                        var transformer = Transformer.Open(transformerId, transformerFile.FullName, _documentDatabase.Configuration.Indexing, LoggingSource.Instance.GetLogger<Transformer>(_documentDatabase.Name));
+                        var transformer = Transformer.CreateNew(definition, _documentDatabase.Configuration.Indexing, LoggingSource.Instance.GetLogger<Transformer>(_documentDatabase.Name));
                         _transformers.Add(transformer);
                     }
                     catch (Exception e)
                     {
                         exceptions?.Add(e);
 
-                        var fakeTransformer = new FaultyInMemoryTransformer(transformerId, Transformer.TryReadNameFromFile(transformerFile.Name));
+                        var fakeTransformer = new FaultyInMemoryTransformer(kvp.Key, definition.Etag, e);
 
-                        var message = $"Could not open transformer with id {transformerId}. Created in-memory, fake instance: {fakeTransformer.Name}";
+                        var message = $"Could not create transformer with etag {definition.Etag}. Created in-memory, fake instance: {fakeTransformer.Name}";
 
                         if (_log.IsOperationsEnabled)
                             _log.Operations(message, e);
 
-                        _documentDatabase.NotificationCenter.Add(AlertRaised.Create("Transformers store initialization error",
+                        _documentDatabase.NotificationCenter.Add(AlertRaised.Create("Transformer creation failed",
                             message,
-                            AlertType.TransformerStore_TransformerCouldNotBeOpened,
+                            AlertType.TransformerStore_TransformerCouldNotBeCreated,
                             NotificationSeverity.Error,
                             key: fakeTransformer.Name,
                             details: new ExceptionDetails(e)));
@@ -117,42 +202,43 @@ namespace Raven.Server.Documents.Transformers
             }
         }
 
-        public int CreateTransformer(TransformerDefinition definition)
+        public async Task<long> CreateTransformer(TransformerDefinition definition)
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
-            lock (_indexAndTransformerLocker)
+            IndexAndTransformerCompilationCache.GetTransformerInstance(definition); // pre-compile it and validate
+
+            await _indexAndTransformerLocker.WaitAsync();
+
+            try
             {
-                var index = _documentDatabase.IndexStore.GetIndex(definition.Name);
-                if (index != null)
+                var command = new PutTransformerCommand(definition, _documentDatabase.Name);
+
+                try
                 {
-                    throw new IndexOrTransformerAlreadyExistException($"Tried to create a transformer with a name of {definition.Name}, but an index under the same name exist");
-                }
-                Transformer existingTransformer;
-                var lockMode = ValidateTransformerDefinition(definition.Name, out existingTransformer);
-                if (lockMode == TransformerLockMode.LockedIgnore)
-                    return existingTransformer.TransformerId;
+                    var index = await _serverStore.SendToLeaderAsync(command);
 
-                if (existingTransformer != null)
+                    await _documentDatabase.WaitForIndexNotification(index);
+
+                    var instance = GetTransformer(definition.Name);
+                    return instance.Etag;
+                }
+                catch (CommandExecutionException e)
                 {
-                    if (existingTransformer.Definition.Equals(definition))
-                        return existingTransformer.TransformerId; // no op for the same transformer
-
-                    DeleteTransformer(existingTransformer.TransformerId);
+                    throw e.InnerException;
                 }
-
-                var transformerId = _transformers.GetNextIndexId();
-                var transformer = Transformer.CreateNew(transformerId, definition, _documentDatabase.Configuration.Indexing, LoggingSource.Instance.GetLogger<Transformer>(_documentDatabase.Name));
-
-                return CreateTransformerInternal(transformer, transformerId);
+            }
+            finally
+            {
+                _indexAndTransformerLocker.Release();
             }
         }
 
         public Transformer GetTransformer(int id)
         {
             Transformer transformer;
-            if (_transformers.TryGetById(id, out transformer) == false)
+            if (_transformers.TryGetByEtag(id, out transformer) == false)
                 return null;
 
             return transformer;
@@ -167,29 +253,46 @@ namespace Raven.Server.Documents.Transformers
             return transformer;
         }
 
-        public bool TryDeleteTransformerIfExists(string name)
+        public async Task<bool> TryDeleteTransformerIfExists(string name)
         {
-            var transformer = GetTransformer(name);
-            if (transformer == null)
-                return false;
+            await _indexAndTransformerLocker.WaitAsync();
 
-            DeleteTransformerInternal(transformer.TransformerId);
-            return true;
+            try
+            {
+                var transformer = GetTransformer(name);
+                if (transformer == null)
+                    return false;
+
+                var etag = await _serverStore.SendToLeaderAsync(new DeleteTransformerCommand(transformer.Name, _documentDatabase.Name));
+
+                await _documentDatabase.WaitForIndexNotification(etag);
+
+                return true;
+            }
+            finally
+            {
+                _indexAndTransformerLocker.Release();
+            }
         }
 
-
-        public void DeleteTransformer(string name)
+        public async Task DeleteTransformer(string name)
         {
-            var transformer = GetTransformer(name);
-            if (transformer == null)
-                TransformerDoesNotExistException.ThrowFor(name);
+            await _indexAndTransformerLocker.WaitAsync();
 
-            DeleteTransformerInternal(transformer.TransformerId);
-        }
+            try
+            {
+                var transformer = GetTransformer(name);
+                if (transformer == null)
+                    TransformerDoesNotExistException.ThrowFor(name);
 
-        public void DeleteTransformer(int id)
-        {
-            DeleteTransformerInternal(id);
+                var etag = await _serverStore.SendToLeaderAsync(new DeleteTransformerCommand(transformer.Name, _documentDatabase.Name));
+
+                await _documentDatabase.WaitForIndexNotification(etag);
+            }
+            finally
+            {
+                _indexAndTransformerLocker.Release();
+            }
         }
 
         public IEnumerable<Transformer> GetTransformers()
@@ -202,85 +305,90 @@ namespace Raven.Server.Documents.Transformers
             return _transformers.Count;
         }
 
-        private void DeleteTransformerInternal(int id)
+        public async Task SetLock(string name, TransformerLockMode mode)
         {
-            lock (_indexAndTransformerLocker)
-            {
-                Transformer transformer;
-                if (_transformers.TryRemoveById(id, out transformer) == false)
-                    TransformerDoesNotExistException.ThrowFor(id);
+            await _indexAndTransformerLocker.WaitAsync();
 
-                transformer.Delete();
-                var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnTransformerDeleted(transformer);
+            try
+            {
+                var transformer = GetTransformer(name);
+                if (transformer == null)
+                    TransformerDoesNotExistException.ThrowFor(name);
+
+                var faultyInMemoryTransformer = transformer as FaultyInMemoryTransformer;
+                if (faultyInMemoryTransformer != null)
+                {
+                    faultyInMemoryTransformer.SetLock(mode); // this will throw proper exception
+                    return;
+                }
+
+                var command = new SetTransformerLockCommand(name, mode, _documentDatabase.Name);
+
+                var etag = await _serverStore.SendToLeaderAsync(command);
+
+                await _documentDatabase.WaitForIndexNotification(etag);
+            }
+            finally
+            {
+                _indexAndTransformerLocker.Release();
+            }
+        }
+
+        public async Task Rename(string name, string newName)
+        {
+            await _indexAndTransformerLocker.WaitAsync();
+
+            try
+            {
+                var transformer = GetTransformer(name);
+                if (transformer == null)
+                    TransformerDoesNotExistException.ThrowFor(name);
+
+                var command = new RenameTransformerCommand(name, newName, _documentDatabase.Name);
+
+                var etag = await _serverStore.SendToLeaderAsync(command);
+
+                await _documentDatabase.WaitForIndexNotification(etag);
+            }
+            finally
+            {
+                _indexAndTransformerLocker.Release();
+            }
+        }
+
+        private void DeleteTransformerInternal(Transformer transformer)
+        {
+            lock (_locker)
+            {
+                Transformer _;
+                _transformers.TryRemoveByEtag(transformer.Etag, out _);
+
                 _documentDatabase.Changes.RaiseNotifications(new TransformerChange
                 {
                     Name = transformer.Name,
                     Type = TransformerChangeTypes.TransformerRemoved,
-                    Etag = tombstoneEtag
+                    Etag = transformer.Etag
                 });
             }
         }
 
-        private int CreateTransformerInternal(Transformer transformer, int transformerId)
+        private void CreateTransformerInternal(Transformer transformer)
         {
             Debug.Assert(transformer != null);
-            Debug.Assert(transformerId > 0);
+            Debug.Assert(transformer.Etag > 0);
 
-            var etag = _documentDatabase.IndexMetadataPersistence.OnTransformerCreated(transformer);
             _transformers.Add(transformer);
             _documentDatabase.Changes.RaiseNotifications(new TransformerChange
             {
                 Name = transformer.Name,
                 Type = TransformerChangeTypes.TransformerAdded,
-                Etag = etag
+                Etag = transformer.Etag
             });
-
-            return transformerId;
-        }
-
-        private TransformerLockMode ValidateTransformerDefinition(string name, out Transformer existingTransformer)
-        {
-            if (_transformers.TryGetByName(name, out existingTransformer) == false)
-                return TransformerLockMode.Unlock;
-
-            return existingTransformer.Definition.LockMode;
         }
 
         public void Dispose()
         {
-        }
-
-        public void Rename(string oldTransformerName, string newTransformerName)
-        {
-            Transformer transformer;
-            if (_transformers.TryGetByName(oldTransformerName, out transformer) == false)
-                throw new InvalidOperationException($"Index {oldTransformerName} does not exist");
-
-            lock (_indexAndTransformerLocker)
-            {
-                var index = _documentDatabase.IndexStore.GetIndex(newTransformerName);
-                if (index != null)
-                {
-                    throw new IndexOrTransformerAlreadyExistException(
-                        $"Cannot rename transformer to {newTransformerName} because an index having the same name already exists");
-                }
-
-                Transformer _;
-                if (_transformers.TryGetByName(newTransformerName, out _))
-                {
-                    throw new IndexOrTransformerAlreadyExistException(
-                        $"Cannot rename transformer to {newTransformerName} because a transformer having the same name already exists");
-                }
-
-                transformer.Rename(newTransformerName);
-                _transformers.RenameTransformer(transformer, oldTransformerName, newTransformerName);
-            }
-
-            _documentDatabase.Changes.RaiseNotifications(new TransformerChange
-            {
-                Name = oldTransformerName,
-                Type = TransformerChangeTypes.TransformerRenamed
-            });
+            
         }
     }
 }

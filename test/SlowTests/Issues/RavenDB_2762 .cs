@@ -17,7 +17,6 @@ namespace SlowTests.Issues
         public void IndexingErrorsShouldSurviveDbRestart()
         {
             var dataDir = NewDataPath();
-            IndexingError[] errors;
             using (var store = GetDocumentStore(path: dataDir))
             {
                 using (var session = store.OpenSession())
@@ -33,13 +32,12 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                errors = store.Admin.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
+                var errors = store.Admin.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
 
                 Assert.NotEmpty(errors);
-            }
+         
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.DefaultDatabase);
 
-            using (var store = GetDocumentStore(path: dataDir))
-            {
                 var recoveredErrors = store.Admin.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
 
                 Assert.NotEmpty(recoveredErrors);

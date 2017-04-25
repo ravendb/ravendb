@@ -33,14 +33,14 @@ namespace FastTests.Client.Indexing
 
                 await store
                     .Admin
-                    .SendAsync(new PutIndexesOperation(new []{input}));
+                    .SendAsync(new PutIndexesOperation(new[] { input }));
 
                 var output = await store
                     .Admin
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
-                Assert.Equal(1, output.IndexId);
-                Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false));
+                Assert.True(output.Etag > 0);
+                Assert.True(input.Equals(output, compareIndexEtags: false, ignoreFormatting: false));
             }
         }
 
@@ -57,7 +57,7 @@ namespace FastTests.Client.Indexing
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new UserAndAge { Name = "Boki", Age = 14});
+                    await session.StoreAsync(new UserAndAge { Name = "Boki", Age = 14 });
                     await session.StoreAsync(new UserAndAge { Name = "Toli", Age = 5 });
 
                     await session.SaveChangesAsync();
@@ -81,12 +81,12 @@ namespace FastTests.Client.Indexing
                     .Admin
                     .SendAsync(new PutIndexesOperation(new[] { input }));
 
-                var output = await store
+                var output1 = await store
                     .Admin
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
-                Assert.Equal(1, output.IndexId);
-                Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false));
+                Assert.True(output1.Etag > 0);
+                Assert.True(input.Equals(output1, compareIndexEtags: false, ignoreFormatting: false));
 
                 await store
                     .Admin
@@ -94,13 +94,13 @@ namespace FastTests.Client.Indexing
 
                 WaitForIndexing(store);
 
-                output = await store
-                    .Admin
-                    .SendAsync(new GetIndexOperation("Users_ByName"));
+                var output2 = await store
+                     .Admin
+                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
-                Assert.Equal(2, output.IndexId);
-                Assert.Equal("Users_ByName", output.Name);
-                Assert.True(input2.Equals(output, compareIndexIds: false, ignoreFormatting: false));
+                Assert.True(output2.Etag > output1.Etag, $"{output2.Etag} > {output1.Etag}");
+                Assert.Equal("Users_ByName", output2.Name);
+                Assert.True(input2.Equals(output2, compareIndexEtags: false, ignoreFormatting: false));
 
             }
         }
@@ -136,29 +136,37 @@ namespace FastTests.Client.Indexing
                     .Admin
                     .SendAsync(new PutIndexesOperation(new[] { input }));
 
-                var output = await store
+                var output1 = await store
                     .Admin
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
-                Assert.Equal(1, output.IndexId);
-                Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false));
+                Assert.True(output1.Etag > 0);
+                Assert.True(input.Equals(output1, compareIndexEtags: false, ignoreFormatting: false));
 
                 await store
                     .Admin
                     .SendAsync(new PutIndexesOperation(new[] { input2 }));
 
                 await store
+                    .Admin
+                    .SendAsync(new StopIndexingOperation());
+
+                await store
                    .Admin
                    .SendAsync(new PutIndexesOperation(new[] { input }));
 
+                await store
+                    .Admin
+                    .SendAsync(new StartIndexingOperation());
+
                 WaitForIndexing(store);
 
-                output = await store
+                var output2 = await store
                     .Admin
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
-                Assert.NotEqual(2, output.IndexId);
-                Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false));
+                Assert.True(output2.Etag >= output1.Etag);
+                Assert.True(input.Equals(output2, compareIndexEtags: false, ignoreFormatting: false));
 
             }
         }

@@ -6,8 +6,8 @@ namespace Raven.Client.Http
     {
         public string Url;
         public string Database;
-        public string ApiKey;
-        public string CurrentToken;
+        public string ClusterTag;
+        public string ClusterToken;
         public bool IsFailed;
 
         private readonly EWMA _ewma = new EWMA(EWMA.M1Alpha, 1, TimeUnit.Milliseconds);
@@ -44,8 +44,7 @@ namespace Raven.Client.Http
         private bool Equals(ServerNode other)
         {
             return string.Equals(Url, other.Url) &&
-                string.Equals(Database, other.Database) &&
-                string.Equals(ApiKey, other.ApiKey);
+                string.Equals(Database, other.Database);
         }
 
         public override bool Equals(object obj)
@@ -62,7 +61,6 @@ namespace Raven.Client.Http
             {
                 var hashCode = Url?.GetHashCode() ?? 0;
                 hashCode = (hashCode * 397) ^ (Database?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (ApiKey?.GetHashCode() ?? 0);
                 return hashCode;
             }
         }

@@ -205,7 +205,7 @@ namespace Raven.Server.Config.Categories
             return configurationProperties;
         }
 
-        protected object GetDefaultValue<T>(Expression<Func<T, object>> getValue)
+        public object GetDefaultValue<T>(Expression<Func<T, object>> getValue)
         {
             var prop = getValue.ToProperty();
             var value = prop.GetCustomAttributes<DefaultValueAttribute>().First().Value;

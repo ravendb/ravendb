@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -34,7 +35,7 @@ namespace SlowTests.Issues
             using (var slave = GetDocumentStore())
             {
                 slave.ExecuteIndex(new PersonAndAddressIndex());
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
 
 
                 using (var session = master.OpenAsyncSession())
@@ -64,11 +65,11 @@ namespace SlowTests.Issues
 
                 using (var session = slave.OpenSession())
                 {
-                    Assert.NotEmpty(session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults()).ToList());
+                    Assert.NotEmpty(session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(13))).ToList());
                 }
 
-                DeleteReplication(master, slave);
-
+                // delete replications to slave
+                await SetupReplicationAsync(master);
 
                 using (var session = master.OpenAsyncSession())
                 {
@@ -89,9 +90,9 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync().ConfigureAwait(false);
                 }
 
-                SetReplicationConflictResolution(slave, StraightforwardConflictResolution.ResolveToLatest);
+                await SetReplicationConflictResolutionAsync(slave, StraightforwardConflictResolution.ResolveToLatest);
 
-                SetupReplication(master, slave);
+                await SetupReplicationAsync(master, slave);
 
                 Assert.True(WaitForDocument(slave, "marker2"));
 
@@ -111,14 +112,14 @@ namespace SlowTests.Issues
                 {
                     long? lastPersonEtag;
 
-                    var person = session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults()).First();
+                    var person = session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(14))).First();
                     lastPersonEtag = session.Advanced.GetEtagFor(person);
 
                     Assert.NotNull(lastPersonEtag);
 
                     for (var i = 0; i < 5; i++)
                     {
-                        person = session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults()).First();
+                        person = session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(16))).First();
                         Thread.Sleep(50);
 
                         Assert.Equal(lastPersonEtag, session.Advanced.GetEtagFor(person));

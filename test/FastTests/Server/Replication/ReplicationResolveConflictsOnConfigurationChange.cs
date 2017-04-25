@@ -14,7 +14,7 @@ namespace FastTests.Server.Replication
     public class ReplicationResolveConflictsOnConfigurationChange : ReplicationTestsBase
     {
 
-        public void GenerateConflicts(DocumentStore store1, DocumentStore store2, string id = "foo/bar")
+        public async Task GenerateConflicts(DocumentStore store1, DocumentStore store2, string id = "foo/bar")
         {
             using (var session = store1.OpenSession())
             {
@@ -32,97 +32,92 @@ namespace FastTests.Server.Replication
                 }, id);
                 session.SaveChanges();
             }
-            SetupReplication(store1,store2);
-            SetupReplication(store2,store1);
+            await SetupReplicationAsync(store1,store2);
+            await SetupReplicationAsync(store2,store1);
 
             Assert.Equal(2, WaitUntilHasConflict(store1, id).Results.Length);
             Assert.Equal(2, WaitUntilHasConflict(store2, id).Results.Length);
         }
 
         [Fact]
-        public void ResolveWhenScriptAdded()
+        public async Task ResolveWhenScriptAdded()
         {
-            var store1 = GetDocumentStore();
-            var store2 = GetDocumentStore();
-            GenerateConflicts(store1,store2);
-            var config = new ReplicationDocument
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
             {
-                ResolveByCollection = new Dictionary<string, ScriptResolver>
+                await GenerateConflicts(store1, store2);
+                var config = new ConflictSolver
                 {
+                    ResolveByCollection = new Dictionary<string, ScriptResolver>
                     {
-                        "Users" , new ScriptResolver
                         {
-                         Script = "return {'Name':'Resolved'}"
+                            "Users", new ScriptResolver
+                            {
+                                Script = "return {'Name':'Resolved'}"
+                            }
                         }
                     }
-                }
-            };
-            SetupReplication(store1,config,store2);
+                };
+                await SetupReplicationAsync(store1, config, store2);
 
-            Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Resolved"));
-            Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Resolved"));
+                Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Resolved"));
+                Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Resolved"));
+            }
         }
 
         [Fact]
-        public void ResolveWhenChangeToLatest()
+        public async Task ResolveWhenChangeToLatest()
         {
-            var store1 = GetDocumentStore();
-            var store2 = GetDocumentStore();
-            GenerateConflicts(store1, store2);
-            var config = new ReplicationDocument
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
             {
-                 DocumentConflictResolution = StraightforwardConflictResolution.ResolveToLatest
-            };
-            SetupReplication(store1, config, store2);
+                await GenerateConflicts(store1, store2);
 
-            Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Store2"));
-            Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store2"));
+                await SetReplicationConflictResolutionAsync(store1, StraightforwardConflictResolution.ResolveToLatest);
+
+                Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Store2"));
+                Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store2"));
+            }
         }
 
         [Fact]
-        public void ResolveWhenSettingDatabaseResolver()
+        public async Task ResolveWhenSettingDatabaseResolver()
         {
-            var store1 = GetDocumentStore();
-            var store2 = GetDocumentStore();
-            GenerateConflicts(store1, store2);
-            var config = new ReplicationDocument
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
             {
-                DefaultResolver = new DatabaseResolver
+                await GenerateConflicts(store1, store2);
+                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.DefaultDatabase).Result;
+
+                var config = new ConflictSolver
                 {
-                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString(),
-                    Version = 0
-                }
-            };
-            SetupReplication(store1, config, store2);
+                    DatabaseResolverId = storage1.DbId.ToString()
+                };
+                await SetupReplicationAsync(store1, config, store2);
 
-            Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Store1"));
-            Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store1"));
+                Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Store1"));
+                Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store1"));
+            }
         }
 
         [Fact]
-        public void ResolveManyConflicts()
+        public async Task ResolveManyConflicts()
         {
-            var store1 = GetDocumentStore();
-            var store2 = GetDocumentStore();
-            GenerateConflicts(store1, store2,"users/1");
-            SetupReplication(store1);
-            SetupReplication(store2);
-            GenerateConflicts(store1, store2,"users/2");
-            var config = new ReplicationDocument
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
             {
-                DefaultResolver = new DatabaseResolver
-                {
-                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString(),
-                    Version = 0
-                }
-            };
+                await GenerateConflicts(store1, store2, "users/1");
+                await SetupReplicationAsync(store1);
+                await SetupReplicationAsync(store2);
+                await GenerateConflicts(store1, store2, "users/2");
+                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.DefaultDatabase).Result;
+                await UpdateConflictResolver(store1, storage1.DbId.ToString());
 
-            SetupReplication(store1, config, store2);
-
-            Assert.True(WaitForDocument<User>(store1, "users/1", u => u.Name == "Store1"));
-            Assert.True(WaitForDocument<User>(store2, "users/1", u => u.Name == "Store1"));
-            Assert.True(WaitForDocument<User>(store1, "users/2", u => u.Name == "Store1"));
-            Assert.True(WaitForDocument<User>(store2, "users/2", u => u.Name == "Store1"));
+                Assert.True(WaitForDocument<User>(store1, "users/1", u => u.Name == "Store1"));
+                Assert.True(WaitForDocument<User>(store2, "users/1", u => u.Name == "Store1"));
+                Assert.True(WaitForDocument<User>(store1, "users/2", u => u.Name == "Store1"));
+                Assert.True(WaitForDocument<User>(store2, "users/2", u => u.Name == "Store1"));
+            }
         }
     }
 }

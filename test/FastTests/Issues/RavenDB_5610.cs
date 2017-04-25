@@ -1,4 +1,6 @@
-﻿using Raven.Client.Documents.Indexes;
+﻿using System;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Xunit;
@@ -8,16 +10,17 @@ namespace FastTests.Issues
     public class RavenDB_5610 : RavenLowLevelTestBase
     {
         [Fact]
-        public void UpdateType()
+        public async Task UpdateType()
         {
             using (var database = CreateDocumentDatabase())
             {
                 var indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "33";
 
-                Assert.Equal(1, database.IndexStore.CreateIndex(indexDefinition));
+                var etag = await database.IndexStore.CreateIndex(indexDefinition);
+                Assert.True(etag > 0);
 
-                var index = database.IndexStore.GetIndex(1);
+                var index = database.IndexStore.GetIndex(etag);
 
                 var options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index);
                 Assert.Equal(IndexCreationOptions.Noop, options);
@@ -29,13 +32,13 @@ namespace FastTests.Issues
                 Assert.Equal(IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex, options);
 
                 indexDefinition = CreateIndexDefinition();
-                indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.RunInMemory)] = "false";
+                indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = "somePath";
 
                 options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index);
                 Assert.Equal(IndexCreationOptions.Update, options);
 
                 indexDefinition = CreateIndexDefinition();
-                indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.RunInMemory)] = "false";
+                indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = "somePath";
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "30";
 
                 options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index);
@@ -44,31 +47,37 @@ namespace FastTests.Issues
         }
 
         [Fact]
-        public void WillUpdate()
+        public async Task WillUpdate()
         {
-            var path = NewDataPath();
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+
+
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 var indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "33";
 
-                Assert.Equal(1, database.IndexStore.CreateIndex(indexDefinition));
+                var etag = await database.IndexStore.CreateIndex(indexDefinition);
+                Assert.True(etag > 0);
 
-                var index = database.IndexStore.GetIndex(1);
+                var index = database.IndexStore.GetIndex(etag);
                 Assert.Equal(33, index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
 
                 indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "30";
 
-                Assert.Equal(1, database.IndexStore.CreateIndex(indexDefinition));
+                etag = await database.IndexStore.CreateIndex(indexDefinition);
+                Assert.True(etag > 0);
 
-                index = database.IndexStore.GetIndex(1);
+                index = database.IndexStore.GetIndex(etag);
                 Assert.Equal(30, index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
-            }
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
-            {
-                var index = database.IndexStore.GetIndex(1);
+                var indexName = index.Name;
+
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(database.Name);
+
+                database = await GetDatabase(database.Name);
+
+                index = database.IndexStore.GetIndex(indexName);
                 Assert.Equal(30, index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
             }
         }

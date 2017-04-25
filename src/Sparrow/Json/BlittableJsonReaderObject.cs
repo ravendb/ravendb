@@ -1088,5 +1088,24 @@ namespace Sparrow.Json
                 }
             }
         }
+
+        public bool Contains(LazyStringValue propertyName)
+        {
+            var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
+
+            for (int i = 0; i < _propCount; i++)
+            {
+                BlittableJsonToken token;
+                int position;
+                int id;
+                GetPropertyTypeAndPosition(i, metadataSize, out token, out position, out id);
+
+                if (propertyName == GetPropertyName(id))
+                    return true;
+            }
+
+            return false;
+
+        }
     }
 }

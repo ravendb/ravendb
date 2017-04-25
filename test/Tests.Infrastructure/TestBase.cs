@@ -40,7 +40,7 @@ namespace FastTests
 
         static TestBase()
         {
-#if DEBUG
+#if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>
             {
                 if (args.Observed)
@@ -93,9 +93,9 @@ namespace FastTests
                 {
                     if (_globalServer == null)
                     {
-                        Console.WriteLine("\tTo attach debugger to test process ({1}), use process id: {0}", Process.GetCurrentProcess().Id, PlatformDetails.Is32Bits ? "x86" : "x64");
                         var globalServer = GetNewServer();
-                        Console.WriteLine($"Server url is {globalServer.WebUrls[0]}");
+                        Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {Process.GetCurrentProcess().Id}. Url {globalServer.WebUrls[0]}");
+                        
                         AssemblyLoadContext.Default.Unloading += UnloadServer;
                         _globalServer = globalServer;
                     }
@@ -134,7 +134,7 @@ namespace FastTests
 
         private readonly object _getNewServerSync = new object();
 
-        protected RavenServer GetNewServer(IDictionary<string, string> customSettings = null)
+        protected RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null)
         {
             lock (_getNewServerSync)
             {
@@ -150,14 +150,18 @@ namespace FastTests
 
                 configuration.Initialize();
                 configuration.DebugLog.LogMode = LogMode.None;
-                configuration.Core.ServerUrl = "http://127.0.0.1:0";
+                if (customSettings == null || customSettings.ContainsKey("Raven/ServerUrl") == false)
+                {
+                    configuration.Core.ServerUrl = "http://127.0.0.1:0";
+                }
                 configuration.Server.Name = ServerName;
-                configuration.Core.RunInMemory = true;
+                configuration.Core.RunInMemory = runInMemory;
                 configuration.Core.DataDirectory =
-                    configuration.Core.DataDirectory.Combine($"Tests{Interlocked.Increment(ref _serverCounter)}");
+                    configuration.Core.DataDirectory.Combine(partialPath??$"Tests{Interlocked.Increment(ref _serverCounter)}");
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
-
-                IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
+                
+                if (deletePrevious)
+                    IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);                
 
                 var server = new RavenServer(configuration);
                 server.Initialize();

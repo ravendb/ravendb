@@ -16,6 +16,6 @@ namespace Raven.Client.Documents.Transformers
         /// <summary>
         /// Gets or sets the total results for this query
         /// </summary>
-        public int TransformerId { get; set; }
+        public int Etag { get; set; }
     }
 }

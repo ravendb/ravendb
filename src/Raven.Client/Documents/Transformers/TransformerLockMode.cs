@@ -3,6 +3,7 @@ namespace Raven.Client.Documents.Transformers
     public enum TransformerLockMode
     {
         Unlock,
-        LockedIgnore
+        LockedIgnore,
+        LockedError
     }
 }

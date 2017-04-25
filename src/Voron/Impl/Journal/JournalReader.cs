@@ -374,12 +374,12 @@ namespace Voron.Impl.Journal
         public void Dispose()
         {
             if (_encryptionBuffers != null) // Encryption enabled
-			{ 
+            { 
                 foreach (var buffer in _encryptionBuffers)
                     UnmanagedMemory.Free(buffer.Pointer);
-				BeforeCommitFinalization?.Invoke(this);
+                BeforeCommitFinalization?.Invoke(this);
             }
-			OnDispose?.Invoke(this);
+            OnDispose?.Invoke(this);
         }
 
         private static int GetNumberOfPagesFor(long size)

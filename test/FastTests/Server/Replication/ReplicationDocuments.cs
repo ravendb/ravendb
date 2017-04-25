@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,11 +24,12 @@ namespace FastTests.Server.Replication
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
             {
-                SetupReplication(source, destination);
+
+                await SetupReplicationAsync(source, destination);
                 string id;
                 using (var session = source.OpenAsyncSession())
                 {
-                    var user = new User { Name = "Arek" };
+                    var user = new User {Name = "Arek"};
 
                     await session.StoreAsync(user);
 
@@ -38,7 +40,7 @@ namespace FastTests.Server.Replication
                     //await source.Replication.WaitAsync(etag: session.Advanced.GetEtagFor(user));
                 }
 
-                var fetchedUser = WaitForDocumentToReplicate<User>(destination, id, 2000);
+                var fetchedUser = WaitForDocumentToReplicate<User>(destination, id, 2_000);
                 Assert.NotNull(fetchedUser);
 
                 Assert.Equal("Arek", fetchedUser.Name);
@@ -46,12 +48,12 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void CanReplicateDocumentDeletion()
+        public async Task CanReplicateDocumentDeletion()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
             {
-                SetupReplication(source, destination);
+                await SetupReplicationAsync(source, destination);
 
                 using (var sourceCommands = source.Commands())
                 {
@@ -77,7 +79,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public void GetConflictsResult_command_should_work_properly()
+        public async Task GetConflictsResult_command_should_work_properly()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
@@ -88,7 +90,7 @@ namespace FastTests.Server.Replication
                     sourceCommands.Put("docs/1", null, new {Key = "Value"}, null);
                     destinationCommands.Put("docs/1", null, new {Key = "Value2"}, null);
 
-                    SetupReplication(source, destination);
+                    await SetupReplicationAsync(source, destination);
 
                     sourceCommands.Put("marker", null, new {Key = "Value"}, null);
 
@@ -105,7 +107,7 @@ namespace FastTests.Server.Replication
 
 
         [Fact]
-        public void ShouldCreateConflictThenResolveIt()
+        public async Task ShouldCreateConflictThenResolveIt()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
@@ -117,7 +119,7 @@ namespace FastTests.Server.Replication
                     sourceCommands.Put("docs/1", null, new { Key = "Value" }, null);
                     destinationCommands.Put("docs/1", null, new { Key = "Value2" }, null);
 
-                    SetupReplication(source, destination);
+                    await SetupReplicationAsync(source, destination);
 
                     sourceCommands.Put("marker", null, new { Key = "Value" }, null);
 

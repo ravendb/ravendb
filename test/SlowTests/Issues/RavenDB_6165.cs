@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Transformers;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -31,13 +32,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [Theory(Skip = "RavenDB-6820")]
         [InlineData("my-index", "0001-my-index")]
         [InlineData("Users/ByNameRenamed", "0001-Users_ByNameRenamed")]
         public async Task Can_rename_index(string newIndexName, string newIndexDirName)
         {
             var path = NewDataPath();
-
+            long indexEtag;
             using (var documentStore = GetDocumentStore(path: path))
             {
                 var usersByName = new Users_ByName();
@@ -48,25 +49,23 @@ namespace SlowTests.Issues
                 documentStore.Admin.Send(new RenameIndexOperation(usersByName.IndexName, newIndexName));
 
                 var stats = documentStore.Admin.Send(new GetStatisticsOperation());
-
                 Assert.Equal(newIndexName, stats.Indexes[0].Name);
-                Assert.Equal(1, stats.Indexes[0].IndexId);
-            }
+                indexEtag = stats.Indexes[0].Etag;
 
-            using (var documentStore = GetDocumentStore(path: path))
-            {
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(documentStore.DefaultDatabase);
+
                 var database = await GetDatabase(documentStore.DefaultDatabase);
 
-                var index = database.IndexStore.GetIndex(1);
+                var index = database.IndexStore.GetIndex(indexEtag);
 
                 var envPath = index._indexStorage.Environment().Options.BasePath;
 
                 Assert.Equal(new DirectoryInfo(envPath).Name, newIndexDirName);
 
-                var stats = documentStore.Admin.Send(new GetStatisticsOperation());
+                 stats = documentStore.Admin.Send(new GetStatisticsOperation());
 
                 Assert.Equal(newIndexName, stats.Indexes[0].Name);
-                Assert.Equal(1, stats.Indexes[0].IndexId);
+                Assert.Equal(indexEtag, stats.Indexes[0].Etag);
             }
         }
 
@@ -120,21 +119,22 @@ namespace SlowTests.Issues
                 var usersTransformer = new Users_FullName_Transformer();
                 usersTransformer.Execute(documentStore);
 
-                documentStore.Admin.Send(new RenameTransformerOperation(usersTransformer.TransformerName, newTransformerName));
+                var etag = documentStore.Admin.Send(new RenameTransformerOperation(usersTransformer.TransformerName, newTransformerName));
+
+                await Server.ServerStore.Cluster.WaitForIndexNotification(etag);
 
                 var database = await GetDatabase(documentStore.DefaultDatabase);
 
-                var transformer = database.TransformerStore.GetTransformer(1);
+                var transformer = database.TransformerStore.GetTransformer(newTransformerName);
 
                 Assert.Equal(newTransformerName, transformer.Name);
                 Assert.Equal(1, database.TransformerStore.GetTransformers().Count());
-            }
 
-            using (var documentStore = GetDocumentStore(path: path))
-            {
-                var database = await GetDatabase(documentStore.DefaultDatabase);
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(documentStore.DefaultDatabase, null);
 
-                var transformer = database.TransformerStore.GetTransformer(1);
+                database = await GetDatabase(documentStore.DefaultDatabase);
+
+                transformer = database.TransformerStore.GetTransformer(newTransformerName);
 
                 Assert.Equal(newTransformerName, transformer.Name);
                 Assert.Equal(1, database.TransformerStore.GetTransformers().Count());
@@ -172,10 +172,10 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(documentStore);
 
-                Assert.Throws<IndexOrTransformerAlreadyExistException>(
+                Assert.Throws<CommandExecutionException>(
                     () => documentStore.Admin.Send(new RenameTransformerOperation(usersTransformer.TransformerName, existingIndexName)));
 
-                Assert.Throws<IndexOrTransformerAlreadyExistException>(
+                Assert.Throws<CommandExecutionException>(
                    () => documentStore.Admin.Send(new RenameTransformerOperation(usersTransformer.TransformerName, existingTransformerName)));
             }
         }

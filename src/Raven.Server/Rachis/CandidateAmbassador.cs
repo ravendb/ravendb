@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using Raven.Client.Server.Tcp;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Rachis
@@ -10,6 +11,7 @@ namespace Raven.Server.Rachis
     {
         private readonly RachisConsensus _engine;
         private readonly Candidate _candidate;
+        private readonly string _tag;
         private readonly string _url;
         private readonly string _apiKey;
         public string Status;
@@ -18,10 +20,11 @@ namespace Raven.Server.Rachis
         public long TrialElectionWonAtTerm { get; set; }
         public long ReadlElectionWonAtTerm { get; set; }
 
-        public CandidateAmbassador(RachisConsensus engine, Candidate candidate, string url, string apiKey)
+        public CandidateAmbassador(RachisConsensus engine, Candidate candidate, string tag, string url, string apiKey)
         {
             _engine = engine;
             _candidate = candidate;
+            _tag = tag;
             _url = url;
             _apiKey = apiKey;
             Status = "Started";
@@ -32,7 +35,7 @@ namespace Raven.Server.Rachis
         {
             _thread = new Thread(Run)
             {
-                Name = "Candidate Ambasaddor for " + (new Uri(_engine.Url).Fragment ?? _engine.Url) + " > " + (new Uri(_url).Fragment ?? _url),
+                Name = $"Candidate Ambasaddor for {_engine.Tag} > {_tag}",
                 IsBackground = true
             };
             _thread.Start();
@@ -46,6 +49,10 @@ namespace Raven.Server.Rachis
                 while (_thread.Join(16) == false)
                 {
                     _conenctToPeer?.Dispose();
+                }
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Dispose");
                 }
             }
         }
@@ -65,7 +72,12 @@ namespace Raven.Server.Rachis
                     {
                         try
                         {
-                            _conenctToPeer = _engine.ConenctToPeer(_url, _apiKey);
+                            TransactionOperationContext context;
+                            using (_engine.ContextPool.AllocateOperationContext(out context))
+                            {
+                                _conenctToPeer = _engine.ConenctToPeer(_url, _apiKey, context).Result; 
+                            }
+
                             if (_candidate.Running == false)
                                 break; 
                         }
@@ -74,14 +86,14 @@ namespace Raven.Server.Rachis
                             Status = "Failed - " + e.Message;
                             if (_engine.Log.IsInfoEnabled)
                             {
-                                _engine.Log.Info("Failed to connect to remote peer: " + _url, e);
+                                _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Failed to connect to remote peer: " + _url, e);
                             }
                             // wait a bit
                             _candidate.WaitForChangeInState();
                             continue; // we'll retry connecting
                         }
                         Status = "Connected";
-                        using (var connection = new RemoteConnection(_url, _engine.Url, _conenctToPeer))
+                        using (var connection = new RemoteConnection(_tag, _engine.Tag, _conenctToPeer))
                         {
                             _engine.AppendStateDisposable(_candidate, connection);
                             while (_candidate.Running)
@@ -102,8 +114,9 @@ namespace Raven.Server.Rachis
                                     connection.Send(context, new RachisHello
                                     {
                                         TopologyId = topology.TopologyId,
-                                        DebugSourceIdentifier = _engine.GetDebugInformation(),
-                                        InitialMessageType = InitialMessageType.RequestVote
+                                        DebugSourceIdentifier = _engine.Tag,
+                                        DebugDestinationIdentifier = _tag,
+                                        InitialMessageType = InitialMessageType.RequestVote,
                                     });
 
                                     RequestVoteResponse rvr;
@@ -114,7 +127,7 @@ namespace Raven.Server.Rachis
                                     {
                                         connection.Send(context, new RequestVote
                                         {
-                                            Source = _engine.Url,
+                                            Source = _engine.Tag,
                                             Term = currentElectionTerm,
                                             IsForcedElection = false,
                                             IsTrialElection = true,
@@ -125,15 +138,23 @@ namespace Raven.Server.Rachis
                                         rvr = connection.Read<RequestVoteResponse>(context);
                                         if (rvr.Term > currentElectionTerm)
                                         {
+                                            var message = "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm;
                                             // we need to abort the current elections
-                                            _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm, 
-                                                "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm);
+                                            _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm, message);
+                                            if (_engine.Log.IsInfoEnabled)
+                                            {
+                                                _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: {message}");
+                                            }
                                             _engine.FoundAboutHigherTerm(rvr.Term);
                                             return;
                                         }
                                         NotInTopology = rvr.NotInTopology;
                                         if (rvr.VoteGranted == false)
                                         {
+                                            if (_engine.Log.IsInfoEnabled)
+                                            {
+                                                _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a negative response from {_tag} reseason:{rvr.Message}");
+                                            }
                                             // we go a negative response here, so we can't proceed
                                             // we'll need to wait until the candidate has done something, like
                                             // change term or given up
@@ -147,7 +168,7 @@ namespace Raven.Server.Rachis
 
                                     connection.Send(context, new RequestVote
                                     {
-                                        Source = _engine.Url,
+                                        Source = _engine.Tag,
                                         Term = currentElectionTerm,
                                         IsForcedElection = _candidate.IsForcedElection,
                                         IsTrialElection = false,
@@ -158,15 +179,23 @@ namespace Raven.Server.Rachis
                                     rvr = connection.Read<RequestVoteResponse>(context);
                                     if (rvr.Term > currentElectionTerm)
                                     {
+                                        var message = "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm;
+                                        if (_engine.Log.IsInfoEnabled)
+                                        {
+                                            _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: {message}");
+                                        }
                                         // we need to abort the current elections
-                                        _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm,
-                                                "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm);
+                                        _engine.SetNewState(RachisConsensus.State.Follower, null, engineCurrentTerm, message);
                                         _engine.FoundAboutHigherTerm(rvr.Term);
                                         return;
                                     }
                                     NotInTopology = rvr.NotInTopology;
                                     if (rvr.VoteGranted == false)
                                     {
+                                        if (_engine.Log.IsInfoEnabled)
+                                        {
+                                            _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a negative response from {_tag} reseason:{rvr.Message}");
+                                        }
                                         // we go a negative response here, so we can't proceed
                                         // we'll need to wait until the candidate has done something, like
                                         // change term or given up
@@ -184,7 +213,7 @@ namespace Raven.Server.Rachis
                         Status = "Failed - " + e.Message;
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info("Failed to get vote from remote peer: " + _url, e);
+                            _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Failed to get vote from remote peer url={_url} tag={_tag}", e);
                         }
                         _candidate.WaitForChangeInState();
                     }

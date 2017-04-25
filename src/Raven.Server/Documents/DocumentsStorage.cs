@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
 using Raven.Client;
@@ -889,6 +890,10 @@ namespace Raven.Server.Documents
 
                 collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
 
+                var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, 
+                    collectionName.GetTableName(CollectionTableType.Tombstones));
+                tombstoneTable.Delete(local.Tombstone.StorageId);
+
                 // we update the tombstone
                 var etag = CreateTombstone(context,
                     loweredKey,
@@ -898,6 +903,21 @@ namespace Raven.Server.Documents
                     lastModifiedTicks,
                     changeVector,
                     DocumentFlags.None);
+
+                // We have to raise the notification here because even though we have deleted
+                // a deleted value, we changed the change vector. And maybe we need to replicate 
+                // that. Another issue is that the last tombstone etag has changed, and we need 
+                // to let the indexes catch up to us here, even if they'll just do a noop.
+
+                // TODO: Do not send here strings. Use lazy strings instead.
+                context.Transaction.AddAfterCommitNotification(new DocumentChange
+                {
+                    Type = DocumentChangeTypes.Delete,
+                    Etag = etag,
+                    Key = key,
+                    CollectionName = collectionName.Name,
+                    IsSystemDocument = collectionName.IsSystem,
+                });
 
                 return new DeleteOperationResult
                 {
@@ -1374,8 +1394,10 @@ namespace Raven.Server.Documents
                 // has to happen after the commit, but while we are holding the write tx lock
                 context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
                 {
-                    var collectionNames = new FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer>(_collectionsCache, OrdinalIgnoreCaseStringStructComparer.Instance);
-                    collectionNames[name.Name] = name;
+                    var collectionNames = new FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer>(_collectionsCache, OrdinalIgnoreCaseStringStructComparer.Instance)
+                    {
+                        [name.Name] = name
+                    };
                     _collectionsCache = collectionNames;
                 };
             }

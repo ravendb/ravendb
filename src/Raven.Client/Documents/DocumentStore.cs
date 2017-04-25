@@ -143,9 +143,9 @@ namespace Raven.Client.Documents
 
             foreach (var kvp in _requestExecuters)
             {
-                if (kvp.Value.IsValueCreated == false)
+                if(kvp.Value.IsValueCreated == false)
                     continue;
-
+                ;
                 kvp.Value.Value.Dispose();
             }
         }
@@ -184,12 +184,25 @@ namespace Raven.Client.Documents
             return session;
         }
 
+        public async Task ForceUpdateTopologyFor(string databaseName = null)
+        {
+            var requestExecutor = GetRequestExecuter(databaseName);
+            await requestExecutor.UpdateTopologyAsync();
+        }
+
         public override RequestExecutor GetRequestExecuter(string databaseName = null)
         {
             if (databaseName == null)
                 databaseName = DefaultDatabase;
 
-            var lazy = _requestExecuters.GetOrAdd(databaseName, dbName => new Lazy<RequestExecutor>(() => RequestExecutor.Create(Url, dbName, ApiKey)));
+            Lazy<RequestExecutor> lazy;
+            if (_requestExecuters.TryGetValue(databaseName, out lazy))
+                return lazy.Value;
+
+            lazy = new Lazy<RequestExecutor>(() => RequestExecutor.Create(Url, databaseName, ApiKey));
+
+            lazy = _requestExecuters.GetOrAdd(databaseName, lazy);
+
             return lazy.Value;
         }
 

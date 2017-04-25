@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using Lucene.Net;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -53,11 +54,11 @@ namespace Raven.Server.Smuggler.Documents.Processors
             {
                 case IndexType.AutoMap:
                     var autoMapIndexDefinition = (AutoMapIndexDefinition)definition;
-                    database.IndexStore.CreateIndex(autoMapIndexDefinition);
+                    AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(autoMapIndexDefinition));
                     break;
                 case IndexType.AutoMapReduce:
                     var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)definition;
-                    database.IndexStore.CreateIndex(autoMapReduceIndexDefinition);
+                    AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(autoMapReduceIndexDefinition));
                     break;
                 case IndexType.Map:
                 case IndexType.MapReduce:
@@ -69,7 +70,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
                             indexDefinitionField.Value.Analyzer = null;
                         }
                     }
-                    database.IndexStore.CreateIndex(indexDefinition);
+                    AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(indexDefinition));
                     break;
                 default:
                     throw new NotSupportedException(indexType.ToString());
@@ -133,7 +134,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
 
             var indexDefinition = new IndexDefinition
             {
-                IndexId = legacyIndexDefinition.IndexId,
+                Etag = legacyIndexDefinition.IndexId,
                 LockMode = legacyIndexDefinition.LockMode,
                 Maps = legacyIndexDefinition.Maps,
                 Name = name,

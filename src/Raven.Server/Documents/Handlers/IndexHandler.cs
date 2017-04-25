@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var createdIndexes = new List<KeyValuePair<string, int>>();
+                var createdIndexes = new List<KeyValuePair<string, long>>();
                 var tuple = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "Indexes", BlittableJsonDocumentBuilder.UsageMode.None);
                 using (tuple.Item2)
                 {
@@ -43,8 +43,8 @@ namespace Raven.Server.Documents.Handlers
 
                         if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
                             throw new ArgumentException("Index must have a 'Maps' fields");
-                        var indexId = Database.IndexStore.CreateIndex(indexDefinition);
-                        createdIndexes.Add(new KeyValuePair<string, int>(indexDefinition.Name, indexId));
+                        var etag = await Database.IndexStore.CreateIndex(indexDefinition);
+                        createdIndexes.Add(new KeyValuePair<string, long>(indexDefinition.Name, etag));
                     }
                 }
 
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Handlers
                     break;
                 case IndexType.MapReduce:
                     var staticMapReduceIndex = (MapReduceIndex)index;
-                    source = staticMapReduceIndex._compiled.Source;
+                    source = staticMapReduceIndex.Compiled.Source;
                     break;
             }
 
@@ -397,15 +397,13 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/indexes", "DELETE")]
-        public Task Delete()
+        public async Task Delete()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            HttpContext.Response.StatusCode = Database.IndexStore.TryDeleteIndexIfExists(name)
+            HttpContext.Response.StatusCode = await Database.IndexStore.TryDeleteIndexIfExists(name)
                 ? (int)HttpStatusCode.NoContent
                 : (int)HttpStatusCode.NotFound;
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/indexes/c-sharp-index-definition", "GET")]
@@ -478,7 +476,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/indexes/set-lock", "POST")]
-        public Task SetLockMode()
+        public async Task SetLockMode()
         {
             var names = GetStringValuesQueryString("name");
             var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
@@ -489,18 +487,14 @@ namespace Raven.Server.Documents.Handlers
 
             foreach (var name in names)
             {
-                var index = Database.IndexStore.GetIndex(name);
-                if (index == null)
-                    IndexDoesNotExistException.ThrowFor(name);
-
-                index.SetLock(mode);
+                await Database.IndexStore.SetLock(name, mode);
             }
 
-            return NoContent();
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/indexes/set-priority", "POST")]
-        public Task SetPriority()
+        public async Task SetPriority()
         {
             var names = GetStringValuesQueryString("name");
             var priorityStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("priority");
@@ -511,14 +505,10 @@ namespace Raven.Server.Documents.Handlers
 
             foreach (var name in names)
             {
-                var index = Database.IndexStore.GetIndex(name);
-                if (index == null)
-                    IndexDoesNotExistException.ThrowFor(name);
-
-                index.SetPriority(priority);
+                await Database.IndexStore.SetPriority(name, priority);
             }
 
-            return NoContent();
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/indexes/errors", "GET")]
@@ -667,8 +657,8 @@ namespace Raven.Server.Documents.Handlers
             var stats = GetIndexesToReportOn()
                 .Select(x => new IndexPerformanceStats
                 {
-                    IndexName = x.Name,
-                    IndexId = x.IndexId,
+                    Name = x.Name,
+                    Etag = x.Etag,
                     Performance = x.GetIndexingPerformance()
                 })
                 .ToArray();
@@ -734,7 +724,7 @@ namespace Raven.Server.Documents.Handlers
             if (names.Count == 0)
                 indexes = Database.IndexStore
                     .GetIndexes()
-                    .OrderBy(x => x.IndexId);
+                    .OrderBy(x => x.Etag);
             else
             {
                 indexes = Database.IndexStore

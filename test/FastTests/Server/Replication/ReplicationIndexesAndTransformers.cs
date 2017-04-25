@@ -119,7 +119,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
         public void DeleteConflictsFor_should_delete_all_conflict_records()
         {
             using (var store = GetDocumentStore())
@@ -184,7 +184,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
         public void Adding_conflict_should_set_the_original_metadata_as_conflicted()
         {
             using (var store = GetDocumentStore())
@@ -231,7 +231,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
         public async Task Setting_conflicted_should_work()
         {
             using (var store = GetDocumentStore())
@@ -269,7 +269,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
         public async Task Deleting_indexes_should_delete_relevant_metadata()
         {
             using (var store = GetDocumentStore())
@@ -303,8 +303,8 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
-        public void Conflicting_indexes_should_record_conflicts_in_metadata()
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
+        public async Task Conflicting_indexes_should_record_conflicts_in_metadata()
         {
             using (var nodeA = GetDocumentStore())
             using (var nodeB = GetDocumentStore())
@@ -313,20 +313,20 @@ namespace FastTests.Server.Replication
                 var userByName = new UserByNameIndex(userByAge.IndexName);
                 userByAge.Execute(nodeA);
 
-                SetupReplication(nodeA, nodeB);
+                await SetupReplicationAsync(nodeA, nodeB);
 
                 userByName.Execute(nodeA);
 
             }
         }
 
-        [Fact]
-        public void Can_replicate_index()
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
+        public async Task Can_replicate_index()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
             {
-                SetupReplication(source, destination);
+                await SetupReplicationAsync(source, destination);
 
                 var userByAge = new UserByAgeIndex();
                 userByAge.Execute(source);
@@ -343,8 +343,8 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
-        public void Can_replicate_multiple_indexes()
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
+        public async Task Can_replicate_multiple_indexes()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
@@ -355,7 +355,7 @@ namespace FastTests.Server.Replication
                 var userByName = new UserByNameIndex();
                 userByName.Execute(source);
 
-                SetupReplication(source, destination);
+                await SetupReplicationAsync(source, destination);
 
                 var sw = Stopwatch.StartNew();
                 var destIndexNames = new string[0];
@@ -370,8 +370,8 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
-        public void Can_replicate_multiple_indexes_and_multiple_transformers()
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
+        public async Task Can_replicate_multiple_indexes_and_multiple_transformers()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
@@ -388,7 +388,7 @@ namespace FastTests.Server.Replication
                 var usernameToLowerTransformer = new UsernameToLowerTransformer();
                 usernameToLowerTransformer.Execute(source);
 
-                SetupReplication(source, destination);
+                await SetupReplicationAsync(source, destination);
 
                 var sw = Stopwatch.StartNew();
                 var destIndexNames = new string[0];
@@ -413,13 +413,13 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
-        public void Can_replicate_transformer()
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
+        public async Task Can_replicate_transformer()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
             {
-                SetupReplication(source, destination);
+                await SetupReplicationAsync(source, destination);
 
                 var usernameToUpperTransformer = new UsernameToUpperTransformer();
                 usernameToUpperTransformer.Execute(source);
@@ -436,8 +436,8 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
-        public void Can_replicate_multiple_transformers()
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
+        public async Task Can_replicate_multiple_transformers()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
@@ -448,7 +448,7 @@ namespace FastTests.Server.Replication
                 var usernameToLowerTransformer = new UsernameToLowerTransformer();
                 usernameToLowerTransformer.Execute(source);
 
-                SetupReplication(source, destination);
+                await SetupReplicationAsync(source, destination);
 
                 var sw = Stopwatch.StartNew();
                 var transformerNames = new string[0];
@@ -463,7 +463,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
         public async Task PurgeTombstonesFrom_should_work_properly()
         {
             using (var store = GetDocumentStore())
@@ -499,7 +499,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
         public async Task GetAfter_should_work_properly()
         {
             using (var store = GetDocumentStore())
@@ -542,7 +542,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
         public async Task Deleting_indexes_should_write_tombstones()
         {
             using (var store = GetDocumentStore())
@@ -580,7 +580,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
         public async Task Creating_indexes_should_create_relevant_metadata()
         {
             using (var store = GetDocumentStore())
@@ -602,20 +602,20 @@ namespace FastTests.Server.Replication
                     Assert.NotNull(metadataByName);
 
                     var serversideIndexMetadata = databaseStore.IndexStore.GetIndex(userByName.IndexName);
-                    Assert.Equal(serversideIndexMetadata.IndexId, metadataByName.Id);
+                    Assert.Equal(serversideIndexMetadata.Etag, metadataByName.Id);
 
                     var metadataByAge =
                         databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
                     Assert.NotNull(metadataByAge);
 
                     serversideIndexMetadata = databaseStore.IndexStore.GetIndex(userByAge.IndexName);
-                    Assert.Equal(serversideIndexMetadata.IndexId, metadataByAge.Id);
+                    Assert.Equal(serversideIndexMetadata.Etag, metadataByAge.Id);
                 }
             }
         }
 
         //An index can't be named with the same name as transformer or vice versa
-        [Fact]
+        [Fact(Skip = "Maxim:will work after raft index implementaion")]
         public void Index_and_transformer_metadata_storage_should_enforce_name_uniqueness_for_writing_index_then_transformer()
         {
             using (var store = GetDocumentStore())
@@ -628,7 +628,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
         public void Index_and_transformer_metadata_storage_should_enforce_name_uniqueness_for_writing_transformer_then_index()
         {
             using (var store = GetDocumentStore())
@@ -641,7 +641,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Maxim:will work after raft index implementaion")]
         public async Task New_index_will_overwrite_transformer_tombstones()
         {
             using (var store = GetDocumentStore())
@@ -676,7 +676,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
         public async Task New_transformer_will_overwrite_index_tombstones()
         {
             using (var store = GetDocumentStore())
@@ -711,7 +711,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Maxim:will work after raft index implementaion, probably will remove that feature")]
         public async Task Manually_removed_indexes_would_remove_metadata_on_startup()
         {
             var pathPrefix = Guid.NewGuid().ToString();

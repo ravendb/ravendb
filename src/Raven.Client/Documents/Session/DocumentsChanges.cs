@@ -63,8 +63,8 @@ namespace Raven.Client.Documents.Session
             {
                 int hashCode = FieldOldValue?.GetHashCode() ?? 0;
                 hashCode = (hashCode * 397) ^ (FieldNewValue?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (FieldOldType != null ? FieldOldType.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (FieldNewType != null ? FieldNewType.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (FieldOldType.GetHashCode());
+                hashCode = (hashCode * 397) ^ (FieldNewType.GetHashCode());
                 hashCode = (hashCode * 397) ^ (FieldName?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Change.GetHashCode());
                 return hashCode;
