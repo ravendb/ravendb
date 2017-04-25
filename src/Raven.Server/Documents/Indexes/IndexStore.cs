@@ -579,7 +579,7 @@ namespace Raven.Server.Documents.Indexes
             return ResetIndexInternal(index);
         }
 
-        public async Task<bool> TryDeleteIndexIfExists2(string name)
+        public async Task<bool> TryDeleteIndexIfExists(string name)
         {
             await _indexAndTransformerLocker.WaitAsync();
 
@@ -1023,7 +1023,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     if (age <= ageThreshold || lastQuery >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
                     {
-                        await TryDeleteIndexIfExists2(item.Index.Name);
+                        await TryDeleteIndexIfExists(item.Index.Name);
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Deleted index '{item.Index.Name} ({item.Index.Etag})' due to idleness. Age: {age}. Last query: {lastQuery}.");
                     }
