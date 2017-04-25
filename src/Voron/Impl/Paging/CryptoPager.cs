@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Platform.Win32;
 using Voron.Data;
 using Voron.Global;
@@ -16,14 +17,15 @@ namespace Voron.Impl.Paging
     public unsafe class EncryptionBuffer
     {
         public byte* Pointer;
-        public long Size;
-        public bool IgnoreFree;
+        public int BufferSize;
+        public int OriginalSize;
         public ulong Checksum;
     }
 
     public unsafe class CryptoPager : AbstractPager
     {
         public AbstractPager Inner { get; }
+        private readonly EncryptionBuffersPool _encryptionBuffersPool;
         private readonly byte[] _masterKey;
         private readonly byte[] _context;
         private const ulong MacLen = 16;
@@ -37,6 +39,7 @@ namespace Voron.Impl.Paging
                 throw new InvalidOperationException("Cannot use CryptoPager if EncryptionEnabled is false (no key defined)");
 
             Inner = inner;
+            _encryptionBuffersPool = new EncryptionBuffersPool();
             _masterKey = inner.Options.MasterKey;
             _context = Sodium.Context;
 
@@ -110,7 +113,7 @@ namespace Voron.Impl.Paging
             // New page -> no need to read page, just allocate a new buffer
             var state = GetTransactionState(tx);
             var size = numberOfPages * Constants.Storage.PageSize;
-            var buffer = GetNewBufferAndAddToTx(pageNumber, state, size);
+            var buffer = GetBufferAndAddToTxState(pageNumber, state, size);
 
             return buffer.Pointer;
         }
@@ -131,13 +134,13 @@ namespace Voron.Impl.Paging
 
             var size = GetNumberOfPages(pageHeader) * Constants.Storage.PageSize;
 
-            buffer = GetNewBufferAndAddToTx(pageNumber, state, size);
+            buffer = GetBufferAndAddToTxState(pageNumber, state, size);
 
-            Memory.Copy(buffer.Pointer, pagePointer, buffer.Size);
+            Memory.Copy(buffer.Pointer, pagePointer, buffer.OriginalSize);
 
             DecryptPage((PageHeader*)buffer.Pointer);
 
-            buffer.Checksum = Hashing.XXHash64.Calculate(buffer.Pointer, (ulong)buffer.Size);
+            buffer.Checksum = Hashing.XXHash64.Calculate(buffer.Pointer, (ulong)buffer.OriginalSize);
 
             return buffer.Pointer;
 
@@ -153,25 +156,29 @@ namespace Voron.Impl.Paging
             if (state.LoadedBuffers.TryGetValue(pageNumber, out var encBuffer) == false)
                 throw new InvalidOperationException("Tried to break buffer that wasn't allocated in this tx");
 
-            for (int i = 1; i < encBuffer.Size / Constants.Storage.PageSize; i++)
+            for (int i = 1; i < encBuffer.OriginalSize / Constants.Storage.PageSize; i++)
             {
                 state.LoadedBuffers[pageNumber + i] = new EncryptionBuffer
                 {
-                    IgnoreFree = true,
+                    OriginalSize = 0,
                     Pointer = encBuffer.Pointer + i * Constants.Storage.PageSize,
-                    Size = Constants.Storage.PageSize
+                    BufferSize = Constants.Storage.PageSize
                 };
             }
 
-            encBuffer.Size = Constants.Storage.PageSize;
+            encBuffer.BufferSize = Constants.Storage.PageSize;
         }
 
-        private EncryptionBuffer GetNewBufferAndAddToTx(long pageNumber, CryptoTransactionState state, int size)
+        private EncryptionBuffer GetBufferAndAddToTxState(long pageNumber, CryptoTransactionState state, int requestedSize)
         {
+            // The buffer pool works with power of 2 sizes, so we might get a buffer larger than what we need.
+            // That's why we keep tab on both the buffer size and the original requested size (the actual size of the data)
+            var powerOf2Size = Bits.NextPowerOf2(requestedSize);
             var buffer = new EncryptionBuffer
             {
-                Pointer = UnmanagedMemory.Allocate4KbAllignedMemory(size),
-                Size = size
+                BufferSize = powerOf2Size,
+                OriginalSize = requestedSize,
+                Pointer = _encryptionBuffersPool.Get(powerOf2Size),
             };
             state.LoadedBuffers[pageNumber] = buffer;
             return buffer;
@@ -220,7 +227,7 @@ namespace Voron.Impl.Paging
 
             foreach (var buffer in state.LoadedBuffers)
             {
-                var checksum = Hashing.XXHash64.Calculate(buffer.Value.Pointer, (ulong)buffer.Value.Size);
+                var checksum = Hashing.XXHash64.Calculate(buffer.Value.Pointer, (ulong)buffer.Value.OriginalSize);
                 if (checksum == buffer.Value.Checksum)
                     continue; // No modification
 
@@ -230,7 +237,9 @@ namespace Voron.Impl.Paging
 
                 var pagePointer = Inner.AcquirePagePointer(null, buffer.Key);
 
-                Memory.Copy(pagePointer, buffer.Value.Pointer, buffer.Value.Size);
+                var sizeToCopy = buffer.Value.OriginalSize == 0 ? Constants.Storage.PageSize : buffer.Value.OriginalSize;
+
+                Memory.Copy(pagePointer, buffer.Value.Pointer, sizeToCopy);
             }
 
         }
@@ -248,17 +257,12 @@ namespace Voron.Impl.Paging
             
             foreach (var buffer in state.LoadedBuffers)
             {
-                Sodium.ZeroMemory(buffer.Value.Pointer, buffer.Value.Size);
-            }
-            
-            // We can't free in the same loop above because we might free a page which is a start of a seperated section, thus freeing the entire section. 
-            // In that case, we'll have access violation starting from the second page in the section.
-            foreach (var buffer in state.LoadedBuffers)
-            {
-                if (buffer.Value.IgnoreFree)
-                    continue;
+                Sodium.ZeroMemory(buffer.Value.Pointer, buffer.Value.BufferSize);
 
-                UnmanagedMemory.Free(buffer.Value.Pointer);
+                // Pages that are marked with OriginalSize = 0 were seperated from a larger allocation, we cannot free them directly.
+                // When the first page of the section will be returned and eventually freed, all the other parts will be freed as well.
+                if (buffer.Value.OriginalSize != 0)
+                    _encryptionBuffersPool.Return(buffer.Value.Pointer, buffer.Value.BufferSize);
             }
         }
 
@@ -333,8 +337,9 @@ namespace Voron.Impl.Paging
         public override void Dispose()
         {
             Inner.Dispose();
+            _encryptionBuffersPool.Dispose();
         }
-        
+
         public override I4KbBatchWrites BatchWriter()
         {
             return Inner.BatchWriter();
