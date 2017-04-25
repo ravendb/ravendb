@@ -165,6 +165,10 @@ class index {
                 return "state-danger";
             }
 
+            if (this.isErrorState()) {
+                return "state-danger";
+            }
+
             if (this.isPausedState()) {
                 return "state-warning";
             }
@@ -189,6 +193,10 @@ class index {
                 return "Faulty";
             }
 
+            if (this.isErrorState()) {
+                return "Error";
+            }
+
             if (this.isPausedState()) {
                 return "Paused";
             }
@@ -201,9 +209,7 @@ class index {
                 return "Idle";
             }
 
-            if (this.isErrorState()) {
-                return "Error";
-            }
+           
 
             return "Normal";
         });
