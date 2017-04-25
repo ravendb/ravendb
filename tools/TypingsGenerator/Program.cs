@@ -119,11 +119,13 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DeterminateProgress));
             scripter.AddType(typeof(IndeterminateProgress));
             scripter.AddType(typeof(BulkOperationResult));
+            scripter.AddType(typeof(BulkInsertProgress));
             scripter.AddType(typeof(OperationExceptionResult));
             scripter.AddType(typeof(DocumentChange));
             scripter.AddType(typeof(IndexChange));
             scripter.AddType(typeof(TransformerChange));
             scripter.AddType(typeof(DatabaseOperations.Operation));
+            scripter.AddType(typeof(NewVersionAvailableDetails));
             
             // indexes
             scripter.AddType(typeof(IndexStats));

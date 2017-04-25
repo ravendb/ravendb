@@ -45,22 +45,27 @@ namespace Raven.Client.Documents.Operations
     {
         public long Processed { get; set; }
 
-        public long TxMergerCalled { get; set; }
+        public long BatchCount { get; set; }
 
-        public string LastProcessedId = "not found";
+        public string LastProcessedId { get; set; }
 
         public override string ToString()
         {
-            return $"TxMerger was {TxMergerCalled} called and inserted {Processed} documents with the last known id of {LastProcessedId}";
+            var msg = $"Inserted {Processed} documents in {BatchCount} batches.";
+
+            if (LastProcessedId != null)
+                msg += $" Last document id: '{LastProcessedId}'";
+
+            return msg;
         }
 
         public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue(GetType())
             {
-                ["Processed"] = Processed,
-                ["TxMergerCalled"] = TxMergerCalled,
-                ["LastProcessedId"] = LastProcessedId
+                [nameof(Processed)] = Processed,
+                [nameof(BatchCount)] = BatchCount,
+                [nameof(LastProcessedId)] = LastProcessedId
             };
         }
     }

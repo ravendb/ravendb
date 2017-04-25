@@ -16,10 +16,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
         {
             return new DynamicJsonValue(GetType())
             {
-                [nameof(VersionInfo.Version)] = VersionInfo.Version,
-                [nameof(VersionInfo.BuildNumber)] = VersionInfo.BuildNumber,
-                [nameof(VersionInfo.BuildType)] = VersionInfo.BuildType,
-                [nameof(VersionInfo.PublishedAt)] = VersionInfo.PublishedAt
+                [nameof(VersionInfo)] = VersionInfo.ToJson()
             };
         }
     }

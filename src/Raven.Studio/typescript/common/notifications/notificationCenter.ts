@@ -22,9 +22,12 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 
 import smugglerDatabaseDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/smugglerDatabaseDetails");
 import patchDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/patchDocumentsDetails");
+import bulkInsertDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/bulkInsertDetails");
 import deleteDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/deleteDocumentsDetails");
 import indexingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/indexingDetails");
 import pagingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/pagingDetails");
+import newVersionAvailableDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/newVersionAvailableDetails");
+import notificationCenterSettings = require("common/notifications/notificationCenterSettings");
 
 interface customDetailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
@@ -38,12 +41,7 @@ interface customOperationMerger {
 class notificationCenter {
     static instance = new notificationCenter();
 
-    static readonly postponeOptions: valueAndLabelItem<number, string>[] = [
-        { label: "1 hour", value: 3600 },
-        { label: "6 hours", value: 6 * 3600 },
-        { label: "1 day", value: 24 * 3600 },
-        { label: "1 week", value: 7 * 24 * 3600 }
-    ];
+    static readonly postponeOptions = notificationCenterSettings.postponeOptions;
 
     spinners = {
         dismiss: ko.observableArray<string>([]),
@@ -89,10 +87,14 @@ class notificationCenter {
             smugglerDatabaseDetails,
             patchDocumentsDetails,
             deleteDocumentsDetails,
+            bulkInsertDetails,
 
             // performance hints:
             indexingDetails,
-            pagingDetails
+            pagingDetails,
+
+            // alerts:
+            newVersionAvailableDetails
         );
 
         this.customOperationMerger.push(smugglerDatabaseDetails);
@@ -236,12 +238,12 @@ class notificationCenter {
         return this.getOperationsWatch(db).monitorOperation(operationId, onProgress);
     }
 
-    postpone(notification: abstractNotification, timeInSeconds: number) {
+    postpone(notification: abstractNotification, timeInSeconds: number): JQueryPromise<void> {
         const notificationId = notification.id;
 
         this.spinners.postpone.push(notificationId);
 
-        new postponeNotificationCommand(notification.database, notificationId, timeInSeconds)
+        return new postponeNotificationCommand(notification.database, notificationId, timeInSeconds)
             .execute()
             .always(() => this.spinners.postpone.remove(notificationId))
             .done(() => this.removeNotificationFromNotificationCenter(notification));
