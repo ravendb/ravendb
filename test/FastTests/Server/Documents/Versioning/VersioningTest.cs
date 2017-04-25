@@ -50,7 +50,7 @@ namespace FastTests.Server.Documents.Versioning
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                await serverStore.PutEditVersioningCommandAsync(context, database,
+                await serverStore.ModifyDatabaseVersioningBundle(context, database,
                     EntityToBlittable.ConvertEntityToBlittable(configuration, DocumentConventions.Default, context));
             }
         }
