@@ -14,6 +14,8 @@ using Xunit;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Server.Operations;
+using Raven.Client.Server.PeriodicExport;
 using Raven.Tests.Core.Utils.Entities;
 
 namespace FastTests.Server.Documents.PeriodicExport
@@ -32,17 +34,14 @@ namespace FastTests.Server.Documents.PeriodicExport
         {
             using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenAsyncSession())
+                var config = new PeriodicExportConfiguration
                 {
-                    await session.StoreAsync(new PeriodicExportConfiguration
-                    {
-                        Active = true,
-                        LocalFolderName = _exportPath,
-                        FullExportIntervalMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds,
-                        IntervalMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds
-                    }, Constants.Documents.PeriodicExport.ConfigurationKey);
-                    await session.SaveChangesAsync();
-                }
+                    Active = true,
+                    LocalFolderName = _exportPath,
+                    FullExportIntervalMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds,
+                    IntervalMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds
+                };
+                await store.Admin.Server.SendAsync(new ConfigurePeriodicExportBundleOperation(config, store.DefaultDatabase));
 
                 var periodicExportRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicExportRunner;
                 Assert.Equal(50, periodicExportRunner.IncrementalInterval.TotalDays);
@@ -58,19 +57,20 @@ namespace FastTests.Server.Documents.PeriodicExport
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "oren" });
-                    await session.StoreAsync(new PeriodicExportConfiguration
+                    var config = new PeriodicExportConfiguration
                     {
                         Active = true,
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
-                    }, Constants.Documents.PeriodicExport.ConfigurationKey);
+                    };
+                    await store.Admin.Server.SendAsync(new ConfigurePeriodicExportBundleOperation(config, store.DefaultDatabase));
                     await session.SaveChangesAsync();
 
                 }
-
+                var operation = new GetPeriodicExportStatusOperation(store.DefaultDatabase);
                 using (var commands = store.Commands())
                 {
-                    SpinWait.SpinUntil(() => commands.Get(Constants.Documents.PeriodicExport.StatusKey) != null, 10000);
+                    SpinWait.SpinUntil(() => store.Admin.Server.Send(operation).Status != null, 10000);
                 }
             }
 

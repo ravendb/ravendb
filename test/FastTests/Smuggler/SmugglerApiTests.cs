@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
 using FastTests.Server.Documents.Versioning;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -10,7 +9,8 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
-using Raven.Server.Documents.Expiration;
+using Raven.Client.Server.expiration;
+using Raven.Client.Server.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -290,12 +290,12 @@ namespace FastTests.Smuggler
         {
             using (var session = store.OpenAsyncSession())
             {
-                await session.StoreAsync(new ExpirationConfiguration
+                var config = new ExpirationConfiguration
                 {
                     Active = true,
                     DeleteFrequencySeconds = 100,
-                }, Constants.Documents.Expiration.ConfigurationKey);
-
+                };
+                await store.Admin.Server.SendAsync(new ConfigureExpirationBundleOperation(config,store.DefaultDatabase));
                 await session.SaveChangesAsync();
             }
         }

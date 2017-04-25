@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-namespace Raven.Server.Documents.PeriodicExport
+namespace Raven.Client.Server.PeriodicExport
 {
     public class PeriodicExportConfiguration
     {
@@ -57,5 +57,30 @@ namespace Raven.Server.Documents.PeriodicExport
         /// Interval between full exports in milliseconds. If set to null or 0 then full periodic export will be disabled.
         /// </summary>
         public long? FullExportIntervalMilliseconds { get; set; }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+            return Equals((PeriodicExportConfiguration)obj);
+        }
+
+        public bool Equals(PeriodicExportConfiguration other)
+        {
+            if (other == null)
+                return false;
+
+            return Active == other.Active &&
+                   AwsRegionName == other.AwsRegionName &&
+                   AzureRemoteFolderName == other.AzureRemoteFolderName &&
+                   AzureStorageContainer == other.AzureStorageContainer &&
+                   FullExportIntervalMilliseconds == other.FullExportIntervalMilliseconds &&
+                   GlacierVaultName == other.GlacierVaultName &&
+                   IntervalMilliseconds == other.IntervalMilliseconds &&
+                   LocalFolderName == other.LocalFolderName &&
+                   S3BucketName == other.S3BucketName &&
+                   S3RemoteFolderName == other.S3RemoteFolderName;
+        }
     }
 }

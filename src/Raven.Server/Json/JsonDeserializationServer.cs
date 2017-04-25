@@ -9,6 +9,8 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
+using Raven.Client.Server.expiration;
+using Raven.Client.Server.PeriodicExport;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.ETL;

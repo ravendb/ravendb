@@ -546,7 +546,7 @@ namespace Raven.Server.Rachis
             _newEntry.Set();
             return tcs.Task;
         }
-
+        
         public void Dispose()
         {
             bool lockTaken = false;

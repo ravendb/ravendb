@@ -243,9 +243,6 @@ namespace Raven.Client
 
             public class PeriodicExport
             {
-                public const string ConfigurationKey = "Raven/PeriodicExport/Configuration";
-
-                public const string StatusKey = "Raven/PeriodicExport/Status";
 
                 public const string IncrementalExportExtension = ".ravendb-incremental-export";
 
@@ -254,8 +251,6 @@ namespace Raven.Client
 
             public class Expiration
             {
-                public const string ConfigurationKey = "Raven/Expiration/Configuration";
-
                 public const string ExpirationDate = "Raven-Expiration-Date";
             }
         }

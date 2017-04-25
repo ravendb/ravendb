@@ -2,6 +2,8 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Server.Operations;
+using Raven.Client.Server.PeriodicExport;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -108,6 +110,23 @@ namespace Raven.Server.Documents.Handlers
                 });
             }
 
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/periodic-export-stats", "GET")]
+        public Task GetPeriodicExportBundleStatus()
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.OpenReadTransaction();
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(GetPeriodicExportStatusOperationResult.Status));
+                writer.WriteObject(Database.DocumentsStorage.GetDatabasePeriodicExportStatus(context));
+                writer.WriteEndObject();
+                writer.Flush();
+            }
             return Task.CompletedTask;
         }
     }

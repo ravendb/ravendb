@@ -67,6 +67,11 @@ namespace Sparrow.Json
 
         public void WriteObject(BlittableJsonReaderObject obj)
         {
+            if (obj == null)
+            {
+                WriteNull();
+                return;
+            }
             WriteStartObject();
             var prop = new BlittableJsonReaderObject.PropertyDetails();
             for (int i = 0; i < obj.Count; i++)
