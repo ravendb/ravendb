@@ -9,7 +9,6 @@ namespace Raven.Server.Documents.Indexes.Configuration
 {
     public class SingleIndexConfiguration : IndexingConfiguration
     {
-        private bool? _runInMemory;
         private PathSetting _indexStoragePath;
 
         private readonly RavenConfiguration _databaseConfiguration;
