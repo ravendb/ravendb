@@ -260,7 +260,7 @@ namespace Raven.Server.Documents.Replication
                         //nothing to do..
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new ArgumentOutOfRangeException("Unknown message type: " + messageType);
                 }
                 SendHeartbeatStatusToSource(documentsContext, configurationContext, writer, _lastDocumentEtag,  messageType);
             }
@@ -437,7 +437,14 @@ namespace Raven.Server.Documents.Replication
                 using (stats.For(ReplicationOperation.Incoming.Storage))
                 {
                     var replicationCommand = new MergedDocumentReplicationCommand(this, buffer, totalSize, lastEtag);
-                    AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(replicationCommand));
+                    var task = _database.TxMerger.Enqueue(replicationCommand);
+                    if (task.Wait(_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan) == false)
+                    {
+                        var message = $"Could not commit replication batch with size {totalSize/1024:#,#}kb after {_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan}, aborting";
+                        if (_log.IsInfoEnabled)
+                            _log.Info(message);
+                        throw new TimeoutException(message);
+                    }
                 }
 
                 sw.Stop();
