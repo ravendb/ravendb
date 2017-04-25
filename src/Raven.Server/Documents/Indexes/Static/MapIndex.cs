@@ -73,7 +73,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected override void HandleDocumentChange(DocumentChange change)
         {
-            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false && _referencedCollections.Contains(change.CollectionName) == false)
+            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false && 
+                _referencedCollections.Contains(change.CollectionName) == false)
                 return;
 
             _mre.Set();

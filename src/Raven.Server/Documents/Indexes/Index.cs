@@ -102,6 +102,7 @@ namespace Raven.Server.Documents.Indexes
         internal TransactionContextPool _contextPool;
 
         internal bool _disposed;
+        private bool _disposing;
 
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
 
@@ -151,7 +152,7 @@ namespace Raven.Server.Documents.Indexes
             MaxNumberOutputsPerDocument = int.MinValue,
             Suggestion = "Please verify this index definition and consider a re-design of your entities or index for better indexing performance"
         };
-
+        
         protected Index(long etag, IndexType type, IndexDefinitionBase definition)
         {
             if (etag <= 0)
@@ -492,6 +493,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual void Dispose()
         {
+            _disposing = true;
             var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
             if (needToLock)
                 _currentlyRunningQueriesLock.EnterWriteLock();
@@ -1853,24 +1855,51 @@ namespace Raven.Server.Documents.Indexes
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AssertIndexState(bool assertState = true)
         {
+            DocumentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
+
             if (_isCompactionInProgress)
-                throw new InvalidOperationException($"Index '{Name} ({Etag})' is currently being compacted.");
+                ThrowCompactionInProgress();
 
             if (_initialized == false)
-                throw new InvalidOperationException($"Index '{Name} ({Etag})' was not initialized.");
+                ThrowNotIntialized();
 
-            if (_disposed)
-                throw new ObjectDisposedException($"Index '{Name} ({Etag})' was already disposed.");
+            if (_disposed || _disposing)
+                ThrowWasDisposed();
 
             if (assertState && State == IndexState.Error)
             {
                 var errorStateReason = _errorStateReason;
                 if (string.IsNullOrWhiteSpace(errorStateReason) == false)
-                    throw new InvalidOperationException($"Index '{Name} ({Etag})' is marked as errored. {errorStateReason}");
+                    ThrowMarkedAsError(errorStateReason);
 
-                throw new InvalidOperationException(
-                    $"Index '{Name} ({Etag})' is marked as errored. Please check index errors avaiable at '/databases/{DocumentDatabase.Name}/indexes/errors?name={Name}'.");
+                ThrowErrored();
             }
+        }
+
+        private void ThrowErrored()
+        {
+            throw new InvalidOperationException(
+                $"Index '{Name} ({Etag})' is marked as errored. Please check index errors avaiable at '/databases/{DocumentDatabase.Name}/indexes/errors?name={Name}'.");
+        }
+
+        private void ThrowMarkedAsError(string errorStateReason)
+        {
+            throw new InvalidOperationException($"Index '{Name} ({Etag})' is marked as errored. {errorStateReason}");
+        }
+
+        private void ThrowWasDisposed()
+        {
+            throw new ObjectDisposedException($"Index '{Name} ({Etag})' was already disposed.");
+        }
+
+        private void ThrowNotIntialized()
+        {
+            throw new InvalidOperationException($"Index '{Name} ({Etag})' was not initialized.");
+        }
+
+        private void ThrowCompactionInProgress()
+        {
+            throw new InvalidOperationException($"Index '{Name} ({Etag})' is currently being compacted.");
         }
 
         private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQueryBase query, SortedField[] sortedFields)
@@ -2384,9 +2413,10 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(TimeSpan.FromSeconds(3)) == false)
                     ThrowLockTimeoutException();
+
                 _hasLock = true;
             }
-
+            
             private void ThrowLockTimeoutException()
             {
                 throw new TimeoutException($"Could not get the index read lock in a reasonable time, {_parent.Name} is probably undergoing maintenance now, try again later");

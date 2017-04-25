@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
@@ -21,9 +22,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
     public class MapReduceIndex : MapReduceIndexBase<MapReduceIndexDefinition>
     {
-        private readonly HashSet<CollectionName> _referencedCollections = new HashSet<CollectionName>(CollectionNameComparer.Instance);
+        private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected internal readonly StaticIndexBase _compiled;
+        protected internal readonly StaticIndexBase Compiled;
         private bool? _isSideBySide;
 
         private HandleReferences _handleReferences;
@@ -35,26 +36,35 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private MapReduceIndex(long etag, MapReduceIndexDefinition definition, StaticIndexBase compiled)
             : base(etag, IndexType.MapReduce, definition)
         {
-            _compiled = compiled;
+            Compiled = compiled;
 
-            if (_compiled.ReferencedCollections == null)
+            if (Compiled.ReferencedCollections == null)
                 return;
 
-            foreach (var collection in _compiled.ReferencedCollections)
+            foreach (var collection in Compiled.ReferencedCollections)
             {
                 foreach (var referencedCollection in collection.Value)
-                    _referencedCollections.Add(referencedCollection);
+                    _referencedCollections.Add(referencedCollection.Name);
             }
         }
 
-        public override bool HasBoostedFields => _compiled.HasBoostedFields;
+        public override bool HasBoostedFields => Compiled.HasBoostedFields;
 
-        public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Count > 1);
+        public override bool IsMultiMap => Compiled.Maps.Count > 1 || Compiled.Maps.Any(x => x.Value.Count > 1);
+
+        protected override void HandleDocumentChange(DocumentChange change)
+        {
+            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false &&
+                _referencedCollections.Contains(change.CollectionName) == false)
+                return;
+
+            _mre.Set();
+        }
 
         public static MapReduceIndex CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var instance = CreateIndexInstance(definition);
-            ValidateReduceResultsCollectionName(definition, instance._compiled, documentDatabase);
+            ValidateReduceResultsCollectionName(definition, instance.Compiled, documentDatabase);
 
             instance.Initialize(documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
@@ -143,7 +153,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         public static void Update(Index index, IndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var staticMapIndex = (MapReduceIndex)index;
-            var staticIndex = staticMapIndex._compiled;
+            var staticIndex = staticMapIndex.Compiled;
 
             var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
                 staticIndex.GroupByFields, staticIndex.HasDynamicFields);
@@ -167,10 +177,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             workers.Add(new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext));
 
             if (_referencedCollections.Count > 0)
-                workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+                workers.Add(_handleReferences = new HandleReferences(this, Compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, MapReduceWorkContext, Configuration));
-            workers.Add(new ReduceMapResultsOfStaticIndex(this, _compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, MapReduceWorkContext));
+            workers.Add(new ReduceMapResultsOfStaticIndex(this, Compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, MapReduceWorkContext));
 
             return workers.ToArray();
         }
@@ -185,7 +195,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats);
+            return new StaticIndexDocsEnumerator(documents, Compiled.Maps[collection], collection, stats);
         }
 
         public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
@@ -255,7 +265,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
         {
-            return _compiled.ReferencedCollections;
+            return Compiled.ReferencedCollections;
         }
 
         private class AnonymousObjectToBlittableMapResultsEnumerableWrapper : IEnumerable<MapResult>

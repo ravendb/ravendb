@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -64,7 +65,7 @@ namespace SlowTests.Issues
 
                 using (var session = slave.OpenSession())
                 {
-                    Assert.NotEmpty(session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults()).ToList());
+                    Assert.NotEmpty(session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(13))).ToList());
                 }
 
                 // delete replications to slave
@@ -111,14 +112,14 @@ namespace SlowTests.Issues
                 {
                     long? lastPersonEtag;
 
-                    var person = session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults()).First();
+                    var person = session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(14))).First();
                     lastPersonEtag = session.Advanced.GetEtagFor(person);
 
                     Assert.NotNull(lastPersonEtag);
 
                     for (var i = 0; i < 5; i++)
                     {
-                        person = session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults()).First();
+                        person = session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(16))).First();
                         Thread.Sleep(50);
 
                         Assert.Equal(lastPersonEtag, session.Advanced.GetEtagFor(person));

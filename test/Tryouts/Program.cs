@@ -25,9 +25,9 @@ namespace Tryouts
                 Console.WriteLine(i);
                 Parallel.For(0, 1, j =>
                 {
-                    using (var a = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
+                    using (var a = new SlowTests.Issues.RavenDB_6259())
                     {
-                        a.IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert().Wait();
+                        a.ToLatestConflictResolutionOfTumbstoneAndUpdateShouldNotReviveTubmstone_And_ShouldNotCauseInfiniteIndexingLoop().Wait();
                     }
                 });
             }
