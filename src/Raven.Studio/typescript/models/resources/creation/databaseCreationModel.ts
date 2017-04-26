@@ -132,14 +132,8 @@ class databaseCreationModel {
             DatabaseName: this.name(),
             Settings: settings,
             SecuredSettings: securedSettings,
-            Disabled: false,
-            DeletionInProgress: null,
-            Indexes: null,
-            Transformers: null,
-            VersioningConfiguration:null,
-            DataDirectory: null,
-            Topology: null,
-        };
+            Disabled: false
+        } as Raven.Client.Documents.DatabaseRecord;
     }
 
     setAlertTimeout(value: number) {

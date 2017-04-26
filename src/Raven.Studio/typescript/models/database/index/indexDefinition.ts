@@ -29,6 +29,7 @@ class mapItem {
 class indexDefinition {
    
     name = ko.observable<string>();
+    etag = ko.observable<number>();
     maps = ko.observableArray<mapItem>();
     reduce = ko.observable<string>();
     isTestIndex = ko.observable<boolean>(false);
@@ -164,7 +165,7 @@ class indexDefinition {
             Name: this.name(),
             Maps: this.maps().map(m => m.map()),
             Reduce: this.reduce(),
-            IndexId: null,
+            Etag: this.etag(),
             Type: this.detectIndexType(),
             LockMode: this.lockMode,
             Priority: this.priority(),
@@ -216,7 +217,7 @@ class indexDefinition {
     static empty(): indexDefinition {
         return new indexDefinition({
             Fields: {},
-            IndexId: null,
+            Etag: null,
             Maps: [""],
             Name: "",
             LockMode: "Unlock",

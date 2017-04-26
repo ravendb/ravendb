@@ -637,7 +637,7 @@ class indexPerformance extends viewModelBase {
     }
 
     private findAndSetIndexNames() {
-        this.indexNames(_.uniq(this.data.map(x => x.IndexName)));
+        this.indexNames(_.uniq(this.data.map(x => x.Name)));
     }
 
     private fixCurrentOffset() {
@@ -833,9 +833,9 @@ class indexPerformance extends viewModelBase {
         context.clip();
 
         this.data.forEach(perfStat => {
-            const yStart = this.yScale(perfStat.IndexName);
+            const yStart = this.yScale(perfStat.Name);
 
-            const isOpened = _.includes(this.expandedTracks(), perfStat.IndexName);
+            const isOpened = _.includes(this.expandedTracks(), perfStat.Name);
 
             context.beginPath();
             context.fillStyle = indexPerformance.colors.trackBackground;
@@ -856,12 +856,12 @@ class indexPerformance extends viewModelBase {
         const extentFunc = gapFinder.extentGeneratorForScaleWithGaps(xScale);
 
         this.data.forEach(perfStat => {
-            if (!_.includes(this.filteredIndexNames(), perfStat.IndexName)) {
+            if (!_.includes(this.filteredIndexNames(), perfStat.Name)) {
                 return;
             }
 
-            const isOpened = _.includes(this.expandedTracks(), perfStat.IndexName);
-            let yStart = this.yScale(perfStat.IndexName);
+            const isOpened = _.includes(this.expandedTracks(), perfStat.Name);
+            let yStart = this.yScale(perfStat.Name);
             yStart += isOpened ? indexPerformance.openedTrackPadding : indexPerformance.closedTrackPadding;
 
             const performance = perfStat.Performance;
@@ -878,7 +878,7 @@ class indexPerformance extends viewModelBase {
                     continue;
 
                 const yOffset = isOpened ? indexPerformance.trackHeight + indexPerformance.stackPadding : 0;
-                this.drawStripes(context, [perf.Details], x1, yStart + (isOpened ? yOffset : 0), yOffset, extentFunc, perfStat.IndexName);
+                this.drawStripes(context, [perf.Details], x1, yStart + (isOpened ? yOffset : 0), yOffset, extentFunc, perfStat.Name);
 
                 if (!perf.Completed) {
                     this.findInProgressAction(context, perf, extentFunc, x1, yStart + (isOpened ? yOffset : 0), yOffset);

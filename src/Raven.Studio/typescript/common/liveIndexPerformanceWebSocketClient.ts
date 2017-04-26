@@ -67,14 +67,14 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.
 
     private mergeIncomingData(e: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) {
         e.forEach(incomingIndexStats => {
-            const indexName = incomingIndexStats.IndexName;
+            const indexName = incomingIndexStats.Name;
 
-            let existingIndexStats = this.mergedData.find(x => x.IndexName === indexName);
+            let existingIndexStats = this.mergedData.find(x => x.Name === indexName);
 
             if (!existingIndexStats) {
                 existingIndexStats = {
-                    IndexId: incomingIndexStats.IndexId,
-                    IndexName: incomingIndexStats.IndexName,
+                    Etag: incomingIndexStats.Etag,
+                    Name: incomingIndexStats.Name,
                     Performance: []
                 };
                 this.mergedData.push(existingIndexStats);
