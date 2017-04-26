@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
 
-namespace Raven.Server.NotificationCenter.BackgroundWork
+namespace Raven.Server.Background
 {
     public abstract class BackgroundWorkBase : IDisposable
     {
@@ -17,7 +17,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
         protected BackgroundWorkBase(string resourceName, CancellationToken shutdown)
         {
             _shutdown = shutdown;
-            Logger = LoggingSource.Instance.GetLogger<NotificationCenter>(resourceName);
+            Logger = LoggingSource.Instance.GetLogger<NotificationCenter.NotificationCenter>(resourceName);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdown);
         }
 
@@ -60,6 +60,24 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
             _currentTask = null;
             _cts.Dispose();
+        }
+
+        protected async Task<bool> WaitAsync(TimeSpan time)
+        {
+            try
+            {
+                await Task.Delay(time, CancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                // can happen if there is an invalid timespan
+                return false;
+            }
+
+            if (CancellationToken.IsCancellationRequested)
+                return false;
+
+            return true;
         }
 
         protected abstract Task Run();

@@ -3,37 +3,26 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Server.Background;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
-    public class DocumentTombstoneCleaner : IDisposable
+    public class DocumentTombstoneCleaner : BackgroundWorkBase
     {
         private static Logger _logger;
 
-        private bool _disposed;
-
         private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
-
-        private readonly CancellationTokenSource _cts;
 
         private readonly DocumentDatabase _documentDatabase;
 
         private readonly HashSet<IDocumentTombstoneAware> _subscriptions = new HashSet<IDocumentTombstoneAware>();
-        
-        private Task _task;
 
-        public DocumentTombstoneCleaner(DocumentDatabase documentDatabase)
+        public DocumentTombstoneCleaner(DocumentDatabase documentDatabase) : base(documentDatabase.Name, documentDatabase.DatabaseShutdown)
         {
             _documentDatabase = documentDatabase;
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(documentDatabase.DatabaseShutdown);
             _logger = LoggingSource.Instance.GetLogger<DocumentTombstoneCleaner>(_documentDatabase.Name);
-        }
-
-        public void Initialize()
-        {
-            _task = Task.Run(Run, _cts.Token);
         }
 
         public void Subscribe(IDocumentTombstoneAware subscription)
@@ -64,27 +53,20 @@ namespace Raven.Server.Documents
             }
         }
 
-        private async Task Run()
+        protected override async Task Run()
         {
-            while (_cts.IsCancellationRequested == false)
+            while (CancellationToken.IsCancellationRequested == false)
             {
                 try
                 {
-                    try
-                    {
-                        await Task.Delay(_documentDatabase.Configuration.Tombstones.Interval.AsTimeSpan, _cts.Token);
-                    }
-                    catch (Exception)
-                    {
-                        // can happen if there is an invalid timespan
+                    if (await WaitAsync(_documentDatabase.Configuration.Tombstones.Interval.AsTimeSpan) == false)
                         return;
-                    }
 
                     await ExecuteCleanup();
                 }
                 catch (OperationCanceledException)
                 {
-                    break;
+                    return;
                 }
                 catch (Exception e)
                 {
@@ -101,7 +83,7 @@ namespace Raven.Server.Documents
 
             try
             {
-                if (_disposed)
+                if (CancellationToken.IsCancellationRequested)
                     return true;
 
                 var tombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
@@ -153,25 +135,6 @@ namespace Raven.Server.Documents
             }
 
             return true;
-        }
-
-        public void Dispose()
-        {
-            _locker.Wait();
-
-            try
-            {
-                _disposed = true;
-
-                if (_task.Status == TaskStatus.Running)
-                    _task.Wait();
-
-                _cts.Dispose();
-            }
-            finally
-            {
-                _locker.Release();
-            }
         }
 
         private class DeleteTombstonesCommand : TransactionOperationsMerger.MergedTransactionCommand
