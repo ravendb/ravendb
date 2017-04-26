@@ -11,8 +11,6 @@ namespace Raven.Server.Documents
 {
     public class DocumentTombstoneCleaner : BackgroundWorkBase
     {
-        private static Logger _logger;
-
         private readonly SemaphoreSlim _subscriptionsLocker = new SemaphoreSlim(1, 1);
 
         private readonly DocumentDatabase _documentDatabase;
@@ -22,7 +20,6 @@ namespace Raven.Server.Documents
         public DocumentTombstoneCleaner(DocumentDatabase documentDatabase) : base(documentDatabase.Name, documentDatabase.DatabaseShutdown)
         {
             _documentDatabase = documentDatabase;
-            _logger = LoggingSource.Instance.GetLogger<DocumentTombstoneCleaner>(_documentDatabase.Name);
         }
 
         public void Subscribe(IDocumentTombstoneAware subscription)
@@ -115,12 +112,12 @@ namespace Raven.Server.Documents
                     _subscriptionsLocker.Release();
                 }
 
-                await _documentDatabase.TxMerger.Enqueue(new DeleteTombstonesCommand(tombstones, minAllDocsEtag, _documentDatabase));
+                await _documentDatabase.TxMerger.Enqueue(new DeleteTombstonesCommand(tombstones, minAllDocsEtag, _documentDatabase, Logger));
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Failed to execute tombstone cleanup on {_documentDatabase.Name}", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to execute tombstone cleanup on {_documentDatabase.Name}", e);
             }
         }
 
@@ -129,12 +126,14 @@ namespace Raven.Server.Documents
             private readonly Dictionary<string, long> _tombstones;
             private readonly long _minAllDocsEtag;
             private readonly DocumentDatabase _database;
+            private readonly Logger _logger;
 
-            public DeleteTombstonesCommand(Dictionary<string, long> tombstones, long minAllDocsEtag, DocumentDatabase database)
+            public DeleteTombstonesCommand(Dictionary<string, long> tombstones, long minAllDocsEtag, DocumentDatabase database, Logger logger)
             {
                 _tombstones = tombstones;
                 _minAllDocsEtag = minAllDocsEtag;
                 _database = database;
+                _logger = logger;
             }
 
             public override int Execute(DocumentsOperationContext context)
