@@ -24,10 +24,9 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             _notificationCenter = notificationCenter;
         }
 
-        protected override async Task<bool> DoWork()
+        protected override async Task DoWork()
         {
-            if (await WaitAsync(_notificationCenter.Options.DatabaseStatsThrottle) == false)
-                return false;
+            await WaitOrThrowOperationCanceled(_notificationCenter.Options.DatabaseStatsThrottle);
 
             Stats current;
 
@@ -62,7 +61,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             }
 
             if (_latest != null && _latest.Equals(current))
-                return true;
+                return;
 
             var modifiedCollections = _latest == null ? current.Collections.Values.ToList() : ExtractModifiedCollections(current);
 
@@ -70,8 +69,6 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                 current.CountOfStaleIndexes, current.LastEtag, current.CountOfIndexingErrors, modifiedCollections));
 
             _latest = current;
-
-            return true;
         }
 
         private List<DatabaseStatsChanged.ModifiedCollection> ExtractModifiedCollections(Stats current)

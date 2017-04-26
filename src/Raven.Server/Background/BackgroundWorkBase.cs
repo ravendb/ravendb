@@ -62,22 +62,21 @@ namespace Raven.Server.Background
             _cts.Dispose();
         }
 
-        protected async Task<bool> WaitAsync(TimeSpan time)
+        protected async Task WaitOrThrowOperationCanceled(TimeSpan time)
         {
             try
             {
-                await Task.Delay(time, CancellationToken).ConfigureAwait(false);
+                await Task.Delay(time, CancellationToken).ConfigureAwait(false); // if cancellation requested then it will throw TaskCancelledException and we stop the work
             }
-            catch (Exception)
+            catch (Exception e) when (e is OperationCanceledException == false)
             {
                 // can happen if there is an invalid timespan
-                return false;
+
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Error in the background worker when {nameof(WaitOrThrowOperationCanceled)} was called", e);
+
+                throw new OperationCanceledException(); // throw OperationCanceled so we stop the work
             }
-
-            if (CancellationToken.IsCancellationRequested)
-                return false;
-
-            return true;
         }
 
         protected async Task Run()
@@ -88,8 +87,7 @@ namespace Raven.Server.Background
             {
                 try
                 {
-                    if (await DoWork().ConfigureAwait(false) == false)
-                        return;
+                    await DoWork().ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -107,7 +105,7 @@ namespace Raven.Server.Background
         {
         }
 
-        protected abstract Task<bool> DoWork();
+        protected abstract Task DoWork();
 
         public void Dispose()
         {
