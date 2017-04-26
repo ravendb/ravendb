@@ -25,7 +25,6 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class StreamSource : ISmugglerSource
     {
-        private static readonly StringSegment MetadataCollectionSegment = new StringSegment(Constants.Documents.Metadata.Collection);
         private readonly Stream _stream;
         private readonly JsonOperationContext _context;
         private JsonOperationContext.ManagedPinnedBuffer _buffer;
@@ -187,7 +186,7 @@ namespace Raven.Server.Smuggler.Documents
                         _changeVectorReader.Reset();
                         return true;
                     }
-                    
+
                     switch (_changeVectorReader.State)
                     {
                         case ChangeVectorReaderState.StartObject:
@@ -404,7 +403,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     switch (state.StringSize)
                     {
-                        case 3:// @id
+                        case 3: // @id
                             if (state.StringBuffer[0] != (byte)'@' ||
                                 *(short*)(state.StringBuffer + 1) != 25705)
                                 return true;
@@ -418,14 +417,14 @@ namespace Raven.Server.Smuggler.Documents
                                 ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Id, state);
                             Id = CreateLazyStringValueFromParserState(state);
                             break;
-                        case 5:// @etag
+                        case 5: // @etag
                             if (state.StringBuffer[0] != (byte)'@' ||
                                 *(int*)(state.StringBuffer + 1) != 1734440037)
                                 return true;
 
                             goto case -1;
 
-                        case 6:// @flags
+                        case 6: // @flags
                             if (state.StringBuffer[0] != (byte)'@' ||
                                 *(int*)(state.StringBuffer + 1) != 1734437990 ||
                                 state.StringBuffer[1 + sizeof(int)] != (byte)'s')
@@ -449,7 +448,7 @@ namespace Raven.Server.Smuggler.Documents
 
                             goto case -1;
 
-                        case 14:// @change-vector
+                        case 14: // @change-vector
                             if (state.StringBuffer[0] != (byte)'@' ||
                                 *(long*)(state.StringBuffer + 1) != 8515573965335390307 ||
                                 *(int*)(state.StringBuffer + 1 + sizeof(long)) != 1869898597 ||
@@ -508,7 +507,7 @@ namespace Raven.Server.Smuggler.Documents
                             goto case -1;
                         case 25: //Raven-Replication-Version OR Raven-Replication-History
                             if (*(long*)state.StringBuffer != 7300947898092904786 ||
-                               *(long*)(state.StringBuffer + sizeof(long)) != 8028075772393122928)
+                                *(long*)(state.StringBuffer + sizeof(long)) != 8028075772393122928)
                                 return true;
 
                             var value = *(long*)(state.StringBuffer + sizeof(long) + sizeof(long));
@@ -541,7 +540,7 @@ namespace Raven.Server.Smuggler.Documents
                                 } while (state.CurrentTokenType != JsonParserToken.EndArray);
                             }
                             else if (state.CurrentTokenType == JsonParserToken.StartArray ||
-                                state.CurrentTokenType == JsonParserToken.StartObject)
+                                     state.CurrentTokenType == JsonParserToken.StartObject)
                                 ThrowInvalidMetadataProperty(state);
                             break;
                         case 29: //Non-Authoritative-Information
@@ -603,17 +602,17 @@ namespace Raven.Server.Smuggler.Documents
                             goto case -1;
 
                         case -1: // IgnoreProperty
+                        {
+                            if (reader.Read() == false)
                             {
-                                if (reader.Read() == false)
-                                {
-                                    _state = State.IgnoreProperty;
-                                    return false;
-                                }
-                                if (state.CurrentTokenType == JsonParserToken.StartArray ||
-                                    state.CurrentTokenType == JsonParserToken.StartObject)
-                                    ThrowInvalidMetadataProperty(state);
-                                break;
+                                _state = State.IgnoreProperty;
+                                return false;
                             }
+                            if (state.CurrentTokenType == JsonParserToken.StartArray ||
+                                state.CurrentTokenType == JsonParserToken.StartObject)
+                                ThrowInvalidMetadataProperty(state);
+                            break;
+                        }
 
                         default: // accept this property
                             return true;
@@ -651,7 +650,6 @@ namespace Raven.Server.Smuggler.Documents
                 throw new InvalidDataException($"Expected property @metadata.@change-vector to have array type, but was: {state.CurrentTokenType}");
             }
 
-
             public void Dispose()
             {
                 for (int i = _allocations.Count - 1; i >= 0; i--)
@@ -666,7 +664,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_ctx == null) // should never happen
                 {
                     _ctx = ctx;
-                    _metadataCollections = _ctx.GetLazyStringForFieldWithCaching(MetadataCollectionSegment);
+                    _metadataCollections = _ctx.GetLazyStringForFieldWithCaching(CollectionName.MetadataCollectionSegment);
                     return;
                 }
                 Id = null;
@@ -678,7 +676,7 @@ namespace Raven.Server.Smuggler.Documents
                 _state = State.None;
                 _readingMetadataObject = false;
                 _ctx = ctx;
-                _metadataCollections = _ctx.GetLazyStringForFieldWithCaching(MetadataCollectionSegment);
+                _metadataCollections = _ctx.GetLazyStringForFieldWithCaching(CollectionName.MetadataCollectionSegment);
             }
         }
 
