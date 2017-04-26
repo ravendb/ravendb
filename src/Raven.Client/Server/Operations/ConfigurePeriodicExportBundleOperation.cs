@@ -8,35 +8,35 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server.expiration;
+using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicExport;
 using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class ConfigurePeriodicExportBundleOperation : IServerOperation<ConfigurePeriodicExportBundleOperationResult>
+    public class ConfigurePeriodicBackupOperation : IServerOperation<ConfigurePeriodicBackupOperationResult>
     {
-        private PeriodicExportConfiguration _configuration;
+        private PeriodicBackupConfiguration _configuration;
         private string _databaseName;
 
-        public ConfigurePeriodicExportBundleOperation(PeriodicExportConfiguration configuration, string databaseName)
+        public ConfigurePeriodicBackupOperation(PeriodicBackupConfiguration configuration, string databaseName)
         {
             _configuration = configuration;
             _databaseName = databaseName;
         }
-        public RavenCommand<ConfigurePeriodicExportBundleOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ConfigurePeriodicBackupOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new ConfigurePeriodicExportBundleCommand(_configuration, _databaseName, context);
+            return new ConfigurePeriodicBackupCommand(_configuration, _databaseName, context);
         }
     }
 
-    public class ConfigurePeriodicExportBundleCommand : RavenCommand<ConfigurePeriodicExportBundleOperationResult>
+    public class ConfigurePeriodicBackupCommand : RavenCommand<ConfigurePeriodicBackupOperationResult>
     {
-        private PeriodicExportConfiguration _configuration;
+        private PeriodicBackupConfiguration _configuration;
         private readonly string _databaseName;
         private JsonOperationContext _context;
 
-        public ConfigurePeriodicExportBundleCommand(PeriodicExportConfiguration configuration, string databaseName, JsonOperationContext context)
+        public ConfigurePeriodicBackupCommand(PeriodicBackupConfiguration configuration, string databaseName, JsonOperationContext context)
         {
             _configuration = configuration;
             _databaseName = databaseName;
@@ -47,7 +47,7 @@ namespace Raven.Client.Server.Operations
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/config-periodic-export-bundle?name={_databaseName}";
+            url = $"{node.Url}/admin/periodic-backup/config?name={_databaseName}";
 
             var request = new HttpRequestMessage
             {
@@ -71,7 +71,7 @@ namespace Raven.Client.Server.Operations
         }
     }
 
-    public class ConfigurePeriodicExportBundleOperationResult
+    public class ConfigurePeriodicBackupOperationResult
     {
         public long? ETag { get; set; }
     }

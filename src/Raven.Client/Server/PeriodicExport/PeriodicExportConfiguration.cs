@@ -1,12 +1,12 @@
 //-----------------------------------------------------------------------
-// <copyright file="PeriodicExportConfiguration.cs" company="Hibernating Rhinos LTD">
+// <copyright file="PeriodicBackup.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
 
 namespace Raven.Client.Server.PeriodicExport
 {
-    public class PeriodicExportConfiguration
+    public class PeriodicBackupConfiguration
     {
         /// <summary>
         /// Indicates if periodic export is active.
@@ -63,10 +63,10 @@ namespace Raven.Client.Server.PeriodicExport
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != GetType()) return false;
-            return Equals((PeriodicExportConfiguration)obj);
+            return Equals((PeriodicBackupConfiguration)obj);
         }
 
-        public bool Equals(PeriodicExportConfiguration other)
+        public bool Equals(PeriodicBackupConfiguration other)
         {
             if (other == null)
                 return false;

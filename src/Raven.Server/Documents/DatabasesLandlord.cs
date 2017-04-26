@@ -112,12 +112,13 @@ namespace Raven.Server.Documents
 
                     if (record.Disabled)
                     {
-                        UnloadDatabase(t.dbName, null);
+                        UnloadDatabase(t.dbName);
                         return;
                     }
-                    Task<DocumentDatabase> task;
-                    if (DatabasesCache.TryGetValue(t.dbName, out task) == false)
-                        return;
+                    if (DatabasesCache.TryGetValue(t.dbName, out var task) == false)
+                    {
+                        task = TryGetOrCreateResourceStore(t.dbName);
+                    }
 
                     if (task.IsCanceled || task.IsFaulted)
                         return;

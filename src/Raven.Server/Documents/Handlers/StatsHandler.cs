@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/periodic-export-stats", "GET")]
+        [RavenAction("/databases/*/periodic-backup/status", "GET")]
         public Task GetPeriodicExportBundleStatus()
         {
             DocumentsOperationContext context;
@@ -122,8 +122,8 @@ namespace Raven.Server.Documents.Handlers
             {
                 context.OpenReadTransaction();
                 writer.WriteStartObject();
-                writer.WritePropertyName(nameof(GetPeriodicExportStatusOperationResult.Status));
-                writer.WriteObject(Database.DocumentsStorage.GetDatabasePeriodicExportStatus(context));
+                writer.WritePropertyName(nameof(GetPeriodicBackupStatusOperationResult.Status));
+                writer.WriteObject(Database.ConfigurationStorage.PeriodicBackupStorage.GetDatabasePeriodicBackupStatus(context));
                 writer.WriteEndObject();
                 writer.Flush();
             }

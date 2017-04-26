@@ -12,7 +12,7 @@ using System.Net;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Server.expiration;
+using Raven.Client.Server.Expiration;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -51,18 +51,18 @@ namespace Raven.Server.Documents.Expiration
         {
             try
             {
-                if (dbRecord.ExpirationConfiguration == null)
+                if (dbRecord.Expiration == null)
                 {
                     expiredDocumentsCleaner?.Dispose();
                     return null;
                 }
-                if (dbRecord.ExpirationConfiguration.Equals(expiredDocumentsCleaner?.Configuration))
+                if (dbRecord.Expiration.Equals(expiredDocumentsCleaner?.Configuration))
                     return expiredDocumentsCleaner;
                 expiredDocumentsCleaner?.Dispose();
-                if (dbRecord.ExpirationConfiguration.Active == false)
+                if (dbRecord.Expiration.Active == false)
                     return null;
 
-                return new ExpiredDocumentsCleaner(database, dbRecord.ExpirationConfiguration);
+                return new ExpiredDocumentsCleaner(database, dbRecord.Expiration);
             }
             catch (Exception e)
             {

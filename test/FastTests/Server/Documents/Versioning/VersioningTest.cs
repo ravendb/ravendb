@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Server.Versioning;
 using Raven.Server.Documents.Versioning;
 using Sparrow.Json;
 using Xunit;
@@ -50,7 +51,7 @@ namespace FastTests.Server.Documents.Versioning
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                await serverStore.ModifyDatabaseVersioningBundle(context, database,
+                await serverStore.ModifyDatabaseVersioning(context, database,
                     EntityToBlittable.ConvertEntityToBlittable(configuration, DocumentConventions.Default, context));
             }
         }

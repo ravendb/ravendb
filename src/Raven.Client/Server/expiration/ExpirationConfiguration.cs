@@ -1,4 +1,4 @@
-namespace Raven.Client.Server.expiration
+namespace Raven.Client.Server.Expiration
 {
     public class ExpirationConfiguration
     {

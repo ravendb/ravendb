@@ -7,6 +7,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Server.Versioning;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
@@ -109,11 +110,11 @@ namespace Raven.Server.Documents.Versioning
         {
             try
             {
-                if (dbRecord.VersioningConfiguration == null)
+                if (dbRecord.Versioning == null)
                     return null;
-                if (dbRecord.VersioningConfiguration.Equals(versioningStorage?.VersioningConfiguration))
+                if (dbRecord.Versioning.Equals(versioningStorage?.VersioningConfiguration))
                     return versioningStorage;                    
-                var config = new VersioningStorage(database, dbRecord.VersioningConfiguration);
+                var config = new VersioningStorage(database, dbRecord.Versioning);
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Versioning configuration changed");
                 return config;
