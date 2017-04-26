@@ -805,6 +805,7 @@ namespace Raven.Server.Documents
         {
             var document = ParseDocument(context, ref tvr);
             DebugDisposeReaderAfterTransction(context.Transaction, document.Data);
+            DocumentPutAction.AssertMetadataWasFiltered(document.Data);
             return document;
         }
 

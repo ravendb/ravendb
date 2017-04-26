@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using Raven.Client;
 using Raven.Client.Documents.Replication.Messages;
@@ -65,7 +64,9 @@ namespace Raven.Server.Documents
 
             mutatedMetadata[Constants.Documents.Metadata.Etag] = Etag;
             mutatedMetadata[Constants.Documents.Metadata.Id] = Key;
-            //mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;
+            mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector.ToJson();
+            if (Flags != DocumentFlags.None)
+                mutatedMetadata[Constants.Documents.Metadata.Flags] = Flags.ToString();
             if (indexScore.HasValue)
                 mutatedMetadata[Constants.Documents.Metadata.IndexScore] = indexScore;
 

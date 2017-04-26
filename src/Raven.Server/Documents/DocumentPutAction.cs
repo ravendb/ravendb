@@ -14,6 +14,7 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
+using System.Linq;
 
 namespace Raven.Server.Documents
 {
@@ -47,6 +48,7 @@ namespace Raven.Server.Documents
 #endif
 
             BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
+            AssertMetadataWasFiltered(document);
 
             var collectionName = _documentsStorage.ExtractCollectionName(context, key, document);
             var newEtag = _documentsStorage.GenerateNextEtag();
@@ -118,9 +120,10 @@ namespace Raven.Server.Documents
 #endif
                 }
 
-                if (_documentDatabase.BundleLoader.VersioningStorage != null)
+                if (_documentDatabase.BundleLoader.VersioningStorage != null &&
+                    (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
                 {
-                    if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document, 
+                    if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
                         ref flags, out VersioningConfigurationCollection configuration, context, key))
                     {
                         _documentDatabase.BundleLoader.VersioningStorage.Put(context, key, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration);
@@ -359,6 +362,22 @@ namespace Raven.Server.Documents
                 return ChangeVectorUtils.UpdateChangeVectorWithNewEtag(_documentsStorage.Environment.DbId, newEtag, oldChangeVector);
 
             return _documentsStorage.ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, loweredKey, newEtag);
+        }
+
+        [Conditional("DEBUG")]
+        public static void AssertMetadataWasFiltered(BlittableJsonReaderObject data)
+        {
+            if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+                return;
+
+            var names = metadata.GetPropertyNames();
+            if (names.Contains(Constants.Documents.Metadata.Id, StringComparer.OrdinalIgnoreCase) ||
+                names.Contains(Constants.Documents.Metadata.Etag, StringComparer.OrdinalIgnoreCase) ||
+                names.Contains(Constants.Documents.Metadata.ChangeVector, StringComparer.OrdinalIgnoreCase) ||
+                names.Contains(Constants.Documents.Metadata.Flags, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Document's metadata should filter properties on before put to storage." + System.Environment.NewLine + data);
+            }
         }
     }
 }

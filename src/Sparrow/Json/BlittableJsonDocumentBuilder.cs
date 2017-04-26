@@ -101,6 +101,7 @@ namespace Sparrow.Json
             _debugTag = debugTag;
             _mode = mode;
             _writer.ResetAndRenew();
+            _modifier?.Reset(_context);
 
             _fakeFieldName = _context.GetLazyStringForFieldWithCaching(UnderscoreSegment);            
         }
@@ -556,6 +557,6 @@ namespace Sparrow.Json
         void StartObject();
         void EndObject();
         bool AboutToReadPropertyName(IJsonParser reader, JsonParserState state);
+        void Reset(JsonOperationContext context);
     }
-
 }
