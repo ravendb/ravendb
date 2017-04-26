@@ -77,6 +77,9 @@ namespace Raven.Server.Documents.Replication
                                     if (conflicts.Count == 0)
                                         break;
 
+                                    // TODO arek: tx merger should just get and put all of the result docs (output of resolution)
+                                    // instead of dealing with the resolving the conflicts
+
                                     await _database.TxMerger.Enqueue(new ResolveConflictsCommand(conflicts, this));
                                 }
                             }
