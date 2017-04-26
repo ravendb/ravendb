@@ -291,11 +291,28 @@ a {
 .flex-form {
     .form-group {
         display: flex;
+        align-items: center;
 
         .control-label {
-            width: 130px;
+            width: 120px;
             text-align: right;
             margin-right: @grid-gutter-width/2;
+            flex-shrink: 0;
+            margin-bottom: 0;
+            font-size: 14px;
+            line-height: 15px;
+        }
+
+        .checkbox {
+            margin: 0;
+        }
+
+        .dropdown {
+            flex-grow: 1;
+
+            .btn {
+                text-align: left;
+            }
         }
     }
 }
@@ -1478,6 +1495,19 @@ pre {
 
     &:hover {
         color: lighten(#a140b0, 10%) !important;
+    }
+}
+
+.widthlabel {
+    position: relative;
+    padding-top: 10px;
+    line-height: 20px;
+
+    .superscript {
+        position: absolute;
+        top: -4px;
+        font-size: 10px;
+        text-transform: uppercase;
     }
 }
 

@@ -45,8 +45,8 @@
                         <button type="button" class="btn btn-default" title="Format transformer" data-bind="formatTransformer"><i class="icon-indent"></i> <span>Format</span></button>
                     </div>
                 </div>
-                <div class="flex-content flex-vertical">
-                    <pre class="form-control flex-content" 
+                <div class="flex-grow flex-vertical">
+                    <pre class="form-control flex-grow" 
                          data-bind="aceEditor: { code: editedTransformer().transformResults, hasFocus: editorHasFocus, allowResize: true }, validationElement: editedTransformer().transformResults"></pre>
 
                     <div data-bind="validationElement: editedTransformer().transformResults">
