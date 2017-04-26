@@ -36,7 +36,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             });
         }
 
-        protected override async Task<bool> DoWork()
+        protected override async Task DoWork()
         {
             var notifications = GetPostponedNotifications(1, DateTime.MaxValue);
 
@@ -50,13 +50,16 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                 await _event.WaitAsync(wait);
 
             if (CancellationToken.IsCancellationRequested)
-                return false;
+                return;
 
             _event.Reset(true);
             notifications = GetPostponedNotifications(int.MaxValue, SystemTime.UtcNow);
 
             while (notifications.Count > 0)
             {
+                if (CancellationToken.IsCancellationRequested)
+                    return;
+
                 var next = notifications.Dequeue();
 
                 NotificationTableValue notification;
@@ -78,8 +81,6 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                     }
                 }
             }
-
-            return true;
         }
 
         private Queue<PostponedNotification> GetPostponedNotifications(int take, DateTime cutoff)

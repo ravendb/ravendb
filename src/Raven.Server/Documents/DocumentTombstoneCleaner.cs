@@ -50,14 +50,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        protected override async Task<bool> DoWork()
+        protected override async Task DoWork()
         {
-            if (await WaitAsync(_documentDatabase.Configuration.Tombstones.Interval.AsTimeSpan) == false)
-                return false;
+            await WaitOrThrowOperationCanceled(_documentDatabase.Configuration.Tombstones.Interval.AsTimeSpan);
 
             await ExecuteCleanup();
-
-            return true;
         }
 
         internal async Task ExecuteCleanup()

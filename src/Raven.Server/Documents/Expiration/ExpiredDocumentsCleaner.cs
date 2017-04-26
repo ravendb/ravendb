@@ -77,14 +77,11 @@ namespace Raven.Server.Documents.Expiration
             }
         }
 
-        protected override async Task<bool> DoWork()
+        protected override async Task DoWork()
         {
-            if (await WaitAsync(_period) == false)
-                return false;
+            await WaitOrThrowOperationCanceled(_period);
 
             await CleanupExpiredDocs();
-
-            return true;
         }
 
         internal async Task CleanupExpiredDocs()
