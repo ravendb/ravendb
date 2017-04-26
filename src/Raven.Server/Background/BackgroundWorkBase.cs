@@ -17,7 +17,7 @@ namespace Raven.Server.Background
         protected BackgroundWorkBase(string resourceName, CancellationToken shutdown)
         {
             _shutdown = shutdown;
-            Logger = LoggingSource.Instance.GetLogger<NotificationCenter.NotificationCenter>(resourceName);
+            Logger = LoggingSource.Instance.GetLogger(resourceName, GetType().FullName);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdown);
         }
 
@@ -98,7 +98,7 @@ namespace Raven.Server.Background
                 catch (Exception e)
                 {
                     if (Logger.IsInfoEnabled)
-                        Logger.Info($"Error in the background worker of type {GetType().FullName}", e);
+                        Logger.Info("Error in the background worker", e);
                 }
             }
         }
