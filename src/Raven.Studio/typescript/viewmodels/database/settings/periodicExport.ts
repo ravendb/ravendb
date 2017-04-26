@@ -98,7 +98,7 @@ class periodicExport extends viewModelBase {
         var deferred = $.Deferred();
         new getPeriodicExportSetupCommand(db)
             .execute()
-            .done((result: Raven.Server.Documents.PeriodicExport.PeriodicExportConfiguration) => {
+            .done((result: Raven.Client.Server.PeriodicExport.PeriodicExportConfiguration) => {
                 this.backupSetup().fromDto(result);
             })
             .always(() => deferred.resolve());

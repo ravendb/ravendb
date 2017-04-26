@@ -1,7 +1,7 @@
 import replicationDestination = require("models/database/replication/replicationDestination");
 
 class replicationsSetup {
-
+    /* TODO
     source = ko.observable<string>();
     destinations = ko.observableArray<replicationDestination>();
     clientFailoverBehaviour = ko.observable<string>(null);
@@ -76,7 +76,7 @@ class replicationsSetup {
         }
         var tokens = behaviour.split(",").map(x => x.trim());
         return _.includes(tokens, "ReadFromAllServers") && _.includes(tokens, "AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
-    });
+    });*/
 }
 
 export = replicationsSetup;

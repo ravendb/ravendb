@@ -8,7 +8,7 @@ class getPeriodicExportSetupCommand extends getDocumentWithMetadataCommand {
         super("Raven/PeriodicExport/Configuration", db, true);
     }
 
-    execute(): JQueryPromise<Raven.Server.Documents.PeriodicExport.PeriodicExportConfiguration> {
+    execute(): JQueryPromise<Raven.Client.Server.PeriodicExport.PeriodicExportConfiguration> {
         return super.execute();
     }
 }

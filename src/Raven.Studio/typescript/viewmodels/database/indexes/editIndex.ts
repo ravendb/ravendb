@@ -211,10 +211,11 @@ class editIndex extends viewModelBase {
             .done((databaseDocument: document) => {
                 const settings = (<any>databaseDocument)["Settings"] as dictionary<string>;
                 const indexStoragePath = settings[configuration.indexing.storagePath];
+                /* TODO
                 const additionalPaths = settings[configuration.indexing.additionalStoragePaths]
                     ? settings[configuration.indexing.additionalStoragePaths].split(";")
                     : [];
-                this.additionalStoragePaths(additionalPaths);
+                this.additionalStoragePaths(additionalPaths);*/
                 this.defaultIndexPath(indexStoragePath || editIndex.DefaultIndexStoragePath);
             })
             .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to load database settings.", response.responseText, response.statusText));

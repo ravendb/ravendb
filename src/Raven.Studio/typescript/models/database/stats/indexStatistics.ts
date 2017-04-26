@@ -2,7 +2,7 @@
 import genUtils = require("../../../common/generalUtils");
 
 class indexStatistics {
-    indexId: number;
+    etag: number;
     isStale: boolean;
     indexName: string;
     indexType: Raven.Client.Documents.Indexes.IndexType;
@@ -28,7 +28,7 @@ class indexStatistics {
     constructor(dto: Raven.Client.Documents.Indexes.IndexStats) {
         this.indexName = dto.Name;
         this.indexType = dto.Type;
-        this.indexId = dto.Id;
+        this.etag = dto.Etag;
         this.isStale = dto.IsStale;
 
         this.entriesCount = dto.EntriesCount.toLocaleString();

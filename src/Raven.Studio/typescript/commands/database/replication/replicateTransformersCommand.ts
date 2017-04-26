@@ -3,6 +3,7 @@ import database = require("models/resources/database");
 import replicationDestination = require("models/database/replication/replicationDestination");
 
 class replicateTransformersCommand extends commandBase {
+    /* TODO
     constructor(private db: database, private destination: replicationDestination) {
         super();
     }
@@ -16,7 +17,7 @@ class replicateTransformersCommand extends commandBase {
             }).done(() => {
                 this.reportSuccess("Sent replicate transformers command");
             });
-    }
+    }*/
 }
 
 export = replicateTransformersCommand;  
