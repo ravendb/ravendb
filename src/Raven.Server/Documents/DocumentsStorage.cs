@@ -1299,7 +1299,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        public void DeleteTombstonesBefore(string collection, long etag, Transaction transaction)
+        public void DeleteTombstonesBefore(string collection, long etag, DocumentsOperationContext context)
         {
             string tableName;
 
@@ -1316,7 +1316,7 @@ namespace Raven.Server.Documents
                 tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
             }
 
-            var table = transaction.OpenTable(TombstonesSchema, tableName);
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, tableName);
             if (table == null)
                 return;
 
