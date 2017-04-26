@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Indexes;
+using Raven.Server.Background;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
@@ -30,18 +30,8 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             {
                 try
                 {
-                    try
-                    {
-                        await Task.Delay(_notificationCenter.Options.DatabaseStatsThrottle, CancellationToken);
-
-                    }
-                    catch (Exception)
-                    {
-                        // can happen if there is an invalid timespan
+                    if (await WaitAsync(_notificationCenter.Options.DatabaseStatsThrottle) == false)
                         return;
-                    }
-                    if (_database.DatabaseShutdown.IsCancellationRequested)
-                        break;
 
                     Stats current;
 

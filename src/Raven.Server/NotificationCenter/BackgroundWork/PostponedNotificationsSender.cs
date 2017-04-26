@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
+using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow;
 using Sparrow.Collections;

@@ -259,7 +259,7 @@ namespace Raven.Server.Documents
             Patcher.Initialize();
             EtlLoader.Initialize();
 
-            DocumentTombstoneCleaner.Initialize();
+            DocumentTombstoneCleaner.Start();
 
             try
             {
