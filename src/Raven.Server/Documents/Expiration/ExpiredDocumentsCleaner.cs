@@ -97,19 +97,19 @@ namespace Raven.Server.Documents.Expiration
                 DocumentsOperationContext context;
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 {
-                    Dictionary<Slice, List<(Slice LoweredKey, string Key)>> expired;
-                    Stopwatch duration;
-
                     using (var tx = context.OpenReadTransaction())
                     {
                         var expirationTree = tx.InnerTransaction.CreateTree(DocumentsByExpiration);
+
+                        Dictionary<Slice, List<(Slice LoweredKey, LazyStringValue Key)>> expired;
+                        Stopwatch duration;
 
                         using (var it = expirationTree.Iterate(false))
                         {
                             if (it.Seek(Slices.BeforeAllKeys) == false)
                                 return;
 
-                            expired = new Dictionary<Slice, List<(Slice LoweredKey, string Key)>>();
+                            expired = new Dictionary<Slice, List<(Slice LoweredKey, LazyStringValue Key)>>();
                             duration = Stopwatch.StartNew();
 
                             do
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Expiration
 
                                 var ticksAsSlice = it.CurrentKey.Clone(tx.InnerTransaction.Allocator);
 
-                                var expiredDocs = new List<(Slice LoweredKey, string Key)>();
+                                var expiredDocs = new List<(Slice LoweredKey, LazyStringValue Key)>();
 
                                 expired.Add(ticksAsSlice, expiredDocs);
 
@@ -166,14 +166,14 @@ namespace Raven.Server.Documents.Expiration
 
                             } while (it.MoveNext());
                         }
+
+                        var command = new DeleteExpiredDocumentsCommand(expired, _database, Logger);
+
+                        await _database.TxMerger.Enqueue(command);
+
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Successfully deleted {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
                     }
-
-                    var command = new DeleteExpiredDocumentsCommand(expired, _database, Logger);
-
-                    await _database.TxMerger.Enqueue(command);
-
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Successfully deleted {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
                 }
             }
             catch (Exception e)
@@ -210,13 +210,13 @@ namespace Raven.Server.Documents.Expiration
 
         private class DeleteExpiredDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly Dictionary<Slice, List<(Slice LoweredKey, string Key)>> _expired;
+            private readonly Dictionary<Slice, List<(Slice LoweredKey, LazyStringValue Key)>> _expired;
             private readonly DocumentDatabase _database;
             private readonly Logger _logger;
 
             public int DeletionCount;
 
-            public DeleteExpiredDocumentsCommand(Dictionary<Slice, List<(Slice LoweredKey, string Key)>> expired, DocumentDatabase database, Logger logger)
+            public DeleteExpiredDocumentsCommand(Dictionary<Slice, List<(Slice LoweredKey, LazyStringValue Key)>> expired, DocumentDatabase database, Logger logger)
             {
                 _expired = expired;
                 _database = database;
