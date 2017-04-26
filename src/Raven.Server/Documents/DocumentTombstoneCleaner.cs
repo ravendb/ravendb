@@ -16,21 +16,24 @@ namespace Raven.Server.Documents
 
         private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
 
+        private readonly CancellationTokenSource _cts;
+
         private readonly DocumentDatabase _documentDatabase;
 
         private readonly HashSet<IDocumentTombstoneAware> _subscriptions = new HashSet<IDocumentTombstoneAware>();
-
-        private Timer _timer;
+        
+        private Task _task;
 
         public DocumentTombstoneCleaner(DocumentDatabase documentDatabase)
         {
             _documentDatabase = documentDatabase;
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(documentDatabase.DatabaseShutdown);
             _logger = LoggingSource.Instance.GetLogger<DocumentTombstoneCleaner>(_documentDatabase.Name);
         }
 
         public void Initialize()
         {
-            _timer = new Timer(_ => ExecuteCleanup(), null, TimeSpan.FromMinutes(1), _documentDatabase.Configuration.Tombstones.Interval.AsTimeSpan);
+            _task = Task.Run(Run, _cts.Token);
         }
 
         public void Subscribe(IDocumentTombstoneAware subscription)
@@ -58,6 +61,36 @@ namespace Raven.Server.Documents
             finally
             {
                 _locker.Release();
+            }
+        }
+
+        private async Task Run()
+        {
+            while (_cts.IsCancellationRequested == false)
+            {
+                try
+                {
+                    try
+                    {
+                        await Task.Delay(_documentDatabase.Configuration.Tombstones.Interval.AsTimeSpan, _cts.Token);
+                    }
+                    catch (Exception)
+                    {
+                        // can happen if there is an invalid timespan
+                        return;
+                    }
+
+                    await ExecuteCleanup();
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Error in the tombstone cleaner", e);
+                }
             }
         }
 
@@ -129,8 +162,11 @@ namespace Raven.Server.Documents
             try
             {
                 _disposed = true;
-                _timer?.Dispose();
-                _timer = null;
+
+                if (_task.Status == TaskStatus.Running)
+                    _task.Wait();
+
+                _cts.Dispose();
             }
             finally
             {
