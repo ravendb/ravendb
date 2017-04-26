@@ -80,7 +80,34 @@ namespace Raven.Server.Background
             return true;
         }
 
-        protected abstract Task Run();
+        protected async Task Run()
+        {
+            InitializeWork();
+
+            while (CancellationToken.IsCancellationRequested == false)
+            {
+                try
+                {
+                    if (await DoWork().ConfigureAwait(false) == false)
+                        return;
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Error in the background worker of type {GetType().FullName}", e);
+                }
+            }
+        }
+
+        protected virtual void InitializeWork()
+        {
+        }
+
+        protected abstract Task<bool> DoWork();
 
         public void Dispose()
         {

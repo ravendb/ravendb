@@ -24,67 +24,54 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             _notificationCenter = notificationCenter;
         }
 
-        protected override async Task Run()
+        protected override async Task<bool> DoWork()
         {
-            while (CancellationToken.IsCancellationRequested == false)
+            if (await WaitAsync(_notificationCenter.Options.DatabaseStatsThrottle) == false)
+                return false;
+
+            Stats current;
+
+            DocumentsOperationContext context;
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
-                try
+                var indexes = _database.IndexStore.GetIndexes().ToList();
+                var staleIndexes = 0;
+                var countOfIndexingErrors = 0L;
+
+                // ReSharper disable once LoopCanBeConvertedToQuery
+                foreach (var index in indexes)
                 {
-                    if (await WaitAsync(_notificationCenter.Options.DatabaseStatsThrottle) == false)
-                        return;
+                    if (index.IsStale(context))
+                        staleIndexes++;
 
-                    Stats current;
-
-                    DocumentsOperationContext context;
-                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-                    using (context.OpenReadTransaction())
-                    {
-                        var indexes = _database.IndexStore.GetIndexes().ToList();
-                        var staleIndexes = 0;
-                        var countOfIndexingErrors = 0L;
-
-                        // ReSharper disable once LoopCanBeConvertedToQuery
-                        foreach (var index in indexes)
-                        {
-                            if (index.IsStale(context))
-                                staleIndexes++;
-
-                            countOfIndexingErrors += index.GetErrorCount();
-                        }
-
-                        current = new Stats
-                        {
-                            CountOfDocuments = _database.DocumentsStorage.GetNumberOfDocuments(context),
-                            CountOfIndexes = indexes.Count,
-                            CountOfStaleIndexes = staleIndexes,
-                            CountOfIndexingErrors = countOfIndexingErrors,
-                            LastEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction),
-                        };
-
-                        current.Collections = _database.DocumentsStorage.GetCollections(context)
-                            .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentEtag(context, x.Name)));
-                    }
-
-                    if (_latest != null && _latest.Equals(current))
-                        continue;
-
-                    var modifiedCollections = _latest == null ? current.Collections.Values.ToList() : ExtractModifiedCollections(current);
-
-                    _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfDocuments, current.CountOfIndexes,
-                        current.CountOfStaleIndexes, current.LastEtag, current.CountOfIndexingErrors, modifiedCollections));
-
-                    _latest = current;
+                    countOfIndexingErrors += index.GetErrorCount();
                 }
-                catch (OperationCanceledException)
+
+                current = new Stats
                 {
-                    return;
-                }
-                catch (Exception e)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info("Error on sending database stats notification", e);
-                }
+                    CountOfDocuments = _database.DocumentsStorage.GetNumberOfDocuments(context),
+                    CountOfIndexes = indexes.Count,
+                    CountOfStaleIndexes = staleIndexes,
+                    CountOfIndexingErrors = countOfIndexingErrors,
+                    LastEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction),
+                };
+
+                current.Collections = _database.DocumentsStorage.GetCollections(context)
+                    .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentEtag(context, x.Name)));
             }
+
+            if (_latest != null && _latest.Equals(current))
+                return true;
+
+            var modifiedCollections = _latest == null ? current.Collections.Values.ToList() : ExtractModifiedCollections(current);
+
+            _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfDocuments, current.CountOfIndexes,
+                current.CountOfStaleIndexes, current.LastEtag, current.CountOfIndexingErrors, modifiedCollections));
+
+            _latest = current;
+
+            return true;
         }
 
         private List<DatabaseStatsChanged.ModifiedCollection> ExtractModifiedCollections(Stats current)

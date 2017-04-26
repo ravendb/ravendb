@@ -53,27 +53,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        protected override async Task Run()
+        protected override async Task<bool> DoWork()
         {
-            while (CancellationToken.IsCancellationRequested == false)
-            {
-                try
-                {
-                    if (await WaitAsync(_documentDatabase.Configuration.Tombstones.Interval.AsTimeSpan) == false)
-                        return;
+            if (await WaitAsync(_documentDatabase.Configuration.Tombstones.Interval.AsTimeSpan) == false)
+                return false;
 
-                    await ExecuteCleanup();
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Error in the tombstone cleaner", e);
-                }
-            }
+            await ExecuteCleanup();
+
+            return true;
         }
 
         internal async Task<bool> ExecuteCleanup()
