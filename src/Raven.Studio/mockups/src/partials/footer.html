@@ -1,37 +1,31 @@
-﻿<footer class="status-footer">
-    <div class="footer-left">       
+﻿<!-- THIS IS ONLY A MOCKUP FOOTER -->
+<footer class="status-footer">
+    <div class="footer-left" data-bind="with: stats(), visible: stats">
         <div class="footer-item">
-            <a title="Documents" data-bind="attr: { href: $parent.urlForDocuments() }"><i class="icon-documents"></i> <span data-bind="text: countOfDocuments"></span></a>
+            <a data-bind="attr: { href: $parent.urlForDocuments() }" title="Documents" href="#databases/documents?&amp;database=test"><i class="icon-documents"></i> <span data-bind="text: countOfDocuments">1059</span></a>
         </div>
         <div class="footer-item">
-            <a title="Indexes" data-bind="attr: { href: $parent.urlForIndexes() }">
+            <a title="Indexes" data-bind="attr: { href: $parent.urlForIndexes() }" href="#databases/indexes?&amp;database=test">
                 <i class="icon-index"></i>
-                <span data-bind="text: countOfIndexes"></span>
+                <span data-bind="text: countOfIndexes">3</span>
+                <span class="separator">|</span><span title="Stale indexes" data-bind="text: countOfStaleIndexes, css: {'text-warning': countOfStaleIndexes}">0</span>
             </a>
         </div>
-        <div class="footer-item">
-            <a title="Stale indexes" class="text-warning" data-bind="attr: { href: $parent.urlForIndexes() }">
-                <i class="icon-warning"></i><span data-bind="text: countOfStaleIndexes"></span>
+        <div class="footer-item" data-bind="visible: countOfIndexingErrors" style="display: none;">
+            <a title="Indexing errors" class="text-danger" data-bind="attr: { href: $parent.urlForIndexingErrors() }" href="#databases/indexes/indexErrors?&amp;database=test">
+                <i class="icon-index-errors"></i> <span data-bind="text: countOfIndexingErrors">0</span>
             </a>
         </div>
-        <div class="footer-item">
-            <a title="Indexing errors" class="text-danger" data-bind="attr: { href: $parent.urlForIndexingErrors() }">
-                <i class="icon-index-errors"></i> <span data-bind="text: countOfIndexingErrors"></span>
-            </a>
-        </div>
-    </div>
-    <div class="footer-left spinner" data-bind="visible: spinners.loading">
-        <i class="btn-spinner"></i> Loading, please wait
     </div>
     <div class="footer-right">
         <div class="footer-item">
             <a title="Studio Version" data-bind="attr: { href: urlForAbout }">
-                <i class="icon-client"></i> <span data-bind="text: $root.constructor.clientVersion"></span>
+                <i class="icon-client"></i> <span data-bind="text: $root.constructor.clientVersion">4.0.0-custom-40</span>
             </a>
         </div>
         <div class="footer-item">
             <a title="Server Version" data-bind="attr: { href: urlForAbout }">
-                <i class="icon-server"></i> <span data-bind="text: $root.constructor.serverBuildVersion() ? $root.constructor.serverBuildVersion().FullVersion : ''"></span>
+                <i class="icon-server"></i> <span data-bind="text: $root.constructor.serverBuildVersion() ? $root.constructor.serverBuildVersion().FullVersion : ''">4.0.0-custom-40</span>
             </a>
         </div>
         <div class="footer-item">

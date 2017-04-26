@@ -147,8 +147,6 @@ namespace Raven.Client.Documents.Replication.Messages
 
         public long LastDocumentEtag;
 
-        public long LastIndexTransformerEtag;
-
         public long LastHeartbeatTicks;
 
         public string LastException;
@@ -192,7 +190,6 @@ namespace Raven.Client.Documents.Replication.Messages
                 [nameof(LastException)] = LastException,
                 [nameof(LastHeartbeatTicks)] = LastHeartbeatTicks,
                 [nameof(LastDocumentEtag)] = LastDocumentEtag,
-                [nameof(LastIndexTransformerEtag)] = LastIndexTransformerEtag,
                 [nameof(NodeStatus)] = NodeStatus.ToString(),
                 [nameof(SpecifiedCollections)] = specifiedCollectionsJson,
                 ["LastHeartbeat"] = new DateTime(LastHeartbeatTicks).GetDefaultRavenFormat(),

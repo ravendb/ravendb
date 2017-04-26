@@ -211,19 +211,6 @@ namespace Raven.Server.Documents.Replication
                         });
                     }
 
-                    var indexesChangeVector = new DynamicJsonArray();
-                    var changeVectorAsArray =
-                        Database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector(
-                            configTx.InnerTransaction);
-                    foreach (var changeVectorEntry in changeVectorAsArray)
-                    {
-                        indexesChangeVector.Add(new DynamicJsonValue
-                        {
-                            [nameof(ChangeVectorEntry.DbId)] = changeVectorEntry.DbId.ToString(),
-                            [nameof(ChangeVectorEntry.Etag)] = changeVectorEntry.Etag
-                        });
-                    }
-
                     var lastEtagFromSrc = Database.DocumentsStorage.GetLastReplicateEtagFrom(
                         documentsOperationContext, getLatestEtagMessage.SourceDatabaseId);
                     if (_log.IsInfoEnabled)
@@ -235,11 +222,7 @@ namespace Raven.Server.Documents.Replication
                         [nameof(ReplicationMessageReply.Type)] = "Ok",
                         [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
                         [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
-                        [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] =
-                        Database.IndexMetadataPersistence.GetLastReplicateEtagFrom(configTx.InnerTransaction,
-                            getLatestEtagMessage.SourceDatabaseId),
-                        [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentsChangeVector,
-                        [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVector,
+                        [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentsChangeVector
                     };
 
                     documentsOperationContext.Write(writer, response);
@@ -557,7 +540,6 @@ namespace Raven.Server.Documents.Replication
                 failureInfo.DestinationDbId = instance.DestinationDbId;
                 failureInfo.LastHeartbeatTicks = instance.LastHeartbeatTicks;
                 failureInfo.LastAcceptedDocumentEtag = instance.LastAcceptedDocumentEtag;
-                failureInfo.LastSentIndexOrTransformerEtag = instance._lastSentIndexOrTransformerEtag;
 
                 _reconnectQueue.Add(failureInfo);
 
@@ -691,7 +673,6 @@ namespace Raven.Server.Documents.Replication
             public string DestinationDbId;
 
             public long LastAcceptedDocumentEtag;
-            public long LastSentIndexOrTransformerEtag;
 
             public long LastHeartbeatTicks;
 

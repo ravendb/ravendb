@@ -21,7 +21,7 @@ import resolveAllConflictsCommand = require("commands/database/replication/resol
 import eventsCollector = require("common/eventsCollector");
 
 class replications extends viewModelBase {
-
+    /* TODO
     replicationEnabled = ko.observable<boolean>(true);
 
     prefixForHilo = ko.observable<string>("");
@@ -330,7 +330,7 @@ class replications extends viewModelBase {
                 this.fetchAutomaticConflictResolution(db);
                 this.fetchReplications(db);
             });
-    }
+    }*/
 
 }
 

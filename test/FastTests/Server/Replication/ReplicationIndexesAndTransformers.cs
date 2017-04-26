@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -11,11 +13,13 @@ using Raven.Client.Documents.Operations.Transformers;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions;
+using Raven.Client.Server;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Raven.Client.Server.Operations;
 
 namespace FastTests.Server.Replication
 {
@@ -119,214 +123,39 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public void DeleteConflictsFor_should_delete_all_conflict_records()
+        public async Task<(DocumentStore source, DocumentStore destination)> CreateDuoCluster([CallerMemberName] string caller = null)
         {
-            using (var store = GetDocumentStore())
+            var leader = await CreateRaftClusterAndGetLeader(2);
+            var follower = Servers.First(srv => ReferenceEquals(srv, leader) == false);
+            var dbName = "Can_replicate_index";
+            var source = new DocumentStore
             {
-                var userByAge = new UserByAgeIndex();
-                userByAge.Execute(store);
-
-                var databaseStoreTask =
-                    Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-                databaseStoreTask.Wait();
-                var databaseStore = databaseStoreTask.Result;
-
-                var definitionJson = new DynamicJsonValue
-                {
-                    ["Foo"] = "Bar"
-                };
-
-                var definitionJson2 = new DynamicJsonValue
-                {
-                    ["Foo"] = "Bar"
-                };
-
-                TransactionOperationContext context;
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenWriteTransaction())
-                using (var definintion = context.ReadObject(definitionJson, string.Empty))
-                using (var definintion2 = context.ReadObject(definitionJson2, string.Empty))
-                {
-                    databaseStore.IndexMetadataPersistence.AddConflict(
-                        context,
-                        tx.InnerTransaction,
-                        userByAge.IndexName,
-                        IndexEntryType.Index,
-                        new ChangeVectorEntry[0], definintion);
-
-                    databaseStore.IndexMetadataPersistence.AddConflict(
-                        context,
-                        tx.InnerTransaction,
-                        userByAge.IndexName,
-                        IndexEntryType.Index,
-                        new ChangeVectorEntry[0], definintion2);
-
-                    tx.Commit();
-                }
-
-
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenWriteTransaction())
-                {
-                    var changeVectors = databaseStore.IndexMetadataPersistence.DeleteConflictsFor(tx.InnerTransaction, context, userByAge.IndexName);
-                    tx.Commit();
-
-                    Assert.Equal(2, changeVectors.Count);
-                }
-
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenReadTransaction())
-                {
-                    Assert.Empty(databaseStore.IndexMetadataPersistence.GetConflictsFor(tx.InnerTransaction, context, userByAge.IndexName, 0, 1024));
-                }
-
-            }
-        }
-
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public void Adding_conflict_should_set_the_original_metadata_as_conflicted()
-        {
-            using (var store = GetDocumentStore())
+                Url = leader.WebUrls[0],
+                DefaultDatabase = dbName
+            };
+            var destination = new DocumentStore
             {
-                var userByAge = new UserByAgeIndex();
-                userByAge.Execute(store);
+                Url = follower.WebUrls[0],
+                DefaultDatabase = dbName
+            };
 
-                var databaseStoreTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-                databaseStoreTask.Wait();
-                var databaseStore = databaseStoreTask.Result;
-
-                IndexesEtagsStorage.IndexEntryMetadata metadata;
-                TransactionOperationContext context;
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenReadTransaction())
-                    metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
-
-                Assert.False(metadata.IsConflicted);
-
-                var definitionJson = new DynamicJsonValue
-                {
-                    ["Foo"] = "Bar"
-                };
-
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenWriteTransaction())
-                using (var definintion = context.ReadObject(definitionJson, string.Empty))
-                {
-                    databaseStore.IndexMetadataPersistence.AddConflict(
-                        context,
-                        tx.InnerTransaction,
-                        userByAge.IndexName,
-                        IndexEntryType.Index,
-                        new ChangeVectorEntry[0], definintion);
-
-                    tx.Commit();
-                }
-
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenReadTransaction())
-                    metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
-
-                Assert.True(metadata.IsConflicted);
-            }
+            var doc = MultiDatabase.CreateDatabaseDocument(dbName);
+            var databaseResult = source.Admin.Server.Send(new CreateDatabaseOperation(doc, 2));
+            await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+            return (source, destination);
         }
+        
 
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public async Task Setting_conflicted_should_work()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var userByAge = new UserByAgeIndex();
-                userByAge.Execute(store);
 
-                var databaseStore =
-                    await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
 
-                IndexesEtagsStorage.IndexEntryMetadata metadata;
-                TransactionOperationContext context;
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenReadTransaction())
-                    metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
-
-                Assert.NotNull(metadata); //sanity check
-                Assert.False(metadata.IsConflicted);
-
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenWriteTransaction())
-                {
-                    Assert.True(databaseStore.IndexMetadataPersistence.TrySetConflictedByName(context,
-                        tx.InnerTransaction,
-                        userByAge.IndexName));
-
-                    tx.Commit();
-                }
-
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenReadTransaction())
-                    metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
-
-                Assert.True(metadata.IsConflicted);
-            }
-        }
-
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public async Task Deleting_indexes_should_delete_relevant_metadata()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var userByAge = new UserByAgeIndex();
-                var userByName = new UserByNameIndex();
-                userByName.Execute(store);
-                userByAge.Execute(store);
-
-                var databaseStore =
-                    await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-
-                store.Admin.Send(new DeleteIndexOperation(userByName.IndexName));
-
-                IndexesEtagsStorage.IndexEntryMetadata metadata;
-                TransactionOperationContext context;
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenReadTransaction())
-                    metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
-                Assert.NotNull(metadata);
-
-                using (var tx = context.OpenReadTransaction())
-                    metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByName.IndexName);
-                Assert.Null(metadata);
-
-                store.Admin.Send(new DeleteIndexOperation(userByAge.IndexName));
-                using (var tx = context.OpenReadTransaction())
-                    metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
-                Assert.Null(metadata);
-
-            }
-        }
-
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public async Task Conflicting_indexes_should_record_conflicts_in_metadata()
-        {
-            using (var nodeA = GetDocumentStore())
-            using (var nodeB = GetDocumentStore())
-            {
-                var userByAge = new UserByAgeIndex();
-                var userByName = new UserByNameIndex(userByAge.IndexName);
-                userByAge.Execute(nodeA);
-
-                await SetupReplicationAsync(nodeA, nodeB);
-
-                userByName.Execute(nodeA);
-
-            }
-        }
-
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
+        [Fact]
         public async Task Can_replicate_index()
         {
-            using (var source = GetDocumentStore())
-            using (var destination = GetDocumentStore())
+            var (source, destination) = await CreateDuoCluster();
+            
+            using (source)
+            using (destination)
             {
-                await SetupReplicationAsync(source, destination);
 
                 var userByAge = new UserByAgeIndex();
                 userByAge.Execute(source);
@@ -343,11 +172,13 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
+        [Fact]
         public async Task Can_replicate_multiple_indexes()
         {
-            using (var source = GetDocumentStore())
-            using (var destination = GetDocumentStore())
+            var (source, destination) = await CreateDuoCluster();
+
+            using (source)
+            using (destination)
             {
                 var userByAge = new UserByAgeIndex();
                 userByAge.Execute(source);
@@ -370,11 +201,13 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
+        [Fact]
         public async Task Can_replicate_multiple_indexes_and_multiple_transformers()
         {
-            using (var source = GetDocumentStore())
-            using (var destination = GetDocumentStore())
+            var (source, destination) = await CreateDuoCluster();
+
+            using (source)
+            using (destination)
             {
                 var userByAge = new UserByAgeIndex();
                 userByAge.Execute(source);
@@ -413,11 +246,13 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
+        [Fact]
         public async Task Can_replicate_transformer()
         {
-            using (var source = GetDocumentStore())
-            using (var destination = GetDocumentStore())
+            var (source, destination) = await CreateDuoCluster();
+
+            using (source)
+            using (destination)
             {
                 await SetupReplicationAsync(source, destination);
 
@@ -436,11 +271,13 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
+        [Fact]
         public async Task Can_replicate_multiple_transformers()
         {
-            using (var source = GetDocumentStore())
-            using (var destination = GetDocumentStore())
+            var (source, destination) = await CreateDuoCluster();
+
+            using (source)
+            using (destination)
             {
                 var usernameToUpperTransformer = new UsernameToUpperTransformer();
                 usernameToUpperTransformer.Execute(source);
@@ -462,161 +299,11 @@ namespace FastTests.Server.Replication
                 Assert.True(transformerNames.Contains(usernameToLowerTransformer.TransformerName));
             }
         }
-
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public async Task PurgeTombstonesFrom_should_work_properly()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var userByAge = new UserByAgeIndex();
-                var userByName = new UserByNameIndex();
-                var userByNameAndBirthday = new UserByNameAndBirthday();
-                userByName.Execute(store);
-                userByAge.Execute(store);
-                userByNameAndBirthday.Execute(store);
-
-                store.Admin.Send(new DeleteIndexOperation(userByName.IndexName));
-                store.Admin.Send(new DeleteIndexOperation(userByNameAndBirthday.IndexName));
-
-                var databaseStore =
-                    await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-
-                TransactionOperationContext context;
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenWriteTransaction())
-                {
-                    databaseStore.IndexMetadataPersistence.PurgeTombstonesFrom(tx.InnerTransaction, context, 0, 1024);
-                    tx.Commit();
-                }
-
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenReadTransaction())
-                {
-                    var metadataCollection = databaseStore.IndexMetadataPersistence.GetAfter(tx.InnerTransaction, context, 0, 0, 1024);
-                    Assert.Equal(1, metadataCollection.Count);
-                    Assert.Equal(userByAge.IndexName.ToLower(), metadataCollection[0].Name);
-                }
-            }
-        }
-
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public async Task GetAfter_should_work_properly()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var userByAge = new UserByAgeIndex();
-                var userByName = new UserByNameIndex();
-                var userByNameAndBirthday = new UserByNameAndBirthday();
-                userByName.Execute(store);
-                userByAge.Execute(store);
-                userByNameAndBirthday.Execute(store);
-
-                var databaseStore =
-                    await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-
-                List<IndexesEtagsStorage.IndexEntryMetadata> metadataItems;
-                TransactionOperationContext context;
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenReadTransaction())
-                {
-                    metadataItems = databaseStore.IndexMetadataPersistence.GetAfter(tx.InnerTransaction, context, 0, 0, 1024);
-                    Assert.Equal(3, metadataItems.Count);
-
-                    metadataItems = databaseStore.IndexMetadataPersistence.GetAfter(tx.InnerTransaction, context, 3, 0, 1024);
-                    Assert.Equal(1, metadataItems.Count);
-                }
-
-                //this one was created last, so it has the largest etag
-                Assert.Equal(userByNameAndBirthday.IndexName.ToLower(), metadataItems[0].Name);
-
-                store.Admin.Send(new DeleteIndexOperation(userByName.IndexName));
-                store.Admin.Send(new DeleteIndexOperation(userByNameAndBirthday.IndexName));
-
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenReadTransaction())
-                {
-                    metadataItems = databaseStore.IndexMetadataPersistence.GetAfter(tx.InnerTransaction, context, 0, 0, 1024);
-                    Assert.Equal(3, metadataItems.Count); //together with tombstones
-                    Assert.Equal(2, metadataItems.Count(item => item.Id == -1));
-                }
-            }
-        }
-
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public async Task Deleting_indexes_should_write_tombstones()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var userByAge = new UserByAgeIndex();
-                var userByName = new UserByNameIndex();
-                userByName.Execute(store);
-                userByAge.Execute(store);
-
-                store.Admin.Send(new DeleteIndexOperation(userByName.IndexName));
-                store.Admin.Send(new DeleteIndexOperation(userByAge.IndexName));
-
-                var databaseStore =
-                    await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-
-                TransactionOperationContext context;
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenReadTransaction())
-
-                {
-                    var metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName,
-                        returnNullIfTombstone: false);
-                    Assert.NotNull(metadata);
-                    Assert.Equal(-1, metadata.Id);
-                    Assert.Equal(userByAge.IndexName.ToLower(), metadata.Name);
-
-
-                    metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByName.IndexName,
-                        returnNullIfTombstone: false);
-                    Assert.NotNull(metadata);
-                    Assert.Equal(-1, metadata.Id);
-                    Assert.Equal(userByName.IndexName.ToLower(), metadata.Name);
-                }
-
-            }
-        }
-
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public async Task Creating_indexes_should_create_relevant_metadata()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var userByAge = new UserByAgeIndex();
-                var userByName = new UserByNameIndex();
-                userByName.Execute(store);
-                userByAge.Execute(store);
-
-                var databaseStore =
-                    await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-
-                TransactionOperationContext context;
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenReadTransaction())
-                {
-                    var metadataByName =
-                        databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByName.IndexName);
-                    Assert.NotNull(metadataByName);
-
-                    var serversideIndexMetadata = databaseStore.IndexStore.GetIndex(userByName.IndexName);
-                    Assert.Equal(serversideIndexMetadata.Etag, metadataByName.Id);
-
-                    var metadataByAge =
-                        databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
-                    Assert.NotNull(metadataByAge);
-
-                    serversideIndexMetadata = databaseStore.IndexStore.GetIndex(userByAge.IndexName);
-                    Assert.Equal(serversideIndexMetadata.Etag, metadataByAge.Id);
-                }
-            }
-        }
-
+       
+       
         //An index can't be named with the same name as transformer or vice versa
-        [Fact(Skip = "Maxim:will work after raft index implementaion")]
-        public void Index_and_transformer_metadata_storage_should_enforce_name_uniqueness_for_writing_index_then_transformer()
+        [Fact]
+        public void Index_and_transformer_storage_should_enforce_name_uniqueness_for_writing_index_then_transformer()
         {
             using (var store = GetDocumentStore())
             {
@@ -628,8 +315,8 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public void Index_and_transformer_metadata_storage_should_enforce_name_uniqueness_for_writing_transformer_then_index()
+        [Fact]
+        public void Index_and_transformer_storage_should_enforce_name_uniqueness_for_writing_transformer_then_index()
         {
             using (var store = GetDocumentStore())
             {
@@ -640,140 +327,7 @@ namespace FastTests.Server.Replication
                 Assert.Throws<IndexOrTransformerAlreadyExistException>(() => userByNameIndex.Execute(store));
             }
         }
-
-        [Fact(Skip = "Maxim:will work after raft index implementaion")]
-        public async Task New_index_will_overwrite_transformer_tombstones()
-        {
-            using (var store = GetDocumentStore())
-            {
-                const string name = "FooBar";
-                var usernameToUpperTransformer = new UsernameToUpperTransformer(name);
-                usernameToUpperTransformer.Execute(store);
-
-                store.Admin.Send(new DeleteTransformerOperation(name));
-
-                var userByNameIndex = new UserByNameIndex(name);
-                userByNameIndex.Execute(store);
-
-                var databaseStore =
-                    await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-
-                TransactionOperationContext context;
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenReadTransaction())
-
-                {
-                    var metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, name);
-                    Assert.Equal(1, metadata.ChangeVector.Length); //sanity check
-
-                    /*
-                     transformers and etags share the same tombstone,
-                     so if transformer created, then deleted, then index created under the same name as transformer, the change vector
-                     which represents history of the object will be preserved
-                    */
-                    Assert.Equal(3, metadata.ChangeVector[0].Etag);
-                }
-            }
-        }
-
-        [Fact(Skip="Test is obsolete, we might want to rewrite it using raft")]
-        public async Task New_transformer_will_overwrite_index_tombstones()
-        {
-            using (var store = GetDocumentStore())
-            {
-                const string name = "FooBar";
-                var userByNameIndex = new UserByNameIndex(name);
-                userByNameIndex.Execute(store);
-
-                store.Admin.Send(new DeleteIndexOperation(name));
-
-                var usernameToUpperTransformer = new UsernameToUpperTransformer(name);
-                usernameToUpperTransformer.Execute(store);
-
-                var databaseStore =
-                    await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-
-                TransactionOperationContext context;
-                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenReadTransaction())
-
-                {
-                    var metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, name);
-                    Assert.Equal(1, metadata.ChangeVector.Length); //sanity check
-
-                    /*
-                     transformers and etags share the same tombstone,
-                     so if transformer created, then deleted, then index created under the same name as transformer, the change vector
-                     which represents history of the object will be preserved
-                    */
-                    Assert.Equal(3, metadata.ChangeVector[0].Etag);
-                }
-            }
-        }
-
-        [Fact(Skip = "Maxim:will work after raft index implementaion, probably will remove that feature")]
-        public async Task Manually_removed_indexes_would_remove_metadata_on_startup()
-        {
-            var pathPrefix = Guid.NewGuid().ToString();
-            var databasePath = string.Empty;
-            var indexesPath = string.Empty;
-
-            try
-            {
-                var userByAgeIndex = new UserByAgeIndex();
-                var userByNameIndex = new UserByNameIndex();
-                var usernameToUpperTransformer = new UsernameToUpperTransformer();
-
-
-                DocumentDatabase databaseStore;
-                using (var store = GetDocumentStore(path: pathPrefix))
-                {
-                    userByNameIndex.Execute(store);
-                    userByAgeIndex.Execute(store);
-                    usernameToUpperTransformer.Execute(store);
-                    databaseStore = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-
-                    TransactionOperationContext context;
-                    using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                    using (var tx = context.OpenReadTransaction())
-                    {
-                        Assert.NotNull(
-                            databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByNameIndex.IndexName));
-                        Assert.NotNull(
-                            databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAgeIndex.IndexName));
-                        Assert.NotNull(
-                            databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, usernameToUpperTransformer.TransformerName));
-                    }
-                }
-
-                indexesPath = databaseStore.Configuration.Indexing.StoragePath.FullPath;
-                databasePath = databaseStore.Configuration.Core.DataDirectory.FullPath;
-                foreach (var indexFolder in Directory.GetDirectories(indexesPath))
-                    IOExtensions.DeleteDirectory(indexFolder);
-
-                using (var store = GetDocumentStore(path: pathPrefix))
-                {
-                    databaseStore = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-
-                    TransactionOperationContext context;
-                    using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
-                    using (var tx = context.OpenReadTransaction())
-                    {
-                        Assert.Null(
-                            databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByNameIndex.IndexName));
-                        Assert.Null(
-                            databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAgeIndex.IndexName));
-                        Assert.Null(
-                            databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, usernameToUpperTransformer.TransformerName));
-                    }
-                }
-            }
-            finally
-            {
-                IOExtensions.DeleteDirectory(databasePath);
-                IOExtensions.DeleteDirectory(indexesPath);
-            }
-        }
+       
     }
 }
 

@@ -18,6 +18,7 @@ using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
@@ -120,11 +121,17 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DeterminateProgress));
             scripter.AddType(typeof(IndeterminateProgress));
             scripter.AddType(typeof(BulkOperationResult));
+            scripter.AddType(typeof(IndexCompactionProgress));
+            scripter.AddType(typeof(IndexCompactionResult));
+            scripter.AddType(typeof(BulkInsertProgress));
             scripter.AddType(typeof(OperationExceptionResult));
             scripter.AddType(typeof(DocumentChange));
             scripter.AddType(typeof(IndexChange));
             scripter.AddType(typeof(TransformerChange));
             scripter.AddType(typeof(DatabaseOperations.Operation));
+            scripter.AddType(typeof(NewVersionAvailableDetails));
+            scripter.AddType(typeof(MessageDetails));
+            scripter.AddType(typeof(ExceptionDetails));
             
             // indexes
             scripter.AddType(typeof(IndexStats));

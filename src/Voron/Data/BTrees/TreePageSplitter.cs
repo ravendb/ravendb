@@ -116,8 +116,8 @@ namespace Voron.Data.BTrees
         {
             if (_pageDecompressed == null)
                 return;
-            _tree.DecompressionsCache.Invalidate(_pageDecompressed.PageNumber, DecompressionUsage.Read);
             _pageDecompressed.CopyToOriginal(_tx, defragRequired: false);
+            _tree.DecompressionsCache.Invalidate(_pageDecompressed.PageNumber, DecompressionUsage.Read);
             _page = _pageDecompressed.Original;
         }
 

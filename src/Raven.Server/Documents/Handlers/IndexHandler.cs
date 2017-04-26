@@ -167,17 +167,6 @@ namespace Raven.Server.Documents.Handlers
             return NoContent();
         }
 
-        [RavenAction("/databases/*/indexes/rename", "POST")]
-        public Task Rename()
-        {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var newName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("newName");
-
-            Database.IndexStore.RenameIndex(name, newName);
-
-            return NoContent();
-        }
-
         [RavenAction("/databases/*/indexes/debug", "GET")]
         public Task Debug()
         {

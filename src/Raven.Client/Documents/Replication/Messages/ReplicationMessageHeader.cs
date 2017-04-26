@@ -6,8 +6,6 @@
 
         public long LastDocumentEtag { get; set; }
 
-        public long LastIndexOrTransformerEtag { get; set; }
-
         public int ItemsCount { get; set; }
 
         public int AttachmentStreamsCount { get; set; }

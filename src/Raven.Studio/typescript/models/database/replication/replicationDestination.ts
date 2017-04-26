@@ -2,7 +2,7 @@ import replicationPatchScript = require("models/database/replication/replication
 import collection = require("models/database/documents/collection");
 
 class replicationDestination {
-
+    /* TODO
     url = ko.observable<string>();
     username = ko.observable<string>();
     password = ko.observable<string>();
@@ -224,7 +224,7 @@ class replicationDestination {
 
     removeCollection(item: replicationPatchScript) {
         this.specifiedCollections.remove(item);
-    }
+    }*/
 }
 
 export = replicationDestination;

@@ -8,14 +8,12 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Server.Expiration;
 using Raven.Client.Server.Operations;
 using Raven.Client.Util;
-using Raven.Server.Documents.Expiration;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -66,7 +64,7 @@ namespace FastTests.Server.Documents.Expiration
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 var expiredDocumentsCleaner = database.BundleLoader.ExpiredDocumentsCleaner;
 
-                expiredDocumentsCleaner.CleanupExpiredDocs();
+                await expiredDocumentsCleaner.CleanupExpiredDocs();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -116,7 +114,7 @@ namespace FastTests.Server.Documents.Expiration
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 var expiredDocumentsCleaner = database.BundleLoader.ExpiredDocumentsCleaner;
 
-                expiredDocumentsCleaner.CleanupExpiredDocs();
+                await expiredDocumentsCleaner.CleanupExpiredDocs();
 
                 var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(0, stats.CountOfDocuments);

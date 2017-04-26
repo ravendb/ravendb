@@ -1,0 +1,235 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+{{> head }}
+
+<body>
+
+    {{> spinner }}
+
+    <div class="durandal-wrapper">
+        {{> topbar }}
+
+        <div class="prime-container">
+            {{> menu }}
+
+            <div class="content-container">
+                <div class="content-margin">
+                    <div class="row flex-row absolute-fill">
+                        <div class="col-xs-12 col-lg-6 flex-vertical">
+                            <div class="flex-header">
+                                <button class="btn btn-primary"><i class="icon-save"></i> <span>Save</span></button>
+                                <button class="btn btn-default"><i class="icon-cancel"></i> <span>Cancel</span></button>
+                            </div>
+                            <div class="panel">
+                                <form class="flex-form">
+                                    <div class="panel-body">
+                                        <div class="form-group">
+                                            <label for="url" class="control-label">URL</label>
+                                            <input type="text" class="form-control" id="url">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="databaseName" class="control-label">Database</label>
+                                            <input type="text" class="form-control" id="databaseName">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="apiKey" class="control-label">API Key</label>
+                                            <input type="text" class="form-control" id="apiKey">
+                                        </div>
+                                        <div class="flex-horizontal">
+                                            <div class="flex-grow">
+                                                <button class="btn btn-info"  onclick="$('#advancedConfig').collapse('toggle');">
+                                                    <i class="icon-settings"></i>
+                                                    <span>Advanced</span>
+                                                </button>
+                                            </div>
+                                            <div>
+                                                <button type="submit" class="btn btn-default">
+                                                    <i class="icon-rocket"></i>
+                                                    <span>Test connection</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="advancedConfig" class="collapse">
+                                        <div class="panel-body panel-info">
+                                            <div class="form-group">
+                                                <label for="visibleUrl" class="control-label">Client Visible URL</label>
+                                                <input type="text" class="form-control" id="visibleUrl">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="failover" class="control-label">Failover</label>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-block dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                        Include
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                                        <li><a href="#">Action</a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="transitiveReplication" class="control-label">Transitive Replication</label>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-block dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                        Changed and replicated
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
+                                                        <li><a href="#">Action</a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="transitiveReplication" class="control-label"></label>
+                                                <div class="checkbox">
+                                                    <input id="checkbox1" class="styled" type="checkbox">
+                                                    <label for="checkbox1">
+                                                        Skip index replication
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="col-xs-12 col-lg-6 flex-vertical">
+                            <div class="flex-horizontal flex-header">
+                                <div class="flex-grow">
+                                    <h3>Transform scripts <i class="icon-info text-info"></i></h3>
+                                </div>
+                                <div>
+                                    <button class="btn btn-info" onclick="$('#transformsList').collapse('hide'); $('#editTransform').collapse('show');"><i class="icon-plus"></i> <span>Add script</span></button>
+                                </div>
+                            </div>
+                            <div class="scroll">
+                                <div id="editTransform" class="collapse panel">
+                                    <div class="padding padding-sm">
+                                        <div class="edit-name flex-horizontal margin-bottom">
+                                            <div class="flex-grow">
+                                                <input class="form-control" type="text" value="Cars to car parts">
+                                            </div>
+                                            <div class="flex-noshrink">
+                                                <button class="btn btn-success" onclick="$('#transformsList').collapse('show'); $('#editTransform').collapse('hide');"><i class="icon-tick"></i></button>
+                                                <button class="btn btn-default" onclick="$('#transformsList').collapse('show'); $('#editTransform').collapse('hide');"><i class="icon-cancel"></i></button>
+                                            </div>
+                                        </div>
+                                        <textarea class="form-control" rows="8">
+var docsPositionsLengths = docs.map(x => x.Positions && x.Positions.length);
+if (docsPositionsLengths.some(x => docsPositionsLengths[0] !== x)) {
+    return {
+        Positions: _(docs.map(x => x.Positions)).flatten().uniq().value()
+    };
+}</textarea>
+                                        <h4>Collections</h4>
+                                        <div class="flex-horizontal margin-bottom">
+                                            <div class="flex-grow">
+                                                <input class="form-control" id="dropdownMenu4" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" placeholder="Name">
+                                                <ul class="dropdown-menu" aria-labelledby="dropdownMenu4">
+                                                    <li><a href="#">Regular link</a></li>
+                                                    <li><a href="#">Another link</a></li>
+                                                </ul>
+                                            </div>
+                                            <div>
+
+                                                <button class="btn btn-default"><i class="icon-plus"></i> <span>Add collection</span></button>
+                                            </div>
+                                        </div>
+                                        <ul class="well collection-list">
+                                            <li>
+                                                <div class="name">
+                                                    Animals
+                                                </div>
+                                                <a href="javascript:void(0)">
+                                                    <i class="icon-trash"></i>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <div class="name">
+                                                    Employees
+                                                </div>
+                                                <a href="javascript:void(0)">
+                                                    <i class="icon-trash"></i>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <div class="name">
+                                                    Other
+                                                </div>
+                                                <a href="javascript:void(0)">
+                                                    <i class="icon-trash"></i>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                        <div class="checkbox">
+                                            <input id="applyToAll" class="styled" type="checkbox">
+                                            <label for="applyToAll">
+                                                Apply script to all documents
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="etl-list collapse in" id="transformsList">
+                                    <div class="panel item">
+                                        <div class="padding padding-sm">
+                                            <div class="flex-horizontal">
+                                                <div class="flex-grow info">
+                                                    <div class="transformer-name">Cars to car parts</div>
+                                                    <div class="collections">
+                                                        Collections: <strong style="color:#b6ff00">Cars</strong>
+                                                    </div>
+                                                </div>
+                                                <div class="actions">
+                                                    <button class="btn btn-default" onclick="$('#transformsList').collapse('hide'); $('#editTransform').collapse('show');"><i class="icon-edit"></i></button>
+                                                    <button class="btn btn-danger"><i class="icon-trash"></i></button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="panel item">
+                                        <div class="padding padding-sm">
+                                            <div class="flex-horizontal">
+                                                <div class="flex-grow info">
+                                                    <div class="transformer-name">Transform old machines to parts</div>
+                                                    <div class="collections">
+                                                        Collections: <strong style="color:#0094ff">Computers</strong> <strong style="color:#ff006e">Printers</strong> <strong style="color:blueviolet">Lorem</strong>
+                                                        <strong style="color:#ffd800">ipsum</strong> <strong style="color:#ff6a00">dolor</strong> <strong style="color:#0094ff">Computers</strong> <strong style="color:#ff006e">Printers</strong> <strong style="color:blueviolet">Lorem</strong>
+                                                        <strong style="color:#ffd800">ipsum</strong> <strong style="color:#ff6a00">dolor</strong> <strong style="color:#0094ff">Computers</strong> <strong style="color:#ff006e">Printers</strong> <strong style="color:blueviolet">Lorem</strong>
+                                                        <strong style="color:#ffd800">ipsum</strong> <strong style="color:#ff6a00">dolor</strong>
+                                                    </div>
+                                                </div>
+                                                <div class="actions">
+                                                    <button class="btn btn-default" onclick="$('#transformsList').collapse('hide'); $('#editTransform').collapse('show');"><i class="icon-edit"></i></button>
+                                                    <button class="btn btn-danger"><i class="icon-trash"></i></button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{> notification-center }}
+        </div>{{> footer }}
+    </div>
+    <script type="text/javascript">
+        function changeState(el) {
+            if (el.readOnly) el.checked = el.readOnly = false;
+            else if (!el.checked) el.readOnly = el.indeterminate = true;
+        }
+    </script>
+
+    {{> modals/includeAll }}
+    {{> scripts }}
+    <div class="prerelease-alert bg-prerelease">
+        <i class="icon-hammer-driver pull-left"></i>
+        <p>
+            CAUTION: This is a pre-release version of RavenDB 4.0<br />
+            <small>it is not intended for business use.</small>
+        </p>
+    </div>
+</body>
+</html>

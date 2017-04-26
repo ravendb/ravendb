@@ -500,15 +500,16 @@ class editDocument extends viewModelBase {
     }
 
     private onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any) {
-        const savedDocumentDto: any = saveResult.Results[0];
+        const savedDocumentDto: changedOnlyMetadataFieldsDto = saveResult.Results[0];
         const currentSelection = this.docEditor.getSelectionRange();
 
-        let metadata = localDoc['@metadata'];
+        const metadata = localDoc['@metadata'];
         for (let prop in savedDocumentDto) {
-            if (prop === "Method")
-                continue;
-            metadata[prop] = savedDocumentDto[prop];
-            
+            if (savedDocumentDto.hasOwnProperty(prop)) {
+                if (prop === "Method")
+                    continue;
+                metadata[prop] = (savedDocumentDto as any)[prop];
+            }
         }
 
         const newDoc = new document(localDoc);
@@ -525,19 +526,7 @@ class editDocument extends viewModelBase {
         this.syncChangeNotification();
         this.connectedDocuments.onDocumentSaved();
 
-        /*
-        this.loadDocument(metadata['@id'], true)
-            .always(() => {
-                this.updateNewlineLayoutInDocument(this.isNewLineFriendlyMode());
-
-                // Try to restore the selection.
-               this.docEditor.selection.setRange(currentSelection, false);
-                this.isSaving(false);
-                this.syncChangeNotification();
-                this.connectedDocuments.onDocumentSaved();
-            });
-        */
-        this.updateUrl(savedDocumentDto.Key);
+        this.updateUrl(savedDocumentDto["@id"]);
 
         this.dirtyFlag().reset(); //Resync Changes
 

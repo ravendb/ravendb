@@ -16,8 +16,6 @@ namespace Raven.Client.Documents.Replication.Messages
 
         public long LastEtagAccepted { get; set; }
 
-        public long LastIndexTransformerEtagAccepted { get; set; }
-
         public string Exception { get; set; }
 
         public string Message { get; set; }
@@ -25,8 +23,6 @@ namespace Raven.Client.Documents.Replication.Messages
         public string MessageType { get; set; }
 
         public ChangeVectorEntry[] DocumentsChangeVector { get; set; }
-
-        public ChangeVectorEntry[] IndexTransformerChangeVector { get; set; }
 
         public string DatabaseId { get; set; }
     }

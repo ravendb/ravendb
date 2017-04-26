@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
 
-namespace Raven.Server.NotificationCenter.BackgroundWork
+namespace Raven.Server.Background
 {
     public abstract class BackgroundWorkBase : IDisposable
     {
@@ -17,7 +17,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
         protected BackgroundWorkBase(string resourceName, CancellationToken shutdown)
         {
             _shutdown = shutdown;
-            Logger = LoggingSource.Instance.GetLogger<NotificationCenter>(resourceName);
+            Logger = LoggingSource.Instance.GetLogger(resourceName, GetType().FullName);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdown);
         }
 
@@ -62,7 +62,50 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             _cts.Dispose();
         }
 
-        protected abstract Task Run();
+        protected async Task WaitOrThrowOperationCanceled(TimeSpan time)
+        {
+            try
+            {
+                await Task.Delay(time, CancellationToken).ConfigureAwait(false); // if cancellation requested then it will throw TaskCancelledException and we stop the work
+            }
+            catch (Exception e) when (e is OperationCanceledException == false)
+            {
+                // can happen if there is an invalid timespan
+
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Error in the background worker when {nameof(WaitOrThrowOperationCanceled)} was called", e);
+
+                throw new OperationCanceledException(); // throw OperationCanceled so we stop the work
+            }
+        }
+
+        protected async Task Run()
+        {
+            InitializeWork();
+
+            while (CancellationToken.IsCancellationRequested == false)
+            {
+                try
+                {
+                    await DoWork().ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Error in the background worker", e);
+                }
+            }
+        }
+
+        protected virtual void InitializeWork()
+        {
+        }
+
+        protected abstract Task DoWork();
 
         public void Dispose()
         {

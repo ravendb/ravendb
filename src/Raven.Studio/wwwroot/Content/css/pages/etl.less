@@ -1,0 +1,78 @@
+﻿.etl-list {
+    .item {
+        transition: background-color .2s;
+
+        .form-control {
+            background-color: @gray-darker;
+            border: none;
+        }
+
+        &:not(.edit) {
+            .edit-name {
+                display: none;
+            }
+        }
+
+        &.edit {
+            background-color: @gray-dark;
+
+            .info {
+                display: none;
+            }
+        }
+
+        .info {
+            line-height: 18px;
+        }
+
+        .actions {
+            flex-shrink: 0;
+            align-self: flex-start;
+        }
+
+        .transformer-name {
+            color: @gray-lighter;
+        }
+
+        .collections {
+            font-size: 12px;
+        }
+    }
+}
+
+.sql-tables-list {
+    .item {
+
+    }
+}
+
+.collection-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 200px;
+    overflow: auto;
+
+    li {
+        display: flex;
+        align-items: stretch;
+        font-size: 13px;
+
+        &:hover {
+            background-color: @gray-base-light;
+        }
+
+        .name {
+            padding: 5px 10px;
+            flex-grow: 1;
+        }
+
+        a {
+            padding: 5px 10px;
+
+            &:hover {
+                background-color: @gray-dark;
+            }
+        }
+    }
+}

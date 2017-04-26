@@ -29,6 +29,7 @@ class mapItem {
 class indexDefinition {
    
     name = ko.observable<string>();
+    etag = ko.observable<number>();
     maps = ko.observableArray<mapItem>();
     reduce = ko.observable<string>();
     isTestIndex = ko.observable<boolean>(false);
@@ -50,7 +51,6 @@ class indexDefinition {
     hasReduce = ko.observable<boolean>(false);
 
     validationGroup: KnockoutValidationGroup;
-    renameValidationGroup: KnockoutValidationGroup;
 
     constructor(dto: Raven.Client.Documents.Indexes.IndexDefinition) {
         this.isAutoIndex(dto.Type.startsWith("Auto"));
@@ -109,10 +109,6 @@ class indexDefinition {
             name: this.name,
             reduce: this.reduce
         });
-
-        this.renameValidationGroup = ko.validatedObservable({
-            name: this.name
-        });
     }
 
     private parseConfiguration(config: Raven.Client.Documents.Indexes.IndexConfiguration): Array<configurationItem> {
@@ -164,7 +160,7 @@ class indexDefinition {
             Name: this.name(),
             Maps: this.maps().map(m => m.map()),
             Reduce: this.reduce(),
-            IndexId: null,
+            Etag: this.etag(),
             Type: this.detectIndexType(),
             LockMode: this.lockMode,
             Priority: this.priority(),
@@ -216,7 +212,7 @@ class indexDefinition {
     static empty(): indexDefinition {
         return new indexDefinition({
             Fields: {},
-            IndexId: null,
+            Etag: null,
             Maps: [""],
             Name: "",
             LockMode: "Unlock",

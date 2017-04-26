@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Indexes;
+using Raven.Server.Background;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
@@ -24,77 +24,51 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             _notificationCenter = notificationCenter;
         }
 
-        protected override async Task Run()
+        protected override async Task DoWork()
         {
-            while (CancellationToken.IsCancellationRequested == false)
+            await WaitOrThrowOperationCanceled(_notificationCenter.Options.DatabaseStatsThrottle);
+
+            Stats current;
+
+            DocumentsOperationContext context;
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
-                try
+                var indexes = _database.IndexStore.GetIndexes().ToList();
+                var staleIndexes = 0;
+                var countOfIndexingErrors = 0L;
+
+                // ReSharper disable once LoopCanBeConvertedToQuery
+                foreach (var index in indexes)
                 {
-                    try
-                    {
-                        await Task.Delay(_notificationCenter.Options.DatabaseStatsThrottle, CancellationToken);
+                    if (index.IsStale(context))
+                        staleIndexes++;
 
-                    }
-                    catch (Exception)
-                    {
-                        // can happen if there is an invalid timespan
-                        return;
-                    }
-                    if (_database.DatabaseShutdown.IsCancellationRequested)
-                        break;
-
-                    Stats current;
-
-                    DocumentsOperationContext context;
-                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-                    using (context.OpenReadTransaction())
-                    {
-                        var indexes = _database.IndexStore.GetIndexes().ToList();
-                        var staleIndexes = 0;
-                        var countOfIndexingErrors = 0L;
-
-                        // ReSharper disable once LoopCanBeConvertedToQuery
-                        foreach (var index in indexes)
-                        {
-                            if (index.IsStale(context))
-                                staleIndexes++;
-
-                            countOfIndexingErrors += index.GetErrorCount();
-                        }
-
-                        current = new Stats
-                        {
-                            CountOfDocuments = _database.DocumentsStorage.GetNumberOfDocuments(context),
-                            CountOfIndexes = indexes.Count,
-                            CountOfStaleIndexes = staleIndexes,
-                            CountOfIndexingErrors = countOfIndexingErrors,
-                            LastEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction),
-                        };
-
-                        current.Collections = _database.DocumentsStorage.GetCollections(context)
-                            .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentEtag(context, x.Name)));
-                    }
-
-                    if (_latest != null && _latest.Equals(current))
-                        continue;
-
-                    var modifiedCollections = _latest == null ? current.Collections.Values.ToList() : ExtractModifiedCollections(current);
-
-                    _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfDocuments, current.CountOfIndexes,
-                        current.CountOfStaleIndexes, current.LastEtag, current.CountOfIndexingErrors, modifiedCollections));
-
-                    _latest = current;
+                    countOfIndexingErrors += index.GetErrorCount();
                 }
-                catch (OperationCanceledException)
+
+                current = new Stats
                 {
-                    return;
-                }
-                catch (Exception e)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info("Error on sending database stats notification", e);
-                }
+                    CountOfDocuments = _database.DocumentsStorage.GetNumberOfDocuments(context),
+                    CountOfIndexes = indexes.Count,
+                    CountOfStaleIndexes = staleIndexes,
+                    CountOfIndexingErrors = countOfIndexingErrors,
+                    LastEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction),
+                };
+
+                current.Collections = _database.DocumentsStorage.GetCollections(context)
+                    .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentEtag(context, x.Name)));
             }
+
+            if (_latest != null && _latest.Equals(current))
+                return;
+
+            var modifiedCollections = _latest == null ? current.Collections.Values.ToList() : ExtractModifiedCollections(current);
+
+            _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfDocuments, current.CountOfIndexes,
+                current.CountOfStaleIndexes, current.LastEtag, current.CountOfIndexingErrors, modifiedCollections));
+
+            _latest = current;
         }
 
         private List<DatabaseStatsChanged.ModifiedCollection> ExtractModifiedCollections(Stats current)
