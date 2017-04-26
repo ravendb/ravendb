@@ -120,8 +120,7 @@ namespace Raven.Server.Documents.Patch
                     // if user didn't specify it, we'll take it from the first doc
                     foreach (var doc in _docs)
                     {
-                        BlittableJsonReaderObject metadata;
-                        if (doc.Doc.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
+                        if (doc.Doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
                         {
                             continue;
                         }

@@ -109,6 +109,8 @@ namespace Raven.Server.Documents.Patch
             if (indexScore.HasValue)
                 metadata.FastAddProperty(Constants.Documents.Metadata.IndexScore, indexScore, true, true, true);
 
+            // TOOD: Do we want to expose here also the change vector?
+
             return instance;
         }
 
@@ -186,7 +188,13 @@ namespace Raven.Server.Documents.Patch
             foreach (var property in jsObject.GetOwnProperties())
             {
                 if (property.Key == Constants.Documents.Indexing.Fields.ReduceKeyFieldName ||
-                    property.Key == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                    property.Key == Constants.Documents.Indexing.Fields.DocumentIdFieldName ||
+                    property.Key == Constants.Documents.Metadata.Id ||
+                    property.Key == Constants.Documents.Metadata.Etag ||
+                    property.Key == Constants.Documents.Metadata.LastModified ||
+                    property.Key == Constants.Documents.Metadata.IndexScore ||
+                    property.Key == Constants.Documents.Metadata.ChangeVector ||
+                    property.Key == Constants.Documents.Metadata.Flags)
                     continue;
 
                 var value = property.Value.Value;

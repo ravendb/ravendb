@@ -373,6 +373,8 @@ namespace Raven.Server.Documents
             var names = metadata.GetPropertyNames();
             if (names.Contains(Constants.Documents.Metadata.Id, StringComparer.OrdinalIgnoreCase) ||
                 names.Contains(Constants.Documents.Metadata.Etag, StringComparer.OrdinalIgnoreCase) ||
+                names.Contains(Constants.Documents.Metadata.LastModified, StringComparer.OrdinalIgnoreCase) ||
+                names.Contains(Constants.Documents.Metadata.IndexScore, StringComparer.OrdinalIgnoreCase) ||
                 names.Contains(Constants.Documents.Metadata.ChangeVector, StringComparer.OrdinalIgnoreCase) ||
                 names.Contains(Constants.Documents.Metadata.Flags, StringComparer.OrdinalIgnoreCase))
             {

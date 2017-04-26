@@ -448,20 +448,32 @@ namespace Raven.Server.Smuggler.Documents
 
                             goto case -1;
 
-                        case 14: // @change-vector
-                            if (state.StringBuffer[0] != (byte)'@' ||
-                                *(long*)(state.StringBuffer + 1) != 8515573965335390307 ||
-                                *(int*)(state.StringBuffer + 1 + sizeof(long)) != 1869898597 ||
-                                state.StringBuffer[1 + sizeof(long) + sizeof(int)] != (byte)'r')
-                                return true;
-
-                            if (ReadChangeVector(reader, state) == false)
+                        case 14:
+                            if (state.StringBuffer[0] == (byte)'@')
                             {
-                                _state = State.ReadingChangeVector;
-                                return false;
+                                // @change-vector
+                                if (*(long*)(state.StringBuffer + 1) == 8515573965335390307 &&
+                                    *(int*)(state.StringBuffer + 1 + sizeof(long)) == 1869898597 &&
+                                    state.StringBuffer[1 + sizeof(long) + sizeof(int)] == (byte)'r')
+                                {
+                                    if (ReadChangeVector(reader, state) == false)
+                                    {
+                                        _state = State.ReadingChangeVector;
+                                        return false;
+                                    }
+                                    break;
+                                }
+
+                                // @last-modified
+                                if (*(long*)(state.StringBuffer + 1) == 7237123168202350956 &&
+                                    *(int*)(state.StringBuffer + 1 + sizeof(long)) == 1701406313 &&
+                                    state.StringBuffer[1 + sizeof(long) + sizeof(int)] == (byte)'d')
+                                {
+                                    goto case -1;
+                                }
                             }
 
-                            break;
+                            return true;
                         case 15: //Raven-Read-Only
                             if (*(long*)state.StringBuffer != 7300947898092904786 ||
                                 *(int*)(state.StringBuffer + sizeof(long)) != 1328374881 ||

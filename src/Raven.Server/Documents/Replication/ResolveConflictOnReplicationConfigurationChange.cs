@@ -315,10 +315,8 @@ namespace Raven.Server.Documents.Replication
             out DocumentConflict resolvedConflict)
         {
             if (ValidatedResolveByScriptInput(scriptResolver, conflicts, collection) == false)
-            {
                 resolvedConflict = null;
                 return false;
-            }
 
             var patch = new PatchConflict(_database, conflicts);
             var updatedConflict = conflicts[0];
@@ -326,9 +324,7 @@ namespace Raven.Server.Documents.Replication
             {
                 Script = scriptResolver.Script
             };
-
-            BlittableJsonReaderObject resolved;
-            if (patch.TryResolveConflict(context, patchRequest, out resolved) == false)
+            if (patch.TryResolveConflict(context, patchRequest, out BlittableJsonReaderObject resolved) == false)
             {
                 resolvedConflict = null;
                 return false;

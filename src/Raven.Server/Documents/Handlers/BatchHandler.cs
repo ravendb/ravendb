@@ -234,6 +234,7 @@ namespace Raven.Server.Documents.Handlers
 
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, cmd.Document.Size);
 
+                            cmd.Document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
                             LastEtag = putResult.Etag;
 
                             ModifiedCollections?.Add(putResult.Collection.Name);
