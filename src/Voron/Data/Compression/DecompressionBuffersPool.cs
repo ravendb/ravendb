@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Sparrow;
 using Sparrow.Binary;
 using Voron.Data.BTrees;
 using Voron.Global;
@@ -258,6 +259,9 @@ namespace Voron.Data.Compression
 
             public void Dispose()
             {
+                if(_pager.Options.EncryptionEnabled)
+                    Sodium.ZeroMemory(TempPage.TempPagePointer, TempPage.PageSize);
+                
                 // return it to the pool
                 _pool._pool[_index].Enqueue(this);
 
