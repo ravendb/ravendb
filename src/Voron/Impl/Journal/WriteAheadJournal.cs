@@ -1233,10 +1233,8 @@ namespace Voron.Impl.Journal
                     _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                     CurrentFile = null;
                 }
-
-                var reduced = ReduceSizeOfCompressionBufferIfNeeded();
-                if (!reduced)
-                    ZeroCompressionBufferIfNeeded(tx);
+                ZeroCompressionBufferIfNeeded(tx);
+                ReduceSizeOfCompressionBufferIfNeeded();
 
                 return journalEntry;
             }
@@ -1505,10 +1503,10 @@ namespace Voron.Impl.Journal
         private CompressionAccelerationStats _lastCompressionAccelerationInfo = new CompressionAccelerationStats();
         private string _journalPath;
 
-        public bool ReduceSizeOfCompressionBufferIfNeeded()
+        public void ReduceSizeOfCompressionBufferIfNeeded()
         {
             if (!ShouldReduceSizeOfCompressionPager())
-                return false;
+                return;
 
             // the compression pager is too large, we probably had a big transaction and now can
             // free all of that and come back to more reasonable values.
@@ -1524,7 +1522,6 @@ namespace Voron.Impl.Journal
 
             _compressionPager.Dispose();
             _compressionPager = CreateCompressionPager(_env.Options.MaxScratchBufferSize);
-            return true;
         }
 
         public void ZeroCompressionBufferIfNeeded(IPagerLevelTransactionState tx)

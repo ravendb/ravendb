@@ -156,7 +156,6 @@ namespace Voron.Impl.Journal
             }
 
             LastTransactionHeader = current;
-            ZeroRecoveryBufferIfNeeded(this, options);
 
             return true;
         }
@@ -166,6 +165,7 @@ namespace Voron.Impl.Journal
             while (ReadOneTransactionToDataFile(options))
             {
             }
+            ZeroRecoveryBufferIfNeeded(this, options);
         }
 
         public void ZeroRecoveryBufferIfNeeded(IPagerLevelTransactionState tx, StorageEnvironmentOptions options)
