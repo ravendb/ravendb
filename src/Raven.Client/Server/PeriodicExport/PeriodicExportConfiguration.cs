@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+
 namespace Raven.Client.Server.PeriodicExport
 {
     public class PeriodicExportConfiguration
@@ -58,6 +60,20 @@ namespace Raven.Client.Server.PeriodicExport
         /// </summary>
         public long? FullExportIntervalMilliseconds { get; set; }
 
+        protected bool Equals(PeriodicExportConfiguration other)
+        {
+            return Active == other.Active 
+                && string.Equals(GlacierVaultName, other.GlacierVaultName) 
+                && string.Equals(S3BucketName, other.S3BucketName) 
+                && string.Equals(AwsRegionName, other.AwsRegionName) 
+                && string.Equals(AzureStorageContainer, other.AzureStorageContainer) 
+                && string.Equals(LocalFolderName, other.LocalFolderName) 
+                && string.Equals(AzureRemoteFolderName, other.AzureRemoteFolderName) 
+                && string.Equals(S3RemoteFolderName, other.S3RemoteFolderName) 
+                && IntervalMilliseconds == other.IntervalMilliseconds 
+                && FullExportIntervalMilliseconds == other.FullExportIntervalMilliseconds;
+        }
+
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
@@ -66,21 +82,22 @@ namespace Raven.Client.Server.PeriodicExport
             return Equals((PeriodicExportConfiguration)obj);
         }
 
-        public bool Equals(PeriodicExportConfiguration other)
+        public override int GetHashCode()
         {
-            if (other == null)
-                return false;
-
-            return Active == other.Active &&
-                   AwsRegionName == other.AwsRegionName &&
-                   AzureRemoteFolderName == other.AzureRemoteFolderName &&
-                   AzureStorageContainer == other.AzureStorageContainer &&
-                   FullExportIntervalMilliseconds == other.FullExportIntervalMilliseconds &&
-                   GlacierVaultName == other.GlacierVaultName &&
-                   IntervalMilliseconds == other.IntervalMilliseconds &&
-                   LocalFolderName == other.LocalFolderName &&
-                   S3BucketName == other.S3BucketName &&
-                   S3RemoteFolderName == other.S3RemoteFolderName;
+            unchecked
+            {
+                var hashCode = Active.GetHashCode();
+                hashCode = (hashCode * 397) ^ (GlacierVaultName != null ? GlacierVaultName.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (S3BucketName != null ? S3BucketName.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (AwsRegionName != null ? AwsRegionName.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (AzureStorageContainer != null ? AzureStorageContainer.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (LocalFolderName != null ? LocalFolderName.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (AzureRemoteFolderName != null ? AzureRemoteFolderName.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (S3RemoteFolderName != null ? S3RemoteFolderName.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ IntervalMilliseconds.GetHashCode();
+                hashCode = (hashCode * 397) ^ FullExportIntervalMilliseconds.GetHashCode();
+                return hashCode;
+            }
         }
     }
 }
