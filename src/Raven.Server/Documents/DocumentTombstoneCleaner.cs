@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
@@ -12,7 +14,7 @@ namespace Raven.Server.Documents
 
         private bool _disposed;
 
-        private readonly object _locker = new object();
+        private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
 
         private readonly DocumentDatabase _documentDatabase;
 
@@ -33,23 +35,35 @@ namespace Raven.Server.Documents
 
         public void Subscribe(IDocumentTombstoneAware subscription)
         {
-            lock (_locker)
+            _locker.Wait();
+
+            try
             {
                 _subscriptions.Add(subscription);
+            }
+            finally
+            {
+                _locker.Release();
             }
         }
 
         public void Unsubscribe(IDocumentTombstoneAware subscription)
         {
-            lock (_locker)
+            _locker.Wait();
+
+            try
             {
                 _subscriptions.Remove(subscription);
             }
+            finally
+            {
+                _locker.Release();
+            }
         }
 
-        internal bool ExecuteCleanup()
+        internal async Task<bool> ExecuteCleanup()
         {
-            if (Monitor.TryEnter(_locker) == false)
+            if (await _locker.WaitAsync(0) == false)
                 return false;
 
             try
@@ -93,23 +107,68 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                foreach (var tombstone in tombstones)
+                await _documentDatabase.TxMerger.Enqueue(new DeleteTombstonesCommand(tombstones, minAllDocsEtag, _documentDatabase));
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to execute tombstone cleanup on {_documentDatabase.Name}", e);
+            }
+            finally
+            {
+                _locker.Release();
+            }
+
+            return true;
+        }
+
+        public void Dispose()
+        {
+            _locker.Wait();
+
+            try
+            {
+                _disposed = true;
+                _timer?.Dispose();
+                _timer = null;
+            }
+            finally
+            {
+                _locker.Release();
+            }
+        }
+
+        private class DeleteTombstonesCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly Dictionary<string, long> _tombstones;
+            private readonly long _minAllDocsEtag;
+            private readonly DocumentDatabase _database;
+
+            public DeleteTombstonesCommand(Dictionary<string, long> tombstones, long minAllDocsEtag, DocumentDatabase database)
+            {
+                _tombstones = tombstones;
+                _minAllDocsEtag = minAllDocsEtag;
+                _database = database;
+            }
+
+            public override int Execute(DocumentsOperationContext context)
+            {
+                var deletionCount = 0;
+
+                foreach (var tombstone in _tombstones)
                 {
-                    var minTombstoneValue = Math.Min(tombstone.Value, minAllDocsEtag);
+                    var minTombstoneValue = Math.Min(tombstone.Value, _minAllDocsEtag);
                     if (minTombstoneValue <= 0)
                         continue;
 
+                    if (_database.DatabaseShutdown.IsCancellationRequested)
+                        break;
+
+                    deletionCount++;
+
                     try
                     {
-                        using (var tx = storageEnvironment.WriteTransaction())
-                        {
-                            if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
-                                return true;
-
-                            _documentDatabase.DocumentsStorage.DeleteTombstonesBefore(tombstone.Key, minTombstoneValue, tx);
-
-                            tx.Commit();
-                        }
+                        _database.DocumentsStorage.DeleteTombstonesBefore(tombstone.Key, minTombstoneValue, context);
                     }
                     catch (Exception e)
                     {
@@ -119,26 +178,8 @@ namespace Raven.Server.Documents
                                 e);
                     }
                 }
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Failed to execute tombstone cleanup on {_documentDatabase.Name}", e);
-            }
-            finally
-            {
-                Monitor.Exit(_locker);
-            }
-            return true;
-        }
 
-        public void Dispose()
-        {
-            lock (_locker) // so we are sure we aren't running concurrently with the timer
-            {
-                _disposed = true;
-                _timer?.Dispose();
-                _timer = null;
+                return deletionCount;
             }
         }
     }
