@@ -51,7 +51,6 @@ class indexDefinition {
     hasReduce = ko.observable<boolean>(false);
 
     validationGroup: KnockoutValidationGroup;
-    renameValidationGroup: KnockoutValidationGroup;
 
     constructor(dto: Raven.Client.Documents.Indexes.IndexDefinition) {
         this.isAutoIndex(dto.Type.startsWith("Auto"));
@@ -109,10 +108,6 @@ class indexDefinition {
         this.validationGroup = ko.validatedObservable({
             name: this.name,
             reduce: this.reduce
-        });
-
-        this.renameValidationGroup = ko.validatedObservable({
-            name: this.name
         });
     }
 

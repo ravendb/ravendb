@@ -15,7 +15,6 @@ import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteB
 import indexAceAutoCompleteProvider = require("models/database/index/indexAceAutoCompleteProvider");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 import saveIndexDefinitionCommand = require("commands/database/index/saveIndexDefinitionCommand");
-import renameIndexCommand = require("commands/database/index/renameIndexCommand");
 import indexFieldOptions = require("models/database/index/indexFieldOptions");
 import getIndexFieldsFromMapCommand = require("commands/database/index/getIndexFieldsFromMapCommand");
 import configurationItem = require("models/database/index/configurationItem");
@@ -40,8 +39,6 @@ class editIndex extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
     saveInProgress = ko.observable<boolean>(false);
     indexAutoCompleter: indexAceAutoCompleteProvider;
-    renameMode = ko.observable<boolean>(false);
-    renameInProgress = ko.observable<boolean>(false);
     nameChanged: KnockoutComputed<boolean>;
     canEditIndexName: KnockoutComputed<boolean>;
 
@@ -101,13 +98,7 @@ class editIndex extends viewModelBase {
         });
 
         this.canEditIndexName = ko.pureComputed(() => {
-            const renameMode = this.renameMode();
-            const editMode = this.isEditingExistingIndex();
-            return !editMode || renameMode;
-        });
-
-        this.renameMode.subscribe(renameMode => {
-            editIndex.$body.toggleClass('show-rename', renameMode);
+            return !this.isEditingExistingIndex();
         });
 
         this.nameChanged = ko.pureComputed(() => {
@@ -526,38 +517,6 @@ class editIndex extends viewModelBase {
         this.isEditingExistingIndex(false);
         this.editedIndex().name(null);
         this.editedIndex().validationGroup.errors.showAllMessages(false);
-    }
-
-    enterRenameMode() {
-        this.renameMode(true);
-        this.indexNameHasFocus(true);
-    }
-
-    renameIndex() {
-        if (this.isValid(this.editedIndex().renameValidationGroup)) {
-            const newName = this.editedIndex().name();
-            const oldName = this.originalIndexName;
-
-            this.renameInProgress(true);
-
-            new renameIndexCommand(oldName, newName, this.activeDatabase())
-                .execute()
-                .always(() => this.renameInProgress(false))
-                .done(() => {
-                    this.dirtyFlag().reset();
-
-                    this.originalIndexName = newName;
-                    this.updateUrl(this.editedIndex().name());
-                    this.renameMode(false);
-                });
-        }
-    }
-
-    cancelRename() {
-        this.renameMode(false);
-        const editedIndex = this.editedIndex();
-        editedIndex.name(this.originalIndexName);
-        editedIndex.renameValidationGroup.errors.showAllMessages(false);
     }
 
     getCSharpCode() {
