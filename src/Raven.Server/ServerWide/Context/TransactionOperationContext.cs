@@ -41,7 +41,7 @@ namespace Raven.Server.ServerWide.Context
             Allocator = new ByteStringContext();
         }
 
-        public RavenTransaction OpenReadTransaction()
+        public TTransaction OpenReadTransaction()
         {
             if (Transaction != null && Transaction.Disposed == false)
                 ThrowTransactionAlreadyOpened();
