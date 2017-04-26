@@ -13,7 +13,7 @@ namespace Raven.Server.Documents
     {
         private static Logger _logger;
 
-        private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _subscriptionsLocker = new SemaphoreSlim(1, 1);
 
         private readonly DocumentDatabase _documentDatabase;
 
@@ -27,7 +27,7 @@ namespace Raven.Server.Documents
 
         public void Subscribe(IDocumentTombstoneAware subscription)
         {
-            _locker.Wait();
+            _subscriptionsLocker.Wait();
 
             try
             {
@@ -35,13 +35,13 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                _locker.Release();
+                _subscriptionsLocker.Release();
             }
         }
 
         public void Unsubscribe(IDocumentTombstoneAware subscription)
         {
-            _locker.Wait();
+            _subscriptionsLocker.Wait();
 
             try
             {
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                _locker.Release();
+                _subscriptionsLocker.Release();
             }
         }
 
@@ -63,20 +63,17 @@ namespace Raven.Server.Documents
             return true;
         }
 
-        internal async Task<bool> ExecuteCleanup()
+        internal async Task ExecuteCleanup()
         {
-            if (await _locker.WaitAsync(0) == false)
-                return false;
-
             try
             {
                 if (CancellationToken.IsCancellationRequested)
-                    return true;
+                    return;
 
                 var tombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
                 var storageEnvironment = _documentDatabase.DocumentsStorage.Environment;
                 if (storageEnvironment == null) // doc storage was disposed before us?
-                    return true;
+                    return;
 
                 using (var tx = storageEnvironment.ReadTransaction())
                 {
@@ -87,26 +84,35 @@ namespace Raven.Server.Documents
                 }
 
                 if (tombstones.Count == 0)
-                    return true;
+                    return;
 
                 long minAllDocsEtag = long.MaxValue;
 
-                foreach (var subscription in _subscriptions)
-                {
-                    foreach (var tombstone in subscription.GetLastProcessedDocumentTombstonesPerCollection())
-                    {
-                        if (tombstone.Key == Constants.Documents.Replication.AllDocumentsCollection)
-                        {
-                            minAllDocsEtag = Math.Min(tombstone.Value, minAllDocsEtag);
-                            break;
-                        }
+                await _subscriptionsLocker.WaitAsync();
 
-                        long v;
-                        if (tombstones.TryGetValue(tombstone.Key, out v) == false)
-                            tombstones[tombstone.Key] = tombstone.Value;
-                        else
-                            tombstones[tombstone.Key] = Math.Min(tombstone.Value, v);
+                try
+                {
+                    foreach (var subscription in _subscriptions)
+                    {
+                        foreach (var tombstone in subscription.GetLastProcessedDocumentTombstonesPerCollection())
+                        {
+                            if (tombstone.Key == Constants.Documents.Replication.AllDocumentsCollection)
+                            {
+                                minAllDocsEtag = Math.Min(tombstone.Value, minAllDocsEtag);
+                                break;
+                            }
+
+                            long v;
+                            if (tombstones.TryGetValue(tombstone.Key, out v) == false)
+                                tombstones[tombstone.Key] = tombstone.Value;
+                            else
+                                tombstones[tombstone.Key] = Math.Min(tombstone.Value, v);
+                        }
                     }
+                }
+                finally
+                {
+                    _subscriptionsLocker.Release();
                 }
 
                 await _documentDatabase.TxMerger.Enqueue(new DeleteTombstonesCommand(tombstones, minAllDocsEtag, _documentDatabase));
@@ -116,12 +122,6 @@ namespace Raven.Server.Documents
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Failed to execute tombstone cleanup on {_documentDatabase.Name}", e);
             }
-            finally
-            {
-                _locker.Release();
-            }
-
-            return true;
         }
 
         private class DeleteTombstonesCommand : TransactionOperationsMerger.MergedTransactionCommand
@@ -159,9 +159,9 @@ namespace Raven.Server.Documents
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info(
-                                $"Could not delete tombstones for '{tombstone.Key}' collection and '{minTombstoneValue}' etag.",
-                                e);
+                            _logger.Info( $"Could not delete tombstones for '{tombstone.Key}' collection before '{minTombstoneValue}' etag.", e);
+
+                        throw;
                     }
                 }
 
