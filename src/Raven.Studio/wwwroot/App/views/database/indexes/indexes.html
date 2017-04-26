@@ -110,7 +110,7 @@
                 </div>
             </div>
         </div>
-        <div class="flex-content scroll">
+        <div class="flex-grow scroll">
 
             <div data-bind="foreach: sortedGroups">
                 <h2 data-bind="text: entityName, visible: !groupHidden()"></h2>
@@ -236,7 +236,7 @@
     <div class="progress-container">
         <div class="progress-ovarall">
             <div class="flex-horizontal" data-bind="with: globalProgress">
-                <h3 class="flex-content">Overall progress</h3>
+                <h3 class="flex-grow">Overall progress</h3>
                 <div class="percentage" data-bind="text: percentageFormatted, attr: { title: textualProgress }"></div>
             </div>
             <div class="progress" data-bind="template: { name: 'progress-bar-template', data: globalProgress }"></div>
