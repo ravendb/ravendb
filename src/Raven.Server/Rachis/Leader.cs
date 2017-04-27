@@ -196,7 +196,7 @@ namespace Raven.Server.Rachis
                     }
                     ambasaddor.Start();
                 }
-                TaskExecuter.Execute(_ =>
+                ThreadPool.QueueUserWorkItem(_ =>
                 {
                     foreach (var ambasaddor in old)
                     {
@@ -536,7 +536,7 @@ namespace Raven.Server.Rachis
                 index = _engine.InsertToLeaderLog(context, cmd, RachisEntryFlags.StateMachineCommand);
                 context.Transaction.Commit();
             }
-            var tcs = new TaskCompletionSource<long>();
+            var tcs = new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
             _entries[index] = new CommandState
             {
                 CommandIndex = index,

@@ -635,7 +635,6 @@ namespace Raven.Server.ServerWide
 
     public class EditVersioningCommand : UpdateDatabaseCommand
     {
-        public string DatabaseName;
         public VersioningConfiguration Configuration;
 
         public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
@@ -665,7 +664,6 @@ namespace Raven.Server.ServerWide
 
     public class EditExpirationCommand : UpdateDatabaseCommand
     {
-        public string DatabaseName;
         public ExpirationConfiguration Configuration;
         public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
         {

@@ -93,7 +93,7 @@ namespace Raven.Server.Documents
             if (_documentNotifications == null)
                 return;
 
-            TaskExecuter.Execute(state => ((DocumentsTransaction)state).RaiseNotifications(), this);
+            ThreadPool.QueueUserWorkItem(state => ((DocumentsTransaction)state).RaiseNotifications(), this);
         }
 
         public bool ModifiedSystemDocuments => _systemDocumentChangeNotifications?.Count > 0;

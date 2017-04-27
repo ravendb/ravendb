@@ -116,7 +116,7 @@ namespace Voron
 
                 for (int i = 0; i < parallelSyncsPerIo; i++)
                 {
-                    TaskExecuter.Execute(SyncAllEnvironmentsInMountPoint, mountPoint.Value); 
+                    ThreadPool.QueueUserWorkItem(SyncAllEnvironmentsInMountPoint, mountPoint.Value); 
                 }
             }
         }
@@ -223,7 +223,7 @@ namespace Voron
 
                 _concurrentFlushes.Wait();
 
-                TaskExecuter.Execute(env =>
+                ThreadPool.QueueUserWorkItem(env =>
                 {
                     var storageEnvironment = ((StorageEnvironment)env);
                     try
