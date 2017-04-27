@@ -132,35 +132,29 @@ namespace Raven.Server.Documents
             return scope;
         }
 
-        public List<DocumentConflict> GetAllConflictsBySameKeyAfter(DocumentsOperationContext context, ref Slice lastKey)
+        public IEnumerable<List<DocumentConflict>> GetAllConflictsBySameKey(DocumentsOperationContext context)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
+
             var list = new List<DocumentConflict>();
-            LazyStringValue firstKey = null;
-            // Here we intentionally do not use prefix as we try to get the first conflict by empty slice
-            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], lastKey, 0, false))
+            LazyStringValue lastKey = null;
+            
+            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], Slices.Empty, 0, false))
             {
                 var conflict = TableValueToConflictDocument(context, ref tvr.Result.Reader);
-                if (lastKey.Content.Match(conflict.LoweredKey))
+
+                if (lastKey != null && lastKey.Equals(conflict.LoweredKey) == false)
                 {
-                    // same key as we already seen, skip it
-                    break;
+                    yield return list;
+                    list = new List<DocumentConflict>();
                 }
 
-                if (firstKey == null)
-                    firstKey = conflict.LoweredKey;
                 list.Add(conflict);
+                lastKey = conflict.LoweredKey;
+            }
 
-                if (firstKey.Equals(conflict.LoweredKey) == false)
-                    break;
-            }
             if (list.Count > 0)
-            {
-                lastKey.Release(context.Allocator);
-                // we have to clone this, because it might be removed by the time we come back here
-                Slice.From(context.Allocator, list[0].LoweredKey.Buffer, list[0].LoweredKey.Size, out lastKey);
-            }
-            return list;
+                yield return list;
         }
 
         public IEnumerable<ReplicationBatchItem> GetConflictsFrom(DocumentsOperationContext context, long etag)
