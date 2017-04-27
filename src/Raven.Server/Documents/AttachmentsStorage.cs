@@ -251,14 +251,16 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize,  ChangeVectorEntry[] changeVector, (LazyStringValue name, LazyStringValue contentType, Slice base64Hash) attachment)
+        private void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerKey, int lowerKeySize, 
+            ChangeVectorEntry[] changeVector, (LazyStringValue name, LazyStringValue contentType, Slice base64Hash) attachment)
         {
             var attachmenEtag = _documentsStorage.GenerateNextEtag();
 
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, attachment.name, out Slice lowerName, out Slice namePtr);
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, attachment.contentType, out Slice lowerContentType, out Slice contentTypePtr);
 
-            using (GetAttachmentKey(context, lowerKey, lowerKeySize, lowerName.Content.Ptr, lowerName.Size, attachment.base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size,  AttachmentType.Revision, changeVector, out Slice keySlice))
+            using (GetAttachmentKey(context, lowerKey, lowerKeySize, lowerName.Content.Ptr, lowerName.Size, attachment.base64Hash, 
+                lowerContentType.Content.Ptr, lowerContentType.Size,  AttachmentType.Revision, changeVector, out Slice keySlice))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                 using (table.Allocate(out TableValueBuilder tbv))
@@ -620,15 +622,23 @@ namespace Raven.Server.Documents
                     };
                 }
 
-                CreateTombstone(context, key, etag);
-            }
-
-            using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out Slice hashSlice))
-            {
-                DeleteAttachmentStream(context, hashSlice);
+                DeleteInternal(context, key, etag, ref tvr);
             }
 
             table.Delete(tvr.Id);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, ref TableValueReader tvr)
+        {
+            CreateTombstone(context, key, etag);
+
+            using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out Slice hashSlice))
+            {
+                // we are running just before the delete, so we may still have 1 entry there, the one just
+                // about to be deleted
+                DeleteAttachmentStream(context, hashSlice);
+            }
         }
 
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag)
@@ -658,11 +668,10 @@ namespace Raven.Server.Documents
             {
                 table.DeleteByPrimaryKeyPrefix(prefixSlice, before =>
                 {
-                    using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref before.Reader, out Slice hashSlice))
+                    using (DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.LoweredDocumentIdAndLoweredNameAndType, ref before.Reader, out Slice key))
                     {
-                        // we are running just before the delete, so we may still have 1 entry there, the one just
-                        // about to be deleted
-                        DeleteAttachmentStream(context, hashSlice);
+                        var etag = DocumentsStorage.TableValueToEtag((int)AttachmentsTable.Etag, ref before.Reader);
+                        DeleteInternal(context, key, etag, ref before.Reader);
                     }
                 });
             }

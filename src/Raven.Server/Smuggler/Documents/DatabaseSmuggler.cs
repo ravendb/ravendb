@@ -336,6 +336,8 @@ namespace Raven.Server.Smuggler.Documents
 
                     Debug.Assert(document.Key != null);
 
+                    document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+
                     actions.WriteDocument(document);
 
                     result.RevisionDocuments.LastEtag = document.Etag;
@@ -407,7 +409,7 @@ namespace Raven.Server.Smuggler.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool CanSkipDocument(Document document, BuildVersionType buildType)
         {
-            if (buildType == BuildVersionType.V3 == false)
+            if (buildType != BuildVersionType.V3)
                 return false;
 
             // skipping "Raven/Replication/DatabaseIdsCache" and

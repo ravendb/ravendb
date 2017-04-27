@@ -5,7 +5,8 @@ param(
     $DataDir = "",
     $DataVolumeName = "ravendb",
     [switch]$AllowEverybodyToAccessTheServerAsAdmin,
-    [switch]$RemoveOnExit)
+    [switch]$RemoveOnExit,
+    [switch]$DryRun)
 
 $ErrorActionPreference = "Stop";
 
@@ -33,7 +34,6 @@ $dockerArgs += '-d'
 if ($RemoveOnExit) {
     $dockerArgs += '--rm'
 }
-
 
 if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
     $fileEntry = (Get-Item $ConfigPath)
@@ -68,7 +68,6 @@ if ($AllowEverybodyToAccessTheServerAsAdmin) {
     $dockerArgs += "AllowEverybodyToAccessTheServerAsAdmin=true"
 }
 
-
 $dockerArgs += '-p'
 $dockerArgs += "$($BindPort):8080"
 
@@ -78,6 +77,14 @@ $dockerArgs += "$($BindTcpPort):38888"
 $RAVEN_IMAGE = 'ravendb/ravendb:windows-nanoserver-latest'
 $dockerArgs += $RAVEN_IMAGE
 
+if ($DryRun) {
+    write-host -fore magenta "docker $dockerArgs"
+    exit 0
+}
+
+write-host -nonewline "Starting container: "
+write-host -fore magenta "docker $dockerArgs"
+
 try {
     $containerId = Invoke-Expression -Command "docker $dockerArgs"
     CheckLastExitCode
@@ -86,21 +93,37 @@ try {
     exit 1
 }
 
-write-host -nonewline "Starting container: "
-write-host -fore blue "docker $dockerArgs"
-
 start-sleep 10
-$ravenIp = docker ps -q | % { docker inspect  -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $_ }[0];
+$ravenIp = docker ps -q -f id=$containerId | % { docker inspect  -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $_ }[0];
 
-write-host -fore white "**********************************************"
+if ([string]::IsNullOrEmpty($ravenIp)) {
+    write-host -fore red "Could not determine container`'s IP address. Is it running?"
+    write-host -fore red -nonewline "Try: "
+    $interactiveCmdArgs = "$dockerArgs".Replace('-d', '-it --rm')
+    write-host -fore magenta "docker $interactiveCmdArgs"
+    exit 1
+}
+
+$containerIdShort = $containerId.Substring(0, 10)
+
+write-host -nonewline -fore white "**********************************************"
+write-host -fore red "
+       _____                       _____  ____
+      |  __ \                     |  __ \|  _ \
+      | |__) |__ ___   _____ _ __ | |  | | |_) |
+      |  _  // _` \  \ / / _ \ '_ \| |  | |  _ <
+      | | \ \ (_| |\ V /  __/ | | | |__| | |_) |
+      |_|  \_\__,_| \_/ \___|_| |_|_____/|____/
+"
+write-host -fore cyan "      Safe by default, optimized for efficiency"
 write-host ""
-write-host "RavenDB docker container running."
-write-host "Container ID is $containerId"
+write-host -nonewline "Container ID is "
+write-host -fore white "$containerId"
 write-host ""
 write-host -nonewline "To stop it use:     "
-write-host -fore cyan "docker stop $containerId"
+write-host -fore cyan "docker stop $containerIdShort"
 write-host -nonewline "To run shell use:   "
-write-host -fore cyan "docker exec -it $containerId powershell"
+write-host -fore cyan "docker exec -it $containerIdShort powershell"
 write-host ""
 write-host -nonewline "Access RavenDB Studio on "
 write-host -fore yellow "http://$($ravenIp):$BindPort"

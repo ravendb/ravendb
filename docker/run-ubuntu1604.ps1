@@ -5,7 +5,8 @@ param(
     $DataDir = "",
     $DataVolumeName = "ravendb",
     [switch]$AllowEverybodyToAccessTheServerAsAdmin,
-    [switch]$RemoveOnExit)
+    [switch]$RemoveOnExit,
+    [switch]$DryRun)
 
 $ErrorActionPreference = "Stop";
 
@@ -43,6 +44,7 @@ if ([string]::IsNullOrEmpty($DataDir)) {
 
     if ([string]::IsNullOrEmpty($(docker volume ls | select-string $DataVolumeName))) {
         docker volume create $DataVolumeName
+        CheckLastExitCode
         write-host "Created docker volume $DataVolumeName."
     }
 
@@ -70,6 +72,14 @@ $dockerArgs += "$($BindTcpPort):38888"
 $RAVEN_IMAGE = 'ravendb/ravendb:ubuntu-latest'
 $dockerArgs += $RAVEN_IMAGE
 
+if ($DryRun) {
+    write-host -fore magenta "docker $dockerArgs"
+    exit 0
+}
+
+write-host -nonewline "Starting container: "
+write-host -fore magenta "docker $dockerArgs"
+
 try {
     $containerId = Invoke-Expression -Command "docker $dockerArgs"
     CheckLastExitCode
@@ -78,11 +88,16 @@ try {
     exit 1
 }
 
-write-host -nonewline "Starting container: "
-write-host -fore blue "docker $dockerArgs"
-
 start-sleep 10
-$containerInSubnetAddress = docker ps -q | % { docker inspect  -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $_ }[0];
+$containerInSubnetAddress = docker ps -q -f id=$containerId | % { docker inspect  -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $_ }[0];
+
+if ([string]::IsNullOrEmpty($containerInSubnetAddress)) {
+    write-host -fore red "Could not determine container`'s IP address. Is it running?"
+    write-host -fore red -nonewline "Try: "
+    $interactiveCmdArgs = "$dockerArgs".Replace('-d', '-it --rm')
+    write-host -fore magenta "docker $interactiveCmdArgs"
+    exit 1
+}
 
 if ($IsWindows -eq $False)
 {
@@ -106,16 +121,27 @@ else
     $dockerSubnetIp = $dockerSubnetAddress.IpV4Address.ToString()
 
     $net = $dockerSubnetAddress.IpV4Address.ToString().Split(".") | select -first 3
-    $last = $containerInSubnetAddress.ToString().Split(".") | select -skip 3
-    $ravenIp = "$($net -join '.').$last"
+
+    
+    $LAST_PART_OF_IP_IN_DOCKERNAT_NETWORK = 2
+    $ravenIp = "$($net -join '.').$LAST_PART_OF_IP_IN_DOCKERNAT_NETWORK"
 }
 
 $containerIdShort = $containerId.Substring(0, 10)
 
-write-host -fore white "**********************************************"
+write-host -nonewline -fore white "**********************************************"
+write-host -fore red "
+       _____                       _____  ____
+      |  __ \                     |  __ \|  _ \
+      | |__) |__ ___   _____ _ __ | |  | | |_) |
+      |  _  // _` \  \ / / _ \ '_ \| |  | |  _ <
+      | | \ \ (_| |\ V /  __/ | | | |__| | |_) |
+      |_|  \_\__,_| \_/ \___|_| |_|_____/|____/
+"
+write-host -fore cyan "      Safe by default, optimized for efficiency"
 write-host ""
-write-host "RavenDB docker container running."
-write-host "Container ID is $containerId"
+write-host -nonewline "Container ID is "
+write-host -fore white "$containerId"
 write-host ""
 write-host -nonewline "To stop it use:     "
 write-host -fore cyan "docker stop $containerIdShort"

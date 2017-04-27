@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Smuggler.Documents;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -329,7 +330,7 @@ namespace Raven.Server.Documents.Handlers
             BlittableJsonReaderObject reader;
             using (var builder = new BlittableJsonDocumentBuilder(ctx,
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk,
-                key, parser, state))
+                key, parser, state, modifier: new StreamSource.BlittableMetadataModifier(ctx)))
             {
                 ctx.CachedProperties.NewDocument();
                 builder.ReadNestedObject();

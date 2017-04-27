@@ -35,7 +35,6 @@ namespace Raven.Server.Utils
             return sb.ToString();
         }
 
-
         public static unsafe void WriteChangeVectorTo(DocumentsOperationContext context, Dictionary<Guid, long> changeVector, Tree tree)
         {
             Guid dbId;

@@ -262,7 +262,6 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-
         private unsafe bool AddReplicationItemToBatch(ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
         {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)

@@ -776,6 +776,7 @@ namespace Raven.Server.Documents
         {
             var document = ParseDocument(context, ref tvr);
             DebugDisposeReaderAfterTransction(context.Transaction, document.Data);
+            DocumentPutAction.AssertMetadataWasFiltered(document.Data);
             return document;
         }
 
@@ -954,7 +955,8 @@ namespace Raven.Server.Documents
 
                 var etag = CreateTombstone(context, tombstone, doc.Etag, collectionName, doc.ChangeVector, lastModifiedTicks, changeVector, doc.Flags);
 
-                if (collectionName.IsSystem == false)
+                if (collectionName.IsSystem == false &&
+                    (flags & DocumentFlags.Versioned) == DocumentFlags.Versioned)
                 {
                     _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, collectionName, loweredKey);
                 }

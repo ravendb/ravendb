@@ -5,4 +5,9 @@ namespace FastTests.Client.Attachments
         public string Name { get; set; }
         public string Country { get; set; }
     }
+
+    public class Product
+    {
+        public string Name { get; set; }
+    }
 }

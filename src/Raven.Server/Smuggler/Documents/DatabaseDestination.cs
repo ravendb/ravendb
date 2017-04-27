@@ -288,7 +288,7 @@ namespace Raven.Server.Smuggler.Documents
                             ThrowVersioningDisabled();
 
                         // ReSharper disable once PossibleNullReferenceException
-                        _database.BundleLoader.VersioningStorage.PutDirect(context, key, document.Data, document.Flags, document.ChangeVector, document.LastModified.Ticks);
+                        _database.BundleLoader.VersioningStorage.Put(context, key, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
                         continue;
                     }
 
@@ -302,7 +302,7 @@ namespace Raven.Server.Smuggler.Documents
                         var newKey = key.Substring(0, endIndex);
 
                         // ReSharper disable once PossibleNullReferenceException
-                        _database.BundleLoader.VersioningStorage.PutDirect(context, newKey, document.Data, document.Flags, document.ChangeVector, document.LastModified.Ticks);
+                        _database.BundleLoader.VersioningStorage.Put(context, newKey, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
                         continue;
                     }
 
