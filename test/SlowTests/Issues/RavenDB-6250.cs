@@ -80,8 +80,6 @@ namespace SlowTests.Issues
                                          "If operation doesn't provide details, please add this to 'operationWithoutDetails' set.");
         }
 
-        
-
 
     }
 }

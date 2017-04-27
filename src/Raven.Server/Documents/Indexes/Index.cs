@@ -233,7 +233,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public long Etag { get; }
+        public long Etag { get; set; }
 
         public IndexType Type { get; }
 
