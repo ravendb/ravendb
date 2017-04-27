@@ -112,7 +112,7 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(2, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
 
-                Assert.False(WaitForDocument(store1, "foo/bar", timeout));
+                Assert.False(WaitForDocument(store1, "foo/bar", 100));
             }
         }
 
