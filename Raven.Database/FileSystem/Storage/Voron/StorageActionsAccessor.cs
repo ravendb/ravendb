@@ -620,12 +620,14 @@ namespace Raven.Database.FileSystem.Storage.Voron
                     var newId = IdGenerator.GetNextIdForTable(storage.Usage);
                     var position = usage.Value<int>("file_pos");
 
+                    var pageId = usage.Value<int>("page_id");
+
                     var newUsage = new RavenJObject
                         {
                             { "id", newId },
                             { "name", targetFilename }, 
                             { "file_pos", position }, 
-                            { "page_id", usage.Value<int>("page_id") }, 
+                            { "page_id", pageId }, 
                             { "page_size", usage.Value<int>("page_size") }
                         };
 
@@ -635,6 +637,8 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
                     usageByFileName.MultiAdd(writeBatch.Value, newKey, newUsageId);
                     usageByFileNameAndPosition.Add(writeBatch.Value, CreateKey(targetFilename, position), newUsageId);
+
+                    IncrementUsageCount(pageId);
 
                     if (commitPeriodically && count++ > 1000)
                     {

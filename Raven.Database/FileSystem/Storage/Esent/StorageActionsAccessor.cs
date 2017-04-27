@@ -707,12 +707,19 @@ namespace Raven.Database.FileSystem.Storage.Esent
                         update.Save();
                     }
 
+                    IncrementUsageCount(pageInfo.Id);
+
                     if (commitPeriodically && count++ > 1000)
                     {
                         PulseTransaction();
                         count = 0;
                     }
                 }
+
+                if (Api.TryMoveFirst(session, Details) == false)
+                    throw new InvalidOperationException("Could not find system metadata row");
+
+                Api.EscrowUpdate(session, Details, tableColumnsCache.DetailsColumns["file_count"], 1);
             }
             catch (Exception e)
             {
