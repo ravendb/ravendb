@@ -12,6 +12,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
@@ -37,7 +38,7 @@ namespace FastTests
         {
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
         }
-        
+
         private readonly object _getDocumentStoreSync = new object();
 
         protected virtual DocumentStore GetDocumentStore(
@@ -50,13 +51,13 @@ namespace FastTests
             bool ignoreDisabledDatabase = false,
             int replicationFacotr = 1,
             RavenServer defaultServer = null,
-            bool waitForDatabasesToBeCreated= false,
+            bool waitForDatabasesToBeCreated = false,
             bool deleteDatabaseWhenDisposed = true,
             bool createDatabase = true)
         {
             lock (_getDocumentStoreSync)
             {
-                defaultServer = defaultServer??Server;
+                defaultServer = defaultServer ?? Server;
                 var name = caller != null
                     ? $"{caller}_{Interlocked.Increment(ref _counter)}"
                     : Guid.NewGuid().ToString("N");
@@ -113,9 +114,9 @@ namespace FastTests
                 if (createDatabase)
                 {
                     var result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFacotr));
-                    Server.ServerStore.Cluster.WaitForIndexNotification(result.ETag??0).Wait();
+                    Server.ServerStore.Cluster.WaitForIndexNotification(result.ETag ?? 0).Wait();
                 }
-                
+
 
                 store.AfterDispose += (sender, args) =>
                 {
@@ -130,9 +131,17 @@ namespace FastTests
                         // if we are disposing store before database had chance to load then we need to wait
 
                         defaultServer.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
-                        if(deleteDatabaseWhenDisposed)
+                        if (deleteDatabaseWhenDisposed)
                         {
-                            var result = store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
+                            DeleteDatabaseResult result;
+                            try
+                            {
+                                result = store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
+                            }
+                            catch (DatabaseDoesNotExistException)
+                            {
+                                return;
+                            }
                             defaultServer.ServerStore.Cluster.WaitForIndexNotification(result.ETag).ConfigureAwait(false).GetAwaiter().GetResult();
                         }
                     }

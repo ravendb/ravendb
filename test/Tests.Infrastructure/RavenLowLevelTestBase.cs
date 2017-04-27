@@ -33,7 +33,17 @@ namespace FastTests
 
         private static int _counter;
 
-        protected DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory = true, string dataDirectory = null, Action<Dictionary<string, string>> modifyConfiguration = null)
+        protected IDisposable CreatePersistentDocumentDatabase(string dataDirectory, out DocumentDatabase db)
+        {
+            var database = CreateDocumentDatabase(runInMemory2: false, dataDirectory: dataDirectory);
+            db = database;
+            return new DisposableAction(() =>
+            {
+                DeleteDatabase(database.Name);
+            });
+        }
+
+        protected DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory2 = true, string dataDirectory = null, Action<Dictionary<string, string>> modifyConfiguration = null)
         {
             var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
 
@@ -45,7 +55,7 @@ namespace FastTests
             var configuration = new Dictionary<string, string>();
             configuration.Add(RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory), int.MaxValue.ToString());
             configuration.Add(RavenConfiguration.GetKey(x => x.Core.DataDirectory), dataDirectory);
-            configuration.Add(RavenConfiguration.GetKey(x => x.Core.RunInMemory), runInMemory.ToString());
+            configuration.Add(RavenConfiguration.GetKey(x => x.Core.RunInMemory), runInMemory2.ToString());
             configuration.Add(RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened), "true");
 
             modifyConfiguration?.Invoke(configuration);

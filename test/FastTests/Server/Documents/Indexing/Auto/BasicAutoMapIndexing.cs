@@ -74,7 +74,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public async Task CanDispose()
         {
-            using (var database = CreateDocumentDatabase(runInMemory: false))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 Assert.True(await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new IndexField
                 {
@@ -92,9 +92,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public async Task CanPersist()
         {
-            var path = NewDataPath();
             string dbName;
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 dbName = database.Name;
 
@@ -119,12 +118,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 index2.SetLock(IndexLockMode.LockedError);
                 index2.SetPriority(IndexPriority.Low);
                 index2.SetState(IndexState.Disabled);
-            }
 
-            Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
 
-            using (var database = await GetDatabase(dbName))
-            {
+                database = await GetDatabase(dbName);
+
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")
@@ -161,8 +159,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             using (var database = CreateDocumentDatabase())
                 await CanDelete(database);
 
-            var path = NewDataPath();
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
                 await CanDelete(database);
         }
 
@@ -214,8 +211,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             using (var database = CreateDocumentDatabase())
                 await CanReset(database);
 
-            var path = NewDataPath();
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
                 await CanReset(database);
         }
 
@@ -243,7 +239,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             var index3 = database.IndexStore.ResetIndex(index1);
             var path3 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath, IndexDefinitionBase.GetIndexNameSafeForFileSystem(def1.Name));
-            
+
             if (database.Configuration.Core.RunInMemory == false)
                 Assert.True(Directory.Exists(path3));
 
@@ -1076,12 +1072,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public async Task IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert()
         {
-            var path = NewDataPath();
             string indexStoragePath;
             string indexName;
             string dbName;
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 dbName = database.Name;
 
@@ -1099,21 +1094,20 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 indexStoragePath = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                     IndexDefinitionBase.GetIndexNameSafeForFileSystem(indexName));
-            }
 
-            Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
 
-            IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "headers.one"));
-            IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "headers.two"));
+                IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "headers.one"));
+                IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "headers.two"));
 
-            await ModifyDatabaseSettings(dbName, record =>
-            {
-                record.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "false";
-            });
+                await ModifyDatabaseSettings(dbName, record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "false";
+                });
 
-            using (var database = await GetDatabase(dbName))
-            {
-                var index = database
+                database = await GetDatabase(dbName);
+
+                index = database
                     .IndexStore
                     .GetIndex(indexName);
 
@@ -1128,13 +1122,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public async Task CanDeleteFaultyIndex()
         {
-            var path = NewDataPath();
             string indexStoragePath;
             string indexSafeName;
             string dbName;
             long etag;
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 dbName = database.Name;
 
@@ -1152,22 +1145,22 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 indexStoragePath = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                     IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name));
-            }
 
-            Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
 
-            Assert.True(Directory.Exists(indexStoragePath));
-            IOExtensions.DeleteDirectory(indexStoragePath);
-            Directory.CreateDirectory(indexStoragePath); // worst case, we have no info
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
 
-            await ModifyDatabaseSettings(dbName, record =>
-            {
-                record.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "false";
-            });
+                Assert.True(Directory.Exists(indexStoragePath));
+                IOExtensions.DeleteDirectory(indexStoragePath);
+                Directory.CreateDirectory(indexStoragePath); // worst case, we have no info
 
-            using (var database = await GetDatabase(dbName))
-            {
-                var index = database
+                await ModifyDatabaseSettings(dbName, record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "false";
+                });
+
+                database = await GetDatabase(dbName);
+
+                index = database
                     .IndexStore
                     .GetIndex(etag);
 

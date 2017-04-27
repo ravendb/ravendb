@@ -230,9 +230,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public async Task DefinitionOfAutoMapReduceIndexIsPersisted()
         {
-            var path = NewDataPath();
             string dbName;
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 dbName = database.Name;
 
@@ -251,7 +251,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Sort = SortOptions.String,
                 };
 
-                Assert.True(await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count }, new[] { location })) > 0);
+                Assert.True(await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] {count}, new[] {location})) > 0);
 
                 var sum = new IndexField
                 {
@@ -261,19 +261,18 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     MapReduceOperation = FieldMapReduceOperation.Sum
                 };
 
-                var etag = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { location }));
+                var etag = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] {count, sum}, new[] {location}));
                 Assert.True(etag > 0);
 
                 var index2 = database.IndexStore.GetIndex(etag);
                 index2.SetLock(IndexLockMode.LockedError);
                 index2.SetPriority(IndexPriority.High);
                 index2.SetState(IndexState.Disabled);
-            }
 
-            Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
 
-            using (var database = await GetDatabase(dbName))
-            {
+                database = await GetDatabase(dbName);
+
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")

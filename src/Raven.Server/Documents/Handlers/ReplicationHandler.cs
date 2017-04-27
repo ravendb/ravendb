@@ -216,7 +216,6 @@ namespace Raven.Server.Documents.Handlers
                         ["Database"] = item.Database,
                         ["Disabled"] = item.Disabled,
                         ["IgnoredClient"] = item.IgnoredClient,
-                        ["SkipIndexReplication"] = item.SkipIndexReplication,
                         ["SpecifiedCollections"] = item.SpecifiedCollections
                     });
                 }
@@ -248,7 +247,6 @@ namespace Raven.Server.Documents.Handlers
                             ["Database"] = item.Key.Database,
                             ["Disabled"] = item.Key.Disabled,
                             ["IgnoredClient"] = item.Key.IgnoredClient,
-                            ["SkipIndexReplication"] = item.Key.SkipIndexReplication,
                             ["SpecifiedCollections"] = item.Key.SpecifiedCollections
                         },
                         ["Value"] = new DynamicJsonValue
@@ -341,7 +339,6 @@ namespace Raven.Server.Documents.Handlers
                         ["Database"] = queueItem.Database,
                         ["Disabled"] = queueItem.Disabled,
                         ["IgnoredClient"] = queueItem.IgnoredClient,
-                        ["SkipIndexReplication"] = queueItem.SkipIndexReplication,
                         ["SpecifiedCollections"] = queueItem.SpecifiedCollections
                     });
                 }

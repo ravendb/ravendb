@@ -34,12 +34,12 @@ namespace Raven.Server.Documents.ETL
             if (ApplyToAllDocuments)
             {
                 if (Collections != null && Collections.Count > 0)
-                    errors.Add($"{nameof(Collections)} cannot be provided when {nameof(ApplyToAllDocuments)} is set");
+                    errors.Add($"{nameof(Collections)} cannot be specified when {nameof(ApplyToAllDocuments)} is set");
             }
             else
             {
                 if (Collections == null || Collections.Count == 0)
-                    errors.Add($"{nameof(Collections)} need be provided or {nameof(ApplyToAllDocuments)} has to be set");
+                    errors.Add($"{nameof(Collections)} need be specified or {nameof(ApplyToAllDocuments)} has to be set");
             }
 
             if (string.IsNullOrEmpty(Script) == false)

@@ -26,14 +26,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);
         }
 
-        protected override IEnumerator<RavenEtlItem> ConvertDocsEnumerator(IEnumerator<Document> docs)
+        protected override IEnumerator<RavenEtlItem> ConvertDocsEnumerator(IEnumerator<Document> docs, string collection)
         {
-            return new DocumentsToRavenEtlItems(docs);
+            return new DocumentsToRavenEtlItems(docs, collection);
         }
 
-        protected override IEnumerator<RavenEtlItem> ConvertTombstonesEnumerator(IEnumerator<DocumentTombstone> tombstones)
+        protected override IEnumerator<RavenEtlItem> ConvertTombstonesEnumerator(IEnumerator<DocumentTombstone> tombstones, string collection)
         {
-            return new TombstonesToRavenEtlItems(tombstones);
+            return new TombstonesToRavenEtlItems(tombstones, collection);
         }
 
         protected override EtlTransformer<RavenEtlItem, ICommandData> GetTransformer(DocumentsOperationContext context)
@@ -74,6 +74,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                 throw;
             }
+        }
+
+        protected override bool ShouldFilterOutSystemDocument(bool isHiLo)
+        {
+            // if we transfer all documents to the same collections (no script specified) then don't exclude HiLo docs
+
+            return (isHiLo && string.IsNullOrEmpty(Transformation.Script)) == false;
         }
 
         private static void ThrowTimeoutException(int numberOfCommands, Exception e)

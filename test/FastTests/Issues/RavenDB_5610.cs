@@ -32,13 +32,13 @@ namespace FastTests.Issues
                 Assert.Equal(IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex, options);
 
                 indexDefinition = CreateIndexDefinition();
-                indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.RunInMemory)] = "false";
+                indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = "somePath";
 
                 options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index);
                 Assert.Equal(IndexCreationOptions.Update, options);
 
                 indexDefinition = CreateIndexDefinition();
-                indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.RunInMemory)] = "false";
+                indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = "somePath";
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "30";
 
                 options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index);
@@ -50,8 +50,8 @@ namespace FastTests.Issues
         public async Task WillUpdate()
         {
 
-            var database = CreateDocumentDatabase(runInMemory: false);
-            try
+
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 var indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "33";
@@ -79,10 +79,6 @@ namespace FastTests.Issues
 
                 index = database.IndexStore.GetIndex(indexName);
                 Assert.Equal(30, index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
-            }
-            finally
-            {
-                DeleteDatabase(database.Name);
             }
         }
 

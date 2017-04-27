@@ -513,6 +513,11 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+        public IAsyncDocumentQuery<TResult> OfType<TResult>()
+        {
+            return CreateDocumentQueryInternal<TResult>(Transformer, FieldsToFetch, ProjectionFields);
+        }
+
         /// <summary>
         /// Order the results by the specified fields
         /// The fields are the names of the fields to sort, defaulting to sorting by ascending.
@@ -719,49 +724,7 @@ namespace Raven.Client.Documents.Session
         /// <typeparam name="TProjection">The type of the projection.</typeparam>
         public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
         {
-            var asyncDocumentQuery = new AsyncDocumentQuery<TProjection>(TheSession,
-                IndexName, fields, projections,
-                IsMapReduce)
-            {
-                PageSize = PageSize,
-                QueryText = new StringBuilder(QueryText.ToString()),
-                Start = Start,
-                Timeout = Timeout,
-                CutoffEtag = CutoffEtag,
-                QueryStats = QueryStats,
-                TheWaitForNonStaleResults = TheWaitForNonStaleResults,
-                TheWaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
-                OrderByFields = OrderByFields,
-                DynamicMapReduceFields = DynamicMapReduceFields,
-                _isDistinct = _isDistinct,
-                AllowMultipleIndexEntriesForSameDocumentToResultTransformer = AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
-                Negate = Negate,
-                TransformResultsFunc = TransformResultsFunc,
-                Includes = new HashSet<string>(Includes),
-                IsSpatialQuery = IsSpatialQuery,
-                SpatialFieldName = SpatialFieldName,
-                QueryShape = QueryShape,
-                SpatialRelation = SpatialRelation,
-                SpatialUnits = SpatialUnits,
-                DistanceErrorPct = DistanceErrorPct,
-                RootTypes = { typeof(T) },
-                DefaultField = DefaultField,
-                BeforeQueryExecutionAction = BeforeQueryExecutionAction,
-                AfterQueryExecutedCallback = AfterQueryExecutedCallback,
-                AfterStreamExecutedCallback = AfterStreamExecutedCallback,
-                HighlightedFields = new List<HighlightedField>(HighlightedFields),
-                HighlighterPreTags = HighlighterPreTags,
-                HighlighterPostTags = HighlighterPostTags,
-                Transformer = Transformer,
-                TransformerParameters = TransformerParameters,
-                DisableEntitiesTracking = DisableEntitiesTracking,
-                DisableCaching = DisableCaching,
-                ShowQueryTimings = ShowQueryTimings,
-                LastEquality = LastEquality,
-                ShouldExplainScores = ShouldExplainScores
-            };
-            asyncDocumentQuery.AfterQueryExecuted(AfterQueryExecutedCallback);
-            return asyncDocumentQuery;
+            return CreateDocumentQueryInternal<TProjection>(Transformer, fields, projections);
         }
 
         public IAsyncDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
@@ -994,50 +957,7 @@ namespace Raven.Client.Documents.Session
 
         public IAsyncDocumentQuery<TTransformerResult> SetTransformer<TTransformer, TTransformerResult>() where TTransformer : AbstractTransformerCreationTask, new()
         {
-            var documentQuery = new AsyncDocumentQuery<TTransformerResult>(TheSession,
-                IndexName,
-                FieldsToFetch,
-                ProjectionFields,
-                IsMapReduce)
-            {
-                PageSize = PageSize,
-                QueryText = new StringBuilder(QueryText.ToString()),
-                Start = Start,
-                Timeout = Timeout,
-                CutoffEtag = CutoffEtag,
-                QueryStats = QueryStats,
-                TheWaitForNonStaleResults = TheWaitForNonStaleResults,
-                TheWaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
-                OrderByFields = OrderByFields,
-                DynamicMapReduceFields = DynamicMapReduceFields,
-                _isDistinct = _isDistinct,
-                AllowMultipleIndexEntriesForSameDocumentToResultTransformer = AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
-                Negate = Negate,
-                TransformResultsFunc = TransformResultsFunc,
-                Includes = new HashSet<string>(Includes),
-                IsSpatialQuery = IsSpatialQuery,
-                SpatialFieldName = SpatialFieldName,
-                QueryShape = QueryShape,
-                SpatialRelation = SpatialRelation,
-                SpatialUnits = SpatialUnits,
-                DistanceErrorPct = DistanceErrorPct,
-                RootTypes = { typeof(T) },
-                DefaultField = DefaultField,
-                BeforeQueryExecutionAction = BeforeQueryExecutionAction,
-                HighlightedFields = new List<HighlightedField>(HighlightedFields),
-                HighlighterPreTags = HighlighterPreTags,
-                HighlighterPostTags = HighlighterPostTags,
-                Transformer = new TTransformer().TransformerName,
-                TransformerParameters = TransformerParameters,
-                DisableEntitiesTracking = DisableEntitiesTracking,
-                DisableCaching = DisableCaching,
-                ShowQueryTimings = ShowQueryTimings,
-                LastEquality = LastEquality,
-                DefaultOperator = DefaultOperator,
-                ShouldExplainScores = ShouldExplainScores
-            };
-            documentQuery.AfterQueryExecuted(AfterQueryExecutedCallback);
-            return documentQuery;
+            return CreateDocumentQueryInternal<TTransformerResult>(new TTransformer().TransformerName, FieldsToFetch, ProjectionFields);
         }
 
         public async Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
@@ -1190,6 +1110,56 @@ namespace Raven.Client.Documents.Session
             }
 
             InvokeAfterQueryExecuted(QueryOperation.CurrentQueryResults);
+        }
+
+        private AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(string transformer, string[] fieldsToFetch, string[] projectionFields)
+        {
+            var asyncDocumentQuery = new AsyncDocumentQuery<TResult>(
+                TheSession,
+                IndexName,
+                fieldsToFetch,
+                projectionFields,
+                IsMapReduce)
+            {
+                PageSize = PageSize,
+                QueryText = new StringBuilder(QueryText.ToString()),
+                Start = Start,
+                Timeout = Timeout,
+                CutoffEtag = CutoffEtag,
+                QueryStats = QueryStats,
+                TheWaitForNonStaleResults = TheWaitForNonStaleResults,
+                TheWaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
+                OrderByFields = OrderByFields,
+                DynamicMapReduceFields = DynamicMapReduceFields,
+                _isDistinct = _isDistinct,
+                AllowMultipleIndexEntriesForSameDocumentToResultTransformer = AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
+                Negate = Negate,
+                TransformResultsFunc = TransformResultsFunc,
+                Includes = new HashSet<string>(Includes),
+                IsSpatialQuery = IsSpatialQuery,
+                SpatialFieldName = SpatialFieldName,
+                QueryShape = QueryShape,
+                SpatialRelation = SpatialRelation,
+                SpatialUnits = SpatialUnits,
+                DistanceErrorPct = DistanceErrorPct,
+                RootTypes = { typeof(T) },
+                DefaultField = DefaultField,
+                BeforeQueryExecutionAction = BeforeQueryExecutionAction,
+                AfterQueryExecutedCallback = AfterQueryExecutedCallback,
+                AfterStreamExecutedCallback = AfterStreamExecutedCallback,
+                HighlightedFields = new List<HighlightedField>(HighlightedFields),
+                HighlighterPreTags = HighlighterPreTags,
+                HighlighterPostTags = HighlighterPostTags,
+                Transformer = transformer,
+                TransformerParameters = TransformerParameters,
+                DisableEntitiesTracking = DisableEntitiesTracking,
+                DisableCaching = DisableCaching,
+                ShowQueryTimings = ShowQueryTimings,
+                LastEquality = LastEquality,
+                ShouldExplainScores = ShouldExplainScores
+            };
+            asyncDocumentQuery.AfterQueryExecuted(AfterQueryExecutedCallback);
+            return asyncDocumentQuery;
         }
     }
 }

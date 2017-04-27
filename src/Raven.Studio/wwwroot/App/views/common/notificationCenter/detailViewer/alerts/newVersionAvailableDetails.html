@@ -1,0 +1,34 @@
+<div class="modal-dialog" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
+                    <h3 class="modal-title" id="myModalLabel" data-bind="text: alert.title"></h3>
+                </div>
+                <div>
+                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                        <i class="icon-cancel"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div data-bind="text: alert.message"></div>
+            
+            <div data-bind="with: alert.details">
+                <div class="row">
+                    <div class="col-md-6">Build Type</div>
+                    <div class="col-md-6" data-bind="text: VersionInfo.BuildType"></div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">Release date</div>
+                    <div class="col-md-6" data-bind="text: $parent.releaseDate"></div>
+                </div>
+            </div>
+          
+        </div>
+        <div class="modal-footer" data-bind="compose: 'common/notificationCenter/detailViewer/alerts/footerPartial.html'">
+        </div>
+    </div>
+</div>

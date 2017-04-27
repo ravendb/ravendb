@@ -298,17 +298,42 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task PutEditVersioningCommandAsync(JsonOperationContext context, string databaseName, BlittableJsonReaderObject val)
+        public async Task<long> ModifyDatabaseExpirationBundle(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
         {
-            using (var editVersioningCmd = context.ReadObject(new DynamicJsonValue
+            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            {
+                ["Type"] = nameof(EditExpirationCommand),
+                [nameof(EditExpirationCommand.DatabaseName)] = name,
+                [nameof(EditExpirationCommand.Configuration)] = configurationJson,
+            }, "expiration-cmd"))
+            {
+                return await SendToLeaderAsync(putCmd);
+            }
+        }
+
+        public async Task<long> ModifyDatabasePeriodicExportBundle(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson)
+        {
+            using (var putCmd = context.ReadObject(new DynamicJsonValue
+            {
+                ["Type"] = nameof(EditPeriodicBackupCommand),
+                [nameof(EditExpirationCommand.DatabaseName)] = name,
+                [nameof(EditExpirationCommand.Configuration)] = configurationJson,
+            }, "periodic-export-cmd"))
+            {
+                return await SendToLeaderAsync(putCmd);
+            }
+        }
+		
+        public async Task<long> ModifyDatabaseVersioningBundle(JsonOperationContext context, string databaseName, BlittableJsonReaderObject val)
+        {
+            using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
                 ["Type"] = nameof(EditVersioningCommand),
                 [nameof(EditVersioningCommand.Configuration)] = val,
                 [nameof(EditVersioningCommand.DatabaseName)] = databaseName,
-            }, "edit-versioning-cmd"))
+            }, "versioning-cmd"))
             {
-                var index = await SendToLeaderAsync(editVersioningCmd);
-                await Cluster.WaitForIndexNotification(index);
+                return await SendToLeaderAsync(putCmd);
             }
         }
 

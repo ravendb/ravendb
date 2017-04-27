@@ -123,11 +123,12 @@ namespace FastTests.Server.Documents.Indexing.Static
         [Fact]
         public async Task CanPersist()
         {
-            var path = NewDataPath();
+
             IndexDefinition indexDefinition1, indexDefinition2;
             string dbName;
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 dbName = database.Name;
 
@@ -153,12 +154,11 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 etag = await database.IndexStore.CreateIndex(indexDefinition2);
                 Assert.True(etag > 0);
-            }
 
-            Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
 
-            using (var database = await GetDatabase(dbName))
-            {
+                database = await GetDatabase(dbName);
+
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")

@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Handlers
                                         TotalSize = totalSize
                                     });
 
-                                    progress.TxMergerCalled++;
+                                    progress.BatchCount++;
                                     progress.Processed += list.Count;
                                     progress.LastProcessedId = list.Last().Key;
 
@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Handlers
                                     TotalSize = totalSize
                                 });
 
-                                progress.TxMergerCalled++;
+                                progress.BatchCount++;
                                 progress.Processed += list.Count;
                                 progress.LastProcessedId = list.Last().Key;
 

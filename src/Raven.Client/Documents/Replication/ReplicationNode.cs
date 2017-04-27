@@ -53,12 +53,7 @@ namespace Raven.Client.Documents.Replication
         /// this destination, or should we replicate only documents that were locally modified.
         /// </summary>
         public TransitiveReplicationOptions TransitiveReplicationBehavior { get; set; }
-
-        /// <summary>
-        /// Gets or sets a flag that controls whether index is replicated to the node or not
-        /// </summary>
-        public bool SkipIndexReplication { get; set; }
-
+        
         /// <summary>
         /// Gets or sets if the replication will ignore this destination in the client
         /// </summary>
@@ -171,7 +166,6 @@ namespace Raven.Client.Documents.Replication
                 [nameof(Disabled)] = Disabled,
                 [nameof(Humane)] = Humane,
                 [nameof(IgnoredClient)] = IgnoredClient,
-                [nameof(SkipIndexReplication)] = SkipIndexReplication,
                 [nameof(TransitiveReplicationBehavior)] = TransitiveReplicationBehavior,
                 [nameof(Url)] = Url,
             };

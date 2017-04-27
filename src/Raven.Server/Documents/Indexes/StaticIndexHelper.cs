@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsStale(MapReduceIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff)
         {
-            return IsStale(index, index._compiled, databaseContext, indexContext, cutoff);
+            return IsStale(index, index.Compiled, databaseContext, indexContext, cutoff);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Indexes
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe long CalculateIndexEtag(MapReduceIndex index, int length, byte* indexEtagBytes, byte* writePos, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
-            return CalculateIndexEtag(index, index._compiled, length, indexEtagBytes, writePos, documentsContext, indexContext);
+            return CalculateIndexEtag(index, index.Compiled, length, indexEtagBytes, writePos, documentsContext, indexContext);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

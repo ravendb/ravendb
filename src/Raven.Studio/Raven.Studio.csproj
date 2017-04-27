@@ -26,6 +26,7 @@
   <ItemGroup>
     <Content Include="wwwroot\Content\css\feedback.less" />
     <Content Include="wwwroot\Content\css\notification-center.less" />
+    <Content Include="wwwroot\Content\css\pages\etl.less" />
     <Content Include="wwwroot\Content\css\pages\stats.less" />
     <Content Include="wwwroot\Content\css\pages\versioning.less" />
   </ItemGroup>

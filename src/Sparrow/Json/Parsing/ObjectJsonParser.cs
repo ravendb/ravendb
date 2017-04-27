@@ -21,7 +21,7 @@ namespace Sparrow.Json.Parsing
 
         public readonly Queue<Tuple<string, object>> Properties = new Queue<Tuple<string, object>>();
         public HashSet<int> Removals;
-        public bool AlreadySeen;
+        public int AlreadySeenBy = -1;
         internal readonly BlittableJsonReaderObject _source;
 
         public DynamicJsonValue()
@@ -103,7 +103,7 @@ namespace Sparrow.Json.Parsing
         public int SourceIndex = -1;
         public readonly Queue<object> Items;
         public List<int> Removals;
-        public bool AlreadySeen;
+        public int AlreadySeenBy = -1;
 
         public DynamicJsonArray()
         {
@@ -151,8 +151,19 @@ namespace Sparrow.Json.Parsing
         private bool _disposed;
         private AllocatedMemoryData _currentStateBuffer;
 
+        // ThreadLocalSeenIndex and _seenIndex added for making sure that we seen this element in the 
+        //current instance and not in another read
+        [ThreadStatic]
+        private static int ThreadLocalSeenIndex;
+
+        private int _seenIndex; 
+
         public void Reset(object root)
         {
+            _seenIndex = ++ThreadLocalSeenIndex;
+            if (ThreadLocalSeenIndex > short.MaxValue)
+                ThreadLocalSeenIndex = 1;
+
             if (_currentStateBuffer != null)
             {
                 _ctx.ReturnMemory(_currentStateBuffer);
@@ -195,13 +206,14 @@ namespace Sparrow.Json.Parsing
                 var value = current as DynamicJsonValue;
                 if (value != null)
                 {
-                    if (value.AlreadySeen == false)
+                    if (value.AlreadySeenBy != _seenIndex)
                     {
 #if DEBUG
                         if(value._source != null)
                             throw new InvalidOperationException("Trying to directly modify a DynamicJsonValue with a source, but you need to place the source (blittable), not the json value in the parent.");
 #endif
-                        value.AlreadySeen = true;
+                        value.AlreadySeenBy = _seenIndex;
+                        value.SourceIndex = -1;
                         _state.CurrentTokenType = JsonParserToken.StartObject;
                         _elements.Push(value);
                         return true;
@@ -219,9 +231,10 @@ namespace Sparrow.Json.Parsing
                 var array = current as DynamicJsonArray;
                 if (array != null)
                 {
-                    if (array.AlreadySeen == false)
+                    if (array.AlreadySeenBy != _seenIndex)
                     {
-                        array.AlreadySeen = true;
+                        array.AlreadySeenBy = _seenIndex;
+                        array.SourceIndex = -1;
                         _state.CurrentTokenType = JsonParserToken.StartArray;
                         _elements.Push(array);
                         return true;
@@ -257,10 +270,11 @@ namespace Sparrow.Json.Parsing
                 {
                     if (bjro.Modifications == null)
                         bjro.Modifications = new DynamicJsonValue();
-                    if (bjro.Modifications.AlreadySeen == false)
+                    if (bjro.Modifications.AlreadySeenBy != _seenIndex)
                     {
                         _elements.Push(bjro);
-                        bjro.Modifications.AlreadySeen = true;
+                        bjro.Modifications.AlreadySeenBy = _seenIndex;
+                        bjro.Modifications.SourceIndex = -1;
                         bjro.Modifications.SourceProperties = bjro.GetPropertiesByInsertionOrder();
                         _state.CurrentTokenType = JsonParserToken.StartObject;
                         return true;
@@ -291,10 +305,11 @@ namespace Sparrow.Json.Parsing
                 {
                     if (bjra.Modifications == null)
                         bjra.Modifications = new DynamicJsonArray();
-                    if (bjra.Modifications.AlreadySeen == false)
+                    if (bjra.Modifications.AlreadySeenBy != _seenIndex)
                     {
                         _elements.Push(bjra);
-                        bjra.Modifications.AlreadySeen = true;
+                        bjra.Modifications.AlreadySeenBy = _seenIndex;
+                        bjra.Modifications.SourceIndex = -1;
                         _state.CurrentTokenType = JsonParserToken.StartArray;
                         return true;
                     }

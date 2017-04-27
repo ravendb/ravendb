@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Transformers;
@@ -14,13 +15,13 @@ namespace Raven.Server.Documents
 
         public TransactionContextPool ContextPool => _contextPool;
 
-        public IndexesEtagsStorage IndexesEtagsStorage { get; }
-
         public NotificationsStorage NotificationsStorage { get; }
 
         public OperationsStorage OperationsStorage { get; }
 
         public StorageEnvironment Environment { get; }
+
+        public EtlStorage EtlStorage { get; }
 
         public ConfigurationStorage(DocumentDatabase db)
         {
@@ -35,14 +36,17 @@ namespace Raven.Server.Documents
 
             options.SchemaVersion = 1;
             options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
+            options.TimeToSyncAfterFlashInSeconds = db.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
+            options.NumOfCocurrentSyncsPerPhysDrive = db.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+
 
             Environment = new StorageEnvironment(options);
             
             NotificationsStorage = new NotificationsStorage(db.Name);
-            
-            IndexesEtagsStorage = new IndexesEtagsStorage(db.Name);
 
             OperationsStorage = new OperationsStorage();
+
+            EtlStorage = new EtlStorage(db.Name);
 
             _contextPool = new TransactionContextPool(Environment);
         }
@@ -54,8 +58,8 @@ namespace Raven.Server.Documents
 
         public void Initialize(IndexStore indexStore, TransformerStore transformerStore)
         {
-            IndexesEtagsStorage.Initialize(Environment, _contextPool, indexStore, transformerStore);
             OperationsStorage.Initialize(Environment, _contextPool);
+            EtlStorage.Initialize(Environment, _contextPool);
         }
 
         public void Dispose()

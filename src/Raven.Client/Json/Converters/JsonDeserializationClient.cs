@@ -103,5 +103,14 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, ExceptionDispatcher.ExceptionSchema> ExceptionSchema = GenerateJsonDeserializationRoutine<ExceptionDispatcher.ExceptionSchema>();
 
         internal static readonly Func<BlittableJsonReaderObject, DeleteDatabaseResult> DeleteDatabaseResult = GenerateJsonDeserializationRoutine<DeleteDatabaseResult>();
-  }
+
+        internal static readonly Func<BlittableJsonReaderObject, ConfigureExpirationBundleOperationResult> ConfigureExpirationBundleOperationResult = GenerateJsonDeserializationRoutine<ConfigureExpirationBundleOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, ConfigurePeriodicExportBundleOperationResult> ConfigurePeriodicExportBundleOperationResult = GenerateJsonDeserializationRoutine<ConfigurePeriodicExportBundleOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, GetPeriodicExportStatusOperationResult> GetExpirationBundleStatusOperationResult = GenerateJsonDeserializationRoutine<GetPeriodicExportStatusOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, ConfigureVersioningBundleOperationResult> ConfigureVersioningBundleOperationResult = GenerateJsonDeserializationRoutine<ConfigureVersioningBundleOperationResult>();
+
+    }
 }

@@ -76,10 +76,7 @@ class viewModelBase {
                 return;
 
             this.changesContext
-                .afterChangesApiConnection
-                .done(() => {
-                    this.afterClientApiConnected();
-                });
+                .afterChangesApiConnected(() => this.afterClientApiConnected());
         });
 
         this.postboxSubscriptions = this.createPostboxSubscriptions();
@@ -128,7 +125,7 @@ class viewModelBase {
     }
 
     detached() {
-        this.currentHelpLink.unsubscribeFrom("currentHelpLink");
+        this.currentHelpLink.unsubscribeFrom("globalHelpLink");
         this.cleanupNotifications();
         this.cleanupPostboxSubscriptions();
 

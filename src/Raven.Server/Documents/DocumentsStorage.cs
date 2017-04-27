@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
 using Raven.Client;
@@ -9,7 +10,10 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Server.PeriodicExport;
+using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Versioning;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -38,6 +42,7 @@ namespace Raven.Server.Documents
         private static readonly Slice ChangeVectorSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
+        private static readonly Slice PeriodicExportStatusSlice;
 
         private static readonly Slice AllTombstonesEtagsSlice;
         private static readonly Slice TombstonesPrefix;
@@ -90,7 +95,7 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "ChangeVector", ByteStringType.Immutable, out ChangeVectorSlice);
-
+            Slice.From(StorageEnvironment.LabelsContext, "PeriodicExportStatus", ByteStringType.Immutable, out PeriodicExportStatusSlice);
             /*
             Collection schema is:
             full name
@@ -221,6 +226,10 @@ namespace Raven.Server.Documents
             options.OnNonDurableFileSystemError += _documentDatabase.HandleNonDurableFileSystemError;
 
             options.ForceUsing32BitsPager = _documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
+            options.TimeToSyncAfterFlashInSeconds = _documentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
+            options.NumOfCocurrentSyncsPerPhysDrive = _documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+
+
 
             try
             {
@@ -250,6 +259,8 @@ namespace Raven.Server.Documents
                     tx.CreateTree(DocsSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(ChangeVectorSlice);
+
+                    tx.CreateTree(PeriodicExportStatusSlice);
 
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
@@ -293,6 +304,26 @@ namespace Raven.Server.Documents
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(ChangeVectorSlice);
             ChangeVectorUtils.WriteChangeVectorTo(context, changeVector, tree);
+        }
+
+        public BlittableJsonReaderObject GetDatabasePeriodicExportStatus(DocumentsOperationContext context)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(PeriodicExportStatusSlice);
+            var result = tree.Read(PeriodicExportStatusSlice);
+            if (result == null)
+                return null;
+            return new BlittableJsonReaderObject(result.Reader.Base, result.Reader.Length, context);
+        }
+
+        public void SetDatabasePeriodicExportStatus(DocumentsOperationContext context, PeriodicExportStatus periodicExportStatus)
+        {
+            var jsonVal = periodicExportStatus.ToJson();
+            var tree = context.Transaction.InnerTransaction.CreateTree(PeriodicExportStatusSlice);
+            using(var json = context.ReadObject(jsonVal, "backup status"))
+            using (tree.DirectAdd(PeriodicExportStatusSlice, json.Size, out byte* dest))
+            {
+                json.CopyTo(dest);
+            }
         }
 
         public static long ReadLastDocumentEtag(Transaction tx)
@@ -885,6 +916,10 @@ namespace Raven.Server.Documents
 
                 collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
 
+                var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, 
+                    collectionName.GetTableName(CollectionTableType.Tombstones));
+                tombstoneTable.Delete(local.Tombstone.StorageId);
+
                 // we update the tombstone
                 var etag = CreateTombstone(context,
                     loweredKey,
@@ -894,6 +929,21 @@ namespace Raven.Server.Documents
                     lastModifiedTicks,
                     changeVector,
                     DocumentFlags.None);
+
+                // We have to raise the notification here because even though we have deleted
+                // a deleted value, we changed the change vector. And maybe we need to replicate 
+                // that. Another issue is that the last tombstone etag has changed, and we need 
+                // to let the indexes catch up to us here, even if they'll just do a noop.
+
+                // TODO: Do not send here strings. Use lazy strings instead.
+                context.Transaction.AddAfterCommitNotification(new DocumentChange
+                {
+                    Type = DocumentChangeTypes.Delete,
+                    Etag = etag,
+                    Key = key,
+                    CollectionName = collectionName.Name,
+                    IsSystemDocument = collectionName.IsSystem,
+                });
 
                 return new DeleteOperationResult
                 {
@@ -1105,7 +1155,9 @@ namespace Raven.Server.Documents
             public string Key;
             public long Etag;
             public CollectionName Collection;
+            public DateTime LastModified;
             public ChangeVectorEntry[] ChangeVector;
+            public DocumentFlags Flags;
         }
 
         public void DeleteWithoutCreatingTombstone(DocumentsOperationContext context, string collection, long storageId, bool isTombstone)
@@ -1247,7 +1299,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        public void DeleteTombstonesBefore(string collection, long etag, Transaction transaction)
+        public void DeleteTombstonesBefore(string collection, long etag, DocumentsOperationContext context)
         {
             string tableName;
 
@@ -1264,7 +1316,7 @@ namespace Raven.Server.Documents
                 tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
             }
 
-            var table = transaction.OpenTable(TombstonesSchema, tableName);
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, tableName);
             if (table == null)
                 return;
 

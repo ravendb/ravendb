@@ -7,6 +7,7 @@ class transformer {
     transformResults = ko.observable<string>();
     lockMode = ko.observable<Raven.Client.Documents.Transformers.TransformerLockMode>();
     temporary = ko.observable<boolean>();
+    etag = ko.observable<number>();
 
     editUrl: KnockoutComputed<string>;
     isLocked = ko.pureComputed(() => this.lockMode() === "LockedIgnore");
@@ -28,8 +29,8 @@ class transformer {
     updateUsing(dto: Raven.Client.Documents.Transformers.TransformerDefinition) {
         this.name(dto.Name);
         this.lockMode(dto.LockMode);
-        this.temporary(dto.Temporary);
         this.transformResults(dto.TransformResults);
+        this.etag(dto.Etag);
         this.filteredOut(false);
     }
 
@@ -42,8 +43,8 @@ class transformer {
         return {
             LockMode: this.lockMode(),
             Name: this.name(),
-            Temporary: this.temporary(),
-            TransformResults: this.transformResults()
+            TransformResults: this.transformResults(),
+            Etag: this.etag()
         }
     }
 
@@ -79,7 +80,8 @@ class transformer {
         return new transformer({
             LockMode: "Unlock",
             Name: "",
-            TransformResults: ""
+            TransformResults: "",
+            Etag: 0
         } as Raven.Client.Documents.Transformers.TransformerDefinition);
     }
     

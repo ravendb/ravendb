@@ -21,7 +21,6 @@ namespace Raven.Client.Documents.Session.Operations
         private readonly string _indexName;
         private readonly IndexQuery _indexQuery;
         private readonly bool _waitForNonStaleResults;
-        private bool _disableEntitiesTracking;
         private readonly bool _metadataOnly;
         private readonly bool _indexEntriesOnly;
         private readonly TimeSpan? _timeout;
@@ -47,7 +46,7 @@ namespace Raven.Client.Documents.Session.Operations
             _transformResults = transformResults;
             _includes = includes;
             _projectionFields = projectionFields;
-            _disableEntitiesTracking = disableEntitiesTracking;
+            DisableEntitiesTracking = disableEntitiesTracking;
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
 
@@ -151,11 +150,11 @@ namespace Raven.Client.Documents.Session.Operations
                     string id;
                     metadata.TryGetId(out id);
 
-                    list.Add(Deserialize<T>(id, document, metadata, _projectionFields, _disableEntitiesTracking, _session));
+                    list.Add(Deserialize<T>(id, document, metadata, _projectionFields, DisableEntitiesTracking, _session));
                 }
             }
 
-            if (_disableEntitiesTracking == false)
+            if (DisableEntitiesTracking == false)
                 _session.RegisterMissingIncludes(queryResult.Results, _includes);
 
             if (_transformResults == null)
@@ -198,11 +197,7 @@ namespace Raven.Client.Documents.Session.Operations
             return result;
         }
 
-        public bool DisableEntitiesTracking
-        {
-            get { return _disableEntitiesTracking; }
-            set { _disableEntitiesTracking = value; }
-        }
+        public bool DisableEntitiesTracking { get; set; }
 
         public void EnsureIsAcceptableAndSaveResult(QueryResult result)
         {
@@ -214,8 +209,9 @@ namespace Raven.Client.Documents.Session.Operations
                 if (_sp.Elapsed > _timeout)
                 {
                     _sp.Stop();
-                    throw new TimeoutException(
-                        string.Format("Waited for {0:#,#;;0}ms for the query to return non stale result.", _sp.ElapsedMilliseconds));
+                    var msg = $"Waited for {_sp.ElapsedMilliseconds:#,#;;0}ms for the query to return non stale result.";
+                    
+                    throw new TimeoutException(msg);
                 }
             }
 

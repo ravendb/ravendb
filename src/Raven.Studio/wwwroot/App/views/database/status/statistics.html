@@ -57,9 +57,9 @@
         <div class="row row-sm flex-row" data-bind="foreach: indexes">
 
             <div class="col-sm-6 col-lg-4 col-xl-3 flex-vertical">
-                <div class="stats-list margin-bottom flex-content">
+                <div class="stats-list margin-bottom flex-grow">
                     <div class="flex-horizontal title">
-                        <h3 class="flex-content text-elipsis">
+                        <h3 class="flex-grow text-elipsis">
                             <a href="#" data-bind="attr: { href: $root.urlForIndexPerformance(indexName), title: indexName } ">
                                 <span class="text" data-bind="text: indexName"></span>
                             </a>
@@ -69,8 +69,8 @@
 
 
                     <div class="stats-item">
-                        <div class="name">Index Id:</div>
-                        <div class="value" data-bind="text: indexId"></div>
+                        <div class="name">Index Etag:</div>
+                        <div class="value" data-bind="text: etag"></div>
                     </div>
                     <div class="stats-item" data-bind="visible: !isFaultyIndex, if: !isFaultyIndex">
                         <div class="name">Entries Count:</div>

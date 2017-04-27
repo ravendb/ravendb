@@ -8,12 +8,12 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Server.expiration;
+using Raven.Client.Server.Operations;
 using Raven.Client.Util;
-using Raven.Server.Documents.Expiration;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -23,16 +23,12 @@ namespace FastTests.Server.Documents.Expiration
     {
         private static async Task SetupExpiration(DocumentStore store)
         {
-            using (var session = store.OpenAsyncSession())
+            var config = new ExpirationConfiguration
             {
-                await session.StoreAsync(new ExpirationConfiguration
-                {
-                    Active = true,
-                    DeleteFrequencySeconds = 100,
-                }, Constants.Documents.Expiration.ConfigurationKey);
-
-                await session.SaveChangesAsync();
-            }
+                Active = true,
+                DeleteFrequencySeconds = 100,
+            };
+            await store.Admin.Server.SendAsync(new ConfigureExpirationBundleOperation(config, store.DefaultDatabase));
         }
 
         [Fact]
@@ -68,7 +64,7 @@ namespace FastTests.Server.Documents.Expiration
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 var expiredDocumentsCleaner = database.BundleLoader.ExpiredDocumentsCleaner;
 
-                expiredDocumentsCleaner.CleanupExpiredDocs();
+                await expiredDocumentsCleaner.CleanupExpiredDocs();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -118,10 +114,10 @@ namespace FastTests.Server.Documents.Expiration
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 var expiredDocumentsCleaner = database.BundleLoader.ExpiredDocumentsCleaner;
 
-                expiredDocumentsCleaner.CleanupExpiredDocs();
+                await expiredDocumentsCleaner.CleanupExpiredDocs();
 
                 var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(1, stats.CountOfDocuments);
+                Assert.Equal(0, stats.CountOfDocuments);
             }
         }
     }

@@ -98,7 +98,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                         var results = queryResult.Results;
 
                         Assert.Equal(1, results.Count);
-                        
+
                         Assert.Equal(1, queryResult.Results.Count);
                         Assert.Equal("Poland", results[0].Data["Location"].ToString());
                         Assert.Equal(2L, results[0].Data["CountInteger"]);
@@ -214,18 +214,17 @@ select new
         [Fact]
         public async Task CanPersist()
         {
-            var path = NewDataPath();
             IndexDefinition defOne, defTwo;
             string dbName;
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 dbName = database.Name;
 
                 defOne = new IndexDefinition
                 {
                     Name = "Users_ByCount_GroupByLocation",
-                    Maps = {"from user in docs.Users select new { user.Location, Count = 1 }"},
+                    Maps = { "from user in docs.Users select new { user.Location, Count = 1 }" },
                     Reduce = "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => x.Count) }",
                 };
 
@@ -276,12 +275,11 @@ select new
 
                     index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
                 }
-            }
 
-            Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
 
-            using (var database = await GetDatabase(dbName))
-            {
+                database = await GetDatabase(dbName);
+
                 var indexes = database
                     .IndexStore
                     .GetIndexes()

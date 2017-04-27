@@ -115,7 +115,7 @@ loadToOrders(orderData);
             using (var store = GetDocumentStore())
             {
                 CreateRdbmsSchema(store);
-                
+
                 int testCount = 5000;
 
                 using (var bulkInsert = store.BulkInsert())
@@ -576,7 +576,7 @@ loadToOrders(orderData);");
                }));
                 SetupSqlEtl(store, @"output ('Tralala');asdfsadf
 var nameArr = this.StepName.split('.'); loadToOrders({});");
-                
+
                 var condition = await task.WaitWithTimeout(TimeSpan.FromSeconds(30));
                 if (condition == false)
                 {
@@ -658,7 +658,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
 
                         Assert.Equal(2, orders.Commands.Length); // delete and insert
                     }
-                    
+
                 }
             }
         }
@@ -715,9 +715,9 @@ loadToOrders(orderData);
                     using (var dbCommand = con.CreateCommand())
                     {
                         dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1'";
-                        
+
                         var sqlDataReader = dbCommand.ExecuteReader();
-                       
+
                         Assert.True(sqlDataReader.Read());
                         var stream = sqlDataReader.GetStream(0);
 
@@ -859,10 +859,61 @@ loadToOrders(orderData);
                         dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1'";
 
                         var sqlDataReader = dbCommand.ExecuteReader();
-                        
+
 
                         Assert.True(sqlDataReader.Read());
                         Assert.True(sqlDataReader.IsDBNull(0));
+                    }
+                }
+            }
+        }
+
+        [NonLinuxFact]
+        public async Task LoadingFromMultipleCollections()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateRdbmsSchema(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Order
+                    {
+                        OrderLines = new List<OrderLine>
+                        {
+                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+                            new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
+                        }
+                    });
+
+                    await session.StoreAsync(new FavouriteOrder
+                    {
+                        OrderLines = new List<OrderLine>
+                        {
+                            new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
+                        }
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                SetupSqlEtl(store, defaultScript, collections: new List<string> {"Orders", "FavouriteOrders" });
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                using (var con = new SqlConnection())
+                {
+                    con.ConnectionString = GetConnectionString(store);
+                    con.Open();
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                        Assert.Equal(2, dbCommand.ExecuteScalar());
+                        dbCommand.CommandText = " SELECT COUNT(*) FROM OrderLines";
+                        Assert.Equal(3, dbCommand.ExecuteScalar());
                     }
                 }
             }
@@ -909,7 +960,7 @@ loadToOrders(orderData);
             }
         }
 
-        protected static void SetupSqlEtl(DocumentStore store, string script, bool insertOnly = false)
+        protected static void SetupSqlEtl(DocumentStore store, string script, bool insertOnly = false, List<string> collections = null)
         {
             SetupEtl(store, new EtlDestinationsConfig
             {
@@ -935,7 +986,7 @@ loadToOrders(orderData);
                             new Transformation()
                             {
                                 Name = "OrdersAndLines",
-                                Collections = {"Orders"},
+                                Collections = collections ?? new List<string> {"Orders"},
                                 Script = script
                             }
                         }
@@ -968,7 +1019,10 @@ loadToOrders(orderData);
             public int Quantity { get; set; }
             public int Cost { get; set; }
         }
+
+        private class FavouriteOrder : Order
+        {
+
+        }
     }
-
-
 }

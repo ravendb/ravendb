@@ -45,19 +45,13 @@ namespace Raven.Server.Documents.Replication
         internal readonly ReplicationLoader _parent;
         internal long _lastSentDocumentEtag;
         public long LastAcceptedDocumentEtag;
-        internal long _lastSentIndexOrTransformerEtag;
 
         internal DateTime _lastDocumentSentTime;
-        internal DateTime _lastIndexOrTransformerSentTime;
 
         internal readonly Dictionary<Guid, long> _destinationLastKnownDocumentChangeVector =
             new Dictionary<Guid, long>();
 
-        internal readonly Dictionary<Guid, long> _destinationLastKnownIndexOrTransformerChangeVector =
-            new Dictionary<Guid, long>();
-
         internal string _destinationLastKnownDocumentChangeVectorAsString;
-        internal string _destinationLastKnownIndexOrTransformerChangeVectorAsString;
 
         private TcpClient _tcpClient;
 
@@ -89,7 +83,6 @@ namespace Raven.Server.Documents.Replication
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             
             _database.Changes.OnDocumentChange += OnDocumentChange;
-            _database.Changes.OnIndexChange += OnIndexChange;
             _database.Changes.OnTransformerChange += OnTransformerChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
@@ -179,8 +172,6 @@ namespace Raven.Server.Documents.Replication
 
                         while (_cts.IsCancellationRequested == false)
                         {
-                            Debug.Assert(_database.IndexMetadataPersistence.IsInitialized);
-
                             while (true)
                             {
                                 var sp = Stopwatch.StartNew();
@@ -263,17 +254,6 @@ namespace Raven.Server.Documents.Replication
 
             while (_lastReplicationStats.Count > 25)
                 _lastReplicationStats.TryDequeue(out stats);
-        }
-
-        private long GetLastIndexEtag()
-        {
-            long currentEtag;
-            TransactionOperationContext configurationContext;
-            using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
-            using (configurationContext.OpenReadTransaction())
-                currentEtag =
-                    _database.IndexMetadataPersistence.ReadLastEtag(configurationContext.Transaction.InnerTransaction);
-            return currentEtag;
         }
 
         private void AddAlertOnFailureToReachOtherSide(string msg, Exception e)
@@ -400,22 +380,13 @@ namespace Raven.Server.Documents.Replication
         private void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
         {
             _lastSentDocumentEtag = Math.Max(_lastSentDocumentEtag, replicationBatchReply.LastEtagAccepted);
-            _lastSentIndexOrTransformerEtag = Math.Max(_lastSentIndexOrTransformerEtag,
-                replicationBatchReply.LastIndexTransformerEtagAccepted);
             LastAcceptedDocumentEtag = replicationBatchReply.LastEtagAccepted;
 
             _destinationLastKnownDocumentChangeVectorAsString = replicationBatchReply.DocumentsChangeVector.Format();
-            _destinationLastKnownIndexOrTransformerChangeVectorAsString =
-                replicationBatchReply.IndexTransformerChangeVector.Format();
 
             foreach (var changeVectorEntry in replicationBatchReply.DocumentsChangeVector)
             {
                 _destinationLastKnownDocumentChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
-            }
-
-            foreach (var changeVectorEntry in replicationBatchReply.IndexTransformerChangeVector)
-            {
-                _destinationLastKnownIndexOrTransformerChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
             }
 
             DocumentsOperationContext documentsContext;
@@ -434,22 +405,9 @@ namespace Raven.Server.Documents.Replication
                         _waitForChanges.SetByAsyncCompletion();
                 }
             }
-            TransactionOperationContext configurationContext;
-            using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
-            using (configurationContext.OpenReadTransaction())
-            {
-                if (
-                    _database.IndexMetadataPersistence.ReadLastEtag(configurationContext.Transaction.InnerTransaction) !=
-                    replicationBatchReply.LastIndexTransformerEtagAccepted)
-                {
-                    if ((DateTime.UtcNow - _lastIndexOrTransformerSentTime).TotalMilliseconds >
-                        _parent.MinimalHeartbeatInterval)
-                        _waitForChanges.SetByAsyncCompletion();
-                }
-            }
         }
 
-        public string FromToString => $"from {_database.ResourceName} to {Destination.NodeTag}({Destination.Database}) at {Destination.Url}";
+        public string FromToString => $"from {_database.Name} to {Destination.NodeTag}({Destination.Database}) at {Destination.Url}";
 
         public ReplicationNode Node => Destination;
         public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";
@@ -466,7 +424,6 @@ namespace Raven.Server.Documents.Replication
                     {
                         [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Heartbeat,
                         [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastSentDocumentEtag,
-                        [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _lastSentIndexOrTransformerEtag,
                         [nameof(ReplicationMessageHeader.ItemsCount)] = 0
                     };
                     documentsContext.Write(writer, heartbeat);
@@ -596,21 +553,7 @@ namespace Raven.Server.Documents.Replication
                 return;
             _waitForChanges.Set();
         }
-
-        private void OnIndexChange(IndexChange change)
-        {
-            if (change.Type != IndexChangeTypes.IndexAdded &&
-                change.Type != IndexChangeTypes.IndexRemoved)
-                return;
-
-            if (_log.IsInfoEnabled)
-                _log.Info(
-                    $"Received index {change.Type} event, index name = {change.Name}, etag = {change.Etag}");
-
-            if (IncomingReplicationHandler.IsIncomingReplicationThread)
-                return;
-            _waitForChanges.Set();
-        }
+      
 
         private void OnTransformerChange(TransformerChange change)
         {
@@ -633,7 +576,6 @@ namespace Raven.Server.Documents.Replication
                 _log.Info($"Disposing OutgoingReplicationHandler ({FromToString})");
 
             _database.Changes.OnDocumentChange -= OnDocumentChange;
-            _database.Changes.OnIndexChange -= OnIndexChange;
             _database.Changes.OnTransformerChange -= OnTransformerChange;
 
             _cts.Cancel();

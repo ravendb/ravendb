@@ -12,7 +12,9 @@ namespace Raven.Server.Documents.Queries
     {
         public readonly Dictionary<string, FieldToFetch> Fields;
 
-        public readonly bool ExtractAllFromIndexAndDocument;
+        public readonly bool ExtractAllFromIndex;
+
+        public readonly bool ExtractAllFromDocument;
 
         public readonly bool AnyExtractableFromIndex;
 
@@ -30,21 +32,29 @@ namespace Raven.Server.Documents.Queries
 
         public FieldsToFetch(string[] fieldsToFetch, IndexDefinitionBase indexDefinition, Transformer transformer)
         {
-            Fields = GetFieldsToFetch(fieldsToFetch, indexDefinition, out AnyExtractableFromIndex);
+            Fields = GetFieldsToFetch(fieldsToFetch, indexDefinition, out AnyExtractableFromIndex, out bool extractAllStoredFields);
             IsProjection = Fields != null && Fields.Count > 0;
             IsDistinct = false;
+
+            if (extractAllStoredFields)
+            {
+                AnyExtractableFromIndex = true;
+                ExtractAllFromIndex = true; // we want to add dynamic fields also to the result (stored only)
+                IsProjection = true;
+            }
 
             if (transformer != null)
             {
                 AnyExtractableFromIndex = true;
-                ExtractAllFromIndexAndDocument = Fields == null || Fields.Count == 0; // extracting all from index only if fields are not specified
+                ExtractAllFromIndex = ExtractAllFromDocument = Fields == null || Fields.Count == 0; // extracting all from index only if fields are not specified
                 IsTransformation = true;
             }
         }
 
-        private static Dictionary<string, FieldToFetch> GetFieldsToFetch(string[] fieldsToFetch, IndexDefinitionBase indexDefinition, out bool anyExtractableFromIndex)
+        private static Dictionary<string, FieldToFetch> GetFieldsToFetch(string[] fieldsToFetch, IndexDefinitionBase indexDefinition, out bool anyExtractableFromIndex, out bool extractAllStoredFields)
         {
             anyExtractableFromIndex = false;
+            extractAllStoredFields = false;
 
             if (fieldsToFetch == null || fieldsToFetch.Length == 0)
                 return null;
@@ -54,24 +64,33 @@ namespace Raven.Server.Documents.Queries
             {
                 var fieldToFetch = fieldsToFetch[i];
 
+                if (string.IsNullOrWhiteSpace(fieldToFetch))
+                    continue;
+
                 if (indexDefinition == null)
                 {
                     result[fieldToFetch] = new FieldToFetch(fieldToFetch, false);
                     continue;
                 }
 
-                if (fieldToFetch[0] == '_' && fieldToFetch == Constants.Documents.Indexing.Fields.AllFields)
+                if (fieldToFetch[0] == '_' && fieldToFetch == Constants.Documents.Indexing.Fields.AllStoredFields)
                 {
+                    if (result.Count > 0)
+                        result.Clear(); // __all_stored_fields should only return stored fields so we are ensuring that no other fields will be returned
+
+                    extractAllStoredFields = true;
+
                     foreach (var kvp in indexDefinition.MapFields)
                     {
                         var stored = kvp.Value.Storage == FieldStorage.Yes;
-                        if (stored)
-                            anyExtractableFromIndex = true;
+                        if (stored == false)
+                            continue;
 
-                        result[kvp.Key] = new FieldToFetch(kvp.Key, stored | indexDefinition.HasDynamicFields);
+                        anyExtractableFromIndex = true;
+                        result[kvp.Key] = new FieldToFetch(kvp.Key, canExtractFromIndex: true);
                     }
 
-                    continue;
+                    return result;
                 }
 
                 IndexField value;

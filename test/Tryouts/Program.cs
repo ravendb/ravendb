@@ -25,9 +25,9 @@ namespace Tryouts
                 Console.WriteLine(i);
                 Parallel.For(0, 1, j =>
                 {
-                    using (var a = new RavenDB_4110())
+                    using (var a = new SlowTests.Server.Rachis.IndexesAndTransformers())
                     {
-                        a.WhenIndexDefinitionDidNotChangeThenWeShouldNotThrowErrorIfIndexIsInLockedErrorState();
+                        a.BasicTransformerCreation().Wait();
                     }
                 });
             }

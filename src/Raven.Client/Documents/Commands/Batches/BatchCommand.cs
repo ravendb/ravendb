@@ -20,12 +20,10 @@ namespace Raven.Client.Documents.Commands.Batches
         {
             if (conventions == null)
                 throw new ArgumentNullException(nameof(conventions));
-            if (context == null)
-                throw new ArgumentNullException(nameof(context));
             if (commands == null)
                 throw new ArgumentNullException(nameof(commands));
 
-            _context = context;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
 
             _commands = new BlittableJsonReaderObject[commands.Count];
             for (var i = 0; i < commands.Count; i++)

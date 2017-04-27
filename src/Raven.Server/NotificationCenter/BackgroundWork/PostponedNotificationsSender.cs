@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
+using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow;
 using Sparrow.Collections;
@@ -23,10 +24,9 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
         {
             _notificationsStorage = notificationsStorage;
             _watchers = watchers;
-            
         }
 
-        protected override async Task Run()
+        protected override void InitializeWork()
         {
             _event = new AsyncManualResetEvent(CancellationToken);
 
@@ -34,60 +34,51 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             {
                 _event.Set();
             });
+        }
 
-            while (CancellationToken.IsCancellationRequested == false)
+        protected override async Task DoWork()
+        {
+            var notifications = GetPostponedNotifications(1, DateTime.MaxValue);
+
+            TimeSpan wait;
+            if (notifications.Count == 0)
+                wait = Infinity;
+            else
+                wait = notifications.Peek().PostponedUntil - SystemTime.UtcNow;
+
+            if (wait == Infinity || wait > TimeSpan.Zero)
+                await _event.WaitAsync(wait);
+
+            if (CancellationToken.IsCancellationRequested)
+                return;
+
+            _event.Reset(true);
+            notifications = GetPostponedNotifications(int.MaxValue, SystemTime.UtcNow);
+
+            while (notifications.Count > 0)
             {
-                try
+                if (CancellationToken.IsCancellationRequested)
+                    return;
+
+                var next = notifications.Dequeue();
+
+                NotificationTableValue notification;
+                using (_notificationsStorage.Read(next.Id, out notification))
                 {
-                    var notifications = GetPostponedNotifications(1, DateTime.MaxValue);
+                    if (notification == null) // could be deleted meanwhile
+                        continue;
 
-                    TimeSpan wait;
-                    if (notifications.Count == 0)
-                        wait = Infinity;
-                    else
-                        wait = notifications.Peek().PostponedUntil - SystemTime.UtcNow;
-
-                    if (wait == Infinity || wait > TimeSpan.Zero)
-                        await _event.WaitAsync(wait);
-
-                    if (CancellationToken.IsCancellationRequested)
-                        break;
-
-                    _event.Reset(true);
-                    notifications = GetPostponedNotifications(int.MaxValue, SystemTime.UtcNow);
-
-                    while (notifications.Count > 0)
+                    try
                     {
-                        var next = notifications.Dequeue();
-
-                        NotificationTableValue notification;
-                        using (_notificationsStorage.Read(next.Id, out notification))
+                        foreach (var watcher in _watchers)
                         {
-                            if (notification == null) // could be deleted meanwhile
-                                continue;
-
-                            try
-                            {
-                                foreach (var watcher in _watchers)
-                                {
-                                    await watcher.Writer.WriteToWebSocket(notification.Json);
-                                }
-                            }
-                            finally
-                            {
-                                _notificationsStorage.ChangePostponeDate(next.Id, null);
-                            }
+                            await watcher.Writer.WriteToWebSocket(notification.Json);
                         }
                     }
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
-                catch (Exception e)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info("Error on sending postponed notification", e);
+                    finally
+                    {
+                        _notificationsStorage.ChangePostponeDate(next.Id, null);
+                    }
                 }
             }
         }

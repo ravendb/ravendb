@@ -211,7 +211,7 @@ class virtualGrid<T> {
         }
     }
 
-    private render() {
+    private render(isRetry = false) {
         // The grid may not be visible if the results returned quickly and we haven't finished initializing the UI.
         // In such a case, we queue up a render to occur later.
         if (this.checkGridVisibility()) {
@@ -219,9 +219,12 @@ class virtualGrid<T> {
             this.layoutVirtualRowPositions();
             this.fillDataIntoRows();
         } else {
-            // Grid isn't yet visible. Queue up a render later.
-            window.cancelAnimationFrame(this.renderHandle);
-            this.renderHandle = window.requestAnimationFrame(() => this.render());
+            if (isRetry) {
+                console.warn("Grid is not visible!");
+            } else {
+                // allow one retry for sync data providers
+                setTimeout(() => this.render(true), 0);
+            }
         }
     }
 

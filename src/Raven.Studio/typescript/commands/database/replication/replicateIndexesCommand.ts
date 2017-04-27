@@ -3,7 +3,7 @@ import database = require("models/resources/database");
 import replicationDestination = require("models/database/replication/replicationDestination");
 
 class replicateIndexesCommand extends commandBase {
-
+    /* TODO
     constructor(private db: database, private destination: replicationDestination) {
         super();
     }
@@ -17,7 +17,7 @@ class replicateIndexesCommand extends commandBase {
             }).done(() => {
                 this.reportSuccess("Sent replicate indexes command.");
             });
-    }
+    }*/
 }
 
 export = replicateIndexesCommand; 

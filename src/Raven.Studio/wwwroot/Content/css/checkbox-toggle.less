@@ -84,6 +84,21 @@
 .toggle {
     height: 37px;
 
+    &.input-sm {
+        height: 29px;
+        padding: 0;
+
+        label {
+            &:before {
+                top: 6px;
+            }
+
+            &:after {
+                top: 0px;
+            }
+        }
+    }
+
     &:hover {
         label:after {
             background-color: @gray-light;

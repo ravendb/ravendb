@@ -33,7 +33,7 @@ using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents
 {
-    public class DocumentDatabase : IResourceStore
+    public class DocumentDatabase : IDisposable
     {
         private readonly ServerStore _serverStore;
         private readonly Logger _logger;
@@ -80,7 +80,6 @@ namespace Raven.Server.Documents
             _serverStore = serverStore;
             StartTime = SystemTime.UtcNow;
             Name = name;
-            ResourceName = "db/" + name;
             Configuration = configuration;
 
             try
@@ -133,8 +132,6 @@ namespace Raven.Server.Documents
 
         public Guid DbId => DocumentsStorage.Environment?.DbId ?? Guid.Empty;
 
-        public string ResourceName { get; }
-
         public RavenConfiguration Configuration { get; }
 
         public CancellationToken DatabaseShutdown => _databaseShutdown.Token;
@@ -164,8 +161,6 @@ namespace Raven.Server.Documents
         public TransformerStore TransformerStore { get; }
 
         public ConfigurationStorage ConfigurationStorage { get; }
-
-        public IndexesEtagsStorage IndexMetadataPersistence => ConfigurationStorage.IndexesEtagsStorage;
 
         public ReplicationLoader ReplicationLoader { get; private set; }
 
@@ -264,7 +259,7 @@ namespace Raven.Server.Documents
             Patcher.Initialize();
             EtlLoader.Initialize();
 
-            DocumentTombstoneCleaner.Initialize();
+            DocumentTombstoneCleaner.Start();
 
             try
             {

@@ -234,8 +234,6 @@ namespace Raven.Server.Documents.Handlers
 
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, cmd.Document.Size);
 
-                            BlittableJsonReaderObject metadata;
-                            cmd.Document.TryGet(Constants.Documents.Metadata.Key, out metadata);
                             LastEtag = putResult.Etag;
 
                             ModifiedCollections?.Add(putResult.Collection.Name);
@@ -246,16 +244,20 @@ namespace Raven.Server.Documents.Handlers
                                 foreach (var entry in putResult.ChangeVector)
                                     changeVector.Add(entry.ToJson());
                             }
-
+                            
+                            // Make sure all the metadata fields are always been add
                             var putReply = new DynamicJsonValue
                             {
-                                [nameof(putResult.Key)] = putResult.Key,
-                                [nameof(putResult.Etag)] = putResult.Etag,
-                                [nameof(putResult.Collection)] = putResult.Collection.Name,
-                                [nameof(putResult.ChangeVector)] = changeVector,
                                 ["Method"] = "PUT",
-                                ["Metadata"] = metadata
+                                [Constants.Documents.Metadata.Id] = putResult.Key,
+                                [Constants.Documents.Metadata.Etag] = putResult.Etag,
+                                [Constants.Documents.Metadata.Collection] = putResult.Collection.Name,
+                                [Constants.Documents.Metadata.ChangeVector] = changeVector,
+                                [Constants.Documents.Metadata.LastModified] = putResult.LastModified,
                             };
+
+                            if (putResult.Flags != DocumentFlags.None)
+                                putReply[Constants.Documents.Metadata.Flags] = putResult.Flags;
 
                             Reply.Add(putReply);
                             break;

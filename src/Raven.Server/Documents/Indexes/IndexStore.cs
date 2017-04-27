@@ -1115,40 +1115,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void RenameIndex(string oldIndexName, string newIndexName)
-        {
-            Index index;
-            if (_indexes.TryGetByName(oldIndexName, out index) == false)
-                throw new InvalidOperationException($"Index {oldIndexName} does not exist");
-
-            lock (_locker)
-            {
-                var transformer = _documentDatabase.TransformerStore.GetTransformer(newIndexName);
-                if (transformer != null)
-                {
-                    throw new IndexOrTransformerAlreadyExistException(
-                        $"Cannot rename index to {newIndexName} because a transformer having the same name already exists");
-                }
-
-                Index _;
-                if (_indexes.TryGetByName(newIndexName, out _))
-                {
-                    throw new IndexOrTransformerAlreadyExistException(
-                        $"Cannot rename index to {newIndexName} because an index having the same name already exists");
-                }
-
-                index.Rename(newIndexName); // store new index name in 'metadata' file, actual dir rename will happen on next db load
-                _indexes.RenameIndex(index, oldIndexName, newIndexName);
-            }
-
-            _documentDatabase.Changes.RaiseNotifications(new IndexRenameChange
-            {
-                Name = newIndexName,
-                OldIndexName = oldIndexName,
-                Type = IndexChangeTypes.Renamed
-            });
-        }
-
         public async Task SetLock(string name, IndexLockMode mode)
         {
             await _indexAndTransformerLocker.WaitAsync();

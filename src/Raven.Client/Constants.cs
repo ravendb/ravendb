@@ -155,6 +155,8 @@ namespace Raven.Client
 
                     public const string AllFields = "__all_fields";
 
+                    public const string AllStoredFields = "__all_stored_fields";
+
                     public const string DefaultSpatialFieldName = "__spatial";
 
                     public const string SpatialShapeFieldName = "__spatial_shape";
@@ -241,9 +243,6 @@ namespace Raven.Client
 
             public class PeriodicExport
             {
-                public const string ConfigurationKey = "Raven/PeriodicExport/Configuration";
-
-                public const string StatusKey = "Raven/PeriodicExport/Status";
 
                 public const string IncrementalExportExtension = ".ravendb-incremental-export";
 
@@ -252,8 +251,6 @@ namespace Raven.Client
 
             public class Expiration
             {
-                public const string ConfigurationKey = "Raven/Expiration/Configuration";
-
                 public const string ExpirationDate = "Raven-Expiration-Date";
             }
         }

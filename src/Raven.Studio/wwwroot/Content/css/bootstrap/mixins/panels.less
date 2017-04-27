@@ -26,8 +26,10 @@
         }
     }
 
-    .input-group-addon, .form-control {
+    .input-group-addon, .form-control, .btn:not(.btn-default):not(.btn-info):not(.btn-primary):not(.btn-success):not(.btn-warning):not(.btn-danger) {
         border-color: desaturate(lighten(@heading-bg-color, 5%),5%);
+        box-shadow: none;
+        background-color: fadeout(@gray-base,90%);
     }
 
     .input-group-addon {

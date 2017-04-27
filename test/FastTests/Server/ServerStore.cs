@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -47,7 +48,18 @@ namespace FastTests.Server
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
-                    Assert.True(HasEtagInDatabaseDocumentResponse(store.Url, store.DefaultDatabase, context));
+                    var command = new GetDatabaseDocumentTestCommand();
+                    using (var requestExecuter = RequestExecutor.Create(store.Url, store.DefaultDatabase, null))
+                    {
+                        requestExecuter.Execute(command, context);
+                    }
+
+                    var result = command.Result;
+                    BlittableJsonReaderObject metadata;
+                    var hasMetadataProperty = result.TryGet("@metadata", out metadata);
+                    long etag;
+                    var hasEtagProperty = metadata.TryGet("@etag", out etag);
+                    Assert.True(hasMetadataProperty && hasEtagProperty && etag > 0, $"{hasMetadataProperty} - {hasEtagProperty} - {etag}");
                 }
             }
         }
@@ -109,24 +121,8 @@ namespace FastTests.Server
             public override bool IsReadRequest => true;
         }
 
-        private bool HasEtagInDatabaseDocumentResponse(string url, string databaseName, JsonOperationContext context)
-        {
-            var command = new GetDatabaseDocumentTestCommand();
-            using (var requestExecuter = RequestExecutor.Create(url, databaseName, null))
-            {
-                requestExecuter.Execute(command, context);
-            }
-
-            var result = command.Result;
-            BlittableJsonReaderObject metadata;
-            var hasMetadataProperty = result.TryGet("@metadata", out metadata);
-            long etag;
-            var hasEtagProperty = metadata.TryGet("@etag", out etag);
-            return hasMetadataProperty && hasEtagProperty && etag > 0;
-        }
-
         [Fact]
-        public void Server_store_basic_read_write_should_work()
+        public async Task Server_store_basic_read_write_should_work()
         {
             using (GetDocumentStore())
             {
@@ -138,8 +134,7 @@ namespace FastTests.Server
                         ["Foo"] = "Bar"
                     };
 
-                    Server.ServerStore.PutValueInClusterAsync(context, "foo/bar", context.ReadObject(foo, "read test stuff"))
-                        .Wait();
+                    await Server.ServerStore.PutValueInClusterAsync(context, "foo/bar", context.ReadObject(foo, "read test stuff"));
                 }
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))

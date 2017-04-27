@@ -1,13 +1,14 @@
 using System;
 using System.Threading;
 using FastTests;
+using Raven.Client.Exceptions;
 using Xunit;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4563 : RavenTestBase
     {
-        
+
         [Fact]
         public void bulk_insert_throws_when_server_is_down()
         {
@@ -54,7 +55,7 @@ namespace SlowTests.Issues
                             case 2:
                             case 3:
                             case 4:
-                                Assert.Equal("An error occurred while sending the request.", exp.InnerException.Message);
+                                Assert.IsType<AllTopologyNodesDownException>(exp);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();

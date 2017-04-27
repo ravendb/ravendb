@@ -149,7 +149,7 @@ class extensions {
         ko.bindingHandlers["numericValue"] = {
             init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
                 var underlyingObservable = valueAccessor();
-                var interceptor = ko.computed({
+                var interceptor = ko.pureComputed({
                     read: underlyingObservable,
                     write: (value: any) => {
                         if (value && !isNaN(value)) {

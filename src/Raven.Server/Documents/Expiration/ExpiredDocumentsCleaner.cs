@@ -9,198 +9,178 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
-using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Server.Json;
+using Raven.Client.Documents;
+using Raven.Client.Server.expiration;
+using Raven.Server.Background;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Voron;
 using Sparrow.Logging;
+using Voron;
 
 namespace Raven.Server.Documents.Expiration
 {
-    public class ExpiredDocumentsCleaner : IDisposable
+    public class ExpiredDocumentsCleaner : BackgroundWorkBase
     {
         private readonly DocumentDatabase _database;
+        private readonly TimeSpan _period;
 
-
-        private static Logger _logger;
         private const string DocumentsByExpiration = "DocumentsByExpiration";
 
-        private readonly Timer _timer;
-        private readonly object _locker = new object();
+        public ExpirationConfiguration Configuration { get; }
 
-        private ExpiredDocumentsCleaner(DocumentDatabase database, ExpirationConfiguration configuration)
+        private ExpiredDocumentsCleaner(DocumentDatabase database, ExpirationConfiguration configuration) : base(database.Name, database.DatabaseShutdown)
         {
+            Configuration = configuration;
             _database = database;
-            _logger = LoggingSource.Instance.GetLogger<ExpiredDocumentsCleaner>(database.Name);
+
             var deleteFrequencyInSeconds = configuration.DeleteFrequencySeconds ?? 60;
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Initialized expired document cleaner, will check for expired documents every {deleteFrequencyInSeconds} seconds");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Initialized expired document cleaner, will check for expired documents every {deleteFrequencyInSeconds} seconds");
 
-            var period = TimeSpan.FromSeconds(deleteFrequencyInSeconds);
-            _timer = new Timer(TimerCallback, null, period, period);
+            _period = TimeSpan.FromSeconds(deleteFrequencyInSeconds);
         }
 
-        public static ExpiredDocumentsCleaner LoadConfigurations(DocumentDatabase database)
+        public static ExpiredDocumentsCleaner LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, ExpiredDocumentsCleaner expiredDocumentsCleaner)
         {
-            DocumentsOperationContext context;
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            {
-                context.OpenReadTransaction();
-
-                var configuration = database.DocumentsStorage.Get(context, Constants.Documents.Expiration.ConfigurationKey);
-                if (configuration == null)
-                    return null;
-
-                try
-                {
-                    var expirationConfiguration = JsonDeserializationServer.ExpirationConfiguration(configuration.Data);
-                    if (expirationConfiguration.Active == false)
-                        return null;
-
-                    return new ExpiredDocumentsCleaner(database, expirationConfiguration);
-                }
-                catch (Exception e)
-                {
-                    //TODO: Raise alert, or maybe handle this via a db load error that can be turned off with 
-                    //TODO: a config
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Cannot enable expired documents cleaner as the configuration document {Constants.Documents.Expiration.ConfigurationKey} is not valid: {configuration.Data}", e);
-                    return null;
-                }
-            }
-        }
-
-        public void TimerCallback(object _)
-        {
-            if (_database.DatabaseShutdown.IsCancellationRequested)
-                return;
-
-            if (Monitor.TryEnter(_locker) == false)
-                return;
-
             try
             {
-                CleanupExpiredDocs();
+                if (dbRecord.ExpirationConfiguration == null)
+                {
+                    expiredDocumentsCleaner?.Dispose();
+                    return null;
+                }
+                if (dbRecord.ExpirationConfiguration.Equals(expiredDocumentsCleaner?.Configuration))
+                    return expiredDocumentsCleaner;
+                expiredDocumentsCleaner?.Dispose();
+                if (dbRecord.ExpirationConfiguration.Active == false)
+                    return null;
+
+                var cleaner = new ExpiredDocumentsCleaner(database, dbRecord.ExpirationConfiguration);
+
+                cleaner.Start();
+
+                return cleaner;
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Error when trying to find expired documents", e);
-            }
-            finally
-            {
-                Monitor.Exit(_locker);
-            }
-        }
+                //TODO: Raise alert, or maybe handle this via a db load error that can be turned off with 
+                //TODO: a config
 
-        public void CleanupExpiredDocs()
-        {
-            if (_logger.IsInfoEnabled)
-                _logger.Info("Trying to find expired documents to delete");
+                var logger = LoggingSource.Instance.GetLogger<ExpiredDocumentsCleaner>(database.Name);
 
-            bool exitWriteTransactionAndContinueAgain = true;
-            DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            {
-                while (exitWriteTransactionAndContinueAgain)
-                {
-                    exitWriteTransactionAndContinueAgain = CleanupDocumentsOnce(context, _database.Time.GetUtcNow());
+                if (logger.IsOperationsEnabled)
+                    logger.Operations("Cannot enable expired documents cleaner as the configuration record is not valid.", e);
 
-                    if (exitWriteTransactionAndContinueAgain)
-                        Thread.Sleep(16); // give up the thread for a short while, to let other transactions run
-                }
+                return null;
             }
         }
 
-        private bool CleanupDocumentsOnce(DocumentsOperationContext context, DateTime currentTime)
+        protected override async Task DoWork()
         {
-            int count = 0;
-            var earlyExit = false;
-            var keysToDelete = new List<Slice>();
+            await WaitOrThrowOperationCanceled(_period);
+
+            await CleanupExpiredDocs();
+        }
+
+        internal async Task CleanupExpiredDocs()
+        {
+            var currentTime = _database.Time.GetUtcNow();
             var currentTicks = currentTime.Ticks;
-            var sp = Stopwatch.StartNew();
 
-            using (var tx = context.OpenWriteTransaction())
+            try
             {
-                var expirationTree = tx.InnerTransaction.CreateTree(DocumentsByExpiration);
-                while (true)
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Trying to find expired documents to delete");
+                
+                DocumentsOperationContext context;
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 {
-                    using (var it = expirationTree.Iterate(false))
+                    using (var tx = context.OpenReadTransaction())
                     {
-                        if (it.Seek(Slices.BeforeAllKeys) == false)
-                            break;
-                        var entryTicks = it.CurrentKey.CreateReader().ReadBigEndianInt64();
-                        if (entryTicks >= currentTicks)
-                            break;
-                        using (var multiIt = expirationTree.MultiRead(it.CurrentKey))
+                        var expirationTree = tx.InnerTransaction.CreateTree(DocumentsByExpiration);
+
+                        Dictionary<Slice, List<(Slice LoweredKey, LazyStringValue Key)>> expired;
+                        Stopwatch duration;
+
+                        using (var it = expirationTree.Iterate(false))
                         {
-                            if (multiIt.Seek(Slices.BeforeAllKeys))
+                            if (it.Seek(Slices.BeforeAllKeys) == false)
+                                return;
+
+                            expired = new Dictionary<Slice, List<(Slice LoweredKey, LazyStringValue Key)>>();
+                            duration = Stopwatch.StartNew();
+
+                            do
                             {
-                                do
+                                var entryTicks = it.CurrentKey.CreateReader().ReadBigEndianInt64();
+                                if (entryTicks >= currentTicks)
+                                    return;
+
+                                var ticksAsSlice = it.CurrentKey.Clone(tx.InnerTransaction.Allocator);
+
+                                var expiredDocs = new List<(Slice LoweredKey, LazyStringValue Key)>();
+
+                                expired.Add(ticksAsSlice, expiredDocs);
+
+                                using (var multiIt = expirationTree.MultiRead(it.CurrentKey))
                                 {
-                                    if (_database.DatabaseShutdown.IsCancellationRequested)
-                                        return false;
-
-                                    if (sp.ElapsedMilliseconds > 150)
+                                    if (multiIt.Seek(Slices.BeforeAllKeys))
                                     {
-                                        earlyExit = true;
-                                        break;
+                                        do
+                                        {
+                                            if (CancellationToken.IsCancellationRequested)
+                                                return;
+
+                                            var clonedKey = multiIt.CurrentKey.Clone(tx.InnerTransaction.Allocator);
+
+                                            var document = _database.DocumentsStorage.Get(context, clonedKey);
+                                            if (document == null)
+                                            {
+                                                expiredDocs.Add((clonedKey, null));
+                                                continue;
+                                            }
+
+                                            // Validate that the expiration value in metadata is still the same.
+                                            // We have to check this as the user can update this valud.
+                                            string expirationDate;
+                                            BlittableJsonReaderObject metadata;
+                                            if (document.Data.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
+                                                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out expirationDate) == false)
+                                                continue;
+
+                                            DateTime date;
+                                            if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
+                                                    out date) == false)
+                                                continue;
+
+                                            if (currentTime < date)
+                                                continue;
+
+                                            expiredDocs.Add((clonedKey, document.Key));
+
+                                        } while (multiIt.MoveNext());
                                     }
+                                }
 
-                                    var clonedKey = multiIt.CurrentKey.Clone(tx.InnerTransaction.Allocator);
-                                    keysToDelete.Add(clonedKey);
-
-                                    var document = _database.DocumentsStorage.Get(context, clonedKey);
-                                    if (document == null)
-                                        continue;
-
-                                    // Validate that the expiration value in metadata is still the same.
-                                    // We have to check this as the user can update this valud.
-                                    string expirationDate;
-                                    BlittableJsonReaderObject metadata;
-                                    if (document.Data.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
-                                        metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out expirationDate) == false)
-                                        continue;
-
-                                    DateTime date;
-                                    if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out date) == false)
-                                        continue;
-                                    if (currentTime < date)
-                                        continue;
-
-                                    var deleted = _database.DocumentsStorage.Delete(context, clonedKey, document.Key, expectedEtag: null);
-                                    count++;
-                                    if (_logger.IsInfoEnabled && deleted == null)
-                                        _logger.Info($"Tried to delete expired document '{clonedKey}' but document was not found.");
-                                } while (multiIt.MoveNext());
-                            }
+                            } while (it.MoveNext());
                         }
-                        var treeKey = it.CurrentKey.Clone(tx.InnerTransaction.Allocator);
-                        foreach (var slice in keysToDelete)
-                        {
-                            expirationTree.MultiDelete(treeKey, slice);
-                        }
+
+                        var command = new DeleteExpiredDocumentsCommand(expired, _database, Logger);
+
+                        await _database.TxMerger.Enqueue(command);
+
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Successfully deleted {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
                     }
-                    if (earlyExit)
-                        break;
                 }
-
-                tx.Commit();
             }
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Successfully deleted {count:#,#;;0} documents in {sp.ElapsedMilliseconds:#,#;;0} ms. Found more stuff to delete? {earlyExit}");
-            return earlyExit;
-        }
-
-        /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-        /// </summary>
-        /// <filterpriority>2</filterpriority>
-        public void Dispose()
-        {
-            _timer.Dispose();
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failed to delete expired documents on {_database.Name} which are older than {currentTime}", e);
+            }
         }
 
         public unsafe void Put(DocumentsOperationContext context,
@@ -226,6 +206,47 @@ namespace Raven.Server.Documents.Expiration
             Slice ticksSlice;
             using (Slice.External(context.Allocator, (byte*) &ticksBigEndian, sizeof(long), out ticksSlice))
                 tree.MultiAdd(ticksSlice, loweredKey);
+        }
+
+        private class DeleteExpiredDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly Dictionary<Slice, List<(Slice LoweredKey, LazyStringValue Key)>> _expired;
+            private readonly DocumentDatabase _database;
+            private readonly Logger _logger;
+
+            public int DeletionCount;
+
+            public DeleteExpiredDocumentsCommand(Dictionary<Slice, List<(Slice LoweredKey, LazyStringValue Key)>> expired, DocumentDatabase database, Logger logger)
+            {
+                _expired = expired;
+                _database = database;
+                _logger = logger;
+            }
+
+            public override int Execute(DocumentsOperationContext context)
+            {
+                var expirationTree = context.Transaction.InnerTransaction.CreateTree(DocumentsByExpiration);
+
+                foreach (var expired in _expired)
+                {
+                    foreach (var ids in expired.Value)
+                    {
+                        if (ids.Key != null)
+                        {
+                            var deleted = _database.DocumentsStorage.Delete(context, ids.LoweredKey, ids.Key, expectedEtag: null);
+
+                            if (_logger.IsInfoEnabled && deleted == null)
+                                _logger.Info($"Tried to delete expired document '{ids.Key}' but document was not found.");
+
+                            DeletionCount++;
+                        }
+
+                        expirationTree.MultiDelete(expired.Key, ids.LoweredKey);
+                    }
+                }
+
+                return DeletionCount;
+            }
         }
     }
 }

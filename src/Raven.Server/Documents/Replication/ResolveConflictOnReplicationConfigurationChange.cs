@@ -52,131 +52,110 @@ namespace Raven.Server.Documents.Replication
                     if (_log.IsInfoEnabled)
                         _log.Info("Failed to wait for a previous task of automatic conflict resolution", e);
                 }
-                ResolveConflictsTask = Task.Run(() =>
-                {
-                    try
-                    {
-                        ResolveConflictsInBackground();
-                    }
-                    catch (Exception e)
-                    {
-                        if (_log.IsInfoEnabled)
-                            _log.Info("Failed to run automatic conflict resolution", e);
-                    }
-                });
+                ResolveConflictsTask = Task.Run(ResolveConflictsInBackground);
             }
         }
 
-        private void ResolveConflictsInBackground()
+        private async Task ResolveConflictsInBackground()
         {
-            DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            try
             {
-                Slice lastKey;
-                Slice.From(context.Allocator, string.Empty, out lastKey);
-                try
+                DocumentsOperationContext context;
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 {
-                    bool hasConflicts = true;
-                    var timeout = 150;
-                    if (Debugger.IsAttached)
-                        timeout *= 10;
-                    while (hasConflicts && !_database.DatabaseShutdown.IsCancellationRequested)
+                    Slice lastKey;
+                    Slice.From(context.Allocator, string.Empty, out lastKey);
+                    try
                     {
-                        try
+                        while (_database.DatabaseShutdown.IsCancellationRequested == false)
                         {
-                            var sp = Stopwatch.StartNew();
-                            DocumentsTransaction tx = null;
                             try
                             {
-                                try
+                                using (context.OpenReadTransaction())
                                 {
-                                    tx = context.OpenWriteTransaction();
-                                }
-                                catch (TimeoutException)
-                                {
-                                    continue;
-                                }
-                                hasConflicts = false;
-                                while (!_database.DatabaseShutdown.IsCancellationRequested)
-                                {
-                                    if (sp.ElapsedMilliseconds > timeout)
-                                    {
-                                        // we must release the write transaction to avoid
-                                        // completely blocking all other operations.
-                                        // This is a background task that we can leave later
-                                        hasConflicts = true;
-                                        break;
-                                    }
-
                                     var conflicts = _database.DocumentsStorage.ConflictsStorage.GetAllConflictsBySameKeyAfter(context, ref lastKey);
                                     if (conflicts.Count == 0)
                                         break;
-                                    if (TryResolveConflict(context, conflicts) == false)
-                                        continue;
-                                    hasConflicts = true;
-                                }
 
-                                tx.Commit();
+                                    // TODO arek: tx merger should just get and put all of the result docs (output of resolution)
+                                    // instead of dealing with the resolving the conflicts
+
+                                    await _database.TxMerger.Enqueue(new ResolveConflictsCommand(conflicts, this));
+                                }
                             }
                             finally
                             {
-                                tx?.Dispose();
+                                if (lastKey.HasValue)
+                                    lastKey.Release(context.Allocator);
+
+                                Slice.From(context.Allocator, string.Empty, out lastKey);
                             }
                         }
-                        finally
-                        {
-                            if (lastKey.HasValue)
-                                lastKey.Release(context.Allocator);
-
-                            Slice.From(context.Allocator, string.Empty, out lastKey);
-                        }
+                    }
+                    finally
+                    {
+                        if (lastKey.HasValue)
+                            lastKey.Release(context.Allocator);
                     }
                 }
-                finally
-                {
-                    if (lastKey.HasValue)
-                        lastKey.Release(context.Allocator);
-                }
+            }
+            catch (Exception e)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info("Failed to run automatic conflict resolution", e);
             }
         }
 
-        private bool TryResolveConflict(DocumentsOperationContext context, List<DocumentConflict> conflictList)
-        {
-            var collection = conflictList[0].Collection;
 
-            ScriptResolver scriptResovler;
-            if (ScriptConflictResolversCache.TryGetValue(collection, out scriptResovler) &&
-                scriptResovler != null)
+        private class ResolveConflictsCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly List<DocumentConflict> _conflicts;
+            private readonly ResolveConflictOnReplicationConfigurationChange _resolver;
+
+            public ResolveConflictsCommand(List<DocumentConflict> conflicts, ResolveConflictOnReplicationConfigurationChange resolver)
             {
-                if (TryResolveConflictByScriptInternal(
-                    context,
-                    scriptResovler,
-                    conflictList,
-                    collection,
-                    hasLocalTombstone: false))
+                _conflicts = conflicts;
+                _resolver = resolver;
+            }
+
+            public override int Execute(DocumentsOperationContext context)
+            {
+                var collection = _conflicts[0].Collection;
+
+                ScriptResolver scriptResovler;
+                if (_resolver.ScriptConflictResolversCache.TryGetValue(collection, out scriptResovler) &&
+                    scriptResovler != null)
                 {
-                    //stats.AddResolvedBy(collection + " Script", conflictList.Count);
-                    return true;
+                    if (_resolver.TryResolveConflictByScriptInternal(
+                        context,
+                        scriptResovler,
+                        _conflicts,
+                        collection,
+                        hasLocalTombstone: false))
+                    {
+                        //stats.AddResolvedBy(collection + " Script", conflictList.Count);
+                        return _conflicts.Count;
+                    }
                 }
 
-            }
+                if (_resolver.TryResolveUsingDefaultResolverInternal(
+                    context,
+                    _resolver.ConflictSolver?.DatabaseResolverId,
+                    _conflicts))
+                {
+                    //stats.AddResolvedBy("DatabaseResolver", conflictList.Count);
+                    return _conflicts.Count;
+                }
 
-            if (TryResolveUsingDefaultResolverInternal(
-                context,
-                ConflictSolver?.DatabaseResolverId,                
-                conflictList))
-            {
-                //stats.AddResolvedBy("DatabaseResolver", conflictList.Count);
-                return true;
-            }
+                if (_resolver.ConflictSolver?.ResolveToLatest ?? false)
+                {
+                    _resolver.ResolveToLatest(context, _conflicts);
+                    //stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
+                    return _conflicts.Count;
+                }
 
-            if (ConflictSolver?.ResolveToLatest ?? false)            {
-                ResolveToLatest(context, conflictList);
-                //stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
-                return true;
+                return 0;
             }
-
-            return false;
         }
 
         private void UpdateScriptResolvers()

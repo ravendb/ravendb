@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes
 
         public const int MaxNumberOfKeptErrors = 500;
 
-        internal bool _simulateCorruption = false;
+        internal bool SimulateCorruption = false;
 
         public IndexStorage(Index index, TransactionContextPool contextPool, DocumentDatabase database)
         {
@@ -361,7 +361,7 @@ namespace Raven.Server.Documents.Indexes
 
         private unsafe void WriteLastEtag(RavenTransaction tx, string tree, Slice collection, long etag)
         {
-            if (_simulateCorruption)
+            if (SimulateCorruption)
                 throw new SimulatedVoronUnrecoverableErrorException("Simulated corruption.");
 
             if (_logger.IsInfoEnabled)

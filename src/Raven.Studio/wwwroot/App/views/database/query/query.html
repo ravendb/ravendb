@@ -37,9 +37,11 @@
                 <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }, visible: !isAutoIndex()" title="Edit index"><i class="icon-edit"></i><span>Edit index</span></a>
                 <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }, visible: isAutoIndex" title="View index fields"><i class="icon-preview"></i><span>View index</span></a>
                 <a class="btn btn-default" data-bind="attr: { href: indexPerformanceUrl }" title="Navigate to index performance"><i class="icon-traffic-watch"></i><span>Index performance</span></a>
-                <a class="btn btn-default" data-bind="attr: { href: termsUrl }" title="Navigate to index terms"><i class="icon-terms"></i><span>Index terms</span></a>
+                <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': !isDynamicIndex() ? '' : 'Available only for static and auto indexes' }">
+                    <a class="btn btn-default" data-bind="attr: { href: termsUrl }, css: { 'disabled' : isDynamicIndex }" title="Navigate to index terms"><i class="icon-terms"></i><span>Index terms</span></a>
+                </div>
                 <div class="btn-group has-disable-reason"  data-bind="attr: { 'data-original-title': isIndexMapReduce() ? '' : 'Available only for map/reduce indexes' }">
-                    <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, css: { 'disabled' : !isIndexMapReduce() }" title="Map/Reduce Visualizer"><i class="icon-map-reduce-visualizer"></i> <span>Map/Reduce Visualizer</span></a>
+                    <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, css: { 'disabled' : !isIndexMapReduce() }" title="Map/Reduce Visualizer"><i class="icon-map-reduce-visualizer"></i><span>Map/Reduce Visualizer</span></a>
                 </div>
                 <div class="pull-right-sm">
                     <div class="dropdown dropdown-right">
@@ -407,8 +409,8 @@
 </script>
 
 <script type="text/html" id="settings-template">
-    <div class="settings-item">
-        <div class="col-xs-7">
+    <div class="row settings-item">
+        <div class="col-xs-offset-1 col-xs-6">        
             <div class="control-label">Cache enabled</div>
         </div>
         <div class="col-xs-5">
@@ -418,8 +420,8 @@
             </div>
         </div>
     </div>
-    <div class="settings-item">
-        <div class="col-xs-7 settings-item-label">
+    <div class="row settings-item">
+        <div class="col-xs-offset-1 col-xs-6">
             <div class="control-label">Default operator</div>
         </div>
         <div class="col-xs-5">
@@ -433,11 +435,9 @@
             </div>
         </div>
     </div>
-    <div class="settings-item">
-        <div class="col-xs-7 settings-item-label">
-            <div class="control-label">
-                Project results to index fields only
-            </div>
+    <div class="row settings-item">
+        <div class="col-xs-offset-1 col-xs-6">
+           <div class="control-label">Show stored index fields only</div>
         </div>
         <div class="col-xs-5">
             <div class="toggle">
@@ -446,13 +446,13 @@
             </div>
         </div>
     </div>
-    <div class="settings-item">
-        <div class="col-xs-7 settings-item-label">
+    <div class="row settings-item">
+        <div class="col-xs-offset-1 col-xs-6">
             <div class="control-label">Show the raw index entries instead of matching documents</div>
         </div>
         <div class="col-xs-5">
             <div class="toggle">
-                <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries">
+                <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries, disable: isDynamicIndex">
                 <label></label>
             </div>
         </div>

@@ -493,26 +493,40 @@ class editDocument extends viewModelBase {
         this.isSaving(true);
         saveCommand
             .execute()
-            .done((saveResult: saveDocumentResponseDto) => this.onDocumentSaved(saveResult))
+            .done((saveResult: saveDocumentResponseDto) => this.onDocumentSaved(saveResult, updatedDto))
             .fail(() => {
                 this.isSaving(false);
             });
     }
 
-    private onDocumentSaved(saveResult: saveDocumentResponseDto) {
-        const savedDocumentDto: saveDocumentResponseItemDto = saveResult.Results[0];
+    private onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any) {
+        const savedDocumentDto: changedOnlyMetadataFieldsDto = saveResult.Results[0];
         const currentSelection = this.docEditor.getSelectionRange();
-        this.loadDocument(savedDocumentDto.Key, true)
-            .always(() => {
-                this.updateNewlineLayoutInDocument(this.isNewLineFriendlyMode());
 
-                // Try to restore the selection.
-                this.docEditor.selection.setRange(currentSelection, false);
-                this.isSaving(false);
-                this.syncChangeNotification();
-                this.connectedDocuments.onDocumentSaved();
-            });
-        this.updateUrl(savedDocumentDto.Key);
+        const metadata = localDoc['@metadata'];
+        for (let prop in savedDocumentDto) {
+            if (savedDocumentDto.hasOwnProperty(prop)) {
+                if (prop === "Method")
+                    continue;
+                metadata[prop] = (savedDocumentDto as any)[prop];
+            }
+        }
+
+        const newDoc = new document(localDoc);
+        this.document(newDoc);
+        this.inReadOnlyMode(false);
+        this.displayDocumentChange(false);
+        this.dirtyFlag().reset();
+
+        this.updateNewlineLayoutInDocument(this.isNewLineFriendlyMode());
+
+        // Try to restore the selection.
+        this.docEditor.selection.setRange(currentSelection, false);
+        this.isSaving(false);
+        this.syncChangeNotification();
+        this.connectedDocuments.onDocumentSaved();
+
+        this.updateUrl(savedDocumentDto["@id"]);
 
         this.dirtyFlag().reset(); //Resync Changes
 

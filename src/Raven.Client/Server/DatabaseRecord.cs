@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Server.expiration;
+using Raven.Client.Server.PeriodicExport;
 using Raven.Server.Documents.Versioning;
 
 
@@ -42,7 +44,11 @@ namespace Raven.Client.Documents
 
         public Dictionary<string, string> SecuredSettings { get; set; }
 
-        public VersioningConfiguration VersioningConfiguration;
+        public VersioningConfiguration VersioningConfiguration { get; set; }
+
+        public ExpirationConfiguration ExpirationConfiguration { get; set; }
+
+        public PeriodicExportConfiguration PeriodicExportConfiguration { get; set; }
 
         public void AddIndex(IndexDefinition definition)
         {

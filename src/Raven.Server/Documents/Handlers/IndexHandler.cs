@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Handlers
                     break;
                 case IndexType.MapReduce:
                     var staticMapReduceIndex = (MapReduceIndex)index;
-                    source = staticMapReduceIndex._compiled.Source;
+                    source = staticMapReduceIndex.Compiled.Source;
                     break;
             }
 
@@ -163,17 +163,6 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
             }
-
-            return NoContent();
-        }
-
-        [RavenAction("/databases/*/indexes/rename", "POST")]
-        public Task Rename()
-        {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var newName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("newName");
-
-            Database.IndexStore.RenameIndex(name, newName);
 
             return NoContent();
         }

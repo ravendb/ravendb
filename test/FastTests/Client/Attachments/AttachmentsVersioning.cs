@@ -45,7 +45,7 @@ namespace FastTests.Client.Attachments
                         }
                     };
 
-                    await Server.ServerStore.PutEditVersioningCommandAsync(context, store.DefaultDatabase, 
+                    await Server.ServerStore.ModifyDatabaseVersioningBundle(context, store.DefaultDatabase, 
                         EntityToBlittable.ConvertEntityToBlittable(versioningDoc, DocumentConventions.Default, context));
                 }
 

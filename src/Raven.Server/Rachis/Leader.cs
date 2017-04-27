@@ -534,7 +534,7 @@ namespace Raven.Server.Rachis
             _newEntry.Set();
             return tcs.Task;
         }
-
+        
         public void Dispose()
         {
             Running = false;

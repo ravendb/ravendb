@@ -24,14 +24,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             Metrics = SqlMetrics;
         }
 
-        protected override IEnumerator<ToSqlItem> ConvertDocsEnumerator(IEnumerator<Document> docs)
+        protected override IEnumerator<ToSqlItem> ConvertDocsEnumerator(IEnumerator<Document> docs, string collection)
         {
-            return new DocumentsToSqlItems(docs);
+            return new DocumentsToSqlItems(docs, collection);
         }
 
-        protected override IEnumerator<ToSqlItem> ConvertTombstonesEnumerator(IEnumerator<DocumentTombstone> tombstones)
+        protected override IEnumerator<ToSqlItem> ConvertTombstonesEnumerator(IEnumerator<DocumentTombstone> tombstones, string collection)
         {
-            return new TombstonesToSqlItems(tombstones);
+            return new TombstonesToSqlItems(tombstones, collection);
         }
 
         protected override EtlTransformer<ToSqlItem, SqlTableWithRecords> GetTransformer(DocumentsOperationContext context)
@@ -86,6 +86,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
                 FallbackTime = TimeSpan.FromSeconds(Math.Min(60 * 15, Math.Max(5, secondsSinceLastError * 2)));
             }
+        }
+
+        protected override bool ShouldFilterOutSystemDocument(bool isHiLo)
+        {
+            return true;
         }
 
         public SqlEtlSimulationResult Simulate(SimulateSqlEtl simulateSqlEtl, DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite)
@@ -147,6 +152,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 throw new InvalidOperationException($"Invalid ETL configuration for destination {simulateSqlEtl.Configuration.Destination}. " +
                                                     $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.");
             }
+            
+            // TODO arek - those constraints can be changed later on
 
             if (simulateSqlEtl.Configuration.Transforms.Count != 1)
             {
@@ -154,11 +161,17 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                                                     "while SQL ETL simulation expects to get exactly 1 transformation script");
             }
 
+            if (simulateSqlEtl.Configuration.Transforms[0].Collections.Count != 1)
+            {
+                throw new InvalidOperationException($"Invalid number of collections specified in the transformation script. You have provided {simulateSqlEtl.Configuration.Transforms[0].Collections.Count} " +
+                                                    "while SQL ETL simulation is supposed to work with exactly 1 collection");
+            }
+
             using (var etl = new SqlEtl(simulateSqlEtl.Configuration.Transforms[0], simulateSqlEtl.Configuration.Destination, database))
             {
                 etl.EnsureThreadAllocationStats();
 
-                var transformed = etl.Transform(new[] {new ToSqlItem(document)}, context, new EtlStatsScope(new EtlRunStats()));
+                var transformed = etl.Transform(new[] {new ToSqlItem(document, simulateSqlEtl.Configuration.Transforms[0].Collections[0])}, context, new EtlStatsScope(new EtlRunStats()));
 
                 return etl.Simulate(simulateSqlEtl, context, transformed);
             }

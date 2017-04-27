@@ -11,6 +11,8 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Server.expiration;
+using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Utils;
@@ -164,12 +166,12 @@ namespace SlowTests.Issues
         {
             using (var session = store.OpenSession())
             {
-                session.Store(new ExpirationConfiguration
+                var config = new ExpirationConfiguration
                 {
                     Active = true,
                     DeleteFrequencySeconds = 100,
-                }, Constants.Documents.Expiration.ConfigurationKey);
-
+                };
+                store.Admin.Server.Send(new ConfigureExpirationBundleOperation(config, store.DefaultDatabase));
                 session.SaveChanges();
             }
         }

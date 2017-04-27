@@ -17,7 +17,11 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
+using Raven.Client.Server.expiration;
+using Raven.Client.Server.PeriodicExport;
 using Raven.Client.Server.Tcp;
+using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Versioning;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
@@ -26,6 +30,7 @@ using Raven.Server.ServerWide.Commands.Transformers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -97,6 +102,8 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteTransformerCommand):
                 case nameof(RenameTransformerCommand):
                 case nameof(EditVersioningCommand):
+                case nameof(EditPeriodicBackupCommand):
+                case nameof(EditExpirationCommand):
                 case nameof(ModifyDatabaseWatchersCommand):
                 case nameof(ModifyConflictSolverCommand):
                     UpdateDatabase(context, type, cmd, index, leader);
@@ -158,18 +165,23 @@ namespace Raven.Server.ServerWide
 
                 var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                TableValueBuilder builder;
-                using (items.Allocate(out builder))
-                {
-                    builder.Add(loweredKey);
-                    builder.Add(key);
-                    builder.Add(updated.BasePointer, updated.Size);
-                    builder.Add(index);
-
-                    items.Set(builder);
-                }
+                UpdateDatabaseRecord(index, items, loweredKey, key, updated);
 
                 NotifyDatabaseChanged(context, databaseName, index);
+            }
+        }
+
+        private static unsafe void UpdateDatabaseRecord(long index, Table items, Slice loweredKey, Slice key, BlittableJsonReaderObject updated)
+        {
+            TableValueBuilder builder;
+            using (items.Allocate(out builder))
+            {
+                builder.Add(loweredKey);
+                builder.Add(key);
+                builder.Add(updated.BasePointer, updated.Size);
+                builder.Add(Bits.SwapBytes(index));
+
+                items.Set(builder);
             }
         }
 
@@ -204,7 +216,7 @@ namespace Raven.Server.ServerWide
                 {
                     if (databaseRecord.Topology.RelevantFor(delDb.FromNode) == false)
                     {
-                        NotifyLeaderAboutError(index, leader, new InvalidOperationException($"The database {databaseName} does not exists on node {delDb.FromNode}"));
+                        NotifyLeaderAboutError(index, leader, new DatabaseDoesNotExistException($"The database {databaseName} does not exists on node {delDb.FromNode}"));
                         return;
                     }
                     databaseRecord.Topology.RemoveFromTopology(delDb.FromNode);
@@ -223,18 +235,9 @@ namespace Raven.Server.ServerWide
 
                     databaseRecord.Topology = new DatabaseTopology();
                 }
-
-                TableValueBuilder builder;
+                
                 using (var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
-                using (items.Allocate(out builder))
-                {
-                    builder.Add(loweredKey);
-                    builder.Add(key);
-                    builder.Add(updated.BasePointer, updated.Size);
-                    builder.Add(index);
-
-                    items.Set(builder);
-                }
+                    UpdateDatabaseRecord(index, items, loweredKey, key, updated);
 
                 NotifyDatabaseChanged(context, databaseName, index);
             }
@@ -247,9 +250,7 @@ namespace Raven.Server.ServerWide
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
-                TableValueBuilder builder;
                 Slice valueName, valueNameLowered;
-                using (items.Allocate(out builder))
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out valueName))
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out valueNameLowered))
                 using (var rec = context.ReadObject(addDatabaseCommand.Value, "inner-val"))
@@ -264,7 +265,7 @@ namespace Raven.Server.ServerWide
                         }
 
                         int size;
-                        var actualEtag = *(long*)reader.Read(3, out size);
+                        var actualEtag = Bits.SwapBytes(*(long*)reader.Read(3, out size));
                         Debug.Assert(size == sizeof(long));
 
                         if (actualEtag != addDatabaseCommand.Etag.Value)
@@ -275,12 +276,7 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    builder.Add(valueNameLowered);
-                    builder.Add(valueName);
-                    builder.Add(rec.BasePointer, rec.Size);
-                    builder.Add(index);
-
-                    items.Set(builder);
+                    UpdateDatabaseRecord(index, items, valueNameLowered, valueName, rec);
                 }
             }
             finally
@@ -312,7 +308,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private unsafe void PutValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private void PutValue(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             try
             {
@@ -324,19 +320,12 @@ namespace Raven.Server.ServerWide
                     return;
                 }
 
-                TableValueBuilder builder;
                 Slice valueName, valueNameLowered;
-                using (items.Allocate(out builder))
                 using (Slice.From(context.Allocator, putVal.Name, out valueName))
                 using (Slice.From(context.Allocator, putVal.Name.ToLowerInvariant(), out valueNameLowered))
                 using (var rec = context.ReadObject(putVal.Value, "inner-val"))
                 {
-                    builder.Add(valueNameLowered);
-                    builder.Add(valueName);
-                    builder.Add(rec.BasePointer, rec.Size);
-                    builder.Add(index);
-
-                    items.Set(builder);
+                    UpdateDatabaseRecord(index, items, valueNameLowered, valueName, rec);
                 }
             }
             finally
@@ -423,16 +412,7 @@ namespace Raven.Server.ServerWide
                     {
                         var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                        TableValueBuilder builder;
-                        using (items.Allocate(out builder))
-                        {
-                            builder.Add(valueNameLowered);
-                            builder.Add(valueName);
-
-                            builder.Add(updatedDatabaseBlittable.BasePointer, updatedDatabaseBlittable.Size);
-                            builder.Add(index);
-                            items.Set(builder);
-                        }
+                       UpdateDatabaseRecord(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                     }
                 }
             }
@@ -564,9 +544,9 @@ namespace Raven.Server.ServerWide
             var ptr = reader.Read(2, out size);
             var doc = new BlittableJsonReaderObject(ptr, size, context);
 
-            etag = *(long*)reader.Read(3, out size);
+            etag = Bits.SwapBytes(*(long*)reader.Read(3, out size));
             Debug.Assert(size == sizeof(long));
-
+            
             return doc;
         }
 
@@ -651,6 +631,93 @@ namespace Raven.Server.ServerWide
     public class DeleteValueCommand
     {
         public string Name;
+    }
+
+    public class EditVersioningCommand : UpdateDatabaseCommand
+    {
+        public string DatabaseName;
+        public VersioningConfiguration Configuration;
+
+        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
+        {
+            databaseRecord.VersioningConfiguration = Configuration;
+        }
+
+        public EditVersioningCommand() : base(null)
+        {
+        }
+
+        public EditVersioningCommand(VersioningConfiguration configuration, string databaseName) : base(databaseName)
+        {
+            Configuration = configuration;
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            record.VersioningConfiguration = Configuration;
+        }
+
+        public override void FillJson(DynamicJsonValue json)
+        {
+            json[nameof(VersioningConfiguration)] = TypeConverter.ToBlittableSupportedType(Configuration);
+        }
+    }
+
+    public class EditExpirationCommand : UpdateDatabaseCommand
+    {
+        public string DatabaseName;
+        public ExpirationConfiguration Configuration;
+        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
+        {
+            databaseRecord.ExpirationConfiguration = Configuration;
+        }
+
+        public EditExpirationCommand() : base(null)
+        {
+        }
+
+        public EditExpirationCommand(ExpirationConfiguration configuration,string databaseName) : base(databaseName)
+        {
+            Configuration = configuration;
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            record.ExpirationConfiguration = Configuration;
+        }
+
+        public override void FillJson(DynamicJsonValue json)
+        {
+            json[nameof(ExpirationConfiguration)] = TypeConverter.ToBlittableSupportedType(Configuration);
+        }
+    }
+
+    public class EditPeriodicBackupCommand : UpdateDatabaseCommand
+    {
+        public PeriodicExportConfiguration Configuration;
+        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
+        {
+            databaseRecord.PeriodicExportConfiguration = Configuration;
+        }
+
+        public EditPeriodicBackupCommand() : base(null)
+        {
+        }
+
+        public EditPeriodicBackupCommand(PeriodicExportConfiguration configuration, string databaseName) : base(databaseName)
+        {
+            Configuration = configuration;
+        }
+
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        {
+            record.PeriodicExportConfiguration = Configuration;
+        }
+
+        public override void FillJson(DynamicJsonValue json)
+        {
+            json[nameof(PeriodicExportConfiguration)] = TypeConverter.ToBlittableSupportedType(Configuration);
+        }
     }
 
     public class DeleteDatabaseCommand

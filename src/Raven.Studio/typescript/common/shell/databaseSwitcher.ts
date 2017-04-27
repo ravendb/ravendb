@@ -29,7 +29,7 @@ class databaseSwitcher {
     filteredDatabases: KnockoutComputed<database[]>;
 
     constructor() {
-        this.filteredDatabases = ko.computed(() => {
+        this.filteredDatabases = ko.pureComputed(() => {
             const filter = this.filter();
             const databases = this.databasesManager.databases();
 

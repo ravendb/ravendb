@@ -34,11 +34,11 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName("Transformer");
+                    writer.WritePropertyName(nameof(PutTransformerResult.Transformer));
                     writer.WriteString(name);
                     writer.WriteComma();
 
-                    writer.WritePropertyName("TransformerId");
+                    writer.WritePropertyName(nameof(PutTransformerResult.Etag));
                     writer.WriteInteger(index);
 
                     writer.WriteEndObject();

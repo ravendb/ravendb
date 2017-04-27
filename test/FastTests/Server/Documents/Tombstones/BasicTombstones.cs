@@ -1,13 +1,12 @@
 ﻿using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils.Metrics;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 
@@ -68,7 +67,7 @@ namespace FastTests.Server.Documents.Tombstones
         }
 
         [Fact]
-        public void Cleanup()
+        public async Task Cleanup()
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -135,10 +134,7 @@ namespace FastTests.Server.Documents.Tombstones
                             Assert.Equal(0, count);
                         }
 
-                        while (database.DocumentTombstoneCleaner.ExecuteCleanup()==false)
-                        {
-                            Thread.Sleep(16);
-                        }
+                        await database.DocumentTombstoneCleaner.ExecuteCleanup();
 
                         using (var tx = context.OpenWriteTransaction())
                         {
@@ -157,10 +153,7 @@ namespace FastTests.Server.Documents.Tombstones
                             Assert.Equal(1, count);
                         }
 
-                        while (database.DocumentTombstoneCleaner.ExecuteCleanup()==false)
-                        {
-                            Thread.Sleep(16);
-                        }
+                        await database.DocumentTombstoneCleaner.ExecuteCleanup();
 
                         using (context.OpenReadTransaction())
                         {
@@ -189,10 +182,7 @@ namespace FastTests.Server.Documents.Tombstones
                             Assert.Equal(2, count);
                         }
 
-                        while (database.DocumentTombstoneCleaner.ExecuteCleanup()==false)
-                        {
-                            Thread.Sleep(16);
-                        }
+                        await database.DocumentTombstoneCleaner.ExecuteCleanup();
 
                         using (context.OpenReadTransaction())
                         {

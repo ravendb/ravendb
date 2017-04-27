@@ -12,7 +12,7 @@ class index {
     createdTimestamp: string;
     entriesCount: number;
     errorsCount: number;
-    id: number;
+    etag: number;
     isStale = ko.observable<boolean>(false);
     isInvalidIndex: boolean;
     isTestIndex: boolean;
@@ -65,7 +65,7 @@ class index {
         this.createdTimestamp = dto.CreatedTimestamp;
         this.entriesCount = dto.EntriesCount;
         this.errorsCount = dto.ErrorsCount;
-        this.id = dto.Id;
+        this.etag = dto.Etag;
         this.isStale(dto.IsStale);
         this.isInvalidIndex = dto.IsInvalidIndex;
         this.isTestIndex = dto.IsTestIndex;
@@ -165,6 +165,10 @@ class index {
                 return "state-danger";
             }
 
+            if (this.isErrorState()) {
+                return "state-danger";
+            }
+
             if (this.isPausedState()) {
                 return "state-warning";
             }
@@ -189,6 +193,10 @@ class index {
                 return "Faulty";
             }
 
+            if (this.isErrorState()) {
+                return "Error";
+            }
+
             if (this.isPausedState()) {
                 return "Paused";
             }
@@ -201,9 +209,7 @@ class index {
                 return "Idle";
             }
 
-            if (this.isErrorState()) {
-                return "Error";
-            }
+           
 
             return "Normal";
         });

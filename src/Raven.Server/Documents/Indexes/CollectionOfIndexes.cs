@@ -50,13 +50,6 @@ namespace Raven.Server.Documents.Indexes
             _indexesByEtag.TryRemove(oldIndex.Etag, out oldIndex);
         }
 
-        public void RenameIndex(Index index, string oldName, string newName)
-        {
-            _indexesByName.AddOrUpdate(newName, index, (key, oldValue) => index);
-            Index _;
-            _indexesByName.TryRemove(oldName, out _);
-        }
-
         public bool TryGetByEtag(long etag, out Index index)
         {
             return _indexesByEtag.TryGetValue(etag, out index);
