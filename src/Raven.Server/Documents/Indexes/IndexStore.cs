@@ -113,8 +113,9 @@ namespace Raven.Server.Documents.Indexes
         {
             var creationOptions = IndexCreationOptions.Create;
             var existingIndex = GetIndex(name);
+            IndexDefinitionCompareDifferences differences =  IndexDefinitionCompareDifferences.None;
             if (existingIndex != null)
-                creationOptions = GetIndexCreationOptions(definition, existingIndex);
+                creationOptions = GetIndexCreationOptions(definition, existingIndex, out differences);
 
             if (creationOptions == IndexCreationOptions.Noop)
             {
@@ -126,8 +127,23 @@ namespace Raven.Server.Documents.Indexes
             if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex || creationOptions == IndexCreationOptions.Update)
             {
                 Debug.Assert(existingIndex != null);
+                
+                differences &= ~IndexDefinitionCompareDifferences.Etag;
 
+                
+                if ((differences & IndexDefinitionCompareDifferences.LockMode) != 0)
+                {
+                    existingIndex.SetLock(definition.LockMode);    
+                }
+
+                if ((differences & IndexDefinitionCompareDifferences.Priority) != 0)
+                {
+                    existingIndex.SetPriority(definition.Priority);
+                }
+                
                 existingIndex.Update(definition, existingIndex.Configuration);
+
+                _indexes.UpdateIndexEtag(existingIndex.Etag, etag);
 
                 return;
             }
@@ -218,15 +234,18 @@ namespace Raven.Server.Documents.Indexes
         private void HandleStaticIndexChange(string name, IndexDefinition definition)
         {
             var creationOptions = IndexCreationOptions.Create;
-            var existingIndex = GetIndex(name);
-            if (existingIndex != null)
-                creationOptions = GetIndexCreationOptions(definition, existingIndex);
+            var currentIndex = GetIndex(name);
+            IndexDefinitionCompareDifferences currentDifferences = IndexDefinitionCompareDifferences.None;
+
+            if (currentIndex != null)
+                creationOptions = GetIndexCreationOptions(definition, currentIndex, out currentDifferences);
 
             var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
 
+
             if (creationOptions == IndexCreationOptions.Noop)
             {
-                Debug.Assert(existingIndex != null);
+                Debug.Assert(currentIndex != null);
 
                 var replacementIndex = GetIndex(replacementIndexName);
                 if (replacementIndex != null)
@@ -237,32 +256,34 @@ namespace Raven.Server.Documents.Indexes
 
             if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
             {
-                Debug.Assert(existingIndex != null);
+                Debug.Assert(currentIndex != null);
 
                 var replacementIndex = GetIndex(replacementIndexName);
                 if (replacementIndex != null)
                     DeleteIndexInternal(replacementIndex);
 
-                UpdateIndex(definition, existingIndex);
+                if (currentDifferences!= IndexDefinitionCompareDifferences.None)
+                    UpdateIndex(definition, currentIndex, currentDifferences);
                 return;
             }
 
+            UpdateStaticIndexLockModeAndPriority(definition, currentIndex, currentDifferences);
+
             if (creationOptions == IndexCreationOptions.Update)
             {
-                Debug.Assert(existingIndex != null);
+                Debug.Assert(currentIndex != null);
 
                 definition.Name = replacementIndexName;
-                existingIndex = GetIndex(replacementIndexName);
-                if (existingIndex != null)
+                var sideBySideIndex = GetIndex(replacementIndexName);
+                if (sideBySideIndex != null)
                 {
-                    creationOptions = GetIndexCreationOptions(definition, existingIndex);
+                    creationOptions = GetIndexCreationOptions(definition, sideBySideIndex, out IndexDefinitionCompareDifferences sideBySideDifferences);
                     if (creationOptions == IndexCreationOptions.Noop)
                         return;
 
                     if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
                     {
-                        UpdateIndex(definition, existingIndex);
-                        return;
+                        UpdateIndex(definition, sideBySideIndex, sideBySideDifferences);
                     }
                 }
 
@@ -435,7 +456,7 @@ namespace Raven.Server.Documents.Indexes
             if (existingIndex == null)
                 return true;
 
-            var creationOptions = GetIndexCreationOptions(definition, existingIndex);
+            var creationOptions = GetIndexCreationOptions(definition, existingIndex, out IndexDefinitionCompareDifferences differences);
             return creationOptions != IndexCreationOptions.Noop;
         }
 
@@ -458,8 +479,12 @@ namespace Raven.Server.Documents.Indexes
                 });
         }
 
-        private void UpdateIndex(IndexDefinition definition, Index existingIndex)
+        private void UpdateIndex(IndexDefinition definition, Index existingIndex, IndexDefinitionCompareDifferences indexDifferences)
         {
+            UpdateStaticIndexLockModeAndPriority(definition, existingIndex, indexDifferences);
+
+            _indexes.UpdateIndexEtag(existingIndex.Etag, definition.Etag);
+
             switch (definition.Type)
             {
                 case IndexType.Map:
@@ -471,42 +496,67 @@ namespace Raven.Server.Documents.Indexes
                 default:
                     throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
             }
+            
+            
+        }
+
+        private static IndexDefinitionCompareDifferences UpdateStaticIndexLockModeAndPriority(IndexDefinition definition, Index existingIndex,
+            IndexDefinitionCompareDifferences indexDifferences)
+        {
+            indexDifferences &= ~IndexDefinitionCompareDifferences.Etag;
+
+            if (definition.LockMode.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.LockMode) != 0)
+                existingIndex.SetLock(definition.LockMode.Value);
+
+            if (definition.Priority.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.Priority) != 0)
+                existingIndex.SetPriority(definition.Priority.Value);
+
+            indexDifferences &= ~IndexDefinitionCompareDifferences.LockMode;
+            indexDifferences &= ~IndexDefinitionCompareDifferences.Priority;
+            return indexDifferences;
         }
 
         internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex)
         {
+            return GetIndexCreationOptions(indexDefinition, existingIndex, out IndexDefinitionCompareDifferences differences);
+        }
+
+
+        internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex, out IndexDefinitionCompareDifferences differences)
+        {
+            differences = IndexDefinitionCompareDifferences.All;
             if (existingIndex == null)
                 return IndexCreationOptions.Create;
 
             //if (existingIndex.Definition.IsTestIndex) // TODO [ppekrol]
             //    return IndexCreationOptions.Update;
+            differences = IndexDefinitionCompareDifferences.None;
 
-            var result = IndexDefinitionCompareDifferences.None;
 
             var indexDef = indexDefinition as IndexDefinition;
             if (indexDef != null)
-                result = existingIndex.Definition.Compare(indexDef);
+                differences = existingIndex.Definition.Compare(indexDef);
 
             var indexDefBase = indexDefinition as IndexDefinitionBase;
             if (indexDefBase != null)
-                result = existingIndex.Definition.Compare(indexDefBase);
+                differences = existingIndex.Definition.Compare(indexDefBase);
 
-            if (result == IndexDefinitionCompareDifferences.All)
+            if (differences == IndexDefinitionCompareDifferences.All)
                 return IndexCreationOptions.Update;
 
-            result &= ~IndexDefinitionCompareDifferences.Etag; // we do not care about IndexId
+            differences &= ~IndexDefinitionCompareDifferences.Etag; // we do not care about IndexId
 
-            if (result == IndexDefinitionCompareDifferences.None)
+            if (differences == IndexDefinitionCompareDifferences.None)
                 return IndexCreationOptions.Noop;
 
-            if ((result & IndexDefinitionCompareDifferences.Maps) == IndexDefinitionCompareDifferences.Maps ||
-                (result & IndexDefinitionCompareDifferences.Reduce) == IndexDefinitionCompareDifferences.Reduce)
+            if ((differences & IndexDefinitionCompareDifferences.Maps) == IndexDefinitionCompareDifferences.Maps ||
+                (differences & IndexDefinitionCompareDifferences.Reduce) == IndexDefinitionCompareDifferences.Reduce)
                 return IndexCreationOptions.Update;
 
-            if ((result & IndexDefinitionCompareDifferences.Fields) == IndexDefinitionCompareDifferences.Fields)
+            if ((differences & IndexDefinitionCompareDifferences.Fields) == IndexDefinitionCompareDifferences.Fields)
                 return IndexCreationOptions.Update;
 
-            if ((result & IndexDefinitionCompareDifferences.Configuration) == IndexDefinitionCompareDifferences.Configuration)
+            if ((differences & IndexDefinitionCompareDifferences.Configuration) == IndexDefinitionCompareDifferences.Configuration)
             {
                 var currentConfiguration = existingIndex.Configuration as SingleIndexConfiguration;
                 if (currentConfiguration == null) // should not happen
@@ -527,14 +577,14 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if ((result & IndexDefinitionCompareDifferences.MapsFormatting) == IndexDefinitionCompareDifferences.MapsFormatting ||
-                (result & IndexDefinitionCompareDifferences.ReduceFormatting) == IndexDefinitionCompareDifferences.ReduceFormatting)
+            if ((differences & IndexDefinitionCompareDifferences.MapsFormatting) == IndexDefinitionCompareDifferences.MapsFormatting ||
+                (differences & IndexDefinitionCompareDifferences.ReduceFormatting) == IndexDefinitionCompareDifferences.ReduceFormatting)
                 return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
 
-            if ((result & IndexDefinitionCompareDifferences.Priority) == IndexDefinitionCompareDifferences.Priority)
+            if ((differences & IndexDefinitionCompareDifferences.Priority) == IndexDefinitionCompareDifferences.Priority)
                 return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
 
-            if ((result & IndexDefinitionCompareDifferences.LockMode) == IndexDefinitionCompareDifferences.LockMode)
+            if ((differences & IndexDefinitionCompareDifferences.LockMode) == IndexDefinitionCompareDifferences.LockMode)
                 return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
 
             return IndexCreationOptions.Update;
