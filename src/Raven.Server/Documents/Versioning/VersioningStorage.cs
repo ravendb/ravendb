@@ -182,39 +182,40 @@ namespace Raven.Server.Documents.Versioning
             DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, ChangeVectorEntry[] changeVector, long lastModifiedTicks,
             VersioningConfigurationCollection configuration = null)
         {
+            Debug.Assert(changeVector != null, "Chagen vector must be set");
+
             BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
 
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out Slice lowerKey, out Slice keyPtr);
 
-            // We want the revision's attachments to have a lower etag than the reivion itself
             var notFromSmuggler = (nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler;
-            if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
-                notFromSmuggler)
-            {
-                _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerKey, changeVector);
-            }
-
-            flags |= DocumentFlags.Revision;
-            var data = context.ReadObject(document, key);
-            var newEtag = _database.DocumentsStorage.GenerateNextEtag();
-            if (changeVector == null)
-            {
-                changeVector = new[]
-                {
-                    new ChangeVectorEntry
-                    {
-                        DbId = _database.DbId,
-                        Etag = newEtag
-                    }
-                };
-            }
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocumentsSlice);
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
+                var changeVectorPtr = (byte*)pChangeVector;
+                var chagneVectorSize = sizeof(ChangeVectorEntry) * changeVector.Length;
+
+                // We want the revision's attachments to have a lower etag than the reivion itself
+                if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
+                    notFromSmuggler)
+                {
+                    using (Slice.External(context.Allocator, changeVectorPtr, chagneVectorSize, out Slice changeVectorSlice))
+                    {
+                        if (table.VerifyKeyExists(changeVectorSlice) == false)
+                        {
+                            _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerKey, changeVector);
+                        }
+                    }
+                }
+
+                flags |= DocumentFlags.Revision;
+                var data = context.ReadObject(document, key);
+                var newEtag = _database.DocumentsStorage.GenerateNextEtag();
+
                 using (table.Allocate(out TableValueBuilder tbv))
                 {
-                    tbv.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
+                    tbv.Add(changeVectorPtr, chagneVectorSize);
                     tbv.Add(lowerKey);
                     tbv.Add(SpecialChars.RecordSeperator);
                     tbv.Add(Bits.SwapBytes(newEtag));
