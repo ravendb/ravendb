@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Exceptions.Indexes;
@@ -127,21 +128,21 @@ namespace FastTests.Server.Replication
         {
             var leader = await CreateRaftClusterAndGetLeader(2);
             var follower = Servers.First(srv => ReferenceEquals(srv, leader) == false);
-            var dbName = "Can_replicate_index";
             var source = new DocumentStore
             {
                 Url = leader.WebUrls[0],
-                DefaultDatabase = dbName
+                DefaultDatabase = caller
             };
             var destination = new DocumentStore
             {
                 Url = follower.WebUrls[0],
-                DefaultDatabase = dbName
+                DefaultDatabase = caller
             };
 
-            var doc = MultiDatabase.CreateDatabaseDocument(dbName);
-            var databaseResult = source.Admin.Server.Send(new CreateDatabaseOperation(doc, 2));
-            await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
+            var res  = CreateClusterDatabase(caller, source, 2);
+            //var doc = MultiDatabase.CreateDatabaseDocument(dbName);
+            //var databaseResult = source.Admin.Server.Send(new CreateDatabaseOperation(doc, 2));
+            await WaitForRaftIndexToBeAppliedInCluster(res.ETag ?? 0, TimeSpan.FromSeconds(5));
             return (source, destination);
         }
         
