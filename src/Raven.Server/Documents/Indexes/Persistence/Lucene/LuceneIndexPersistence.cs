@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
@@ -72,7 +73,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             _fields = fields.ToDictionary(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name), x => (object)null);
-            _indexSearcherHolder = new IndexSearcherHolder(() => new IndexSearcher(_directory, true), _index._indexStorage.DocumentDatabase);
+            _indexSearcherHolder = new IndexSearcherHolder(state => new IndexSearcher(_directory, true, state), _index._indexStorage.DocumentDatabase);
         }
 
         public void Clean()
@@ -90,9 +91,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             using (var tx = environment.WriteTransaction())
             {
-                using (_directory.SetTransaction(tx))
+                IState state;
+                using (_directory.SetTransaction(tx, out state))
                 {
-                    CreateIndexStructure();
+                    CreateIndexStructure(state);
                     RecreateSearcher(tx);
 
                     // force tx commit so it will bump tx counter and just created searcher holder will have valid tx id
@@ -105,9 +107,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _initialized = true;
         }
 
-        private void CreateIndexStructure()
+        private void CreateIndexStructure(IState state)
         {
-            new IndexWriter(_directory, _dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED).Dispose();
+            new IndexWriter(_directory, _dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED, state).Dispose();
         }
 
         public IndexWriteOperation OpenIndexWriter(Transaction writeTransaction)
@@ -152,7 +154,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexSearcherHolder.SetIndexSearcher(asOfTx);
         }
 
-        internal LuceneIndexWriter EnsureIndexWriter()
+        internal LuceneIndexWriter EnsureIndexWriter(IState state)
         {
             if (_indexWriter != null)
                 return _indexWriter;
@@ -162,7 +164,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
                 // TODO [ppekrol] support for IndexReaderWarmer?
                 return _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter,
-                    IndexWriter.MaxFieldLength.UNLIMITED, null, _index._indexStorage.DocumentDatabase);
+                    IndexWriter.MaxFieldLength.UNLIMITED, null, _index._indexStorage.DocumentDatabase, state);
             }
             catch (Exception e)
             {

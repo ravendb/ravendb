@@ -10,23 +10,20 @@ using Voron.Impl;
 
 namespace Raven.Server.Indexing
 {
-    public unsafe class VoronIndexInput : IndexInput
+    public class VoronIndexInput : IndexInput
     {
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-
-        private readonly AsyncLocal<Transaction> _currentTransaction;
 
         private readonly string _name;
         private VoronStream _stream;
 
         private bool _isOriginal = true;
 
-        public VoronIndexInput(AsyncLocal<Transaction> transaction, string name)
+        public VoronIndexInput(string name, Transaction transaction)
         {
             _name = name;
-            _currentTransaction = transaction;
 
-            OpenInternal();
+            OpenInternal(transaction);
         }
 
         public override string ToString()
@@ -34,40 +31,54 @@ namespace Raven.Server.Indexing
             return _name;
         }
 
-        private void OpenInternal()
+        private void OpenInternal(Transaction transaction)
         {
-            var fileTree = _currentTransaction.Value.ReadTree("Files");
+            var fileTree = transaction.ReadTree("Files");
             if (fileTree == null)
                 throw new FileNotFoundException("Could not find index input", _name);
 
             Slice fileName;
-            using (Slice.From(_currentTransaction.Value.Allocator, _name, out fileName))
+            using (Slice.From(transaction.Allocator, _name, out fileName))
             {
                 _stream = fileTree.ReadStream(fileName);
                 if (_stream == null)
                     throw new FileNotFoundException("Could not find index input", _name);
-            }          
+            }
         }
 
-        public override object Clone()
+        public override object Clone(IState s)
         {
-            ThrowIfDisposed();
+            var state = s as VoronState;
+            if (state == null)
+            {
+                ThrowStateNullException();
+                return null;
+            }
 
-            var clone = (VoronIndexInput)base.Clone();
+            ThrowIfDisposed(state);
+
+            var clone = (VoronIndexInput)base.Clone(s);
             GC.SuppressFinalize(clone);
             clone._isOriginal = false;
 
-            clone.OpenInternal();
+            clone.OpenInternal(state.Transaction);
             clone._stream.Position = _stream.Position;
 
             return clone;
         }
 
-        public override byte ReadByte()
+        public override byte ReadByte(IState s)
         {
-            ThrowIfDisposed();
+            var state = s as VoronState;
+            if (state == null)
+            {
+                ThrowStateNullException();
+                return byte.MinValue;
+            }
 
-            _stream.UpdateCurrentTransaction(_currentTransaction.Value);
+            ThrowIfDisposed(state);
+
+            _stream.UpdateCurrentTransaction(state.Transaction);
             var readByte = _stream.ReadByte();
             if (readByte == -1)
                 throw new EndOfStreamException();
@@ -75,17 +86,31 @@ namespace Raven.Server.Indexing
             return (byte)readByte;
         }
 
-        public override void ReadBytes(byte[] buffer, int offset, int len)
+        public override void ReadBytes(byte[] buffer, int offset, int len, IState s)
         {
-            ThrowIfDisposed();
+            var state = s as VoronState;
+            if (state == null)
+            {
+                ThrowStateNullException();
+                return;
+            }
 
-            _stream.UpdateCurrentTransaction(_currentTransaction.Value);
+            ThrowIfDisposed(state);
+
+            _stream.UpdateCurrentTransaction(state.Transaction);
             _stream.ReadEntireBlock(buffer, offset, len);
         }
 
-        public override void Seek(long pos)
+        public override void Seek(long pos, IState s)
         {
-            ThrowIfDisposed();
+            var state = s as VoronState;
+            if (state == null)
+            {
+                ThrowStateNullException();
+                return;
+            }
+
+            ThrowIfDisposed(state);
 
             _stream.Seek(pos, SeekOrigin.Begin);
         }
@@ -101,29 +126,41 @@ namespace Raven.Server.Indexing
             _cts.Dispose();
         }
 
-        public override long Length()
+        public override long Length(IState s)
         {
+            var state = s as VoronState;
+            if (state == null)
+            {
+                ThrowStateNullException();
+                return 0;
+            }
+
             return _stream.Length;
         }
 
-        public override long FilePointer
+        public override long FilePointer(IState s)
         {
-            get
+            var state = s as VoronState;
+            if (state == null)
             {
-                ThrowIfDisposed();
-                return _stream.Position;
+                ThrowStateNullException();
+                return 0;
             }
+
+            ThrowIfDisposed(state);
+
+            return _stream.Position;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ThrowIfDisposed()
+        private void ThrowIfDisposed(VoronState state)
         {
-            if (_currentTransaction.Value == null)
+            if (state == null)
             {
                 ThrowDisposed();
                 return; // never hit
             }
-            if (_currentTransaction.Value.LowLevelTransaction.IsDisposed)
+            if (state.Transaction.LowLevelTransaction.IsDisposed)
                 ThrowTransactionDisposed();
             if (_cts.IsCancellationRequested)
                 ThrowCancelled();
@@ -142,6 +179,11 @@ namespace Raven.Server.Indexing
         private static void ThrowCancelled()
         {
             throw new OperationCanceledException("VoronIndexInput");
+        }
+
+        private static void ThrowStateNullException()
+        {
+            throw new ArgumentNullException("State");
         }
     }
 }

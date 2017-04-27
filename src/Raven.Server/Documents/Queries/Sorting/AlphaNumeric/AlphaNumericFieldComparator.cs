@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Lucene.Net.Store;
 
 namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 {
@@ -38,7 +39,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
             _bottom = _values[slot];
         }
 
-        public override int CompareBottom(int doc)
+        public override int CompareBottom(int doc, IState state)
         {
             var str2 = _lookup[_order[doc]];
             if (_bottom == null)
@@ -49,14 +50,14 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
             return AlphanumComparer.Instance.Compare(_bottom, str2);
         }
 
-        public override void Copy(int slot, int doc)
+        public override void Copy(int slot, int doc, IState state)
         {
             _values[slot] = _lookup[_order[doc]];
         }
 
-        public override void SetNextReader(IndexReader reader, int docBase)
+        public override void SetNextReader(IndexReader reader, int docBase, IState state)
         {
-            var currentReaderValues = FieldCache_Fields.DEFAULT.GetStringIndex(reader, _field);
+            var currentReaderValues = FieldCache_Fields.DEFAULT.GetStringIndex(reader, _field, state);
             _order = currentReaderValues.order;
             _lookup = currentReaderValues.lookup;
         }

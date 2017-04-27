@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Index;
+using Lucene.Net.Store;
 using Lucene.Net.Util;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Sparrow.Json;
@@ -61,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public static Dictionary<string, int[]> GetTermsAndDocumentsFor(IndexReader reader, int docBase, string field, string indexName)
+        public static Dictionary<string, int[]> GetTermsAndDocumentsFor(IndexReader reader, int docBase, string field, string indexName, IState state)
         {
             var termsCachePerField = CacheInstance.TermsCachePerReader.GetValue(reader, x => new CachedIndexedTerms(indexName));
 
@@ -78,14 +79,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (info.Done)
                     return info.Results;
 
-                info.Results = FillCache(reader, docBase, field);
+                info.Results = FillCache(reader, docBase, field, state);
                 info.Done = true;
 
                 return info.Results;
             }
         }
 
-        public static BlittableJsonReaderObject[] ReadAllEntriesFromIndex(IndexReader reader, JsonOperationContext context)
+        public static BlittableJsonReaderObject[] ReadAllEntriesFromIndex(IndexReader reader, JsonOperationContext context, IState state)
         {
             if (reader.MaxDoc > 512 * 1024)
             {
@@ -96,10 +97,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             var results = new DynamicJsonValue[reader.MaxDoc];
-            using (var termDocs = reader.TermDocs())
-            using (var termEnum = reader.Terms())
+            using (var termDocs = reader.TermDocs(state))
+            using (var termEnum = reader.Terms(state))
             {
-                while (termEnum.Next())
+                while (termEnum.Next(state))
                 {
                     var term = termEnum.Term;
                     if (term == null)
@@ -107,8 +108,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     var text = term.Text;
 
-                    termDocs.Seek(termEnum);
-                    for (var i = 0; i < termEnum.DocFreq() && termDocs.Next(); i++)
+                    termDocs.Seek(termEnum, state);
+                    for (var i = 0; i < termEnum.DocFreq() && termDocs.Next(state); i++)
                     {
                         var result = results[termDocs.Doc];
                         if (result == null)
@@ -152,13 +153,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 .ToArray();
         }
 
-        private static Dictionary<string, int[]> FillCache(IndexReader reader, int docBase, string field)
+        private static Dictionary<string, int[]> FillCache(IndexReader reader, int docBase, string field, IState state)
         {
-            using (var termDocs = reader.TermDocs())
+            using (var termDocs = reader.TermDocs(state))
             {
                 var items = new Dictionary<string, int[]>();
                 var docsForTerm = new List<int>();
-                using (var termEnum = reader.Terms(new Term(field)))
+                using (var termEnum = reader.Terms(new Term(field), state))
                 {
                     do
                     {
@@ -170,8 +171,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             continue;
 
                         var totalDocCountIncludedDeletes = termEnum.DocFreq();
-                        termDocs.Seek(termEnum.Term);
-                        while (termDocs.Next() && totalDocCountIncludedDeletes > 0)
+                        termDocs.Seek(termEnum.Term, state);
+                        while (termDocs.Next(state) && totalDocCountIncludedDeletes > 0)
                         {
                             var curDoc = termDocs.Doc;
                             totalDocCountIncludedDeletes -= 1;
@@ -183,7 +184,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         docsForTerm.Sort();
                         items[term.Text] = docsForTerm.ToArray();
                         docsForTerm.Clear();
-                    } while (termEnum.Next());
+                    } while (termEnum.Next(state));
                 }
                 return items;
             }

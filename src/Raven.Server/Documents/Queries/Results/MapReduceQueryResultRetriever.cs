@@ -1,4 +1,5 @@
-﻿using Raven.Client;
+﻿using Lucene.Net.Store;
+using Raven.Client;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Results
@@ -13,9 +14,9 @@ namespace Raven.Server.Documents.Queries.Results
             _context = context;
         }
 
-        protected override unsafe Document DirectGet(Lucene.Net.Documents.Document input, string id)
+        protected override unsafe Document DirectGet(Lucene.Net.Documents.Document input, string id, IState state)
         {
-            var reduceValue = input.GetField(Constants.Documents.Indexing.Fields.ReduceValueFieldName).GetBinaryValue();
+            var reduceValue = input.GetField(Constants.Documents.Indexing.Fields.ReduceValueFieldName).GetBinaryValue(state);
 
             var result = new BlittableJsonReaderObject((byte*)_context.PinObjectAndGetAddress(reduceValue), reduceValue.Length, _context);
 
@@ -25,15 +26,15 @@ namespace Raven.Server.Documents.Queries.Results
             };
         }
 
-        public override Document Get(Lucene.Net.Documents.Document input, float score)
+        public override Document Get(Lucene.Net.Documents.Document input, float score, IState state)
         {
             if (_fieldsToFetch.IsProjection || _fieldsToFetch.IsTransformation)
-                return GetProjection(input, score, null);
+                return GetProjection(input, score, null, state);
 
-            return DirectGet(input, null);
+            return DirectGet(input, null, state);
         }
 
-        public override bool TryGetKey(Lucene.Net.Documents.Document document, out string key)
+        public override bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key)
         {
             key = null;
             return false;
