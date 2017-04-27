@@ -15,7 +15,7 @@ namespace StressTests.Issues
             {
                 using (var store = new ReplicationTombstoneTestsSlow())
                 {
-                    store.Two_tombstones_should_replicate_in_master_master();
+                    store.Two_tombstones_should_replicate_in_master_master().Wait();
                 }
             });
         }
