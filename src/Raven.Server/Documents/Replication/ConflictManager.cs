@@ -94,9 +94,10 @@ namespace Raven.Server.Documents.Replication
                 if (local != null)
                     conflicts.Add(local);
 
-                _conflictResolver.ResolveToLatest(documentsContext, conflicts);
-                return;
+                var resolved = _conflictResolver.ResolveToLatest(documentsContext, conflicts);
+                _conflictResolver.PutResolvedDocument(documentsContext, resolved);
 
+                return;
             }
             _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection);
         }
@@ -149,12 +150,18 @@ namespace Raven.Server.Documents.Replication
                 Doc = doc
             });
 
-            return _conflictResolver.TryResolveConflictByScriptInternal(
+            if (_conflictResolver.TryResolveConflictByScriptInternal(
                 documentsContext,
                 scriptResolver,
                 conflictedDocs,
                 documentsContext.GetLazyString(collection),
-                isTomstone);
+                isTomstone, out var resolved))
+            {
+                _conflictResolver.PutResolvedDocument(documentsContext, resolved);
+                return true;
+            }
+
+            return false;
         }
 
         private bool TryResolveUsingDefaultResolver(
@@ -183,10 +190,16 @@ namespace Raven.Server.Documents.Replication
                 LoweredKey = context.GetLazyString(id)
             });
 
-            return _conflictResolver.TryResolveUsingDefaultResolverInternal(
+            if (_conflictResolver.TryResolveUsingDefaultResolverInternal(
                 context,
                 _conflictResolver.ConflictSolver.DatabaseResolverId,
-                conflicts);
+                conflicts, out var resolved))
+            {
+                _conflictResolver.PutResolvedDocument(context, resolved);
+                return true;
+            }
+
+            return false;
         }
 
         private void HandleHiloConflict(DocumentsOperationContext context, string id, BlittableJsonReaderObject doc)
