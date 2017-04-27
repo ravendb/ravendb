@@ -34,14 +34,14 @@ namespace FastTests.Server.Documents.PeriodicExport
         {
             using (var store = GetDocumentStore())
             {
-                var config = new PeriodicExportConfiguration
+                var config = new PeriodicBackupConfiguration
                 {
                     Active = true,
                     LocalFolderName = _exportPath,
                     FullExportIntervalMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds,
                     IntervalMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds
                 };
-                await store.Admin.Server.SendAsync(new ConfigurePeriodicExportBundleOperation(config, store.DefaultDatabase));
+                await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.DefaultDatabase));
 
                 var periodicExportRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicExportRunner;
                 Assert.Equal(50, periodicExportRunner.IncrementalInterval.TotalDays);
@@ -57,21 +57,19 @@ namespace FastTests.Server.Documents.PeriodicExport
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "oren" });
-                    var config = new PeriodicExportConfiguration
+                    var config = new PeriodicBackupConfiguration
                     {
                         Active = true,
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
                     };
-                    await store.Admin.Server.SendAsync(new ConfigurePeriodicExportBundleOperation(config, store.DefaultDatabase));
+                    await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.DefaultDatabase));
                     await session.SaveChangesAsync();
 
                 }
-                var operation = new GetPeriodicExportStatusOperation(store.DefaultDatabase);
-                using (var commands = store.Commands())
-                {
-                    SpinWait.SpinUntil(() => store.Admin.Server.Send(operation).Status != null, 10000);
-                }
+                var operation = new GetPeriodicBackupStatusOperation();
+                SpinWait.SpinUntil(() => store.Admin.Server.Send(operation).Status != null, 10000);
+
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))

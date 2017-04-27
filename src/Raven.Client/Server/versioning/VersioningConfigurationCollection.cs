@@ -1,4 +1,4 @@
-namespace Raven.Server.Documents.Versioning
+namespace Raven.Client.Server.Versioning
 {
     public class VersioningConfigurationCollection
     {

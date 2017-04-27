@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
@@ -13,6 +14,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -23,7 +25,6 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class StreamSource : ISmugglerSource
     {
-        private static readonly StringSegment MetadataCollectionSegment = new StringSegment(Constants.Documents.Metadata.Collection);
         private readonly Stream _stream;
         private readonly JsonOperationContext _context;
         private JsonOperationContext.ManagedPinnedBuffer _buffer;
@@ -113,9 +114,41 @@ namespace Raven.Server.Smuggler.Documents
             private int _depth;
             private State _state = State.None;
             private bool _verifyStartArray;
+            private readonly ChangeVectorReader _changeVectorReader = new ChangeVectorReader();
+
+            private class ChangeVectorReader
+            {
+                public readonly Dictionary<Guid, long> ChangeVector = new Dictionary<Guid, long>();
+                public ChangeVectorReaderState State;
+                public Guid DbId;
+                public long Etag;
+
+                public void Reset()
+                {
+                    ChangeVector.Clear();
+                    State = ChangeVectorReaderState.StartArray;
+                    DbId = Guid.Empty;
+                    Etag = 0;
+                }
+            }
+
+            enum ChangeVectorReaderState
+            {
+                StartArray,
+                StartObject,
+                Property,
+                DbId,
+                Etag
+            }
+
+            public BlittableMetadataModifier(JsonOperationContext context)
+            {
+                _ctx = context;
+            }
 
             public LazyStringValue Id;
-
+            public ChangeVectorEntry[] ChangeVector;
+            public DocumentFlags Flags;
             public NonPersistentDocumentFlags NonPersistentFlags;
 
             private JsonOperationContext _ctx;
@@ -125,6 +158,94 @@ namespace Raven.Server.Smuggler.Documents
 
             private const string HistoricalRevisionState = "Historical";
             private const string VersionedDocumentState = "Current";
+
+            private unsafe bool ReadChangeVector(IJsonParser reader, JsonParserState state)
+            {
+                if (_changeVectorReader.State == ChangeVectorReaderState.StartArray)
+                {
+                    if (reader.Read() == false)
+                    {
+                        _state = State.ReadingChangeVector;
+                        return false;
+                    }
+
+                    if (state.CurrentTokenType != JsonParserToken.StartArray)
+                        ThrowInvalidChangeVectorType(state);
+
+                    _changeVectorReader.State = ChangeVectorReaderState.StartObject;
+                }
+
+                while (true)
+                {
+                    if (reader.Read() == false)
+                        return false;
+
+                    if (state.CurrentTokenType == JsonParserToken.EndArray)
+                    {
+                        ChangeVector = _changeVectorReader.ChangeVector.Select(x => new ChangeVectorEntry {DbId = x.Key, Etag = x.Value}).ToArray();
+                        _changeVectorReader.Reset();
+                        return true;
+                    }
+
+                    switch (_changeVectorReader.State)
+                    {
+                        case ChangeVectorReaderState.StartObject:
+                            if (state.CurrentTokenType != JsonParserToken.StartObject)
+                                ThrowInvalidChangeVectorType(state);
+
+                            _changeVectorReader.State = ChangeVectorReaderState.Property;
+                            break;
+                        case ChangeVectorReaderState.Property:
+                            if (state.CurrentTokenType == JsonParserToken.EndObject)
+                            {
+                                _changeVectorReader.ChangeVector[_changeVectorReader.DbId] = _changeVectorReader.Etag;
+                                _changeVectorReader.State = ChangeVectorReaderState.StartObject;
+                                break;
+                            }
+
+                            if (state.CurrentTokenType != JsonParserToken.String || state.StringSize != 4)
+                                ThrowInvalidChangeVectorType(state);
+
+                            switch (*(int*)state.StringBuffer)
+                            {
+                                case 1682530884:
+                                    _changeVectorReader.State = ChangeVectorReaderState.DbId;
+                                    break;
+                                case 1734440005:
+                                    _changeVectorReader.State = ChangeVectorReaderState.Etag;
+                                    break;
+                                default:
+                                    ThrowInvalidChangeVectorType(state);
+                                    break;
+                            }
+                            break;
+                        case ChangeVectorReaderState.DbId:
+                            if (state.CurrentTokenType != JsonParserToken.String)
+                                ThrowInvalidChangeVectorType(state);
+
+                            _changeVectorReader.DbId = new Guid(CreateLazyStringValueFromParserState(state));
+                            _changeVectorReader.State = ChangeVectorReaderState.Property;
+                            break;
+                        case ChangeVectorReaderState.Etag:
+                            if (state.CurrentTokenType != JsonParserToken.Integer)
+                                ThrowInvalidChangeVectorType(state);
+
+                            _changeVectorReader.Etag = state.Long;
+                            _changeVectorReader.State = ChangeVectorReaderState.Property;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+            }
+
+            private DocumentFlags ReadFlags(JsonParserState state)
+            {
+                var str = CreateLazyStringValueFromParserState(state);
+                if (Enum.TryParse(str, true, out DocumentFlags flags) == false)
+                    ThrowInvalidFlagsProperty(str);
+                return flags;
+            }
 
             private unsafe LazyStringValue CreateLazyStringValueFromParserState(JsonParserState state)
             {
@@ -148,7 +269,8 @@ namespace Raven.Server.Smuggler.Documents
             {
                 None,
                 ReadingId,
-                IgnorePropertyEtag,
+                ReadingFlags,
+                ReadingChangeVector,
                 IgnoreProperty,
                 IgnoreArray,
                 IgnoreRevisionStatusProperty
@@ -190,14 +312,6 @@ namespace Raven.Server.Smuggler.Documents
                             state.CurrentTokenType == JsonParserToken.StartObject)
                             ThrowInvalidMetadataProperty(state);
                         break;
-                    case State.IgnorePropertyEtag:
-                        if (reader.Read() == false)
-                            return false;
-
-                        if (state.CurrentTokenType != JsonParserToken.String &&
-                            state.CurrentTokenType != JsonParserToken.Integer)
-                            ThrowInvalidEtagType(state);
-                        break;
                     case State.IgnoreArray:
                         if (_verifyStartArray)
                         {
@@ -209,7 +323,6 @@ namespace Raven.Server.Smuggler.Documents
                             if (state.CurrentTokenType != JsonParserToken.StartArray)
                                 ThrowInvalidReplicationHistoryType(state);
                         }
-
                         while (state.CurrentTokenType != JsonParserToken.EndArray)
                         {
                             if (reader.Read() == false)
@@ -239,8 +352,23 @@ namespace Raven.Server.Smuggler.Documents
                             return false;
 
                         if (state.CurrentTokenType != JsonParserToken.String)
-                            ThrowInvalidIdType(state);
+                            ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Id, state);
                         Id = CreateLazyStringValueFromParserState(state);
+                        break;
+                    case State.ReadingFlags:
+                        if (reader.Read() == false)
+                            return false;
+
+                        if (state.CurrentTokenType != JsonParserToken.String)
+                            ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Flags, state);
+                        Flags = ReadFlags(state);
+                        break;
+                    case State.ReadingChangeVector:
+                        if (ReadChangeVector(reader, state) == false)
+                        {
+                            return false;
+                        }
+
                         break;
                 }
 
@@ -266,7 +394,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     switch (state.StringSize)
                     {
-                        case 3:// @id
+                        case 3: // @id
                             if (state.StringBuffer[0] != (byte)'@' ||
                                 *(short*)(state.StringBuffer + 1) != 25705)
                                 return true;
@@ -277,16 +405,40 @@ namespace Raven.Server.Smuggler.Documents
                                 return false;
                             }
                             if (state.CurrentTokenType != JsonParserToken.String)
-                                ThrowInvalidIdType(state);
+                                ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Id, state);
                             Id = CreateLazyStringValueFromParserState(state);
                             break;
-                        case 5:// @etag
+                        case 5: // @etag
                             if (state.StringBuffer[0] != (byte)'@' ||
                                 *(int*)(state.StringBuffer + 1) != 1734440037)
                                 return true;
 
                             goto case -1;
 
+                        case 6: // @flags
+                            if (state.StringBuffer[0] != (byte)'@' ||
+                                *(int*)(state.StringBuffer + 1) != 1734437990 ||
+                                state.StringBuffer[1 + sizeof(int)] != (byte)'s')
+                                return true;
+
+                            if (reader.Read() == false)
+                            {
+                                _state = State.ReadingFlags;
+                                return false;
+                            }
+                            if (state.CurrentTokenType != JsonParserToken.String)
+                                ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Flags, state);
+                            Flags = ReadFlags(state);
+                            break;
+
+                        case 12: // @index-score
+                            if (state.StringBuffer[0] != (byte)'@' ||
+                                *(long*)(state.StringBuffer + 1) != 7166121427196997225 ||
+                                *(short*)(state.StringBuffer + 1 + sizeof(long)) != 29295 ||
+                                state.StringBuffer[1 + sizeof(long) + sizeof(short)] != (byte)'e')
+                                return true;
+
+                            goto case -1;
                         case 13: //Last-Modified
                             if (*(long*)state.StringBuffer != 7237087983830262092 ||
                                 *(int*)(state.StringBuffer + sizeof(long)) != 1701406313 ||
@@ -295,6 +447,32 @@ namespace Raven.Server.Smuggler.Documents
 
                             goto case -1;
 
+                        case 14:
+                            if (state.StringBuffer[0] == (byte)'@')
+                            {
+                                // @change-vector
+                                if (*(long*)(state.StringBuffer + 1) == 8515573965335390307 &&
+                                    *(int*)(state.StringBuffer + 1 + sizeof(long)) == 1869898597 &&
+                                    state.StringBuffer[1 + sizeof(long) + sizeof(int)] == (byte)'r')
+                                {
+                                    if (ReadChangeVector(reader, state) == false)
+                                    {
+                                        _state = State.ReadingChangeVector;
+                                        return false;
+                                    }
+                                    break;
+                                }
+
+                                // @last-modified
+                                if (*(long*)(state.StringBuffer + 1) == 7237123168202350956 &&
+                                    *(int*)(state.StringBuffer + 1 + sizeof(long)) == 1701406313 &&
+                                    state.StringBuffer[1 + sizeof(long) + sizeof(int)] == (byte)'d')
+                                {
+                                    goto case -1;
+                                }
+                            }
+
+                            return true;
                         case 15: //Raven-Read-Only
                             if (*(long*)state.StringBuffer != 7300947898092904786 ||
                                 *(int*)(state.StringBuffer + sizeof(long)) != 1328374881 ||
@@ -340,7 +518,7 @@ namespace Raven.Server.Smuggler.Documents
                             goto case -1;
                         case 25: //Raven-Replication-Version OR Raven-Replication-History
                             if (*(long*)state.StringBuffer != 7300947898092904786 ||
-                               *(long*)(state.StringBuffer + sizeof(long)) != 8028075772393122928)
+                                *(long*)(state.StringBuffer + sizeof(long)) != 8028075772393122928)
                                 return true;
 
                             var value = *(long*)(state.StringBuffer + sizeof(long) + sizeof(long));
@@ -373,7 +551,7 @@ namespace Raven.Server.Smuggler.Documents
                                 } while (state.CurrentTokenType != JsonParserToken.EndArray);
                             }
                             else if (state.CurrentTokenType == JsonParserToken.StartArray ||
-                                state.CurrentTokenType == JsonParserToken.StartObject)
+                                     state.CurrentTokenType == JsonParserToken.StartObject)
                                 ThrowInvalidMetadataProperty(state);
                             break;
                         case 29: //Non-Authoritative-Information
@@ -435,7 +613,7 @@ namespace Raven.Server.Smuggler.Documents
                             goto case -1;
 
                         case -1: // IgnoreProperty
-                            {
+                        {
                             if (reader.Read() == false)
                             {
                                 _state = State.IgnoreProperty;
@@ -455,28 +633,33 @@ namespace Raven.Server.Smuggler.Documents
 
             private static void ThrowInvalidMetadataProperty(JsonParserState state)
             {
-                throw new InvalidDataException("Expected property @metadata to be a simpel type, but was " +
-                                               state.CurrentTokenType);
+                throw new InvalidDataException($"Expected property @metadata to be a simpel type, but was {state.CurrentTokenType}");
             }
 
-            private static void ThrowInvalidIdType(JsonParserState state)
+            private static void ThrowExpectedFieldTypeOfString(string field, JsonParserState state)
             {
-                throw new InvalidDataException(
-                    $"Expected property @metadata.@id to have string type, but was: {state.CurrentTokenType}");
+                throw new InvalidDataException($"Expected property @metadata.{field} to have string type, but was: {state.CurrentTokenType}");
+            }
+
+            private static void ThrowInvalidFlagsProperty(LazyStringValue str)
+            {
+                throw new InvalidDataException($"Cannot parse the value of property @metadata.@flags: {str}");
             }
 
             private static void ThrowInvalidEtagType(JsonParserState state)
             {
-                throw new InvalidDataException("Expected property @metadata.@etag to have string or long type, but was: " +
-                                               state.CurrentTokenType);
+                throw new InvalidDataException($"Expected property @metadata.@etag to have string or long type, but was: {state.CurrentTokenType}");
             }
 
             private static void ThrowInvalidReplicationHistoryType(JsonParserState state)
             {
-                throw new InvalidDataException("Expected property @metadata.Raven-Replication-History to have array type, but was: " +
-                                               state.CurrentTokenType);
+                throw new InvalidDataException($"Expected property @metadata.Raven-Replication-History to have array type, but was: {state.CurrentTokenType}");
             }
 
+            private static void ThrowInvalidChangeVectorType(JsonParserState state)
+            {
+                throw new InvalidDataException($"Expected property @metadata.@change-vector to have array type, but was: {state.CurrentTokenType}");
+            }
 
             public void Dispose()
             {
@@ -489,19 +672,22 @@ namespace Raven.Server.Smuggler.Documents
 
             public void Reset(JsonOperationContext ctx)
             {
-                if (_ctx == null)
+                if (_ctx == null) // should never happen
                 {
                     _ctx = ctx;
-                    _metadataCollections = _ctx.GetLazyStringForFieldWithCaching(MetadataCollectionSegment);
+                    _metadataCollections = _ctx.GetLazyStringForFieldWithCaching(CollectionName.MetadataCollectionSegment);
                     return;
                 }
                 Id = null;
+                ChangeVector = null;
+                _changeVectorReader.Reset();
+                Flags = DocumentFlags.None;
                 NonPersistentFlags = NonPersistentDocumentFlags.None;
                 _depth = 0;
                 _state = State.None;
                 _readingMetadataObject = false;
                 _ctx = ctx;
-                _metadataCollections = _ctx.GetLazyStringForFieldWithCaching(MetadataCollectionSegment);
+                _metadataCollections = _ctx.GetLazyStringForFieldWithCaching(CollectionName.MetadataCollectionSegment);
             }
         }
 
@@ -705,7 +891,7 @@ namespace Raven.Server.Smuggler.Documents
                 ThrowInvalidJson();
 
             var context = _context;
-            var modifier = new BlittableMetadataModifier();
+            var modifier = new BlittableMetadataModifier(context);
             var builder = CreateBuilder(context, modifier);
             try
             {
@@ -727,7 +913,6 @@ namespace Raven.Server.Smuggler.Documents
                             builder = CreateBuilder(context, modifier);
                         }
                     }
-                    modifier.Reset(context);
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     ReadObject(builder);
@@ -738,7 +923,9 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         Data = blittableJsonReaderObject,
                         Key = modifier.Id,
-                        NonPersistentFlags = modifier.NonPersistentFlags
+                        ChangeVector = modifier.ChangeVector,
+                        Flags = modifier.Flags,
+                        NonPersistentFlags = modifier.NonPersistentFlags,
                     };
                 }
             }

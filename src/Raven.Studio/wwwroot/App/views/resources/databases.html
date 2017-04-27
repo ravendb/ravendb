@@ -66,7 +66,7 @@
     </div>
     </div>
 
-    <div class="flex-content scroll">
+    <div class="flex-grow scroll">
     <div data-bind="foreach: databases().sortedDatabases">
         <div class="panel database-item" data-bind="scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(), attr: { class: 'panel database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') }">
             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>

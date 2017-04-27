@@ -101,6 +101,7 @@ namespace Voron.Platform.Posix
                         {
                             // TODO : Add other types                            
                             case "cifs":
+                            case "nfs":
                                 syncAllowed = false;
                                 break;
                             default:

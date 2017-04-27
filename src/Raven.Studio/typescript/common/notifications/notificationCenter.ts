@@ -1,5 +1,4 @@
-﻿import app = require("durandal/app");
-import EVENTS = require("common/constants/events");
+﻿import EVENTS = require("common/constants/events");
 import database = require("models/resources/database");
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
@@ -15,18 +14,23 @@ import notificationCenterOperationsWatch = require("common/notifications/notific
 
 import postponeNotificationCommand = require("commands/operations/postponeNotificationCommand");
 import dismissNotificationCommand = require("commands/operations/dismissNotificationCommand");
-import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
 import killOperationCommand = require("commands/operations/killOperationCommand");
-import showDataDialog = require("viewmodels/common/showDataDialog");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 import smugglerDatabaseDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/smugglerDatabaseDetails");
 import patchDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/patchDocumentsDetails");
+import indexCompactDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/indexCompactDetails");
+import bulkInsertDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/bulkInsertDetails");
 import deleteDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/deleteDocumentsDetails");
 import indexingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/indexingDetails");
 import pagingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/pagingDetails");
+import newVersionAvailableDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/newVersionAvailableDetails");
+import genericAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/genericAlertDetails");
+import recentErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/recentErrorDetails");
+import notificationCenterSettings = require("common/notifications/notificationCenterSettings");
 
-interface customDetailsProvider {
+
+interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
     showDetailsFor(notification: abstractNotification, notificationCenter: notificationCenter): JQueryPromise<void>;
 }
@@ -38,12 +42,7 @@ interface customOperationMerger {
 class notificationCenter {
     static instance = new notificationCenter();
 
-    static readonly postponeOptions: valueAndLabelItem<number, string>[] = [
-        { label: "1 hour", value: 3600 },
-        { label: "6 hours", value: 6 * 3600 },
-        { label: "1 day", value: 24 * 3600 },
-        { label: "1 week", value: 7 * 24 * 3600 }
-    ];
+    static readonly postponeOptions = notificationCenterSettings.postponeOptions;
 
     spinners = {
         dismiss: ko.observableArray<string>([]),
@@ -65,7 +64,7 @@ class notificationCenter {
     alertCountAnimation = ko.observable<boolean>();
     noNewNotifications: KnockoutComputed<boolean>;
 
-    customDetailsProviders = [] as Array<customDetailsProvider>;
+    detailsProviders = [] as Array<detailsProvider>;
     customOperationMerger = [] as Array<customOperationMerger>;
 
     private hideHandler = (e: Event) => {
@@ -84,15 +83,25 @@ class notificationCenter {
 
     private initializeObservables() {
 
-        this.customDetailsProviders.push(
+        this.detailsProviders.push(
+            // recent errors: 
+            recentErrorDetails,
+
             // operations:
             smugglerDatabaseDetails,
             patchDocumentsDetails,
             deleteDocumentsDetails,
+            bulkInsertDetails,
+            indexCompactDetails,
 
             // performance hints:
             indexingDetails,
-            pagingDetails
+            pagingDetails,
+
+            // alerts:
+            newVersionAvailableDetails,
+
+            genericAlertDetails  // leave it as last item on this list - this is fallback handler for all alert types
         );
 
         this.customOperationMerger.push(smugglerDatabaseDetails);
@@ -236,12 +245,12 @@ class notificationCenter {
         return this.getOperationsWatch(db).monitorOperation(operationId, onProgress);
     }
 
-    postpone(notification: abstractNotification, timeInSeconds: number) {
+    postpone(notification: abstractNotification, timeInSeconds: number): JQueryPromise<void> {
         const notificationId = notification.id;
 
         this.spinners.postpone.push(notificationId);
 
-        new postponeNotificationCommand(notification.database, notificationId, timeInSeconds)
+        return new postponeNotificationCommand(notification.database, notificationId, timeInSeconds)
             .execute()
             .always(() => this.spinners.postpone.remove(notificationId))
             .done(() => this.removeNotificationFromNotificationCenter(notification));
@@ -304,43 +313,15 @@ class notificationCenter {
     }
 
     openDetails(notification: abstractNotification) {
-        //TODO: it is only temporary solution to display progress/details as JSON in dialog
-        for (let i = 0; i < this.customDetailsProviders.length; i++) {
-            const provider = this.customDetailsProviders[i];
+        for (let i = 0; i < this.detailsProviders.length; i++) {
+            const provider = this.detailsProviders[i];
             if (provider.supportsDetailsFor(notification)) {
                 provider.showDetailsFor(notification, this);
                 return;
             }
         }
 
-        if (notification instanceof alert) {
-            const currentAlert = notification as alert;
-            const text = JSON.stringify(currentAlert.details(), null, 4);
-
-            app.showBootstrapDialog(new showDataDialog("Alert", text, "javascript"));
-        } else if (notification instanceof performanceHint) {
-            const currentHint = notification as performanceHint;
-            const text = JSON.stringify(currentHint.details(), null, 4);
-            app.showBootstrapDialog(new showDataDialog("Performance Hint", text, "javascript"));
-        } else if (notification instanceof operation) {
-            const op = notification as operation;
-            
-            const dialogText = ko.pureComputed(() => {
-                const completed = op.isCompleted();
-
-                return completed ? op.result() : op.progress();
-            });
-            app.showBootstrapDialog(new tempStatDialog(dialogText));
-        } else if (notification instanceof recentError) {
-            const error = notification as recentError;
-            const recentErrorDetails = {
-                httpStatus: error.httpStatus(),
-                details: error.details()
-            };
-            app.showBootstrapDialog(new tempStatDialog(recentErrorDetails));
-        } else {
-            throw new Error("Unable to handle details for: " + notification);
-        }
+        throw new Error("Unsupported notification: " + notification);
     }
 
     private shouldConsumeHideEvent(e: Event) {

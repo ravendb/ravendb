@@ -39,18 +39,20 @@ namespace Raven.Server.Documents
 
         public void HandleDatabaseRecordChange()
         {
-            TransactionOperationContext context;
-            using (_serverStore.ContextPool.AllocateOperationContext(out context))
+            lock(this)
             {
-                context.OpenReadTransaction();
-                var dbRecord = _serverStore.Cluster.ReadDatabase(context, _database.Name);
-                if (dbRecord == null)
-                    return;
-                VersioningStorage = VersioningStorage.LoadConfigurations(_database, dbRecord, VersioningStorage);
-                ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database, dbRecord, ExpiredDocumentsCleaner);
-                PeriodicExportRunner = PeriodicExportRunner.LoadConfigurations(_database, dbRecord, PeriodicExportRunner);
+                TransactionOperationContext context;
+                using (_serverStore.ContextPool.AllocateOperationContext(out context))
+                {
+                    context.OpenReadTransaction();
+                    var dbRecord = _serverStore.Cluster.ReadDatabase(context, _database.Name);
+                    if (dbRecord == null)
+                        return;
+                    VersioningStorage = VersioningStorage.LoadConfigurations(_database, dbRecord, VersioningStorage);
+                    ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database, dbRecord, ExpiredDocumentsCleaner);
+                    PeriodicExportRunner = PeriodicExportRunner.LoadConfigurations(_database, dbRecord, PeriodicExportRunner);
+                }
             }
-                
         }
 
         /// <summary>
@@ -59,17 +61,7 @@ namespace Raven.Server.Documents
         public void InitializeBundles()
         {
 
-            TransactionOperationContext context;
-            using (_serverStore.ContextPool.AllocateOperationContext(out context))
-            {
-                context.OpenReadTransaction();
-                var dbRecord = _serverStore.Cluster.ReadDatabase(context, _database.Name);
-                if (dbRecord == null)
-                    return;
-                VersioningStorage = VersioningStorage.LoadConfigurations(_database, dbRecord, VersioningStorage);                                   
-                ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database, dbRecord, ExpiredDocumentsCleaner);
-                PeriodicExportRunner = PeriodicExportRunner.LoadConfigurations(_database, dbRecord, PeriodicExportRunner);
-            }
+            HandleDatabaseRecordChange();
         }
 
         public List<string> GetActiveBundles()

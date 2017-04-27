@@ -1,66 +1,73 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Server.Background;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
-    public class DocumentTombstoneCleaner : IDisposable
+    public class DocumentTombstoneCleaner : BackgroundWorkBase
     {
-        private static Logger _logger;
-
-        private bool _disposed;
-
-        private readonly object _locker = new object();
+        private readonly SemaphoreSlim _subscriptionsLocker = new SemaphoreSlim(1, 1);
 
         private readonly DocumentDatabase _documentDatabase;
 
         private readonly HashSet<IDocumentTombstoneAware> _subscriptions = new HashSet<IDocumentTombstoneAware>();
 
-        private Timer _timer;
-
-        public DocumentTombstoneCleaner(DocumentDatabase documentDatabase)
+        public DocumentTombstoneCleaner(DocumentDatabase documentDatabase) : base(documentDatabase.Name, documentDatabase.DatabaseShutdown)
         {
             _documentDatabase = documentDatabase;
-            _logger = LoggingSource.Instance.GetLogger<DocumentTombstoneCleaner>(_documentDatabase.Name);
-        }
-
-        public void Initialize()
-        {
-            _timer = new Timer(_ => ExecuteCleanup(), null, TimeSpan.FromMinutes(1), _documentDatabase.Configuration.Tombstones.Interval.AsTimeSpan);
         }
 
         public void Subscribe(IDocumentTombstoneAware subscription)
         {
-            lock (_locker)
+            _subscriptionsLocker.Wait();
+
+            try
             {
                 _subscriptions.Add(subscription);
+            }
+            finally
+            {
+                _subscriptionsLocker.Release();
             }
         }
 
         public void Unsubscribe(IDocumentTombstoneAware subscription)
         {
-            lock (_locker)
-            {
-                _subscriptions.Remove(subscription);
-            }
-        }
-
-        internal bool ExecuteCleanup()
-        {
-            if (Monitor.TryEnter(_locker) == false)
-                return false;
+            _subscriptionsLocker.Wait();
 
             try
             {
-                if (_disposed)
-                    return true;
+                _subscriptions.Remove(subscription);
+            }
+            finally
+            {
+                _subscriptionsLocker.Release();
+            }
+        }
+
+        protected override async Task DoWork()
+        {
+            await WaitOrThrowOperationCanceled(_documentDatabase.Configuration.Tombstones.Interval.AsTimeSpan);
+
+            await ExecuteCleanup();
+        }
+
+        internal async Task ExecuteCleanup()
+        {
+            try
+            {
+                if (CancellationToken.IsCancellationRequested)
+                    return;
 
                 var tombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
                 var storageEnvironment = _documentDatabase.DocumentsStorage.Environment;
                 if (storageEnvironment == null) // doc storage was disposed before us?
-                    return true;
+                    return;
 
                 using (var tx = storageEnvironment.ReadTransaction())
                 {
@@ -71,74 +78,90 @@ namespace Raven.Server.Documents
                 }
 
                 if (tombstones.Count == 0)
-                    return true;
+                    return;
 
                 long minAllDocsEtag = long.MaxValue;
 
-                foreach (var subscription in _subscriptions)
-                {
-                    foreach (var tombstone in subscription.GetLastProcessedDocumentTombstonesPerCollection())
-                    {
-                        if (tombstone.Key == Constants.Documents.Replication.AllDocumentsCollection)
-                        {
-                            minAllDocsEtag = Math.Min(tombstone.Value, minAllDocsEtag);
-                            break;
-                        }
+                await _subscriptionsLocker.WaitAsync();
 
-                        long v;
-                        if (tombstones.TryGetValue(tombstone.Key, out v) == false)
-                            tombstones[tombstone.Key] = tombstone.Value;
-                        else
-                            tombstones[tombstone.Key] = Math.Min(tombstone.Value, v);
+                try
+                {
+                    foreach (var subscription in _subscriptions)
+                    {
+                        foreach (var tombstone in subscription.GetLastProcessedDocumentTombstonesPerCollection())
+                        {
+                            if (tombstone.Key == Constants.Documents.Replication.AllDocumentsCollection)
+                            {
+                                minAllDocsEtag = Math.Min(tombstone.Value, minAllDocsEtag);
+                                break;
+                            }
+
+                            long v;
+                            if (tombstones.TryGetValue(tombstone.Key, out v) == false)
+                                tombstones[tombstone.Key] = tombstone.Value;
+                            else
+                                tombstones[tombstone.Key] = Math.Min(tombstone.Value, v);
+                        }
                     }
                 }
-
-                foreach (var tombstone in tombstones)
+                finally
                 {
-                    var minTombstoneValue = Math.Min(tombstone.Value, minAllDocsEtag);
+                    _subscriptionsLocker.Release();
+                }
+
+                await _documentDatabase.TxMerger.Enqueue(new DeleteTombstonesCommand(tombstones, minAllDocsEtag, _documentDatabase, Logger));
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to execute tombstone cleanup on {_documentDatabase.Name}", e);
+            }
+        }
+
+        private class DeleteTombstonesCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly Dictionary<string, long> _tombstones;
+            private readonly long _minAllDocsEtag;
+            private readonly DocumentDatabase _database;
+            private readonly Logger _logger;
+
+            public DeleteTombstonesCommand(Dictionary<string, long> tombstones, long minAllDocsEtag, DocumentDatabase database, Logger logger)
+            {
+                _tombstones = tombstones;
+                _minAllDocsEtag = minAllDocsEtag;
+                _database = database;
+                _logger = logger;
+            }
+
+            public override int Execute(DocumentsOperationContext context)
+            {
+                var deletionCount = 0;
+
+                foreach (var tombstone in _tombstones)
+                {
+                    var minTombstoneValue = Math.Min(tombstone.Value, _minAllDocsEtag);
                     if (minTombstoneValue <= 0)
                         continue;
 
+                    if (_database.DatabaseShutdown.IsCancellationRequested)
+                        break;
+
+                    deletionCount++;
+
                     try
                     {
-                        using (var tx = storageEnvironment.WriteTransaction())
-                        {
-                            if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
-                                return true;
-
-                            _documentDatabase.DocumentsStorage.DeleteTombstonesBefore(tombstone.Key, minTombstoneValue, tx);
-
-                            tx.Commit();
-                        }
+                        _database.DocumentsStorage.DeleteTombstonesBefore(tombstone.Key, minTombstoneValue, context);
                     }
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info(
-                                $"Could not delete tombstones for '{tombstone.Key}' collection and '{minTombstoneValue}' etag.",
-                                e);
+                            _logger.Info( $"Could not delete tombstones for '{tombstone.Key}' collection before '{minTombstoneValue}' etag.", e);
+
+                        throw;
                     }
                 }
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Failed to execute tombstone cleanup on {_documentDatabase.Name}", e);
-            }
-            finally
-            {
-                Monitor.Exit(_locker);
-            }
-            return true;
-        }
 
-        public void Dispose()
-        {
-            lock (_locker) // so we are sure we aren't running concurrently with the timer
-            {
-                _disposed = true;
-                _timer?.Dispose();
-                _timer = null;
+                return deletionCount;
             }
         }
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Jint;
 using Jint.Native;
@@ -109,6 +110,8 @@ namespace Raven.Server.Documents.Patch
             if (indexScore.HasValue)
                 metadata.FastAddProperty(Constants.Documents.Metadata.IndexScore, indexScore, true, true, true);
 
+            // TOOD: Do we want to expose here also the change vector?
+
             return instance;
         }
 
@@ -185,8 +188,7 @@ namespace Raven.Server.Documents.Patch
         {
             foreach (var property in jsObject.GetOwnProperties())
             {
-                if (property.Key == Constants.Documents.Indexing.Fields.ReduceKeyFieldName ||
-                    property.Key == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                if (ShouldFilterProperty(property.Key))
                     continue;
 
                 var value = property.Value.Value;
@@ -205,6 +207,19 @@ namespace Raven.Server.Documents.Patch
                     ToBlittableJsonReaderValue(writer, value, CreatePropertyKey(property.Key, propertyKey), recursive);
                 }
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool ShouldFilterProperty(string property)
+        {
+            return property == Constants.Documents.Indexing.Fields.ReduceKeyFieldName ||
+                   property == Constants.Documents.Indexing.Fields.DocumentIdFieldName ||
+                   property == Constants.Documents.Metadata.Id ||
+                   property == Constants.Documents.Metadata.Etag ||
+                   property == Constants.Documents.Metadata.LastModified ||
+                   property == Constants.Documents.Metadata.IndexScore ||
+                   property == Constants.Documents.Metadata.ChangeVector ||
+                   property == Constants.Documents.Metadata.Flags;
         }
 
         private void ToBlittableJsonReaderValue(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, JsValue v, string propertyKey, bool recursiveCall)
@@ -329,7 +344,7 @@ namespace Raven.Server.Documents.Patch
             var obj = new DynamicJsonValue();
             foreach (var property in jsObject.GetOwnProperties())
             {
-                if (property.Key == Constants.Documents.Indexing.Fields.ReduceKeyFieldName || property.Key == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                if (ShouldFilterProperty(property.Key))
                     continue;
 
                 var value = property.Value.Value;

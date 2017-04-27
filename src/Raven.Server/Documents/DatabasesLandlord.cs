@@ -112,12 +112,17 @@ namespace Raven.Server.Documents
 
                     if (record.Disabled)
                     {
-                        UnloadDatabase(t.dbName, null);
+                        UnloadDatabase(t.dbName);
                         return;
                     }
-                    Task<DocumentDatabase> task;
-                    if (DatabasesCache.TryGetValue(t.dbName, out task) == false)
-                        return;
+                    if (DatabasesCache.TryGetValue(t.dbName, out var task) == false)
+                    {
+                        // if the database isn't loaded, but it is relevant for this node, we need to create
+                        // it. This is important so things like replication will start pumping, and that 
+                        // configuration changes such as running periodic backup will get a chance to run, which
+                        // they wouldn't unless the database is loaded / will have a request on it.
+                        task = TryGetOrCreateResourceStore(t.dbName);
+                    }
 
                     if (task.IsCanceled || task.IsFaulted)
                         return;

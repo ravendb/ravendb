@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Server.Versioning;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -14,6 +15,7 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
+using System.Linq;
 
 namespace Raven.Server.Documents
 {
@@ -47,6 +49,7 @@ namespace Raven.Server.Documents
 #endif
 
             BlittableJsonReaderObject.AssertNoModifications(document, key, assertChildren: true);
+            AssertMetadataWasFiltered(document);
 
             var collectionName = _documentsStorage.ExtractCollectionName(context, key, document);
             var newEtag = _documentsStorage.GenerateNextEtag();
@@ -118,12 +121,13 @@ namespace Raven.Server.Documents
 #endif
                 }
 
-                if (_documentDatabase.BundleLoader.VersioningStorage != null)
+                if (_documentDatabase.BundleLoader.VersioningStorage != null &&
+                    (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
                 {
-                    VersioningConfigurationCollection configuration;
-                    if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document, ref flags, out configuration, context, key))
+                    if (_documentDatabase.BundleLoader.VersioningStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
+                        ref flags, out VersioningConfigurationCollection configuration, context, key))
                     {
-                        _documentDatabase.BundleLoader.VersioningStorage.PutFromDocument(context, key, document, flags, changeVector, modifiedTicks, configuration);
+                        _documentDatabase.BundleLoader.VersioningStorage.Put(context, key, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration);
                     }
                 }
             }
@@ -359,6 +363,24 @@ namespace Raven.Server.Documents
                 return ChangeVectorUtils.UpdateChangeVectorWithNewEtag(_documentsStorage.Environment.DbId, newEtag, oldChangeVector);
 
             return _documentsStorage.ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, loweredKey, newEtag);
+        }
+
+        [Conditional("DEBUG")]
+        public static void AssertMetadataWasFiltered(BlittableJsonReaderObject data)
+        {
+            if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+                return;
+
+            var names = metadata.GetPropertyNames();
+            if (names.Contains(Constants.Documents.Metadata.Id, StringComparer.OrdinalIgnoreCase) ||
+                names.Contains(Constants.Documents.Metadata.Etag, StringComparer.OrdinalIgnoreCase) ||
+                names.Contains(Constants.Documents.Metadata.LastModified, StringComparer.OrdinalIgnoreCase) ||
+                names.Contains(Constants.Documents.Metadata.IndexScore, StringComparer.OrdinalIgnoreCase) ||
+                names.Contains(Constants.Documents.Metadata.ChangeVector, StringComparer.OrdinalIgnoreCase) ||
+                names.Contains(Constants.Documents.Metadata.Flags, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Document's metadata should filter properties on before put to storage." + System.Environment.NewLine + data);
+            }
         }
     }
 }

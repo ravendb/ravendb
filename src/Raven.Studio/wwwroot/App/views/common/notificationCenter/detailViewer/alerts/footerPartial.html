@@ -1,0 +1,20 @@
+<div class="flex-horizontal">
+    <div data-bind="with: alert">
+        <div class="dropdown" data-bind="visible: canBePostponed">
+            <button class="btn btn-sm dropdown-toggle" data-toggle="dropdown" data-bind="enable: !_.includes($parent.spinners.postpone(), id), css: { 'btn-spinner': _.includes($parent.spinners.postpone(), id) }">
+                <span>Postpone</span>
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" data-bind="foreach: $root.postponeOptions">
+                <li><a href="#" data-bind="text: label, click: _.partial($root.postpone, value)"></a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="flex-separator"></div>
+    <div>
+        <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
+        <button type="button" class="btn btn-default" data-bind="click: $root.dismiss">
+            <i class="icon-cancel"></i> <span>Dismiss</span>
+        </button>
+    </div>
+</div>

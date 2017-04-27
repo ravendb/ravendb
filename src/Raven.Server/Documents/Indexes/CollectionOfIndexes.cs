@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-
+using Raven.Client.Documents.Indexes;
 using Sparrow.Collections;
 
 namespace Raven.Server.Documents.Indexes
@@ -48,13 +48,14 @@ namespace Raven.Server.Documents.Indexes
                 indexes.TryRemove(oldIndex);
             }
             _indexesByEtag.TryRemove(oldIndex.Etag, out oldIndex);
+            _indexesByEtag.TryAdd(newIndex.Etag, newIndex);
         }
 
-        public void RenameIndex(Index index, string oldName, string newName)
+        public void UpdateIndexEtag(long oldEtag, long newEtag)
         {
-            _indexesByName.AddOrUpdate(newName, index, (key, oldValue) => index);
-            Index _;
-            _indexesByName.TryRemove(oldName, out _);
+            _indexesByEtag.TryRemove(oldEtag, out Index value);
+            _indexesByEtag.TryAdd(newEtag, value);
+            value.Etag = newEtag;
         }
 
         public bool TryGetByEtag(long etag, out Index index)

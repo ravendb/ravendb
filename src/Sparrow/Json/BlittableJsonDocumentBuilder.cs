@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
@@ -17,7 +15,7 @@ namespace Sparrow.Json
         private readonly JsonOperationContext _context;
         private UsageMode _mode;
         private readonly IJsonParser _reader;
-        private readonly IBlittableDocumentModifier _modifier;
+        public IBlittableDocumentModifier _modifier;
         private readonly BlittableWriter<UnmanagedWriteBuffer> _writer;
         private readonly JsonParserState _state;
         private LazyStringValue _fakeFieldName;
@@ -101,6 +99,7 @@ namespace Sparrow.Json
             _debugTag = debugTag;
             _mode = mode;
             _writer.ResetAndRenew();
+            _modifier?.Reset(_context);
 
             _fakeFieldName = _context.GetLazyStringForFieldWithCaching(UnderscoreSegment);            
         }
@@ -556,6 +555,6 @@ namespace Sparrow.Json
         void StartObject();
         void EndObject();
         bool AboutToReadPropertyName(IJsonParser reader, JsonParserState state);
+        void Reset(JsonOperationContext context);
     }
-
 }

@@ -9,9 +9,10 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
-using Raven.Client.Server.expiration;
+using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicExport;
 using Raven.Client.Server.Tcp;
+using Raven.Client.Server.Versioning;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
@@ -80,7 +81,7 @@ namespace Raven.Server.Json
     
         public static readonly Func<BlittableJsonReaderObject, ExpirationConfiguration> ExpirationConfiguration = GenerateJsonDeserializationRoutine<ExpirationConfiguration>();
 
-        public static readonly Func<BlittableJsonReaderObject, PeriodicExportConfiguration> PeriodicExportConfiguration = GenerateJsonDeserializationRoutine<PeriodicExportConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicExportConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
         public static readonly Func<BlittableJsonReaderObject, PeriodicExportStatus> PeriodicExportStatus = GenerateJsonDeserializationRoutine<PeriodicExportStatus>();
 
         public static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();

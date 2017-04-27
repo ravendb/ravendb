@@ -223,11 +223,7 @@ namespace Raven.Server.Commercial
                     "License updated",
                     message,
                     AlertType.LicenseManager_LicenseUpdated,
-                    NotificationSeverity.Info,
-                    details: new MessageDetails
-                    {
-                        Message = message
-                    });
+                    NotificationSeverity.Info);
 
                 _notificationCenter.Add(alert);
             }

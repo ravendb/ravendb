@@ -17,9 +17,10 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
-using Raven.Client.Server.expiration;
+using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicExport;
 using Raven.Client.Server.Tcp;
+using Raven.Client.Server.Versioning;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Json;
@@ -631,93 +632,6 @@ namespace Raven.Server.ServerWide
     public class DeleteValueCommand
     {
         public string Name;
-    }
-
-    public class EditVersioningCommand : UpdateDatabaseCommand
-    {
-        public string DatabaseName;
-        public VersioningConfiguration Configuration;
-
-        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
-        {
-            databaseRecord.VersioningConfiguration = Configuration;
-        }
-
-        public EditVersioningCommand() : base(null)
-        {
-        }
-
-        public EditVersioningCommand(VersioningConfiguration configuration, string databaseName) : base(databaseName)
-        {
-            Configuration = configuration;
-        }
-
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
-        {
-            record.VersioningConfiguration = Configuration;
-        }
-
-        public override void FillJson(DynamicJsonValue json)
-        {
-            json[nameof(VersioningConfiguration)] = TypeConverter.ToBlittableSupportedType(Configuration);
-        }
-    }
-
-    public class EditExpirationCommand : UpdateDatabaseCommand
-    {
-        public string DatabaseName;
-        public ExpirationConfiguration Configuration;
-        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
-        {
-            databaseRecord.ExpirationConfiguration = Configuration;
-        }
-
-        public EditExpirationCommand() : base(null)
-        {
-        }
-
-        public EditExpirationCommand(ExpirationConfiguration configuration,string databaseName) : base(databaseName)
-        {
-            Configuration = configuration;
-        }
-
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
-        {
-            record.ExpirationConfiguration = Configuration;
-        }
-
-        public override void FillJson(DynamicJsonValue json)
-        {
-            json[nameof(ExpirationConfiguration)] = TypeConverter.ToBlittableSupportedType(Configuration);
-        }
-    }
-
-    public class EditPeriodicBackupCommand : UpdateDatabaseCommand
-    {
-        public PeriodicExportConfiguration Configuration;
-        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
-        {
-            databaseRecord.PeriodicExportConfiguration = Configuration;
-        }
-
-        public EditPeriodicBackupCommand() : base(null)
-        {
-        }
-
-        public EditPeriodicBackupCommand(PeriodicExportConfiguration configuration, string databaseName) : base(databaseName)
-        {
-            Configuration = configuration;
-        }
-
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
-        {
-            record.PeriodicExportConfiguration = Configuration;
-        }
-
-        public override void FillJson(DynamicJsonValue json)
-        {
-            json[nameof(PeriodicExportConfiguration)] = TypeConverter.ToBlittableSupportedType(Configuration);
-        }
     }
 
     public class DeleteDatabaseCommand

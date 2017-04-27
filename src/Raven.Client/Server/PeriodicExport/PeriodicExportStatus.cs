@@ -1,5 +1,4 @@
 using System;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.PeriodicExport

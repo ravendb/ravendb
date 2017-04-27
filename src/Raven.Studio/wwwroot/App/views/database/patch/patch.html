@@ -264,11 +264,11 @@
                             <div class="row flex-row">
                                 <div class="col-sm-6 flex-vertical">
                                     <h3 class="flex-header">Before</h3>
-                                    <pre class="flex-content scroll" data-bind="html: formatAsJson(beforeDoc)"></pre>
+                                    <pre class="flex-grow scroll" data-bind="html: formatAsJson(beforeDoc)"></pre>
                                 </div>
                                 <div class="col-sm-6 flex-vertical">
                                     <h3 class="flex-header">After</h3>
-                                    <pre class="flex-content scroll" data-bind="html: formatAsJson(afterDoc)"></pre>
+                                    <pre class="flex-grow scroll" data-bind="html: formatAsJson(afterDoc)"></pre>
                                 </div>
                             </div>
                         </div>
@@ -284,7 +284,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="flex-content scroll" data-bind="foreach: actions.putDocument">
+                            <div class="flex-grow scroll" data-bind="foreach: actions.putDocument">
                                 <div class="put-item">
                                     <div class="put-heading" data-bind="text: Key"></div>
                                     <div class="put-placeholder">{ ... }</div>
@@ -296,7 +296,7 @@
                         </div>
                         <div class="tab-pane fade flex-vertical" id="loads">
                             <h3 class="flex-header">Loads</h3>
-                            <ul class="flex-content scroll" data-bind="foreach: actions.loadDocument">
+                            <ul class="flex-grow scroll" data-bind="foreach: actions.loadDocument">
                                 <li data-bind="text: $data"></li>
                             </ul>
 
@@ -304,7 +304,7 @@
                         </div>
                         <div class="tab-pane fade flex-vertical" id="output">
                             <h3 class="flex-header">Output</h3>
-                            <ul class="flex-content scroll" data-bind="foreach: actions.info">
+                            <ul class="flex-grow scroll" data-bind="foreach: actions.info">
                                 <li data-bind="text: $data"></li>
                             </ul>
 
@@ -325,14 +325,14 @@
     </button>
     <div class="dropdown-menu slidein-style" aria-labelledby="dropdownLoadPatch" data-bind="dropdownPanel: true, with: savedPatches">
         <div class="loadpatch-dropdown flex-vertical" data-bind="css: { 'show-preview': previewItem() }">
-            <div class="flex-content loadpatch-container">
+            <div class="flex-grow loadpatch-container">
                 <div class="patch-preview-container flex-vertical">
                     <div class="flex-header">
                         <h3>
                             Patch preview
                         </h3>
                     </div>
-                    <div class="flex-content flex-vertical scroll">
+                    <div class="flex-grow flex-vertical scroll">
                         <div class="bg-info padding padding-sm">
                             <div class="row">
                                 <div class="col-xs-6">
@@ -363,7 +363,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="flex-content scroll">
+                    <div class="flex-grow scroll">
                         <ul class="patch-list" data-bind="foreach: filteredPatches">
                             <li>
                                 <a href="#" class="patch-link" data-bind="click: $parent.previewPatch">

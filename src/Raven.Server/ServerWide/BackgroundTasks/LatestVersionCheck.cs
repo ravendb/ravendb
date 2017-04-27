@@ -8,6 +8,7 @@ using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.BackgroundTasks
 {
@@ -100,6 +101,17 @@ namespace Raven.Server.ServerWide.BackgroundTasks
             public string BuildType { get; set; }
 
             public DateTime PublishedAt { get; set; }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue(GetType())
+                {
+                    [nameof(Version)] = Version,
+                    [nameof(BuildNumber)] = BuildNumber,
+                    [nameof(BuildType)] = BuildType,
+                    [nameof(PublishedAt)] = PublishedAt
+                };
+            }
         }
     }
 }

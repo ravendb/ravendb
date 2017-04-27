@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Client.Util;
+using Raven.Server.Background;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications;
@@ -151,11 +152,10 @@ namespace Raven.Server.NotificationCenter
 
         public void Dismiss(string id)
         {
-            var deleted = _notificationsStorage.Delete(id);
+            _notificationsStorage.Delete(id);
 
-            if (deleted == false)
-                return;
-
+            // send this notificaton even when notification doesn't exist 
+            // we don't persist all notifications
             Add(NotificationUpdated.Create(id, NotificationUpdateType.Dismissed));
         }
 

@@ -33,16 +33,14 @@ namespace FastTests.Server.Replication
                     session.Delete("foo/bar");
                     session.SaveChanges();
                 }
-                while (storage1.DocumentTombstoneCleaner.ExecuteCleanup() == false)
-                {
-                    Thread.Sleep(16);
-                }
+
+                await storage1.DocumentTombstoneCleaner.ExecuteCleanup();
+
                 Assert.Equal(1, WaitUntilHasTombstones(store2).Count);
                 //Assert.Equal(4, WaitForValue(() => storage1.ReplicationLoader.MinimalEtagForReplication, 4));
-                while (storage1.DocumentTombstoneCleaner.ExecuteCleanup() == false)
-                {
-                    Thread.Sleep(16);
-                }
+
+                await storage1.DocumentTombstoneCleaner.ExecuteCleanup();
+
                 Assert.Equal(0, WaitUntilHasTombstones(store1, 0).Count);
             }
         }
