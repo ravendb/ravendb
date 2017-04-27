@@ -16,10 +16,7 @@ namespace Raven.Client.Documents.Commands
 
         public HeadDocumentCommand(string id, long? etag)
         {
-            if (id == null)
-                throw new ArgumentNullException(nameof(id));
-
-            _id = id;
+            _id = id ?? throw new ArgumentNullException(nameof(id));
             _etag = etag;
         }
 
