@@ -4,7 +4,7 @@
         <div class="center">
             <h1>Sample Data</h1>
             <div class="button-wrapper">
-                <button class="btn btn-primary btn-lg btn-spinner sampleData-createBtn" data-bind="click: generateSampleData, css: { 'btn-spinner': isBusy() }, disable: !canCreateSampleData()">
+                <button class="btn btn-primary btn-lg btn-spinner sampleData-createBtn" data-bind="click: generateSampleData, css: { 'btn-spinner': isBusy() }, disable: !canCreateSampleData() || isBusy()">
                     <span>
                         Create<span data-bind="visible: justCreatedSampleData()">d</span>
                     </span>
