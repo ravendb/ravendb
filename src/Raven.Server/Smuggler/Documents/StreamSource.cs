@@ -271,7 +271,6 @@ namespace Raven.Server.Smuggler.Documents
                 ReadingId,
                 ReadingFlags,
                 ReadingChangeVector,
-                IgnorePropertyEtag,
                 IgnoreProperty,
                 IgnoreArray,
                 IgnoreRevisionStatusProperty
@@ -312,14 +311,6 @@ namespace Raven.Server.Smuggler.Documents
                         if (state.CurrentTokenType == JsonParserToken.StartArray ||
                             state.CurrentTokenType == JsonParserToken.StartObject)
                             ThrowInvalidMetadataProperty(state);
-                        break;
-                    case State.IgnorePropertyEtag:
-                        if (reader.Read() == false)
-                            return false;
-
-                        if (state.CurrentTokenType != JsonParserToken.String &&
-                            state.CurrentTokenType != JsonParserToken.Integer)
-                            ThrowInvalidEtagType(state);
                         break;
                     case State.IgnoreArray:
                         if (_verifyStartArray)
