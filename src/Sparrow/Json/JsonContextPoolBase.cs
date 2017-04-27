@@ -24,7 +24,7 @@ namespace Sparrow.Json
         /// It is safe to read from another thread, although you may
         /// get a stale view of the data
         /// </summary>
-        private class MutliReaderSingleWriterStack : IEnumerable<T>
+        private class MutliReaderSingleWriterStack 
         {
             private CancellationToken _token;
             private T _fastPath;
@@ -98,29 +98,19 @@ namespace Sparrow.Json
                 Count = 0;
             }
 
-            public IEnumerator<T> GetEnumerator()
+            public ArraySegment<T> Snapshot 
             {
-                var ctx = _fastPath;
-                if (ctx != null)
-                    yield return ctx;
-
-                // we assume that the code is racy, stale data is fine here
-                var array = _stack;
-                if(array == null)
-                    yield break;
-                var len = Math.Min(_stackUsage, array.Length);
-
-                for (int i = len - 1; i >= 0; i--)
+                get
                 {
-                    ctx = array[i];
-                    if (ctx != null)
-                        yield return ctx;
-                }
-            }
+                    var array = _stack;
 
-            IEnumerator IEnumerable.GetEnumerator()
-            {
-                return GetEnumerator();
+                    if(array == null)
+                        return new ArraySegment<T>(Array.Empty<T>());
+
+                    var min = Math.Min(_stackUsage, array.Length);
+
+                    return new ArraySegment<T>(array, 0, min);
+                }
             }
         }
 
@@ -140,10 +130,12 @@ namespace Sparrow.Json
                     return;
 
                 var now = DateTime.UtcNow;
-                foreach (var threadPool in _contextPool.Values)
+                foreach (var treahdStack in _contextPool.Values)
                 {
-                    foreach (var ctx in threadPool)
+                    var items = treahdStack.Snapshot;
+                    for (int i = items.Offset; i < items.Count; i++)
                     {
+                        var ctx = items.Array[i];
                         // note that this is a racy call, need to be careful here
                         if (ctx == null)
                             continue;
@@ -159,6 +151,8 @@ namespace Sparrow.Json
                             continue;
 
                         ctx.Dispose();
+
+                        items.Array[i] = null;
                     }
                 }
             }
@@ -184,9 +178,10 @@ namespace Sparrow.Json
 
             if (stack.Count == 0)
                 return; // nothing to do;
-            foreach (var item in stack)
+            var items = stack.Snapshot;
+            for (int i = items.Offset; i < items.Count; i++)
             {
-                item.Dispose();
+                items.Array[i].Dispose();
             }
             stack.Clear();
 
@@ -199,6 +194,8 @@ namespace Sparrow.Json
             while (stack.Count > 0)
             {
                 context = stack.Pop();
+                if (context == null)
+                    continue;
                 if (Interlocked.CompareExchange(ref context.InUse, 1, 0) != 0)
                     continue;
                 context.Renew();
@@ -264,8 +261,10 @@ namespace Sparrow.Json
                 _timer.Dispose();
                 foreach (var stack in _contextPool.Values)
                 {
-                    foreach (var ctx in stack)
+                    var items = stack.Snapshot;
+                    for (int i = items.Offset; i < items.Count; i++)
                     {
+                        var ctx = items.Array[i];
                         if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
                             continue;
                         ctx.Dispose();
