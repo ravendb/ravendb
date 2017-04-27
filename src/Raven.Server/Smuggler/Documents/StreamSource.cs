@@ -440,6 +440,14 @@ namespace Raven.Server.Smuggler.Documents
                             Flags = ReadFlags(state);
                             break;
 
+                        case 12: // @index-score
+                            if (state.StringBuffer[0] != (byte)'@' ||
+                                *(long*)(state.StringBuffer + 1) != 7166121427196997225 ||
+                                *(short*)(state.StringBuffer + 1 + sizeof(long)) != 29295 ||
+                                state.StringBuffer[1 + sizeof(long) + sizeof(short)] != (byte)'e')
+                                return true;
+
+                            goto case -1;
                         case 13: //Last-Modified
                             if (*(long*)state.StringBuffer != 7237087983830262092 ||
                                 *(int*)(state.StringBuffer + sizeof(long)) != 1701406313 ||
