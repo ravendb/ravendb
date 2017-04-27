@@ -40,6 +40,20 @@ namespace Raven.Client.Documents.Session
             throw new NotImplementedException();
         }
 
+        public async Task<bool> ExistsAsync(string id)
+        {
+            if(id == null)
+                throw new ArgumentNullException(nameof(id));
+
+            if (DocumentsById.TryGetValue(id, out _))
+                return true;
+
+            var command = new HeadDocumentCommand(id, null);
+            await RequestExecutor.ExecuteAsync(command, Context);
+
+            return command.Result != null;
+        }
+
         public async Task RefreshAsync<T>(T entity, CancellationToken token = default(CancellationToken))
         {
             DocumentInfo documentInfo;
@@ -115,5 +129,7 @@ namespace Raven.Client.Documents.Session
                 saveChangesOperation.SetResult(command.Result);
             }
         }
+
+       
     }
 }
