@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Server.expiration;
+using Raven.Client.Server.Expiration;
 using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
@@ -28,7 +28,7 @@ namespace FastTests.Server.Documents.Expiration
                 Active = true,
                 DeleteFrequencySeconds = 100,
             };
-            await store.Admin.Server.SendAsync(new ConfigureExpirationBundleOperation(config, store.DefaultDatabase));
+            await store.Admin.Server.SendAsync(new ConfigureExpirationOperation(config));
         }
 
         [Fact]

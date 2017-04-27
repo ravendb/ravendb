@@ -25,9 +25,9 @@ namespace Tryouts
                 Console.WriteLine(i);
                 Parallel.For(0, 1, j =>
                 {
-                    using (var a = new SlowTests.Server.Rachis.IndexesAndTransformers())
+                    using (var a = new PeriodicExportTests())
                     {
-                        a.BasicTransformerCreation().Wait();
+                        a.CanSetupPeriodicExportWithVeryLargePeriods().Wait();
                     }
                 });
             }

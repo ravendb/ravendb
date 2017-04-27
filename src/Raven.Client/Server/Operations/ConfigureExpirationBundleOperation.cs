@@ -4,37 +4,35 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server.expiration;
+using Raven.Client.Server.Expiration;
 using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class ConfigureExpirationBundleOperation : IServerOperation<ConfigureExpirationBundleOperationResult>
+    public class ConfigureExpirationOperation : IServerOperation<ConfigureExpirationOperationResult>
     {
-        private ExpirationConfiguration _configuration;
+        private readonly ExpirationConfiguration _configuration;
         private string _databaseName;
 
-        public ConfigureExpirationBundleOperation(ExpirationConfiguration configuration, string databaseName)
+        public ConfigureExpirationOperation(ExpirationConfiguration configuration)
         {
             _configuration = configuration;
-            _databaseName = databaseName;
         }
-        public RavenCommand<ConfigureExpirationBundleOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ConfigureExpirationOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new ConfigureExpirationBundleCommand(_configuration, _databaseName, context);
+            return new ConfigureExpirationCommand(_configuration, context);
         }
     }
 
-    public class ConfigureExpirationBundleCommand : RavenCommand<ConfigureExpirationBundleOperationResult>
+    public class ConfigureExpirationCommand : RavenCommand<ConfigureExpirationOperationResult>
     {
         private ExpirationConfiguration _configuration;
         private readonly string _databaseName;
         private JsonOperationContext _context;
 
-        public ConfigureExpirationBundleCommand(ExpirationConfiguration configuration, string databaseName, JsonOperationContext context)
+        public ConfigureExpirationCommand(ExpirationConfiguration configuration, JsonOperationContext context)
         {
             _configuration = configuration;
-            _databaseName = databaseName;
             _context = context;
         }
 
@@ -42,7 +40,7 @@ namespace Raven.Client.Server.Operations
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/config-expiration-bundle?name={_databaseName}";
+            url = $"{node.Url}/admin/expiration/config?name={node.Database}";
 
             var request = new HttpRequestMessage
             {
@@ -62,11 +60,11 @@ namespace Raven.Client.Server.Operations
             if (response == null)
                 ThrowInvalidResponse();
 
-            Result = JsonDeserializationClient.ConfigureExpirationBundleOperationResult(response);
+            Result = JsonDeserializationClient.ConfigureExpirationOperationResult(response);
         }
     }
 
-    public class ConfigureExpirationBundleOperationResult
+    public class ConfigureExpirationOperationResult
     {
         public long? ETag { get; set; }
     }

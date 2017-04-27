@@ -10,6 +10,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Server.Versioning;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.Context;
@@ -45,7 +46,7 @@ namespace FastTests.Client.Attachments
                         }
                     };
 
-                    await Server.ServerStore.ModifyDatabaseVersioningBundle(context, store.DefaultDatabase, 
+                    await Server.ServerStore.ModifyDatabaseVersioning(context, store.DefaultDatabase, 
                         EntityToBlittable.ConvertEntityToBlittable(versioningDoc, DocumentConventions.Default, context));
                 }
 

@@ -9,7 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
-using Raven.Client.Server.expiration;
+using Raven.Client.Server.Expiration;
 using Raven.Client.Server.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -295,7 +295,7 @@ namespace FastTests.Smuggler
                     Active = true,
                     DeleteFrequencySeconds = 100,
                 };
-                await store.Admin.Server.SendAsync(new ConfigureExpirationBundleOperation(config,store.DefaultDatabase));
+                await store.Admin.Server.SendAsync(new ConfigureExpirationOperation(config));
                 await session.SaveChangesAsync();
             }
         }
