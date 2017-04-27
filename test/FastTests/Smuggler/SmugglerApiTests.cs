@@ -238,7 +238,6 @@ namespace FastTests.Smuggler
                     {
                         await VersioningHelper.SetupVersioning(Server.ServerStore, store1.DefaultDatabase);
 
-
                         await session.StoreAsync(new Person { Name = "Name1" });
                         await session.StoreAsync(new Person { Name = "Name2" });
                         await session.StoreAsync(new Company { Name = "Hibernaitng Rhinos " });
@@ -277,7 +276,7 @@ namespace FastTests.Smuggler
 
                     stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
-                    Assert.Equal(14, stats.CountOfRevisionDocuments);
+                    Assert.Equal(7, stats.CountOfRevisionDocuments);
                 }
             }
             finally

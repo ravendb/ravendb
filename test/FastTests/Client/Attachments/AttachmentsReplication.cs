@@ -458,7 +458,7 @@ namespace FastTests.Client.Attachments
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
-                    Assert.Equal(4, result.Etag);
+                    Assert.Equal(3, result.Etag);
                     Assert.Equal(names[0], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("image/png", result.ContentType);
@@ -467,7 +467,7 @@ namespace FastTests.Client.Attachments
                 using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
-                    Assert.Equal(8, result.Etag);
+                    Assert.Equal(7, result.Etag);
                     Assert.Equal(names[1], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("ImGgE/jPeG", result.ContentType);
@@ -476,7 +476,7 @@ namespace FastTests.Client.Attachments
                 using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
-                    Assert.Equal(13, result.Etag);
+                    Assert.Equal(12, result.Etag);
                     Assert.Equal(names[2], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("", result.ContentType);
@@ -516,7 +516,7 @@ namespace FastTests.Client.Attachments
                     AssertRevisionAttachments(names, 3, revisions[1], session);
                     AssertRevisionAttachments(names, 2, revisions[2], session);
                     AssertRevisionAttachments(names, 1, revisions[3], session);
-                }, 6, expectedCountOfDocuments: 5);
+                }, 6, expectedCountOfDocuments: 4);
 
                 using (var session = store1.OpenSession()) // This will delete the revision #2 which is with attachment
                 {
@@ -530,7 +530,7 @@ namespace FastTests.Client.Attachments
                     AssertNoRevisionAttachment(revisions[1], session);
                     AssertRevisionAttachments(names, 3, revisions[2], session);
                     AssertRevisionAttachments(names, 2, revisions[3], session);
-                }, 5, expectedCountOfDocuments: 6);
+                }, 5, expectedCountOfDocuments: 5);
 
                 using (var session = store1.OpenSession()) // This will delete the revision #3 which is with attachment
                 {
@@ -544,7 +544,7 @@ namespace FastTests.Client.Attachments
                     AssertNoRevisionAttachment(revisions[1], session);
                     AssertNoRevisionAttachment(revisions[2], session);
                     AssertRevisionAttachments(names, 3, revisions[3], session);
-                }, 3, expectedCountOfDocuments: 7);
+                }, 3, expectedCountOfDocuments: 6);
 
                 using (var session = store1.OpenSession()) // This will delete the revision #4 which is with attachment
                 {
@@ -558,12 +558,12 @@ namespace FastTests.Client.Attachments
                     AssertNoRevisionAttachment(revisions[1], session);
                     AssertNoRevisionAttachment(revisions[2], session);
                     AssertNoRevisionAttachment(revisions[3], session);
-                }, 0, expectedCountOfUniqueAttachments: 0, expectedCountOfDocuments: 8);
+                }, 0, expectedCountOfUniqueAttachments: 0, expectedCountOfDocuments: 7);
             }
         }
 
         private static void AssertRevisions(DocumentStore store, string[] names, Action<IDocumentSession, List<User>> assertAction,
-            long expectedCountOfAttachments, long expectedCountOfDocuments = 3, long expectedCountOfUniqueAttachments = 3)
+            long expectedCountOfAttachments, long expectedCountOfDocuments = 2, long expectedCountOfUniqueAttachments = 3)
         {
             var statistics = store.Admin.Send(new GetStatisticsOperation());
             Assert.Equal(expectedCountOfAttachments, statistics.CountOfAttachments);
@@ -633,11 +633,11 @@ namespace FastTests.Client.Attachments
                     if (name == names[0])
                     {
                         if (expectedCount == 1)
-                            Assert.Equal(5, attachment.Etag);
+                            Assert.Equal(4, attachment.Etag);
                         else if (expectedCount == 2)
-                            Assert.Equal(11, attachment.Etag);
+                            Assert.Equal(10, attachment.Etag);
                         else if (expectedCount == 3)
-                            Assert.Equal(20, attachment.Etag);
+                            Assert.Equal(19, attachment.Etag);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] { 1, 2, 3 }, readBuffer.Take(3));
@@ -648,9 +648,9 @@ namespace FastTests.Client.Attachments
                     else if (name == names[1])
                     {
                         if (expectedCount == 2)
-                            Assert.Equal(10, attachment.Etag);
+                            Assert.Equal(9, attachment.Etag);
                         else if (expectedCount == 3)
-                            Assert.Equal(18, attachment.Etag);
+                            Assert.Equal(17, attachment.Etag);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] { 10, 20, 30, 40, 50 }, readBuffer.Take(5));
@@ -661,7 +661,7 @@ namespace FastTests.Client.Attachments
                     else if (name == names[2])
                     {
                         if (expectedCount == 3)
-                            Assert.Equal(19, attachment.Etag);
+                            Assert.Equal(18, attachment.Etag);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] { 1, 2, 3, 4, 5 }, readBuffer.Take(5));
