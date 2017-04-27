@@ -42,10 +42,10 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
                             if (Logger.IsInfoEnabled)
                                 Logger.Info("Low memory detected, will try to reduce memory usage...");
                             RunLowMemoryHandlers();
-                            Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
                         }
                         break;
                     case 0:
+                        _simulatedLowMemory.Reset();
                         RunLowMemoryHandlers();
                         break;
                     default:
