@@ -1,20 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using Lucene.Net.Store;
 using Raven.Client.Util;
 using Voron;
 using Voron.Impl;
-using Voron.Data.Fixed;
 
 namespace Raven.Server.Indexing
 {
     public unsafe class LuceneVoronDirectory : Lucene.Net.Store.Directory
     {
         private readonly StorageEnvironment _environment;
-
-        private readonly AsyncLocal<Transaction> _currentTransaction = new AsyncLocal<Transaction>();
 
         public LuceneVoronDirectory(StorageEnvironment environment)
         {
@@ -27,16 +23,24 @@ namespace Raven.Server.Indexing
             }
         }
 
-        public override bool FileExists(string name)
+        public override bool FileExists(string name, IState s)
         {
-            var filesTree = _currentTransaction.Value.ReadTree("Files");
+            var state = s as VoronState;
+            if (state == null)
+                throw new ArgumentNullException(nameof(s));
+
+            var filesTree = state.Transaction.ReadTree("Files");
             return filesTree.Read(name) != null;
         }
 
-        public override string[] ListAll()
+        public override string[] ListAll(IState s)
         {
+            var state = s as VoronState;
+            if (state == null)
+                throw new ArgumentNullException(nameof(s));
+
             var files = new List<string>();
-            var filesTree = _currentTransaction.Value.ReadTree("Files");
+            var filesTree = state.Transaction.ReadTree("Files");
             using (var it = filesTree.Iterate(false))
             {
                 if (it.Seek(Slices.BeforeAllKeys))
@@ -50,11 +54,15 @@ namespace Raven.Server.Indexing
             return files.ToArray();
         }
 
-        public override long FileModified(string name)
+        public override long FileModified(string name, IState s)
         {
-            var filesTree = _currentTransaction.Value.ReadTree("Files");
+            var state = s as VoronState;
+            if (state == null)
+                throw new ArgumentNullException(nameof(s));
+
+            var filesTree = state.Transaction.ReadTree("Files");
             Slice str;
-            using (Slice.From(_currentTransaction.Value.Allocator, name, out str))
+            using (Slice.From(state.Transaction.Allocator, name, out str))
             {
                 var info = filesTree.GetStreamInfo(str, writeable: false);
                 if (info == null)
@@ -63,26 +71,34 @@ namespace Raven.Server.Indexing
             }
         }
 
-        public override void TouchFile(string name)
+        public override void TouchFile(string name, IState s)
         {
-            var filesTree = _currentTransaction.Value.ReadTree("Files");
+            var state = s as VoronState;
+            if (state == null)
+                throw new ArgumentNullException(nameof(s));
+
+            var filesTree = state.Transaction.ReadTree("Files");
             var readResult = filesTree.Read(name);
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
 
             Slice str;
-            using (Slice.From(_currentTransaction.Value.Allocator, name, out str))
+            using (Slice.From(state.Transaction.Allocator, name, out str))
             {
                 if(filesTree.TouchStream(str) == 0)
                     throw new FileNotFoundException(name);
             }
         }
 
-        public override long FileLength(string name)
+        public override long FileLength(string name, IState s)
         {
-            var filesTree = _currentTransaction.Value.ReadTree("Files");
+            var state = s as VoronState;
+            if (state == null)
+                throw new ArgumentNullException(nameof(s));
+
+            var filesTree = state.Transaction.ReadTree("Files");
             Slice str;
-            using (Slice.From(_currentTransaction.Value.Allocator, name, out str))
+            using (Slice.From(state.Transaction.Allocator, name, out str))
             {
                 var info = filesTree.GetStreamInfo(str, writeable: false);
                 if (info == null)
@@ -91,9 +107,13 @@ namespace Raven.Server.Indexing
             }
         }
 
-        public override void DeleteFile(string name)
+        public override void DeleteFile(string name, IState s)
         {
-            var filesTree = _currentTransaction.Value.ReadTree("Files");
+            var state = s as VoronState;
+            if (state == null)
+                throw new ArgumentNullException(nameof(s));
+
+            var filesTree = state.Transaction.ReadTree("Files");
             var readResult = filesTree.ReadStream(name);
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
@@ -101,23 +121,36 @@ namespace Raven.Server.Indexing
             filesTree.DeleteStream(name);
         }
 
-        public override IndexInput OpenInput(string name)
+        public override IndexInput OpenInput(string name, IState s)
         {
-            return new VoronIndexInput(_currentTransaction, name);
+            var state = s as VoronState;
+            if (state == null)
+                throw new ArgumentNullException(nameof(s));
+
+            return new VoronIndexInput(name, state.Transaction);
             
         }
 
-        public override IndexOutput CreateOutput(string name)
+        public override IndexOutput CreateOutput(string name, IState s)
         {
-            return new VoronIndexOutput(_environment.Options.TempPath, name, _currentTransaction.Value);
+            var state = s as VoronState;
+            if (state == null)
+                throw new ArgumentNullException(nameof(s));
+
+            return new VoronIndexOutput(_environment.Options.TempPath, name, state.Transaction);
         }
 
-        public IDisposable SetTransaction(Transaction tx)
+        public IDisposable SetTransaction(Transaction tx, out IState state)
         {
-            if (tx == null) throw new ArgumentNullException(nameof(tx));
-            _currentTransaction.Value = tx;
+            if (tx == null)
+                throw new ArgumentNullException(nameof(tx));
 
-            return new DisposableAction(() => _currentTransaction.Value = null);
+            state = StateHolder.Current.Value = new VoronState(tx);
+
+            return new DisposableAction(() =>
+            {
+                StateHolder.Current.Value = null;
+            });
         }
 
         protected override void Dispose(bool disposing)

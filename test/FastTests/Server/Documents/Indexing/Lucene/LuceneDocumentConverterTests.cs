@@ -46,8 +46,8 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             _sut.SetDocument(doc.Key, doc, _ctx, out shouldSkip);
 
             Assert.Equal(2, _sut.Document.GetFields().Count);
-            Assert.Equal(Constants.Documents.Indexing.Fields.NullValue, _sut.Document.GetField("Name").StringValue);
-            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue);
+            Assert.Equal(Constants.Documents.Indexing.Fields.NullValue, _sut.Document.GetField("Name").StringValue(null));
+            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
         }
 
         [Fact]
@@ -71,8 +71,8 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             _sut.SetDocument(doc.Key, doc, _ctx, out shouldSkip);
 
             Assert.Equal(2, _sut.Document.GetFields().Count);
-            Assert.Equal(Constants.Documents.Indexing.Fields.EmptyString, _sut.Document.GetField("Name").StringValue);
-            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue);
+            Assert.Equal(Constants.Documents.Indexing.Fields.EmptyString, _sut.Document.GetField("Name").StringValue(null));
+            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
         }
 
         [Fact]
@@ -97,7 +97,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
 
             Assert.Equal(2, _sut.Document.GetFields().Count);
             Assert.NotNull(_sut.Document.GetField("Name"));
-            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
         }
 
         [Fact]
@@ -121,7 +121,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             _sut.SetDocument(doc1.Key, doc1, _ctx, out shouldSkip);
 
             Assert.Equal("Arek", _sut.Document.GetField("Name").ReaderValue.ReadToEnd());
-            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
 
             var doc2 = create_doc(new DynamicJsonValue
             {
@@ -131,7 +131,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             _sut.SetDocument(doc2.Key, doc2, _ctx, out shouldSkip);
 
             Assert.Equal("Pawel", _sut.Document.GetField("Name").ReaderValue.ReadToEnd());
-            Assert.Equal("users/2", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/2", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
         }
 
         [Fact]
@@ -178,7 +178,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             Assert.NotNull(ageNumeric);
             Assert.Equal(25.0, ageNumeric.NumericValue);
 
-            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
         }
 
         [Fact]
@@ -206,7 +206,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
 
             Assert.Equal(2, _sut.Document.GetFields().Count);
             Assert.Equal("NYC", _sut.Document.GetField("Address_City").ReaderValue.ReadToEnd());
-            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
         }
 
         [Fact]
@@ -245,9 +245,9 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             Assert.Equal("Joe", _sut.Document.GetFields("Friends_Name")[0].ReaderValue.ReadToEnd());
             Assert.Equal("John", _sut.Document.GetFields("Friends_Name")[1].ReaderValue.ReadToEnd());
 
-            Assert.Equal("true", _sut.Document.GetField("Friends_Name_IsArray").StringValue);
+            Assert.Equal("true", _sut.Document.GetField("Friends_Name_IsArray").StringValue(null));
 
-            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue);
+            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
         }
 
         [Fact]
@@ -303,9 +303,9 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             Assert.Equal("Keyboard AD3", _sut.Document.GetFields("Companies_Products_Name")[1].ReaderValue.ReadToEnd());
             Assert.Equal("Optical Mouse V2", _sut.Document.GetFields("Companies_Products_Name")[2].ReaderValue.ReadToEnd());
 
-            Assert.Equal("true", _sut.Document.GetField("Companies_Products_Name_IsArray").StringValue);
+            Assert.Equal("true", _sut.Document.GetField("Companies_Products_Name_IsArray").StringValue(null));
 
-            Assert.Equal("companies/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue);
+            Assert.Equal("companies/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
         }
 
         [Fact]
@@ -342,11 +342,11 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             {
 
                 Assert.Equal(5, _sut.Document.GetFields().Count);
-                Assert.Equal(@"{""City"":""New York City""}", _sut.Document.GetField("Address").StringValue);
-                Assert.Equal("true", _sut.Document.GetField("Address" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
-                Assert.Equal(@"{""City"":""San Francisco""}", _sut.Document.GetField("ResidenceAddress").StringValue);
-                Assert.Equal("true", _sut.Document.GetField("ResidenceAddress" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
-                Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue);
+                Assert.Equal(@"{""City"":""New York City""}", _sut.Document.GetField("Address").StringValue(null));
+                Assert.Equal("true", _sut.Document.GetField("Address" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue(null));
+                Assert.Equal(@"{""City"":""San Francisco""}", _sut.Document.GetField("ResidenceAddress").StringValue(null));
+                Assert.Equal("true", _sut.Document.GetField("ResidenceAddress" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue(null));
+                Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
 
                 doc = create_doc(new DynamicJsonValue
                 {
@@ -363,11 +363,11 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 _sut.SetDocument(doc.Key, doc, _ctx, out shouldSkip);
 
                 Assert.Equal(5, _sut.Document.GetFields().Count);
-                Assert.Equal(@"{""City"":""NYC""}", _sut.Document.GetField("Address").StringValue);
-                Assert.Equal("true", _sut.Document.GetField("Address" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
-                Assert.Equal(@"{""City"":""Washington""}", _sut.Document.GetField("ResidenceAddress").StringValue);
-                Assert.Equal("true", _sut.Document.GetField("ResidenceAddress" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
-                Assert.Equal("users/2", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue);
+                Assert.Equal(@"{""City"":""NYC""}", _sut.Document.GetField("Address").StringValue(null));
+                Assert.Equal("true", _sut.Document.GetField("Address" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue(null));
+                Assert.Equal(@"{""City"":""Washington""}", _sut.Document.GetField("ResidenceAddress").StringValue(null));
+                Assert.Equal("true", _sut.Document.GetField("ResidenceAddress" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue(null));
+                Assert.Equal("users/2", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
             }
         }
 
@@ -398,8 +398,8 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             Assert.Equal(4, _sut.Document.GetFields().Count);
             Assert.Equal("Dave", _sut.Document.GetFields("Friends")[0].ReaderValue.ReadToEnd());
             Assert.Equal("James", _sut.Document.GetFields("Friends")[1].ReaderValue.ReadToEnd());
-            Assert.Equal("true", _sut.Document.GetField("Friends" + LuceneDocumentConverterBase.IsArrayFieldSuffix).StringValue);
-            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue);
+            Assert.Equal("true", _sut.Document.GetField("Friends" + LuceneDocumentConverterBase.IsArrayFieldSuffix).StringValue(null));
+            Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
         }
 
         [Fact]
@@ -433,11 +433,11 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             using (_sut.SetDocument(doc.Key, doc, _ctx, out shouldSkip))
             {
                 Assert.Equal(5, _sut.Document.GetFields().Count);
-                Assert.Equal(@"{""City"":""New York City""}", _sut.Document.GetFields("Addresses")[0].StringValue);
-                Assert.Equal(@"{""City"":""NYC""}", _sut.Document.GetFields("Addresses")[1].StringValue);
-                Assert.Equal("true", _sut.Document.GetField("Addresses" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue);
-                Assert.Equal("true", _sut.Document.GetField("Addresses" + LuceneDocumentConverterBase.IsArrayFieldSuffix).StringValue);
-                Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue);
+                Assert.Equal(@"{""City"":""New York City""}", _sut.Document.GetFields("Addresses")[0].StringValue(null));
+                Assert.Equal(@"{""City"":""NYC""}", _sut.Document.GetFields("Addresses")[1].StringValue(null));
+                Assert.Equal("true", _sut.Document.GetField("Addresses" + LuceneDocumentConverterBase.ConvertToJsonSuffix).StringValue(null));
+                Assert.Equal("true", _sut.Document.GetField("Addresses" + LuceneDocumentConverterBase.IsArrayFieldSuffix).StringValue(null));
+                Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
             }
         }
 

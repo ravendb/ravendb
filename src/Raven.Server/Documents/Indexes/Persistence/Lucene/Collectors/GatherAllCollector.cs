@@ -9,6 +9,7 @@ using System.Linq;
 
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Lucene.Net.Store;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 {
@@ -20,12 +21,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
         {
         }
 
-        public override void Collect(int doc)
+        public override void Collect(int doc, IState state)
         {
             Documents.Add(doc + _docBase);
         }
 
-        public override void SetNextReader(IndexReader reader, int docBase)
+        public override void SetNextReader(IndexReader reader, int docBase, IState state)
         {
             _docBase = docBase;
         }

@@ -23,6 +23,7 @@ using System.Linq;
 using System.Text;
 
 using Lucene.Net.Index;
+using Lucene.Net.Store;
 using Lucene.Net.Support;
 using Lucene.Net.Util;
 using IndexReader = Lucene.Net.Index.IndexReader;
@@ -248,6 +249,8 @@ namespace Lucene.Net.Search.Similar
         /// <summary> For idf() calculations.</summary>
         private Lucene.Net.Search.Similarity similarity = null;
 
+        private readonly IState _state;
+
         /// <summary> IndexReader to use</summary>
         private IndexReader ir;
 
@@ -264,15 +267,16 @@ namespace Lucene.Net.Search.Similar
         }
 
         /// <summary> Constructor requiring an IndexReader.</summary>
-        public MoreLikeThis(IndexReader ir)
-            : this(ir, new DefaultSimilarity())
+        public MoreLikeThis(IndexReader ir, IState state)
+            : this(ir, new DefaultSimilarity(), state)
         {
         }
 
-        public MoreLikeThis(IndexReader ir, Lucene.Net.Search.Similarity sim)
+        public MoreLikeThis(IndexReader ir, Lucene.Net.Search.Similarity sim, IState state)
         {
             this.ir = ir;
             this.similarity = sim;
+            _state = state;
         }
 
         public Similarity Similarity
@@ -566,7 +570,7 @@ namespace Lucene.Net.Search.Similar
                 int docFreq = 0;
                 for (int i = 0; i < fieldNames.Length; i++)
                 {
-                    int freq = ir.DocFreq(new Term(fieldNames[i], word));
+                    int freq = ir.DocFreq(new Term(fieldNames[i], word), _state);
                     topField = (freq > docFreq) ? fieldNames[i] : topField;
                     docFreq = (freq > docFreq) ? freq : docFreq;
                 }
@@ -628,13 +632,13 @@ namespace Lucene.Net.Search.Similar
             for (int i = 0; i < fieldNames.Length; i++)
             {
                 System.String fieldName = fieldNames[i];
-                ITermFreqVector vector = ir.GetTermFreqVector(docNum, fieldName);
+                ITermFreqVector vector = ir.GetTermFreqVector(docNum, fieldName, _state);
 
                 // field does not store term vector info
                 if (vector == null)
                 {
-                    Document d = ir.Document(docNum);
-                    System.String[] text = d.GetValues(fieldName);
+                    Document d = ir.Document(docNum, _state);
+                    System.String[] text = d.GetValues(fieldName, _state);
                     if (text != null)
                     {
                         for (int j = 0; j < text.Length; j++)

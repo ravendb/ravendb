@@ -29,6 +29,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private IndexingStatsScope _statsInstance;
         protected readonly IndexWriteOperationStats Stats = new IndexWriteOperationStats();
 
+        private readonly IState _state;
+
         public IndexWriteOperation(Index index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
             : base(index.Definition.Name, LoggingSource.Instance.GetLogger<IndexWriteOperation>(index._indexStorage.DocumentDatabase.Name))
         {
@@ -46,9 +48,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             try
             {
-                _releaseWriteTransaction = directory.SetTransaction(writeTransaction);
+                _releaseWriteTransaction = directory.SetTransaction(writeTransaction, out _state);
 
-                _writer = persistence.EnsureIndexWriter();
+                _writer = persistence.EnsureIndexWriter(_state);
 
                 _locker = directory.MakeLock("writing-to-index.lock");
 
@@ -79,7 +81,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_writer != null) // TODO && _persistance._indexWriter.RamSizeInBytes() >= long.MaxValue)
             {
                 using (stats.For(IndexingOperation.Lucene.FlushToDisk))
-                    _writer.Commit(); // just make sure changes are flushed to disk
+                    _writer.Commit(_state); // just make sure changes are flushed to disk
             }
         }
 
@@ -98,7 +100,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     return;
 
                 using (Stats.AddStats.Start())
-                    _writer.AddDocument(_converter.Document, _analyzer);
+                    _writer.AddDocument(_converter.Document, _analyzer, _state);
 
                 stats.RecordIndexingOutput();
 
@@ -117,7 +119,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             EnsureValidStats(stats);
 
             using (Stats.DeleteStats.Start())
-                _writer.DeleteDocuments(_documentId.CreateTerm(key));
+                _writer.DeleteDocuments(_documentId.CreateTerm(key), _state);
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Deleted document for '{_indexName}'. Key: {key}.");
@@ -128,7 +130,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             EnsureValidStats(stats);
 
             using (Stats.DeleteStats.Start())
-                _writer.DeleteDocuments(_reduceKeyHash.CreateTerm(reduceKeyHash));
+                _writer.DeleteDocuments(_reduceKeyHash.CreateTerm(reduceKeyHash), _state);
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Deleted document for '{_indexName}'. Reduce key hash: {reduceKeyHash}.");
