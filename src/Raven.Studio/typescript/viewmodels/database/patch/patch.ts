@@ -460,7 +460,7 @@ class patch extends viewModelBase {
 
         const fakeFetcher: fetcherType = () => $.Deferred<pagedResult<document>>().resolve({
             items: [],
-            totalResultCount: 0
+            totalResultCount: -1
         });
 
         grid.headerVisible(true);
