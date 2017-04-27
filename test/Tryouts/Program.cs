@@ -1,16 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using FastTests.Client.Attachments;
-using FastTests.Smuggler;
-using System.Threading.Tasks;
-using FastTests.Client;
-using FastTests.Client.Subscriptions;
-using FastTests.Server.Documents.Indexing;
-using FastTests.Server.Documents.Patching;
-using FastTests.Server.Documents.PeriodicExport;
-using FastTests.Server.OAuth;
-using FastTests.Server.Replication;
-using Sparrow;
+using SlowTests.Issues;
 
 namespace Tryouts
 {
@@ -24,9 +14,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new AttachmentsReplication())
+                using (var a = new RavenDB_5998())
                 {
-                    a.AttachmentsVersioningReplication().Wait();
+                    a.CanImportNorthwind("SlowTests.Smuggler.Northwind_3.5.35168.ravendbdump");
                 }
             }
         }
