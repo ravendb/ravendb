@@ -60,7 +60,7 @@ namespace Raven.Client.Server.PeriodicExport
         /// </summary>
         public long? FullExportIntervalMilliseconds { get; set; }
 
-        protected bool Equals(PeriodicExportConfiguration other)
+        protected bool Equals(PeriodicBackupConfiguration other)
         {
             return Active == other.Active 
                 && string.Equals(GlacierVaultName, other.GlacierVaultName) 

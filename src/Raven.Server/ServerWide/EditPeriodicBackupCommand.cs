@@ -30,7 +30,7 @@ namespace Raven.Server.ServerWide
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(PeriodicBackupConfiguration)] = TypeConverter.ToBlittableSupportedType(Configuration);
+            json[nameof(Configuration)] = TypeConverter.ToBlittableSupportedType(Configuration);
         }
     }
 }
