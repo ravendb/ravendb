@@ -226,8 +226,7 @@ namespace FastTests.Client.Indexing
                 await store.Admin.SendAsync(new SetIndexPriorityOperation(index.Name, IndexPriority.Low));
 
                 stats = await store.Admin.SendAsync(new GetIndexStatisticsOperation(index.Name));
-
-                Assert.Equal(index.Etag, stats.Etag);
+                
                 Assert.Equal(IndexLockMode.LockedIgnore, stats.LockMode);
                 Assert.Equal(IndexPriority.Low, stats.Priority);
             }
