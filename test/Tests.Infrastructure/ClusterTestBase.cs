@@ -98,21 +98,46 @@ namespace Tests.Infrastructure
             }
         }
 
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(DatabaseTopology topology, string docId, Func<T, bool> predicate, TimeSpan timeout)
+        {
+            var stores = GetDocumentStores(topology);
+            return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
+        }
+
         protected async Task<bool> WaitForDocumentInClusterAsync<T>(IReadOnlyList<ServerNode> topology,string docId, Func<T, bool> predicate, TimeSpan timeout)
         {
             var stores = GetStoresFromTopology(topology);
+            return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
+        }
+
+        private async Task<bool> WaitForDocumentInClusterAsyncInternal<T>(string docId, Func<T, bool> predicate, TimeSpan timeout, List<DocumentStore> stores)
+        {
             var tasks = new List<Task<bool>>();
 
-            foreach(var store in stores)
-                tasks.Add(Task.Run(() => WaitForDocument(store, docId, predicate,(int)timeout.TotalMilliseconds)));
+            foreach (var store in stores)
+                tasks.Add(Task.Run(() => WaitForDocument(store, docId, predicate, (int)timeout.TotalMilliseconds)));
 
             var timeoutTask = Task.Delay(timeout);
             await Task.WhenAny(Task.WhenAll(tasks), timeoutTask);
 
-            if(timeoutTask.IsCompleted)
+            if (timeoutTask.IsCompleted)
                 throw new TimeoutException();
 
             return tasks.All(x => x.Result);
+        }
+
+        private List<DocumentStore> GetDocumentStores(DatabaseTopology topology)
+        {
+            var stores = new List<DocumentStore>();
+            foreach (var node in topology.AllReplicationNodes)
+            {
+                stores.Add(new DocumentStore
+                {
+                    Url = node.Url,
+                    DefaultDatabase = node.Database
+                });
+            }
+            return stores;
         }
 
         protected bool WaitForDocument<T>(DocumentStore store,

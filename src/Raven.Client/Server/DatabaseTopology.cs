@@ -111,6 +111,7 @@ namespace Raven.Client.Documents
         public List<DatabaseWatcher> Watchers = new List<DatabaseWatcher>();
 
         public Dictionary<string,string> NameToUrlMap = new Dictionary<string, string>();
+
         public bool RelevantFor(string nodeTag)
         {
             return Members.Exists(m => m.NodeTag == nodeTag) ||
@@ -213,6 +214,25 @@ namespace Raven.Client.Documents
                 foreach (var watcher in Watchers)
                 {
                     yield return watcher.NodeTag;
+                }
+            }
+        }
+
+        public IEnumerable<ReplicationNode> AllReplicationNodes
+        {
+            get
+            {
+                foreach (var member in Members)
+                {
+                    yield return member;
+                }
+                foreach (var promotable in Promotables)
+                {
+                    yield return promotable;
+                }
+                foreach (var watcher in Watchers)
+                {
+                    yield return watcher;
                 }
             }
         }
