@@ -48,6 +48,7 @@ namespace Sparrow.Json
                 return $"Value: {Comparer}, GlobalSortOrder: {GlobalSortOrder}, PropertyId: {PropertyId}";
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private bool Equals(PropertyName other)
             {
                 return HashCode == other.HashCode;
@@ -190,11 +191,15 @@ namespace Sparrow.Json
             // so we can take advantage of that by remember the previous sort, we 
             // check if the values are the same, and if so, save the sort
 
+            var sortingList = cachedSort.Sorting;
             for (int i = 0; i < properties.Count; i++)
             {
-                if (cachedSort.Sorting[i].Property == properties[i].Property)
+                var sortingProp = sortingList[i];
+                var sortedProp = properties[i];
+
+                if (sortingProp.Property.Equals(sortedProp.Property))
                 {
-                    cachedSort.Sorting[i].Tmp = properties[i];
+                    sortingProp.Tmp = sortedProp;
                 }
                 else
                 {
@@ -204,14 +209,17 @@ namespace Sparrow.Json
             }
 
             // ReSharper disable once ForCanBeConvertedToForeach
-            for (int i = 0; i < cachedSort.Sorting.Count; i++)
+            int sortingListCount = sortingList.Count;
+            for (int i = 0; i < sortingListCount; i++)
             {
-                properties[cachedSort.Sorting[i].SortedPosition] = cachedSort.Sorting[i].Tmp;
+                var sortingProp = sortingList[i];
+                properties[sortingProp.SortedPosition] = sortingProp.Tmp;
             }
 
-            if (properties.Count != cachedSort.FinalCount)
+            int finalCount = cachedSort.FinalCount;
+            if (properties.Count != finalCount)
             {
-                properties.RemoveRange(cachedSort.FinalCount, properties.Count - cachedSort.FinalCount);
+                properties.RemoveRange(finalCount, properties.Count - finalCount);
             }            
         }
 
@@ -262,7 +270,7 @@ namespace Sparrow.Json
                 // leave just the latest
                 for (int i = 0; i < properties.Count - 1; i++)
                 {
-                    if (properties[i].Property == properties[i + 1].Property)
+                    if (properties[i].Property.Equals(properties[i + 1].Property))
                     {
                         _cachedSorts[index].FinalCount--;
                         _cachedSorts[index].Sorting[i + 1] = new PropertyPosition
