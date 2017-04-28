@@ -200,9 +200,9 @@ namespace Raven.Server.Documents
             {
                 // Since this document resolve the conflict we dont need to alter the change vector.
                 // This way we avoid another replication back to the source
-                if (expectedEtag.HasValue)
+                if (_documentsStorage.ConflictsStorage.ShouldThrowConcurrencyExceptionOnConflict(context, lowerKey, expectedEtag, out var currentMaxConflictEtag))
                 {
-                    _documentsStorage.ConflictsStorage.ThrowConcurrencyExceptionOnConflict(context, lowerKey.Content.Ptr, lowerKey.Size, expectedEtag);
+                    _documentsStorage.ConflictsStorage.ThrowConcurrencyExceptionOnConflict(expectedEtag, currentMaxConflictEtag);
                 }
 
                 if ((flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication)
