@@ -506,13 +506,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
                 else
                 {
-                    if (value == null && blittableValue == null)
-                        stringReader = new LazyStringReader();
-                    else if (value == null && lazyValue == null)
+                    if (value == null && lazyValue == null)
                         blittableReader = new BlittableObjectReader();
 
                     field = new Field(CreateFieldName(name),
-                        value ?? stringReader?.GetStringFor(lazyValue) ?? blittableReader.GetStringFor(blittableValue),
+                        value ?? LazyStringReader.GetStringFor(lazyValue) ?? blittableReader.GetStringFor(blittableValue),
                         store, index, termVector);
                 }
 
@@ -541,7 +539,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
                 else
                 {
-                    field.SetValue(value ?? cached.LazyStringReader?.GetStringFor(lazyValue) ?? cached.BlittableObjectReader.GetStringFor(blittableValue));
+                    field.SetValue(value ?? LazyStringReader.GetStringFor(lazyValue) ?? cached.BlittableObjectReader.GetStringFor(blittableValue));
                 }
             }
 
