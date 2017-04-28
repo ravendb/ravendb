@@ -95,9 +95,9 @@ namespace Raven.Server.Documents.Patch
             if (scope.ActualPatchResult == JsValue.Undefined || scope.ActualPatchResult == JsValue.Undefined)
             {
                 val = null;
-                if (_logger.IsInfoEnabled)
+                if (Logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Conflict resolution script for {_docs[0].Collection} collection declined to resolve the conflict for {_docs[0].LoweredKey}");
+                    Logger.Info($"Conflict resolution script for {_docs[0].Collection} collection declined to resolve the conflict for {_docs[0].LoweredKey}");
                 }
                 return false;
             }

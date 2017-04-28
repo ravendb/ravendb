@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class LuceneIndexWriter : IDisposable
     {
-        private static Logger _logger;
+        private readonly Logger _logger;
 
         private static DocumentDatabase _documentDatabase;
 

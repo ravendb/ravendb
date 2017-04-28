@@ -3,14 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Server.Versioning;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Json;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -29,10 +25,10 @@ namespace Raven.Server.Documents.Versioning
         public static readonly Slice RevisionsEtagsSlice;
         public static readonly Slice RevisionDocumentsSlice;
         public static readonly Slice RevisionsCountSlice;
-        private static Logger _logger;
 
         private static readonly TableSchema DocsSchema;
 
+        private readonly Logger _logger;
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
         private readonly VersioningConfiguration _versioningConfiguration;
@@ -108,6 +104,7 @@ namespace Raven.Server.Documents.Versioning
 
         public static VersioningStorage LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, VersioningStorage versioningStorage)
         {
+            var logger = LoggingSource.Instance.GetLogger<VersioningStorage>(database.Name);
             try
             {
                 if (dbRecord.Versioning == null)
@@ -115,16 +112,16 @@ namespace Raven.Server.Documents.Versioning
                 if (dbRecord.Versioning.Equals(versioningStorage?.VersioningConfiguration))
                     return versioningStorage;                    
                 var config = new VersioningStorage(database, dbRecord.Versioning);
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Versioning configuration changed");
+                if (logger.IsInfoEnabled)
+                    logger.Info("Versioning configuration changed");
                 return config;
             }
             catch (Exception e)
             {
                 //TODO: This should generate an alert, so admin will know that something is very bad
                 //TODO: Or this should throw and we should have a config flag to ignore the error
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations(
+                if (logger.IsOperationsEnabled)
+                    logger.Operations(
                         $"Cannot enable versioning for documents as the versioning configuration" +
                         $" in the database record is missing or not valid: {dbRecord}", e);
                 return null;

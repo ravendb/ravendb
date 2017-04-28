@@ -18,13 +18,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server.Tcp;
-using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Replication;
-using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
@@ -40,7 +37,7 @@ namespace Raven.Server
 {
     public class RavenServer : IDisposable
     {
-        private static Logger _logger;
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
 
         public readonly RavenConfiguration Configuration;
 
@@ -73,7 +70,6 @@ namespace Raven.Server
             Metrics = new MetricsCountersManager();
             ServerMaintenanceTimer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 
-            _logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
 
             _latestVersionCheck = new LatestVersionCheck(ServerStore);
