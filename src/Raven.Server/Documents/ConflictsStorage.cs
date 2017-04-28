@@ -430,18 +430,28 @@ namespace Raven.Server.Documents
             };
         }
 
-        public void ThrowConcurrencyExceptionOnConflict(DocumentsOperationContext context, byte* lowerKey, int lowerSize, long? expectedEtag)
+        public bool ShouldThrowConcurrencyExceptionOnConflict(DocumentsOperationContext context, Slice loweredKey, long? expectedEtag, out long? currentMaxConflictEtag)
         {
-            long currentMaxConflictEtag;
-            using (GetConflictsKeyPrefix(context, lowerKey, lowerSize, out Slice prefixSlice))
+            if (expectedEtag.HasValue == false)
             {
-                currentMaxConflictEtag = GetConflictsMaxEtagFor(context, prefixSlice);
+                currentMaxConflictEtag = null;
+                return false;
             }
 
+            using (GetConflictsKeyPrefix(context, loweredKey.Content.Ptr, loweredKey.Size, out Slice prefixSlice))
+            {
+                currentMaxConflictEtag = GetConflictsMaxEtagFor(context, prefixSlice);
+
+                return currentMaxConflictEtag != 0 && currentMaxConflictEtag != expectedEtag.Value;
+            }
+        }
+
+        public void ThrowConcurrencyExceptionOnConflict(long? expectedEtag, long? currentMaxConflictEtag)
+        {
             throw new ConcurrencyException(
                 $"Tried to resolve document conflict with etag = {expectedEtag}, but the current max conflict etag is {currentMaxConflictEtag}. " +
-                $"This means that the conflict information with which you are trying to resolve the conflict is outdated. " +
-                $"Get conflict information and try resolving again.");
+                "This means that the conflict information with which you are trying to resolve the conflict is outdated. " +
+                "Get conflict information and try resolving again.");
         }
 
         public ChangeVectorEntry[] MergeConflictChangeVectorIfNeededAndDeleteConflicts(ChangeVectorEntry[] documentChangeVector, DocumentsOperationContext context, string key, long newEtag)
@@ -649,9 +659,9 @@ namespace Raven.Server.Documents
                     // We do have a conflict for our deletion candidate
                     // Since this document resolve the conflict we dont need to alter the change vector.
                     // This way we avoid another replication back to the source
-                    if (expectedEtag.HasValue)
+                    if (ShouldThrowConcurrencyExceptionOnConflict(context, loweredKey, expectedEtag, out var currentMaxConflictEtag))
                     {
-                        ThrowConcurrencyExceptionOnConflict(context, loweredKey.Content.Ptr, loweredKey.Size, expectedEtag);
+                        ThrowConcurrencyExceptionOnConflict(expectedEtag, currentMaxConflictEtag);
                     }
 
                     long etag;
