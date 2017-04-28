@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.ServerWide;
@@ -12,27 +13,27 @@ namespace Raven.Server.Documents
 {
     internal class CollectionRunner
     {
-        protected readonly DocumentsOperationContext _context;
-        protected readonly DocumentDatabase _database;
+        protected readonly DocumentsOperationContext Context;
+        protected readonly DocumentDatabase Database;
 
         public CollectionRunner(DocumentDatabase database, DocumentsOperationContext context)
         {
-            _database = database;
-            _context = context;
+            Database = database;
+            Context = context;
         }
 
-        public virtual IOperationResult ExecuteDelete(string collectionName, CollectionOperationOptions options, DocumentsOperationContext documentsOperationContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public virtual Task<IOperationResult> ExecuteDelete(string collectionName, CollectionOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(collectionName, options, _context, onProgress, key => _database.DocumentsStorage.Delete(_context, key, null), token);
+            return ExecuteOperation(collectionName, options, Context, onProgress, (key, context) => Database.DocumentsStorage.Delete(context, key, null), token);
         }
 
-        public IOperationResult ExecutePatch(string collectionName, CollectionOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public Task<IOperationResult> ExecutePatch(string collectionName, CollectionOperationOptions options, PatchRequest patch, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(collectionName, options, _context, onProgress, key => _database.Patcher.Apply(context, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false), token);
+            return ExecuteOperation(collectionName, options, Context, onProgress, (key, context) => Database.Patcher.Apply(context, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false), token);
         }
 
-        protected IOperationResult ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,
-             Action<DeterminateProgress> onProgress, Action<LazyStringValue> action, OperationCancelToken token)
+        protected async Task<IOperationResult> ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,
+             Action<DeterminateProgress> onProgress, Action<LazyStringValue, DocumentsOperationContext> action, OperationCancelToken token)
         {
             const int batchSize = 1024;
             var progress = new DeterminateProgress();
@@ -62,9 +63,12 @@ namespace Raven.Server.Documents
                     cancellationToken.ThrowIfCancellationRequested();
                     var wait = false;
 
-                    using (var tx = context.OpenWriteTransaction())
+                    using (context.OpenReadTransaction())
                     {
                         var documents = GetDocuments(context, collectionName, startEtag, batchSize);
+
+                        var ids = new List<LazyStringValue>();
+
                         foreach (var document in documents)
                         {
                             token.Delay();
@@ -85,13 +89,13 @@ namespace Raven.Server.Documents
 
                             startEtag = document.Etag + 1;
 
-                            action(document.Key);
+                            ids.Add(document.Key);
 
                             progress.Processed++;
 
                         }
 
-                        tx.Commit();
+                        await Database.TxMerger.Enqueue(new ExecuteOperationsOnCollection(ids, action));
 
                         onProgress(progress);
 
@@ -111,19 +115,47 @@ namespace Raven.Server.Documents
 
         protected virtual List<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize)
         {
-            return _database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag, 0, batchSize).ToList();
+            return Database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag, 0, batchSize).ToList();
         }
 
         protected virtual long GetTotalCountForCollection(DocumentsOperationContext context, string collectionName)
         {
             long totalCount;
-            _database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, collectionName, 0, out totalCount);
+            Database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, collectionName, 0, out totalCount);
             return totalCount;
         }
 
         protected virtual long GetLastEtagForCollection(DocumentsOperationContext context, string collection)
         {
-            return _database.DocumentsStorage.GetLastDocumentEtag(context, collection);
+            return Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
+        }
+
+        private class ExecuteOperationsOnCollection : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly List<LazyStringValue> _documentIds;
+            private readonly Action<LazyStringValue, DocumentsOperationContext> _action;
+
+            public ExecuteOperationsOnCollection(List<LazyStringValue> documentIds, Action<LazyStringValue, DocumentsOperationContext> action)
+            {
+                _documentIds = documentIds;
+                _action = action;
+            }
+
+            public override int Execute(DocumentsOperationContext context)
+            {
+                var count = 0;
+
+                // TODO arek: need to handle concurrency 
+
+                foreach (var id in _documentIds)
+                {
+                    _action(id, context);
+
+                    count++;
+                }
+
+                return count;
+            }
         }
     }
 }
