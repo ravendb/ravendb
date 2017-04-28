@@ -337,6 +337,11 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public Guid GetServerId()
+        {
+            return _env.DbId;
+        }
+
         public void Dispose()
         {
             if (_shutdownNotification.IsCancellationRequested || _disposed)

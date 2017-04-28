@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Threading;
@@ -67,8 +68,17 @@ namespace Raven.Server
 
         public static bool SkipHttpLogging;
 
+        private static readonly HashSet<string> RoutesAllowedInUnsafeMode = new HashSet<string> {
+            "/admin/stats/server-id"
+        };
+
         private Task UnsafeRequestHandler(HttpContext context)
         {
+            if (RoutesAllowedInUnsafeMode.Contains(context.Request.Path.Value))
+            {
+                return RequestHandler(context);
+            }
+
             context.Response.StatusCode = (int) HttpStatusCode.ServiceUnavailable;
             context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             JsonOperationContext ctx;
