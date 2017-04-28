@@ -149,7 +149,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
             long revision = 1;
 
             var existingFile = accessor.ReadFile(name);
-            if (existingFile != null)
+            if (existingFile != null && existingFile.Metadata.ContainsKey(SynchronizationConstants.RavenDeleteMarker) == false)
             {
                 RavenJToken existingRevisionToken;
                 if (existingFile.Metadata.TryGetValue(VersioningUtil.RavenFileRevision, out existingRevisionToken))
