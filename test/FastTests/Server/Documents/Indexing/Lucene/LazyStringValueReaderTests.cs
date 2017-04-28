@@ -25,7 +25,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         {
             using (var lazyString = _ctx.GetLazyString(expected))
             {
-                var stringResult = _sut.GetStringFor(lazyString);
+                var stringResult = LazyStringReader.GetStringFor(lazyString);
                 var readerResult = _sut.GetTextReaderFor(lazyString);
 
                 Assert.Equal(expected, stringResult);
@@ -43,7 +43,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             var expected = new string('a', length);
             using (var lazyString = _ctx.GetLazyString(expected))
             {
-                var stringResult = _sut.GetStringFor(lazyString);
+                var stringResult = LazyStringReader.GetStringFor(lazyString);
                 var readerResult = _sut.GetTextReaderFor(lazyString);
 
                 Assert.Equal(expected, stringResult);
@@ -65,7 +65,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
 
                 var lazyString = _ctx.GetLazyString(expected);
              
-                var stringResult = _sut.GetStringFor(lazyString);
+                var stringResult = LazyStringReader.GetStringFor(lazyString);
                 var readerResult = _sut.GetTextReaderFor(lazyString);
 
                 Assert.Equal(expected, stringResult);

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Impl;
@@ -10,7 +11,7 @@ using Voron.Util;
 
 namespace Voron.Data
 {
-    public unsafe class VoronStream : Stream
+    public sealed unsafe class VoronStream : Stream
     {
         public Slice Name { get; }
 
@@ -18,7 +19,7 @@ namespace Voron.Data
         private readonly int[] _positions;
         private int _index;
         private LowLevelTransaction _llt;
-        private LowLevelTransaction.PagerRef _pagerRef;
+        private readonly LowLevelTransaction.PagerRef _pagerRef;
         
         public override bool CanRead => true;
         public override bool CanSeek => true;
@@ -45,11 +46,21 @@ namespace Voron.Data
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UpdateCurrentTransaction(Transaction tx)
         {
-            if (tx == null)
-                throw new ArgumentNullException(nameof(tx));
-            _llt = tx.LowLevelTransaction;
+            if (tx != null)
+            {
+                _llt = tx.LowLevelTransaction;
+                return;
+            }
+
+            ThrowTransactionIsNull();            
+        }
+
+        private void ThrowTransactionIsNull()
+        {
+            throw new ArgumentNullException("tx");
         }
 
         public override long Position
@@ -88,21 +99,22 @@ namespace Voron.Data
 
         public override int ReadByte()
         {
-            var pos = _positions[_index];
-            var len = _chunksDetails[_index].ChunkSize;
+            int pos = _positions[_index];
+            var chunk = _chunksDetails[_index];
 
-            if (pos == len)
+            if (pos == chunk.ChunkSize)
             {
                 if (_index == _chunksDetails.Length - 1)
                     return -1;
 
                 _index++;
+                chunk = _chunksDetails[_index];
 
-                if (_chunksDetails[_index].ChunkSize == 0)
+                if (chunk.ChunkSize == 0)
                     return -1;
             }
 
-            var page = _llt.GetPage(_chunksDetails[_index].PageNumber, _pagerRef);
+            var page = _llt.GetPage(chunk.PageNumber, _pagerRef);
             _pagerRef.Pager.EnsureMapped(_llt, _pagerRef.PagerPageNumber, _pagerRef.Pager.GetNumberOfOverflowPages(page.OverflowSize));
 
             return page.DataPointer[_positions[_index]++];
