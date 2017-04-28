@@ -209,7 +209,7 @@ class periodicExportSetup {
         return "";
     }
 
-    fromDto(dto: Raven.Client.Server.PeriodicExport.PeriodicExportConfiguration) {
+    fromDto(dto: Raven.Client.Server.PeriodicExport.PeriodicBackupConfiguration) {
         if (dto) {
             this.awsRegionName(dto.AwsRegionName);
 
@@ -229,7 +229,7 @@ class periodicExportSetup {
         }
     }
 
-    toDto(): Raven.Client.Server.PeriodicExport.PeriodicExportConfiguration {
+    toDto(): Raven.Client.Server.PeriodicExport.PeriodicBackupConfiguration {
         return {
             Active: this.active(),
             GlacierVaultName: this.prepareMainValue(this.GLACIER_VAULT),
@@ -319,7 +319,7 @@ class periodicExportSetup {
         this.azureStorageKeyDecryptionFailed(false);
     }
 
-    private setupTypeAndMainValue(dto: Raven.Client.Server.PeriodicExport.PeriodicExportConfiguration) {
+    private setupTypeAndMainValue(dto: Raven.Client.Server.PeriodicExport.PeriodicBackupConfiguration) {
         var count = 0;
         if (dto.LocalFolderName) {
             this.localFolderName(dto.LocalFolderName);

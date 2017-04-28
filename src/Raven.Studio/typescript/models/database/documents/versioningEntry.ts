@@ -16,7 +16,7 @@ class versioningEntry {
         maxRevisions: this.maxRevisions
     });
 
-    constructor(collection: string, dto: Raven.Server.Documents.Versioning.VersioningConfigurationCollection) {
+    constructor(collection: string, dto: Raven.Client.Server.Versioning.VersioningConfigurationCollection) {
         this.collection(collection);
         this.maxRevisions(dto.MaxRevisions);
         this.active(dto.Active);
@@ -36,7 +36,7 @@ class versioningEntry {
         });
     }
 
-    toDto(): Raven.Server.Documents.Versioning.VersioningConfigurationCollection {
+    toDto(): Raven.Client.Server.Versioning.VersioningConfigurationCollection {
         return {
             Active: this.active(),
             MaxRevisions: this.maxRevisions(),

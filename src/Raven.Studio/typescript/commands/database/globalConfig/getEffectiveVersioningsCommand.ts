@@ -7,7 +7,7 @@ class getEffectiveVersioningsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Server.Documents.Versioning.VersioningConfiguration> {
+    execute(): JQueryPromise<Raven.Client.Server.Versioning.VersioningConfiguration> {
         return super.execute();
     }
 

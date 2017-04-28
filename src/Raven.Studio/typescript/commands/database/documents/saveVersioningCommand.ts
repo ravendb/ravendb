@@ -3,7 +3,7 @@ import commandBase = require("commands/commandBase");
 
 //TODO: we probably won't need this class
 class saveVersioningCommand extends commandBase {
-    constructor(private db: database, private versioningConfiguration: Raven.Server.Documents.Versioning.VersioningConfiguration) {
+    constructor(private db: database, private versioningConfiguration: Raven.Client.Server.Versioning.VersioningConfiguration) {
         super();
     }
 

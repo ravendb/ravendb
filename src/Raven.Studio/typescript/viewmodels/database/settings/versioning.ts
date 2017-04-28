@@ -61,15 +61,15 @@ class versioning extends viewModelBase {
         this.setupDisableReasons();
     }
 
-    private fetchVersioningEntries(db: database): JQueryPromise<Raven.Server.Documents.Versioning.VersioningConfiguration> {
+    private fetchVersioningEntries(db: database): JQueryPromise<Raven.Client.Server.Versioning.VersioningConfiguration> {
         return new getVersioningsCommand(db).execute()
-            .done((versionings: Raven.Server.Documents.Versioning.VersioningConfiguration) => this.versioningsLoaded(versionings));
+            .done((versionings: Raven.Client.Server.Versioning.VersioningConfiguration) => this.versioningsLoaded(versionings));
     }
 
-    toDto(): Raven.Server.Documents.Versioning.VersioningConfiguration {
+    toDto(): Raven.Client.Server.Versioning.VersioningConfiguration {
         const collectionVersioning = this.versionings();
 
-        const collectionsDto = {} as { [key: string]: Raven.Server.Documents.Versioning.VersioningConfigurationCollection; }
+        const collectionsDto = {} as { [key: string]: Raven.Client.Server.Versioning.VersioningConfigurationCollection; }
 
         collectionVersioning.forEach(config => {
             collectionsDto[config.collection()] = config.toDto();
@@ -129,7 +129,7 @@ class versioning extends viewModelBase {
         this.versionings.remove(entry);
     }
 
-    versioningsLoaded(data: Raven.Server.Documents.Versioning.VersioningConfiguration) {
+    versioningsLoaded(data: Raven.Client.Server.Versioning.VersioningConfiguration) {
         if (data) {
             this.defaultVersioning(new versioningEntry(versioningEntry.DefaultConfiguration, data.Default));
 
