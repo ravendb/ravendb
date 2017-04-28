@@ -1,8 +1,6 @@
 ﻿
 import MENU_BASED_ROUTER_CONFIGURATION = require("common/shell/routerConfiguration");
 
-export = Routes;
-
 class Routes {
 
     static get(appUrls: computedAppUrls): Array<DurandalRouteConfiguration> {
@@ -27,3 +25,4 @@ class Routes {
 
 }
 
+export = Routes;
