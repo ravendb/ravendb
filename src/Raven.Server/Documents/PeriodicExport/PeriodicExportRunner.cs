@@ -21,9 +21,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
-using Sparrow.Extensions;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
@@ -31,7 +28,7 @@ namespace Raven.Server.Documents.PeriodicExport
 {
     public class PeriodicExportRunner : IDisposable
     {
-        private static Logger _logger;
+        private readonly Logger _logger;
 
         private readonly DocumentDatabase _database;
         private readonly PeriodicBackupConfiguration _configuration;
@@ -532,6 +529,8 @@ namespace Raven.Server.Documents.PeriodicExport
 
         public static PeriodicExportRunner LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, PeriodicExportRunner periodicExportRunner)
         {
+            var logger = LoggingSource.Instance.GetLogger<PeriodicExportRunner>(database.Name);
+
             try
             {
                 if (dbRecord.PeriodicBackup == null)
@@ -542,10 +541,11 @@ namespace Raven.Server.Documents.PeriodicExport
                 if (dbRecord.PeriodicBackup.Equals(periodicExportRunner?.Configuration))
                     return periodicExportRunner;
                 periodicExportRunner?.Dispose();
+
                 if (dbRecord.PeriodicBackup.Active == false)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Periodic export is disabled.");
+                    if (logger.IsInfoEnabled)
+                        logger.Info("Periodic export is disabled.");
                     return null;
                 }
                 DocumentsOperationContext context;
@@ -560,8 +560,8 @@ namespace Raven.Server.Documents.PeriodicExport
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Unable to read the periodic export status as the status document. We will start to export from scratch.", e);
+                        if (logger.IsInfoEnabled)
+                            logger.Info($"Unable to read the periodic export status as the status document. We will start to export from scratch.", e);
                     }
                 }
 
@@ -571,8 +571,8 @@ namespace Raven.Server.Documents.PeriodicExport
             {
                 //TODO: Raise alert, or maybe handle this via a db load error that can be turned off with 
                 //TODO: a config
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Cannot enable periodic export unexpected error", e);
+                if (logger.IsInfoEnabled)
+                    logger.Info($"Cannot enable periodic export unexpected error", e);
                 /*
                     Database.AddAlert(new Alert
                                 {

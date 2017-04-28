@@ -6,8 +6,6 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Replication;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
@@ -22,7 +20,6 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -35,11 +32,13 @@ namespace Raven.Server.ServerWide
     /// </summary>
     public class ServerStore : IDisposable
     {
+        private const string ResourceName = nameof(ServerStore);
+
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<ServerStore>(ResourceName);
+
         private readonly CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
 
         public CancellationToken ServerShutdown => _shutdownNotification.Token;
-
-        private static Logger _logger;
 
         private StorageEnvironment _env;
 
@@ -58,17 +57,15 @@ namespace Raven.Server.ServerWide
 
         public ServerStore(RavenConfiguration configuration, RavenServer ravenServer)
         {
-            var resourceName = "ServerStore";
-
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             Configuration = configuration;
             _ravenServer = ravenServer;
-            _logger = LoggingSource.Instance.GetLogger<ServerStore>(resourceName);
+
             DatabasesLandlord = new DatabasesLandlord(this);
 
-            _notificationsStorage = new NotificationsStorage(resourceName);
+            _notificationsStorage = new NotificationsStorage(ResourceName);
 
-            NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, resourceName, ServerShutdown);
+            NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, ResourceName, ServerShutdown);
 
             LicenseManager = new LicenseManager(NotificationCenter);
 

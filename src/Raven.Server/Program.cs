@@ -16,7 +16,7 @@ namespace Raven.Server
 {
     public class Program
     {
-        private static Logger _logger;
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<Program>("Raven/Server");
 
         public static int Main(string[] args)
         {
@@ -36,7 +36,6 @@ namespace Raven.Server
                 mode = LogMode.Operations;
 
             LoggingSource.Instance.SetupLogMode(mode, Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
-            _logger = LoggingSource.Instance.GetLogger<Program>("Raven/Server");
 
             try
             {
