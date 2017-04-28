@@ -24,8 +24,13 @@ namespace Raven.Server
 
             var customConfigPath = ParseCustomConfigPath(args);
             var configuration = new RavenConfiguration(null, ResourceType.Server, customConfigPath);
+            bool printServerId = false;
             if (args != null)
             {
+                var list = args.ToList();
+                printServerId = list.Remove("--print-id");
+                args = list.ToArray();
+
                 configuration.AddCommandLine(args);
             }
 
@@ -44,6 +49,10 @@ namespace Raven.Server
                     try
                     {
                         server.Initialize();
+
+                        if (printServerId)
+                            Console.WriteLine($"Server ID is {server.ServerStore.GetServerId()}.");
+
                         Console.WriteLine($"Listening to: {string.Join(", ", server.WebUrls)}");
 
                         var serverWebUrl = server.WebUrls[0];
