@@ -8,6 +8,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
+using Raven.Server.Rachis;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -18,7 +19,7 @@ namespace RachisTests
         [Fact]
         public async Task EnsureDocumentsReplication()
         {
-            var clusterSize = 3;
+            var clusterSize = 5;
             var databaseName = "ReplicationTestDB";
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
             using (var store = new DocumentStore()
@@ -28,9 +29,8 @@ namespace RachisTests
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
-                var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, clusterSize));
+                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes.Count());
-
                 foreach (var server in Servers)
                 {
                     await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag ?? -1);
@@ -44,16 +44,18 @@ namespace RachisTests
                     await session.StoreAsync(new User {Name  = "Karmel"},"users/1");
                     await session.SaveChangesAsync();
                 }
-                
                 Assert.True(await WaitForDocumentInClusterAsync<User>(
                     databaseResult.Topology,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
                     TimeSpan.FromSeconds(clusterSize + 5)));
-
+                await Task.Delay(TimeSpan.FromMilliseconds(500));
                 var stats = leader.ServerStore.ClusterStats();
                 Assert.NotEmpty(stats);
-                
+                foreach (var server in databaseResult.Topology.AllReplicationNodes)
+                {
+                    Assert.Equal(1,stats[server.NodeTag].LastReport[databaseName].LastDocumentChangeVector.Length);
+                }
             }
         }      
     }

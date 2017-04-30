@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
@@ -73,7 +74,8 @@ namespace Raven.Server.ServerWide
 
             DatabaseInfoCache = new DatabaseInfoCache();
 
-            _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;            
+            _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;
+
         }
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
@@ -99,9 +101,72 @@ namespace Raven.Server.ServerWide
 
         private Timer _timer;
         private RachisConsensus<ClusterStateMachine> _engine;
-        private bool _disposed;
-
+        private bool _disposed;      
         public RachisConsensus<ClusterStateMachine> Engine => _engine;
+
+        private ClusterMaintenanceMaster _clusterMaintenanceMaster;
+        public Dictionary<string, ClusterNodeStatusReport> ClusterStats()
+        {
+            if (_engine.LeaderTag != NodeTag)
+                return null; // not a leader
+            return _clusterMaintenanceMaster?.GetStats();
+        }
+        public async Task ClusterMaintanceSetupTask()
+        {
+            while (true)
+            {
+                try
+                {
+                    if (_engine.LeaderTag != NodeTag)
+                    {
+                        await _engine.WaitForState(RachisConsensus.State.Leader);
+                        continue;
+                    }
+                    using (_clusterMaintenanceMaster = new ClusterMaintenanceMaster(_engine.Tag, _engine.CurrentTerm))
+                    {
+                        var oldNodes = new Dictionary<string, string>();
+                        while (_engine.LeaderTag == NodeTag)
+                        {
+                            var topologyChangedTask = _engine.GetTopologyChanged();
+                            ClusterTopology clusterTopology;
+                            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                            using (context.OpenReadTransaction())
+                            {
+                                clusterTopology = _engine.GetTopology(context);
+                            }
+                            var newNodes = clusterTopology.AllNodes;
+                            var nodesChanges = ClusterTopology.DictionaryDiff(oldNodes, newNodes);
+                            oldNodes = newNodes;
+                            foreach (var node in nodesChanges.removedValues)
+                            {
+                                _clusterMaintenanceMaster.RemoveFromCluster(node.Key);
+                            }
+                            var taskList = new List<Task>();
+                            foreach (var node in nodesChanges.addedValues)
+                            {
+                                var task = _clusterMaintenanceMaster.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key));
+                                taskList.Add(task);
+                            }
+
+                            var leaderChanged = _engine.WaitForLeaveState(RachisConsensus.State.Leader);
+                            var allNodesAdded = Task.WhenAll(taskList);
+                            if (await Task.WhenAny(allNodesAdded, topologyChangedTask, leaderChanged) == leaderChanged)
+                                break;
+
+                            await topologyChangedTask;
+                        }
+                    }
+                }
+                catch (TaskCanceledException)
+                {// ServerStore dispose?
+                    throw;
+                }
+                catch (Exception)
+                {
+                    //
+                }
+            }            
+        }
 
         public ClusterTopology GetClusterTopology(TransactionOperationContext context)
         {
@@ -224,6 +289,8 @@ namespace Raven.Server.ServerWide
                     DatabasesLandlord.ClusterOnDatabaseChanged(this, (db.Item1, 0));
                 }
             }
+
+            Task.Run(ClusterMaintanceSetupTask, ServerShutdown);
         }
 
         public async Task<long> DeleteDatabaseAsync(JsonOperationContext context, string db, bool hardDelete, string fromNode)

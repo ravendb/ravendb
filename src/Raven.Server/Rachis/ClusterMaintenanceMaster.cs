@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -18,15 +19,15 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Rachis
 {
-    public partial class ClusterMaintenanceMaster : IDisposable
+    public class ClusterMaintenanceMaster : IDisposable
     {
         private readonly string _leaderClusterTag;
 
         //maintenance handler is valid for specific term, otherwise it's requests will be rejected by nodes
-        private readonly long _term; 
+        private readonly long _term;
         private bool _isDisposed;
 
-        private readonly ConcurrentSet<ClusterNode> _clusterNodes = new ConcurrentSet<ClusterNode>();
+        private readonly ConcurrentDictionary<string, ClusterNode> _clusterNodes = new ConcurrentDictionary<string, ClusterNode>();
         private readonly ConcurrentDictionary<ClusterNode, long> _failedNodes = new ConcurrentDictionary<ClusterNode, long>();
         private readonly ConcurrentDictionary<ClusterNode, long> _timedOutNodes = new ConcurrentDictionary<ClusterNode, long>();
 
@@ -44,9 +45,27 @@ namespace Raven.Server.Rachis
         {
             var connectionInfo = await ReplicationUtils.GetTcpInfoAsync(MultiDatabase.GetRootDatabaseUrl(url), null, null);
             var clusterNode = new ClusterNode(clusterTag, connectionInfo, _contextPool, this, _cts.Token);
-            _clusterNodes.Add(clusterNode);
+            _clusterNodes.Add(clusterTag, clusterNode);
+            var task = clusterNode.StartListening();
+            GC.KeepAlive(task); // we are explicitly not waiting on this task
         }
-      
+
+        public Dictionary<string, ClusterNodeStatusReport> GetStats()
+        {
+            var clusterStats = new Dictionary<string, ClusterNodeStatusReport>();
+            foreach (var node in _clusterNodes)
+            {
+                clusterStats[node.Key] = node.Value.ReceivedReport;
+            }
+            return clusterStats;
+        }
+
+        public void RemoveFromCluster(string clusterTag)
+        {
+            _clusterNodes[clusterTag]?.Dispose();
+            _clusterNodes.Remove(clusterTag);
+        }
+
         public void Dispose()
         {
             if (_isDisposed)
@@ -59,9 +78,9 @@ namespace Raven.Server.Rachis
             {
                 try
                 {
-                    node.Dispose();
+                    node.Value.Dispose();
                 }
-                catch 
+                catch
                 {
                     //don't care, we are disposing
                 }
@@ -82,35 +101,25 @@ namespace Raven.Server.Rachis
             private readonly JsonContextPool _contextPool;
             private readonly ClusterMaintenanceMaster _parent;
             private readonly CancellationToken _token;
-            private readonly Logger _log;
+            private readonly CancellationTokenSource _cts;
 
-            public Exception LastError { get; private set; }
+            private readonly Logger _log;
 
             public string ClusterTag { get; }
 
             private readonly TcpClient _tcpClient;
 
-            public ClusterNodeStatusReport LastReceivedStatus { get; private set; }
-
-            public DateTime LastUpdateDateTime { get; private set; }
-
-            public DateTime LastSuccessfulUpdateDateTime { get; private set; }
+            public ClusterNodeStatusReport ReceivedReport = new ClusterNodeStatusReport(
+                new Dictionary<string, DatabaseStatusReport>(), ClusterNodeStatusReport.ReportStatus.WaitingForResponse,
+                null, DateTime.MinValue, DateTime.MinValue
+                );
 
             private bool _isDisposed;
             private readonly string _readStatusUpdateDebugString;
-
-            public Status LastUpdateStatus { get; private set; }
-
-            public enum Status
-            {
-                Timeout,
-                Error,
-                Ok
-            }
-
+            private readonly TcpConnectionInfo _tcpConnection;
             public ClusterNode(
-                string clusterTag, 
-                TcpConnectionInfo tcpConnectionInfo,
+                string clusterTag,
+                TcpConnectionInfo tcpConnectionConnectionInfo,
                 JsonContextPool contextPool,
                 ClusterMaintenanceMaster parent,
                 CancellationToken token)
@@ -118,83 +127,88 @@ namespace Raven.Server.Rachis
                 ClusterTag = clusterTag;
                 _contextPool = contextPool;
                 _parent = parent;
-                _token = token;
+                _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                _token = _cts.Token;
                 _readStatusUpdateDebugString = $"ClusterMaintenanceServer/{ClusterTag}/UpdateState/Read-Response";
                 _tcpClient = new TcpClient();
 
                 _log = LoggingSource.Instance.GetLogger<ClusterNode>(clusterTag);
-                LastUpdateStatus = Status.Ok;
+                _tcpConnection = tcpConnectionConnectionInfo;
+            }
 
-                Task.Factory.StartNew(async () =>
+            public Task StartListening()
+            {
+                return ListenToSlave();
+            }
+
+            private async Task ListenToSlave()
+            {
+                bool needToWait = false;
+                var startUpdateTime = DateTime.UtcNow;
+                while (_token.IsCancellationRequested == false)
                 {
-                    Stream connection = null;
+                    var timeoutInMilliseconds = 5000;
                     try
                     {
-                        connection = await ConnectToClientNodeAsync(tcpConnectionInfo);
-                        while (_token.IsCancellationRequested == false)
+                        if (needToWait)
                         {
-                            BlittableJsonReaderObject statusUpdateJson = null;
-                            try
+                            needToWait = false; // avoid tight loop if there was timeout / error
+                            await Task.Delay(timeoutInMilliseconds, _token);
+                        }
+                        using (var connection = await ConnectToClientNodeAsync(_tcpConnection))
+                        {
+                            while (_token.IsCancellationRequested == false)
                             {
-                                Task<BlittableJsonReaderObject> readResponseTask;
-                                using (contextPool.AllocateOperationContext(out JsonOperationContext context))
+                                using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
                                 {
-                                    var timeout = Task.Delay(5000);
-                                    readResponseTask = context.ReadForMemoryAsync(connection, _readStatusUpdateDebugString, _token);
-                                    LastUpdateDateTime = DateTime.UtcNow;
+                                    var timeout = Task.Delay(timeoutInMilliseconds, _token);
+                                    startUpdateTime = DateTime.UtcNow;
+                                    var readResponseTask = context.ReadForMemoryAsync(connection, _readStatusUpdateDebugString, _token);
                                     if (await Task.WhenAny(readResponseTask, timeout) == timeout)
                                     {
                                         //TODO : logging about timeout
-                                        LastUpdateStatus = Status.Timeout;
-                                        continue;
+                                        ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(), 
+                                            ClusterNodeStatusReport.ReportStatus.Timeout,
+                                            null,
+                                            startUpdateTime,
+                                            DateTime.UtcNow);
+                                        await readResponseTask;
+                                        needToWait = true;
+                                        break;
                                     }
 
-                                    if (readResponseTask.IsFaulted)
+                                    using (var statusUpdateJson = await readResponseTask)
                                     {
-                                        //TODO : logging about error
-                                        LastUpdateStatus = Status.Error;
-                                        LastError = readResponseTask.Exception;
-
-                                        continue;
+                                        var report = new Dictionary<string, DatabaseStatusReport>();
+                                        foreach (var property in statusUpdateJson.GetPropertyNames())
+                                        {
+                                            var value = (BlittableJsonReaderObject)statusUpdateJson[property];
+                                            report.Add(property, JsonDeserializationServer.DatabaseStatusReport(value));
+                                        }
+                                        ReceivedReport = new ClusterNodeStatusReport(
+                                            report,
+                                            ClusterNodeStatusReport.ReportStatus.Ok,
+                                            null,
+                                            startUpdateTime,
+                                            DateTime.UtcNow);
                                     }
                                 }
-                                statusUpdateJson = readResponseTask.Result;
-                                LastSuccessfulUpdateDateTime = DateTime.UtcNow;
+                            }
 
-                                LastReceivedStatus = JsonDeserializationServer.ClusterNodeStatusReport(statusUpdateJson);
-                            }
-                            catch (SocketException e)
-                            {
-                                //most likely this will never happen, precaution
-                                LastError = e;
-                                //TODO: log about socket error -> this is most likely will indicate issue with network or remote node going down...
-                                LastUpdateStatus = Status.Error;
-                                //socket exception means that we have unrecoverable error, so try to reconnect
-                                connection.Dispose();
-
-                                await Task.Delay(1000);
-                                connection = await ConnectToClientNodeAsync(tcpConnectionInfo);
-                            }
-                            catch (Exception e)
-                            {
-                                //TODO : do not forget to add this to log as well
-                                LastError = e;
-                                LastUpdateStatus = Status.Error;
-                                await Task.Delay(1000); //wait a bit in case of transient error
-                            }
-                            finally
-                            {
-                                statusUpdateJson?.Dispose();
-                            }
                         }
                     }
-                    finally
+                    catch (Exception e)
                     {
-                        connection?.Dispose();
+                        //TODO : do not forget to add this to log as well
+                        ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(), 
+                            ClusterNodeStatusReport.ReportStatus.Error,
+                            e,
+                            startUpdateTime,
+                            DateTime.UtcNow);
+                        needToWait = true;
                     }
-                }, _token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-            }         
-
+                }
+            }
 
             private async Task<Stream> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo)
             {
@@ -238,7 +252,7 @@ namespace Raven.Server.Rachis
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
                     writer.WriteString((string)null);
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.AuthorizationToken));
-                    writer.WriteString((string)null);
+                    writer.WriteString((string)null);//TODO: fixme
                 }
                 writer.WriteEndObject();
                 writer.Flush();
@@ -276,20 +290,15 @@ namespace Raven.Server.Rachis
                 _isDisposed = true;
                 try
                 {
+                    _cts.Cancel();
                     _tcpClient?.Dispose();
                 }
                 catch
                 {
                     //don't care, we are disposing
                 }
-                GC.SuppressFinalize(this);
             }
 
-            ~ClusterNode()
-            {
-                //TODO : add logging about running finalizer where we shouldn't
-                Dispose();
-            }
         }
 
         public enum StateUpdateResult

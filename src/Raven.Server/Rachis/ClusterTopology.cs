@@ -70,6 +70,60 @@ namespace Raven.Server.Rachis
             return null;
         }
 
+        public static (Dictionary<TKey, TValue> addedValues, Dictionary<TKey, TValue> removedValues) 
+            DictionaryDiff<TKey, TValue>(Dictionary<TKey, TValue> oldDic,Dictionary<TKey, TValue> newDic)
+        {
+            var addedValues = new Dictionary<TKey, TValue>();
+            var removedValues = new Dictionary<TKey, TValue>();
+            var temp = new Dictionary<TKey,TValue>(newDic);
+
+            foreach (var kvp in oldDic)
+            {
+                var value = kvp.Value;
+                var key = kvp.Key;
+                if (temp.ContainsKey(key))
+                {
+                    if (temp[key] == null || temp[key].Equals(value) == false)
+                    {
+                        removedValues.Add(key, value);
+                    }
+                    temp.Remove(key);
+                }
+                else
+                {
+                    removedValues.Add(key, value);
+                }
+                
+            }
+            foreach (var kvp in temp)
+            {
+                addedValues.Add(kvp.Key,kvp.Value);
+            }
+            
+            return (addedValues, removedValues);
+        }
+
+        public Dictionary<string,string> AllNodes
+        {
+            get
+            {
+                var dic = new Dictionary<string,string>();
+                foreach (var node in Members)
+                {
+                    dic.Add(node.Key,node.Value);
+                }
+                foreach (var node in Promotables)
+                {
+                    dic.Add(node.Key, node.Value);
+                }
+                foreach (var node in Watchers)
+                {
+                    dic.Add(node.Key, node.Value);
+                }
+                return dic;
+            }
+        }
+
         public readonly string LastNodeId;
         public readonly string TopologyId;
         public readonly string ApiKey;

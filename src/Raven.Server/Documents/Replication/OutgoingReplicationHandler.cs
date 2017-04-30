@@ -284,7 +284,8 @@ namespace Raven.Server.Documents.Replication
                     [nameof(TcpConnectionHeaderMessage.DatabaseName)] =Destination.Database,// _parent.Database.Name,
                     [nameof(TcpConnectionHeaderMessage.Operation)] =
                     TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
-                    [nameof(TcpConnectionHeaderMessage.AuthorizationToken)] = token
+                    [nameof(TcpConnectionHeaderMessage.AuthorizationToken)] = token,
+                    [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
                 });
                 writer.Flush();
                 ReadHeaderResponseAndThrowIfUnAuthorized();
@@ -292,10 +293,11 @@ namespace Raven.Server.Documents.Replication
                 var request = new DynamicJsonValue
                 {
                     ["Type"] = "GetLastEtag",
-                    ["SourceDatabaseId"] = _database.DbId.ToString(),
-                    ["SourceDatabaseName"] = _database.Name,
-                    ["SourceUrl"] = _database.Configuration.Core.ServerUrl,
-                    ["MachineName"] = Environment.MachineName,
+                    [nameof(ReplicationLatestEtagRequest.SourceDatabaseId)] = _database.DbId.ToString(),
+                    [nameof(ReplicationLatestEtagRequest.SourceMachineName)] = _database.Name,
+                    [nameof(ReplicationLatestEtagRequest.SourceUrl)] = _database.Configuration.Core.ServerUrl,
+                    [nameof(ReplicationLatestEtagRequest.SourceTag)] = _parent._server.NodeTag,
+                    [nameof(ReplicationLatestEtagRequest.SourceMachineName)] = Environment.MachineName,
                 };
 
                 documentsContext.Write(writer, request);
@@ -407,7 +409,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public string FromToString => $"from {_database.Name} to {Destination.NodeTag}({Destination.Database}) at {Destination.Url}";
+        public string FromToString => $"from {_database.Name} at {_parent._server.NodeTag} to {Destination.NodeTag}({Destination.Database}) at {Destination.Url}";
 
         public ReplicationNode Node => Destination;
         public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";

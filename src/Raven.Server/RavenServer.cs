@@ -20,8 +20,10 @@ using Raven.Client.Json.Converters;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
@@ -55,7 +57,7 @@ namespace Raven.Server
 
         private readonly LatestVersionCheck _latestVersionCheck;
 
-        public event Action AfterDisposal;    
+        public event Action AfterDisposal;
 
         public RavenServer(RavenConfiguration configuration)
         {
@@ -424,9 +426,11 @@ namespace Raven.Server
                     {
                         _tcpLogger.Info("Failure when processing tcp connection", e);
                     }
-                }               
+                }
             });
         }
+
+        private ClusterMaintenanceSlave _clusterMaintainance;
 
         private bool DispatchServerwideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, TcpClient tcpClient)
         {
@@ -441,6 +445,12 @@ namespace Raven.Server
             {
                 //TODO: add ClusterMaintenanceSlave as a handler for this connection
                 //TODO: do not forget that the "client" should dispose the tcp connection
+                var old = _clusterMaintainance;
+                using (old)
+                {
+                    _clusterMaintainance = new ClusterMaintenanceSlave(tcp, ServerStore.ServerShutdown, ServerStore);
+                    _clusterMaintainance.Start();
+                }
                 return true;
             }
             return false;
@@ -461,7 +471,10 @@ namespace Raven.Server
             {
                 var resultingTask = await Task.WhenAny(databaseLoadingTask, Task.Delay(databaseLoadTimeout));
                 if (resultingTask != databaseLoadingTask)
-                    ThrowTimeoutOnDatabaseLoad(header);
+                {
+                    if (databaseLoadingTask.IsCompleted == false)
+                        ThrowTimeoutOnDatabaseLoad(header);
+                }
             }
 
             tcp.DocumentDatabase = await databaseLoadingTask;
@@ -470,7 +483,7 @@ namespace Raven.Server
 
             switch (header.Operation)
             {
-             
+
                 case TcpConnectionHeaderMessage.OperationTypes.Subscription:
                     SubscriptionConnection.SendSubscriptionDocuments(tcp);
                     break;
@@ -492,7 +505,7 @@ namespace Raven.Server
             tcp = null;
             return false;
         }
-                   
+
         private async Task<Stream> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
             if (Configuration.Encryption.UseSsl)

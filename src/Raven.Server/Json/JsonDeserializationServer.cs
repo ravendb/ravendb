@@ -32,8 +32,8 @@ namespace Raven.Server.Json
 {
     internal class JsonDeserializationServer : JsonDeserializationBase
     {
-        public static readonly Func<BlittableJsonReaderObject, ClusterNodeStatusReport> ClusterNodeStatusReport =
-            GenerateJsonDeserializationRoutine<ClusterNodeStatusReport>();
+        public static readonly Func<BlittableJsonReaderObject, DatabaseStatusReport> DatabaseStatusReport =
+            GenerateJsonDeserializationRoutine<DatabaseStatusReport>();
 
         public static readonly Func<BlittableJsonReaderObject, TcpConnectionInfo> TcpConnectionInfo =
             GenerateJsonDeserializationRoutine<TcpConnectionInfo>();
