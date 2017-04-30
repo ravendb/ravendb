@@ -84,6 +84,11 @@ namespace Raven.Client.Documents.Session
             //TODO -  Add RegisterMissingProperties ???
             try
             {
+                if (entityType == typeof(BlittableJsonReaderObject))
+                {
+                    return document;
+                }
+
                 var defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(entityType);
                 var entity = defaultValue;
 
