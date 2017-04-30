@@ -100,7 +100,7 @@ namespace Raven.Server.Documents
                 }
             }
 
-            changeVector = BuildChangeVector(context, key, lowerKey, newEtag, changeVector, expectedEtag, flags, oldValue);
+            changeVector = BuildChangeVectorAndResolveConflicts(context, key, lowerKey, newEtag, changeVector, expectedEtag, flags, oldValue);
 
             if (collectionName.IsSystem == false &&
                 (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
@@ -194,7 +194,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ChangeVectorEntry[] BuildChangeVector(DocumentsOperationContext context, string key, Slice lowerKey, long newEtag, ChangeVectorEntry[] changeVector, long? expectedEtag, DocumentFlags flags, TableValueReader oldValue)
+        private ChangeVectorEntry[] BuildChangeVectorAndResolveConflicts(DocumentsOperationContext context, string key, Slice lowerKey, long newEtag, ChangeVectorEntry[] changeVector, long? expectedEtag, DocumentFlags flags, TableValueReader oldValue)
         {
             if (_documentsStorage.ConflictsStorage.ConflictsCount != 0)
             {
