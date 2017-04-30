@@ -442,7 +442,7 @@ namespace Raven.Server.Documents
             {
                 currentMaxConflictEtag = GetConflictsMaxEtagFor(context, prefixSlice);
 
-                return currentMaxConflictEtag != 0 && currentMaxConflictEtag != expectedEtag.Value;
+                return currentMaxConflictEtag != expectedEtag.Value;
             }
         }
 

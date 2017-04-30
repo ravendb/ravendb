@@ -1,12 +1,15 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Replication
 {
-    public class ReplicationResolveToDatabase : ReplicationTestsBase
+    public class ReplicationResolveToDatabase : ReplicationTestsBase, IDocumentTombstoneAware
     {
         [Fact]
         public async Task ResovleToDatabase()
@@ -211,7 +214,10 @@ namespace FastTests.Server.Replication
             {
                 var documentDatabase1 = await GetDocumentDatabaseInstanceFor(store1);
                 var documentDatabase2 = await GetDocumentDatabaseInstanceFor(store2);
-                
+
+                documentDatabase1.DocumentTombstoneCleaner.Subscribe(this);
+                documentDatabase2.DocumentTombstoneCleaner.Subscribe(this);
+
                 using (var session = store1.OpenSession())
                 {
                     session.Store(new User {Name = "Karmel"}, "foo/bar");
@@ -241,6 +247,15 @@ namespace FastTests.Server.Replication
                 Assert.Equal(1, WaitUntilHasTombstones(store1).Count);
 
             }
+        }
+
+        public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        {
+            return new Dictionary<string, long>
+            {
+                ["Users"] = 0
+            };
+
         }
     }
 }

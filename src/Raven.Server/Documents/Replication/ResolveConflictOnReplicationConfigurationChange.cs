@@ -120,7 +120,12 @@ namespace Raven.Server.Documents.Replication
                             return;
 
                         if (resolvedConflicts.Count > 0)
-                            await _database.TxMerger.Enqueue(new PutResolvedConflictsCommand(_database.DocumentsStorage.ConflictsStorage, resolvedConflicts, this));
+                        {
+                            var cmd = new PutResolvedConflictsCommand(_database.DocumentsStorage.ConflictsStorage, resolvedConflicts, this);
+                            await _database.TxMerger.Enqueue(cmd);
+                            if(cmd.RequiresRetry)
+                                RunConflictResolversOnce();
+                        }
                     }
                 }
             }
@@ -136,6 +141,7 @@ namespace Raven.Server.Documents.Replication
             private readonly ConflictsStorage _conflictsStorage;
             private readonly List<(DocumentConflict ResolvedConflict, long MaxConflictEtag)> _resolvedConflicts;
             private readonly ResolveConflictOnReplicationConfigurationChange _resolver;
+            public bool RequiresRetry;
 
             public PutResolvedConflictsCommand(ConflictsStorage conflictsStorage, List<(DocumentConflict, long)> resolvedConflicts, ResolveConflictOnReplicationConfigurationChange resolver)
             {
@@ -159,6 +165,7 @@ namespace Raven.Server.Documents.Replication
 
                         if (_conflictsStorage.ShouldThrowConcurrencyExceptionOnConflict(context, slice, item.MaxConflictEtag, out var _))
                             continue;
+                        RequiresRetry = true;
                     }
                     
                     _resolver.PutResolvedDocument(context, item.ResolvedConflict);
@@ -204,21 +211,24 @@ namespace Raven.Server.Documents.Replication
                 return false;
 
             long maxEtag = -1;
+            long duplicateResolverEtagAt = -1;
+            var resolverDbId = new Guid(resolver);
+
             foreach (var documentConflict in conflicts)
             {
                 foreach (var changeVectorEntry in documentConflict.ChangeVector)
                 {
-                    if (changeVectorEntry.DbId.Equals(new Guid(resolver)))
+                    if (changeVectorEntry.DbId.Equals(resolverDbId))
                     {
                         if (changeVectorEntry.Etag == maxEtag)
                         {
-                            // we have two documents with same etag of the leader
-                            return false;
+                            duplicateResolverEtagAt = maxEtag;
+                            continue;
                         }
-
                         if (changeVectorEntry.Etag < maxEtag)
                             continue;
 
+                        duplicateResolverEtagAt = -1;
                         maxEtag = changeVectorEntry.Etag;
                         resolved = documentConflict;
                         break;
@@ -226,7 +236,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            if (resolved == null)
+            if (resolved == null || duplicateResolverEtagAt == maxEtag)
                 return false;
 
             resolved.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
