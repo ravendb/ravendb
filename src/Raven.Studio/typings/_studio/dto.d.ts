@@ -300,3 +300,7 @@ interface feedbackSavedSettingsDto {
     Name: string;
     Email: string;
 }
+
+interface customFunctionsDto {
+    Functions: string;
+}

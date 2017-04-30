@@ -82,8 +82,10 @@ class appUrl {
         statusDebugConfig: ko.pureComputed(() => appUrl.forStatusDebugConfig(appUrl.currentDatabase())),
         statusDebugDocrefs: ko.pureComputed(() => appUrl.forStatusDebugDocrefs(appUrl.currentDatabase())),
         statusDebugCurrentlyIndexing: ko.pureComputed(() => appUrl.forStatusDebugCurrentlyIndexing(appUrl.currentDatabase())),
+        customFunctionsEditor: ko.pureComputed(() => appUrl.forCustomFunctionsEditor(appUrl.currentDatabase())),
         statusDebugQueries: ko.pureComputed(() => appUrl.forStatusDebugQueries(appUrl.currentDatabase())),
         statusDebugTasks: ko.pureComputed(() => appUrl.forStatusDebugTasks(appUrl.currentDatabase())),
+
         statusDebugRoutes: ko.pureComputed(() => appUrl.forStatusDebugRoutes(appUrl.currentDatabase())),
         statusDebugSqlReplication: ko.pureComputed(() => appUrl.forStatusDebugSqlReplication(appUrl.currentDatabase())),
         statusDebugIndexFields: ko.pureComputed(() => appUrl.forStatusDebugIndexFields(appUrl.currentDatabase())),
@@ -103,6 +105,7 @@ class appUrl {
         isAreaActive: (routeRoot: string) => ko.pureComputed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.pureComputed(() => router.navigationModel().find(m => m.isActive() && m.title === routeTitle) != null),
         databasesManagement: ko.pureComputed(() => appUrl.forDatabases()),
+        
 
     };
 
@@ -589,6 +592,10 @@ class appUrl {
 
         //TODO: we don't have Raven/DocumentsByEntityName anymore
         return appUrl.forDatabaseQuery(db) + "/streams/query/Raven/DocumentsByEntityName" + appUrl.urlEncodeArgs(args);
+    }
+
+    static forCustomFunctionsEditor(db: database): string {
+        return "#databases/settings/customFunctionsEditor?" + appUrl.getEncodedDbPart(db);
     }
 
     static forSampleData(db: database): string {

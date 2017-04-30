@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
@@ -147,6 +148,7 @@ namespace TypingsGenerator
 
             // query 
             scripter.AddType(typeof(QueryResult<>));
+            scripter.AddType(typeof(PutResult));
 
             // transformers
             scripter.AddType(typeof(TransformerDefinition));
