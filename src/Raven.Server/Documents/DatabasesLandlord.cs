@@ -324,7 +324,7 @@ namespace Raven.Server.Documents
         {
             try
             {
-                var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config));
+                var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config), TaskCreationOptions.RunContinuationsAsynchronously);
 
                 var database = DatabasesCache.GetOrAdd(databaseName, task);
                 if (database == task)

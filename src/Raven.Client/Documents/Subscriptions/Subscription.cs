@@ -51,8 +51,8 @@ namespace Raven.Client.Documents.Subscriptions
         private bool _disposed;
         private Task _subscriptionTask;
         private Stream _stream;
-        private readonly TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>();
-        private TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
+        private readonly TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<bool> _taskCompletionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>
         ///     It indicates if the subscription is in errored state because one of subscribers threw an exception.
@@ -112,7 +112,7 @@ namespace Raven.Client.Documents.Subscriptions
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions,
                 entity => { throw new InvalidOperationException("Shouldn't be generating new ids here"); });
 
-            SubscriptionLifetimeTask = taskCompletionSource.Task;
+            SubscriptionLifetimeTask = _taskCompletionSource.Task;
         }
 
         ~Subscription()
@@ -166,9 +166,9 @@ namespace Raven.Client.Documents.Subscriptions
 
                 OnCompletedNotification();
 
-                if (taskCompletionSource.Task.IsCanceled == false && taskCompletionSource.Task.IsCompleted == false && taskCompletionSource.Task.IsFaulted == false)
+                if (_taskCompletionSource.Task.IsCanceled == false && _taskCompletionSource.Task.IsCompleted == false && _taskCompletionSource.Task.IsFaulted == false)
                 {
-                    taskCompletionSource.TrySetResult(true);
+                    _taskCompletionSource.TrySetResult(true);
                 }
             }
             catch (Exception ex)
@@ -208,7 +208,7 @@ namespace Raven.Client.Documents.Subscriptions
                 throw new InvalidOperationException(
                     "No observers has been registered, did you forget to call Subscribe?");
             _started = true;
-            var tcs = new TaskCompletionSource<object>();
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             _subscriptionTask = Task.Run(async () =>
             {
                 try
@@ -520,7 +520,7 @@ namespace Raven.Client.Documents.Subscriptions
                         IsErroredBecauseOfSubscriber = true;
                         LastSubscriberException = ex;
                         SubscriptionConnectionInterrupted(ex, false);
-                        taskCompletionSource.TrySetException(ex);
+                        _taskCompletionSource.TrySetException(ex);
 
                         try
                         {
@@ -636,7 +636,7 @@ namespace Raven.Client.Documents.Subscriptions
             // someone forced us to drop the connection by calling Subscriptions.Release
             {
                 IsConnectionClosed = true;
-                taskCompletionSource.TrySetException(ex);
+                _taskCompletionSource.TrySetException(ex);
                 SubscriptionConnectionInterrupted(ex, false);
 
                 await DisposeAsync().ConfigureAwait(false);

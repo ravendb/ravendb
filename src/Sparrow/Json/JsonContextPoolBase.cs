@@ -265,6 +265,8 @@ namespace Sparrow.Json
                     for (int i = items.Offset; i < items.Count; i++)
                     {
                         var ctx = items.Array[i];
+                        if(ctx == null)
+                            continue;
                         if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
                             continue;
                         ctx.Dispose();

@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Changes
             var indexSub = changes.ForAllIndexes();
             indexesSubscription = indexSub.Subscribe(this);
 
-            connectionTask = Task.Factory.ContinueWhenAll(new Task[] { docSub.Task, indexSub.Task }, tasks => { });
+            connectionTask = Task.Factory.ContinueWhenAll(new Task[] { docSub.Task, indexSub.Task }, tasks => { }, TaskContinuationOptions.RunContinuationsAsynchronously);
         }
 
         public Task ConnectionTask => connectionTask;

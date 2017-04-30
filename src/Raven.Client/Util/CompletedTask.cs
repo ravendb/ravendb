@@ -43,7 +43,7 @@ namespace Raven.Client.Util
         {
             get
             {
-                var tcs = new TaskCompletionSource<T>();
+                var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
                 if (_error == null)
                     tcs.SetResult(Result);
                 else

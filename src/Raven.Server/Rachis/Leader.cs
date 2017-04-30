@@ -24,7 +24,7 @@ namespace Raven.Server.Rachis
         private Task _topologyModification;
         private readonly RachisConsensus _engine;
 
-        private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>();
+        private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         private readonly ConcurrentDictionary<long, CommandState> _entries =
             new ConcurrentDictionary<long, CommandState>();
@@ -98,7 +98,7 @@ namespace Raven.Server.Rachis
                 throw new InvalidOperationException("Cannot step down when I'm the only voter int he cluster");
             var nextLeader = _voters.Values.OrderByDescending(x => x.FollowerMatchIndex).ThenByDescending(x => x.LastReplyFromFollower).First();
             nextLeader.ForceElectionsNow = true;
-            var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>());
+            var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
             old.TrySetResult(null);
         }
 
@@ -708,7 +708,7 @@ namespace Raven.Server.Rachis
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
 
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
-                var tcs = new TaskCompletionSource<long>();
+                var tcs = new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
                 _entries[index] = new CommandState
                 {
                     TaskCompletionSource = tcs,

@@ -9,7 +9,7 @@ namespace Raven.Server.Rachis
 {
     public class Candidate : IDisposable
     {
-        private TaskCompletionSource<object> _stateChange = new TaskCompletionSource<object>();
+        private TaskCompletionSource<object> _stateChange = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly RachisConsensus _engine;
         private readonly List<CandidateAmbassador> _voters = new List<CandidateAmbassador>();
         private readonly ManualResetEvent _peersWaiting = new ManualResetEvent(false);
@@ -182,7 +182,7 @@ namespace Raven.Server.Rachis
 
         private void StateChange()
         {
-            var tcs = Interlocked.Exchange(ref _stateChange, new TaskCompletionSource<object>());
+            var tcs = Interlocked.Exchange(ref _stateChange, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
             tcs.TrySetResult(null);
         }
 

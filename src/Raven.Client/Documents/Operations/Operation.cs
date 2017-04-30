@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Operations
         private readonly RequestExecutor _requestExecutor;
         private readonly DocumentConventions _conventions;
         private readonly long _id;
-        private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>();
+        private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Action<IOperationProgress> OnProgressChanged;
         private bool _work;

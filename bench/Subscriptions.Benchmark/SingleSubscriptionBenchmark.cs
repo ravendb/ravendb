@@ -13,7 +13,7 @@ namespace SubscriptionsBenchmark
         public int MaxCount { get; private set; }
         public int CurCount { get; private set; }
 
-        public readonly TaskCompletionSource<bool> Tcs = new TaskCompletionSource<bool>();
+        public readonly TaskCompletionSource<bool> Tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public CounterObserver(int maxCount)
         {
