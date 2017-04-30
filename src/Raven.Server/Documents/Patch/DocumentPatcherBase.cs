@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Patch
                 ApplySingleScript(context, documentKey, document, patchRequest, scope);
 
                 var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), documentKey, 
-                    BlittableJsonDocumentBuilder.UsageMode.ToDisk, new StreamSource.BlittableMetadataModifier(context));
+                    BlittableJsonDocumentBuilder.UsageMode.ToDisk, new BlittableMetadataModifier(context));
 
                 var result = new PatchResult
                 {
