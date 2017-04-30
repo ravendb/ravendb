@@ -330,7 +330,7 @@ namespace Raven.Server.Documents.Handlers
             BlittableJsonReaderObject reader;
             using (var builder = new BlittableJsonDocumentBuilder(ctx,
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk,
-                key, parser, state, modifier: new StreamSource.BlittableMetadataModifier(ctx)))
+                key, parser, state, modifier: new BlittableMetadataModifier(ctx)))
             {
                 ctx.CachedProperties.NewDocument();
                 builder.ReadNestedObject();
