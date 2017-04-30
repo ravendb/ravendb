@@ -4,6 +4,7 @@ using System.Diagnostics;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Platform.Win32;
+using Sparrow.Utils;
 using Voron.Data;
 using Voron.Global;
 
@@ -20,6 +21,7 @@ namespace Voron.Impl.Paging
         public int Size;
         public int? OriginalSize;
         public ulong Checksum;
+        public NativeMemory.ThreadStats AllocatingThread;
     }
 
     public unsafe class CryptoPager : AbstractPager
@@ -172,10 +174,12 @@ namespace Voron.Impl.Paging
 
         private EncryptionBuffer GetBufferAndAddToTxState(long pageNumber, CryptoTransactionState state, int size)
         {
+            var ptr = _encryptionBuffersPool.Get(size, out var thread);
             var buffer = new EncryptionBuffer
             {
                 Size = size,
-                Pointer = _encryptionBuffersPool.Get(size)
+                Pointer = ptr,
+                AllocatingThread = thread
             };
             state.LoadedBuffers[pageNumber] = buffer;
             return buffer;
@@ -262,12 +266,12 @@ namespace Voron.Impl.Paging
                 if (buffer.Value.OriginalSize != null && buffer.Value.OriginalSize != 0)
                 {
                     // First page of a seperated section, returned with its original size.
-                    _encryptionBuffersPool.Return(buffer.Value.Pointer, (int)buffer.Value.OriginalSize);
+                    _encryptionBuffersPool.Return(buffer.Value.Pointer, (int)buffer.Value.OriginalSize, buffer.Value.AllocatingThread);
                     continue;
                 }
 
                 // Normal buffers
-                _encryptionBuffersPool.Return(buffer.Value.Pointer, buffer.Value.Size);
+                _encryptionBuffersPool.Return(buffer.Value.Pointer, buffer.Value.Size, buffer.Value.AllocatingThread);
             }
         }
 

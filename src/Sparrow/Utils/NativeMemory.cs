@@ -1,8 +1,14 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
+using Sparrow.Platform.Win32;
 
 namespace Sparrow.Utils
 {
@@ -103,6 +109,66 @@ namespace Sparrow.Utils
                     }
                 }
             }
+        }
+
+        public static byte* Allocate4KbAlignedMemory(long size, out ThreadStats thread)
+        {
+            Debug.Assert(size >= 0);
+
+            thread = ThreadAllocations.Value;
+            thread.Allocations += size;
+
+            if (PlatformDetails.RunningOnPosix)
+            {
+                byte* ptr;
+                var rc = Syscall.posix_memalign(&ptr, (IntPtr)4096, (IntPtr)size);
+                if (rc != 0)
+                    Syscall.ThrowLastError(rc, "Could not allocate memory");
+
+                return ptr;
+            }
+
+            var allocate4KbAllignedMemory = Win32MemoryProtectMethods.VirtualAlloc(null, (UIntPtr)size, Win32MemoryProtectMethods.AllocationType.COMMIT,
+                Win32MemoryProtectMethods.MemoryProtection.READWRITE);
+
+            if (allocate4KbAllignedMemory == null)
+                ThrowFailedToAllocate();
+
+            return allocate4KbAllignedMemory;
+        }
+
+        private static void ThrowFailedToAllocate()
+        {
+            throw new Win32Exception("Could not allocate memory");
+        }
+
+        public static void Free4KbAlignedMemory(byte* ptr, int size, ThreadStats stats)
+        {
+            var currentThreadValue = ThreadAllocations.Value;
+            if (currentThreadValue == stats)
+            {
+                currentThreadValue.Allocations -= size;
+                FixupReleasesFromOtherThreads(currentThreadValue);
+            }
+            else
+            {
+                Interlocked.Add(ref stats.ReleasesFromOtherThreads, size);
+            }
+
+            var p = new IntPtr(ptr);
+            if (PlatformDetails.RunningOnPosix)
+            {
+                Syscall.free(p);
+                return;
+            }
+
+            if (Win32MemoryProtectMethods.VirtualFree(ptr, UIntPtr.Zero, Win32MemoryProtectMethods.FreeType.MEM_RELEASE) == false)
+                ThrowFailedToFree();
+        }
+
+        private static void ThrowFailedToFree()
+        {
+            throw new Win32Exception("Failed to free memory");
         }
     }
 }

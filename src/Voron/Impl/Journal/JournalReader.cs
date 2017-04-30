@@ -260,15 +260,16 @@ namespace Voron.Impl.Journal
                 // We use temp buffers to hold the transaction before decrypting, and release the buffers afterwards.
                 var size = (4*Constants.Size.Kilobyte) * GetNumberOf4KbFor(sizeof(TransactionHeader) + current->CompressedSize);
 
+                var ptr = NativeMemory.Allocate4KbAlignedMemory(size, out var thread);
                 var buffer = new EncryptionBuffer
                 {
-                    Pointer = UnmanagedMemory.Allocate4KbAlignedMemory(size),
-                    Size = size
+                    Pointer = ptr,
+                    Size = size,
+                    AllocatingThread = thread
                 };
+
                 _encryptionBuffers.Add(buffer);
-
                 Memory.Copy(buffer.Pointer, (byte*)current, size);
-
                 current = (TransactionHeader*)buffer.Pointer;
 
                 try
@@ -374,7 +375,7 @@ namespace Voron.Impl.Journal
             if (_encryptionBuffers != null) // Encryption enabled
             { 
                 foreach (var buffer in _encryptionBuffers)
-                    UnmanagedMemory.Free(buffer.Pointer);
+                    NativeMemory.Free4KbAlignedMemory(buffer.Pointer, buffer.Size, buffer.AllocatingThread);
                 BeforeCommitFinalization?.Invoke(this);
             }
             OnDispose?.Invoke(this);
