@@ -454,7 +454,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
         {
             protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
             {
-                return new CompletedTask();
+                return Task.CompletedTask;
             }
 
             protected override bool TryComputeLength(out long length)

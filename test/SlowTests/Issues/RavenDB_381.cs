@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.RegisterAsyncIdConvention<User>((dbName, user) => new CompletedTask<string>("users/" + user.Name));
+                store.Conventions.RegisterAsyncIdConvention<User>((dbName, user) => Task.FromResult("users/" + user.Name));
 
                 using (var session = store.OpenAsyncSession())
                 {

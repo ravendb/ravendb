@@ -692,7 +692,7 @@ more responsive application.
 
             Task<string> generator =
                 id != null
-                ? CompletedTask.With(id)
+                ? Task.FromResult(id)
                 : GenerateKeyAsync(entity);
 
             var result = await generator.ConfigureAwait(false);
