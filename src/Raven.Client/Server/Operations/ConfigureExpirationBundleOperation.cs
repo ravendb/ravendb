@@ -12,7 +12,6 @@ namespace Raven.Client.Server.Operations
     public class ConfigureExpirationOperation : IServerOperation<ConfigureExpirationOperationResult>
     {
         private readonly ExpirationConfiguration _configuration;
-        private string _databaseName;
 
         public ConfigureExpirationOperation(ExpirationConfiguration configuration)
         {
@@ -26,9 +25,8 @@ namespace Raven.Client.Server.Operations
 
     public class ConfigureExpirationCommand : RavenCommand<ConfigureExpirationOperationResult>
     {
-        private ExpirationConfiguration _configuration;
-        private readonly string _databaseName;
-        private JsonOperationContext _context;
+        private readonly ExpirationConfiguration _configuration;
+        private readonly JsonOperationContext _context;
 
         public ConfigureExpirationCommand(ExpirationConfiguration configuration, JsonOperationContext context)
         {
