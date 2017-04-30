@@ -47,53 +47,5 @@ namespace Sparrow
                 ? Syscall.Set(dest, c, count)
                 : Win32UnmanagedMemory.Set(dest, c, count);
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static byte* Allocate4KbAlignedMemory(long size)
-        {
-            Debug.Assert(size >= 0);
-
-            if (PlatformDetails.RunningOnPosix)
-            {
-                byte* ptr;
-                var rc = Syscall.posix_memalign(&ptr, (IntPtr)4096, (IntPtr)size);
-                if (rc != 0)
-                    Syscall.ThrowLastError(rc, "Could not allocate memory");
-                
-                return ptr;
-            }
-
-            var allocate4KbAllignedMemory = Win32MemoryProtectMethods.VirtualAlloc(null, (UIntPtr)size, Win32MemoryProtectMethods.AllocationType.COMMIT,
-                Win32MemoryProtectMethods.MemoryProtection.READWRITE);
-
-            if (allocate4KbAllignedMemory == null)
-                ThrowFailedToAllocate();
-
-            return allocate4KbAllignedMemory;
-        }
-
-        private static void ThrowFailedToAllocate()
-        {
-            throw new Win32Exception("Could not allocate memory");
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Free(byte* ptr)
-        {
-            var p = new IntPtr(ptr);
-            if (PlatformDetails.RunningOnPosix)
-            {
-                Syscall.free(p);
-                return;
-            }
-
-            if (Win32MemoryProtectMethods.VirtualFree(ptr, UIntPtr.Zero, Win32MemoryProtectMethods.FreeType.MEM_RELEASE) == false)
-                ThrowFailedToFree();
-        }
-
-        private static void ThrowFailedToFree()
-        {
-            throw new Win32Exception("Failed to free memory");
-        }
     }
 }
