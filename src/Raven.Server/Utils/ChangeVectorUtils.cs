@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -15,26 +13,6 @@ namespace Raven.Server.Utils
 {
     public class ChangeVectorUtils
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string ChangeVectorToString(Dictionary<Guid, long> changeVector)
-        {
-            var sb = new StringBuilder();
-            foreach (var kvp in changeVector)
-                sb.Append($"{kvp.Key}:{kvp.Value};");
-
-            return sb.ToString();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static string ChangeVectorToString(ChangeVectorEntry[] changeVector)
-        {
-            var sb = new StringBuilder();
-            foreach (var kvp in changeVector)
-                sb.Append($"{kvp.DbId}:{kvp.Etag};");
-
-            return sb.ToString();
-        }
-
         public static unsafe void WriteChangeVectorTo(DocumentsOperationContext context, Dictionary<Guid, long> changeVector, Tree tree)
         {
             Guid dbId;
