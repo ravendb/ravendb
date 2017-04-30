@@ -446,11 +446,13 @@ namespace Rachis.Behaviors
             {
                 var midpointIndex = resp.MidpointIndex.Value;
                 var myMidpointTerm = Engine.PersistentState.TermFor(midpointIndex) ?? 0;
+                var indexDiff = (resp.LastLogIndex - midpointIndex)/ 2;
+                indexDiff = indexDiff == 0 ? 1 : Math.Abs(indexDiff);
                 if (myMidpointTerm == resp.MidpointTerm.Value)
                 {
                     // we know that we are a match on the middle, so let us set the 
                     // next attempt to be half way from the midpoint to the end
-                    _nextIndexes[resp.From] = midpointIndex + Math.Abs(resp.LastLogIndex - midpointIndex) / 2;
+                    _nextIndexes[resp.From] = midpointIndex + indexDiff;
                     _matchIndexes[resp.From] = midpointIndex;
 
                     if (_log.IsDebugEnabled)
@@ -459,7 +461,7 @@ namespace Rachis.Behaviors
                 else
                 {
                     // we don't have a match, so we need to go backward yet
-                    _nextIndexes[resp.From] = midpointIndex - Math.Abs(resp.LastLogIndex - midpointIndex) / 2;
+                    _nextIndexes[resp.From] = midpointIndex - indexDiff;
                     _matchIndexes[resp.From] = 0;
 
                     if (_log.IsDebugEnabled)
