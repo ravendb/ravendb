@@ -88,7 +88,7 @@ namespace Raven.Client.Http
             {
                 if (_cleanupTask == null)
                 {
-                    var cleanup = new Task(FreeSpace);
+                    var cleanup = new Task(FreeSpace, TaskCreationOptions.RunContinuationsAsynchronously);
                     if (Interlocked.CompareExchange(ref _cleanupTask, cleanup, null) == null)
                     {
                         cleanup.ContinueWith(_ => Interlocked.Exchange(ref _cleanupTask, null));

@@ -15,9 +15,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class LuceneIndexWriter : IDisposable
     {
-        private static Logger _logger;
-
-        private static DocumentDatabase _documentDatabase;
+        private readonly Logger _logger;
 
         private IndexWriter indexWriter;
 
@@ -35,38 +33,37 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public Analyzer Analyzer => indexWriter?.Analyzer;
 
-        public LuceneIndexWriter(Directory d, Analyzer a, IndexDeletionPolicy deletionPolicy, 
-            IndexWriter.MaxFieldLength mfl, IndexWriter.IndexReaderWarmer indexReaderWarmer, DocumentDatabase documentDatabase)
+        public LuceneIndexWriter(Directory d, Analyzer a, IndexDeletionPolicy deletionPolicy,
+            IndexWriter.MaxFieldLength mfl, IndexWriter.IndexReaderWarmer indexReaderWarmer, DocumentDatabase documentDatabase, IState state)
         {
             directory = d;
             analyzer = a;
             indexDeletionPolicy = deletionPolicy;
             maxFieldLength = mfl;
             _indexReaderWarmer = indexReaderWarmer;
-            _documentDatabase = documentDatabase;
             _logger = LoggingSource.Instance.GetLogger<LuceneIndexWriter>(documentDatabase.Name);
-            RecreateIndexWriter();
+            RecreateIndexWriter(state);
         }
 
-        public void AddDocument(global::Lucene.Net.Documents.Document doc, Analyzer a)
+        public void AddDocument(global::Lucene.Net.Documents.Document doc, Analyzer a, IState state)
         {
-            indexWriter.AddDocument(doc, a);
+            indexWriter.AddDocument(doc, a, state);
         }
 
-        public void DeleteDocuments(Term term)
+        public void DeleteDocuments(Term term, IState state)
         {
-            indexWriter.DeleteDocuments(term);
+            indexWriter.DeleteDocuments(term, state);
         }
 
-        public void Commit()
+        public void Commit(IState state)
         {
             try
             {
-                indexWriter.Commit();
+                indexWriter.Commit(state);
             }
             finally
             {
-                RecreateIndexWriter();
+                RecreateIndexWriter(state);
             }
         }
 
@@ -75,22 +72,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return indexWriter.RamSizeInBytes();
         }
 
-        public void Optimize()
+        public void Optimize(IState state)
         {
-            indexWriter.Optimize();
+            indexWriter.Optimize(state);
         }
 
-        private void RecreateIndexWriter()
+        private void RecreateIndexWriter(IState state)
         {
             DisposeIndexWriter();
 
             if (indexWriter == null)
-                CreateIndexWriter();
+                CreateIndexWriter(state);
         }
 
-        private void CreateIndexWriter()
+        private void CreateIndexWriter(IState state)
         {
-            indexWriter = new IndexWriter(directory, analyzer, indexDeletionPolicy, maxFieldLength);
+            indexWriter = new IndexWriter(directory, analyzer, indexDeletionPolicy, maxFieldLength, state);
             indexWriter.UseCompoundFile = false;
             if (_indexReaderWarmer != null)
             {
@@ -99,7 +96,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             using (indexWriter.MergeScheduler)
             {
             }
-            indexWriter.SetMergeScheduler(new SerialMergeScheduler());
+            indexWriter.SetMergeScheduler(new SerialMergeScheduler(), state);
 
             // RavenDB already manages the memory for those, no need for Lucene to do this as well
             indexWriter.SetMaxBufferedDocs(IndexWriter.DISABLE_AUTO_FLUSH);
@@ -145,14 +142,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             DisposeIndexWriter(waitForMerges);
         }
 
-        public void AddIndexesNoOptimize(Directory[] directories, int count)
+        public void AddIndexesNoOptimize(Directory[] directories, int count, IState state)
         {
-            indexWriter.AddIndexesNoOptimize(directories);
+            indexWriter.AddIndexesNoOptimize(state, directories);
         }
 
-        public int NumDocs()
+        public int NumDocs(IState state)
         {
-            return indexWriter.NumDocs();
+            return indexWriter.NumDocs(state);
         }
     }
 }

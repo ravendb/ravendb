@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter.Notifications;
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
     /**
      * Those convention tests guards against exception in Studio, when opening notification details. 
      * */
-    public class RavenDB_6250
+    public class RavenDB_6250 : NoDisposalNeeded
     {
         [Fact]
         public void All_operations_has_details_providers()
@@ -78,8 +79,6 @@ namespace SlowTests.Issues
                 ". If those was already handled in notification center please add given type to 'alreadyHandledInStudio' set. " +
                                          "If operation doesn't provide details, please add this to 'operationWithoutDetails' set.");
         }
-
-        
 
 
     }

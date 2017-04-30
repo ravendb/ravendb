@@ -762,7 +762,7 @@ namespace Raven.Server.Documents.Replication
             if (_waitForReplicationTasks.TryPeek(out result))
                 return result.Task;
 
-            result = new TaskCompletionSource<object>();
+            result = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             _waitForReplicationTasks.Enqueue(result);
             return result.Task;
         }

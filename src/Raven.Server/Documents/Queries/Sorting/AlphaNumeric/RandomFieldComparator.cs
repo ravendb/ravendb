@@ -1,6 +1,7 @@
 using System;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Lucene.Net.Store;
 
 namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 {
@@ -28,7 +29,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
             return 0;
         }
 
-        public override int CompareBottom(int doc)
+        public override int CompareBottom(int doc, IState state)
         {
             var v2 = _currentReaderValues[doc];
             if (_bottom > v2)
@@ -38,12 +39,12 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
             return 0;
         }
 
-        public override void Copy(int slot, int doc)
+        public override void Copy(int slot, int doc, IState state)
         {
             _values[slot] = _currentReaderValues[doc];
         }
 
-        public override void SetNextReader(IndexReader reader, int docBase)
+        public override void SetNextReader(IndexReader reader, int docBase, IState state)
         {
             _currentReaderValues = new int[reader.MaxDoc];
             for (int i = 0; i < _currentReaderValues.Length; i++)

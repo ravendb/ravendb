@@ -7,8 +7,6 @@ import appUrl = require("common/appUrl");
 import databaseSettings = require("common/settings/databaseSettings");
 import studioSettings = require("common/settings/studioSettings");
 
-export = activeDatabaseTracker;
-
 class activeDatabaseTracker {
 
     static default: activeDatabaseTracker = new activeDatabaseTracker();
@@ -70,3 +68,5 @@ class activeDatabaseTracker {
     }
 
 }
+
+export = activeDatabaseTracker;

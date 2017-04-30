@@ -33,13 +33,13 @@ namespace SlowTests.Server.Documents.PeriodicExport
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "oren" });
-                    var config = new PeriodicExportConfiguration
+                    var config = new PeriodicBackupConfiguration
                     {
                         Active = true,
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
                     };
-                    await store.Admin.Server.SendAsync(new ConfigurePeriodicExportBundleOperation(config, store.DefaultDatabase));                    
+                    await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.DefaultDatabase));                    
                     await session.SaveChangesAsync();
                 }
 
@@ -54,31 +54,28 @@ namespace SlowTests.Server.Documents.PeriodicExport
                     .GetField(nameof(PeriodicExportRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
                     .SetValue(periodicExportRunner, TimeSpan.FromMilliseconds(5));
 
-                using (var commands = store.Commands())
+                var operation = new GetPeriodicBackupStatusOperation();
+                    //await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.DefaultDatabase));
+                SpinWait.SpinUntil(() =>
                 {
-                    var operation = new GetPeriodicExportStatusOperation(store.DefaultDatabase);
-                        //await store.Admin.Server.SendAsync(new ConfigurePeriodicExportBundleOperation(config, store.DefaultDatabase));
-                    SpinWait.SpinUntil(() =>
-                    {
-                        var result = store.Admin.Server.Send(operation);
-                        if (result.Status == null)
-                            return false;
-                        return result.Status.LastDocsEtag > 0;
-                    }, TimeSpan.FromSeconds(10));
+                    var result = store.Admin.Server.Send(operation);
+                    if (result.Status == null)
+                        return false;
+                    return result.Status.LastDocsEtag > 0;
+                }, TimeSpan.FromSeconds(10));
 
-                    var etagForExports = store.Admin.Server.Send(operation).Status.LastDocsEtag;
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        await session.StoreAsync(new User { Name = "ayende" });
-                        await session.SaveChangesAsync();
-                    }
-
-                    SpinWait.SpinUntil(() =>
-                    {
-                        var newLastEtag = store.Admin.Server.Send(operation).Status.LastDocsEtag;
-                        return newLastEtag != etagForExports;
-                    }, 10000);
+                var etagForExports = store.Admin.Server.Send(operation).Status.LastDocsEtag;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "ayende" });
+                    await session.SaveChangesAsync();
                 }
+
+                SpinWait.SpinUntil(() =>
+                {
+                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastDocsEtag;
+                    return newLastEtag != etagForExports;
+                }, 10000);
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
@@ -103,13 +100,13 @@ namespace SlowTests.Server.Documents.PeriodicExport
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "oren" });
-                    var config = new PeriodicExportConfiguration
+                    var config = new PeriodicBackupConfiguration
                     {
                         Active = true,
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
                     };
-                    var operation = new ConfigurePeriodicExportBundleOperation(config, store.DefaultDatabase);
+                    var operation = new ConfigurePeriodicBackupOperation(config, store.DefaultDatabase);
                     await store.Admin.Server.SendAsync(operation);
                     await session.SaveChangesAsync();
                 }
@@ -124,11 +121,8 @@ namespace SlowTests.Server.Documents.PeriodicExport
                 typeof(PeriodicExportRunner)
                     .GetField(nameof(PeriodicExportRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
                     .SetValue(periodicExportRunner, TimeSpan.FromMilliseconds(5));
-                var getPeriodicBackupStatus = new GetPeriodicExportStatusOperation(store.DefaultDatabase);
-                using (var commands = store.Commands())
-                {
-                    SpinWait.SpinUntil(() => store.Admin.Server.Send(getPeriodicBackupStatus).Status != null, 10000);
-                }
+                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation();
+                SpinWait.SpinUntil(() => store.Admin.Server.Send(getPeriodicBackupStatus).Status != null, 10000);
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
@@ -152,42 +146,41 @@ namespace SlowTests.Server.Documents.PeriodicExport
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "oren" });
-                    var config = new PeriodicExportConfiguration
+                    var config = new PeriodicBackupConfiguration
                     {
                         Active = true,
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
                     };
-                    var operation = new ConfigurePeriodicExportBundleOperation(config, store.DefaultDatabase);
+                    var operation = new ConfigurePeriodicBackupOperation(config, store.DefaultDatabase);
                     await store.Admin.Server.SendAsync(operation);
                     await session.SaveChangesAsync();
                 }
-                var getPeriodicBackupStatus = new GetPeriodicExportStatusOperation(store.DefaultDatabase);
-                using (var commands = store.Commands())
+                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation();
+
+                SpinWait.SpinUntil(() =>
                 {
-                    SpinWait.SpinUntil(() =>
-                    {
-                        var result = store.Admin.Server.Send(getPeriodicBackupStatus);
-                        if (result.Status == null)
-                            return false;                        
-                        return result.Status.LastDocsEtag > 0;
-                    }, TimeSpan.FromSeconds(10));
+                    var result = store.Admin.Server.Send(getPeriodicBackupStatus);
+                    if (result.Status == null)
+                        return false;                        
+                    return result.Status.LastDocsEtag > 0;
+                }, TimeSpan.FromSeconds(10));
 
 
-                    var res = await store.Admin.Server.SendAsync(getPeriodicBackupStatus);
-                    var etagForExports = res.Status.LastDocsEtag;
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        await session.StoreAsync(new User { Name = "ayende" });
-                        await session.SaveChangesAsync();
-                    }
-
-                    SpinWait.SpinUntil(() =>
-                    {
-                        res = store.Admin.Server.Send(getPeriodicBackupStatus);
-                        return res.Status.LastDocsEtag != etagForExports;
-                    }, 10000);
+                var res = await store.Admin.Server.SendAsync(getPeriodicBackupStatus);
+                var etagForExports = res.Status.LastDocsEtag;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "ayende" });
+                    await session.SaveChangesAsync();
                 }
+
+                SpinWait.SpinUntil(() =>
+                {
+                    res = store.Admin.Server.Send(getPeriodicBackupStatus);
+                    return res.Status.LastDocsEtag != etagForExports;
+                }, 10000);
+
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))

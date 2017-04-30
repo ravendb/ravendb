@@ -1055,10 +1055,9 @@ namespace Voron.Data.Tables
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
             long id;
-            Slice key;
             bool exists;
 
-            using (builder.SliceFromLocation(_tx.Allocator, _schema.Key.StartIndex, out key))
+            using (builder.SliceFromLocation(_tx.Allocator, _schema.Key.StartIndex, out Slice key))
             {
                 exists = TryFindIdFromPrimaryKey(key, out id);
             }

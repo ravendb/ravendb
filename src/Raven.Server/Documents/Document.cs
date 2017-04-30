@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using Raven.Client;
 using Raven.Client.Documents.Replication.Messages;
@@ -47,8 +46,7 @@ namespace Raven.Server.Documents
             _metadataEnsured = true;
 
             DynamicJsonValue mutatedMetadata;
-            BlittableJsonReaderObject metadata;
-            if (Data.TryGet(Constants.Documents.Metadata.Key, out metadata))
+            if (Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
             {
                 if (metadata.Modifications == null)
                     metadata.Modifications = new DynamicJsonValue(metadata);
@@ -65,7 +63,10 @@ namespace Raven.Server.Documents
 
             mutatedMetadata[Constants.Documents.Metadata.Etag] = Etag;
             mutatedMetadata[Constants.Documents.Metadata.Id] = Key;
-            //mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;
+            if (ChangeVector != null)
+                mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector.ToJson();
+            if (Flags != DocumentFlags.None)
+                mutatedMetadata[Constants.Documents.Metadata.Flags] = Flags.ToString();
             if (indexScore.HasValue)
                 mutatedMetadata[Constants.Documents.Metadata.IndexScore] = indexScore;
 

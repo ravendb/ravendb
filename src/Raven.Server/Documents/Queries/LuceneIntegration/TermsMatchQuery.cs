@@ -4,6 +4,7 @@ using System.Linq;
 
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Lucene.Net.Store;
 
 namespace Raven.Server.Documents.Queries.LuceneIntegration
 {
@@ -15,9 +16,9 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
 
         public TermsMatchQuery(string field, List<string> matches)
         {
-           Field = field;
-           Matches = matches;
-           Matches.Sort(StringComparer.Ordinal);
+            Field = field;
+            Matches = matches;
+            Matches.Sort(StringComparer.Ordinal);
             RewriteMethod = SCORING_BOOLEAN_QUERY_REWRITE;
         }
 
@@ -26,56 +27,58 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             return "@in<" + Field + ">(" + string.Join(", ", Matches) + ")";
         }
 
-        protected override FilteredTermEnum GetEnum(IndexReader reader)
+        protected override FilteredTermEnum GetEnum(IndexReader reader, IState state)
         {
-            return new RavenTermsFilteredTermEnum(this, reader);
+            return new RavenTermsFilteredTermEnum(this, reader, state);
         }
 
         private sealed class RavenTermsFilteredTermEnum : FilteredTermEnum
         {
             private readonly TermsMatchQuery _termsMatchQuery;
             private readonly IndexReader _reader;
+            private readonly IState _state;
             private bool _endEnum;
             private int _pos;
 
-            public RavenTermsFilteredTermEnum(TermsMatchQuery termsMatchQuery, IndexReader reader)
+            public RavenTermsFilteredTermEnum(TermsMatchQuery termsMatchQuery, IndexReader reader, IState state)
             {
-                this._termsMatchQuery = termsMatchQuery;
-                this._reader = reader;
-                if (this._termsMatchQuery.Matches.Count == 0)
+                _termsMatchQuery = termsMatchQuery;
+                _reader = reader;
+                _state = state;
+                if (_termsMatchQuery.Matches.Count == 0)
                 {
                     _endEnum = true;
                     return;
                 }
-                MoveToCurrentTerm();
+                MoveToCurrentTerm(state);
             }
 
-            private void MoveToCurrentTerm()
+            private void MoveToCurrentTerm(IState state)
             {
                 if (actualEnum != null)
                     actualEnum.Dispose();
-                SetEnum(_reader.Terms(new Term(_termsMatchQuery.Field, _termsMatchQuery.Matches[_pos])));
-                movedEnum = true;
+                SetEnum(_reader.Terms(new Term(_termsMatchQuery.Field, _termsMatchQuery.Matches[_pos]), state), state);
+                _movedEnum = true;
             }
 
-            private bool movedEnum;
+            private bool _movedEnum;
 
-            public override bool Next()
+            public override bool Next(IState state)
             {
                 if (actualEnum == null)
                     return false; // the actual enumerator is not initialized!
                 currentTerm = null;
-                while (EndEnum() == false && actualEnum.Next())
+                while (EndEnum() == false && actualEnum.Next(state))
                 {
                     do
                     {
-                        movedEnum = false;
+                        _movedEnum = false;
                         var term = actualEnum.Term;
-                        if (CompareTermAndMoveToNext(term, move: true) == false)
+                        if (CompareTermAndMoveToNext(term, move: true, state: _state) == false)
                             continue;
                         currentTerm = term;
                         return true;
-                    } while (movedEnum);
+                    } while (_movedEnum);
                 }
                 currentTerm = null;
                 return false;
@@ -83,10 +86,10 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
 
             protected override bool TermCompare(Term term)
             {
-                return CompareTermAndMoveToNext(term, move: false);
+                return CompareTermAndMoveToNext(term, move: false, state: _state);
             }
 
-            private bool CompareTermAndMoveToNext(Term term, bool move)
+            private bool CompareTermAndMoveToNext(Term term, bool move, IState state)
             {
                 if (term == null || term.Field != _termsMatchQuery.Field)
                 {
@@ -110,7 +113,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 }
                 if (last > 0 && move)
                 {
-                    MoveToCurrentTerm();
+                    MoveToCurrentTerm(state);
                     return false;
                 }
                 return last == 0;

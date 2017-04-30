@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Exceptions;
-using Raven.Client.Documents.Replication;
 using Raven.Server.Documents.Patch;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -30,7 +28,7 @@ namespace Raven.Server.Documents.Replication
         public ResolveConflictOnReplicationConfigurationChange(ReplicationLoader replicationLoader, Logger log)
         {
             _replicationLoader = replicationLoader ?? 
-                throw new ArgumentNullException($"ResolveConflictOnReplicationConfigurationChange must have replicationLoader instance");
+                throw new ArgumentNullException($"{nameof(ResolveConflictOnReplicationConfigurationChange)} must have replicationLoader instance");
             _database = _replicationLoader.Database;
             _log = log;
         }
@@ -63,39 +61,71 @@ namespace Raven.Server.Documents.Replication
                 DocumentsOperationContext context;
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 {
-                    Slice lastKey;
-                    Slice.From(context.Allocator, string.Empty, out lastKey);
-                    try
+                    using (context.OpenReadTransaction())
                     {
-                        while (_database.DatabaseShutdown.IsCancellationRequested == false)
+                        var resolvedConflicts = new List<(DocumentConflict ResolvedConflict, long MaxConflictEtag)>();
+
+                        var hadConflicts = false;
+
+                        foreach (var conflicts in _database.DocumentsStorage.ConflictsStorage.GetAllConflictsBySameKey(context))
                         {
-                            try
+                            if (_database.DatabaseShutdown.IsCancellationRequested)
+                                break;
+
+                            hadConflicts = true;
+
+                            var collection = conflicts[0].Collection;
+
+                            var maxConflictEtag = conflicts.Max(x => x.Etag);
+
+                            DocumentConflict resolved;
+                            if (ScriptConflictResolversCache.TryGetValue(collection, out var scriptResolver) && scriptResolver != null)
                             {
-                                using (context.OpenReadTransaction())
+                                if (TryResolveConflictByScriptInternal(
+                                    context,
+                                    scriptResolver,
+                                    conflicts,
+                                    collection,
+                                    hasLocalTombstone: false,
+                                    resolvedConflict: out resolved))
                                 {
-                                    var conflicts = _database.DocumentsStorage.ConflictsStorage.GetAllConflictsBySameKeyAfter(context, ref lastKey);
-                                    if (conflicts.Count == 0)
-                                        break;
+                                    resolvedConflicts.Add((resolved, maxConflictEtag));
 
-                                    // TODO arek: tx merger should just get and put all of the result docs (output of resolution)
-                                    // instead of dealing with the resolving the conflicts
-
-                                    await _database.TxMerger.Enqueue(new ResolveConflictsCommand(conflicts, this));
+                                    //stats.AddResolvedBy(collection + " Script", conflictList.Count);
+                                    continue;
                                 }
                             }
-                            finally
-                            {
-                                if (lastKey.HasValue)
-                                    lastKey.Release(context.Allocator);
 
-                                Slice.From(context.Allocator, string.Empty, out lastKey);
+                            if (TryResolveUsingDefaultResolverInternal(
+                                context,
+                                ConflictSolver?.DatabaseResolverId,
+                                conflicts,
+                                out resolved))
+                            {
+                                resolvedConflicts.Add((resolved, maxConflictEtag));
+
+                                //stats.AddResolvedBy("DatabaseResolver", conflictList.Count);
+                                continue;
+                            }
+
+                            if (ConflictSolver?.ResolveToLatest == true)
+                            {
+                                resolvedConflicts.Add((ResolveToLatest(context, conflicts), maxConflictEtag));
+
+                                //stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
                             }
                         }
-                    }
-                    finally
-                    {
-                        if (lastKey.HasValue)
-                            lastKey.Release(context.Allocator);
+
+                        if (hadConflicts == false || _database.DatabaseShutdown.IsCancellationRequested)
+                            return;
+
+                        if (resolvedConflicts.Count > 0)
+                        {
+                            var cmd = new PutResolvedConflictsCommand(_database.DocumentsStorage.ConflictsStorage, resolvedConflicts, this);
+                            await _database.TxMerger.Enqueue(cmd);
+                            if(cmd.RequiresRetry)
+                                RunConflictResolversOnce();
+                        }
                     }
                 }
             }
@@ -105,56 +135,43 @@ namespace Raven.Server.Documents.Replication
                     _log.Info("Failed to run automatic conflict resolution", e);
             }
         }
-
-
-        private class ResolveConflictsCommand : TransactionOperationsMerger.MergedTransactionCommand
+        
+        private class PutResolvedConflictsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly List<DocumentConflict> _conflicts;
+            private readonly ConflictsStorage _conflictsStorage;
+            private readonly List<(DocumentConflict ResolvedConflict, long MaxConflictEtag)> _resolvedConflicts;
             private readonly ResolveConflictOnReplicationConfigurationChange _resolver;
+            public bool RequiresRetry;
 
-            public ResolveConflictsCommand(List<DocumentConflict> conflicts, ResolveConflictOnReplicationConfigurationChange resolver)
+            public PutResolvedConflictsCommand(ConflictsStorage conflictsStorage, List<(DocumentConflict, long)> resolvedConflicts, ResolveConflictOnReplicationConfigurationChange resolver)
             {
-                _conflicts = conflicts;
+                _conflictsStorage = conflictsStorage;
+                _resolvedConflicts = resolvedConflicts;
                 _resolver = resolver;
             }
 
             public override int Execute(DocumentsOperationContext context)
             {
-                var collection = _conflicts[0].Collection;
+                var count = 0;
 
-                ScriptResolver scriptResovler;
-                if (_resolver.ScriptConflictResolversCache.TryGetValue(collection, out scriptResovler) &&
-                    scriptResovler != null)
+                foreach (var item in _resolvedConflicts)
                 {
-                    if (_resolver.TryResolveConflictByScriptInternal(
-                        context,
-                        scriptResovler,
-                        _conflicts,
-                        collection,
-                        hasLocalTombstone: false))
+                    count++;
+
+                    using (Slice.External(context.Allocator, item.ResolvedConflict.LoweredKey, out var slice))
                     {
-                        //stats.AddResolvedBy(collection + " Script", conflictList.Count);
-                        return _conflicts.Count;
+                        // let's check if nothing has changed since we resolved the conflict in the read tx
+                        // in particulal the conflict could be resolved externally before the tx merger opened this write tx
+
+                        if (_conflictsStorage.ShouldThrowConcurrencyExceptionOnConflict(context, slice, item.MaxConflictEtag, out var _))
+                            continue;
+                        RequiresRetry = true;
                     }
+                    
+                    _resolver.PutResolvedDocument(context, item.ResolvedConflict);
                 }
 
-                if (_resolver.TryResolveUsingDefaultResolverInternal(
-                    context,
-                    _resolver.ConflictSolver?.DatabaseResolverId,
-                    _conflicts))
-                {
-                    //stats.AddResolvedBy("DatabaseResolver", conflictList.Count);
-                    return _conflicts.Count;
-                }
-
-                if (_resolver.ConflictSolver?.ResolveToLatest ?? false)
-                {
-                    _resolver.ResolveToLatest(context, _conflicts);
-                    //stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
-                    return _conflicts.Count;
-                }
-
-                return 0;
+                return count;
             }
         }
 
@@ -185,30 +202,33 @@ namespace Raven.Server.Documents.Replication
         public bool TryResolveUsingDefaultResolverInternal(
             DocumentsOperationContext context,
             string resolver,
-            IReadOnlyList<DocumentConflict> conflicts)
+            IReadOnlyList<DocumentConflict> conflicts,
+            out DocumentConflict resolved)
         {
-            if (resolver == null)
-            {
-                return false;
-            }
+            resolved = null;
 
-            DocumentConflict resolved = null;
+            if (resolver == null)
+                return false;
+
             long maxEtag = -1;
+            long duplicateResolverEtagAt = -1;
+            var resolverDbId = new Guid(resolver);
+
             foreach (var documentConflict in conflicts)
             {
                 foreach (var changeVectorEntry in documentConflict.ChangeVector)
                 {
-                    if (changeVectorEntry.DbId.Equals(new Guid(resolver)))
+                    if (changeVectorEntry.DbId.Equals(resolverDbId))
                     {
                         if (changeVectorEntry.Etag == maxEtag)
                         {
-                            // we have two documents with same etag of the leader
-                            return false;
+                            duplicateResolverEtagAt = maxEtag;
+                            continue;
                         }
-
                         if (changeVectorEntry.Etag < maxEtag)
                             continue;
 
+                        duplicateResolverEtagAt = -1;
                         maxEtag = changeVectorEntry.Etag;
                         resolved = documentConflict;
                         break;
@@ -216,11 +236,10 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            if (resolved == null)
+            if (resolved == null || duplicateResolverEtagAt == maxEtag)
                 return false;
 
             resolved.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-            PutResolvedDocumentBackToStorage(context, resolved);
             return true;
         }
 
@@ -258,7 +277,7 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
 
-        public void PutResolvedDocumentBackToStorage(
+        public void PutResolvedDocument(
            DocumentsOperationContext context,
            DocumentConflict conflict)
         {
@@ -316,12 +335,13 @@ namespace Raven.Server.Documents.Replication
             ScriptResolver scriptResolver,
             IReadOnlyList<DocumentConflict> conflicts,
             LazyStringValue collection,
-            bool hasLocalTombstone)
+            bool hasLocalTombstone, 
+            out DocumentConflict resolvedConflict)
         {
+            resolvedConflict = null;
+
             if (ValidatedResolveByScriptInput(scriptResolver, conflicts, collection) == false)
-            {
                 return false;
-            }
 
             var patch = new PatchConflict(_database, conflicts);
             var updatedConflict = conflicts[0];
@@ -329,8 +349,7 @@ namespace Raven.Server.Documents.Replication
             {
                 Script = scriptResolver.Script
             };
-            BlittableJsonReaderObject resolved;
-            if (patch.TryResolveConflict(context, patchRequest, out resolved) == false)
+            if (patch.TryResolveConflict(context, patchRequest, out BlittableJsonReaderObject resolved) == false)
             {
                 return false;
             }
@@ -338,11 +357,13 @@ namespace Raven.Server.Documents.Replication
             updatedConflict.Doc = resolved;
             updatedConflict.Collection = collection;
             updatedConflict.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-            PutResolvedDocumentBackToStorage(context, updatedConflict);
+
+            resolvedConflict = updatedConflict;
+
             return true;
         }
 
-        public void ResolveToLatest(
+        public DocumentConflict ResolveToLatest(
             DocumentsOperationContext context,
             IReadOnlyList<DocumentConflict> conflicts)
         {
@@ -359,7 +380,8 @@ namespace Raven.Server.Documents.Replication
             }
 
             latestDoc.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-            PutResolvedDocumentBackToStorage(context, latestDoc);
+
+            return latestDoc;
         }
     }
 }

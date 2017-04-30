@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             var returnContextToPool = ContextPool.AllocateOperationContext(out context);
 
-            ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(() => runner.ExecuteDelete(collectionName, options, context, onProgress, token)),
+            ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(async () => await runner.ExecuteDelete(collectionName, options, onProgress, token)),
                 context, returnContextToPool, DatabaseOperations.OperationType.DeleteByCollection);
             return Task.CompletedTask;
 
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Handlers
             var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
             var patch = Documents.Patch.PatchRequest.Parse(reader);
 
-            ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(() => runner.ExecutePatch(collectionName, options, patch, context, onProgress, token)),
+            ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(async () => await runner.ExecutePatch(collectionName, options, patch, onProgress, token)),
                 context, returnContextToPool, DatabaseOperations.OperationType.UpdateByCollection);
             return Task.CompletedTask;
 

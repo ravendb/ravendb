@@ -109,11 +109,7 @@ namespace FastTests.Client.Subscriptions
                         Assert.Equal("foo", dynamicThing.Name);
                         Assert.Equal("ThingNo4", dynamicThing.OtherDoc.Name);
 
-
-                      
-                        
                         Assert.False(list.TryTake(out thing, 50));
-
                     }
                 }
             }

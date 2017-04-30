@@ -47,7 +47,7 @@ namespace SlowTests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.RegisterAsyncIdConvention<User>((databaseName, entity) => new CompletedTask<string>("def/" + entity.Name));
+                store.Conventions.RegisterAsyncIdConvention<User>((databaseName, entity) => Task.FromResult("def/" + entity.Name));
 
                 using (var session = store.OpenSession())
                 {
@@ -78,7 +78,7 @@ namespace SlowTests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.RegisterAsyncIdConvention<TShirt>((databaseName, entity) => new CompletedTask<string>("ts/" + entity.ReleaseYear));
+                store.Conventions.RegisterAsyncIdConvention<TShirt>((databaseName, entity) => Task.FromResult("ts/" + entity.ReleaseYear));
                 store.Conventions.RegisterIdLoadConvention<TShirt>(id => "ts/" + id);
 
                 using (var session = store.OpenSession())

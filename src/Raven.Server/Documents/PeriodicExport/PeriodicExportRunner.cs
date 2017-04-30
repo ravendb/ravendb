@@ -21,9 +21,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
-using Sparrow.Extensions;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
@@ -31,13 +28,13 @@ namespace Raven.Server.Documents.PeriodicExport
 {
     public class PeriodicExportRunner : IDisposable
     {
-        private static Logger _logger;
+        private readonly Logger _logger;
 
         private readonly DocumentDatabase _database;
-        private readonly PeriodicExportConfiguration _configuration;
+        private readonly PeriodicBackupConfiguration _configuration;
         private readonly PeriodicExportStatus _status;
 
-        public PeriodicExportConfiguration Configuration => _configuration;
+        public PeriodicBackupConfiguration Configuration => _configuration;
 
         // This will be canceled once the configuration document will be changed
         private readonly CancellationTokenSource _cancellationToken;
@@ -89,7 +86,7 @@ namespace Raven.Server.Documents.PeriodicExport
             set { _azureStorageKey = value; }
         }
 
-        private PeriodicExportRunner(DocumentDatabase database, PeriodicExportConfiguration configuration, PeriodicExportStatus status)
+        private PeriodicExportRunner(DocumentDatabase database, PeriodicBackupConfiguration configuration, PeriodicExportStatus status)
         {
             _database = database;
             _configuration = configuration;
@@ -406,7 +403,7 @@ namespace Raven.Server.Documents.PeriodicExport
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
-                _database.DocumentsStorage.SetDatabasePeriodicExportStatus(context, _status);
+                _database.ConfigurationStorage.PeriodicBackupStorage.SetDatabasePeriodicBackupStatus(context, _status);
                 tx.Commit();
             }
         }
@@ -532,20 +529,23 @@ namespace Raven.Server.Documents.PeriodicExport
 
         public static PeriodicExportRunner LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, PeriodicExportRunner periodicExportRunner)
         {
+            var logger = LoggingSource.Instance.GetLogger<PeriodicExportRunner>(database.Name);
+
             try
             {
-                if (dbRecord.PeriodicExportConfiguration == null)
+                if (dbRecord.PeriodicBackup == null)
                 {
                     periodicExportRunner?.Dispose();
                     return null;
                 }
-                if (dbRecord.PeriodicExportConfiguration.Equals(periodicExportRunner?.Configuration))
+                if (dbRecord.PeriodicBackup.Equals(periodicExportRunner?.Configuration))
                     return periodicExportRunner;
                 periodicExportRunner?.Dispose();
-                if (dbRecord.PeriodicExportConfiguration.Active == false)
+
+                if (dbRecord.PeriodicBackup.Active == false)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Periodic export is disabled.");
+                    if (logger.IsInfoEnabled)
+                        logger.Info("Periodic export is disabled.");
                     return null;
                 }
                 DocumentsOperationContext context;
@@ -555,24 +555,24 @@ namespace Raven.Server.Documents.PeriodicExport
                     try
                     {
                         context.OpenReadTransaction();
-                        var exportStatusJson = database.DocumentsStorage.GetDatabasePeriodicExportStatus(context);
+                        var exportStatusJson = database.ConfigurationStorage.PeriodicBackupStorage.GetDatabasePeriodicBackupStatus(context);
                         periodicExportStatus = exportStatusJson == null ? new PeriodicExportStatus() : JsonDeserializationServer.PeriodicExportStatus(exportStatusJson);
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Unable to read the periodic export status as the status document. We will start to export from scratch.", e);
+                        if (logger.IsInfoEnabled)
+                            logger.Info($"Unable to read the periodic export status as the status document. We will start to export from scratch.", e);
                     }
                 }
 
-                return new PeriodicExportRunner(database, dbRecord.PeriodicExportConfiguration, periodicExportStatus ?? new PeriodicExportStatus());
+                return new PeriodicExportRunner(database, dbRecord.PeriodicBackup, periodicExportStatus ?? new PeriodicExportStatus());
             }
             catch (Exception e)
             {
                 //TODO: Raise alert, or maybe handle this via a db load error that can be turned off with 
                 //TODO: a config
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Cannot enable periodic export unexpected error", e);
+                if (logger.IsInfoEnabled)
+                    logger.Info($"Cannot enable periodic export unexpected error", e);
                 /*
                     Database.AddAlert(new Alert
                                 {

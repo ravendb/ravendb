@@ -1,4 +1,5 @@
 ﻿using System;
+using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
 
@@ -17,16 +18,16 @@ namespace Raven.Server.Documents.Queries.Results
             _context = context;
         }
 
-        public override Document Get(Lucene.Net.Documents.Document input, float score)
+        public override Document Get(Lucene.Net.Documents.Document input, float score, IState state)
         {
             string id;
-            if (TryGetKey(input, out id) == false)
+            if (TryGetKey(input, state, out id) == false)
                 throw new InvalidOperationException($"Could not extract '{Constants.Documents.Indexing.Fields.DocumentIdFieldName}' from index.");
 
             if (_fieldsToFetch.IsProjection || _fieldsToFetch.IsTransformation)
-                return GetProjection(input, score, id);
+                return GetProjection(input, score, id, state);
 
-            var doc = DirectGet(null, id);
+            var doc = DirectGet(null, id, state);
 
             if (doc != null)
                 doc.IndexScore = score;
@@ -34,18 +35,18 @@ namespace Raven.Server.Documents.Queries.Results
             return doc;
         }
 
-        public override bool TryGetKey(Lucene.Net.Documents.Document input, out string key)
+        public override bool TryGetKey(Lucene.Net.Documents.Document input, IState state, out string key)
         {
-            key = input.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
+            key = input.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, state);
             return key != null;
         }
 
-        protected override Document DirectGet(Lucene.Net.Documents.Document input, string id)
+        protected override Document DirectGet(Lucene.Net.Documents.Document input, string id, IState state)
         {
             var doc = _documentsStorage.Get(_context, id);
             if (doc == null)
                 return null;
-            
+
             return doc;
         }
     }

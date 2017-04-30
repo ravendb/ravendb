@@ -146,9 +146,9 @@ namespace Raven.Server.Rachis
         public int ElectionTimeoutMs = Debugger.IsAttached ? 3000 : 300;
 
         private Leader _currentLeader;
-        private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>();
-        private TaskCompletionSource<object> _stateChanged = new TaskCompletionSource<object>();
-        private TaskCompletionSource<object> _commitIndexChanged = new TaskCompletionSource<object>();
+        private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private TaskCompletionSource<object> _stateChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private TaskCompletionSource<object> _commitIndexChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private int? _seed;
         private string _lastStateChangeReason;
 

@@ -33,7 +33,7 @@ function escapeHtml(string: string) {
 
 function widthToPixels(column: virtualColumn) {
     if (!column.width.endsWith("px")) {
-        throw new Error("Resize is only supported for columns with width specified in pixels");
+        throw new Error("Excepted column width in pixels (px)");
     }
     return parseInt(column.width.slice(0, -2));
 }

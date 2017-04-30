@@ -25,8 +25,13 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
 
     public abstract class AbstractLowMemoryNotification
     {
-        private static Logger _logger;
+        protected readonly Logger Logger;
         private readonly ConcurrentSet<WeakReference<ILowMemoryHandler>> _lowMemoryHandlers = new ConcurrentSet<WeakReference<ILowMemoryHandler>>();
+
+        protected AbstractLowMemoryNotification(string resourceName)
+        {
+            Logger = LoggingSource.Instance.GetLogger(resourceName, GetType().FullName);
+        }
 
         protected void RunLowMemoryHandlers()
         {
@@ -43,8 +48,8 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info("Failure to process low memory notification (low memory handler - " + handler + ")", e);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Failure to process low memory notification (low memory handler - " + handler + ")", e);
                     }
                 }
                 else
@@ -82,7 +87,6 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
             Instance = PlatformDetails.RunningOnPosix
                 ? new PosixLowMemoryNotification(shutdownNotification, configuration) as AbstractLowMemoryNotification
                 : new WinLowMemoryNotification(shutdownNotification, configuration);
-            _logger = LoggingSource.Instance.GetLogger<AbstractLowMemoryNotification>("Raven/Server");
         }
     }
 }

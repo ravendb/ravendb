@@ -71,5 +71,11 @@ namespace Raven.Client.Documents.Session
         /// <param name="id">Id to store this entity under. If other entity exists with the same id it will be overwritten.</param>
         /// <param name="token">The cancellation token.</param>
         Task StoreAsync(object entity, string id, CancellationToken token = default (CancellationToken));
+
+        /// <summary>
+        ///     Check if document exisits
+        /// </summary>
+        /// <param name="id">Document id</param>
+        Task<bool> ExistsAsync(string id);
     }
 }

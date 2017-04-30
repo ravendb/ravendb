@@ -1,24 +1,19 @@
 ﻿using System;
 using System.Threading;
 using Raven.Server.Config;
-using Sparrow.Logging;
 
 namespace Raven.Server.ServerWide.LowMemoryNotification
 {
     public class PosixLowMemoryNotification : AbstractLowMemoryNotification
     {
-        private readonly CancellationToken _shutdownNotification;
         private readonly RavenConfiguration _configuration;
-        private static Logger _logger;
         private readonly ManualResetEvent _simulatedLowMemory = new ManualResetEvent(false);
         private readonly ManualResetEvent _shutdownRequested = new ManualResetEvent(false);
 
-        public PosixLowMemoryNotification(CancellationToken shutdownNotification, RavenConfiguration configuration)
+        public PosixLowMemoryNotification(CancellationToken shutdownNotification, RavenConfiguration configuration) : base(configuration.ResourceName)
         {
             shutdownNotification.Register(() => _shutdownRequested.Set());
-            _shutdownNotification = shutdownNotification;
             _configuration = configuration;
-            _logger = LoggingSource.Instance.GetLogger<PosixLowMemoryNotification>(configuration.ResourceName);
             new Thread(MonitorMemoryUsage)
             {
                 IsBackground = true,
@@ -44,13 +39,13 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
                         if (availableMem < _configuration.Memory.LowMemoryForLinuxDetection)
                         {
                             clearInactiveHandlersCounter = 0;
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info("Low memory detected, will try to reduce memory usage...");
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info("Low memory detected, will try to reduce memory usage...");
                             RunLowMemoryHandlers();
-                            Thread.Sleep(TimeSpan.FromSeconds(60)); // prevent triggering the event to frequent when the low memory notification object is in the signaled state
                         }
                         break;
                     case 0:
+                        _simulatedLowMemory.Reset();
                         RunLowMemoryHandlers();
                         break;
                     default:

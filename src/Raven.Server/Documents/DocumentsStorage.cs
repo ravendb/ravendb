@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
 using Raven.Client;
@@ -10,10 +8,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Server.PeriodicExport;
-using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Versioning;
-using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -42,7 +37,6 @@ namespace Raven.Server.Documents
         private static readonly Slice ChangeVectorSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
-        private static readonly Slice PeriodicExportStatusSlice;
 
         private static readonly Slice AllTombstonesEtagsSlice;
         private static readonly Slice TombstonesPrefix;
@@ -94,8 +88,7 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
             Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "ChangeVector", ByteStringType.Immutable, out ChangeVectorSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "PeriodicExportStatus", ByteStringType.Immutable, out PeriodicExportStatusSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "ChangeVector", ByteStringType.Immutable, out ChangeVectorSlice);            
             /*
             Collection schema is:
             full name
@@ -260,8 +253,6 @@ namespace Raven.Server.Documents
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(ChangeVectorSlice);
 
-                    tx.CreateTree(PeriodicExportStatusSlice);
-
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
                     Identities = new IdentitiesStorage(_documentDatabase, tx);
@@ -304,26 +295,6 @@ namespace Raven.Server.Documents
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(ChangeVectorSlice);
             ChangeVectorUtils.WriteChangeVectorTo(context, changeVector, tree);
-        }
-
-        public BlittableJsonReaderObject GetDatabasePeriodicExportStatus(DocumentsOperationContext context)
-        {
-            var tree = context.Transaction.InnerTransaction.ReadTree(PeriodicExportStatusSlice);
-            var result = tree.Read(PeriodicExportStatusSlice);
-            if (result == null)
-                return null;
-            return new BlittableJsonReaderObject(result.Reader.Base, result.Reader.Length, context);
-        }
-
-        public void SetDatabasePeriodicExportStatus(DocumentsOperationContext context, PeriodicExportStatus periodicExportStatus)
-        {
-            var jsonVal = periodicExportStatus.ToJson();
-            var tree = context.Transaction.InnerTransaction.CreateTree(PeriodicExportStatusSlice);
-            using(var json = context.ReadObject(jsonVal, "backup status"))
-            using (tree.DirectAdd(PeriodicExportStatusSlice, json.Size, out byte* dest))
-            {
-                json.CopyTo(dest);
-            }
         }
 
         public static long ReadLastDocumentEtag(Transaction tx)
@@ -805,6 +776,7 @@ namespace Raven.Server.Documents
         {
             var document = ParseDocument(context, ref tvr);
             DebugDisposeReaderAfterTransction(context.Transaction, document.Data);
+            DocumentPutAction.AssertMetadataWasFiltered(document.Data);
             return document;
         }
 
@@ -983,7 +955,8 @@ namespace Raven.Server.Documents
 
                 var etag = CreateTombstone(context, tombstone, doc.Etag, collectionName, doc.ChangeVector, lastModifiedTicks, changeVector, doc.Flags);
 
-                if (collectionName.IsSystem == false)
+                if (collectionName.IsSystem == false &&
+                    (flags & DocumentFlags.Versioned) == DocumentFlags.Versioned)
                 {
                     _documentDatabase.BundleLoader.VersioningStorage?.Delete(context, collectionName, loweredKey);
                 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 
 using Lucene.Net.Search;
+using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries;
@@ -20,6 +21,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly IndexSearcher _searcher;
 
         private readonly IQueryResultRetriever _retriever;
+        private readonly IState _state;
 
         private readonly bool _isSortingQuery;
 
@@ -29,13 +31,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private int _alreadyScannedForDuplicates;
 
-        public IndexQueryingScope(IndexType indexType, IndexQueryServerSide query, FieldsToFetch fieldsToFetch, IndexSearcher searcher, IQueryResultRetriever retriever)
+        public IndexQueryingScope(IndexType indexType, IndexQueryServerSide query, FieldsToFetch fieldsToFetch, IndexSearcher searcher, IQueryResultRetriever retriever, IState state)
         {
             _indexType = indexType;
             _query = query;
             _fieldsToFetch = fieldsToFetch;
             _searcher = searcher;
             _retriever = retriever;
+            _state = state;
             _isSortingQuery = query.SortedFields != null && query.SortedFields.Length > 0;
 
             if (_fieldsToFetch.IsDistinct)
@@ -65,8 +68,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     for (var i = 0; i < _query.Start && i < search.ScoreDocs.Length; i++)
                     {
                         var scoreDoc = search.ScoreDocs[i];
-                        var document = _searcher.Doc(scoreDoc.Doc);
-                        var alreadyPagedKey = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
+                        var document = _searcher.Doc(scoreDoc.Doc, _state);
+                        var alreadyPagedKey = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _state);
 
                         _alreadySeenDocumentKeysInPreviousPage.Add(alreadyPagedKey);
                     }
@@ -75,8 +78,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     // that's not a sorted query so we need just to ensure that we won't return the last item of the previous page
                     var scoreDoc = search.ScoreDocs[_query.Start - 1];
-                    var document = _searcher.Doc(scoreDoc.Doc);
-                    var alreadyPagedKey = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
+                    var document = _searcher.Doc(scoreDoc.Doc, _state);
+                    var alreadyPagedKey = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _state);
 
                     _alreadySeenDocumentKeysInPreviousPage.Add(alreadyPagedKey);
                 }
@@ -88,7 +91,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             for (; _alreadyScannedForDuplicates < _query.Start; _alreadyScannedForDuplicates++)
             {
                 var scoreDoc = search.ScoreDocs[_alreadyScannedForDuplicates];
-                var document = _retriever.Get(_searcher.Doc(scoreDoc.Doc), scoreDoc.Score);
+                var document = _retriever.Get(_searcher.Doc(scoreDoc.Doc, _state), scoreDoc.Score, _state);
 
                 if (document.Data.Count > 0) // we don't consider empty projections to be relevant for distinct operations
                     _alreadySeenProjections.Add(document.DataHash);

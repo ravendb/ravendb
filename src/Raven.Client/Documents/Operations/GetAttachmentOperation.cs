@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Operations
                     throw new ArgumentNullException(nameof(documentId));
                 if (string.IsNullOrWhiteSpace(name))
                     throw new ArgumentNullException(nameof(name));
-                if (string.IsNullOrWhiteSpace(name))
+                if (handleStreamResponse == null)
                     throw new ArgumentNullException(nameof(handleStreamResponse));
 
                 if (type != AttachmentType.Document && changeVector == null)

@@ -16,7 +16,7 @@ namespace Raven.Server
 {
     public class Program
     {
-        private static Logger _logger;
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<Program>("Raven/Server");
 
         public static int Main(string[] args)
         {
@@ -36,7 +36,6 @@ namespace Raven.Server
                 mode = LogMode.Operations;
 
             LoggingSource.Instance.SetupLogMode(mode, Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
-            _logger = LoggingSource.Instance.GetLogger<Program>("Raven/Server");
 
             try
             {
@@ -189,6 +188,11 @@ namespace Raven.Server
 
                         break;
 
+                    case "gc2":
+                        GC.Collect(GC.MaxGeneration);
+                        GC.WaitForPendingFinalizers();
+                        break;
+
                     case "oom":
                     case "low-mem":
                     case "low-memory":
@@ -228,10 +232,13 @@ namespace Raven.Server
             Console.WriteLine($"    no-log {description, 36}");
 
             description = "simulate low memory";
-            Console.WriteLine($"    low-mem {description, 26}");
+            Console.WriteLine($"    low-mem {description, 26}"); 
 
             description = "dump statistical information";
             Console.WriteLine($"    stats {description, 37}");
+
+            description = "collect gc max generation";
+            Console.WriteLine($"    gc2 {description,36}");
 
             description = "quit";
             Console.WriteLine($"    q {description, 17}");

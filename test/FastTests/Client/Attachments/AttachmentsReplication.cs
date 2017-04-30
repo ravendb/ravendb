@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Xunit;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
 using Sparrow.Json;
 
@@ -372,13 +374,19 @@ namespace FastTests.Client.Attachments
 
             if (waitOnMarker)
             {
-                using (var session = store1.OpenSession())
-                {
-                    session.Store(new User {Name = "Marker"}, "marker");
-                    session.SaveChanges();
-                }
-                Assert.True(WaitForDocument(store2, "marker"));
+                WaitForMarker(store1, store2);
             }
+        }
+
+        private void WaitForMarker(DocumentStore store1, DocumentStore store2)
+        {
+            var id = "marker - " + Guid.NewGuid();
+            using (var session = store1.OpenSession())
+            {
+                session.Store(new Product {Name = "Marker"}, id);
+                session.SaveChanges();
+            }
+            Assert.True(WaitForDocument(store2, id));
         }
 
         private void AssertDelete(DocumentStore store1, DocumentStore store2, string name, long expectedUniqueAttachments, long? expectedAttachments = null)
@@ -426,7 +434,7 @@ namespace FastTests.Client.Attachments
             }
         }
 
-        [Fact(Skip = "WIP")]
+        [Fact]
         public async Task AttachmentsVersioningReplication()
         {
             using (var store1 = GetDocumentStore())
@@ -450,7 +458,7 @@ namespace FastTests.Client.Attachments
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
-                    Assert.Equal(4, result.Etag);
+                    Assert.Equal(3, result.Etag);
                     Assert.Equal(names[0], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("image/png", result.ContentType);
@@ -459,7 +467,7 @@ namespace FastTests.Client.Attachments
                 using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
-                    Assert.Equal(8, result.Etag);
+                    Assert.Equal(7, result.Etag);
                     Assert.Equal(names[1], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("ImGgE/jPeG", result.ContentType);
@@ -468,7 +476,7 @@ namespace FastTests.Client.Attachments
                 using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
-                    Assert.Equal(13, result.Etag);
+                    Assert.Equal(12, result.Etag);
                     Assert.Equal(names[2], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("", result.ContentType);
@@ -476,25 +484,24 @@ namespace FastTests.Client.Attachments
                 }
                 await SetupAttachmentReplicationAsync(store1, store2);
 
-                WaitForUserToContinueTheTest(store2);
-
-                AttachmentsVersioning.AssertRevisions(store2, names, (session, revisions) =>
+                AssertRevisions(store2, names, (session, revisions) =>
                 {
-                    AttachmentsVersioning.AssertRevisionAttachments(names, 3, revisions[0], session);
-                    AttachmentsVersioning.AssertRevisionAttachments(names, 2, revisions[1], session);
-                    AttachmentsVersioning.AssertRevisionAttachments(names, 1, revisions[2], session);
-                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[3], session);
-                }, 9, expectedCountOfDocuments: 3);
+                    AssertRevisionAttachments(names, 3, revisions[0], session);
+                    AssertRevisionAttachments(names, 2, revisions[1], session);
+                    AssertRevisionAttachments(names, 1, revisions[2], session);
+                    AssertNoRevisionAttachment(revisions[3], session);
+                }, 9);
 
                 // Delete document should delete all the attachments
                 store1.Commands().Delete("users/1", null);
-                AttachmentsVersioning.AssertRevisions(store2, names, (session, revisions) =>
+                WaitForMarker(store1, store2);
+                AssertRevisions(store2, names, (session, revisions) =>
                 {
-                    AttachmentsVersioning.AssertRevisionAttachments(names, 3, revisions[0], session);
-                    AttachmentsVersioning.AssertRevisionAttachments(names, 2, revisions[1], session);
-                    AttachmentsVersioning.AssertRevisionAttachments(names, 1, revisions[2], session);
-                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[3], session);
-                }, 6, expectedCountOfDocuments: 2);
+                    AssertRevisionAttachments(names, 3, revisions[0], session);
+                    AssertRevisionAttachments(names, 2, revisions[1], session);
+                    AssertRevisionAttachments(names, 1, revisions[2], session);
+                    AssertNoRevisionAttachment(revisions[3], session);
+                }, 6);
 
                 // Create another revision which should delete old revision
                 using (var session = store1.OpenSession()) // This will delete the revision #1 which is without attachment
@@ -502,52 +509,167 @@ namespace FastTests.Client.Attachments
                     session.Store(new User { Name = "Fitzchak 2" }, "users/1");
                     session.SaveChanges();
                 }
-                AttachmentsVersioning.AssertRevisions(store2, names, (session, revisions) =>
+                WaitForMarker(store1, store2);
+                AssertRevisions(store2, names, (session, revisions) =>
                 {
-                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[0], session);
-                    AttachmentsVersioning.AssertRevisionAttachments(names, 3, revisions[1], session);
-                    AttachmentsVersioning.AssertRevisionAttachments(names, 2, revisions[2], session);
-                    AttachmentsVersioning.AssertRevisionAttachments(names, 1, revisions[3], session);
-                }, 6);
+                    AssertNoRevisionAttachment(revisions[0], session);
+                    AssertRevisionAttachments(names, 3, revisions[1], session);
+                    AssertRevisionAttachments(names, 2, revisions[2], session);
+                    AssertRevisionAttachments(names, 1, revisions[3], session);
+                }, 6, expectedCountOfDocuments: 4);
 
                 using (var session = store1.OpenSession()) // This will delete the revision #2 which is with attachment
                 {
                     session.Store(new User { Name = "Fitzchak 3" }, "users/1");
                     session.SaveChanges();
                 }
-                AttachmentsVersioning.AssertRevisions(store2, names, (session, revisions) =>
+                WaitForMarker(store1, store2);
+                AssertRevisions(store2, names, (session, revisions) =>
                 {
-                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[0], session);
-                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[1], session);
-                    AttachmentsVersioning.AssertRevisionAttachments(names, 3, revisions[2], session);
-                    AttachmentsVersioning.AssertRevisionAttachments(names, 2, revisions[3], session);
-                }, 5);
+                    AssertNoRevisionAttachment(revisions[0], session);
+                    AssertNoRevisionAttachment(revisions[1], session);
+                    AssertRevisionAttachments(names, 3, revisions[2], session);
+                    AssertRevisionAttachments(names, 2, revisions[3], session);
+                }, 5, expectedCountOfDocuments: 5);
 
                 using (var session = store1.OpenSession()) // This will delete the revision #3 which is with attachment
                 {
                     session.Store(new User { Name = "Fitzchak 4" }, "users/1");
                     session.SaveChanges();
                 }
-                AttachmentsVersioning.AssertRevisions(store2, names, (session, revisions) =>
+                WaitForMarker(store1, store2);
+                AssertRevisions(store2, names, (session, revisions) =>
                 {
-                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[0], session);
-                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[1], session);
-                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[2], session);
-                    AttachmentsVersioning.AssertRevisionAttachments(names, 3, revisions[2], session);
-                }, 3);
+                    AssertNoRevisionAttachment(revisions[0], session);
+                    AssertNoRevisionAttachment(revisions[1], session);
+                    AssertNoRevisionAttachment(revisions[2], session);
+                    AssertRevisionAttachments(names, 3, revisions[3], session);
+                }, 3, expectedCountOfDocuments: 6);
 
                 using (var session = store1.OpenSession()) // This will delete the revision #4 which is with attachment
                 {
                     session.Store(new User { Name = "Fitzchak 5" }, "users/1");
                     session.SaveChanges();
                 }
-                AttachmentsVersioning.AssertRevisions(store2, names, (session, revisions) =>
+                WaitForMarker(store1, store2);
+                AssertRevisions(store2, names, (session, revisions) =>
                 {
-                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[0], session);
-                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[1], session);
-                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[2], session);
-                    AttachmentsVersioning.AssertNoRevisionAttachment(revisions[3], session);
-                }, 0, expectedCountOfUniqueAttachments: 0);
+                    AssertNoRevisionAttachment(revisions[0], session);
+                    AssertNoRevisionAttachment(revisions[1], session);
+                    AssertNoRevisionAttachment(revisions[2], session);
+                    AssertNoRevisionAttachment(revisions[3], session);
+                }, 0, expectedCountOfUniqueAttachments: 0, expectedCountOfDocuments: 7);
+            }
+        }
+
+        private static void AssertRevisions(DocumentStore store, string[] names, Action<IDocumentSession, List<User>> assertAction,
+            long expectedCountOfAttachments, long expectedCountOfDocuments = 2, long expectedCountOfUniqueAttachments = 3)
+        {
+            var statistics = store.Admin.Send(new GetStatisticsOperation());
+            Assert.Equal(expectedCountOfAttachments, statistics.CountOfAttachments);
+            Assert.Equal(expectedCountOfUniqueAttachments, statistics.CountOfUniqueAttachments);
+            Assert.Equal(4, statistics.CountOfRevisionDocuments.Value);
+            Assert.Equal(expectedCountOfDocuments, statistics.CountOfDocuments);
+            Assert.Equal(0, statistics.CountOfIndexes);
+
+            using (var session = store.OpenSession())
+            {
+                var revisions = session.Advanced.GetRevisionsFor<User>("users/1");
+                Assert.Equal(4, revisions.Count);
+                assertAction(session, revisions);
+            }
+        }
+
+        private static void AssertNoRevisionAttachment(User revision, IDocumentSession session)
+        {
+            var metadata = session.Advanced.GetMetadataFor(revision);
+            Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), metadata[Constants.Documents.Metadata.Flags]);
+            Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
+        }
+
+        private static void AssertRevisionAttachments(string[] names, int expectedCount, User revision, IDocumentSession session)
+        {
+            var metadata = session.Advanced.GetMetadataFor(revision);
+            Assert.Equal((DocumentFlags.Versioned | DocumentFlags.Revision | DocumentFlags.HasAttachments | DocumentFlags.FromReplication).ToString(), metadata[Constants.Documents.Metadata.Flags]);
+            var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+            Assert.Equal(expectedCount, attachments.Length);
+
+            var orderedNames = names.Take(expectedCount).OrderBy(x => x).ToArray();
+            for (var i = 0; i < expectedCount; i++)
+            {
+                var name = orderedNames[i];
+                var attachment = attachments[i];
+                Assert.Equal(name, attachment.GetString(nameof(Attachment.Name)));
+                var hash = attachment.GetString(nameof(AttachmentResult.Hash));
+                if (name == names[1])
+                {
+                    Assert.Equal("mpqSy7Ky+qPhkBwhLiiM2no82Wvo9gQw", hash);
+                }
+                else if (name == names[2])
+                {
+                    Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", hash);
+                }
+                else if (name == names[0])
+                {
+                    Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", hash);
+                }
+            }
+
+            var changeVector = session.Advanced.GetChangeVectorFor(revision);
+            var readBuffer = new byte[8];
+            for (var i = 0; i < names.Length; i++)
+            {
+                var name = names[i];
+                using (var attachmentStream = new MemoryStream(readBuffer))
+                {
+                    var attachment = session.Advanced.GetRevisionAttachment("users/1", name, changeVector, (result, stream) => stream.CopyTo(attachmentStream));
+                    if (i >= expectedCount)
+                    {
+                        Assert.Null(attachment);
+                        continue;
+                    }
+
+                    Assert.Equal(name, attachment.Name);
+                    if (name == names[0])
+                    {
+                        if (expectedCount == 1)
+                            Assert.Equal(4, attachment.Etag);
+                        else if (expectedCount == 2)
+                            Assert.Equal(10, attachment.Etag);
+                        else if (expectedCount == 3)
+                            Assert.Equal(19, attachment.Etag);
+                        else
+                            throw new ArgumentOutOfRangeException(nameof(i));
+                        Assert.Equal(new byte[] { 1, 2, 3 }, readBuffer.Take(3));
+                        Assert.Equal("image/png", attachment.ContentType);
+                        Assert.Equal(3, attachmentStream.Position);
+                        Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", attachment.Hash);
+                    }
+                    else if (name == names[1])
+                    {
+                        if (expectedCount == 2)
+                            Assert.Equal(9, attachment.Etag);
+                        else if (expectedCount == 3)
+                            Assert.Equal(17, attachment.Etag);
+                        else
+                            throw new ArgumentOutOfRangeException(nameof(i));
+                        Assert.Equal(new byte[] { 10, 20, 30, 40, 50 }, readBuffer.Take(5));
+                        Assert.Equal("ImGgE/jPeG", attachment.ContentType);
+                        Assert.Equal(5, attachmentStream.Position);
+                        Assert.Equal("mpqSy7Ky+qPhkBwhLiiM2no82Wvo9gQw", attachment.Hash);
+                    }
+                    else if (name == names[2])
+                    {
+                        if (expectedCount == 3)
+                            Assert.Equal(18, attachment.Etag);
+                        else
+                            throw new ArgumentOutOfRangeException(nameof(i));
+                        Assert.Equal(new byte[] { 1, 2, 3, 4, 5 }, readBuffer.Take(5));
+                        Assert.Equal("", attachment.ContentType);
+                        Assert.Equal(5, attachmentStream.Position);
+                        Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", attachment.Hash);
+                    }
+                }
             }
         }
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
@@ -19,7 +20,7 @@ namespace Raven.Server.Web.Studio
             _excludeIds = excludeIds;
         }
 
-        public override unsafe IOperationResult ExecuteDelete(string collectionName, CollectionOperationOptions options, DocumentsOperationContext documentsOperationContext, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public override unsafe Task<IOperationResult> ExecuteDelete(string collectionName, CollectionOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             if (collectionName == Constants.Documents.Indexing.AllDocumentsCollection)
             {
@@ -27,33 +28,33 @@ namespace Raven.Server.Web.Studio
                 if (_excludeIds.Count == 0)
                 {
                     // all documents w/o exclusions -> filter system documents
-                    return ExecuteOperation(collectionName, options, _context, onProgress, key =>
+                    return ExecuteOperation(collectionName, options, Context, onProgress, (key, etag, context) =>
                     {
                         if (CollectionName.IsSystemDocument(key.Buffer, key.Length, out _) == false)
                         {
-                            _database.DocumentsStorage.Delete(_context, key, null);
+                            Database.DocumentsStorage.Delete(context, key, etag);
                         }
                     }, token);
                 }
                 // all documents w/ exluclusions -> delete only not excluded and not system
-                return ExecuteOperation(collectionName, options, _context, onProgress, key =>
+                return ExecuteOperation(collectionName, options, Context, onProgress, (key, etag, context) =>
                 {
                     if (_excludeIds.Contains(key) == false && CollectionName.IsSystemDocument(key.Buffer, key.Length, out _) == false)
                     {
-                        _database.DocumentsStorage.Delete(_context, key, null);
+                        Database.DocumentsStorage.Delete(context, key, etag);
                     }
                 }, token);
             }
 
             if (_excludeIds.Count == 0)
-                return base.ExecuteDelete(collectionName, options, documentsOperationContext, onProgress, token);
+                return base.ExecuteDelete(collectionName, options, onProgress, token);
 
             // specific collection w/ exclusions
-            return ExecuteOperation(collectionName, options, _context, onProgress, key =>
+            return ExecuteOperation(collectionName, options, Context, onProgress, (key, etag, context) =>
             {
                 if (_excludeIds.Contains(key) == false)
                 {
-                    _database.DocumentsStorage.Delete(_context, key, null);
+                    Database.DocumentsStorage.Delete(context, key, etag);
                 }
             }, token);
         }
@@ -61,7 +62,7 @@ namespace Raven.Server.Web.Studio
         protected override List<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize)
         {
             if (collectionName == Constants.Documents.Indexing.AllDocumentsCollection)
-                return _database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, batchSize).ToList();
+                return Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, batchSize).ToList();
 
             return base.GetDocuments(context, collectionName, startEtag, batchSize);
         }
@@ -69,7 +70,7 @@ namespace Raven.Server.Web.Studio
         protected override long GetTotalCountForCollection(DocumentsOperationContext context, string collectionName)
         {
             if (collectionName == Constants.Documents.Indexing.AllDocumentsCollection)
-                return _database.DocumentsStorage.GetNumberOfDocuments(context);
+                return Database.DocumentsStorage.GetNumberOfDocuments(context);
 
             return base.GetTotalCountForCollection(context, collectionName);
         }

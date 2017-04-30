@@ -1,14 +1,10 @@
-using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Server.Versioning;
 using Raven.Server.Documents.Versioning;
 using Sparrow.Json;
-using Xunit;
 
 namespace FastTests.Server.Documents.Versioning
 {
@@ -46,11 +42,11 @@ namespace FastTests.Server.Documents.Versioning
             await SetupVersioning(serverStore, database, versioningDoc);
         }
 
-        public static async Task SetupVersioning(Raven.Server.ServerWide.ServerStore serverStore, string database, VersioningConfiguration configuration)
+        private static async Task SetupVersioning(Raven.Server.ServerWide.ServerStore serverStore, string database, VersioningConfiguration configuration)
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                await serverStore.ModifyDatabaseVersioningBundle(context, database,
+                await serverStore.ModifyDatabaseVersioning(context, database,
                     EntityToBlittable.ConvertEntityToBlittable(configuration, DocumentConventions.Default, context));
             }
         }

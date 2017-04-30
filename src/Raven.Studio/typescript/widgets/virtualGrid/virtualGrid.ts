@@ -219,12 +219,7 @@ class virtualGrid<T> {
             this.layoutVirtualRowPositions();
             this.fillDataIntoRows();
         } else {
-            if (isRetry) {
-                console.warn("Grid is not visible!");
-            } else {
-                // allow one retry for sync data providers
-                setTimeout(() => this.render(true), 0);
-            }
+            throw new Error("Grid is not visible!");
         }
     }
 
@@ -246,14 +241,26 @@ class virtualGrid<T> {
             if (safeTake > 0) {
                 this.isLoading(true);
 
-                this.settings.fetcher(safeSkip, safeTake)
-                    .then((results: pagedResult<T>) => this.chunkFetched(results, safeSkip, safeTake))
-                    .fail(error => this.chunkFetchFailed(error, skip, safeTake))
-                    .always(() => {
-                        // When we're done loading, run the next queued fetch as necessary.
-                        this.isLoading(false);
-                        this.runQueuedFetch();
-                    });
+                const fetcherTask = this.settings.fetcher(safeSkip, safeTake);
+
+                const fetcherPostprocessor = () => {
+                    fetcherTask
+                        .then((results: pagedResult<T>) => this.chunkFetched(results, safeSkip, safeTake))
+                        .fail(error => this.chunkFetchFailed(error, skip, safeTake))
+                        .always(() => {
+                            // When we're done loading, run the next queued fetch as necessary.
+                            this.isLoading(false);
+                            this.runQueuedFetch();
+                        });
+                }
+
+                if (fetcherTask.state() === "resolved" && !this.checkGridVisibility()) {
+                    // look like fetcher works in synchronous mode, but grid is not yet visibile. Use setTimeout, to postpone value provider.
+                    // this way we can make sure grid was successfully initialized 
+                    setTimeout(() => fetcherPostprocessor(), 0);
+                } else {
+                    fetcherPostprocessor();
+                }
             }
         }
     }
@@ -441,10 +448,31 @@ class virtualGrid<T> {
         failedRows.forEach(r => r.dataLoadError(error));
     }
 
+    private static percentageToPixels(containerWidth: number, percentageValue: string): string {
+        const woPercentage = percentageValue.slice(0, -1);
+        return (containerWidth * parseFloat(woPercentage) / 100) + 'px';
+    }
+
     //TODO: investigate if we fetch this properly
     private chunkFetched(results: pagedResult<T>, skip: number, take: number) {
+
+        if (results.totalResultCount === -1) {
+            this.emptyResult(true);
+            this.virtualHeight(0);
+            this.checkForUpdatedGridHeight();
+            return;
+        }
+
         if (!this.columns() || this.columns().length === 0) {
-            this.columns(this.settings.columnsProvider(this.$viewportElement.prop("clientWidth"), results));
+            const clientWidth = this.$viewportElement.prop("clientWidth");
+            const columns = this.settings.columnsProvider(clientWidth, results);
+            columns
+                .filter(x => x.width.endsWith("%"))
+                .forEach(percentageColumn => {
+                    percentageColumn.width = virtualGrid.percentageToPixels(clientWidth, percentageColumn.width);
+                });
+
+            this.columns(columns);
 
             this.syncVirtualWidth();
         }

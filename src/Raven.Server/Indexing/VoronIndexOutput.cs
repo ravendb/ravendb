@@ -6,7 +6,7 @@ using Voron;
 
 namespace Raven.Server.Indexing
 {
-    public unsafe class VoronIndexOutput : BufferedIndexOutput
+    public class VoronIndexOutput : BufferedIndexOutput
     {
         public static readonly int MaxFileChunkSize = 128 * 1024 * 1024;
 

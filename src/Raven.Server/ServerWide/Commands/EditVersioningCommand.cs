@@ -1,36 +1,36 @@
-using System;
 using Raven.Client.Documents;
-using Raven.Client.Server;
-using Raven.Server.Documents.Versioning;
-using Raven.Server.Json;
-using Sparrow.Json;
+using Raven.Client.Server.Versioning;
+using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
     public class EditVersioningCommand : UpdateDatabaseCommand
     {
-        // todo: change this back to VersioningConfiguration 
-        public BlittableJsonReaderObject Configuration;
+        public VersioningConfiguration Configuration;
 
-        // for deserialization
-        public EditVersioningCommand() : base(null){}
+        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
+        {
+            databaseRecord.Versioning = Configuration;
+        }
 
-        public EditVersioningCommand(BlittableJsonReaderObject configuration, string databaseName)
-            : base(databaseName)
+        public EditVersioningCommand() : base(null)
+        {
+        }
+
+        public EditVersioningCommand(VersioningConfiguration configuration, string databaseName) : base(databaseName)
         {
             Configuration = configuration;
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord databaseRecord, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            databaseRecord.VersioningConfiguration = 
-                JsonDeserializationServer.VersioningConfiguration(Configuration);
+            record.Versioning = Configuration;
         }
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(Configuration)] = Configuration;
+            json[nameof(Configuration)] = TypeConverter.ToBlittableSupportedType(Configuration);
         }
     }
 }

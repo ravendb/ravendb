@@ -70,6 +70,25 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
+        /// Check if document exists without loading it
+        /// </summary>
+        /// <param name="id">Document id.</param>
+        /// <returns></returns>
+        public bool Exists(string id)
+        {
+            if (id == null)
+                throw new ArgumentNullException(nameof(id));
+
+            if (DocumentsById.TryGetValue(id, out _))
+                return true;
+
+            var command = new HeadDocumentCommand(id, null);
+            RequestExecutor.Execute(command, Context);
+
+            return command.Result != null;
+        }
+
+        /// <summary>
         /// Refreshes the specified entity from Raven server.
         /// </summary>
         /// <typeparam name="T"></typeparam>

@@ -95,9 +95,9 @@ namespace Raven.Server.Documents.Patch
             if (scope.ActualPatchResult == JsValue.Undefined || scope.ActualPatchResult == JsValue.Undefined)
             {
                 val = null;
-                if (_logger.IsInfoEnabled)
+                if (Logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Conflict resolution script for {_docs[0].Collection} collection declined to resolve the conflict for {_docs[0].LoweredKey}");
+                    Logger.Info($"Conflict resolution script for {_docs[0].Collection} collection declined to resolve the conflict for {_docs[0].LoweredKey}");
                 }
                 return false;
             }
@@ -120,8 +120,7 @@ namespace Raven.Server.Documents.Patch
                     // if user didn't specify it, we'll take it from the first doc
                     foreach (var doc in _docs)
                     {
-                        BlittableJsonReaderObject metadata;
-                        if (doc.Doc.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
+                        if (doc.Doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
                         {
                             continue;
                         }

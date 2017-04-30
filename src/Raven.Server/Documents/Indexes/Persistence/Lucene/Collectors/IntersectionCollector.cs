@@ -3,6 +3,7 @@ using System.Linq;
 
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Lucene.Net.Store;
 using Raven.Client;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
@@ -13,15 +14,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
         private IndexReader _currentReader;
         private Scorer _currentScorer;
 
-        public IntersectionCollector(Searchable indexSearcher, IEnumerable<ScoreDoc> scoreDocs)
+        public IntersectionCollector(Searchable indexSearcher, IEnumerable<ScoreDoc> scoreDocs, IState state)
         {
             foreach (var scoreDoc in scoreDocs)
             {
-                var document = indexSearcher.Doc(scoreDoc.Doc);
+                var document = indexSearcher.Doc(scoreDoc.Doc, state);
                 var subQueryResult = new SubQueryResult
                 {
                     LuceneId = scoreDoc.Doc,
-                    RavenDocId = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName) ?? document.Get(Constants.Documents.Indexing.Fields.ReduceKeyFieldName),
+                    RavenDocId = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, state) ?? document.Get(Constants.Documents.Indexing.Fields.ReduceKeyFieldName, state),
                     Score = float.IsNaN(scoreDoc.Score) ? 0.0f : scoreDoc.Score,
                     Count = 1
                 };
@@ -34,12 +35,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
             _currentScorer = scorer;
         }
 
-        public override void Collect(int doc)
+        public override void Collect(int doc, IState state)
         {
             //Don't need to add the currentBase here, it's already accounted for
-            var document = _currentReader.Document(doc);
-            var key = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName) ?? document.Get(Constants.Documents.Indexing.Fields.ReduceKeyFieldName);
-            var currentScore = _currentScorer.Score();
+            var document = _currentReader.Document(doc, state);
+            var key = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, state) ?? document.Get(Constants.Documents.Indexing.Fields.ReduceKeyFieldName, state);
+            var currentScore = _currentScorer.Score(state);
 
             SubQueryResult value;
             if (_results.TryGetValue(key, out value) == false)
@@ -49,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
             value.Score += currentScore;
         }
 
-        public override void SetNextReader(IndexReader reader, int docBase)
+        public override void SetNextReader(IndexReader reader, int docBase, IState state)
         {
             _currentReader = reader;
         }

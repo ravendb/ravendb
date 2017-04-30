@@ -9,7 +9,6 @@ using Jint.Runtime;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Json;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -17,12 +16,12 @@ using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 using Sparrow.Logging;
 using JavaScriptException = Raven.Client.Documents.Exceptions.Patching.JavaScriptException;
+using Raven.Server.Smuggler.Documents;
 
 namespace Raven.Server.Documents.Patch
 {
     public abstract class DocumentPatcherBase
     {
-        protected static Logger _logger;
         private const int MaxRecursionDepth = 128;
         private readonly int _maxSteps;
         protected readonly int _additionalStepsPerSize;
@@ -30,12 +29,13 @@ namespace Raven.Server.Documents.Patch
 
         private static readonly ScriptsCache ScriptsCache = new ScriptsCache();
 
-        protected readonly DocumentDatabase _database;
+        protected readonly Logger Logger;
+        protected readonly DocumentDatabase Database;
 
         protected DocumentPatcherBase(DocumentDatabase database)
         {
-            _database = database;
-            _logger = LoggingSource.Instance.GetLogger<DocumentPatcherBase>(database.Name);
+            Database = database;
+            Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
             _maxSteps = database.Configuration.Patching.MaxStepsForScript;
             _additionalStepsPerSize = database.Configuration.Patching.AdditionalStepsForScriptBasedOnDocumentSize;
             _allowScriptsToAdjustNumberOfSteps = database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps;
@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Patch
             if (patchIfMissing != null && string.IsNullOrWhiteSpace(patchIfMissing.Script))
                 throw new InvalidOperationException("Patch script must be non-null and not empty.");
 
-            var originalDocument = _database.DocumentsStorage.Get(context, documentKey);
+            var originalDocument = Database.DocumentsStorage.Get(context, documentKey);
             if (etag.HasValue)
             {
                 if (originalDocument == null && etag.Value != 0)
@@ -133,7 +133,8 @@ namespace Raven.Server.Documents.Patch
             {
                 ApplySingleScript(context, documentKey, document, patchRequest, scope);
 
-                var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), documentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), documentKey, 
+                    BlittableJsonDocumentBuilder.UsageMode.ToDisk, new BlittableMetadataModifier(context));
 
                 var result = new PatchResult
                 {
@@ -148,8 +149,8 @@ namespace Raven.Server.Documents.Patch
 
                 if (modifiedDocument == null)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"After applying patch, modifiedDocument is null and document is null? {originalDocument == null}");
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"After applying patch, modifiedDocument is null and document is null? {originalDocument == null}");
 
                     result.Status = PatchStatus.Skipped;
                     return result;
@@ -159,14 +160,14 @@ namespace Raven.Server.Documents.Patch
 
                 if (originalDocument == null)
                 {
-                    putResult = _database.DocumentsStorage.Put(context, documentKey, null, modifiedDocument);
+                    putResult = Database.DocumentsStorage.Put(context, documentKey, null, modifiedDocument);
                     result.Status = PatchStatus.Created;
                 }
                 else
                 {
                     if (DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDocument, true) == DocumentCompareResult.NotEqual) // http://issues.hibernatingrhinos.com/issue/RavenDB-6408
                     {
-                        putResult = _database.DocumentsStorage.Put(context, originalDocument.Key, originalDocument.Etag, modifiedDocument);
+                        putResult = Database.DocumentsStorage.Put(context, originalDocument.Key, originalDocument.Etag, modifiedDocument);
                         result.Status = PatchStatus.Patched;
                     }
                 }
@@ -183,11 +184,11 @@ namespace Raven.Server.Documents.Patch
 
         protected PatcherOperationScope CreateOperationScope(DocumentsOperationContext context, bool debugMode)
         {
-            return new PatcherOperationScope(_database, context, debugMode)
+            return new PatcherOperationScope(Database, context, debugMode)
             {
                 AdditionalStepsPerSize = _additionalStepsPerSize,
                 MaxSteps = _maxSteps,
-                CustomFunctions = _database.Patcher.CustomFunctions
+                CustomFunctions = Database.Patcher.CustomFunctions
             };
         }
 

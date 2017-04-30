@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Identity
                 }
             }
 
-            return new CompletedTask();
+            return Task.CompletedTask;
         }
 
         public void Add(object entity)

@@ -35,9 +35,9 @@ namespace Raven.Client.Documents.BulkInsert
 
             public StreamExposerContent()
             {
-                _outputStreamTcs = new TaskCompletionSource<Stream>();
+                _outputStreamTcs = new TaskCompletionSource<Stream>(TaskCreationOptions.RunContinuationsAsynchronously);
                 OutputStream = _outputStreamTcs.Task;
-                _done = new TaskCompletionSource<object>();
+                _done = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             }
 
             public void Done()

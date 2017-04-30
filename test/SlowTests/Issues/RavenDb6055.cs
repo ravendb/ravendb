@@ -35,7 +35,7 @@ namespace SlowTests.Issues
                     Assert.Equal("Auto/Users/ByFirstName", indexes[0].Name);
                 }
 
-                var tcs = new TaskCompletionSource<object>();
+                var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 using ((await (await store.Changes().ConnectionTask)
                         .ForAllIndexes().Task)

@@ -584,7 +584,7 @@ namespace Voron.Impl.Journal
                         var operation = new SyncOperation(this);
                         operation.GatherInformationToStartSync();
                         _pendingSync = operation.Task;
-                        TaskExecuter.Execute(state => ((SyncOperation)state).CompleteSync(), operation);
+                        ThreadPool.QueueUserWorkItem(state => ((SyncOperation)state).CompleteSync(), operation);
                     }
 
                     ApplyJournalStateAfterFlush(token, lastProcessedJournal, lastFlushedTransactionId, unusedJournals);
@@ -817,7 +817,7 @@ namespace Voron.Impl.Journal
                 private readonly List<KeyValuePair<long, JournalFile>> _journalsToDelete;
                 bool _flushLockTaken;
                 private TransactionHeader _transactionHeader;
-                private TaskCompletionSource<object> _tcs = new TaskCompletionSource<object>();
+                private readonly TaskCompletionSource<object> _tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 public SyncOperation(JournalApplicator parent)
                 {

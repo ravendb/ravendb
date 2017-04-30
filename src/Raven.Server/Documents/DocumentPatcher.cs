@@ -19,13 +19,13 @@ namespace Raven.Server.Documents
 
         public void Initialize()
         {
-            _database.Changes.OnSystemDocumentChange += HandleDocumentChange;
+            Database.Changes.OnSystemDocumentChange += HandleDocumentChange;
             LoadCustomFunctions();
         }
 
         public void Dispose()
         {
-            _database.Changes.OnSystemDocumentChange -= HandleDocumentChange;
+            Database.Changes.OnSystemDocumentChange -= HandleDocumentChange;
         }
 
         private void HandleDocumentChange(DocumentChange change)
@@ -53,10 +53,10 @@ namespace Raven.Server.Documents
             lock (_locker)
             {
                 DocumentsOperationContext context;
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 using (context.OpenReadTransaction())
                 {
-                    var json = _database.DocumentsStorage.Get(context, Constants.Json.CustomFunctionsKey);
+                    var json = Database.DocumentsStorage.Get(context, Constants.Json.CustomFunctionsKey);
 
                     string functions;
                     if (json == null || json.Data.TryGet("Functions", out functions) == false || string.IsNullOrWhiteSpace(functions))

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="PeriodicExportConfiguration.cs" company="Hibernating Rhinos LTD">
+// <copyright file="PeriodicBackup.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -8,7 +8,7 @@ using System;
 
 namespace Raven.Client.Server.PeriodicExport
 {
-    public class PeriodicExportConfiguration
+    public class PeriodicBackupConfiguration
     {
         /// <summary>
         /// Indicates if periodic export is active.
@@ -60,7 +60,7 @@ namespace Raven.Client.Server.PeriodicExport
         /// </summary>
         public long? FullExportIntervalMilliseconds { get; set; }
 
-        protected bool Equals(PeriodicExportConfiguration other)
+        protected bool Equals(PeriodicBackupConfiguration other)
         {
             return Active == other.Active 
                 && string.Equals(GlacierVaultName, other.GlacierVaultName) 
@@ -79,7 +79,7 @@ namespace Raven.Client.Server.PeriodicExport
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != GetType()) return false;
-            return Equals((PeriodicExportConfiguration)obj);
+            return Equals((PeriodicBackupConfiguration)obj);
         }
 
         public override int GetHashCode()

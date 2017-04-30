@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
 using System.IO;
+using Lucene.Net.Store;
 using Raven.Client;
 
 namespace Raven.Server.Documents.Queries.Results
@@ -23,18 +24,18 @@ namespace Raven.Server.Documents.Queries.Results
             _fieldsToFetch = fieldsToFetch;
         }
 
-        public abstract Document Get(Lucene.Net.Documents.Document input, float score);
+        public abstract Document Get(Lucene.Net.Documents.Document input, float score, IState state);
 
-        public abstract bool TryGetKey(Lucene.Net.Documents.Document document, out string key);
+        public abstract bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key);
 
-        protected abstract Document DirectGet(Lucene.Net.Documents.Document input, string id);
+        protected abstract Document DirectGet(Lucene.Net.Documents.Document input, string id, IState state);
 
-        protected Document GetProjection(Lucene.Net.Documents.Document input, float score, string id)
+        protected Document GetProjection(Lucene.Net.Documents.Document input, float score, string id, IState state)
         {
             Document doc = null;
             if (_fieldsToFetch.AnyExtractableFromIndex == false)
             {
-                doc = DirectGet(input, id);
+                doc = DirectGet(input, id, state);
 
                 if (doc == null)
                     return null;
@@ -68,7 +69,7 @@ namespace Raven.Server.Documents.Queries.Results
                     if (fields == null)
                         fields = new Dictionary<string, FieldsToFetch.FieldToFetch>();
 
-                    doc = DirectGet(input, id);
+                    doc = DirectGet(input, id, state);
                     documentLoaded = true;
 
                     if (doc != null)
@@ -99,12 +100,12 @@ namespace Raven.Server.Documents.Queries.Results
 
             foreach (var fieldToFetch in fields.Values)
             {
-                if (TryExtractValueFromIndex(fieldToFetch, input, result))
+                if (TryExtractValueFromIndex(fieldToFetch, input, result, state))
                     continue;
 
                 if (documentLoaded == false)
                 {
-                    doc = DirectGet(input, id);
+                    doc = DirectGet(input, id, state);
                     documentLoaded = true;
                 }
 
@@ -158,7 +159,7 @@ namespace Raven.Server.Documents.Queries.Results
             return doc;
         }
 
-        private bool TryExtractValueFromIndex(FieldsToFetch.FieldToFetch fieldToFetch, Lucene.Net.Documents.Document indexDocument, DynamicJsonValue toFill)
+        private bool TryExtractValueFromIndex(FieldsToFetch.FieldToFetch fieldToFetch, Lucene.Net.Documents.Document indexDocument, DynamicJsonValue toFill, IState state)
         {
             if (fieldToFetch.CanExtractFromIndex == false)
                 return false;
@@ -173,7 +174,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (fieldType == null)
                     fieldType = GetFieldType(field, indexDocument);
 
-                var fieldValue = ConvertType(indexDocument, field, fieldType);
+                var fieldValue = ConvertType(indexDocument, field, fieldType, state);
 
                 if (fieldType.IsArray)
                 {
@@ -210,12 +211,12 @@ namespace Raven.Server.Documents.Queries.Results
             public bool IsJson;
         }
 
-        private object ConvertType(Lucene.Net.Documents.Document indexDocument, IFieldable field, FieldType fieldType)
+        private object ConvertType(Lucene.Net.Documents.Document indexDocument, IFieldable field, FieldType fieldType, IState state)
         {
             if (field.IsBinary)
                 throw new NotImplementedException("Support for binary values");
 
-            var stringValue = field.StringValue;
+            var stringValue = field.StringValue(state);
             if (stringValue == Constants.Documents.Indexing.Fields.NullValue || stringValue == null)
                 return null;
             if (stringValue == Constants.Documents.Indexing.Fields.EmptyString || stringValue == string.Empty)

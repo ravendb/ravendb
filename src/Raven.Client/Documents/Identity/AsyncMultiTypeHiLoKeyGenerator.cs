@@ -22,6 +22,7 @@ namespace Raven.Client.Documents.Identity
         private readonly DocumentStore _store;
         private readonly string _dbName;
         private readonly DocumentConventions _conventions;
+        private static readonly Task<string> NullStringCompletedTask = Task.FromResult<string>(null);
 
         public AsyncMultiTypeHiLoKeyGenerator(DocumentStore store, string dbName, DocumentConventions conventions)
         {
@@ -34,7 +35,9 @@ namespace Raven.Client.Documents.Identity
         {
             var typeTagName = _conventions.GetCollectionName(entity);
             if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
-                return CompletedTask.With<string>(null);
+            {
+                return NullStringCompletedTask;
+            }
             var tag = _conventions.TransformTypeCollectionNameToDocumentIdPrefix(typeTagName);
             AsyncHiLoKeyGenerator value;
             if (_keyGeneratorsByTag.TryGetValue(tag, out value))

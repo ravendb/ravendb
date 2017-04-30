@@ -2,6 +2,7 @@
 using System.IO;
 
 using Lucene.Net.Index;
+using Lucene.Net.Store;
 using Lucene.Net.Util;
 
 namespace Raven.Server.Documents.Queries.MoreLikeThis
@@ -9,11 +10,13 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
     internal class RavenMoreLikeThis : Lucene.Net.Search.Similar.MoreLikeThis
     {
         private readonly IndexReader _ir;
+        private readonly IState _state;
 
-        public RavenMoreLikeThis(IndexReader ir, MoreLikeThisQueryServerSide query)
-            : base(ir)
+        public RavenMoreLikeThis(IndexReader ir, MoreLikeThisQueryServerSide query, IState state)
+            : base(ir, state)
         {
             _ir = ir;
+            _state = state;
 
             if (query.Boost != null)
                 Boost = query.Boost.Value;
@@ -54,13 +57,13 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 
             foreach (var fieldName in fieldNames)
             {
-                var vector = _ir.GetTermFreqVector(docNum, fieldName);
+                var vector = _ir.GetTermFreqVector(docNum, fieldName, _state);
 
                 // field does not store term vector info
                 if (vector == null)
                 {
-                    var d = _ir.Document(docNum);
-                    var text = d.GetValues(fieldName);
+                    var d = _ir.Document(docNum, _state);
+                    var text = d.GetValues(fieldName, _state);
                     if (text != null)
                     {
                         foreach (var t in text)

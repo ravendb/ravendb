@@ -156,9 +156,7 @@ namespace Sparrow.Json
             ElectricFencedMemory.IncrementConext();
             ElectricFencedMemory.RegisterContextAllocation(this,Environment.StackTrace);
 #endif
-
         }
-
 
         public ReturnBuffer GetManagedBuffer(out ManagedPinnedBuffer buffer)
         {
@@ -371,9 +369,9 @@ namespace Sparrow.Json
         }
 
         public BlittableJsonReaderObject ReadObject(DynamicJsonValue builder, string documentId,
-            BlittableJsonDocumentBuilder.UsageMode mode = BlittableJsonDocumentBuilder.UsageMode.None)
+            BlittableJsonDocumentBuilder.UsageMode mode = BlittableJsonDocumentBuilder.UsageMode.None, IBlittableDocumentModifier modifier = null)
         {
-            return ReadObjectInternal(builder, documentId, mode);
+            return ReadObjectInternal(builder, documentId, mode, modifier);
         }
 
         public BlittableJsonReaderObject ReadObject(BlittableJsonReaderObject obj, string documentId,
@@ -383,12 +381,13 @@ namespace Sparrow.Json
         }
 
         private BlittableJsonReaderObject ReadObjectInternal(object builder, string documentId,
-            BlittableJsonDocumentBuilder.UsageMode mode)
+            BlittableJsonDocumentBuilder.UsageMode mode, IBlittableDocumentModifier modifier = null)
         {
             _jsonParserState.Reset();
             _objectJsonParser.Reset(builder);
             _documentBuilder.Renew(documentId, mode);
             CachedProperties.NewDocument();
+            _documentBuilder._modifier = modifier;
             _documentBuilder.ReadObjectDocument();
             if (_documentBuilder.Read() == false)
                 throw new InvalidOperationException("Partial content in object json parser shouldn't happen");
@@ -445,28 +444,28 @@ namespace Sparrow.Json
             }
         }
 
-        public BlittableJsonReaderObject Read(Stream stream, string documentId)
+        public BlittableJsonReaderObject Read(Stream stream, string documentId, IBlittableDocumentModifier modifier = null)
         {
             var state = BlittableJsonDocumentBuilder.UsageMode.ToDisk;
-            return ParseToMemory(stream, documentId, state);
+            return ParseToMemory(stream, documentId, state, modifier);
         }
 
-        private BlittableJsonReaderObject ParseToMemory(Stream stream, string debugTag, BlittableJsonDocumentBuilder.UsageMode mode)
+        private BlittableJsonReaderObject ParseToMemory(Stream stream, string debugTag, BlittableJsonDocumentBuilder.UsageMode mode, IBlittableDocumentModifier modifier = null)
         {
             ManagedPinnedBuffer bytes;
             using (GetManagedBuffer(out bytes))
             {
-                return ParseToMemory(stream, debugTag, mode, bytes);
+                return ParseToMemory(stream, debugTag, mode, bytes, modifier);
             }
         }
 
         public BlittableJsonReaderObject ParseToMemory(Stream stream, string debugTag, 
             BlittableJsonDocumentBuilder.UsageMode mode,
-            ManagedPinnedBuffer bytes)
+            ManagedPinnedBuffer bytes, IBlittableDocumentModifier modifier = null)
         {
             _jsonParserState.Reset();
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
-            using (var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState))
+            using (var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState, modifier: modifier))
             {
                 CachedProperties.NewDocument();
                 builder.ReadObjectDocument();

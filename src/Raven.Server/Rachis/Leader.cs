@@ -24,7 +24,7 @@ namespace Raven.Server.Rachis
         private Task _topologyModification;
         private readonly RachisConsensus _engine;
 
-        private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>();
+        private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         private readonly ConcurrentDictionary<long, CommandState> _entries =
             new ConcurrentDictionary<long, CommandState>();
@@ -51,14 +51,12 @@ namespace Raven.Server.Rachis
         private readonly Dictionary<string, FollowerAmbassador> _nonVoters =
             new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
 
-        private ClusterMaintenanceMaster _clusterMaintenanceMaster;
-
         private Thread _thread;
 
         public long LowestIndexInEntireCluster
         {
-            get => _lowestIndexInEntireCluster;
-            set => Interlocked.Exchange(ref _lowestIndexInEntireCluster, value);
+            get { return _lowestIndexInEntireCluster; }
+            set { Interlocked.Exchange(ref _lowestIndexInEntireCluster, value); }
         }
 
         public Leader(RachisConsensus engine)
@@ -68,35 +66,22 @@ namespace Raven.Server.Rachis
 
         public bool Running
         {
-            get => Volatile.Read(ref _running);
-            private set => Volatile.Write(ref _running, value);
+            get { return Volatile.Read(ref _running); }
+            private set { Volatile.Write(ref _running, value); }
         }
 
         public void Start()
         {
             Running = true;
             ClusterTopology clusterTopology;
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            TransactionOperationContext context;
+            using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
                 clusterTopology = _engine.GetTopology(context);
             }
 
             RefreshAmbassadors(clusterTopology);
-            _clusterMaintenanceMaster = new ClusterMaintenanceMaster(_engine.Tag,_engine.CurrentTerm);
-            var addTasks = new Task[clusterTopology.Members.Count + clusterTopology.Promotables.Count];
-            int index = 0;
-            foreach(var member in clusterTopology.Members)
-            {
-                addTasks[index++] = _clusterMaintenanceMaster.AddToCluster(member.Key, clusterTopology.GetUrlFromTag(member.Key));
-            }
-
-            //TODO : consider adding the promotables with some sort of flag, 
-            //so cluster maintenance master would be aware of their state from the beginning
-            foreach (var promotable in clusterTopology.Promotables)
-            {                
-                addTasks[index++] = _clusterMaintenanceMaster.AddToCluster(promotable.Key, clusterTopology.GetUrlFromTag(promotable.Key));
-            }
 
             _thread = new Thread(Run)
             {
@@ -105,8 +90,6 @@ namespace Raven.Server.Rachis
                 IsBackground = true
             };
             _thread.Start();
-
-            Task.WaitAll(addTasks);
         }
 
         public void StepDown()
@@ -115,97 +98,118 @@ namespace Raven.Server.Rachis
                 throw new InvalidOperationException("Cannot step down when I'm the only voter int he cluster");
             var nextLeader = _voters.Values.OrderByDescending(x => x.FollowerMatchIndex).ThenByDescending(x => x.LastReplyFromFollower).First();
             nextLeader.ForceElectionsNow = true;
-            var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>());
+            var old = Interlocked.Exchange(ref _newEntriesArrived, new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
             old.TrySetResult(null);
         }
 
         private void RefreshAmbassadors(ClusterTopology clusterTopology)
         {
-            if (_engine.Log.IsInfoEnabled)
+            bool lockTaken = false;
+            Monitor.TryEnter(this, ref lockTaken);            
+            try
             {
-                _engine.Log.Info($"Leader {_engine.Tag}: Refreshing ambassadors");
-            }
-            var old = new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
-            foreach (var peers in new[] { _voters, _promotables, _nonVoters })
-            {
-                foreach (var peer in peers)
+                //This only means we are been disposed so we can quit now
+                if (lockTaken == false)
                 {
-                    old[peer.Key] = peer.Value;
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Leader {_engine.Tag}: Skipping refreshing ambassadors because we are been disposed of");
+                    }
+                    return;
                 }
-                peers.Clear();
-            }
-
-            foreach (var voter in clusterTopology.Members)
-            {
-                if (voter.Key == _engine.Tag)
-                    continue; // we obviously won't be applying to ourselves
-
-                if (old.TryGetValue(voter.Key, out FollowerAmbassador existingInstance))
-                {
-                    existingInstance.UpdateLeaderWake(_voterResponded);
-                    _voters.Add(voter.Key, existingInstance);
-                    old.Remove(voter.Key);
-                    continue; // already here
-                }
-
-                var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, clusterTopology.ApiKey);
-                _voters.Add(voter.Key, ambasaddor);
-                _engine.AppendStateDisposable(this, ambasaddor);
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for voter {voter.Key} {voter.Value}");
+                    _engine.Log.Info($"Leader {_engine.Tag}: Refreshing ambassadors");
                 }
-                ambasaddor.Start();
+                var old = new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
+                foreach (var peers in new[] { _voters, _promotables, _nonVoters })
+                {
+                    foreach (var peer in peers)
+                    {
+                        old[peer.Key] = peer.Value;
+                    }
+                    peers.Clear();
+                }
+
+                foreach (var voter in clusterTopology.Members)
+                {
+                    if (voter.Key == _engine.Tag)
+                        continue; // we obviously won't be applying to ourselves
+
+                    FollowerAmbassador existingInstance;
+                    if (old.TryGetValue(voter.Key, out existingInstance))
+                    {
+                        existingInstance.UpdateLeaderWake(_voterResponded);
+                        _voters.Add(voter.Key, existingInstance);
+                        old.Remove(voter.Key);
+                        continue; // already here
+                    }
+
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, clusterTopology.ApiKey);
+                    _voters.Add(voter.Key, ambasaddor);
+                    _engine.AppendStateDisposable(this, ambasaddor);
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for voter {voter.Key} {voter.Value}");
+                    }
+                    ambasaddor.Start();
+                }
+
+                foreach (var promotable in clusterTopology.Promotables)
+                {
+                    FollowerAmbassador existingInstance;
+                    if (old.TryGetValue(promotable.Key, out existingInstance))
+                    {
+                        existingInstance.UpdateLeaderWake(_promotableUpdated);
+                        _promotables.Add(promotable.Key, existingInstance);
+                        old.Remove(promotable.Key);
+                        continue; // already here
+                    }
+
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value, clusterTopology.ApiKey);
+                    _promotables.Add(promotable.Key, ambasaddor);
+                    _engine.AppendStateDisposable(this, ambasaddor);
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for promotable {promotable.Key} {promotable.Value}");
+                    }
+                    ambasaddor.Start();
+                }
+
+                foreach (var nonVoter in clusterTopology.Watchers)
+                {
+                    FollowerAmbassador existingInstance;
+                    if (_nonVoters.TryGetValue(nonVoter.Key, out existingInstance))
+                    {
+                        existingInstance.UpdateLeaderWake(_noop);
+
+                        _nonVoters.Add(nonVoter.Key, existingInstance);
+                        old.Remove(nonVoter.Key);
+                        continue; // already here
+                    }
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value, clusterTopology.ApiKey);
+                    _nonVoters.Add(nonVoter.Key, ambasaddor);
+                    _engine.AppendStateDisposable(this, ambasaddor);
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for watcher {nonVoter.Key} {nonVoter.Value}");
+                    }
+                    ambasaddor.Start();
+                }
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    foreach (var ambasaddor in old)
+                    {
+                        // it is not used by anything else, so we can close it
+                        ambasaddor.Value.Dispose();
+                    }
+                }, null);
             }
-
-            foreach (var promotable in clusterTopology.Promotables)
+            finally
             {
-                if (old.TryGetValue(promotable.Key, out FollowerAmbassador existingInstance))
-                {
-                    existingInstance.UpdateLeaderWake(_promotableUpdated);
-                    _promotables.Add(promotable.Key, existingInstance);
-                    old.Remove(promotable.Key);
-                    continue; // already here
-                }
-
-                var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value, clusterTopology.ApiKey);
-                _promotables.Add(promotable.Key, ambasaddor);
-                _engine.AppendStateDisposable(this, ambasaddor);
-                if (_engine.Log.IsInfoEnabled)
-                {
-                    _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for promotable {promotable.Key} {promotable.Value}");
-                }
-                ambasaddor.Start();
+                if(lockTaken)
+                    Monitor.Exit(this);
             }
-
-            foreach (var nonVoter in clusterTopology.Watchers)
-            {
-                if (_nonVoters.TryGetValue(nonVoter.Key, out FollowerAmbassador existingInstance))
-                {
-                    existingInstance.UpdateLeaderWake(_noop);
-
-                    _nonVoters.Add(nonVoter.Key, existingInstance);
-                    old.Remove(nonVoter.Key);
-                    continue; // already here
-                }
-                var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value, clusterTopology.ApiKey);
-                _nonVoters.Add(nonVoter.Key, ambasaddor);
-                _engine.AppendStateDisposable(this, ambasaddor);
-                if (_engine.Log.IsInfoEnabled)
-                {
-                    _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for watcher {nonVoter.Key} {nonVoter.Value}");
-                }
-                ambasaddor.Start();
-            }
-
-            Task.Run(() =>
-            {
-                foreach (var ambasaddor in old)
-                {
-                    // it is not used by anything else, so we can close it
-                    ambasaddor.Value.Dispose();
-                }
-            });
         }
 
         /// <summary>
@@ -227,7 +231,8 @@ namespace Raven.Server.Rachis
                 {
                     ["Command"] = "noop"
                 };
-                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                TransactionOperationContext context;
+                using (_engine.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenWriteTransaction())
                 using (var cmd = context.ReadObject(noopCmd, "noop-cmd"))
                 {
@@ -268,7 +273,7 @@ namespace Raven.Server.Rachis
                     var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster();
                     if (lowestIndexInEntireCluster != LowestIndexInEntireCluster)
                     {
-                        using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (_engine.ContextPool.AllocateOperationContext(out context))
                         using (context.OpenWriteTransaction())
                         {
                             _engine.TruncateLogBefore(context, lowestIndexInEntireCluster);
@@ -380,7 +385,8 @@ namespace Raven.Server.Rachis
                 if (kvp.Key > _lastCommit)
                     continue;
 
-                if (_entries.TryRemove(kvp.Key, out CommandState value))
+                CommandState value;
+                if (_entries.TryRemove(kvp.Key, out value))
                 {
                     TaskExecuter.Execute(o =>
                     {
@@ -442,7 +448,8 @@ namespace Raven.Server.Rachis
         protected long GetLowestIndexInEntireCluster()
         {
             long lowestIndex;
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            TransactionOperationContext context;
+            using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
                 lowestIndex = _engine.GetLastEntryIndex(context);
@@ -469,7 +476,8 @@ namespace Raven.Server.Rachis
         protected long GetMaxIndexOnQuorum(int minSize)
         {
             _nodesPerIndex.Clear();
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            TransactionOperationContext context;
+            using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
                 _nodesPerIndex[_engine.GetLastEntryIndex(context)] = 1;
@@ -477,8 +485,9 @@ namespace Raven.Server.Rachis
 
             foreach (var voter in _voters.Values)
             {
+                int count;
                 var voterIndex = voter.FollowerMatchIndex;
-                _nodesPerIndex.TryGetValue(voterIndex, out int count);
+                _nodesPerIndex.TryGetValue(voterIndex, out count);
                 _nodesPerIndex[voterIndex] = count + 1;
             }
             var votesSoFar = 0;
@@ -495,7 +504,8 @@ namespace Raven.Server.Rachis
         private void CheckPromotables()
         {
             long lastIndex;
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            TransactionOperationContext context;
+            using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
                 lastIndex = _engine.GetLastEntryIndex(context);
@@ -506,7 +516,8 @@ namespace Raven.Server.Rachis
                 if (ambasaddor.Value.FollowerMatchIndex != lastIndex)
                     continue;
 
-                TryModifyTopology(ambasaddor.Key, ambasaddor.Value.Url, TopologyModification.Voter, out Task task);
+                Task task;
+                TryModifyTopology(ambasaddor.Key, ambasaddor.Value.Url, TopologyModification.Voter, out task);
 
                 _promotableUpdated.Set();
                 break;
@@ -518,13 +529,14 @@ namespace Raven.Server.Rachis
         {
             long index;
 
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            TransactionOperationContext context;
+            using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenWriteTransaction())
             {
                 index = _engine.InsertToLeaderLog(context, cmd, RachisEntryFlags.StateMachineCommand);
                 context.Transaction.Commit();
             }
-            var tcs = new TaskCompletionSource<long>();
+            var tcs = new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
             _entries[index] = new CommandState
             {
                 CommandIndex = index,
@@ -537,56 +549,78 @@ namespace Raven.Server.Rachis
         
         public void Dispose()
         {
-            Running = false;
-            _shutdownRequested.Set();
-            TaskExecuter.Execute(_ =>
+            bool lockTaken = false;
+            Monitor.TryEnter(this, ref lockTaken);
+            try
             {
-                _newEntriesArrived.TrySetCanceled();
-                var lastStateChangeReason = _engine.LastStateChangeReason;
-                TimeoutException te = null;
-                if (string.IsNullOrEmpty(lastStateChangeReason) == false)
-                    te = new TimeoutException(lastStateChangeReason);
-                foreach (var entry in _entries)
+                if (lockTaken == false)
                 {
-                    if (te == null)
+                    //We need to wait that refresh ambassador finish
+                    if (Monitor.Wait(this, TimeSpan.FromSeconds(15)) == false)
                     {
-                        entry.Value.TaskCompletionSource.TrySetCanceled();
-                    }
-                    else
-                    {
-                        entry.Value.TaskCompletionSource.TrySetException(te);
+                        var message = $"Leader {_engine.Tag}: Refresh ambassador is taking the lock for 15 sec giving up on leader dispose";
+                        if (_engine.Log.IsInfoEnabled)
+                        {                            
+                            _engine.Log.Info(message);
+                        }
+                        throw new TimeoutException(message);
                     }
                 }
-            }, null);
+                Running = false;
+                _shutdownRequested.Set();
+                TaskExecuter.Execute(_ =>
+                {
+                    _newEntriesArrived.TrySetCanceled();
+                    var lastStateChangeReason = _engine.LastStateChangeReason;
+                    TimeoutException te = null;
+                    if (string.IsNullOrEmpty(lastStateChangeReason) == false)
+                        te = new TimeoutException(lastStateChangeReason);
+                    foreach (var entry in _entries)
+                    {
+                        if (te == null)
+                        {
+                            entry.Value.TaskCompletionSource.TrySetCanceled();
+                        }
+                        else
+                        {
+                            entry.Value.TaskCompletionSource.TrySetException(te);
+                        }
+                    }
+                }, null);
 
-            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-                _thread.Join();
+                if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                    _thread.Join();
 
-            var ae = new ExceptionAggregator("Could not properly dispose Leader");
-            foreach (var ambasaddor in _nonVoters)
-            {
-                ae.Execute(ambasaddor.Value.Dispose);
+                var ae = new ExceptionAggregator("Could not properly dispose Leader");
+                foreach (var ambasaddor in _nonVoters)
+                {
+                    ae.Execute(ambasaddor.Value.Dispose);
+                }
+
+                foreach (var ambasaddor in _promotables)
+                {
+                    ae.Execute(ambasaddor.Value.Dispose);
+                }
+                foreach (var ambasaddor in _voters)
+                {
+                    ae.Execute(ambasaddor.Value.Dispose);
+                }
+
+
+                _newEntry.Dispose();
+                _voterResponded.Dispose();
+                _promotableUpdated.Dispose();
+                _shutdownRequested.Dispose();
+                _noop.Dispose();
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"Leader {_engine.Tag}: Dispose");
+                }
             }
-
-            foreach (var ambasaddor in _promotables)
+            finally
             {
-                ae.Execute(ambasaddor.Value.Dispose);
-            }
-            foreach (var ambasaddor in _voters)
-            {
-                ae.Execute(ambasaddor.Value.Dispose);
-            }
-
-            _newEntry.Dispose();
-            _voterResponded.Dispose();
-            _promotableUpdated.Dispose();
-            _shutdownRequested.Dispose();
-            _noop.Dispose();
-            _clusterMaintenanceMaster.Dispose();
-
-            if (_engine.Log.IsInfoEnabled)
-            {
-                _engine.Log.Info($"Leader {_engine.Tag}: Dispose");
+                if(lockTaken)
+                    Monitor.Exit(this);
             }
         }
 
@@ -605,7 +639,8 @@ namespace Raven.Server.Rachis
 
         public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false)
         {
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            TransactionOperationContext context;
+            using (_engine.ContextPool.AllocateOperationContext(out context))
             using (context.OpenWriteTransaction())
             {
                 var existing = Interlocked.CompareExchange(ref _topologyModification, null, null);
@@ -673,7 +708,7 @@ namespace Raven.Server.Rachis
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
 
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
-                var tcs = new TaskCompletionSource<long>();
+                var tcs = new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
                 _entries[index] = new CommandState
                 {
                     TaskCompletionSource = tcs,
@@ -710,7 +745,8 @@ namespace Raven.Server.Rachis
 
         public void SetStateOf(long index, Action<TaskCompletionSource<long>> onNotify)
         {
-            if (_entries.TryGetValue(index, out CommandState value))
+            CommandState value;
+            if (_entries.TryGetValue(index, out value))
             {
                 value.OnNotify = onNotify;
             }

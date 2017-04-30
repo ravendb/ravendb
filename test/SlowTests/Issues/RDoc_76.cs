@@ -42,11 +42,11 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.RegisterAsyncIdConvention<Bedroom>((dbName, r) => new CompletedTask<string>("b/" + r.Sth));
-                store.Conventions.RegisterAsyncIdConvention<Guestroom>((dbName, r) => new CompletedTask<string>("gr/" + r.Sth));
-                store.Conventions.RegisterAsyncIdConvention<Room>((dbName, r) => new CompletedTask<string>("r/" + r.Sth));
-                store.Conventions.RegisterAsyncIdConvention<Kitchen>((dbName, r) => new CompletedTask<string>("k/" + r.Sth));
-                store.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => new CompletedTask<string>("mb/" + r.Sth));
+                store.Conventions.RegisterAsyncIdConvention<Bedroom>((dbName, r) => Task.FromResult("b/" + r.Sth));
+                store.Conventions.RegisterAsyncIdConvention<Guestroom>((dbName, r) => Task.FromResult("gr/" + r.Sth));
+                store.Conventions.RegisterAsyncIdConvention<Room>((dbName, r) => Task.FromResult("r/" + r.Sth));
+                store.Conventions.RegisterAsyncIdConvention<Kitchen>((dbName, r) => Task.FromResult("k/" + r.Sth));
+                store.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => Task.FromResult("mb/" + r.Sth));
 
                 using (var session = store.OpenSession())
                 {
@@ -82,8 +82,8 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => new CompletedTask<string>("a/" + r.Sth));
-                store.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => new CompletedTask<string>("mb/" + r.Sth));
+                store.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => Task.FromResult("a/" + r.Sth));
+                store.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, r) => Task.FromResult("mb/" + r.Sth));
 
                 using (var session = store.OpenAsyncSession())
                 {
