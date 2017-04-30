@@ -217,7 +217,7 @@ namespace Rachis
                         if (hasStateChagned)
                         {
                             if(_log.IsDebugEnabled)
-                                _log.Debug("State {0} timeout but the behavior has changed to {2} so we will skeep timeout handling ({1:#,#;;0} ms).", oldBehavior.State, oldBehavior.Timeout,behavior.State);
+                                _log.Debug("State {0} timeout but the behavior has changed to {2} so we will skip timeout handling ({1:#,#;;0} ms).", oldBehavior.State, oldBehavior.Timeout,behavior.State);
                             continue;
                         }
                         if (State != RaftEngineState.Leader && _log.IsDebugEnabled)
