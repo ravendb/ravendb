@@ -55,7 +55,7 @@ namespace Raven.Client.Documents
 
         public PeriodicBackupConfiguration PeriodicBackup { get; set; }
 
-        public Dictionary<long, SubscriptionRaftState> Subscriptions { get; set; }
+        public Dictionary<string, SubscriptionRaftState> Subscriptions;
 
         public void AddIndex(IndexDefinition definition)
         {
@@ -170,7 +170,7 @@ namespace Raven.Client.Documents
 
         public void CreateSubscription(SubscriptionCriteria criteria, long etag, ChangeVectorEntry[] initialChangeVector = null)
         {
-            Subscriptions.Add(etag, new SubscriptionRaftState()
+            Subscriptions.Add(etag.ToString(), new SubscriptionRaftState()
             {
                 Etag = etag,
                 ChangeVector = initialChangeVector,
@@ -180,7 +180,7 @@ namespace Raven.Client.Documents
 
         public void UpdateSusbscriptionChangeVector(long etag, ChangeVectorEntry[] changeVectorUpdate, string nodeTag)
         {
-            var subscriptionRaftState = Subscriptions[etag];
+            var subscriptionRaftState = Subscriptions[etag.ToString()];
             if (this.Topology.IsItMyTask(subscriptionRaftState, nodeTag) == false)
                 throw new InvalidOperationException($"Can't update subscription with id {etag} by node {nodeTag}, because it's not it's task to update this subscription");
 
@@ -191,7 +191,7 @@ namespace Raven.Client.Documents
 
         public void DeleteSubscription(long etag)
         {
-            Subscriptions.Remove(etag);
+            Subscriptions.Remove(etag.ToString());
         }
 
         
