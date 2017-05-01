@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicExport;
@@ -49,6 +52,8 @@ namespace Raven.Client.Documents
         public ExpirationConfiguration Expiration { get; set; }
 
         public PeriodicBackupConfiguration PeriodicBackup { get; set; }
+
+        public Dictionary<long, SubscriptionRaftState> Subscriptions { get; set; }
 
         public void AddIndex(IndexDefinition definition)
         {
@@ -160,6 +165,34 @@ namespace Raven.Client.Documents
         {
             Transformers?.Remove(name);
         }
+
+        public void CreateSubscription(SubscriptionCriteria criteria, long etag, ChangeVectorEntry[] initialChangeVector = null)
+        {
+            Subscriptions.Add(etag, new SubscriptionRaftState()
+            {
+                Etag = etag,
+                ChangeVector = initialChangeVector,
+                Criteria = criteria
+            });
+        }
+
+        public void UpdateSusbscriptionChangeVector(long etag, ChangeVectorEntry[] changeVectorUpdate, string nodeTag)
+        {
+            var subscriptionRaftState = Subscriptions[etag];
+            if (this.Topology.IsItMyTask(subscriptionRaftState, nodeTag) == false)
+                throw new InvalidOperationException($"Can't update subscription with id {etag} by node {nodeTag}, because it's not it's task to update this subscription");
+
+            // todo: implement change vector comparison here, need to move some extention methods from server to client first
+            
+            subscriptionRaftState.ChangeVector = changeVectorUpdate;
+        }
+
+        public void DeleteSubscription(long etag)
+        {
+            Subscriptions.Remove(etag);
+        }
+
+        
     }
 
     public enum DeletionInProgressStatus
