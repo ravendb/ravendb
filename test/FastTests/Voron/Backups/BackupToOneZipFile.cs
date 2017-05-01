@@ -66,10 +66,7 @@ namespace FastTests.Voron.Backups
 
                     tx.Commit();
                 }
-
-                database.SubscriptionStorage.Environment().Options.ManualFlushing = true;
-                database.SubscriptionStorage.Environment().FlushLogToDataFile();
-
+                
                 foreach (var index in database.IndexStore.GetIndexes())
                 {
                     index._indexStorage.Environment().Options.ManualFlushing = true;
@@ -107,8 +104,7 @@ namespace FastTests.Voron.Backups
             {
                 database.DocumentsStorage.Environment.Options.IncrementalBackupEnabled = true;
                 database.DocumentsStorage.Environment.Options.ManualFlushing = true;
-                database.SubscriptionStorage.Environment().Options.ManualFlushing = true;
-                database.SubscriptionStorage.Environment().Options.IncrementalBackupEnabled = true;
+                
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
 
@@ -150,9 +146,7 @@ namespace FastTests.Voron.Backups
                         database.DocumentsStorage.Put(context, "users/2", null, doc2);
 
                         tx.Commit();
-                    }
-
-                    database.SubscriptionStorage.Environment().FlushLogToDataFile();
+                    }               
 
                     foreach (var index in database.IndexStore.GetIndexes())
                     {
@@ -191,9 +185,7 @@ namespace FastTests.Voron.Backups
                         database.DocumentsStorage.Put(context, "users/1", null, doc);
 
                         tx.Commit();
-                    }
-
-                    database.SubscriptionStorage.Environment().FlushLogToDataFile();
+                    }                                        
 
                     foreach (var index in database.IndexStore.GetIndexes())
                     {
