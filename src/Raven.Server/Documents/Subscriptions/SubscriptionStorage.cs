@@ -9,6 +9,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -18,6 +19,10 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
+using Raven.Server.ServerWide.Commands.Subscriptions;
+using Raven.Client.Documents.Replication.Messages;
+using System.Threading.Tasks;
+using Raven.Client.Documents;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -25,42 +30,16 @@ namespace Raven.Server.Documents.Subscriptions
     public class SubscriptionStorage : IDisposable
     {
         private readonly DocumentDatabase _db;
+        private readonly ServerStore _serverStore;
         public static TimeSpan TwoMinutesTimespan = TimeSpan.FromMinutes(2);
         private readonly ConcurrentDictionary<long, SubscriptionState> _subscriptionStates = new ConcurrentDictionary<long, SubscriptionState>();
-        private readonly TableSchema _subscriptionsSchema = new TableSchema();
-        private readonly StorageEnvironment _environment;
         private readonly Logger _logger;
 
-
-        public SubscriptionStorage(DocumentDatabase db)
+        public SubscriptionStorage(DocumentDatabase db, ServerStore serverStore)
         {
             _db = db;
-            var path = db.Configuration.Core.DataDirectory.Combine("Subscriptions");
-
-            var options = db.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath, null, db.IoChanges, db.CatastrophicFailureNotification)
-                : StorageEnvironmentOptions.ForPath(path.FullPath, null, null, db.IoChanges, db.CatastrophicFailureNotification);
-
-            options.OnNonDurableFileSystemError += db.HandleNonDurableFileSystemError;
-            options.OnRecoveryError += db.HandleOnRecoveryError;
-
-            options.SchemaVersion = 1;
-            options.TransactionsMode = TransactionsMode.Lazy;
-            options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
-            options.TimeToSyncAfterFlashInSeconds = db.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
-            options.NumOfCocurrentSyncsPerPhysDrive = db.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
-            options.MasterKey = db.MasterKey;
-
-
-            _environment = new StorageEnvironment(options);
-            var databaseName = db.Name;
-
-            _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(databaseName);
-            _subscriptionsSchema.DefineKey(new TableSchema.SchemaIndexDef
-            {
-                StartIndex = 0,
-                Count = 1
-            });
+            _serverStore = serverStore;
+            _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(db.Name);
         }
 
         public void Dispose()
@@ -68,56 +47,50 @@ namespace Raven.Server.Documents.Subscriptions
             foreach (var state in _subscriptionStates.Values)
             {
                 state.Dispose();
-            }
-            _environment.Dispose();
+            }            
         }
 
         public void Initialize()
         {
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.WriteTransaction(transactionPersistentContext))
-            {
-                tx.CreateTree(SubscriptionSchema.IdsTree);
-                _subscriptionsSchema.Create(tx, SubscriptionSchema.SubsTree, 16);
-
-                tx.Commit();
-            }
+          
         }
 
-        public unsafe long CreateSubscription(BlittableJsonReaderObject criteria, long ackEtag = 0)
+        // todo: maybe switch etag in subscriptions to ChangeVector...
+        public async Task<long> CreateSubscription(BlittableJsonReaderObject criteria, long ackEtag = 0)
         {
             // Validate that this can be properly parsed into a criteria object
             // and doing that without holding the tx lock
-            JsonDeserializationServer.SubscriptionCriteria(criteria);
-
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.WriteTransaction(transactionPersistentContext))
+            var criteriaInstance = JsonDeserializationServer.SubscriptionCriteria(criteria);
+            
+            var command = new CreateSubscriptionCommand(_db.Name)
             {
-                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
-                var subscriptionsTree = tx.ReadTree(SubscriptionSchema.IdsTree);
-                var id = subscriptionsTree.Increment(SubscriptionSchema.Id, 1);
+                Criteria = criteriaInstance,
+                InitialChangeVector = GetChangeVectorFromEtag(ackEtag)
+            };
 
-                const long timeOfSendingLastBatch = 0;
-                const long timeOfLastClientActivity = 0;
+            var etag = await _serverStore.SendToLeaderAsync(command);
 
-                var bigEndianId = Bits.SwapBytes((ulong)id);
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"New Subscription With ID {etag} was created");
 
-                TableValueBuilder tableValueBuilder;
-                using (table.Allocate(out tableValueBuilder))
+            await _db.WaitForIndexNotification(etag);
+            return etag;
+        }
+
+        private ChangeVectorEntry[] GetChangeVectorFromEtag(long ackEtag)
+        {
+            ChangeVectorEntry[] changeVectorForEtag = null;
+
+            if (ackEtag != 0)
+            {
+                using (_db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    tableValueBuilder.Add(bigEndianId);
-                    tableValueBuilder.Add(criteria.BasePointer, criteria.Size);
-                    tableValueBuilder.Add(ackEtag);
-                    tableValueBuilder.Add(timeOfSendingLastBatch);
-                    tableValueBuilder.Add(timeOfLastClientActivity);
-                    table.Insert(tableValueBuilder);
+                    var docEqualsOrBiggerThenEtag = _db.DocumentsStorage.GetDocumentsFrom(context, ackEtag, 0, 1).First();
+                    changeVectorForEtag = docEqualsOrBiggerThenEtag.ChangeVector;
                 }
-                tx.Commit();
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"New Subscription With ID {id} was created");
-
-                return id;
             }
+
+            return changeVectorForEtag;
         }
 
         public SubscriptionState OpenSubscription(SubscriptionConnection connection)
@@ -127,112 +100,63 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionState;
         }
 
-        public unsafe void AcknowledgeBatchProcessed(long id, long lastEtag)
+        public async Task AcknowledgeBatchProcessed(long id, long lastEtag)
         {
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.WriteTransaction(transactionPersistentContext))
-            {
-                TableValueReader config;
-                GetSubscriptionConfig(id, tx, out config);
+            var changeVectorForEtag = GetChangeVectorFromEtag(lastEtag);                       
 
-                var subscriptionId = Bits.SwapBytes((ulong)id);
+            var command = new AcknowledgeSubscriptionBatchCommand(_db.Name)
+            {                
+                ChangeVector = changeVectorForEtag,
+                NodeTag = _serverStore.NodeTag,
+                SubscriptionEtag = id
+            };
 
-                int oldCriteriaSize;
-                var now = SystemTime.UtcNow.Ticks;
-                var ptr = config.Read(SubscriptionSchema.SubscriptionTable.CriteriaIndex, out oldCriteriaSize);
+            var etag = await _serverStore.SendToLeaderAsync(command);
 
-                JsonOperationContext context;
-                using (_db.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-                {
-                    var copy = context.GetMemory(oldCriteriaSize);
-                    Memory.Copy(copy.Address, ptr, oldCriteriaSize);
-                    var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
-                    TableValueBuilder tvb;
-                    using (table.Allocate(out tvb))
-                    {
-                        tvb.Add((byte*)&subscriptionId, sizeof(long));
-                        tvb.Add(copy.Address, oldCriteriaSize);
-                        tvb.Add((byte*)&lastEtag, sizeof(long));
-                        tvb.Add((byte*)&now, sizeof(long));
-                        TableValueReader existingSubscription;
-                        Slice subscriptionSlice;
-                        using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subscriptionSlice))
-                        {
-                            if (table.ReadByKey(subscriptionSlice, out existingSubscription) == false)
-                                return;
-                        }
-                        table.Update(existingSubscription.Id, tvb);
-                    }
-                    tx.Commit();
-                }
-            }
+            await _db.WaitForIndexNotification(etag);            
         }
 
-        public unsafe void GetCriteriaAndEtag(long id, DocumentsOperationContext context, out SubscriptionCriteria criteria, out long startEtag)
+        public unsafe void GetCriteriaAndEtag(long id, DocumentsOperationContext context, out SubscriptionCriteria criteria, out ChangeVectorEntry[] startChangeVector)
         {
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
+            using (serverStoreContext.OpenReadTransaction())
             {
-                TableValueReader config;
-                GetSubscriptionConfig(id, tx, out config);
-
-                int criteriaSize;
-                var criteriaPtr = config.Read(SubscriptionSchema.SubscriptionTable.CriteriaIndex, out criteriaSize);
-                using (var criteriaBlittable = new BlittableJsonReaderObject(criteriaPtr, criteriaSize, context))
-                {
-                    criteria = JsonDeserializationServer.SubscriptionCriteria(criteriaBlittable);
-                    startEtag =
-                        *(long*) config.Read(SubscriptionSchema.SubscriptionTable.AckEtagIndex, out criteriaSize);
-                }
-            }
+                var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name);
+                var subscriptionRaftState = databaseRecord.Subscriptions[id];
+                criteria = subscriptionRaftState.Criteria;
+                startChangeVector = subscriptionRaftState.ChangeVector;
+            }            
         }
 
-        public unsafe void AssertSubscriptionIdExists(long id)
+        public void AssertSubscriptionIdExists(long id, TimeSpan timeout)
         {
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
+            Task.WaitAny(_db.WaitForIndexNotification(id), Task.Delay(timeout));
+            
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
+            using (serverStoreContext.OpenReadTransaction())
             {
-                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
-                var subscriptionId = Bits.SwapBytes((ulong)id);
+                var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name);
 
-                Slice subsriptionSlice;
-                using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subsriptionSlice))
-                {
-                    if (table.VerifyKeyExists(subsriptionSlice) == false)
-                        throw new SubscriptionDoesNotExistException(
+                if (databaseRecord.Subscriptions.ContainsKey(id) == false)
+                    throw new SubscriptionDoesNotExistException(
                             "There is no subscription configuration for specified identifier (id: " + id + ")");
-                }
             }
-
         }
 
-
-        public unsafe void DeleteSubscription(long id)
+        public async Task DeleteSubscription(long id)
         {
-            DropSubscriptionConnection(id, "Deleted");
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.WriteTransaction(transactionPersistentContext))
+            var command = new DeleteSubscriptionCommand(_db.Name)
             {
-                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
+                SubscriptionEtag = id                
+            };
 
-                var subscriptionId = Bits.SwapBytes(id);
-                TableValueReader subscription;
-                Slice subsriptionSlice;
-                using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subsriptionSlice))
-                {
-                    if (table.ReadByKey(subsriptionSlice, out subscription) == false)
-                        return;
+            var etag = await _serverStore.SendToLeaderAsync(command);
 
-                    table.DeleteByKey(subsriptionSlice);
-                }
-
-                tx.Commit();
-
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info($"Subscription with id {id} was deleted");
-                }
+            if (_logger.IsInfoEnabled)
+            {
+                _logger.Info($"Subscription with id {id} was deleted");
             }
+            await _db.WaitForIndexNotification(etag);           
         }
 
         public bool DropSubscriptionConnection(long subscriptionId, string reason)
@@ -251,20 +175,18 @@ namespace Raven.Server.Documents.Subscriptions
             return true;
         }
 
-        public IEnumerable<DynamicJsonValue> GetAllSubscriptions(DocumentsOperationContext context, bool history, int start, int take)
+        public IEnumerable<DynamicJsonValue> GetAllSubscriptions(TransactionOperationContext serverStoreContext, bool history, int start, int take)
         {
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
+            var databaseRecord = _serverStore.Cluster.Read(serverStoreContext, _db.Name);
+
+            databaseRecord.TryGet(nameof(DatabaseRecord.Subscriptions), out BlittableJsonReaderArray subscriptionsBlittable);
+
+            foreach (BlittableJsonReaderObject curSubscriptionKeyValuePair in subscriptionsBlittable)
             {
-                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
+                curSubscriptionKeyValuePair.TryGet("Key", out long subscriptionId);
+                curSubscriptionKeyValuePair.TryGet("Value", out BlittableJsonReaderObject curSubscription);
 
-                foreach (var subscriptionTvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys, start))
-                {
-                    if (take-- <= 0)
-                        yield break;
-
-                    yield return GetSubscriptionInternal(context, ref subscriptionTvr.Reader, history);
-                }
+                yield return GetSubscriptionInternal(subscriptionId, curSubscription, history);
             }
         }
 
@@ -306,53 +228,75 @@ namespace Raven.Server.Documents.Subscriptions
             };
         }
 
-        public IEnumerable<DynamicJsonValue> GetAllRunningSubscriptions(DocumentsOperationContext context, bool history, int start, int take)
-        {
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
+        public IEnumerable<DynamicJsonValue> GetAllRunningSubscriptions(TransactionOperationContext context, bool history, int start, int take)
+        {            
+            var databaseRecord = _serverStore.Cluster.Read(context, _db.Name);
+                
+            foreach (var kvp in _subscriptionStates)
             {
-                foreach (var kvp in _subscriptionStates)
+                var subscriptionState = kvp.Value;
+                var subscriptionId = kvp.Key;
+
+                if (subscriptionState?.Connection == null)
+                    continue;
+
+                if (start > 0)
                 {
-                    var subscriptionState = kvp.Value;
-                    var subscriptionId = kvp.Key;
-
-                    if (subscriptionState?.Connection == null)
-                        continue;
-
-                    if (start > 0)
-                    {
-                        start--;
-                        continue;
-                    }
-
-                    if (take-- <= 0)
-                        yield break;
-
-                    yield return GetRunningSubscriptionInternal(context, history, subscriptionId, tx, subscriptionState);
+                    start--;
+                    continue;
                 }
+
+                if (take-- <= 0)
+                    yield break;
+                
+                BlittableJsonReaderObject currentSubscriptionReader = 
+                    GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, subscriptionId);                
+
+                Debug.Assert(currentSubscriptionReader != null);
+
+                yield return GetRunningSubscriptionInternal(history, currentSubscriptionReader, subscriptionState);
             }
+
         }
 
-        public unsafe DynamicJsonValue GetSubscription(DocumentsOperationContext context, long id, bool history)
+        private static BlittableJsonReaderObject GetSubscriptionFromDatabaseRecordBlittable(BlittableJsonReaderObject databaseRecord, long subscriptionId)
         {
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
+            BlittableJsonReaderObject foundSubscriptionReader = null;
+            databaseRecord.TryGet(nameof(DatabaseRecord.Subscriptions), out BlittableJsonReaderArray subscriptionsReader);
+
+            int low = 0, high = subscriptionsReader.Length - 1, midpoint = 0;
+
+            while (low <= high)
             {
-                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
+                midpoint = low + (high - low) / 2;
 
-                Slice subscriptionSlice;
-                using (Slice.External(tx.Allocator, (byte*)&id, sizeof(long), out subscriptionSlice))
+                var curSubscriptionKeyValuePair = subscriptionsReader[midpoint] as BlittableJsonReaderObject;
+                curSubscriptionKeyValuePair.TryGet("Key", out long curSubscriptionId);
+
+                if (subscriptionId == curSubscriptionId)
                 {
-                    TableValueReader reader;
-                    if (table.ReadByKey(subscriptionSlice, out reader) == false)
-                        return null;
-
-                    return GetSubscriptionInternal(context, ref reader, history);
+                    curSubscriptionKeyValuePair.TryGet("Value", out foundSubscriptionReader);
+                    low = high + 1;
                 }
+                else if (subscriptionId < curSubscriptionId)
+                    high = midpoint - 1;
+                else
+                    low = midpoint + 1;
             }
+
+            return foundSubscriptionReader;
         }
 
-        public DynamicJsonValue GetRunningSubscription(DocumentsOperationContext context, long id, bool history)
+        public unsafe DynamicJsonValue GetSubscription(TransactionOperationContext context, long id, bool history)
+        {
+            var databaseRecord = _serverStore.Cluster.Read(context, _db.Name);
+
+            var subscriptionBlittable = GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, id);
+
+            return GetSubscriptionInternal(id, subscriptionBlittable, history);
+        }
+
+        public DynamicJsonValue GetRunningSubscription(TransactionOperationContext context, long id, bool history)
         {
             SubscriptionState subscriptionState;
             if (_subscriptionStates.TryGetValue(id, out subscriptionState) == false)
@@ -361,14 +305,14 @@ namespace Raven.Server.Documents.Subscriptions
             if (subscriptionState.Connection == null)
                 return null;
 
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
-            {
-                return GetRunningSubscriptionInternal(context, history, id, tx, subscriptionState);
-            }
+
+            var databaseRecord = _serverStore.Cluster.Read(context, _db.Name);
+
+            var subscriptionBlittable = GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, id);
+            return GetRunningSubscriptionInternal(history, subscriptionBlittable, subscriptionState);            
         }
 
-        public DynamicJsonValue GetRunningSubscriptionConnectionHistory(JsonOperationContext context, long subscriptionId)
+        public DynamicJsonValue GetRunningSubscriptionConnectionHistory(TransactionOperationContext context, long subscriptionId)
         {
             SubscriptionState subscriptionState;
             if (!_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState))
@@ -378,60 +322,30 @@ namespace Raven.Server.Documents.Subscriptions
             if (subscriptionConnection == null)
                 return null;
 
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
-            {
-                long _;
-                TableValueReader reader;
-                GetSubscriptionConfig(subscriptionId, tx, out reader);
-                var subscriptionData = ExtractSubscriptionConfigValue(ref reader, context, out _);
-                SetSubscriptionStateData(subscriptionState, subscriptionData);
-                SetSubscriptionHistory(subscriptionState, subscriptionData);
+            var databaseRecord = _serverStore.Cluster.Read(context, _db.Name);
+            var subscriptionBlittable = GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, subscriptionId);
+            
+            var subscriptionData = new DynamicJsonValue(subscriptionBlittable);
+            SetSubscriptionStateData(subscriptionState, subscriptionData);
+            SetSubscriptionHistory(subscriptionState, subscriptionData);
 
-                return subscriptionData;
-            }
+            return subscriptionData;            
         }
 
         public long GetRunningCount()
         {
             return _subscriptionStates.Count(x => x.Value.Connection != null);
         }
-
-
-        public StorageEnvironment Environment()
-        {
-            return _environment;
-        }
-
+        
         public long GetAllSubscriptionsCount()
         {
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
-                return table.NumberOfEntries;
-            }
-        }
-
-        private static unsafe DynamicJsonValue ExtractSubscriptionConfigValue(ref TableValueReader tvr, JsonOperationContext context, out long id)
-        {
-            int size;
-            id = Bits.SwapBytes(*(long*)tvr.Read(SubscriptionSchema.SubscriptionTable.IdIndex, out size));
-            var ackEtag = *(long*)tvr.Read(SubscriptionSchema.SubscriptionTable.AckEtagIndex, out size);
-            var timeOfReceivingLastAck = *(long*)tvr.Read(SubscriptionSchema.SubscriptionTable.TimeOfReceivingLastAck, out size);
-            var ptr = tvr.Read(SubscriptionSchema.SubscriptionTable.CriteriaIndex, out size);
-            var data = context.GetMemory(size);
-            Memory.Copy(data.Address, ptr, size);
-            var criteria = new BlittableJsonReaderObject(data.Address, size, context);
-
-            return new DynamicJsonValue
-            {
-                ["SubscriptionId"] = id,
-                ["Criteria"] = criteria,
-                ["AckEtag"] = ackEtag,
-                ["TimeOfReceivingLastAck"] = new DateTime(timeOfReceivingLastAck).ToString(CultureInfo.InvariantCulture),
-            };
-        }
+                var databaseRecord = _serverStore.Cluster.Read(context, _db.Name);
+                databaseRecord.TryGet(nameof(DatabaseRecord.Subscriptions), out BlittableJsonReaderArray subscriptionsReader);
+                return subscriptionsReader.Length;
+            }            
+        }        
 
         private void SetSubscriptionStateData(SubscriptionState subscriptionState, DynamicJsonValue subscriptionData)
         {
@@ -458,13 +372,9 @@ namespace Raven.Server.Documents.Subscriptions
 
         }
 
-        private DynamicJsonValue GetRunningSubscriptionInternal(JsonOperationContext context, bool history, long id, Transaction tx, SubscriptionState subscriptionState)
-        {
-            long subscriptionId;
-            TableValueReader result;
-            GetSubscriptionConfig(id, tx, out result);
-            var subscriptionData = ExtractSubscriptionConfigValue(ref result, context, out subscriptionId);
-            Debug.Assert(id == subscriptionId);
+        private DynamicJsonValue GetRunningSubscriptionInternal(bool history, BlittableJsonReaderObject subscriptionReader, SubscriptionState subscriptionState)
+        {            
+            var subscriptionData = new DynamicJsonValue(subscriptionReader);          
 
             SetSubscriptionStateData(subscriptionState, subscriptionData);
 
@@ -473,10 +383,9 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionData;
         }
 
-        private DynamicJsonValue GetSubscriptionInternal(JsonOperationContext context, ref TableValueReader tvr, bool history)
+        private DynamicJsonValue GetSubscriptionInternal(long id , BlittableJsonReaderObject subscriptionRaftState, bool history)
         {
-            long id;
-            var subscriptionData = ExtractSubscriptionConfigValue(ref tvr, context, out id);
+            var subscriptionData = new DynamicJsonValue(subscriptionRaftState);
 
             SubscriptionState subscriptionState;
             if (_subscriptionStates.TryGetValue(id, out subscriptionState))
@@ -493,24 +402,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
 
             return subscriptionData;
-        }
-
-        private unsafe void GetSubscriptionConfig(long id, Transaction tx, out TableValueReader result)
-        {
-            var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
-            var subscriptionId = Bits.SwapBytes((ulong)id);
-
-            Slice subscriptionSlice;
-            using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subscriptionSlice))
-            {
-                TableValueReader config;
-                if (table.ReadByKey(subscriptionSlice, out config) == false)
-                    throw new SubscriptionDoesNotExistException(
-                    "There is no subscription configuration for specified identifier (id: " + id + ")");
-                result = config;
-            }
-
-        }
+        }       
     }
 
     // ReSharper disable once ClassNeverInstantiated.Local
