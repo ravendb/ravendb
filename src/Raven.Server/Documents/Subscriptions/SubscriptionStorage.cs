@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Subscriptions
             using (serverStoreContext.OpenReadTransaction())
             {
                 var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name);
-                var subscriptionRaftState = databaseRecord.Subscriptions[id];
+                var subscriptionRaftState = databaseRecord.Subscriptions[id.ToString()];
                 criteria = subscriptionRaftState.Criteria;
                 startChangeVector = subscriptionRaftState.ChangeVector;
             }            
@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name);
 
-                if (databaseRecord.Subscriptions.ContainsKey(id) == false)
+                if (databaseRecord.Subscriptions.ContainsKey(id.ToString()) == false)
                     throw new SubscriptionDoesNotExistException(
                             "There is no subscription configuration for specified identifier (id: " + id + ")");
             }
