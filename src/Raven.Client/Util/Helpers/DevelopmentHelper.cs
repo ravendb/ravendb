@@ -6,7 +6,7 @@ namespace Raven.Client.Util.Helpers
     {
         public static void TimeBomb()
         {
-            if (SystemTime.UtcNow > new DateTime(2017, 5, 1))
+            if (SystemTime.UtcNow > new DateTime(2017, 6, 1))
                 throw new NotImplementedException("Development time bomb.");
         }
     }
