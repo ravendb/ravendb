@@ -93,7 +93,7 @@ namespace Raven.Server.Documents
             if(serverStore != null)
                 ReplicationLoader = new ReplicationLoader(this, serverStore);
             DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
-            SubscriptionStorage = new SubscriptionStorage(this);
+            SubscriptionStorage = new SubscriptionStorage(this, serverStore);
             Operations = new DatabaseOperations(this);
             Metrics = new MetricsCountersManager();
             Patcher = new DocumentPatcher(this);
@@ -496,10 +496,7 @@ namespace Raven.Server.Documents
             // TODO :: more storage environments ?
             yield return
                 new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents,
-                    DocumentsStorage.Environment);
-            yield return
-                new StorageEnvironmentWithType("Subscriptions",
-                    StorageEnvironmentWithType.StorageEnvironmentType.Subscriptions, SubscriptionStorage.Environment());
+                    DocumentsStorage.Environment);            
             yield return
                 new StorageEnvironmentWithType("Configuration",
                     StorageEnvironmentWithType.StorageEnvironmentType.Configuration, ConfigurationStorage.Environment);
@@ -516,13 +513,7 @@ namespace Raven.Server.Documents
         }
 
         private IEnumerable<FullBackup.StorageEnvironmentInformation> GetAllStoragesEnvironmentInformation()
-        {
-            yield return (new FullBackup.StorageEnvironmentInformation()
-            {
-                Name = "",
-                Folder = "Subscriptions",
-                Env = SubscriptionStorage.Environment()
-            });
+        {           
             var i = 1;
             foreach (var index in IndexStore.GetIndexes())
             {
