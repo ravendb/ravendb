@@ -13,6 +13,10 @@ namespace Raven.Client.Documents.Subscriptions
 {
     public class SubscriptionRaftState:IDatabaseTask
     {
+        public SubscriptionRaftState()
+        {
+
+        }
         public SubscriptionCriteria Criteria { get; set; }
         public ChangeVectorEntry[] ChangeVector { get; set; }
         public long Etag { get; set; }
@@ -24,7 +28,7 @@ namespace Raven.Client.Documents.Subscriptions
     }
     public class SubscriptionCriteria : IFillFromBlittableJson
     {
-        protected SubscriptionCriteria()
+        public SubscriptionCriteria()
         {
             // for deserialization
         }
@@ -57,6 +61,10 @@ namespace Raven.Client.Documents.Subscriptions
 
     public class SubscriptionCriteria<T>
     {
+        public SubscriptionCriteria()
+        {
+
+        }
         public string FilterJavaScript { get; set; }
     }
 }
