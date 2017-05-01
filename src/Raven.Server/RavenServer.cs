@@ -20,8 +20,10 @@ using Raven.Client.Json.Converters;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
@@ -55,13 +57,11 @@ namespace Raven.Server
 
         private readonly LatestVersionCheck _latestVersionCheck;
 
-        public event Action AfterDisposal;    
+        public event Action AfterDisposal;
 
         public RavenServer(RavenConfiguration configuration)
         {
-            if (configuration == null) throw new ArgumentNullException(nameof(configuration));
-
-            Configuration = configuration;
+            Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
             if (Configuration.Initialized == false)
                 throw new InvalidOperationException("Configuration must be initialized");
@@ -343,7 +343,6 @@ namespace Raven.Server
                     return;
                 }
                 ListenToNewTcpConnection(listener);
-                TcpConnectionOptions tcp = null;
                 try
                 {
                     tcpClient.NoDelay = true;
@@ -351,7 +350,7 @@ namespace Raven.Server
                     tcpClient.SendBufferSize = 4096;
                     Stream stream = tcpClient.GetStream();
                     stream = await AuthenticateAsServerIfSslNeeded(stream);
-                    tcp = new TcpConnectionOptions
+                    var tcp = new TcpConnectionOptions
                     {
                         ContextPool = _tcpContextPool,
                         Stream = stream,
@@ -375,14 +374,14 @@ namespace Raven.Server
                                 header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
                                 if (_logger.IsInfoEnabled)
                                 {
-                                    _logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName} from {tcpClient.Client.RemoteEndPoint}");
+                                    _logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
                                 }
                             }
                             if (TryAuthorize(context, Configuration, tcp.Stream, header) == false)
                             {
-                                string msg =
-                                    $"New {header.Operation} TCP connection to {header.DatabaseName} from {tcpClient.Client.RemoteEndPoint}" +
-                                    $" is not authorized to access {header.DatabaseName}";
+                                var msg =
+                                    $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}" +
+                                    $" is not authorized to access {header.DatabaseName ?? "the cluster node"}";
                                 if (_logger.IsInfoEnabled)
                                 {
                                     _logger.Info(msg);
@@ -391,11 +390,9 @@ namespace Raven.Server
                             }
                         }
 
-                        tcp.Operation = header.Operation;
-                        if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
+                        if (DispatchServerwideTcpConnection(tcp, header, tcpClient))
                         {
-                            ServerStore.ClusterAcceptNewConnection(tcpClient);
-                            tcp = null; //the cluster will dispose of the TcpClient
+                            tcp = null; //do not keep reference -> tcp will be disposed by server-wide connection handlers
                             return;
                         }
 
@@ -429,8 +426,34 @@ namespace Raven.Server
                     {
                         _tcpLogger.Info("Failure when processing tcp connection", e);
                     }
-                }               
+                }
             });
+        }
+
+        private ClusterMaintenanceSlave _clusterMaintainance;
+
+        private bool DispatchServerwideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, TcpClient tcpClient)
+        {
+            tcp.Operation = header.Operation;
+            if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
+            {
+                ServerStore.ClusterAcceptNewConnection(tcpClient);
+                return true;
+            }
+
+            if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Heartbeats)
+            {
+                //TODO: add ClusterMaintenanceSlave as a handler for this connection
+                //TODO: do not forget that the "client" should dispose the tcp connection
+                var old = _clusterMaintainance;
+                using (old)
+                {
+                    _clusterMaintainance = new ClusterMaintenanceSlave(tcp, ServerStore.ServerShutdown, ServerStore);
+                    _clusterMaintainance.Start();
+                }
+                return true;
+            }
+            return false;
         }
 
         private async Task<bool> DispatchDatabaseTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
@@ -448,7 +471,10 @@ namespace Raven.Server
             {
                 var resultingTask = await Task.WhenAny(databaseLoadingTask, Task.Delay(databaseLoadTimeout));
                 if (resultingTask != databaseLoadingTask)
-                    ThrowTimeoutOnDatabaseLoad(header);
+                {
+                    if (databaseLoadingTask.IsCompleted == false)
+                        ThrowTimeoutOnDatabaseLoad(header);
+                }
             }
 
             tcp.DocumentDatabase = await databaseLoadingTask;
@@ -457,7 +483,7 @@ namespace Raven.Server
 
             switch (header.Operation)
             {
-             
+
                 case TcpConnectionHeaderMessage.OperationTypes.Subscription:
                     SubscriptionConnection.SendSubscriptionDocuments(tcp);
                     break;
@@ -479,7 +505,7 @@ namespace Raven.Server
             tcp = null;
             return false;
         }
-                   
+
         private async Task<Stream> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
             if (Configuration.Encryption.UseSsl)

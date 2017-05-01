@@ -125,9 +125,10 @@ namespace Raven.Server.Web.System
 
                     databaseRecord.Topology.AddMember(node,name);
                 }
+
                 //The case were we don't care where the database will be added to
                 else
-                {
+                {                    
                     var clusterTopology = ServerStore.GetClusterTopology(context);
                     var allNodes = clusterTopology.Members.Keys
                         .Concat(clusterTopology.Promotables.Keys)

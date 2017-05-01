@@ -268,6 +268,25 @@ namespace Raven.Server.Rachis
             }
         }
 
+        public async Task WaitForLeaveState(State state)
+        {
+            while (true)
+            {
+                // we setup the wait _before_ checking the state
+                var task = _stateChanged.Task;
+
+                if (CurrentState != state)
+                    return;
+
+                await task;
+            }
+        }
+
+        public Task GetTopologyChanged()
+        {
+            return _topologyChanged.Task;
+        }
+
         public async Task WaitForTopology(Leader.TopologyModification modification, string nodeTag = null)
         {
             while (true)

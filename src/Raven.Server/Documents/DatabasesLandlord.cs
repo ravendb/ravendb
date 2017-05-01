@@ -115,12 +115,13 @@ namespace Raven.Server.Documents
                         UnloadDatabase(t.dbName);
                         return;
                     }
+
                     if (DatabasesCache.TryGetValue(t.dbName, out var task) == false)
                     {
                         // if the database isn't loaded, but it is relevant for this node, we need to create
                         // it. This is important so things like replication will start pumping, and that 
                         // configuration changes such as running periodic backup will get a chance to run, which
-                        // they wouldn't unless the database is loaded / will have a request on it.
+                        // they wouldn't unless the database is loaded / will have a request on it.          
                         task = TryGetOrCreateResourceStore(t.dbName);
                     }
 
@@ -270,14 +271,12 @@ namespace Raven.Server.Documents
                 if (_disposing.TryEnterReadLock(0) == false)
                     ThrowServerIsBeingDisposed(databaseName);
 
-                Task<DocumentDatabase> database;
-                if (DatabasesCache.TryGetValue(databaseName, out database))
+                if (DatabasesCache.TryGetValue(databaseName, out var database))
                 {
                     if (database.IsFaulted || database.IsCanceled)
                     {
                         DatabasesCache.TryRemove(databaseName, out database);
-                        DateTime time;
-                        LastRecentlyUsed.TryRemove(databaseName, out time);
+                        LastRecentlyUsed.TryRemove(databaseName, out var _);
                         // and now we will try creating it again
                     }
                     else
@@ -285,7 +284,6 @@ namespace Raven.Server.Documents
                         return database;
                     }
                 }
-
                 return CreateDatabase(databaseName, ignoreDisabledDatabase);
             }
             finally
@@ -324,10 +322,22 @@ namespace Raven.Server.Documents
         {
             try
             {
-                var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config), TaskCreationOptions.RunContinuationsAsynchronously);
-
-                var database = DatabasesCache.GetOrAdd(databaseName, task);
-                if (database == task)
+                var tcs = new TaskCompletionSource<DocumentDatabase>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var task = new Task(delegate (object state) {
+                    var taskCompletionSource = (TaskCompletionSource<DocumentDatabase>)state;
+                    try
+                    {
+                        var r = ActuallyCreateDatabase(databaseName, config);
+                        taskCompletionSource.TrySetResult(r);
+                    }
+                    catch (Exception e)
+                    {
+                        taskCompletionSource.TrySetException(e);
+                    }
+                }, tcs);
+                
+                var database = DatabasesCache.GetOrAdd(databaseName, tcs.Task);
+                if (database == tcs.Task)
                     task.Start(); // the semaphore will be released here at the end of the task
                 else
                     _resourceSemaphore.Release();
@@ -355,6 +365,7 @@ namespace Raven.Server.Documents
                 var db = CreateDocumentsStorage(databaseName, config);
                 _serverStore.NotificationCenter.Add(
                     DatabaseChanged.Create(databaseName, DatabaseChangeType.Load));
+
                 return db;
             }
             catch (Exception e)
@@ -387,6 +398,7 @@ namespace Raven.Server.Documents
 
                 if(_disposing.IsReadLockHeld)
                     _disposing.ExitReadLock();
+              
             }
         }
 

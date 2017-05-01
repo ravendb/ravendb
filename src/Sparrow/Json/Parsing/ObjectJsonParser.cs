@@ -12,6 +12,11 @@ using Sparrow.Utils;
 
 namespace Sparrow.Json.Parsing
 {
+    public interface IDynamicJson
+    {
+        DynamicJsonValue ToJson();
+    }
+
     public class DynamicJsonValue
     {
         public const string TypeFieldName = "$type";
@@ -84,7 +89,7 @@ namespace Sparrow.Json.Parsing
             }
         }
 
-        public static DynamicJsonValue Convert(Dictionary<string, string> dictionary)
+        public static DynamicJsonValue Convert<T>(Dictionary<string, T> dictionary)
         {
             if (dictionary == null)
                 return null;
@@ -92,7 +97,8 @@ namespace Sparrow.Json.Parsing
             var djv = new DynamicJsonValue();
             foreach (var kvp in dictionary)
             {
-                djv[kvp.Key] = kvp.Value;
+                var json = kvp.Value as IDynamicJson;
+                djv[kvp.Key] = json == null ? (object)kvp.Value : json.ToJson();
             }
             return djv;
         }
@@ -203,6 +209,12 @@ namespace Sparrow.Json.Parsing
 
             while (true)
             {
+                var idj = current as IDynamicJson;
+                if (idj != null)
+                {
+                    current = idj.ToJson();
+                }
+
                 var value = current as DynamicJsonValue;
                 if (value != null)
                 {
@@ -337,7 +349,7 @@ namespace Sparrow.Json.Parsing
                     current = dbj.BlittableJson;
                     continue;
                 }
-
+                
                 var enumerable = current as IEnumerable<object>;
                 if (enumerable != null)
                 {

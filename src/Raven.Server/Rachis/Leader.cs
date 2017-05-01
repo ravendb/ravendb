@@ -82,7 +82,7 @@ namespace Raven.Server.Rachis
             }
 
             RefreshAmbassadors(clusterTopology);
-
+           
             _thread = new Thread(Run)
             {
                 Name =
@@ -622,6 +622,8 @@ namespace Raven.Server.Rachis
                 if(lockTaken)
                     Monitor.Exit(this);
             }
+
+           
         }
 
         public Task WaitForNewEntries()
