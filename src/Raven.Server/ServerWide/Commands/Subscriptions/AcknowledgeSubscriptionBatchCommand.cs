@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.AcknowledgeSubscriptionBatch(SubscriptionEtag, ChangeVector,NodeTag);
+            record.UpdateSusbscriptionChangeVector(SubscriptionEtag, ChangeVector,NodeTag);
         }
 
         public override void FillJson(DynamicJsonValue json)

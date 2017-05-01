@@ -34,13 +34,13 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/subscriptions", "DELETE", "/databases/{databaseName:string}/subscriptions?id={subscriptionId:long}")]
-        public Task Delete()
+        public async Task Delete()
         {
             var id = GetLongQueryString("id").Value;
 
-            Database.SubscriptionStorage.DeleteSubscription(id);
+            await Database.SubscriptionStorage.DeleteSubscription(id);
 
-            return NoContent();
+            await NoContent();
         }
 
         [RavenAction("/databases/*/subscriptions", "GET", "/databases/{databaseName:string}/subscriptions/running")]
@@ -52,8 +52,8 @@ namespace Raven.Server.Documents.Handlers
             var running = GetBoolValueQueryString("running", required: false) ?? false;
             var id = GetLongQueryString("id", required: false);
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))                
             using (context.OpenReadTransaction())
             {
                 IEnumerable<DynamicJsonValue> subscriptions;
