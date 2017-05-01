@@ -163,6 +163,7 @@ class replicationStats extends viewModelBase {
         brushChartColor: "#37404b",
         brushChartStrokeColor: "#008cc9",
         trackBackground: "#2c343a",
+        separatorLine: "rgba(44, 52, 58, 0.65)",
         trackNameBg: "rgba(57, 67, 79, 0.95)",
         trackNameFg: "#98a7b7",
         trackDirectionText: "#baa50b",
@@ -870,6 +871,8 @@ class replicationStats extends viewModelBase {
 
             const performance = replicationTrack.Performance; 
             const perfLength = performance.length;
+            let perfCompleted: string; 
+
             for (let perfIdx = 0; perfIdx < perfLength; perfIdx++) {
                 const perf = performance[perfIdx];   // each performance[i] has:  completed, deteails, DurationInMilliseconds, id, started
 
@@ -884,9 +887,22 @@ class replicationStats extends viewModelBase {
                     continue;
 
                 const yOffset = isOpened ? replicationStats.trackHeight + replicationStats.stackPadding : 0;
+
                 context.save();
+
+                // 1. Draw perf items
                 this.drawStripes(context, [perfWithCache.Details], x1, yStart + (isOpened ? yOffset : 0), yOffset, extentFunc, perfWithCache);
+
+                // 2. Draw a separating line between adjacent perf items if needed
+                if (perfIdx >= 1 && perfCompleted === perf.Started) {
+                    context.fillStyle = replicationStats.colors.separatorLine;
+                    context.fillRect(x1, yStart + (isOpened ? yOffset : 0), 1, replicationStats.trackHeight);
+                }
+
                 context.restore();
+
+                // Save to compare with the start time of the next item...
+                perfCompleted = perf.Completed; 
             }
         });
     }
