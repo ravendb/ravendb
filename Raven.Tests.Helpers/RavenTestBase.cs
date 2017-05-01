@@ -797,6 +797,8 @@ namespace Raven.Tests.Helpers
             {
                 databaseName = remoteDocumentStore.DefaultDatabase;
             }
+            if (url.EndsWith("/") == false)
+                url += "/";
 
             using (server)
             {
@@ -811,10 +813,13 @@ namespace Raven.Tests.Helpers
                     Console.WriteLine("Failed to open the browser. Please open it manually at {0}. {1}", url, e);
                 }
 
+                var databaseCommands = documentStore.DatabaseCommands;
+                if(string.IsNullOrWhiteSpace(databaseName) == false)
+                    databaseCommands = databaseCommands.ForDatabase(databaseName);
                 do
                 {
                     Thread.Sleep(100);
-                } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+                } while (databaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
             }
         }
 
@@ -841,12 +846,6 @@ namespace Raven.Tests.Helpers
 
             documentDatabase.DatabaseCommands.Put("Raven/StudioConfig", null, doc, metadata);
         }
-
-        /*    private void isServerExsist(string url)
-            {
-                checkPorts.CompareTo(url);
-
-            }*/
 
         protected void WaitForUserToContinueTheTest(bool debug = true, string url = null, string startPage = null,int port = 8079)
         {
