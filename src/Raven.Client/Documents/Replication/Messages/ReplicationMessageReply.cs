@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Replication.Messages
         }
     }
 
-    public struct ChangeVectorEntry : IComparable<ChangeVectorEntry>
+    public struct ChangeVectorEntry : IComparable<ChangeVectorEntry>, IDynamicJson
     {
         public Guid DbId;
         public long Etag;

@@ -9,10 +9,13 @@
             Subscription,
             Replication,
             TopologyDiscovery,
-            Cluster
+            Cluster,
+            Heartbeats
         }
 
         public string DatabaseName { get; set; }
+
+        public string SourceNodeTag { get; set; }
 
         public OperationTypes Operation { get; set; }
 

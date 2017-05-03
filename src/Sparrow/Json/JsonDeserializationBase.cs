@@ -472,12 +472,12 @@ namespace Sparrow.Json
             var list = new List<T>();
 
             BlittableJsonReaderArray array;
-            if (json.TryGet(name, out array) == false)
+            if (json.TryGet(name, out array) == false || array == null)
                 return list.ToArray();
 
             foreach (BlittableJsonReaderObject item in array.Items)
                 list.Add(converter(item));
-
+            
             return list.ToArray();
         }
     }

@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks =
             new ConcurrentQueue<TaskCompletionSource<object>>();
 
-        private readonly ServerStore _server;
+        internal readonly ServerStore _server;
       
         public List<ReplicationNode> Destinations => _destinations ?? new List<ReplicationNode>();
         private List<ReplicationNode> _destinations;
@@ -115,9 +115,10 @@ namespace Raven.Server.Documents.Replication
         {
             _server = server;
             Database = database;
+            var reconnectTime = TimeSpan.FromSeconds(3);
             _log = LoggingSource.Instance.GetLogger<ReplicationLoader>(Database.Name);
             _reconnectAttemptTimer = new Timer(AttemptReconnectFailedOutgoing,
-                null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
+                null, reconnectTime, reconnectTime);
             MinimalHeartbeatInterval =
                (int)Database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
 
@@ -159,7 +160,7 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                 {
                     _log.Info(
-                        $"GetLastEtag: {getLatestEtagMessage.SourceMachineName} / {getLatestEtagMessage.SourceDatabaseName} ({getLatestEtagMessage.SourceDatabaseId}) - {getLatestEtagMessage.SourceUrl}");
+                        $"GetLastEtag: {getLatestEtagMessage.SourceTag}({getLatestEtagMessage.SourceMachineName}) / {getLatestEtagMessage.SourceDatabaseName} ({getLatestEtagMessage.SourceDatabaseId}) - {getLatestEtagMessage.SourceUrl}");
                 }
             }
 

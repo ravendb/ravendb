@@ -7,7 +7,6 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
-using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicExport;
@@ -22,6 +21,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Versioning;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
@@ -32,6 +32,8 @@ namespace Raven.Server.Json
 {
     internal class JsonDeserializationServer : JsonDeserializationBase
     {
+        public static readonly Func<BlittableJsonReaderObject, DatabaseStatusReport> DatabaseStatusReport =
+            GenerateJsonDeserializationRoutine<DatabaseStatusReport>();
 
         public static readonly Func<BlittableJsonReaderObject, TcpConnectionInfo> TcpConnectionInfo =
             GenerateJsonDeserializationRoutine<TcpConnectionInfo>();
@@ -99,7 +101,6 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, UserRegistrationInfo> UserRegistrationInfo = GenerateJsonDeserializationRoutine<UserRegistrationInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, FeedbackForm> FeedbackForm = GenerateJsonDeserializationRoutine<FeedbackForm>();
-
         public static readonly Func<BlittableJsonReaderObject, CustomIndexPaths> CustomIndexPaths = GenerateJsonDeserializationRoutine<CustomIndexPaths>();
     }
 }
