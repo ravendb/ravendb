@@ -37,7 +37,7 @@
     "mocha-phantomjs": "^4.1.0",
     "run-sequence": "^1.1.5",
     "through2": "^2.0.1",
-    "typescript": "^2.1.4"
+    "typescript": "^2.3.2"
   },
   "dependencies": {}
 }

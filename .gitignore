@@ -112,3 +112,4 @@ release
 
 !scripts/assets/bin
 /.idea
+.vscode

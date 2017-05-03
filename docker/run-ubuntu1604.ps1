@@ -6,7 +6,8 @@ param(
     $DataVolumeName = "ravendb",
     [switch]$AllowEverybodyToAccessTheServerAsAdmin,
     [switch]$RemoveOnExit,
-    [switch]$DryRun)
+    [switch]$DryRun,
+    [switch]$DontScanVmSubnet)
 
 $ErrorActionPreference = "Stop";
 
@@ -24,6 +25,55 @@ CALLSTACK:$(Get-PSCallStack | Out-String)
 "@
         throw $msg
     }
+}
+
+function DetermineDockerVmSubnet {
+    $dockerSubnetAddress = Get-NetAdapter `
+        | Where-Object { $_.Name.Contains('DockerNAT') } `
+        | Select-Object -Property @{
+            Name = "IpV4Address";
+            Expression = {
+                Get-NetIPAddress -InterfaceIndex $_.ifIndex | Where-Object { $_.AddressFamily -eq "IPv4" }
+            }
+        }
+
+    if (!$dockerSubnetAddress -or !$($dockerSubnetAddress.IpV4Address)) {
+        throw "Could not determine Docker's subnet address."
+    }
+
+    return $dockerSubnetAddress.IpV4Address
+}
+
+function GetDockerizedServerId ($containerId) {
+    $serverIdMatch = docker logs $containerId | select-string -Pattern "Server ID is ([A-Za-z0-9-]+)."
+    $serverId = $null;
+    if ($serverIdMatch -and $serverIdMatch.Matches[0].Groups[1]) {
+        $serverId = $serverIdMatch.Matches[0].Groups[1].Value
+    }
+
+    return $serverId
+}
+
+function DetermineServerIp ($serverId, $dockerSubnetAddress, $shouldScan) {
+    $net = $dockerSubnetAddress.IpV4Address.ToString().Split(".") | Select-Object -first 3
+    $netPrefix = $net -join "."
+
+    $lastOctet = 2
+
+    if ($serverId -and $shouldScan) {
+        foreach ($scanOctet in 2..254) {
+            $uri = "$netPrefix.$( $scanOctet ):$BindPort/admin/stats/server-id"
+            try {
+                $response = (Invoke-WebRequest -Uri $uri -TimeoutSec 1 -Method 'GET').Content | ConvertFrom-Json
+                if ($response.ServerId -eq $serverId) {
+                    $lastOctet = $scanOctet
+                    break;
+                }
+            } catch {}
+        }
+    }
+
+    return "$netPrefix.$lastOctet"
 }
 
 $dockerArgs = @('run')
@@ -88,8 +138,9 @@ try {
     exit 1
 }
 
-start-sleep 10
-$containerInSubnetAddress = docker ps -q -f id=$containerId | % { docker inspect  -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $_ }[0];
+start-sleep 5
+
+$containerInSubnetAddress = docker ps -q -f id=$containerId | ForEach-Object { docker inspect  -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $_ }[0];
 
 if ([string]::IsNullOrEmpty($containerInSubnetAddress)) {
     write-host -fore red "Could not determine container`'s IP address. Is it running?"
@@ -105,31 +156,24 @@ if ($IsWindows -eq $False)
 }
 else
 {
-    $dockerSubnetAddress = Get-NetAdapter `
-        | Where-Object { $_.Name.Contains('DockerNAT') } `
-        | Select-Object -Property @{
-            Name = "IpV4Address";
-            Expression = {
-                Get-NetIPAddress -InterfaceIndex $_.ifIndex | Where-Object { $_.AddressFamily -eq "IPv4" }
-            }
-        }
+    try {
+        #
+        # To avoid the need of running this script with elevated privileges,
+        # we scan DockerNAT network searching for the proper server.
+        # Most of the time it's the first machine on the network - x.x.x.2
+        #
 
-    if (!$dockerSubnetAddress -or !$($dockerSubnetAddress.IpV4Address)) {
-        throw "Could not determine Docker's subnet address."
+        $dockerSubnetAddress = DetermineDockerVmSubnet
+        $serverId = GetDockerizedServerId $containerId
+        $ravenIp = DetermineServerIp $serverId $dockerSubnetAddress $(-Not $DontScanVmSubnet)
+    } catch {
+        $ravenIp = $null
     }
-
-    $dockerSubnetIp = $dockerSubnetAddress.IpV4Address.ToString()
-
-    $net = $dockerSubnetAddress.IpV4Address.ToString().Split(".") | select -first 3
-
-    
-    $LAST_PART_OF_IP_IN_DOCKERNAT_NETWORK = 2
-    $ravenIp = "$($net -join '.').$LAST_PART_OF_IP_IN_DOCKERNAT_NETWORK"
 }
 
 $containerIdShort = $containerId.Substring(0, 10)
 
-write-host -nonewline -fore white "**********************************************"
+write-host -nonewline -fore white "***********************************************************"
 write-host -fore red "
        _____                       _____  ____
       |  __ \                     |  __ \|  _ \
@@ -143,23 +187,30 @@ write-host ""
 write-host -nonewline "Container ID is "
 write-host -fore white "$containerId"
 write-host ""
-write-host -nonewline "To stop it use:     "
+write-host -nonewline "To stop it use:`t`t"
 write-host -fore cyan "docker stop $containerIdShort"
-write-host -nonewline "To run shell use:   "
+write-host -nonewline "To run shell use:`t"
 write-host -fore cyan "docker exec -it $containerIdShort /bin/bash"
-write-host ""
-write-host -nonewline "Access RavenDB Studio on "
-write-host -fore yellow "http://$($ravenIp):$BindPort"
-write-host -nonewline "Listening for TCP connections on: "
-write-host -fore yellow "$($ravenIp):$BindTcpPort"
-write-host ""
+write-host -nonewline "See output using:`t"
+write-host -fore cyan "docker logs $containerIdShort"
+write-host -nonewline "Inspect with:`t`t"
+write-host -fore cyan "docker inspect $containerIdShort"
+
+if ([string]::IsNullOrEmpty($ravenIp) -eq $False) {
+    write-host ""
+    write-host -nonewline "Access RavenDB Studio on "
+    write-host -fore yellow "http://$($ravenIp):$BindPort"
+    write-host -nonewline "Listening for TCP connections on: "
+    write-host -fore yellow "$($ravenIp):$BindTcpPort"
+    write-host ""
+}
 
 write-host -fore darkgray "Container IP address in Docker network: $containerInSubnetAddress"
 
-if ([string]::IsNullOrEmpty($dockerSubnetIp) -eq $False) {
-    write-host -fore darkgray "Docker bridge iface address: $dockerSubnetIp"
+if ($dockerSubnetAddress) {
+    write-host -fore darkgray "Docker bridge iface address: $($dockerSubnetAddress.IpV4Address.ToString())"
 }
 
 write-host ""
 
-write-host -fore white "**********************************************"
+write-host -fore white "***********************************************************"
