@@ -142,6 +142,20 @@
 
             height: 22px;
         }
+
+        .text-disabled {
+            color: @gray-light;
+
+            &:hover {
+                color: lighten(@gray-light, 25%);
+                transition: color .15s ease;
+            }
+        }
+
+        .link-disabled {
+            pointer-events: none;
+            cursor: default;
+        }
     }
 
     &.databases_compact {
