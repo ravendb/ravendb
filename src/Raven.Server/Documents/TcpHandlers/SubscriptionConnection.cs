@@ -348,7 +348,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 ChangeVectorEntry[] startChangeVector;
                 SubscriptionCriteria criteria;
 
-                TcpConnection.DocumentDatabase.SubscriptionStorage.GetCriteriaAndEtag(_options.SubscriptionId, dbContext,
+                TcpConnection.DocumentDatabase.SubscriptionStorage.GetCriteriaAndChangeVector(_options.SubscriptionId, dbContext,
                     out criteria, out startChangeVector);                
                 
                 long startEtag = 0;
@@ -508,13 +508,13 @@ namespace Raven.Server.Documents.TcpHandlers
                                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
                                     await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
                                         _options.SubscriptionId,
-                                        clientReply.Etag);
+                                        clientReply.ChangeVector);
                                     Stats.LastAckReceivedAt = DateTime.UtcNow;
                                     Stats.AckRate.Mark();
                                     await WriteJsonAsync(new DynamicJsonValue
                                     {
                                         ["Type"] = "Confirm",
-                                        ["Etag"] = clientReply.Etag
+                                        ["ChangeVector"] = clientReply.ChangeVector.ToJson()
                                     });
 
                                     break;

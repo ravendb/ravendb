@@ -78,7 +78,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, SqlDestination> SqlReplicationConfiguration = GenerateJsonDeserializationRoutine<SqlDestination>();
         public static readonly Func<BlittableJsonReaderObject, SimulateSqlEtl> SimulateSqlReplication = GenerateJsonDeserializationRoutine<SimulateSqlEtl>();
 
-        public static readonly Func<BlittableJsonReaderObject, SubscriptionCriteria> SubscriptionCriteria = GenerateJsonDeserializationRoutine<SubscriptionCriteria>();
+        public static readonly Func<BlittableJsonReaderObject, SubscriptionCreationParams> SubscriptionCreationParams = GenerateJsonDeserializationRoutine<SubscriptionCreationParams>();
 
         public static readonly Func<BlittableJsonReaderObject, VersioningConfiguration> VersioningConfiguration = GenerateJsonDeserializationRoutine<VersioningConfiguration>();
     

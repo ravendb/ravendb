@@ -11,16 +11,14 @@ namespace Raven.Server.Documents.Handlers
 {
     public class SubscriptionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/subscriptions", "PUT", "/databases/{databaseName:string}/subscriptions?startEtag={startEtag:long|optional}")]
+        [RavenAction("/databases/*/subscriptions", "PUT", "/databases/{databaseName:string}/subscriptions")]
         public async Task Create()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var startEtag = GetLongQueryString("startEtag", required: false) ?? 0;
-
                 var json = await context.ReadForDiskAsync(RequestBodyStream(), null);
-                var subscriptionId = Database.SubscriptionStorage.CreateSubscription(json, startEtag);
+                var subscriptionId = await Database.SubscriptionStorage.CreateSubscription(json);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created; // Created
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

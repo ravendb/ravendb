@@ -1,4 +1,6 @@
 ﻿using System.Net.Http;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -10,27 +12,18 @@ namespace Raven.Client.Documents.Commands
     public class CreateSubscriptionCommand : RavenCommand<CreateSubscriptionResult>
     {
         public JsonOperationContext Context;
-        public long StartEtag;
-        public SubscriptionCriteria Criteria;
+        public SubscriptionCreationParams SubscriptionCreationParams;
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/subscriptions?startEtag={StartEtag}";
+            url = $"{node.Url}/databases/{node.Database}/subscriptions";
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Put,
                 Content = new BlittableJsonContent(stream =>
                 {
-                    using (var writer = new BlittableJsonTextWriter(Context, stream))
-                    {
-                        writer.WriteStartObject();
-                        writer.WritePropertyName(nameof(SubscriptionCriteria.Collection));
-                        writer.WriteString(Criteria.Collection);
-                        writer.WriteComma();
-                        writer.WritePropertyName(nameof(SubscriptionCriteria.FilterJavaScript));
-                        writer.WriteString(Criteria.FilterJavaScript);
-                        writer.WriteEndObject();
-                    }
+                    Context.Write(stream, 
+                        EntityToBlittable.ConvertEntityToBlittable(SubscriptionCreationParams, DocumentConventions.Default, Context));
                 })
             };
             return request;

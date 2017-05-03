@@ -27,14 +27,18 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCriteria = new SubscriptionCriteria("Things")
+                var subscriptionCreationParams = new SubscriptionCreationParams()
                 {
-                    FilterJavaScript = " return this.Name == 'ThingNo3'",
+                    Criteria = new SubscriptionCriteria("Things")
+                    {
+                        FilterJavaScript = " return this.Name == 'ThingNo3'"
+                    },
+                    ChangeVector = lastChangeVector
                 };
-                var subsId = subscriptionManager.Create(subscriptionCriteria, lastEtag);
+                var subsId = subscriptionManager.Create(subscriptionCreationParams);
                 using (var subscription = subscriptionManager.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
                     var list = new BlockingCollection<Thing>();
@@ -66,13 +70,15 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector;
                 await CreateDocuments(store, 6);
 
-                var subscriptionCriteria = new SubscriptionCriteria("Things")
+                var subscriptionCreationParams = new SubscriptionCreationParams()
                 {
-                    FilterJavaScript =
-                    @"var namSuffix = parseInt(this.Name.replace('ThingNo', ''));  
+                    Criteria = new SubscriptionCriteria("Things")
+                    {
+                        FilterJavaScript =
+                            @"var namSuffix = parseInt(this.Name.replace('ThingNo', ''));  
                     if (namSuffix <= 2){
                         return false;
                     }
@@ -83,8 +89,11 @@ namespace FastTests.Client.Subscriptions
                     return this;
                     }
                     return {Name: 'foo', OtherDoc:LoadDocument('things/6')}",
+                    },
+                    ChangeVector = lastChangeVector
                 };
-                var subsId = subscriptionManager.Create(subscriptionCriteria, lastEtag);
+                
+                var subsId = subscriptionManager.Create(subscriptionCreationParams);
                 using (var subscription = subscriptionManager.Open<BlittableJsonReaderObject>(new SubscriptionConnectionOptions(subsId)))
                 {
                     JsonOperationContext context;
