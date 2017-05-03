@@ -54,7 +54,9 @@ namespace Raven.Server.Documents.Queries.Parse
 
         public virtual void AddQueryToBooleanQuery(BooleanQuery b, LuceneASTQueryConfiguration configuration, Occur o)
         {
-            b.Add(ToQuery(configuration), o);
+            var query = ToQuery(configuration);
+            if(query != null)
+                b.Add(query, o);
         }
 
         public virtual Query ToGroupFieldQuery(LuceneASTQueryConfiguration configuration)
@@ -333,7 +335,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 };
                 return booleanQuery;
             }
-            if (terms.Count == 0) return new BooleanQuery();
+            if (terms.Count == 0) return null;
 
             if (Type == TermType.Quoted)
             {
