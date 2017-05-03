@@ -18,7 +18,11 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+                var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                {
+                    Criteria = new SubscriptionCriteria<User>()
+                };
+                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
 
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
 
@@ -63,7 +67,11 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+                var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                {
+                    Criteria = new SubscriptionCriteria<User>()
+                };
+                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var users = new BlockingCollection<User>();
 
@@ -104,7 +112,11 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+                var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                {
+                    Criteria = new SubscriptionCriteria<User>()
+                };
+                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
 
                 var beforeAckMre = new ManualResetEvent(false);
@@ -139,7 +151,11 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+                var subscriptionCriteria = new SubscriptionCreationParams<User>
+                {
+                    Criteria = new SubscriptionCriteria<User>()
+                };
+                var subscriptionId = store.Subscriptions.Create(subscriptionCriteria);
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var users = new BlockingCollection<User>();
 
@@ -177,7 +193,11 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+                var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                {
+                    Criteria = new SubscriptionCriteria<User>()
+                };
+                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var users = new BlockingCollection<User>();
                 subscription.Subscribe(users.Add);
@@ -207,7 +227,11 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+                var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                {
+                    Criteria = new SubscriptionCriteria<User>()
+                };
+                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var exceptions = new BlockingCollection<Exception>();
 

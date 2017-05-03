@@ -54,18 +54,17 @@ namespace Raven.Server.Documents.Subscriptions
         {
           
         }
-
-        // todo: maybe switch etag in subscriptions to ChangeVector...
-        public async Task<long> CreateSubscription(BlittableJsonReaderObject criteria, long ackEtag = 0)
+        
+        public async Task<long> CreateSubscription(BlittableJsonReaderObject criteria)
         {
             // Validate that this can be properly parsed into a criteria object
             // and doing that without holding the tx lock
-            var criteriaInstance = JsonDeserializationServer.SubscriptionCriteria(criteria);
+            var criteriaInstance = JsonDeserializationServer.SubscriptionCreationParams(criteria);
             
             var command = new CreateSubscriptionCommand(_db.Name)
             {
-                Criteria = criteriaInstance,
-                InitialChangeVector = GetChangeVectorFromEtag(ackEtag)
+                Criteria = criteriaInstance.Criteria,
+                InitialChangeVector = criteriaInstance.ChangeVector
             };
 
             var etag = await _serverStore.SendToLeaderAsync(command);
@@ -77,22 +76,6 @@ namespace Raven.Server.Documents.Subscriptions
             return etag;
         }
 
-        private ChangeVectorEntry[] GetChangeVectorFromEtag(long ackEtag)
-        {
-            ChangeVectorEntry[] changeVectorForEtag = null;
-
-            if (ackEtag != 0)
-            {
-                using (_db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                {
-                    var docEqualsOrBiggerThenEtag = _db.DocumentsStorage.GetDocumentsFrom(context, ackEtag, 0, 1).First();
-                    changeVectorForEtag = docEqualsOrBiggerThenEtag.ChangeVector;
-                }
-            }
-
-            return changeVectorForEtag;
-        }
-
         public SubscriptionState OpenSubscription(SubscriptionConnection connection)
         {
             var subscriptionState = _subscriptionStates.GetOrAdd(connection.SubscriptionId,
@@ -100,9 +83,9 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionState;
         }
 
-        public async Task AcknowledgeBatchProcessed(long id, long lastEtag)
+        public async Task AcknowledgeBatchProcessed(long id, ChangeVectorEntry[] changeVector)
         {
-            var changeVectorForEtag = GetChangeVectorFromEtag(lastEtag);                       
+            var changeVectorForEtag = changeVector;                       
 
             var command = new AcknowledgeSubscriptionBatchCommand(_db.Name)
             {                
@@ -116,7 +99,7 @@ namespace Raven.Server.Documents.Subscriptions
             await _db.WaitForIndexNotification(etag);            
         }
 
-        public unsafe void GetCriteriaAndEtag(long id, DocumentsOperationContext context, out SubscriptionCriteria criteria, out ChangeVectorEntry[] startChangeVector)
+        public void GetCriteriaAndChangeVector(long id, DocumentsOperationContext context, out SubscriptionCriteria criteria, out ChangeVectorEntry[] startChangeVector)
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
