@@ -30,7 +30,11 @@ namespace SlowTests.Core.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria("Users"));
+                var subscriptionCreationParams = new SubscriptionCreationParams
+                {
+                    Criteria = new SubscriptionCriteria("Users")
+                };
+                var id = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
 
                 using (var subscription = store.AsyncSubscriptions.Open(
                     new SubscriptionConnectionOptions(id){

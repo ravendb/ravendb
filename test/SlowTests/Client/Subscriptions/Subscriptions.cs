@@ -21,11 +21,15 @@ namespace SlowTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector ;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCriteria = new SubscriptionCriteria("Things");
-                var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
+                var subscriptionCreationParams = new SubscriptionCreationParams
+                {
+                    Criteria = new SubscriptionCriteria("Things"),
+                    ChangeVector = lastChangeVector
+                };
+                var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
 
                 using (
                     var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))

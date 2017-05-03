@@ -6,6 +6,7 @@
 
 using System;
 using System.Threading;
+using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Subscriptions
@@ -20,7 +21,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         public MessageType Type { get; set; }
-        public long Etag { get; set; }
+        public ChangeVectorEntry[] ChangeVector { get; set; }
     }
 
     internal class SubscriptionConnectionServerMessage

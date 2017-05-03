@@ -26,6 +26,22 @@ namespace Raven.Client.Documents.Subscriptions
             return (ulong)Etag;
         }
     }
+
+    public class SubscriptionCreationParams
+    {
+        public SubscriptionCriteria Criteria { get; set; }
+        public ChangeVectorEntry[] ChangeVector { get; set; }
+    }
+
+    public class SubscriptionCreationParams<T>
+    {
+        public SubscriptionCreationParams()
+        {
+            
+        }
+        public SubscriptionCriteria<T> Criteria { get; set; }
+        public ChangeVectorEntry[] ChangeVector { get; set; }
+    }
     public class SubscriptionCriteria : IFillFromBlittableJson
     {
         public SubscriptionCriteria()
