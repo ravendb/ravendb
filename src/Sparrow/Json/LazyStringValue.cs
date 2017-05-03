@@ -72,6 +72,7 @@ namespace Sparrow.Json
         private int _length;
         public int Length
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
                 // Lazily load the length from the buffer. This is an O(n)
