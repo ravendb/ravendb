@@ -8,9 +8,8 @@ import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
 
 class customFunctionsEditor extends viewModelBase {
-    documentText = ko.observable<string>("");
+    documentText = ko.observable<string>();
     isSaveEnabled: KnockoutComputed<boolean>;
-    isEditingCustomFunctions = ko.observable<boolean>(false);
 
     globalValidationGroup = ko.validatedObservable({
         documentText: this.documentText
@@ -25,16 +24,13 @@ class customFunctionsEditor extends viewModelBase {
         aceEditorBindingHandler.install();
         this.dirtyFlag = new ko.DirtyFlag([this.documentText], false, jsonUtil.newLineNormalizingHashFunction);
         this.isSaveEnabled = ko.pureComputed<boolean>(() => {
-            let editCustomFunction = this.isEditingCustomFunctions();
-            const isDirty = this.dirtyFlag().isDirty();
-            return !editCustomFunction || isDirty;
+            return this.dirtyFlag().isDirty();
         });
         this.initValidation();
     }
 
     private initValidation() {
         this.documentText.extend({
-            required: true,
             validJavascript: true
         });
     }
@@ -42,7 +38,7 @@ class customFunctionsEditor extends viewModelBase {
     activate(args: any) {
         super.activate(args);
         this.updateHelpLink('XLDBRW');
-        this.fetchCustomFunctions();
+        return this.fetchCustomFunctions();
     }
 
     attached() {
@@ -61,14 +57,13 @@ class customFunctionsEditor extends viewModelBase {
     }
 
     fetchCustomFunctions() {
-        new getCustomFunctionsCommand(this.activeDatabase())
+        return new getCustomFunctionsCommand(this.activeDatabase())
             .execute()
             .done((cf: customFunctions) => {
-                this.documentText(cf.functions);
-                this.dirtyFlag().reset();
-                if (this.documentText() !== "") {
-                    this.isEditingCustomFunctions(true);
+                if (cf) {
+                    this.documentText(cf.functions);
                 }
+                this.dirtyFlag().reset();
             });
     }
 
@@ -83,9 +78,6 @@ class customFunctionsEditor extends viewModelBase {
                 .execute()
                 .done(() => {
                     this.dirtyFlag().reset();
-                    if (!this.isEditingCustomFunctions()) {
-                        this.isEditingCustomFunctions(true);
-                    }
                 })
                 .always(() => this.spinners.save(false));
         }

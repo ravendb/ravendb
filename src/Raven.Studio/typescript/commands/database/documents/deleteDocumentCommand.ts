@@ -8,12 +8,12 @@ class deleteDocumentCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<any> {       
+    execute(): JQueryPromise<void> {
         const args = {
             id: this.docId
         };
         const url = endpoints.databases.document.docs + this.urlEncodeArgs(args);
-        return this.del(url, null, this.db);
+        return this.del<void>(url, null, this.db);
     }
 }
 
