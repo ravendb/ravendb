@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using Sparrow.Binary;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Sparrow.Json
@@ -30,7 +29,7 @@ namespace Sparrow.Json
             }
         }
 
-        public void HandleLowMemory()
+        public void LowMemory()
         {
             _log.Info($"HandleLowMemory was called, will release all pooled memory for: {_debugTag}");
             var size = FreeAllPooledMemory();
@@ -63,7 +62,7 @@ namespace Sparrow.Json
             return size;
         }
 
-        public void SoftMemoryRelease()
+        public void LowMemoryOver()
         {
         }
 

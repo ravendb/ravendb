@@ -5,9 +5,11 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Global;
 using Sparrow.Json;
+using Sparrow.LowMemory;
 using Sparrow.Utils;
 #if VALIDATE
 using System.Threading;
@@ -371,6 +373,7 @@ namespace Sparrow
         {
             Size = size;
             Segment = NativeMemory.AllocateMemory(size, out _thread);
+            LowMemoryNotification.NotifyAllocationPending();
         }
 
         ~UnmanagedGlobalSegment()
@@ -497,7 +500,7 @@ namespace Sparrow
         { }
     }
 
-    public unsafe class ByteStringContext<TAllocator> : IDisposable where TAllocator : struct, IByteStringAllocator
+    public unsafe class ByteStringContext<TAllocator> : ILowMemoryHandler, IDisposable where TAllocator : struct, IByteStringAllocator
     {
         public static TAllocator Allocator;
 
@@ -589,6 +592,8 @@ namespace Sparrow
             AllocateExternalSegment(allocationBlockSize);
 
             this._externalStringPool = new FastStack<IntPtr>(64);
+
+            LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
 
             PrepareForValidation();
         }
@@ -1411,6 +1416,7 @@ namespace Sparrow
         }
 
         [ThreadStatic] private static bool _isFinalizerThread;
+        private LowMemoryFlag _lowMemoryFlag = new LowMemoryFlag();
 
         private void ReleaseSegment(SegmentInformation segment)
         {
@@ -1421,7 +1427,8 @@ namespace Sparrow
 
             // Check if we can release this memory segment back to the pool.
             if (_isFinalizerThread || 
-                segment.Memory.Size > ByteStringContext.MaxAllocationBlockSizeInBytes)
+                segment.Memory.Size > ByteStringContext.MaxAllocationBlockSizeInBytes ||
+                _lowMemoryFlag.LowMemoryState != 0)
             {
                 segment.Memory.Dispose();
             }
@@ -1429,6 +1436,25 @@ namespace Sparrow
             {
                 Allocator.Free(segment.Memory);
             }
+        }
+
+        public void LowMemory()
+        {
+            Interlocked.CompareExchange(ref _lowMemoryFlag.LowMemoryState, 1, 0);
+        }
+
+        public void LowMemoryOver()
+        {
+            Interlocked.CompareExchange(ref _lowMemoryFlag.LowMemoryState, 0, 1);
+
+        }
+
+        public LowMemoryHandlerStatistics GetStats()
+        {
+            return new LowMemoryHandlerStatistics
+            {
+                Name = "ByteStringContext"
+            };
         }
     }
 

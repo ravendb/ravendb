@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
 
-namespace Raven.Server.Config.Settings
+namespace Sparrow
 {
     public struct Size
     {

@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Server.Documents;
 using Sparrow.Json;
+using Sparrow.LowMemory;
 using Voron.Data;
 using Voron.Data.RawData;
 using Voron.Data.Tables;
@@ -76,7 +77,7 @@ namespace Voron.Recovery
             using (var destinationStream = File.OpenWrite(_output))
             using (var logFile = File.CreateText(Path.Combine(Path.GetDirectoryName(_output), LogFileName)))
             using (var gZipStream = new GZipStream(destinationStream, CompressionMode.Compress, true))
-            using (var context = new JsonOperationContext(_initialContextSize, _initialContextLongLivedSize))
+            using (var context = new JsonOperationContext(_initialContextSize, _initialContextLongLivedSize, LowMemoryFlag.None))
             using (var writer = new BlittableJsonTextWriter(context, gZipStream))
             {
                 WriteSmugglerHeader(writer);

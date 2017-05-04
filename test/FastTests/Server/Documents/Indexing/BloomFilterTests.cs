@@ -2,6 +2,7 @@
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
+using Sparrow.LowMemory;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing
@@ -11,7 +12,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void Basic()
         {
-            using (var context = new TransactionOperationContext(Env, 1024, 1024))
+            using (var context = new TransactionOperationContext(Env, 1024, 1024, LowMemoryFlag.None))
             {
                 using (var tx = Env.WriteTransaction())
                 {
@@ -58,7 +59,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CanPersist()
         {
-            using (var context = new TransactionOperationContext(Env, 1024, 1024))
+            using (var context = new TransactionOperationContext(Env, 1024, 1024, LowMemoryFlag.None))
             {
                 var key1 = context.GetLazyString("orders/1");
 
@@ -93,7 +94,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CheckWriteability()
         {
-            using (var context = new TransactionOperationContext(Env, 1024, 1024))
+            using (var context = new TransactionOperationContext(Env, 1024, 1024, LowMemoryFlag.None))
             {
                 var key1 = context.GetLazyString("orders/1");
                 var key2 = context.GetLazyString("orders/2");
@@ -139,7 +140,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CheckReadonly()
         {
-            using (var context = new TransactionOperationContext(Env, 1024, 1024))
+            using (var context = new TransactionOperationContext(Env, 1024, 1024, LowMemoryFlag.None))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
@@ -172,7 +173,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void WillExpand()
         {
-            using (var context = new TransactionOperationContext(Env, 1024, 1024))
+            using (var context = new TransactionOperationContext(Env, 1024, 1024, LowMemoryFlag.None))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
@@ -205,7 +206,7 @@ namespace FastTests.Server.Documents.Indexing
         [Fact]
         public void CannotMixFilters()
         {
-            using (var context = new TransactionOperationContext(Env, 1024, 1024))
+            using (var context = new TransactionOperationContext(Env, 1024, 1024, LowMemoryFlag.None))
             {
                 using (var tx = context.OpenWriteTransaction())
                 {

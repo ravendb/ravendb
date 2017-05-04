@@ -7,16 +7,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Global;
-using Size = Raven.Server.Config.Settings.Size;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Smuggler.Documents
 {

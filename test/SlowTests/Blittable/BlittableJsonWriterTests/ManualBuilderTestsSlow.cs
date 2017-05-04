@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using FastTests;
 using Sparrow.Json;
+using Sparrow.LowMemory;
 using Xunit;
 
 namespace SlowTests.Blittable.BlittableJsonWriterTests
@@ -14,7 +15,7 @@ namespace SlowTests.Blittable.BlittableJsonWriterTests
         [InlineData(short.MaxValue + 1)]
         public void BigAmountOfProperties(int propertiesAmount)
         {
-            using (var context = new JsonOperationContext(1024, 1024 * 4))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, LowMemoryFlag.None))
             {
                 using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
                 {

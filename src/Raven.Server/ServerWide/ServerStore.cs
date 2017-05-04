@@ -6,7 +6,6 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
@@ -19,12 +18,13 @@ using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 
 namespace Raven.Server.ServerWide
 {
@@ -35,7 +35,7 @@ namespace Raven.Server.ServerWide
     {
         private const string ResourceName = nameof(ServerStore);
 
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<ServerStore>(ResourceName);
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ServerStore>(ResourceName);
 
         private readonly CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
 
@@ -185,10 +185,12 @@ namespace Raven.Server.ServerWide
 
         public void Initialize()
         {
-            AbstractLowMemoryNotification.Initialize(ServerShutdown, Configuration);
+            LowMemoryNotification.Initialize(ServerShutdown, 
+                Configuration.Memory.LowMemoryDetection.GetValue(SizeUnit.Bytes),
+                Configuration.Memory.PhysicalRatioForLowMemDetection);
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));
+            if (Logger.IsInfoEnabled)
+                Logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));
 
             var path = Configuration.Core.DataDirectory.Combine("System");
 
@@ -250,8 +252,8 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception e)
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations(
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(
                         "Could not open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath), e);
                 options.Dispose();
                 throw;
@@ -432,7 +434,7 @@ namespace Raven.Server.ServerWide
                         ContextPool
                     };
 
-                    var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(ServerStore)}.");
+                    var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");
 
                     foreach (var disposable in toDispose)
                         exceptionAggregator.Execute(() =>
@@ -479,8 +481,8 @@ namespace Raven.Server.ServerWide
 
                     catch (Exception e)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info("Error during idle operation run for " + db.Key, e);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Error during idle operation run for " + db.Key, e);
                     }
                 }
 
@@ -503,8 +505,8 @@ namespace Raven.Server.ServerWide
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Error during idle operations for the server", e);
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Error during idle operations for the server", e);
                 }
             }
             finally
@@ -592,8 +594,8 @@ namespace Raven.Server.ServerWide
                     }
                     catch (Exception ex)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info("Tried to send message to leader, retrying", ex);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Tried to send message to leader, retrying", ex);
                     }
 
                     await logChange;
@@ -622,8 +624,8 @@ namespace Raven.Server.ServerWide
                     }
                     catch (Exception ex)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info("Tried to send message to leader, retrying", ex);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Tried to send message to leader, retrying", ex);
                     }
 
                     await logChange;
