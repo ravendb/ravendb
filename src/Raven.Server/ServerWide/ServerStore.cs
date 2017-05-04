@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
@@ -21,6 +24,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
@@ -289,8 +293,162 @@ namespace Raven.Server.ServerWide
                     DatabasesLandlord.ClusterOnDatabaseChanged(this, (db.Item1, 0));
                 }
             }
+        }
 
-            Task.Run(ClusterMaintanceSetupTask, ServerShutdown);
+        public IEnumerable<string> GetSecretKeysNames(TransactionOperationContext context)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree("SecretKeys");
+            if (tree == null)
+                yield break;
+
+            using (var it = tree.Iterate(prefetch: false))
+            {
+                if (it.Seek(Slices.BeforeAllKeys) == false)
+                    yield break;
+                do
+                {
+
+                    yield return it.CurrentKey.ToString();
+
+                } while (it.MoveNext());
+            }
+
+        }
+
+        public unsafe void PutSecretKey(
+            TransactionOperationContext context,
+            string name,
+            byte[] key,
+            bool overwrite = false /*Be careful with this one, overwriting a key might be disastrous*/)
+        {
+            Debug.Assert(context.Transaction != null);
+            if (key.Length != 256 / 8)
+                throw new ArgumentException($"Key size must be 256 bits, but was {key.Length * 8}", nameof(key));
+
+            byte[] existingKey;
+            try
+            {
+                existingKey = GetSecretKey(context, name);
+            }
+            catch (Exception)
+            {
+                // failure to read the key might be because the user password has changed
+                // in this case, we ignore the existance of the key and overwrite it
+                existingKey = null;
+            }
+            if (existingKey != null)
+            {
+                fixed (byte* pKey = key)
+                fixed (byte* pExistingKey = existingKey)
+                {
+                    bool areEqual = Sparrow.Memory.Compare(pKey, pExistingKey, key.Length) == 0;
+                    Sodium.ZeroMemory(pExistingKey, key.Length);
+                    if (areEqual)
+                    {
+                        Sodium.ZeroMemory(pKey, key.Length);
+                        return;
+                    }
+                }
+            }
+
+            var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
+            var record = Cluster.ReadDatabase(context, name);
+
+            if (overwrite == false && tree.Read(name) != null)
+                throw new InvalidOperationException($"Attempt to overwrite secret key {name}, which isn\'t permitted (you\'ll lose access to the encrypted db).");
+
+            if (record != null && record.Encrypted == false)
+                throw new InvalidOperationException($"Cannot modify key {name} where there is an existing database that is not encrypted");
+
+            var hashLen = Sodium.crypto_generichash_bytes_max();
+            var hash = new byte[hashLen + key.Length];
+            fixed (byte* pHash = hash)
+            fixed (byte* pKey = key)
+            {
+                try
+                {
+                    if (Sodium.crypto_generichash(pHash, (IntPtr)hashLen, pKey, (ulong)key.Length, null, IntPtr.Zero) != 0)
+                        throw new InvalidOperationException("Failed to hash key");
+
+                    Sparrow.Memory.Copy(pHash + hashLen, pKey, key.Length);
+
+                    var entropy = Sodium.GenerateRandomBuffer(256);
+                    var protectedData = ProtectedData.Protect(hash, entropy, DataProtectionScope.CurrentUser);
+
+                    var ms = new MemoryStream();
+                    ms.Write(entropy, 0, entropy.Length);
+                    ms.Write(protectedData, 0, protectedData.Length);
+                    ms.Position = 0;
+
+                    tree.Add(name, ms);
+                }
+                finally
+                {
+                    Sodium.ZeroMemory(pHash, hash.Length);
+                    Sodium.ZeroMemory(pKey, key.Length);
+                }
+            }
+        }
+
+
+        public unsafe byte[] GetSecretKey(TransactionOperationContext context, string name)
+        {
+            Debug.Assert(context.Transaction != null);
+            
+            var tree = context.Transaction.InnerTransaction.ReadTree("SecretKeys");
+
+            var readResult = tree?.Read(name);
+            if (readResult == null)
+                return null;
+
+            const int numberOfBits = 256;
+            var entropy = new byte[numberOfBits / 8];
+            var reader = readResult.Reader;
+            reader.Read(entropy, 0, entropy.Length);
+            var protectedData = new byte[reader.Length - entropy.Length];
+            reader.Read(protectedData, 0, protectedData.Length);
+
+            var data = ProtectedData.Unprotect(protectedData, entropy, DataProtectionScope.CurrentUser);
+
+            var hashLen = Sodium.crypto_generichash_bytes_max();
+
+            fixed (byte* pData = data)
+            fixed (byte* pHash = new byte[hashLen])
+            {
+                try
+                {
+                    if (Sodium.crypto_generichash(pHash, (IntPtr)hashLen, pData + hashLen, (ulong)(data.Length - hashLen), null, IntPtr.Zero) != 0)
+                        throw new InvalidOperationException($"Unable to compute hash for {name}");
+
+                    if (Sodium.sodium_memcmp(pData, pHash, (IntPtr)hashLen) != 0)
+                        throw new InvalidOperationException($"Unable to validate hash after decryption for {name}, user store changed?");
+
+                    var buffer = new byte[data.Length - hashLen];
+                    fixed (byte* pBuffer = buffer)
+                    {
+                        Sparrow.Memory.Copy(pBuffer, pData + hashLen, buffer.Length);
+                    }
+                    return buffer;
+                }
+                finally
+                {
+                    Sodium.ZeroMemory(pData, data.Length);
+                }
+            }
+        }
+
+        public void DeleteSecretKey(TransactionOperationContext context, string name)
+        {
+            Debug.Assert(context.Transaction != null);
+
+            var record = Cluster.ReadDatabase(context, name);
+
+            if (record != null)
+                throw new InvalidOperationException($"Cannot delete key {name} where there is an existing database that require its usage");
+
+            var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
+
+            tree.Delete(name);
         }
 
         public async Task<long> DeleteDatabaseAsync(JsonOperationContext context, string db, bool hardDelete, string fromNode)
@@ -536,7 +694,7 @@ namespace Raven.Server.ServerWide
             return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
         }
 
-        public async Task<long> WriteDbAsync(TransactionOperationContext context, string dbId, BlittableJsonReaderObject dbDoc, long? etag)
+        public async Task<long> WriteDbAsync(TransactionOperationContext context, string dbId, BlittableJsonReaderObject dbDoc, long? etag, bool encrypted = false)
         {
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
@@ -544,6 +702,7 @@ namespace Raven.Server.ServerWide
                 [nameof(AddDatabaseCommand.Name)] = dbId,
                 [nameof(AddDatabaseCommand.Value)] = dbDoc,
                 [nameof(AddDatabaseCommand.Etag)] = etag,
+                [nameof(AddDatabaseCommand.Encrypted)] = encrypted
             }, "put-cmd"))
             {
                 return await SendToLeaderAsync(putCmd);

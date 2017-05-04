@@ -174,6 +174,11 @@ namespace Raven.Server.Documents
         {
             try
             {
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    MasterKey = _serverStore.GetSecretKey(ctx, Name);
+                }
                 DocumentsStorage.Initialize();
                 InitializeInternal();
             }
@@ -290,7 +295,7 @@ namespace Raven.Server.Documents
             NotificationCenter.Initialize(this);
         }
 
-        public void Dispose()
+        public unsafe void Dispose()
         {
             if (_databaseShutdown.IsCancellationRequested)
                 return; // double dispose?
@@ -437,6 +442,16 @@ namespace Raven.Server.Documents
                     _databaseShutdown.Dispose();
                 });
 
+                exceptionAggregator.Execute(() =>
+                {
+                    if (MasterKey == null)
+                        return;
+                    fixed (byte* pKey = MasterKey)
+                    {
+                        Sodium.ZeroMemory(pKey, MasterKey.Length);
+                    }
+                });
+
                 exceptionAggregator.ThrowIfNeeded();
             }
         }
@@ -571,6 +586,7 @@ namespace Raven.Server.Documents
         public Task WaitForIndexNotification(long index) => _rachisLogIndexNotifications.WaitForIndexNotification(index);
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications;
+        public byte[] MasterKey;
 
         public IEnumerable<DatabasePerformanceMetrics> GetAllPerformanceMetrics()
         {
