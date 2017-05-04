@@ -572,8 +572,12 @@ namespace Raven.Server.Documents.Replication
             _waitForChanges.Set();
         }
 
+        private int _disposed;
         public void Dispose()
         {
+            //There are multiple invokations of dispose, this happens sometimes during tests, causing failures.
+            if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 1)
+                return;
             if (_log.IsInfoEnabled)
                 _log.Info($"Disposing OutgoingReplicationHandler ({FromToString})");
 
