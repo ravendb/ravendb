@@ -28,20 +28,20 @@ namespace Raven.Server.Web.Studio
                 if (_excludeIds.Count == 0)
                 {
                     // all documents w/o exclusions -> filter system documents
-                    return ExecuteOperation(collectionName, options, Context, onProgress, (key, etag, context) =>
+                    return ExecuteOperation(collectionName, options, Context, onProgress, (key, context) =>
                     {
                         if (CollectionName.IsSystemDocument(key.Buffer, key.Length, out _) == false)
                         {
-                            Database.DocumentsStorage.Delete(context, key, etag);
+                            Database.DocumentsStorage.Delete(context, key, null);
                         }
                     }, token);
                 }
                 // all documents w/ exluclusions -> delete only not excluded and not system
-                return ExecuteOperation(collectionName, options, Context, onProgress, (key, etag, context) =>
+                return ExecuteOperation(collectionName, options, Context, onProgress, (key, context) =>
                 {
                     if (_excludeIds.Contains(key) == false && CollectionName.IsSystemDocument(key.Buffer, key.Length, out _) == false)
                     {
-                        Database.DocumentsStorage.Delete(context, key, etag);
+                        Database.DocumentsStorage.Delete(context, key, null);
                     }
                 }, token);
             }
@@ -50,11 +50,11 @@ namespace Raven.Server.Web.Studio
                 return base.ExecuteDelete(collectionName, options, onProgress, token);
 
             // specific collection w/ exclusions
-            return ExecuteOperation(collectionName, options, Context, onProgress, (key, etag, context) =>
+            return ExecuteOperation(collectionName, options, Context, onProgress, (key, context) =>
             {
                 if (_excludeIds.Contains(key) == false)
                 {
-                    Database.DocumentsStorage.Delete(context, key, etag);
+                    Database.DocumentsStorage.Delete(context, key, null);
                 }
             }, token);
         }
