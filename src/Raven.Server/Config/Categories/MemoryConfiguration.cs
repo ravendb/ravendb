@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
-using Raven.Server.Config.Settings;
 using Sparrow;
 using Sparrow.LowMemory;
 
@@ -8,77 +7,22 @@ namespace Raven.Server.Config.Categories
 {
     public class MemoryConfiguration : ConfigurationCategory
     {
-        public MemoryConfiguration(RavenConfiguration configuration)
+        public MemoryConfiguration()
         {
             var memoryInfo = MemoryInformation.GetMemoryInfo();
 
-            // we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
-            LimitForProcessing = Size.Min(new Size(1024, SizeUnit.Megabytes), memoryInfo.AvailableMemory * 0.75);
-
-            LowMemoryDetection = Size.Min(new Size(2, SizeUnit.Gigabytes), memoryInfo.AvailableMemory * PhysicalRatioForLowMemDetection);
-
-            MemoryCacheLimit = GetDefaultMemoryCacheLimit(memoryInfo.TotalPhysicalMemory);
-
-            AvailableMemoryForRaisingBatchSizeLimit = Size.Min(new Size(768, SizeUnit.Megabytes), memoryInfo.TotalPhysicalMemory / 2);
+            LowMemoryDetection = Size.Min(new Size(2, SizeUnit.Gigabytes), memoryInfo.TotalPhysicalMemory * PhysicalRatioForLowMemDetection);
         }
 
-        [Description("Maximum number of megabytes that can be used by database to control the maximum size of the processing batches.\r\n" +
-                     "Default: 1024 or 75% percent of available memory if 1GB is not available.")]
-        [DefaultValue(DefaultValueSetInConstructor)]
-        [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Raven/Memory/LimitForProcessingInMB")]
-        [LegacyConfigurationEntry("Raven/MemoryLimitForProcessing")]
-        [LegacyConfigurationEntry("Raven/MemoryLimitForIndexing")]
-        public Size LimitForProcessing { get; set; }
-
-        [Description("Limit for low mem detection")]
+        [Description("The minimum amount of available memory RavenDB will attempt to achieve (free memory lower than this value will trigger low memory behavior)")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Raven/Memory/LowMemoryLimitInMB")]
-        [LegacyConfigurationEntry("Raven/LowMemoryLimitInMB")]
         public Size LowMemoryDetection { get; set; }
 
         [Description("Physical Memory Ratio For Low Memory Detection")]
         [DefaultValue(0.10)]
         [ConfigurationEntry("Raven/Memory/PhysicalRatioForLowMemDetection")]
-        [LegacyConfigurationEntry("Raven/PhysicalRatioForLowMemDetection")]
         public double PhysicalRatioForLowMemDetection { get; set; }
-
-        [Description("An integer value that specifies the maximum allowable size, in megabytes, that caching document instances will use")]
-        [DefaultValue(DefaultValueSetInConstructor)]
-        [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Raven/Memory/MemoryCacheLimitInMB")]
-        [LegacyConfigurationEntry("Raven/MemoryCacheLimitMegabytes")]
-        public Size MemoryCacheLimit { get; set; }
-
-        [Description("The expiration value for documents in the internal managed cache")]
-        [DefaultValue(360)]
-        [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Raven/Memory/MemoryCacheExpirationInSec")]
-        [LegacyConfigurationEntry("Raven/MemoryCacheExpiration")]
-        public TimeSetting MemoryCacheExpiration { get; set; }
-
-        [Description("Percentage of physical memory used for caching. Allowed values: 0-99 (0 = autosize)")]
-        [DefaultValue(0 /* auto size */)]
-        [ConfigurationEntry("Raven/Memory/MemoryCacheLimitPercentage")]
-        [LegacyConfigurationEntry("Raven/MemoryCacheLimitPercentage")]
-        public int MemoryCacheLimitPercentage { get; set; }
-
-        [Description("The minimum amount of memory available for us to double the size of Raven/InitialNumberOfItemsToProcessInSingleBatch if we need to.")]
-        [DefaultValue(DefaultValueSetInConstructor)]
-        [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Raven/Memory/AvailableMemoryForRaisingBatchSizeLimitInMB")]
-        [LegacyConfigurationEntry("Raven/AvailableMemoryForRaisingBatchSizeLimit")]
-        [LegacyConfigurationEntry("Raven/AvailableMemoryForRaisingIndexBatchSizeLimit")]
-        public Size AvailableMemoryForRaisingBatchSizeLimit { get; set; }
-
-        private Size GetDefaultMemoryCacheLimit(Size totalPhysicalMemory)
-        {
-            if (totalPhysicalMemory < new Size(1024, SizeUnit.Megabytes))
-                return new Size(128, SizeUnit.Megabytes); // if machine has less than 1024 MB, then only use 128 MB 
-
-            // we need to leave ( a lot ) of room for other things as well, so we min the cache size
-            return totalPhysicalMemory / 2;
-        }
     }
 }

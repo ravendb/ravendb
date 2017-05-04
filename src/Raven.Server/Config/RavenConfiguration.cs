@@ -95,7 +95,7 @@ namespace Raven.Server.Config
             BulkInsert = new BulkInsertConfiguration();
             Server = new ServerConfiguration();
             Databases = new DatabaseConfiguration();
-            Memory = new MemoryConfiguration(this);
+            Memory = new MemoryConfiguration();
             Expiration = new ExpirationBundleConfiguration();
             Studio = new StudioConfiguration();
             Licensing = new LicenseConfiguration();
