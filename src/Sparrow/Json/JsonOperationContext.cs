@@ -133,16 +133,17 @@ namespace Sparrow.Json
 
         public long AllocatedMemory => _arenaAllocator.TotalUsed;
 
-        private static readonly LowMemoryFlag ShortTermMemoryFlag = new LowMemoryFlag();
         protected readonly LowMemoryFlag LowMemoryFlag;
 
         public static JsonOperationContext ShortTermSingleUse()
         {
-            return new JsonOperationContext(4096, 1024, ShortTermMemoryFlag);
+            return new JsonOperationContext(4096, 1024, LowMemoryFlag.None);
         }
 
         public JsonOperationContext(int initialSize, int longLivedSize, LowMemoryFlag lowMemoryFlag)
         {
+            Debug.Assert(lowMemoryFlag != null);
+            
             _initialSize = initialSize;
             _longLivedSize = longLivedSize;
             _arenaAllocator = new ArenaMemoryAllocator(lowMemoryFlag, initialSize);
@@ -151,8 +152,6 @@ namespace Sparrow.Json
             _jsonParserState = new JsonParserState();
             _objectJsonParser = new ObjectJsonParser(_jsonParserState, this);
             _documentBuilder = new BlittableJsonDocumentBuilder(this, _jsonParserState, _objectJsonParser);
-            if (lowMemoryFlag == null)
-                lowMemoryFlag = LowMemoryFlag.None;
             LowMemoryFlag = lowMemoryFlag;
 #if MEM_GUARD_STACK
             ElectricFencedMemory.IncrementConext();
