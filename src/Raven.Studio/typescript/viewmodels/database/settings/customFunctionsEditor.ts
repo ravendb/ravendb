@@ -10,6 +10,7 @@ import popoverUtils = require("common/popoverUtils");
 class customFunctionsEditor extends viewModelBase {
     documentText = ko.observable<string>("");
     isSaveEnabled: KnockoutComputed<boolean>;
+    isEditingCustomFunctions = ko.observable<boolean>(false);
 
     globalValidationGroup = ko.validatedObservable({
         documentText: this.documentText
@@ -24,7 +25,9 @@ class customFunctionsEditor extends viewModelBase {
         aceEditorBindingHandler.install();
         this.dirtyFlag = new ko.DirtyFlag([this.documentText], false, jsonUtil.newLineNormalizingHashFunction);
         this.isSaveEnabled = ko.pureComputed<boolean>(() => {
-            return this.dirtyFlag().isDirty();
+            let editCustomFunction = this.isEditingCustomFunctions();
+            const isDirty = this.dirtyFlag().isDirty();
+            return !editCustomFunction || isDirty;
         });
         this.initValidation();
     }
@@ -63,6 +66,9 @@ class customFunctionsEditor extends viewModelBase {
             .done((cf: customFunctions) => {
                 this.documentText(cf.functions);
                 this.dirtyFlag().reset();
+                if (this.documentText() !== "") {
+                    this.isEditingCustomFunctions(true);
+                }
             });
     }
 
@@ -75,7 +81,12 @@ class customFunctionsEditor extends viewModelBase {
             });
             new saveCustomFunctionsCommand(this.activeDatabase(), cf)
                 .execute()
-                .done(() => this.dirtyFlag().reset())
+                .done(() => {
+                    this.dirtyFlag().reset();
+                    if (!this.isEditingCustomFunctions()) {
+                        this.isEditingCustomFunctions(true);
+                    }
+                })
                 .always(() => this.spinners.save(false));
         }
     }
