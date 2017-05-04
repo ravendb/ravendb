@@ -24,16 +24,16 @@ namespace Raven.Server.Documents
 
         public virtual Task<IOperationResult> ExecuteDelete(string collectionName, CollectionOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(collectionName, options, Context, onProgress, (key, etag, context) => Database.DocumentsStorage.Delete(context, key, etag), token);
+            return ExecuteOperation(collectionName, options, Context, onProgress, (key, context) => Database.DocumentsStorage.Delete(context, key, null), token);
         }
 
         public Task<IOperationResult> ExecutePatch(string collectionName, CollectionOperationOptions options, PatchRequest patch, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(collectionName, options, Context, onProgress, (key, etag, context) => Database.Patcher.Apply(context, key, etag, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false), token);
+            return ExecuteOperation(collectionName, options, Context, onProgress, (key, context) => Database.Patcher.Apply(context, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false), token);
         }
 
         protected async Task<IOperationResult> ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,
-             Action<DeterminateProgress> onProgress, Action<LazyStringValue, long, DocumentsOperationContext> action, OperationCancelToken token)
+             Action<DeterminateProgress> onProgress, Action<LazyStringValue, DocumentsOperationContext> action, OperationCancelToken token)
         {
             const int batchSize = 1024;
             var progress = new DeterminateProgress();
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents
                     {
                         var documents = GetDocuments(context, collectionName, startEtag, batchSize);
 
-                        var docs = new List<(LazyStringValue Id, long Etag)>();
+                        var ids = new List<LazyStringValue>();
 
                         foreach (var document in documents)
                         {
@@ -89,13 +89,13 @@ namespace Raven.Server.Documents
 
                             startEtag = document.Etag + 1;
 
-                            docs.Add((document.Key, document.Etag));
+                            ids.Add(document.Key);
 
                             progress.Processed++;
 
                         }
 
-                        await Database.TxMerger.Enqueue(new ExecuteOperationsOnCollection(docs, action));
+                        await Database.TxMerger.Enqueue(new ExecuteOperationsOnCollection(ids, action));
 
                         onProgress(progress);
 
@@ -132,12 +132,12 @@ namespace Raven.Server.Documents
 
         private class ExecuteOperationsOnCollection : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly List<(LazyStringValue Id, long Etag)> _docs;
-            private readonly Action<LazyStringValue, long, DocumentsOperationContext> _action;
+            private readonly List<LazyStringValue> _documentIds;
+            private readonly Action<LazyStringValue, DocumentsOperationContext> _action;
 
-            public ExecuteOperationsOnCollection(List<(LazyStringValue Id, long Etag)> docs, Action<LazyStringValue, long, DocumentsOperationContext> action)
+            public ExecuteOperationsOnCollection(List<LazyStringValue> documentIds, Action<LazyStringValue, DocumentsOperationContext> action)
             {
-                _docs = docs;
+                _documentIds = documentIds;
                 _action = action;
             }
 
@@ -145,9 +145,9 @@ namespace Raven.Server.Documents
             {
                 var count = 0;
 
-                foreach (var doc in _docs)
+                foreach (var id in _documentIds)
                 {
-                    _action(doc.Id, doc.Etag, context);
+                    _action(id, context);
 
                     count++;
                 }
