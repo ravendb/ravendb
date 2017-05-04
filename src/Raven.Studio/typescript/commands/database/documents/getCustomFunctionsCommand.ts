@@ -12,7 +12,7 @@ class getCustomFunctionsCommand extends commandBase {
     execute(): JQueryPromise<customFunctions> {
         const urlArgs = { id: "Raven/Javascript/Functions" };
 
-        const resultsSelector = (queryResult: customFunctionsDto) => new customFunctions(queryResult);
+        const resultsSelector = (queryResult: queryResultDto<customFunctionsDto>) => new customFunctions(queryResult.Results[0]);
         const url = endpoints.databases.document.docs;
         return this.query(url, urlArgs, this.db, resultsSelector);
     }
