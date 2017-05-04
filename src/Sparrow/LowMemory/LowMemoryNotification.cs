@@ -14,14 +14,6 @@ namespace Sparrow.LowMemory
         public static LowMemoryFlag None = new LowMemoryFlag();
     }
 
-    public class LowMemoryHandlerStatistics
-    {
-        public string Name { get; set; }
-        public long EstimatedUsedMemory { get; set; }
-        public string DatabaseName { get; set; }
-        public object Metadata { get; set; }
-    }
-
     public interface ILowMemoryHandler
     {
         void LowMemory();
@@ -81,7 +73,8 @@ namespace Sparrow.LowMemory
             _lowMemoryHandlers.Add(new WeakReference<ILowMemoryHandler>(handler));
         }
 
-        public static LowMemoryNotification Instance { get; private set; }
+        public readonly static LowMemoryNotification Instance = new LowMemoryNotification(1024 * 1024 * 256, 0.1);
+
         public bool LowMemoryState { get; set; }
 
         public static void Initialize(CancellationToken shutdownNotification, long lowMemoryThreshold, double physicalRatioForLowMemDetection)
