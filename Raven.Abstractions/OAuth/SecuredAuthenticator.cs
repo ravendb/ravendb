@@ -277,7 +277,7 @@ namespace Raven.Abstractions.OAuth
                 }
                 else
                 {
-                    autoRefreshTimer = new Timer(_ => DoOAuthRequestAsync(null, oauthSource, apiKey), null, defaultRefreshTimeInMilis, Timeout.InfiniteTimeSpan);
+                    autoRefreshTimer = new Timer(_ => DoOAuthRequestAsync(null, oauthSource, apiKey).IgnoreUnobservedExceptions(), null, defaultRefreshTimeInMilis, Timeout.InfiniteTimeSpan);
                 }
             }
         }
