@@ -389,7 +389,6 @@ namespace Sparrow.Json
         {
             EnsureBuffer(1);
             _buffer[_pos++] = Comma;
-
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -496,6 +495,20 @@ namespace Sparrow.Json
             EnsureBuffer(2);
             _buffer[_pos++] = (byte)'\r';
             _buffer[_pos++] = (byte)'\n';
+        }
+
+        public void WriteStream(Stream stream)
+        {
+            Flush();
+
+            while (true)
+            {
+                _pos = stream.Read(_pinnedBuffer.Buffer.Array, _pinnedBuffer.Buffer.Offset, _pinnedBuffer.Buffer.Count);
+                if (_pos == 0)
+                    break;
+
+                Flush();
+            }
         }
     }
 }

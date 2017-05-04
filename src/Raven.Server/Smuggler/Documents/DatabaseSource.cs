@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
@@ -9,6 +10,8 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
+using Sparrow.Json;
+using Voron;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -80,6 +83,14 @@ namespace Raven.Server.Smuggler.Documents
                 return Enumerable.Empty<Document>();
 
             return versioningStorage.GetRevisionsFrom(_context, _startRevisionDocumentsEtag, limit);
+        }
+
+        public Stream GetAttachmentStream(LazyStringValue hash)
+        {
+            using (Slice.External(_context.Allocator, hash, out Slice hashSlice))
+            {
+                return _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(_context, hashSlice);
+            }
         }
 
         public IEnumerable<IndexDefinitionAndType> GetIndexes()
