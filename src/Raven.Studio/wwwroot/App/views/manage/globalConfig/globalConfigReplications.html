@@ -99,14 +99,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="form-group">
-                    <div class="col-sm-9 col-sm-offset-3">
-                        <div class="checkbox">
-                            <input type="checkbox" id="globalSkipIndexReplicatonForAll" class="styled" data-bind="checked: skipIndexReplicationForAll, disable: $root.settingsAccess.isReadOnly()">
-                            <label for="globalSkipIndexReplicatonForAll">Skip index replication for all destinations</label>
-                        </div>
-                    </div>
-                </div>
 
                 <div class="form-group">
                     <label class="col-sm-3 control-label">Replication destinations</label>
@@ -216,14 +208,6 @@
                                                 <label class="col-sm-4 control-label">Client Visible Url</label>
                                                 <div class="col-sm-7">
                                                     <input type="text" class="form-control" data-bind="value: clientVisibleUrl, valueUpdate: 'afterkeydown', disable: $root.settingsAccess.isReadOnly()" />
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
-                                                <div class="col-sm-7 col-sm-offset-4">
-                                                    <div class="checkbox">
-                                                        <input type="checkbox" class="styled" data-bind="checked: skipIndexReplication, disable: $root.settingsAccess.isReadOnly(), attr: { id: 'skipIndexReplicaton_' + $index() } ">
-                                                        <label data-bind="attr: { for: 'skipIndexReplicaton_' + $index() }">Skip Index Replication</label>
-                                                    </div>
                                                 </div>
                                             </div>
                                             <div class="form-group">
