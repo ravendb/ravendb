@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Operations
 
         public long Total { get; set; }
 
-        public string Message => $"Processed {Total} items.";
+        public string Message => $"Processed {Total:#,#} items.";
 
         public List<IBulkOperationDetails> Details { get; }
 
