@@ -209,13 +209,13 @@ class editDocument extends viewModelBase {
             return true;
         });         
 
-        this.attachmentsCount = ko.pureComputed(() => {
+        this.attachmentsCount = ko.pureComputed(() => { 
             const doc = this.document();
-            if (!doc || !doc.__metadata || !doc.__metadata.attachments) {
+            if (!doc || !doc.__metadata || !doc.__metadata.attachments()) {
                 return 0;
             }
 
-            return doc.__metadata.attachments.length;
+            return doc.__metadata.attachments().length;
         });
 
         this.document.subscribe(doc => {
@@ -412,7 +412,7 @@ class editDocument extends viewModelBase {
 
         this.syncChangeNotification();
 
-        // 2. Remove the '@change-vector' from metadata view
+        // 2. Remove the '@change-vector' & '@flags' from metadata view for the clone 
         const docDto = this.document().toDto(true);
         const metaDto = docDto["@metadata"];
         if (metaDto) {
@@ -422,6 +422,8 @@ class editDocument extends viewModelBase {
         }
 
         // 3. Clear data..
+        this.document().__metadata.attachments([]); 
+        this.connectedDocuments.gridController().reset(true);
         this.metadata().etag(null);
         this.userSpecifiedId("");
     }
