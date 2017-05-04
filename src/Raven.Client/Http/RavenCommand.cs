@@ -65,14 +65,14 @@ namespace Raven.Client.Http
 
         public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
-            if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
-                return;
-
             using (response)
             using (var stream = await response.Content.ReadAsStreamAsync())
             {
                 if (ResponseType == RavenCommandResponseType.Object)
                 {
+                    if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
+                        return;
+
                     // we intentionally don't dispose the reader here, we'll be using it
                     // in the command, any associated memory will be released on context reset
                     var json = await context.ReadForMemoryAsync(stream, "response/object");
@@ -86,6 +86,9 @@ namespace Raven.Client.Http
 
                 if (ResponseType == RavenCommandResponseType.Array)
                 {
+                    if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
+                        return;
+
                     var array = await context.ParseArrayToMemoryAsync(stream, "response/array", BlittableJsonDocumentBuilder.UsageMode.None);
                     // TODO: Either cache also arrays or the better way is to remove all array respones by converting them to objects.
                     SetResponse(array.Item1, fromCache: false);

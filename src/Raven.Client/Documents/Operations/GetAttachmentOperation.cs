@@ -135,6 +135,7 @@ namespace Raven.Client.Documents.Operations
                 var etag = response.GetRequiredEtagHeader();
                 IEnumerable<string> hashVal;
                 var hash = response.Headers.TryGetValues("Content-Hash", out hashVal) ? hashVal.First() : null;
+                var size = response.Content.Headers.ContentLength ?? 0;
           
                 Result = new AttachmentResult
                 {
@@ -143,6 +144,7 @@ namespace Raven.Client.Documents.Operations
                     Name = _name,
                     DocumentId = _documentId,
                     Hash = hash,
+                    Size = size
                 };
 
                 _handleStreamResponse(Result, stream);

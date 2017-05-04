@@ -200,6 +200,7 @@ namespace Raven.Server.Documents
                 Name = name,
                 DocumentId = documentId,
                 Hash = hash,
+                Size = stream.Length
             };
         }
 
@@ -377,7 +378,7 @@ namespace Raven.Server.Documents
                 return null;
 
             var stream = GetAttachmentStream(context, attachment.Base64Hash);
-            if (stream == null || stream.Length == 0)
+            if (stream == null)
                 throw new FileNotFoundException($"Attachment's stream {name} on {documentId} was not found. This should not happen and is likely a bug.");
             attachment.Stream = stream;
 
