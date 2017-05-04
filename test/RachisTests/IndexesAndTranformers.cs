@@ -5,7 +5,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
@@ -109,6 +108,7 @@ namespace SlowTests.Server.Rachis
                         foreach (var serverToCheckAt in relevantServers)
                         {
                             var db = await serverToCheckAt.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+
                             Assert.True(await db.WaitForIndexNotification(putTransformerResult.Etag).WaitAsync(WaitInterval));
                             using (var currentServerStore = new DocumentStore
                             {
@@ -116,15 +116,13 @@ namespace SlowTests.Server.Rachis
                                 DefaultDatabase = store.DefaultDatabase
                             })
                             {
-                                var getTransformerOperation = new GetTransformerOperation(curTransformerDefinition.Name);
-                                var transformerDefinition = await currentServerStore.Admin.SendAsync(getTransformerOperation);
+                                var transformerDefinition = db.TransformerStore.GetTransformer(curTransformerDefinition.Name);
                                 Assert.Equal(curTransformerDefinition.Name, transformerDefinition.Name);
                             }
                         }
                     }
                 }
             }
-            await Task.Delay(1000); //remove this
         }
     }
 }

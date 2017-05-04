@@ -202,7 +202,7 @@ namespace Raven.Client.Documents.Queries
         public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
 
         /// <summary>
-        /// Whatever we should get the raw index entries.
+        /// Whether we should get the raw index entries.
         /// </summary>
         public bool DebugOptionGetIndexEntries { get; set; }
 
@@ -232,7 +232,7 @@ namespace Raven.Client.Documents.Queries
         public string Transformer { get; set; }
 
         /// <summary>
-        /// Whatever we should disable caching of query results
+        /// Whether we should disable caching of query results
         /// </summary>
         public bool DisableCaching { get; set; }
 
@@ -242,7 +242,7 @@ namespace Raven.Client.Documents.Queries
         public bool SkipDuplicateChecking { get; set; }
 
         /// <summary>
-        /// Whatever a query result should contains an explanation about how docs scored against query
+        /// Whatever a query result should contain an explanation about how docs scored against query
         /// </summary>
         public bool ExplainScores { get; set; }
 
@@ -328,12 +328,12 @@ namespace Raven.Client.Documents.Queries
         private int _pageSize = int.MaxValue;
 
         /// <summary>
-        /// Whatever the page size was explicitly set or still at its default value
+        /// Whether the page size was explicitly set or still at its default value
         /// </summary>
         protected internal bool PageSizeSet { get; private set; }
 
         /// <summary>
-        /// Whatever we should apply distinct operation to the query on the server side
+        /// Whether we should apply distinct operation to the query on the server side
         /// </summary>
         public bool IsDistinct { get; set; }
 

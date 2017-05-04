@@ -4,27 +4,20 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using System.Threading;
-using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 using System.Text;
-using Raven.Server.ServerWide;
-using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Util;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.Utils;
 using Voron;
-using Memory = Sparrow.Memory;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Replication
@@ -568,10 +561,10 @@ namespace Raven.Server.Documents.Replication
         public struct ReplicationAttachmentStream : IDisposable
         {
             public Slice Base64Hash;
-            public IDisposable Base64HashDispose;
+            public ByteStringContext.InternalScope Base64HashDispose;
 
             public FileStream File;
-            public IDisposable FileDispose;
+            public AttachmentsStorage.ReleaseTempFile FileDispose;
 
             public void Dispose()
             {
@@ -698,7 +691,7 @@ namespace Raven.Server.Documents.Replication
                 attachment.Base64HashDispose = Slice.From(context.Allocator, ReadExactly(base64HashSize), base64HashSize, out attachment.Base64Hash);
 
                 var streamLength = *(long*)ReadExactly(sizeof(long));
-                attachment.FileDispose = _database.DocumentsStorage.AttachmentsStorage.GetTempFile(out attachment.File);
+                attachment.FileDispose = _database.DocumentsStorage.AttachmentsStorage.GetTempFile(out attachment.File, "replication-");
                 ReadExactly(streamLength, attachment.File);
 
                 attachment.File.Position = 0;
@@ -790,6 +783,8 @@ namespace Raven.Server.Documents.Replication
 
                 foreach (var item in _incoming._replicatedItems)
                 {
+                    context.TransactionMarkerOffset = item.TransactionMarker;
+
                     ++operationsCount;
                     using (item)
                     {
@@ -800,8 +795,8 @@ namespace Raven.Server.Documents.Replication
                             if (_incoming._log.IsInfoEnabled)
                                 _incoming._log.Info($"Got incoming attachment, doing PUT on attachment = {item.Name}, with key = {item.Key}");
 
-                            database.DocumentsStorage.AttachmentsStorage.PutFromReplication(context, item.Key, item.Name,
-                                item.ContentType, item.Base64Hash, item.TransactionMarker);
+                            database.DocumentsStorage.AttachmentsStorage.PutDirect(context, item.Key, item.Name,
+                                item.ContentType, item.Base64Hash);
 
                             if (_incoming._replicatedAttachmentStreams.TryGetValue(item.Base64Hash, out ReplicationAttachmentStream attachmentStream))
                             {
@@ -825,7 +820,6 @@ namespace Raven.Server.Documents.Replication
                         }
                         else
                         {
-                            context.TransactionMarkerOffset = item.TransactionMarker;
                             BlittableJsonReaderObject document = null;
                             try
                             {

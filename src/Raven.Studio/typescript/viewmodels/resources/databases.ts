@@ -139,7 +139,7 @@ class databases extends viewModelBase {
         });
     }
 
-    databaseUrl(dbInfo: databaseInfo): string {
+    allDocumentsUrl(dbInfo: databaseInfo): string {
         const db = dbInfo.asDatabase();
         return appUrl.forDocuments(null, db);
     }
@@ -147,6 +147,21 @@ class databases extends viewModelBase {
     indexErrorsUrl(dbInfo: databaseInfo): string {
         const db = dbInfo.asDatabase();
         return appUrl.forIndexErrors(db);
+    }
+
+    storageReportUrl(dbInfo: databaseInfo): string {
+        const db = dbInfo.asDatabase();
+        return appUrl.forStatusStorageReport(db);
+    }
+
+    indexesUrl(dbInfo: databaseInfo): string {
+        const db = dbInfo.asDatabase();
+        return appUrl.forIndexes(db);
+    } 
+
+    periodicExportUrl(dbInfo: databaseInfo): string {
+        const db = dbInfo.asDatabase();
+        return appUrl.forPeriodicExport(db);
     }
 
     private getSelectedDatabases() {

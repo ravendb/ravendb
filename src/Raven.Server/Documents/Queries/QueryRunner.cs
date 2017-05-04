@@ -180,9 +180,9 @@ namespace Raven.Server.Documents.Queries
 
         public Task<IOperationResult> ExecuteDeleteQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(indexName, query, options, context, onProgress, (key, retrieveDetails) =>
+            return ExecuteOperation(indexName, query, options, context, onProgress, (key, ctx, retrieveDetails) =>
             {
-                var result = _database.DocumentsStorage.Delete(context, key, null);
+                var result = _database.DocumentsStorage.Delete(ctx, key, null);
                 if (retrieveDetails && result != null)
                 {
                     return new BulkOperationResult.DeleteDetails
@@ -198,9 +198,9 @@ namespace Raven.Server.Documents.Queries
 
         public Task<IOperationResult> ExecutePatchQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(indexName, query, options, context, onProgress, (key, retrieveDetails) =>
+            return ExecuteOperation(indexName, query, options, context, onProgress, (key, ctx, retrieveDetails) =>
             {
-                var result = _database.Patcher.Apply(context, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false);
+                var result = _database.Patcher.Apply(ctx, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false);
                 if (retrieveDetails && result != null)
                 {
                     return new BulkOperationResult.PatchDetails
@@ -216,7 +216,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         private async Task<IOperationResult> ExecuteOperation(string indexName, IndexQueryServerSide query, QueryOperationOptions options,
-            DocumentsOperationContext context, Action<DeterminateProgress> onProgress, Func<string, bool, IBulkOperationDetails> func, OperationCancelToken token)
+            DocumentsOperationContext context, Action<DeterminateProgress> onProgress, Func<string, DocumentsOperationContext, bool, IBulkOperationDetails> func, OperationCancelToken token)
         {
             var index = GetIndex(indexName);
 
@@ -225,32 +225,30 @@ namespace Raven.Server.Documents.Queries
 
             query = ConvertToOperationQuery(query, options);
 
-            const int BatchSize = 1024;
+            const int batchSize = 1024;
 
-            RavenTransaction tx = null;
-            var operationsInCurrentBatch = 0;
-            List<string> resultKeys;
+            Queue<string> resultIds;
             try
             {
                 var results = await index.Query(query, context, token).ConfigureAwait(false);
                 if (options.AllowStale == false && results.IsStale)
                     throw new InvalidOperationException("Cannot perform bulk operation. Query is stale.");
 
-                resultKeys = new List<string>(results.Results.Count);
+                resultIds = new Queue<string>(results.Results.Count);
+
                 foreach (var document in results.Results)
                 {
-                    resultKeys.Add(document.Key.ToString());
+                    resultIds.Enqueue(document.Key.ToString());
                 }
             }
-            finally //make sure to close tx if DocumentConflictException is thrown
+            finally // make sure to close tx if DocumentConflictException is thrown
             {
                 context.CloseTransaction();
             }
-
-
+            
             var progress = new DeterminateProgress
             {
-                Total = resultKeys.Count,
+                Total = resultIds.Count,
                 Processed = 0
             };
 
@@ -260,55 +258,27 @@ namespace Raven.Server.Documents.Queries
 
             using (var rateGate = options.MaxOpsPerSecond.HasValue ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1)) : null)
             {
-                foreach (var document in resultKeys)
+                while (resultIds.Count > 0)
                 {
-                    token.Delay();
+                    IBulkOperationDetails details = null;
 
-                    if (rateGate != null && rateGate.WaitToProceed(0) == false)
+                    var command = new ExecuteRateLimitedOperations<string>(resultIds, (id, ctx) =>
                     {
-                        using (tx)
-                        {
-                            tx?.Commit();
-                        }
+                        details = func(id, ctx, options.RetrieveDetails);
+                    }, rateGate, token, batchSize);
 
-                        tx = null;
+                    await _database.TxMerger.Enqueue(command);
 
-                        rateGate.WaitToProceed();
-                    }
-
-                    if (tx == null)
-                    {
-                        operationsInCurrentBatch = 0;
-                        tx = context.OpenWriteTransaction();
-                    }
-
-                    var details = func(document, options.RetrieveDetails);
-                    if (options.RetrieveDetails)
+                    if (options.RetrieveDetails && details != null)
                         result.Details.Add(details);
 
-                    operationsInCurrentBatch++;
-                    progress.Processed++;
+                    progress.Processed += command.Processed;
 
-                    if (progress.Processed % 128 == 0)
-                    {
-                        onProgress(progress);
-                    }
+                    onProgress(progress);
 
-                    if (operationsInCurrentBatch < BatchSize)
-                        continue;
-
-                    using (tx)
-                    {
-                        tx.Commit();
-                    }
-
-                    tx = null;
+                    if (command.NeedWait)
+                        rateGate?.WaitToProceed();
                 }
-            }
-
-            using (tx)
-            {
-                tx?.Commit();
             }
 
             result.Total = progress.Total;

@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Session
         private static Dictionary<Type, Func<object, string>> _implicitStringsCache = new Dictionary<Type, Func<object, string>>();
 
         /// <summary>
-        /// Whatever to negate the next operation
+        /// Whether to negate the next operation
         /// </summary>
         protected bool Negate;
 

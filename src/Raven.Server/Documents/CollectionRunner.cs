@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util.RateLimiting;
@@ -24,16 +25,16 @@ namespace Raven.Server.Documents
 
         public virtual Task<IOperationResult> ExecuteDelete(string collectionName, CollectionOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(collectionName, options, Context, onProgress, (key, etag, context) => Database.DocumentsStorage.Delete(context, key, etag), token);
+            return ExecuteOperation(collectionName, options, Context, onProgress, (key, context) => Database.DocumentsStorage.Delete(context, key, null), token);
         }
 
         public Task<IOperationResult> ExecutePatch(string collectionName, CollectionOperationOptions options, PatchRequest patch, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(collectionName, options, Context, onProgress, (key, etag, context) => Database.Patcher.Apply(context, key, etag, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false), token);
+            return ExecuteOperation(collectionName, options, Context, onProgress, (key, context) => Database.Patcher.Apply(context, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false), token);
         }
 
         protected async Task<IOperationResult> ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,
-             Action<DeterminateProgress> onProgress, Action<LazyStringValue, long, DocumentsOperationContext> action, OperationCancelToken token)
+             Action<DeterminateProgress> onProgress, Action<LazyStringValue, DocumentsOperationContext> action, OperationCancelToken token)
         {
             const int batchSize = 1024;
             var progress = new DeterminateProgress();
@@ -56,52 +57,52 @@ namespace Raven.Server.Documents
                     ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1))
                     : null)
             {
-                bool done = false;
-                //The reason i do this nested loop is because i can't operate on a document while iterating the document tree.
+                var end = false;
+
                 while (startEtag <= lastEtag)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var wait = false;
 
                     using (context.OpenReadTransaction())
                     {
-                        var documents = GetDocuments(context, collectionName, startEtag, batchSize);
+                        var ids = new Queue<LazyStringValue>(batchSize);
 
-                        var docs = new List<(LazyStringValue Id, long Etag)>();
-
-                        foreach (var document in documents)
+                        foreach (var document in GetDocuments(context, collectionName, startEtag, batchSize))
                         {
-                            token.Delay();
-
                             cancellationToken.ThrowIfCancellationRequested();
 
-                            if (document.Etag > lastEtag)// we don't want to go over the documents that we have patched
+                            token.Delay();
+                            
+                            if (document.Etag > lastEtag) // we don't want to go over the documents that we have patched
                             {
-                                done = true;
-                                break;
-                            }
-
-                            if (rateGate != null && rateGate.WaitToProceed(0) == false)
-                            {
-                                wait = true;
+                                end = true;
                                 break;
                             }
 
                             startEtag = document.Etag + 1;
 
-                            docs.Add((document.Key, document.Etag));
-
-                            progress.Processed++;
-
+                            ids.Enqueue(document.Key);
                         }
 
-                        await Database.TxMerger.Enqueue(new ExecuteOperationsOnCollection(docs, action));
+                        if (ids.Count == 0)
+                            break;
+                        
+                        do
+                        {
+                            var command = new ExecuteRateLimitedOperations<LazyStringValue>(ids, action, rateGate, token);
 
-                        onProgress(progress);
+                            await Database.TxMerger.Enqueue(command);
 
-                        if (wait)
-                            rateGate.WaitToProceed();
-                        if (done || documents.Count == 0)
+                            progress.Processed += command.Processed;
+
+                            onProgress(progress);
+
+                            if (command.NeedWait)
+                                rateGate?.WaitToProceed();
+
+                        } while (ids.Count > 0);
+                        
+                        if (end)
                             break;
                     }
                 }
@@ -113,9 +114,9 @@ namespace Raven.Server.Documents
             };
         }
 
-        protected virtual List<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize)
+        protected virtual IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize)
         {
-            return Database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag, 0, batchSize).ToList();
+            return Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, batchSize);
         }
 
         protected virtual long GetTotalCountForCollection(DocumentsOperationContext context, string collectionName)
@@ -128,32 +129,6 @@ namespace Raven.Server.Documents
         protected virtual long GetLastEtagForCollection(DocumentsOperationContext context, string collection)
         {
             return Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
-        }
-
-        private class ExecuteOperationsOnCollection : TransactionOperationsMerger.MergedTransactionCommand
-        {
-            private readonly List<(LazyStringValue Id, long Etag)> _docs;
-            private readonly Action<LazyStringValue, long, DocumentsOperationContext> _action;
-
-            public ExecuteOperationsOnCollection(List<(LazyStringValue Id, long Etag)> docs, Action<LazyStringValue, long, DocumentsOperationContext> action)
-            {
-                _docs = docs;
-                _action = action;
-            }
-
-            public override int Execute(DocumentsOperationContext context)
-            {
-                var count = 0;
-
-                foreach (var doc in _docs)
-                {
-                    _action(doc.Id, doc.Etag, context);
-
-                    count++;
-                }
-
-                return count;
-            }
         }
     }
 }

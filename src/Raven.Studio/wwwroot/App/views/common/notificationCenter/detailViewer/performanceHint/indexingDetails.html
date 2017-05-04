@@ -18,7 +18,7 @@
             <div data-bind="with: hint.details">
                 <div class="row">
                     <div class="col-md-6">Number of exceeding documents</div>
-                    <div class="col-md-6" data-bind="text: NumberOfExceedingDocuments"></div>
+                    <div class="col-md-6" data-bind="text: NumberOfExceedingDocuments.toLocaleString()"></div>
                 </div>
 
                 <div class="row">
@@ -33,7 +33,7 @@
                 
                 <div class="row">
                     <div class="col-md-6">Max number outputs per document</div>
-                    <div class="col-md-6" data-bind="text: MaxNumberOutputsPerDocument"></div>
+                    <div class="col-md-6" data-bind="text: MaxNumberOutputsPerDocument.toLocaleString()"></div>
                 </div>
             </div>
           

@@ -189,14 +189,6 @@ namespace Voron
             bool result;
             if (bool.TryParse(shouldForceEnvVar, out result))
                 ForceUsing32BitsPager = result;
-
-            var hardCodedMasterKeyUsedOnlyForDevelopmentUntilWeDoKeyExchangeOfSomeSort = new byte[32]
-            {
-                0x26, 0xce, 0xc8, 0x8c, 0x20, 0xed, 0x18, 0x1d, 0xaa, 0xb2, 0xc7, 0x35, 0x26, 0x75, 0x99, 0x8c,
-                0xe0, 0x8b, 0x24, 0xf0, 0x31, 0xbd, 0x63, 0xc2, 0x46, 0x97, 0xd1, 0x29, 0xdd, 0x97, 0x99, 0xf8
-            };
-            //MasterKey = hardCodedMasterKeyUsedOnlyForDevelopmentUntilWeDoKeyExchangeOfSomeSort;
-            MasterKey = null; // Encryption is disabled until we implement key management
         }
 
         public void SetCatastrophicFailure(ExceptionDispatchInfo exception)
@@ -467,7 +459,7 @@ namespace Voron
                 }
             }
 
-            public override void Dispose()
+            protected override void Disposing()
             {
                 if (Disposed)
                     return;
@@ -704,7 +696,7 @@ namespace Voron
                 return value;
             }
 
-            public override void Dispose()
+            protected override void Disposing()
             {
                 if (Disposed)
                     return;
@@ -856,7 +848,21 @@ namespace Voron
             return string.Format("scratch.{0:D10}.buffers", number);
         }
 
-        public abstract void Dispose();
+        public unsafe void Dispose()
+        {
+            var copy = MasterKey;
+            if (copy != null)
+            {
+                fixed (byte* key = copy)
+                {
+                    Sodium.ZeroMemory(key, copy.Length);
+                    MasterKey = null;
+                }
+            }
+            Disposing();
+        }
+
+        protected abstract void Disposing();
 
         public abstract bool TryDeleteJournal(long number);
 
@@ -899,7 +905,8 @@ namespace Voron
             set => _numOfCocurrentSyncsPerPhysDrive = value;
         }
 
-        public int TimeToSyncAfterFlashInSeconds {
+        public int TimeToSyncAfterFlashInSeconds
+        {
             get
             {
                 if (_timeToSyncAfterFlashInSeconds < 1)

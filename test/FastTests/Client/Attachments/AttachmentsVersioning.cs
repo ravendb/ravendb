@@ -9,7 +9,6 @@ using Xunit;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
-using Raven.Client.Server.Versioning;
 using Raven.Server.Documents;
 
 namespace FastTests.Client.Attachments
@@ -21,52 +20,8 @@ namespace FastTests.Client.Attachments
         {
             using (var store = GetDocumentStore())
             {
-
                 await VersioningHelper.SetupVersioning(Server.ServerStore, store.DefaultDatabase, false, 4);
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User {Name = "Fitzchak"}, "users/1");
-                    session.SaveChanges();
-                }
-
-                var names = new[]
-                {
-                    "profile.png",
-                    "background-photo.jpg",
-                    "fileNAME_#$1^%_בעברית.txt"
-                };
-                long lastEtag = 0;
-                using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
-                {
-                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
-                    Assert.True(lastEtag < result.Etag);
-                    lastEtag = result.Etag;
-                    Assert.Equal(names[0], result.Name);
-                    Assert.Equal("users/1", result.DocumentId);
-                    Assert.Equal("image/png", result.ContentType);
-                    Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", result.Hash);
-                }
-                using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
-                {
-                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
-                    Assert.True(lastEtag < result.Etag);
-                    lastEtag = result.Etag;
-                    Assert.Equal(names[1], result.Name);
-                    Assert.Equal("users/1", result.DocumentId);
-                    Assert.Equal("ImGgE/jPeG", result.ContentType);
-                    Assert.Equal("mpqSy7Ky+qPhkBwhLiiM2no82Wvo9gQw", result.Hash);
-                }
-                using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
-                {
-                    var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
-                    Assert.True(lastEtag < result.Etag);
-                    lastEtag = result.Etag;
-                    Assert.Equal(names[2], result.Name);
-                    Assert.Equal("users/1", result.DocumentId);
-                    Assert.Equal("", result.ContentType);
-                    Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", result.Hash);
-                }
+                var names = CreateDocumentWithAttachments(store);
                 AssertRevisions(store, names, (session, revisions) =>
                 {
                     AssertRevisionAttachments(names, 3, revisions[0], session);
@@ -140,6 +95,50 @@ namespace FastTests.Client.Attachments
             }
         }
 
+        public static string[] CreateDocumentWithAttachments(DocumentStore store)
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User {Name = "Fitzchak"}, "users/1");
+                session.SaveChanges();
+            }
+
+            var names = new[]
+            {
+                "profile.png",
+                "background-photo.jpg",
+                "fileNAME_#$1^%_בעברית.txt"
+            };
+            using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
+            {
+                var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
+                Assert.Equal(3, result.Etag);
+                Assert.Equal(names[0], result.Name);
+                Assert.Equal("users/1", result.DocumentId);
+                Assert.Equal("image/png", result.ContentType);
+                Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", result.Hash);
+            }
+            using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
+            {
+                var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
+                Assert.Equal(7, result.Etag);
+                Assert.Equal(names[1], result.Name);
+                Assert.Equal("users/1", result.DocumentId);
+                Assert.Equal("ImGgE/jPeG", result.ContentType);
+                Assert.Equal("mpqSy7Ky+qPhkBwhLiiM2no82Wvo9gQw", result.Hash);
+            }
+            using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+            {
+                var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
+                Assert.Equal(12, result.Etag);
+                Assert.Equal(names[2], result.Name);
+                Assert.Equal("users/1", result.DocumentId);
+                Assert.Equal("", result.ContentType);
+                Assert.Equal("PN5EZXRY470m7BLxu9MsOi/WwIRIq4WN", result.Hash);
+            }
+            return names;
+        }
+
         private static void AssertRevisions(DocumentStore store, string[] names, Action<IDocumentSession, List<User>> assertAction,
             long expectedCountOfAttachments, long expectedCountOfDocuments = 1, long expectedCountOfUniqueAttachments = 3)
         {
@@ -177,7 +176,7 @@ namespace FastTests.Client.Attachments
             {
                 var name = orderedNames[i];
                 var attachment = attachments[i];
-                Assert.Equal(name, attachment.GetString(nameof(Attachment.Name)));
+                Assert.Equal(name, attachment.GetString(nameof(AttachmentResult.Name)));
                 var hash = attachment.GetString(nameof(AttachmentResult.Hash));
                 if (name == names[1])
                 {

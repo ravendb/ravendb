@@ -2,15 +2,19 @@
 using System.Collections.Generic;
 using System.IO;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron;
 using Size = Raven.Server.Config.Settings.Size;
 
 namespace Raven.Server.Smuggler.Documents
@@ -18,9 +22,11 @@ namespace Raven.Server.Smuggler.Documents
     public class StreamSource : ISmugglerSource
     {
         private readonly Stream _stream;
-        private readonly JsonOperationContext _context;
+        private readonly DocumentsOperationContext _context;
         private JsonOperationContext.ManagedPinnedBuffer _buffer;
         private JsonOperationContext.ReturnBuffer _returnBuffer;
+        private JsonOperationContext.ManagedPinnedBuffer _writeBuffer;
+        private JsonOperationContext.ReturnBuffer _returnWriteBuffer;
         private JsonParserState _state;
         private UnmanagedJsonParser _parser;
         private DatabaseItemType? _currentType;
@@ -31,7 +37,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private Size _totalObjectsRead = new Size(0, SizeUnit.Bytes);
 
-        public StreamSource(Stream stream, JsonOperationContext context)
+        public StreamSource(Stream stream, DocumentsOperationContext context)
         {
             _stream = stream;
             _context = context;
@@ -57,6 +63,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _parser.Dispose();
                 _returnBuffer.Dispose();
+                _returnWriteBuffer.Dispose();
             });
         }
 
@@ -326,11 +333,19 @@ namespace Raven.Server.Smuggler.Documents
 
                     ReadObject(builder);
 
-                    var blittableJsonReaderObject = builder.CreateReader();
+                    var data = builder.CreateReader();
                     builder.Reset();
+
+                    if (data.TryGet(DocumentItem.Key, out byte type) &&
+                        type == (byte)DocumentType.Attachment)
+                    {
+                        AddAttachmentStream(context, data, actions);
+                        continue;
+                    }
+
                     yield return new Document
                     {
-                        Data = blittableJsonReaderObject,
+                        Data = data,
                         Key = modifier.Id,
                         ChangeVector = modifier.ChangeVector,
                         Flags = modifier.Flags,
@@ -342,6 +357,61 @@ namespace Raven.Server.Smuggler.Documents
             {
                 builder.Dispose();
             }
+        }
+
+        public struct AttachmentStream : IDisposable
+        {
+            public Slice Base64Hash;
+            public ByteStringContext<ByteStringMemoryCache>.ExternalScope Base64HashDispose;
+
+            public FileStream File;
+            public AttachmentsStorage.ReleaseTempFile FileDispose;
+
+            public BlittableJsonReaderObject Data;
+
+            public void Dispose()
+            {
+                Base64HashDispose.Dispose();
+                FileDispose.Dispose();
+                Data.Dispose();
+            }
+        }
+
+        private unsafe void AddAttachmentStream(DocumentsOperationContext context, BlittableJsonReaderObject data, INewDocumentActions actions)
+        {
+            var documentActions = actions as DatabaseDestination.DatabaseDocumentActions;
+            if (documentActions == null)
+                return;
+
+            if (data.TryGet(nameof(AttachmentResult.Hash), out LazyStringValue hash) == false ||
+                data.TryGet(nameof(AttachmentResult.Size), out long size) == false)
+                throw new ArgumentException($"Data of attachment stream is not valid: {data}");
+
+            if (_writeBuffer == null)
+                _returnWriteBuffer = _context.GetManagedBuffer(out _writeBuffer);
+
+            var attachment = documentActions.CreateAttachment();
+            attachment.Data = data;
+            attachment.Base64HashDispose = Slice.External(context.Allocator, hash, out attachment.Base64Hash);
+
+            while (size > 0)
+            {
+                var sizeToRead = (int)Math.Min(_writeBuffer.Length, size);
+                var read = _parser.Copy(_writeBuffer.Pointer, sizeToRead);
+                attachment.File.Write(_writeBuffer.Buffer.Array, _writeBuffer.Buffer.Offset, read.bytesRead);
+                if (read.done == false)
+                {
+                    var read2 = _stream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
+                    if (read2 == 0)
+                        throw new EndOfStreamException("Stream ended without reaching end of stream content");
+
+                    _parser.SetBuffer(_buffer, 0, read2);
+                }
+                size -= read.bytesRead;
+            }
+            attachment.File.Position = 0;
+
+            documentActions.WriteAttachment(attachment);
         }
 
         private BlittableJsonDocumentBuilder CreateBuilder(JsonOperationContext context, BlittableMetadataModifier modifier)

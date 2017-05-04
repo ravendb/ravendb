@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -57,7 +58,9 @@ for (var i = 0; i < this.Skills.$values.length; i++) {
 "
                     };
 
-                    store.Operations.Send(new PatchByIndexOperation("PrimarySkills", index, patch));
+                    var operation = store.Operations.Send(new PatchByIndexOperation("PrimarySkills", index, patch));
+
+                    operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
                     var user = session.Load<User>("Users/1");
                     Assert.False(user.Skills.Single().IsPrimary);

@@ -104,6 +104,7 @@ namespace Raven.Server.Web.System
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var node = GetStringQueryString("node", false);
+
             string errorMessage;
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
                 throw new BadRequestException(errorMessage);
@@ -143,7 +144,7 @@ namespace Raven.Server.Web.System
 
                 var topologyJson = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                var index = await ServerStore.WriteDbAsync(context, name, topologyJson, etag);
+                var index = await ServerStore.WriteDbAsync(context, name, topologyJson, etag, databaseRecord.Encrypted);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
@@ -166,6 +167,7 @@ namespace Raven.Server.Web.System
         public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var encrypted = GetBoolValueQueryString("encrypted", required: false) ?? false;
 
             string errorMessage;
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
@@ -220,7 +222,7 @@ namespace Raven.Server.Web.System
                     [nameof(DatabaseRecord.Topology)] = topologyJson,
                 };
 
-                var index = await ServerStore.WriteDbAsync(context, name, json, etag);
+                var index = await ServerStore.WriteDbAsync(context, name, json, etag, encrypted);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
@@ -489,7 +491,7 @@ namespace Raven.Server.Web.System
 
                     var json = EntityToBlittable.ConvertEntityToBlittable(dbDoc, DocumentConventions.Default, context);
 
-                    var index = await ServerStore.WriteDbAsync(context, name, json, null);
+                    var index = await ServerStore.WriteDbAsync(context, name, json, null, dbDoc.Encrypted);
                     await ServerStore.Cluster.WaitForIndexNotification(index);
 
                     ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));

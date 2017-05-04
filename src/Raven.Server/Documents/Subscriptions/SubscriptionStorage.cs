@@ -49,6 +49,7 @@ namespace Raven.Server.Documents.Subscriptions
             options.ForceUsing32BitsPager = db.Configuration.Storage.ForceUsing32BitsPager;
             options.TimeToSyncAfterFlashInSeconds = db.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
             options.NumOfCocurrentSyncsPerPhysDrive = db.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+            options.MasterKey = db.MasterKey;
 
 
             _environment = new StorageEnvironment(options);

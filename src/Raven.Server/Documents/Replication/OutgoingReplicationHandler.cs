@@ -11,6 +11,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Extensions;
 using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
@@ -21,7 +22,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Utils;
@@ -572,8 +572,12 @@ namespace Raven.Server.Documents.Replication
             _waitForChanges.Set();
         }
 
+        private int _disposed;
         public void Dispose()
         {
+            //There are multiple invokations of dispose, this happens sometimes during tests, causing failures.
+            if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 1)
+                return;
             if (_log.IsInfoEnabled)
                 _log.Info($"Disposing OutgoingReplicationHandler ({FromToString})");
 

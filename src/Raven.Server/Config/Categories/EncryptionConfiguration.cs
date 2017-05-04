@@ -14,7 +14,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/Encryption/KeyBitsPreference")]
         public int EncryptionKeyBitsPreference { get; set; }
 
-        [Description("Whatever we should use SSL for this connection")]
+        [Description("Whether we should use SSL for this connection")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/UseSsl")]
         public bool UseSsl { get; set; }

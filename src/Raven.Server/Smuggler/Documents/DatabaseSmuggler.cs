@@ -29,6 +29,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly Action<IOperationProgress> _onProgress;
         private readonly SmugglerPatcher _patcher;
         private CancellationToken _token;
+        private HashSet<LazyStringValue> _attachmentStreamsAlreadyExported;
 
         public DatabaseSmuggler(
             ISmugglerSource source,
@@ -336,6 +337,8 @@ namespace Raven.Server.Smuggler.Documents
 
                     Debug.Assert(document.Key != null);
 
+                    WriteAttachments(document, actions);
+
                     document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
                     actions.WriteDocument(document);
@@ -385,6 +388,8 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
+                    WriteAttachments(document, actions);
+
                     if (_patcher != null)
                     {
                         document = _patcher.Transform(document, actions.GetContextForNewDocument());
@@ -404,6 +409,36 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result.Documents;
+        }
+
+        private void WriteAttachments(Document document, IDocumentActions actions)
+        {
+            var source = _source as DatabaseSource;
+            var streamDestination = actions as StreamDestination.StreamDocumentActions;
+            if (source == null || streamDestination == null)
+                return;
+
+            if ((document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments || 
+                document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false || 
+                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                return;
+
+            if (_attachmentStreamsAlreadyExported == null)
+                _attachmentStreamsAlreadyExported = new HashSet<LazyStringValue>();
+
+            foreach (BlittableJsonReaderObject attachment in attachments)
+            {
+                if (attachment.TryGet(nameof(AttachmentResult.Hash), out LazyStringValue hash) == false)
+                    throw new ArgumentException($"Hash field is mandatory in attachment's metadata: {attachment}");
+
+                if (_attachmentStreamsAlreadyExported.Add(hash))
+                {
+                    using (var stream = source.GetAttachmentStream(hash))
+                    {
+                        streamDestination.WriteAttachmentStream(hash, stream);
+                    }
+                }
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

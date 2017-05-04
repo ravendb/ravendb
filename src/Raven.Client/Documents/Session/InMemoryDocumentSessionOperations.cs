@@ -225,7 +225,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Returns whatever a document with the specified id is loaded in the 
+        /// Returns whether a document with the specified id is loaded in the 
         /// current session
         /// </summary>
         public bool IsLoaded(string id)
@@ -241,7 +241,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Returns whatever a document with the specified id is deleted 
+        /// Returns whether a document with the specified id is deleted 
         /// or known to be missing
         /// </summary>
         public bool IsDeleted(string id)

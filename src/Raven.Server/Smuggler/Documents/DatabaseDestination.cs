@@ -1,22 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Voron;
 using Voron.Global;
 using Size = Raven.Server.Config.Settings.Size;
+using Raven.Client.Extensions;
+using Raven.Server.Extensions;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -107,7 +115,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class DatabaseDocumentActions : IDocumentActions
+        public class DatabaseDocumentActions : IDocumentActions
         {
             private readonly DocumentDatabase _database;
             private readonly BuildVersionType _buildType;
@@ -137,12 +145,32 @@ namespace Raven.Server.Smuggler.Documents
 
             public void WriteDocument(Document document)
             {
-                _command.Add(document);
+                _command.Add(new DocumentItem
+                {
+                    Type = DocumentType.Document,
+                    Document = document,
+                });
 
                 HandleBatchOfDocumentsIfNecessary();
             }
 
-            public JsonOperationContext GetContextForNewDocument()
+            public void WriteAttachment(StreamSource.AttachmentStream attachment)
+            {
+                _command.Add(new DocumentItem
+                {
+                    Type = DocumentType.Attachment,
+                    Attachment = attachment,
+                });
+            }
+
+            public StreamSource.AttachmentStream CreateAttachment()
+            {
+                var attachment = new StreamSource.AttachmentStream();
+                attachment.FileDispose = _database.DocumentsStorage.AttachmentsStorage.GetTempFile(out attachment.File, "smuggler-");
+                return attachment;
+            }
+
+            public DocumentsOperationContext GetContextForNewDocument()
             {
                 _command.Context.CachedProperties.NewDocument();
                 return _command.Context;
@@ -157,7 +185,6 @@ namespace Raven.Server.Smuggler.Documents
             {
                 var prevDoneAndHasEnough = _command.Context.AllocatedMemory > Constants.Size.Megabyte && _prevCommandTask.IsCompleted;
                 var currentReachedLimit = _command.Context.AllocatedMemory > _enqueueThreshold.GetValue(SizeUnit.Bytes);
-
 
                 if (currentReachedLimit == false && prevDoneAndHasEnough == false)
                     return;
@@ -252,9 +279,7 @@ namespace Raven.Server.Smuggler.Documents
             private readonly BuildVersionType _buildType;
             private readonly Logger _log;
 
-            public Size TotalSize = new Size(0, SizeUnit.Bytes);
-
-            public readonly List<Document> Documents = new List<Document>();
+            public readonly List<DocumentItem> Documents = new List<DocumentItem>();
             private IDisposable _resetContext;
             private bool _isDisposed;
 
@@ -271,44 +296,92 @@ namespace Raven.Server.Smuggler.Documents
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             }
 
-            public JsonOperationContext Context => _context;
+            public DocumentsOperationContext Context => _context;
 
             public override int Execute(DocumentsOperationContext context)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"Importing {Documents.Count:#,#} documents");
 
-                foreach (var document in Documents)
+                foreach (var documentType in Documents)
                 {
-                    var key = document.Key;
-
-                    if (IsRevision)
+                    if (documentType.Type == DocumentType.Attachment)
                     {
-                        if (_database.BundleLoader.VersioningStorage == null)
-                            ThrowVersioningDisabled();
-
-                        // ReSharper disable once PossibleNullReferenceException
-                        _database.BundleLoader.VersioningStorage.Put(context, key, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                        using (var attachment = documentType.Attachment)
+                        using (Slice.From(context.Allocator, "Smuggler", out Slice tag)) // TODO: Export the tag also
+                        {
+                            _database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, tag, attachment.Base64Hash, attachment.File);
+                        }
                         continue;
                     }
 
-                    if (IsPreV4Revision(key, document))
+                    var document = documentType.Document;
+                    using (document.Data)
                     {
-                        // handle old revisions
-                        if (_database.BundleLoader.VersioningStorage == null)
-                            ThrowVersioningDisabled();
+                        var key = document.Key;
 
-                        var endIndex = key.IndexOf(PreV4RevisionsDocumentKey, StringComparison.OrdinalIgnoreCase);
-                        var newKey = key.Substring(0, endIndex);
+                        if (IsRevision)
+                        {
+                            if (_database.BundleLoader.VersioningStorage == null)
+                                ThrowVersioningDisabled();
 
-                        // ReSharper disable once PossibleNullReferenceException
-                        _database.BundleLoader.VersioningStorage.Put(context, newKey, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
-                        continue;
+                            PutAttachments(context, document);
+                            // ReSharper disable once PossibleNullReferenceException
+                            _database.BundleLoader.VersioningStorage.Put(context, key, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                            continue;
+                        }
+
+                        if (IsPreV4Revision(key, document))
+                        {
+                            // handle old revisions
+                            if (_database.BundleLoader.VersioningStorage == null)
+                                ThrowVersioningDisabled();
+
+                            var endIndex = key.IndexOf(PreV4RevisionsDocumentKey, StringComparison.OrdinalIgnoreCase);
+                            var newKey = key.Substring(0, endIndex);
+
+                            // ReSharper disable once PossibleNullReferenceException
+                            _database.BundleLoader.VersioningStorage.Put(context, newKey, document.Data, document.Flags, document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                            continue;
+                        }
+
+                        PutAttachments(context, document);
+                        _database.DocumentsStorage.Put(context, key, null, document.Data, nonPersistentFlags: document.NonPersistentFlags);
                     }
-
-                    _database.DocumentsStorage.Put(context, key, null, document.Data, nonPersistentFlags: document.NonPersistentFlags);
                 }
+
                 return Documents.Count;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private unsafe void PutAttachments(DocumentsOperationContext context, Document document)
+            {
+                if ((document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
+                    return;
+
+                if (document.Data.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false || 
+                    metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                    return;
+
+                foreach (BlittableJsonReaderObject attachment in attachments)
+                {
+                    if (attachment.TryGet(nameof(AttachmentResult.Name), out LazyStringValue name) == false || 
+                        attachment.TryGet(nameof(AttachmentResult.ContentType), out LazyStringValue contentType) == false || 
+                        attachment.TryGet(nameof(AttachmentResult.Hash), out LazyStringValue hash) == false)
+                        throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
+
+                    var type = (document.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision : AttachmentType.Document;
+                    var attachmentsStorage = _database.DocumentsStorage.AttachmentsStorage;
+                    using (DocumentKeyWorker.GetSliceFromKey(_context, document.Key, out Slice lowerDocumentId))
+                    using (DocumentKeyWorker.GetLowerKeySliceAndStorageKey(_context, name, out Slice lowerName, out Slice nameSlice))
+                    using (DocumentKeyWorker.GetLowerKeySliceAndStorageKey(_context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
+                    using (Slice.External(_context.Allocator, hash, out Slice base64Hash))
+                    using (attachmentsStorage.GetAttachmentKey(_context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
+                        base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, document.ChangeVector, out Slice keySlice))
+                    {
+                        attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash);
+                    }
+                }
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -334,20 +407,15 @@ namespace Raven.Server.Smuggler.Documents
                     return;
 
                 _isDisposed = true;
-                for (int i = Documents.Count - 1; i >= 0; i--)
-                {
-                    Documents[i].Data.Dispose();
-                }
 
                 Documents.Clear();
                 _resetContext?.Dispose();
                 _resetContext = null;
             }
 
-            public void Add(Document document)
+            public void Add(DocumentItem document)
             {
                 Documents.Add(document);
-                TotalSize.Add(document.Data.Size, SizeUnit.Bytes);
             }
         }
     }

@@ -64,7 +64,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <typeparam name="T">The result of the query</typeparam>
         /// <param name="indexName">Name of the index.</param>
-        /// <param name="isMapReduce">Whatever we are querying a map/reduce index (modify how we treat identifier properties)</param>
+        /// <param name="isMapReduce">Whether we are querying a map/reduce index (modify how we treat identifier properties)</param>
         public IRavenQueryable<T> Query<T>(string indexName, bool isMapReduce = false)
         {
             var ravenQueryStatistics = new QueryStatistics();

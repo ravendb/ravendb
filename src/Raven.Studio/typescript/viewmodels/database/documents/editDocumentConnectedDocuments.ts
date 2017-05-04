@@ -199,11 +199,11 @@ class connectedDocuments {
         return deferred.promise();
     }
 
-    fetchAttachments(skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> {
+    fetchAttachments(skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> { 
         const doc = this.document();
         const search = this.searchInput().toLocaleLowerCase();
-
-        let attachments: documentAttachmentDto[] = doc.__metadata.attachments || [];
+        
+        let attachments: documentAttachmentDto[] = doc.__metadata.attachments() || [];
 
         if (search) {
             attachments = attachments.filter(file => file.Name.includes(search));

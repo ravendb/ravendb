@@ -1,28 +1,10 @@
 ﻿using System;
-using System.IO;
-using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 
 namespace Raven.Client.Extensions
 {
     internal static class BlittableJsonExtensions
     {
-        public static ChangeVectorEntry[] ToVector(this BlittableJsonReaderArray vectorJson)
-        {
-            var result = new ChangeVectorEntry[vectorJson.Length];
-            int iter = 0;
-            foreach (BlittableJsonReaderObject entryJson in vectorJson)
-            {
-                if (!entryJson.TryGet(nameof(ChangeVectorEntry.DbId), out result[iter].DbId))
-                    throw new InvalidDataException("Tried to find " + nameof(ChangeVectorEntry.DbId) + " property in change vector, but didn't find.");
-                if (!entryJson.TryGet(nameof(ChangeVectorEntry.Etag), out result[iter].Etag))
-                    throw new InvalidDataException("Tried to find "+ nameof(ChangeVectorEntry.Etag) + " property in change vector, but didn't find.");
-
-                iter++;
-            }
-            return result;
-        }
-
         public static BlittableJsonReaderObject GetMetadata(this BlittableJsonReaderObject document)
         {
             BlittableJsonReaderObject metadata;

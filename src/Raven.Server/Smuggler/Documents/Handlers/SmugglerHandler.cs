@@ -127,7 +127,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private IOperationResult ExportDatabaseInternal(DatabaseSmugglerOptions options, Action<IOperationProgress> onProgress, JsonOperationContext context, OperationCancelToken token)
+        private IOperationResult ExportDatabaseInternal(DatabaseSmugglerOptions options, Action<IOperationProgress> onProgress, DocumentsOperationContext context, OperationCancelToken token)
         {
             using (token)
             {
@@ -136,7 +136,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, onProgress: onProgress, token: token.Token);
                 return smuggler.Execute();
             }
-           
         }
 
         [RavenAction("/databases/*/smuggler/import-s3-dir", "GET")]
@@ -381,7 +380,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private void DoImportInternal(JsonOperationContext context, Stream stream, DatabaseSmugglerOptions options, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        private void DoImportInternal(DocumentsOperationContext context, Stream stream, DatabaseSmugglerOptions options, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             using (stream)
             using (token)

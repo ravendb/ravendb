@@ -10,11 +10,13 @@ then
         /Raven/RunAsService=true \
         /Raven/ServerUrl/Tcp=38888 \
         /Raven/AllowEverybodyToAccessTheServerAsAdmin=${AllowEverybodyToAccessTheServerAsAdmin} \
-        /Raven/DataDir=${DataDir} 
+        /Raven/DataDir=${DataDir} \
+        --print-id
 else
     ./Raven.Server \
         /Raven/RunAsService=true \
         /Raven/ServerUrl/Tcp=38888 \
         /Raven/Config=${CUSTOM_SETTINGS_PATH} \
-        /Raven/DataDir=${DataDir}
+        /Raven/DataDir=${DataDir} \
+        --print-id
 fi

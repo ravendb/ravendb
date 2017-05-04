@@ -4,7 +4,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
-using Sparrow.Json;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Smuggler.Documents.Data
 {
@@ -25,7 +25,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface INewDocumentActions
     {
-        JsonOperationContext GetContextForNewDocument();
+        DocumentsOperationContext GetContextForNewDocument();
     }
 
     public interface IIndexActions : IDisposable

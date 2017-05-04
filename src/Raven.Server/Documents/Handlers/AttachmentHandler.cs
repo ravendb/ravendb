@@ -14,9 +14,9 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
+using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Voron.Exceptions;
@@ -202,6 +202,10 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WritePropertyName(nameof(AttachmentResult.Hash));
                     writer.WriteString(result.Hash);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(AttachmentResult.Size));
+                    writer.WriteInteger(result.Size);
 
                     writer.WriteEndObject();
                 }

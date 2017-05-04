@@ -40,7 +40,7 @@ namespace Raven.Server.Documents
         public static readonly string AttachmentsTombstones = "Attachments.Tombstones";
 
         // The attachments schema is as follows
-        // 5 fields (lowered document id AND record separator AND lowered name, etag, name, content type, last modified)
+        // 5 fields (lowered document id AND record separator AND lowered name, etag, name, content type, hash and transaction marker)
         // We are you using the record separator in order to avoid loading another files that has the same key prefix, 
         //      e.g. fitz(record-separator)profile.png and fitz0(record-separator)profile.png, without the record separator we would have to load also fitz0 and filter it.
         // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
@@ -145,17 +145,17 @@ namespace Raven.Server.Documents
             using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
             using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, null, out Slice keySlice))
             {
+                Debug.Assert(base64Hash.Size == 32, $"Hash size should be 32 but was: {keySlice.Size}");
+
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                 using (table.Allocate(out TableValueBuilder tbv))
                 {
-                    var transactionMarker = context.GetTransactionMarker();
-
                     tbv.Add(keySlice.Content.Ptr, keySlice.Size);
                     tbv.Add(Bits.SwapBytes(attachmenEtag));
                     tbv.Add(namePtr);
                     tbv.Add(contentTypePtr);
                     tbv.Add(base64Hash.Content.Ptr, base64Hash.Size);
-                    tbv.Add(transactionMarker);
+                    tbv.Add(context.GetTransactionMarker());
 
                     if (table.ReadByKey(keySlice, out TableValueReader oldValue))
                     {
@@ -200,24 +200,26 @@ namespace Raven.Server.Documents
                 Name = name,
                 DocumentId = documentId,
                 Hash = hash,
+                Size = stream.Length
             };
         }
 
-        public void PutFromReplication(DocumentsOperationContext context, Slice key, Slice name, Slice contentType, 
-            Slice base64Hash, short transactionMarker)
+        /// <summary>
+        /// Should be used only from replication or smuggler.
+        /// </summary>
+        public void PutDirect(DocumentsOperationContext context, Slice key, Slice name, Slice contentType, Slice base64Hash)
         {
-            // Attachment etag should be generated before updating the document
-            var attachmenEtag = _documentsStorage.GenerateNextEtag();
+            Debug.Assert(base64Hash.Size == 32, $"Hash size should be 32 but was: {key.Size}");
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using (table.Allocate(out TableValueBuilder tbv))
             {
                 tbv.Add(key.Content.Ptr, key.Size);
-                tbv.Add(Bits.SwapBytes(attachmenEtag));
+                tbv.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
                 tbv.Add(name.Content.Ptr, name.Size);
                 tbv.Add(contentType.Content.Ptr, contentType.Size);
                 tbv.Add(base64Hash.Content.Ptr, base64Hash.Size);
-                tbv.Add(transactionMarker);
+                tbv.Add(context.GetTransactionMarker());
 
                 table.Set(tbv);
             }
@@ -265,14 +267,12 @@ namespace Raven.Server.Documents
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                 using (table.Allocate(out TableValueBuilder tbv))
                 {
-                    var transactionMarker = context.GetTransactionMarker();
-
                     tbv.Add(keySlice.Content.Ptr, keySlice.Size);
                     tbv.Add(Bits.SwapBytes(attachmenEtag));
                     tbv.Add(namePtr);
                     tbv.Add(contentTypePtr);
                     tbv.Add(attachment.base64Hash);
-                    tbv.Add(transactionMarker);
+                    tbv.Add(context.GetTransactionMarker());
                     table.Set(tbv);
                 }
             }
@@ -280,6 +280,8 @@ namespace Raven.Server.Documents
 
         public void PutAttachmentStream(DocumentsOperationContext context, Slice key, Slice base64Hash, Stream stream)
         {
+            Debug.Assert(stream.Position == 0);
+
             var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
             var existingStream = tree.ReadStream(base64Hash);
             if (existingStream == null)
@@ -399,7 +401,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private Stream GetAttachmentStream(DocumentsOperationContext context, Slice hashSlice)
+        public Stream GetAttachmentStream(DocumentsOperationContext context, Slice hashSlice)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
             return tree.ReadStream(hashSlice);
@@ -693,11 +695,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        public ReleaseTempFile GetTempFile(out FileStream file, bool fromReplication = false)
+        public ReleaseTempFile GetTempFile(out FileStream file, string prefix = null)
         {
             var name = $"attachment.{Guid.NewGuid():N}.put";
-            if (fromReplication)
-                name = "replication-" + name;
+            if (prefix != null)
+                name = prefix + name;
             var tempPath = Path.Combine(_documentsStorage.Environment.Options.DataPager.Options.TempPath, name);
             file = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan);
             return new ReleaseTempFile(tempPath, file);

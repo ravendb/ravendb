@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Client.Documents.Replication.Messages;
+using Sparrow.Json;
 
-namespace Raven.Server.Extensions
+namespace Raven.Client.Extensions
 {
     public static class ChangeVectorExtensions
     {              
@@ -86,6 +88,22 @@ namespace Raven.Server.Extensions
             sb.Length -= 2;
             sb.Append("]");
             return sb.ToString();
+        }
+
+        public static ChangeVectorEntry[] ToVector(this BlittableJsonReaderArray vectorJson)
+        {
+            var result = new ChangeVectorEntry[vectorJson.Length];
+            int iter = 0;
+            foreach (BlittableJsonReaderObject entryJson in vectorJson)
+            {
+                if (!entryJson.TryGet(nameof(ChangeVectorEntry.DbId), out result[iter].DbId))
+                    throw new InvalidDataException("Tried to find " + nameof(ChangeVectorEntry.DbId) + " property in change vector, but didn't find.");
+                if (!entryJson.TryGet(nameof(ChangeVectorEntry.Etag), out result[iter].Etag))
+                    throw new InvalidDataException("Tried to find " + nameof(ChangeVectorEntry.Etag) + " property in change vector, but didn't find.");
+
+                iter++;
+            }
+            return result;
         }
     }
 }

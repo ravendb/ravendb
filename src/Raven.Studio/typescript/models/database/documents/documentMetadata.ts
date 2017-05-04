@@ -15,7 +15,7 @@ class documentMetadata {
     etag = ko.observable<number>(null);
     lastModifiedFullDate: KnockoutComputed<string>;
 
-    attachments: Array<documentAttachmentDto>;
+    attachments = ko.observableArray<documentAttachmentDto>();
     changeVector: Array<changeVectorDto>;
 
     constructor(dto?: documentMetadataDto) {
@@ -37,7 +37,7 @@ class documentMetadata {
 
             this.etag(dto['@etag']);
 
-            this.attachments = dto['@attachments'];
+            this.attachments(dto['@attachments']);
 
             this.changeVector = dto['@change-vector'];
             
@@ -75,7 +75,7 @@ class documentMetadata {
             'Temp-Index-Score': this.tempIndexScore,
             '@last-modified': this.lastModified(),
             '@etag': this.etag(),
-            '@attachments': this.attachments,
+            '@attachments': this.attachments(),
             '@change-vector': this.changeVector
     };
 
@@ -93,6 +93,7 @@ class documentMetadata {
 
         if (isClonedDocument) {
             metaPropsToRemove.push("@change-vector");
+            metaPropsToRemove.push("@flags");
         }
 
         for (let property in metaDto) {
