@@ -83,7 +83,7 @@ namespace Raven.Server.Web.Studio
                 }
                 catch (Exception) 
                 {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest; // Bad Request
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     return HttpContext.Response.WriteAsync("\"Failed to validate custom functions!\"");
                 }
 

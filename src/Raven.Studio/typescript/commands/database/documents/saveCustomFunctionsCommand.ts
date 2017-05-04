@@ -8,8 +8,8 @@ class saveCustomFunctionsCommand extends commandBase {
         super();
     }
 
-    private validateCustomFunctions(document: string): JQueryPromise<any> {
-        return this.post(endpoints.databases.studioTasks.studioTasksValidateCustomFunctions, document, this.db, { dataType: 'text' }); //TODO use right validation
+    private validateCustomFunctions(document: string): JQueryPromise<string> {
+        return this.post(endpoints.databases.studioTasks.studioTasksValidateCustomFunctions, document, this.db, { dataType: 'text' });
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Commands.Batches.PutResult> {

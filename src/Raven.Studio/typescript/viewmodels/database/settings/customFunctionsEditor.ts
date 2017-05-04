@@ -4,15 +4,11 @@ import getCustomFunctionsCommand = require("commands/database/documents/getCusto
 import saveCustomFunctionsCommand = require("commands/database/documents/saveCustomFunctionsCommand");
 import customFunctions = require("models/database/documents/customFunctions");
 import jsonUtil = require("common/jsonUtil");
-import messagePublisher = require("common/messagePublisher");
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
 
 class customFunctionsEditor extends viewModelBase {
-
-    docEditor: AceAjax.Editor;
-    textarea: any;
-    documentText: KnockoutObservable<string>;
+    documentText = ko.observable<string>("");
     isSaveEnabled: KnockoutComputed<boolean>;
 
     globalValidationGroup = ko.validatedObservable({
@@ -26,10 +22,8 @@ class customFunctionsEditor extends viewModelBase {
     constructor() {
         super();
         aceEditorBindingHandler.install();
-        this.documentText = ko.observable<string>("");
-
         this.dirtyFlag = new ko.DirtyFlag([this.documentText], false, jsonUtil.newLineNormalizingHashFunction);
-        this.isSaveEnabled = ko.computed<boolean>(() => {
+        this.isSaveEnabled = ko.pureComputed<boolean>(() => {
             return this.dirtyFlag().isDirty();
         });
         this.initValidation();
@@ -45,6 +39,7 @@ class customFunctionsEditor extends viewModelBase {
     activate(args: any) {
         super.activate(args);
         this.updateHelpLink('XLDBRW');
+        this.fetchCustomFunctions();
     }
 
     attached() {
@@ -53,19 +48,8 @@ class customFunctionsEditor extends viewModelBase {
             html: true,
             template: popoverUtils.longPopoverTemplate,
             trigger: "hover",
-            content: "<p>Examples:</p><pre>exports.greet = <span class=\"code-keyword\">function</span>(name) {<br/>    <span class=\"code-keyword\">return</span> <span class=\"code-string\">\"Hello \" + name + \"!\"</span>;<br/>}</pre>"
+            content: "<p>Examples:</p><pre>exports.greet = <span class=\"token keyword\">function</span>(name) {<br/>    <span class=\"token keyword\">return</span> <span class=\"token string\">\"Hello \" + name + \"!\"</span>;<br/>}</pre>"
         });
-    }
-
-    compositionComplete() {
-        super.compositionComplete();
-
-        const editorElement = $("#customFunctionsEditor.editor");
-        if (editorElement.length > 0) {
-            this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
-        }
-
-        this.fetchCustomFunctions();
     }
 
     detached() {
@@ -74,11 +58,12 @@ class customFunctionsEditor extends viewModelBase {
     }
 
     fetchCustomFunctions() {
-        new getCustomFunctionsCommand(this.activeDatabase()).execute()
-        .done((cf: customFunctions) => {
-            this.documentText(cf.functions);
-            this.dirtyFlag().reset();
-        });
+        new getCustomFunctionsCommand(this.activeDatabase())
+            .execute()
+            .done((cf: customFunctions) => {
+                this.documentText(cf.functions);
+                this.dirtyFlag().reset();
+            });
     }
 
     saveChanges() {
@@ -88,7 +73,8 @@ class customFunctionsEditor extends viewModelBase {
             const cf = new customFunctions({
                 Functions: this.documentText()
             });
-            new saveCustomFunctionsCommand(this.activeDatabase(), cf).execute()
+            new saveCustomFunctionsCommand(this.activeDatabase(), cf)
+                .execute()
                 .done(() => this.dirtyFlag().reset())
                 .always(() => this.spinners.save(false));
         }
