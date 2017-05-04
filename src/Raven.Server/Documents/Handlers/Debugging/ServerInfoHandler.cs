@@ -1,14 +1,14 @@
 using System.Threading.Tasks;
 using Raven.Server.Routing;
+using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Raven.Server.Web;
 
-namespace Raven.Server.Documents.Handlers.Admin
+namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class AdminStatsHandler : RequestHandler
+    public class ServerInfoHandler : RequestHandler
     {
-        [RavenAction("/admin/stats/server-id", "GET", "/admin/stats/server-id", NoAuthorizationRequired = true)]
+        [RavenAction("/debug/server-id", "GET", "/debug/server-id", NoAuthorizationRequired = true)]
         public Task ServerId()
         {
             JsonOperationContext context;
