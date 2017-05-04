@@ -8,11 +8,7 @@ import updateServerPrefixHiLoCommand = require("commands/database/documents/upda
 import saveReplicationDocumentCommand = require("commands/database/replication/saveReplicationDocumentCommand");
 import saveAutomaticConflictResolutionDocumentCommand = require("commands/database/replication/saveAutomaticConflictResolutionDocumentCommand");
 import getServerPrefixForHiLoCommand = require("commands/database/documents/getServerPrefixForHiLoCommand");
-import replicateAllIndexesCommand = require("commands/database/replication/replicateAllIndexesCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import replicateAllTransformersCommand = require("commands/database/replication/replicateAllTransformersCommand");
-import replicateIndexesCommand = require("commands/database/replication/replicateIndexesCommand");
-import replicateTransformersCommand = require("commands/database/replication/replicateTransformersCommand");
 import getEffectiveConflictResolutionCommand = require("commands/database/globalConfig/getEffectiveConflictResolutionCommand");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
@@ -36,35 +32,7 @@ class replications extends viewModelBase {
     isConfigSaveEnabled: KnockoutComputed<boolean>;
     isSetupSaveEnabled: KnockoutComputed<boolean>;
 
-    skipIndexReplicationForAllDestinationsStatus = ko.observable<string>();
-    skipIndexReplicationForAll = ko.observable<boolean>();
-
     showRequestTimeoutRow: KnockoutComputed<boolean>;
-
-    private skipIndexReplicationForAllSubscription: KnockoutSubscription;
-
-    private refereshSkipIndexReplicationForAllDestinations() {
-        if (this.skipIndexReplicationForAllSubscription != null)
-            this.skipIndexReplicationForAllSubscription.dispose();
-
-        var newStatus = this.getIndexReplicationStatusForAllDestinations();
-        this.skipIndexReplicationForAll(newStatus === 'all');
-
-        this.skipIndexReplicationForAllSubscription = this.skipIndexReplicationForAll.subscribe(newValue => this.toggleIndexReplication(newValue));
-    }
-
-    private getIndexReplicationStatusForAllDestinations(): string {
-        var nonEtlDestinations = this.replicationsSetup().destinations().filter(x => !x.enableReplicateOnlyFromCollections());
-        var nonEtlWithSkipedIndexReplicationCount = nonEtlDestinations.filter(x => x.skipIndexReplication()).length;
-
-        if (nonEtlWithSkipedIndexReplicationCount === 0)
-            return 'none';
-
-        if (nonEtlWithSkipedIndexReplicationCount === nonEtlDestinations.length)
-            return 'all';
-
-        return 'mixed';
-    }
 
     constructor() {
         super();
@@ -96,7 +64,7 @@ class replications extends viewModelBase {
         this.replicationConfigDirtyFlag = new ko.DirtyFlag([this.replicationConfig]);
         this.isConfigSaveEnabled = ko.computed(() => this.replicationConfigDirtyFlag().isDirty());
 
-        var replicationSetupDirtyFlagItems = [this.replicationsSetup, this.replicationsSetup().destinations(), this.skipIndexReplicationForAll, this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour];
+        var replicationSetupDirtyFlagItems = [this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationConfig, this.replicationsSetup().clientFailoverBehaviour];
 
         this.replicationsSetupDirtyFlag = new ko.DirtyFlag(replicationSetupDirtyFlagItems);
 
@@ -138,7 +106,6 @@ class replications extends viewModelBase {
 
     fetchReplications(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
-        ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
 
         new getReplicationsCommand(db)
             .execute()
@@ -146,14 +113,6 @@ class replications extends viewModelBase {
                 if (repSetup) {
                     this.replicationsSetup(new replicationsSetup(repSetup));    
                 }
-
-                var status = this.getIndexReplicationStatusForAllDestinations();
-                if (status === 'all')
-                    this.skipIndexReplicationForAll(true);
-                else
-                    this.skipIndexReplicationForAll(false);
-
-                this.skipIndexReplicationForAllSubscription = this.skipIndexReplicationForAll.subscribe(newValue => this.toggleIndexReplication(newValue));
             })
             .always(() => deferred.resolve({ can: true }));
         return deferred;
@@ -185,18 +144,11 @@ class replications extends viewModelBase {
         destination.specifiedCollections.notifySubscribers();
     }
 
-    toggleSkipIndexReplicationForAll() {
-        eventsCollector.default.reportEvent("replications", "toggle-skip-for-all");
-
-        this.skipIndexReplicationForAll.toggle();
-    }
-
     createNewDestination() {
         eventsCollector.default.reportEvent("replications", "create");
 
         var db = this.activeDatabase();
         this.replicationsSetup().destinations.unshift(replicationDestination.empty(db.name));
-        this.refereshSkipIndexReplicationForAllDestinations();
         this.addScriptHelpPopover();
     }
 
@@ -242,40 +194,6 @@ class replications extends viewModelBase {
                     this.dirtyFlag().reset();
                 });
         }
-    }
-
-    toggleIndexReplication(skipReplicationValue: boolean) {
-        this.replicationsSetup().destinations().forEach(dest => {
-            // since we are on replications page filter toggle to non-etl destinations only
-            if (!dest.enableReplicateOnlyFromCollections()) {
-                dest.skipIndexReplication(skipReplicationValue);    
-            }
-        });
-    }
-
-    sendReplicateCommand(destination: replicationDestination, parentClass: replications) {
-        eventsCollector.default.reportEvent("replications", "send-replicate");
-
-        var db = parentClass.activeDatabase();
-        if (db) {
-            new replicateIndexesCommand(db, destination).execute();
-            new replicateTransformersCommand(db, destination).execute();
-        } else {
-            alert("No database selected! This error should not be seen."); //precaution to ease debugging - in case something bad happens
-        }
-    }
-
-    sendReplicateAllCommand() {
-        eventsCollector.default.reportEvent("replications", "send-replicate-all");
-
-        var db = this.activeDatabase();
-        if (db) {
-            new replicateAllIndexesCommand(db).execute();
-            new replicateAllTransformersCommand(db).execute();
-        } else {
-            alert("No database selected! This error should not be seen."); //precaution to ease debugging - in case something bad happens
-        }
-
     }
 
     sendResolveAllConflictsCommand() {

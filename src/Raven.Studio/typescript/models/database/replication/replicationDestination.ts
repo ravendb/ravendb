@@ -13,7 +13,6 @@ class replicationDestination {
     ignoredClient = ko.observable<boolean>();
     disabled = ko.observable<boolean>();
     clientVisibleUrl = ko.observable<string>();
-    skipIndexReplication = ko.observable<boolean>();
 
     specifiedCollections = ko.observableArray<replicationPatchScript>().extend({ required: false });
     withScripts = ko.observableArray<string>([]);
@@ -90,7 +89,6 @@ class replicationDestination {
         this.ignoredClient(dto.IgnoredClient);
         this.disabled(dto.Disabled);
         this.clientVisibleUrl(dto.ClientVisibleUrl);
-        this.skipIndexReplication(dto.SkipIndexReplication);
         this.specifiedCollections(this.mapSpecifiedCollections(dto.SpecifiedCollections));
         this.withScripts(this.specifiedCollections().filter(x => typeof (x.script()) !== "undefined").map(x => x.collection()));
 
@@ -101,9 +99,6 @@ class replicationDestination {
         } else if (this.apiKey()) {
             this.isApiKeyCredentials(true);
         }
-
-        this.skipIndexReplication.subscribe(() => ko.postbox.publish('skip-index-replication'));
-
     }
 
     mapSpecifiedCollections(input: dictionary<string>) {
@@ -141,10 +136,6 @@ class replicationDestination {
         return typeof(item.script()) !== "undefined";
     }
 
-    toggleSkipIndexReplication() {
-        this.skipIndexReplication.toggle();
-    }
-
     static empty(databaseName: string): replicationDestination {
         return new replicationDestination({
             Url: location.protocol + "//" + location.host,
@@ -158,7 +149,6 @@ class replicationDestination {
             IgnoredClient: false,
             Disabled: false,
             ClientVisibleUrl: null,
-            SkipIndexReplication: false,
             SpecifiedCollections: {} as { [key: string]: string; }
         } as Raven.Client.Documents.Replication.ReplicationDestination);
     }
@@ -191,7 +181,6 @@ class replicationDestination {
             IgnoredClient: this.ignoredClient(),
             Disabled: this.disabled(),
             ClientVisibleUrl: this.clientVisibleUrl(),
-            SkipIndexReplication: this.skipIndexReplication(),
             SpecifiedCollections: this.enableReplicateOnlyFromCollections() ? this.specifiedCollectionsToMap() : null
         } as Raven.Client.Documents.Replication.ReplicationDestination;
     }

@@ -13,35 +13,6 @@ class etl extends viewModelBase {
     isServerPrefixForHiLoSaveEnabled: KnockoutComputed<boolean>;
     isSetupSaveEnabled: KnockoutComputed<boolean>;
 
-    skipIndexReplicationForAllDestinationsStatus = ko.observable<string>();
-    skipIndexReplicationForAll = ko.observable<boolean>();
-
-    private skipIndexReplicationForAllSubscription: KnockoutSubscription;
-
-    private refereshSkipIndexReplicationForAllDestinations() {
-        if (this.skipIndexReplicationForAllSubscription != null)
-            this.skipIndexReplicationForAllSubscription.dispose();
-
-        var newStatus = this.getIndexReplicationStatusForAllDestinations();
-        this.skipIndexReplicationForAll(newStatus === 'all');
-
-        this.skipIndexReplicationForAllSubscription = this.skipIndexReplicationForAll.subscribe(newValue => this.toggleIndexReplication(newValue));
-    }
-
-    private getIndexReplicationStatusForAllDestinations(): string {
-        var etlDestinations = this.replicationsSetup().destinations().filter(x => x.enableReplicateOnlyFromCollections());
-        var etlWithSkipedIndexReplicationCount = etlDestinations.filter(x => x.skipIndexReplication()).length;
-
-        // ReSharper disable once ConditionIsAlwaysConst
-        if (etlWithSkipedIndexReplicationCount === 0)
-            return 'none';
-
-        if (etlWithSkipedIndexReplicationCount === etlDestinations.length)
-            return 'all';
-
-        return 'mixed';
-    }
-
     constructor() {
         super();
         aceEditorBindingHandler.install();
@@ -69,7 +40,7 @@ class etl extends viewModelBase {
         super.activate(args);
         this.updateHelpLink("B8WXPY");
 
-        var replicationSetupDirtyFlagItems = [this.replicationsSetup, this.replicationsSetup().destinations(), this.skipIndexReplicationForAll, this.replicationsSetup().clientFailoverBehaviour];
+        var replicationSetupDirtyFlagItems = [this.replicationsSetup, this.replicationsSetup().destinations(), this.replicationsSetup().clientFailoverBehaviour];
 
         this.replicationsSetupDirtyFlag = new ko.DirtyFlag(replicationSetupDirtyFlagItems);
 
@@ -94,20 +65,11 @@ class etl extends viewModelBase {
 
     fetchReplications(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
-        ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
 
         new getReplicationsCommand(db)
             .execute()
             .done((repSetup: configurationDocumentDto<replicationsDto>) => {
                 this.replicationsSetup(new replicationsSetup(repSetup));
-
-                var status = this.getIndexReplicationStatusForAllDestinations();
-                if (status === 'all')
-                    this.skipIndexReplicationForAll(true);
-                else
-                    this.skipIndexReplicationForAll(false);
-
-                this.skipIndexReplicationForAllSubscription = this.skipIndexReplicationForAll.subscribe(newValue => this.toggleIndexReplication(newValue));
             })
             .always(() => deferred.resolve({ can: true }));
         return deferred;
@@ -126,10 +88,6 @@ class etl extends viewModelBase {
         });
     }
 
-    toggleSkipIndexReplicationForAll() {
-        this.skipIndexReplicationForAll.toggle();
-    }
-
     createNewDestination() {
         var db = this.activeDatabase();
         var newDestination = replicationDestination.empty(db.name);
@@ -137,7 +95,6 @@ class etl extends viewModelBase {
         newDestination.ignoredClient(true);
         newDestination.addNewCollection();
         this.replicationsSetup().destinations.unshift(newDestination);
-        this.refereshSkipIndexReplicationForAllDestinations();
         this.addScriptHelpPopover();
     }
 
@@ -181,25 +138,6 @@ class etl extends viewModelBase {
 
     private fetchCollectionsStats(db: database): JQueryPromise<collectionsStats> {
         return new getCollectionsStatsCommand(db).execute();
-    }
-
-    toggleIndexReplication(skipReplicationValue: boolean) {
-        this.replicationsSetup().destinations().forEach(dest => {
-            // since we are on ETL page filter toggle to etl destinations only
-            if (dest.enableReplicateOnlyFromCollections()) {
-                dest.skipIndexReplication(skipReplicationValue);
-            }
-        });
-    }
-
-    sendReplicateCommand(destination: replicationDestination, parentClass: etl) {
-        var db = parentClass.activeDatabase();
-        if (db) {
-            new replicateIndexesCommand(db, destination).execute();
-            new replicateTransformersCommand(db, destination).execute();
-        } else {
-            alert("No database selected! This error should not be seen."); //precaution to ease debugging - in case something bad happens
-        }
     }
 
     enableReplication() {
