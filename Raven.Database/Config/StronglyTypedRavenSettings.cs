@@ -499,9 +499,6 @@ namespace Raven.Database.Config
 
         public StringSetting TaskScheduler { get; private set; }
 
-        public BooleanSetting AllowLocalAccessWithoutAuthorization { get; private set; }
-
-
         public BooleanSetting RejectClientsModeEnabled { get; private set; }
 
         public TimeSpanSetting MaxIndexCommitPointStoreTimeInterval { get; private set; }
