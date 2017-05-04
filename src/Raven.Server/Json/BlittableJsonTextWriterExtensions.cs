@@ -715,6 +715,13 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
+            writer.WritePropertyName((nameof(statistics.LastChangeVector)));
+            if (statistics.LastChangeVector != null)
+                context.Write(writer, statistics.LastChangeVector.ToJson());
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(statistics.LastIndexingTime));
             if (statistics.LastIndexingTime.HasValue)
                 writer.WriteString(statistics.LastIndexingTime.Value.GetDefaultRavenFormat(isUtc: true));

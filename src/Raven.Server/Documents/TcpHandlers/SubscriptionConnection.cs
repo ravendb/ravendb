@@ -331,7 +331,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 
                 long startEtag = 0;
                 
-                if (startChangeVector != null)
+                if (startChangeVector != null && startChangeVector.Length >0)
                 {
                     startEtag = GetStartEtagByStartChangeVector(startChangeVector, startEtag, dbContext, criteria);
                 }
@@ -369,10 +369,6 @@ namespace Raven.Server.Documents.TcpHandlers
                                     {
                                         anyDocumentsSentInCurrentIteration = true;
                                         startEtag = doc.Etag;
-
-                                        if (ConflictsStorage.GetConflictStatus(doc.ChangeVector, startChangeVector) ==
-                                            ConflictsStorage.ConflictStatus.Update)                                                                                
-                                            continue;                                        
 
                                         BlittableJsonReaderObject transformResult;
                                         if (DocumentMatchCriteriaScript(patch, dbContext, doc, out transformResult) ==

@@ -18,6 +18,7 @@ using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
@@ -474,13 +475,15 @@ namespace Raven.Client.Documents.Subscriptions
         {
             BlittableJsonReaderObject metadata;
             string id;
-
+            lastReceivedChangeVector = null;
             if (curDoc.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
                 ThrowMetadataRequired();
             if (metadata.TryGet(Constants.Documents.Metadata.Id, out id) == false)
                 ThrowIdRequired();
-            if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out lastReceivedChangeVector) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out BlittableJsonReaderArray changeVectorAsObject) == false || changeVectorAsObject == null)
                 ThrowEtagRequired();
+            else
+                lastReceivedChangeVector = changeVectorAsObject.ToVector();
 
             if (_logger.IsInfoEnabled)
             {
