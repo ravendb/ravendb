@@ -21,13 +21,12 @@ namespace Sparrow
 
         }
 
-        public static int randombytes_buf(
-            byte* buffer,
-            int size)
+        public static void randombytes_buf(byte* buffer, int size)
         {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.randombytes_buf(buffer, size)
-                : Platform.Win32.WinSodium.randombytes_buf(buffer, size);
+            if (Platform.PlatformDetails.RunningOnPosix)
+                Platform.Posix.PosixSodium.randombytes_buf(buffer, size);
+            else
+                Platform.Win32.WinSodium.randombytes_buf(buffer, size);
         }
 
         private static void crypto_kdf_keygen(
@@ -190,7 +189,7 @@ namespace Sparrow
             return GenerateRandomBuffer(64);
         }
 
-        private static byte[] GenerateRandomBuffer(int numberOfBits)
+        public static byte[] GenerateRandomBuffer(int numberOfBits)
         {
             var buffer = new byte[numberOfBits / 8];
             fixed (byte* p = buffer)

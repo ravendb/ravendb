@@ -25,7 +25,7 @@ namespace Sparrow.Platform.Win32
         public static extern int sodium_init();
 
         [DllImport(LIB_SODIUM)]
-        public static extern int randombytes_buf(
+        public static extern void randombytes_buf(
             byte* buffer,
             int size);
 

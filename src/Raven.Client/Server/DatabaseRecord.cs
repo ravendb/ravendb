@@ -25,6 +25,8 @@ namespace Raven.Client.Documents
 
         public bool Disabled;
 
+        public bool Encrypted;
+
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress;
 
         public string DataDirectory;
