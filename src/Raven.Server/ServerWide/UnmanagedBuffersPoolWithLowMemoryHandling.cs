@@ -9,17 +9,5 @@ namespace Raven.Server.ServerWide
         {
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
         }
-
-
-        public LowMemoryHandlerStatistics GetStats()
-        {
-            return new LowMemoryHandlerStatistics
-            {
-                Name = _debugTag,
-                DatabaseName = _databaseName,
-                EstimatedUsedMemory = GetAllocatedMemorySize()
-            };
-        }
-
     }
 }

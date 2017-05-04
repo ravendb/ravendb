@@ -1448,14 +1448,6 @@ namespace Sparrow
             Interlocked.CompareExchange(ref _lowMemoryFlag.LowMemoryState, 0, 1);
 
         }
-
-        public LowMemoryHandlerStatistics GetStats()
-        {
-            return new LowMemoryHandlerStatistics
-            {
-                Name = "ByteStringContext"
-            };
-        }
     }
 
     public class ByteStringValidationException : Exception

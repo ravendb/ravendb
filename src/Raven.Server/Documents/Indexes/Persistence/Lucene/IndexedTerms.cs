@@ -52,14 +52,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public void LowMemoryOver()
             {
             }
-
-            public LowMemoryHandlerStatistics GetStats()
-            {
-                return new LowMemoryHandlerStatistics
-                {
-                    Name = "WeakCache"
-                };
-            }
         }
 
         public static Dictionary<string, int[]> GetTermsAndDocumentsFor(IndexReader reader, int docBase, string field, string indexName, IState state)
@@ -220,19 +212,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             public void LowMemoryOver()
             {
-            }
-
-            public LowMemoryHandlerStatistics GetStats()
-            {
-                return new LowMemoryHandlerStatistics
-                {
-                    Name = "CachedIndexedTerms",
-                    Metadata = new
-                    {
-                        IndexName = _indexName
-                    },
-                    EstimatedUsedMemory = Results.Sum(x => x.Key.Length * sizeof(char) + x.Value.Results.Sum(y => y.Key.Length * sizeof(char) + y.Value.Length * sizeof(int)))
-                };
             }
         }
 

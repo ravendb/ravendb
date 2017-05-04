@@ -33,7 +33,6 @@ namespace Sparrow.LowMemory
     {
         void LowMemory();
         void LowMemoryOver();
-        LowMemoryHandlerStatistics GetStats();
     }
 
     public class LowMemoryNotification

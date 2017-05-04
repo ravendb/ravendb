@@ -568,15 +568,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public void LowMemoryOver()
             {
             }
-
-            public LowMemoryHandlerStatistics GetStats()
-            {
-                return new LowMemoryHandlerStatistics
-                {
-                    Name = "IntArraysPool",
-                    //EstimatedUsedMemory = arraysPoolBySize.Select(x=>x.Value.)
-                };
-            }
         }
 
         private class ReaderFacetInfo

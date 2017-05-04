@@ -300,13 +300,5 @@ namespace Sparrow.Json
         {
             Interlocked.CompareExchange(ref LowMemoryFlag.LowMemoryState, 0, 1);
         }
-
-        public LowMemoryHandlerStatistics GetStats()
-        {
-            return new LowMemoryHandlerStatistics
-            {
-                Name = "JsonContextPool"
-            };
-        }
     }
 }
