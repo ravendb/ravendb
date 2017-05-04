@@ -9,9 +9,8 @@
 </div>
 <div class="databases flex-vertical absolute-fill content-margin" data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length, css: { 'databases_compact': compactView() }">
     <div class="flex-header">
-    <div class="databasesToolbar toolbar clearfix">
-        <div class="form-inline">
-            <div class="flex-header">
+    <div class="databasesToolbar">
+        <div class="form-inline">            
             <div class="checkbox checkbox-primary checkbox-inline align-checkboxes">
                 <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }">
                 <label></label>
@@ -61,7 +60,6 @@
                     Compact View
                 </label>
             </div>
-        </div>
     </div> 
     </div>
     </div>

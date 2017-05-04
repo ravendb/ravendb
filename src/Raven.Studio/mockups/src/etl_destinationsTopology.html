@@ -1,0 +1,272 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+{{> head }}
+
+<body>
+
+    {{> spinner }}
+
+    <div class="durandal-wrapper">
+        {{> topbar }}
+
+        <div class="prime-container">
+            {{> menu }}
+
+            <div class="content-container">
+                <div class="destinations flex-vertical absolute-fill content-margin">
+                    <div class="row flex-row flex-grow">
+                        <div class="col-sm-12 col-lg-6 flex-vertical">
+                            <div class="flex-header">
+                                <button class="btn btn-success">
+                                    <i class="icon-save"></i>
+                                    <span>Save</span>
+                                </button>
+                                <button class="btn btn-primary" data-toggle="modal" data-target="#destinationModal">
+                                    <i class="icon-plus"></i>
+                                    <span>Add destination</span>
+                                </button>
+                            </div>
+                            <div class="scroll flex-grow">
+                                <div class="panel destination-item raven-replication">
+                                    <div data-state-text="dual" class="state state-success"></div>
+                                    <div class="padding padding-sm destination-info">
+                                        <div class="info-container">
+                                            <h3 class="destination-name">
+                                                <a href="#" title="test"><i class="icon-raven"></i><span>REPLICATION</span></a>
+                                            </h3>
+                                            <div class="location">Nordwind@localhost:8082</div>
+                                        </div>
+                                        <div class="actions-container">
+                                            <div class="actions">
+                                                <div class="dropdown dropdown-right">
+                                                    <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                        <i class="icon-play"></i> <span>Actions</span>
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                                        <li><a href="#"><i class="icon-server-smuggling"></i> <span>Setup master-master replication</span></a></li>
+                                                    </ul>
+                                                </div>
+                                                <button class="btn btn-default">
+                                                    <i class="icon-edit"></i>
+                                                </button>
+                                                <button class="btn btn-danger">
+                                                    <i class="icon-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="properties-container">
+                                            <div class="properties-item">
+                                                <span class="properties-label">Status:</span>
+                                                <div class="btn-group properties-value dropdown-right">
+                                                    <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                                        <span>Partialy disabled</span> <span class="caret"></span>
+                                                    </button>
+                                                    <div class="dropdown-menu settings-menu">
+                                                        <div class="settings-item">
+                                                            <div class="col-xs-8">
+                                                                <div class="control-label">Transform Cars to car parts</div>
+                                                            </div>
+                                                            <div class="col-xs-4">
+                                                                <div class="toggle">
+                                                                    <input type="checkbox" class="styled">
+                                                                    <label></label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="settings-item">
+                                                            <div class="col-xs-8 settings-item-label">
+                                                                <div class="control-label">Transform old machines to parts</div>
+                                                            </div>
+                                                            <div class="col-xs-4">
+                                                                <div class="toggle">
+                                                                    <input type="checkbox" class="styled" >
+                                                                    <label></label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                                <div class="panel destination-item raven-etl">
+                                    <div data-state-text="partial" class="state state-warning"></div>
+                                    <div class="padding padding-sm destination-info">
+                                        <div class="info-container">
+                                            <h3 class="destination-name">
+                                                <a href="#" title="RavenDB ETL"><i class="icon-raven"></i><span>RAVENDB ETL</span></a>
+                                            </h3>
+                                            <div class="location">Pie2@rpi.local:8084</div>
+                                        </div>
+                                        <div class="actions-container">
+                                            <div class="actions">
+                                                <div class="dropdown dropdown-right">
+                                                    <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                        <i class="icon-play"></i> <span>Actions</span>
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                                        <li><a href="#"><i class="icon-server-smuggling"></i> <span>Setup master-master replication</span></a></li>
+                                                    </ul>
+                                                </div>
+                                                <button class="btn btn-default">
+                                                    <i class="icon-edit"></i>
+                                                </button>
+                                                <button class="btn btn-danger">
+                                                    <i class="icon-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="properties-container">
+                                            <div class="properties-item">
+                                                <span class="properties-label">Status:</span>
+                                                <div class="btn-group properties-value dropdown-right">
+                                                    <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                                        <span>Partialy disabled</span> <span class="caret"></span>
+                                                    </button>
+                                                    <div class="dropdown-menu settings-menu">
+                                                        <div class="settings-item">
+                                                            <div class="col-xs-8">
+                                                                <div class="control-label">Transform Cars to car parts</div>
+                                                            </div>
+                                                            <div class="col-xs-4">
+                                                                <div class="toggle">
+                                                                    <input type="checkbox" class="styled">
+                                                                    <label></label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="settings-item">
+                                                            <div class="col-xs-8 settings-item-label">
+                                                                <div class="control-label">Transform old machines to parts</div>
+                                                            </div>
+                                                            <div class="col-xs-4">
+                                                                <div class="toggle">
+                                                                    <input type="checkbox" class="styled">
+                                                                    <label></label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                                <div class="panel destination-item sql-etl">
+                                    <div data-state-text="dual" class="state state-success"></div>
+                                    <div class="padding padding-sm destination-info">
+                                        <div class="info-container">
+                                            <h3 class="destination-name">
+                                                <a href="#" title="test"><i class="icon-sql-replication"></i><span>SQL ETL</span></a>
+                                            </h3>
+                                            <div class="location">TableWorld@sqldbs.tablestables.net:8084</div>
+                                        </div>
+                                        <div class="actions-container">
+                                            <div class="actions">
+                                                <div class="dropdown dropdown-right">
+                                                    <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                        <i class="icon-play"></i> <span>Actions</span>
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                                        <li><a href="#"><i class="icon-server-smuggling"></i> <span>Setup master-master replication</span></a></li>
+                                                    </ul>
+                                                </div>
+                                                <button class="btn btn-default">
+                                                    <i class="icon-edit"></i>
+                                                </button>
+                                                <button class="btn btn-danger">
+                                                    <i class="icon-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="properties-container">
+                                            <div class="properties-item">
+                                                <span class="properties-label">Status:</span>
+                                                <div class="btn-group properties-value dropdown-right">
+                                                    <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                                        <span>Partialy disabled</span> <span class="caret"></span>
+                                                    </button>
+                                                    <div class="dropdown-menu settings-menu">
+                                                        <div class="settings-item">
+                                                            <div class="col-xs-8">
+                                                                <div class="control-label">Transform Cars to car parts</div>
+                                                            </div>
+                                                            <div class="col-xs-4">
+                                                                <div class="toggle">
+                                                                    <input type="checkbox" class="styled">
+                                                                    <label></label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="settings-item">
+                                                            <div class="col-xs-8 settings-item-label">
+                                                                <div class="control-label">Transform old machines to parts</div>
+                                                            </div>
+                                                            <div class="col-xs-4">
+                                                                <div class="toggle">
+                                                                    <input type="checkbox" class="styled">
+                                                                    <label></label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-12 col-lg-6 flex-vertical">
+                            <div class="flex-horizontal flex-header">
+                                <div></div><h3>Topology <i class="icon-info text-info"></i></h3>
+                                <div class="flex-separator"></div>
+                                <div>
+                                    <button class="btn btn-default"><i class="icon-refresh"></i></button>
+                                </div>
+                                <div>
+                                    <button class="btn btn-info"><i class="icon-topology"></i> <span>Retrieve full topology</span></button>
+                                </div>
+                                <div class="btn-group dropdown-right">                                    
+                                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                        <i class="icon-export"></i><span>Download topology</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                        <li><a href="#">.zip</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="panel flex-grow">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{> notification-center }}
+        </div>{{> footer }}
+    </div>
+    <script type="text/javascript">
+        function changeState(el) {
+            if (el.readOnly) el.checked = el.readOnly = false;
+            else if (!el.checked) el.readOnly = el.indeterminate = true;
+        }
+    </script>
+
+    {{> modals/includeAll }}
+    {{> scripts }}
+    <div class="prerelease-alert bg-prerelease">
+        <i class="icon-hammer-driver pull-left"></i>
+        <p>
+            CAUTION: This is a pre-release version of RavenDB 4.0<br />
+            <small>it is not intended for business use.</small>
+        </p>
+    </div>
+</body>
+</html>
