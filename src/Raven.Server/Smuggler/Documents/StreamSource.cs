@@ -15,7 +15,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
-using Size = Raven.Server.Config.Settings.Size;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Smuggler.Documents
 {

@@ -1,20 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
@@ -22,9 +18,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
 using Voron.Global;
-using Size = Raven.Server.Config.Settings.Size;
-using Raven.Client.Extensions;
-using Raven.Server.Extensions;
+using Sparrow;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -125,7 +119,7 @@ namespace Raven.Server.Smuggler.Documents
             private MergedBatchPutCommand _prevCommand;
             private Task _prevCommandTask = Task.CompletedTask;
 
-            private readonly Size _enqueueThreshold;
+            private readonly Sparrow.Size _enqueueThreshold;
 
             public DatabaseDocumentActions(DocumentDatabase database, BuildVersionType buildType, bool isRevision, Logger log)
             {
@@ -133,7 +127,7 @@ namespace Raven.Server.Smuggler.Documents
                 _buildType = buildType;
                 _isRevision = isRevision;
                 _log = log;
-                _enqueueThreshold = new Size(
+                _enqueueThreshold = new Sparrow.Size(
                     (sizeof(int) == IntPtr.Size || database.Configuration.Storage.ForceUsing32BitsPager) ? 2 : 32,
                     SizeUnit.Megabytes);
 
