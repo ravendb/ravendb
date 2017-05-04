@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
 using Xunit;
 
 namespace SlowTests.Utils
@@ -12,7 +13,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveEmpty()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -29,7 +30,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveIdentical()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -50,7 +51,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveTwoEmptyArrays()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -71,7 +72,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveOneEmptyArraysAndOneWithValue()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -94,7 +95,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanMergeAdditionalProperties()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -119,7 +120,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanDetectAndSuggestOptionsForConflict_SimpleProp()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -143,7 +144,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanMergeProperties_Nested()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -171,7 +172,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanDetectConflict_DifferentValues()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -198,7 +199,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanMergeArrays()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -222,7 +223,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanMergeArrays_SameStart()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -248,7 +249,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveEmptyWithMetadata()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -267,7 +268,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveIdenticalMetadata()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -294,7 +295,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveTwoEmptyArraysInMetadata()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -321,7 +322,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanResolveOneEmptyArraysAndOneWithValueInMetadata()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -351,7 +352,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanMergeAdditionalMetadata()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
@@ -381,7 +382,7 @@ namespace SlowTests.Utils
         [Fact]
         public void CanDetectAndSuggestOptionsForConflict_SimpleMetadata()
         {
-            using (var ctx = new JsonOperationContext(4096, 16*1024))
+            using (var ctx = new JsonOperationContext(4096, 16*1024, LowMemoryFlag.None))
             {
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();

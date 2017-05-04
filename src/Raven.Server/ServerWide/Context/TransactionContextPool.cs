@@ -49,9 +49,7 @@ namespace Raven.Server.ServerWide.Context
                 }
             }
 
-            return new TransactionOperationContext(_storageEnvironment,
-                initialSize, 
-                16*1024);
+            return new TransactionOperationContext(_storageEnvironment, initialSize, 16*1024, LowMemoryFlag);
         }
     }
 }

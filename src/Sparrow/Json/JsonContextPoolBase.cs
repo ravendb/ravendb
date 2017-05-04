@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Threading;
+using Sparrow.LowMemory;
 
 namespace Sparrow.Json
 {
-    public abstract class JsonContextPoolBase<T>:IDisposable
+    public abstract class JsonContextPoolBase<T> : ILowMemoryHandler, IDisposable
         where T : JsonOperationContext
     {
         /// <summary>
@@ -16,6 +15,7 @@ namespace Sparrow.Json
         private readonly ThreadLocal<MutliReaderSingleWriterStack> _contextPool;
         private readonly Timer _timer;
         private bool _disposed;
+        protected LowMemoryFlag LowMemoryFlag = new LowMemoryFlag();
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
@@ -117,16 +117,22 @@ namespace Sparrow.Json
         protected JsonContextPoolBase()
         {
             _contextPool = new ThreadLocal<MutliReaderSingleWriterStack>(() => new MutliReaderSingleWriterStack(_cts.Token), trackAllValues: true);
-            _timer = new Timer(TimerCallback, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            _timer = new Timer(CleanNativeMemoryTimer, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
         }
 
-        private void TimerCallback(object state)
+        private void CleanNativeMemoryTimer(object state)
         {
             if (_disposed)
                 return;
-            lock (this)
+            bool lockTaken = false;
+            try
             {
                 if (_disposed)
+                    return;
+
+                Monitor.TryEnter(this, ref lockTaken);
+                if (lockTaken == false)
                     return;
 
                 var now = DateTime.UtcNow;
@@ -140,9 +146,12 @@ namespace Sparrow.Json
                         if (ctx == null)
                             continue;
 
-                        var timeInPool = now - ctx.InPoolSince;
-                        if (timeInPool < TimeSpan.FromMinutes(1))
-                            continue;
+                        if (LowMemoryFlag.LowMemoryState == 0)
+                        {
+                            var timeInPool = now - ctx.InPoolSince;
+                            if (timeInPool < TimeSpan.FromMinutes(1))
+                                continue;
+                        } // else dispose context on low mem stress
 
                         // it is too old, we can dispose it, but need to protect from races
                         // if the owner thread will just pick it up
@@ -155,6 +164,11 @@ namespace Sparrow.Json
                         items.Array[i] = null;
                     }
                 }
+            }
+            finally
+            {
+                if (lockTaken)
+                    Monitor.Exit(this);
             }
         }
 
@@ -274,6 +288,25 @@ namespace Sparrow.Json
                 }
                 _contextPool.Dispose();
             }
+        }
+
+        public void LowMemory()
+        {
+            Interlocked.CompareExchange(ref LowMemoryFlag.LowMemoryState, 1, 0);
+            CleanNativeMemoryTimer(null);
+        }
+
+        public void LowMemoryOver()
+        {
+            Interlocked.CompareExchange(ref LowMemoryFlag.LowMemoryState, 0, 1);
+        }
+
+        public LowMemoryHandlerStatistics GetStats()
+        {
+            return new LowMemoryHandlerStatistics
+            {
+                Name = "JsonContextPool"
+            };
         }
     }
 }

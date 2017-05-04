@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Exceptions.Patching;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.NotificationCenter.Notifications;

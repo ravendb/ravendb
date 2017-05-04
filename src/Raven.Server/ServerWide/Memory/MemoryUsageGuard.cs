@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
-using Raven.Server.Config.Settings;
-using Raven.Server.ServerWide.LowMemoryNotification;
+using Sparrow;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Memory

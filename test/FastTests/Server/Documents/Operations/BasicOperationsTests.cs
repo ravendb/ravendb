@@ -7,6 +7,7 @@ using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
 using Xunit;
 
 namespace FastTests.Server.Documents.Operations
@@ -158,7 +159,7 @@ namespace FastTests.Server.Documents.Operations
                 }
             };
 
-            using (var context = new JsonOperationContext(1024, 1024))
+            using (var context = new JsonOperationContext(1024, 1024, LowMemoryFlag.None))
             {
                 var json = context.ReadObject(state.ToJson(), "state");
                 var progress = json["Progress"];
@@ -179,7 +180,7 @@ namespace FastTests.Server.Documents.Operations
                 }
             };
 
-            using (var context = new JsonOperationContext(1024, 1024))
+            using (var context = new JsonOperationContext(1024, 1024, LowMemoryFlag.None))
             {
                 var json = context.ReadObject(state.ToJson(), "state");
                 var result = json["Result"] as BlittableJsonReaderObject;

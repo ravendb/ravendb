@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Server.Documents;
+using Sparrow.LowMemory;
 using Voron;
 
 namespace Raven.Server.ServerWide.Context
@@ -10,12 +11,12 @@ namespace Raven.Server.ServerWide.Context
 
         public static DocumentsOperationContext ShortTermSingleUse(DocumentDatabase documentDatabase)
         {
-            var shortTermSingleUse = new DocumentsOperationContext(documentDatabase, 4096, 1024);
+            var shortTermSingleUse = new DocumentsOperationContext(documentDatabase, 4096, 1024, LowMemoryFlag.None);
             return shortTermSingleUse;
         }
 
-        public DocumentsOperationContext(DocumentDatabase documentDatabase, int initialSize, int longLivedSize) :
-            base(initialSize, longLivedSize)
+        public DocumentsOperationContext(DocumentDatabase documentDatabase, int initialSize, int longLivedSize, LowMemoryFlag lowMemoryFlag) :
+            base(initialSize, longLivedSize, lowMemoryFlag)
         {
             _documentDatabase = documentDatabase;
         }

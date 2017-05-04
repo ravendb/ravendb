@@ -7,16 +7,16 @@ using System.Threading.Tasks;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 
 namespace Raven.Server
 {
     public class Program
     {
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<Program>("Raven/Server");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Program>("Raven/Server");
 
         public static int Main(string[] args)
         {
@@ -79,13 +79,13 @@ namespace Raven.Server
                             RunInteractive(server);
                         }
                         Console.WriteLine("Starting shut down...");
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info("Server is shutting down");
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Server is shutting down");
                     }
                     catch (Exception e)
                     {
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations("Failed to initialize the server", e);
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations("Failed to initialize the server", e);
                         Console.WriteLine(e);
                         return -1;
                     }
@@ -121,8 +121,8 @@ namespace Raven.Server
         private static void RunAsService()
         {
             ManualResetEvent mre = new ManualResetEvent(false);
-            if (_logger.IsInfoEnabled)
-                _logger.Info("Server is running as a service");
+            if (Logger.IsInfoEnabled)
+                Logger.Info("Server is running as a service");
             Console.WriteLine("Running as Service");
             AssemblyLoadContext.Default.Unloading += (s) =>
             {
@@ -205,7 +205,7 @@ namespace Raven.Server
                     case "oom":
                     case "low-mem":
                     case "low-memory":
-                        AbstractLowMemoryNotification.Instance.SimulateLowMemoryNotification();
+                        LowMemoryNotification.Instance.SimulateLowMemoryNotification();
                         break;
 
                     case "help":

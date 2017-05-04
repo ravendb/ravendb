@@ -1,7 +1,8 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
-using Raven.Server.ServerWide.LowMemoryNotification;
+using Sparrow;
+using Sparrow.LowMemory;
 
 namespace Raven.Server.Config.Categories
 {
@@ -14,7 +15,7 @@ namespace Raven.Server.Config.Categories
             // we allow 1 GB by default, or up to 75% of available memory on startup, if less than that is available
             LimitForProcessing = Size.Min(new Size(1024, SizeUnit.Megabytes), memoryInfo.AvailableMemory * 0.75);
 
-            LowMemoryForLinuxDetection = Size.Min(new Size(16, SizeUnit.Megabytes), memoryInfo.AvailableMemory * 0.10);
+            LowMemoryDetection = Size.Min(new Size(2, SizeUnit.Gigabytes), memoryInfo.AvailableMemory * PhysicalRatioForLowMemDetection);
 
             MemoryCacheLimit = GetDefaultMemoryCacheLimit(memoryInfo.TotalPhysicalMemory);
 
@@ -30,12 +31,18 @@ namespace Raven.Server.Config.Categories
         [LegacyConfigurationEntry("Raven/MemoryLimitForIndexing")]
         public Size LimitForProcessing { get; set; }
 
-        [Description("Limit for low mem detection in linux")]
+        [Description("Limit for low mem detection")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Raven/Memory/LowMemoryLimitForLinuxDetectionInMB")]
-        [LegacyConfigurationEntry("Raven/LowMemoryLimitForLinuxDetectionInMB")]
-        public Size LowMemoryForLinuxDetection { get; set; }
+        [ConfigurationEntry("Raven/Memory/LowMemoryLimitInMB")]
+        [LegacyConfigurationEntry("Raven/LowMemoryLimitInMB")]
+        public Size LowMemoryDetection { get; set; }
+
+        [Description("Physical Memory Ratio For Low Memory Detection")]
+        [DefaultValue(0.10)]
+        [ConfigurationEntry("Raven/Memory/PhysicalRatioForLowMemDetection")]
+        [LegacyConfigurationEntry("Raven/PhysicalRatioForLowMemDetection")]
+        public double PhysicalRatioForLowMemDetection { get; set; }
 
         [Description("An integer value that specifies the maximum allowable size, in megabytes, that caching document instances will use")]
         [DefaultValue(DefaultValueSetInConstructor)]

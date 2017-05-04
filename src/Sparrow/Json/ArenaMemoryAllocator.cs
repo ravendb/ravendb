@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading;
 using Sparrow.Binary;
-using Sparrow.Collections;
-using Sparrow.Logging;
-using Sparrow.Platform;
+using Sparrow.LowMemory;
 using Sparrow.Utils;
 
 namespace Sparrow.Json
@@ -37,6 +34,7 @@ namespace Sparrow.Json
         private readonly int _initialSize;
 
         public long TotalUsed;
+        private LowMemoryFlag _lowMemoryFlag;
 
         public long Allocated
         {
@@ -54,13 +52,19 @@ namespace Sparrow.Json
             }
         }
 
-        public ArenaMemoryAllocator(int initialSize = 1024 * 1024)
+        public ArenaMemoryAllocator(LowMemoryFlag lowMemoryFlag, int initialSize = 1024 * 1024)
         {
+            if (lowMemoryFlag.LowMemoryState != 0 && initialSize > 1024 * 1024)
+            {                
+                Console.WriteLine("Avoiding arena creation");
+                throw new LowMemoryException("Will not renew arena due to low memory stress");
+            }
             _initialSize = initialSize;
             _ptrStart = _ptrCurrent = NativeMemory.AllocateMemory(initialSize, out _allocatingThread);
             _allocated = initialSize;
             _used = 0;
             TotalUsed = 0;
+            _lowMemoryFlag = lowMemoryFlag;
         }
 
 
@@ -147,8 +151,15 @@ namespace Sparrow.Json
 
         private void GrowArena(int requestedSize)
         {
+            if (_lowMemoryFlag.LowMemoryState != 0)
+            {
+                throw new LowMemoryException("Will not grow arena due to low memory stress");
+            }
+
             if (requestedSize >= MaxArenaSize)
                 throw new ArgumentOutOfRangeException(nameof(requestedSize));
+
+            LowMemoryNotification.NotifyAllocationPending();
 
             // we need the next allocation to cover at least the next expansion (also doubling)
             // so we'll allocate 3 times as much as was requested, or as much as we already have
