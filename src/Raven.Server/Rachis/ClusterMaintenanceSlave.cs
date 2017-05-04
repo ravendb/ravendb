@@ -65,6 +65,9 @@ namespace Raven.Server.Rachis
         {
             foreach (var dbName in _server.Cluster.GetDatabaseNames(ctx))
             {
+                if (_token.IsCancellationRequested)
+                    yield break;
+
                 DatabaseStatusReport report;
                 if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask) == false)
                 {
@@ -105,6 +108,9 @@ namespace Raven.Server.Rachis
                 var dbInstance = dbTask.Result;
                 var documentsStorage = dbInstance.DocumentsStorage;
                 var indexStorage = dbInstance.IndexStore;
+
+                if (_token.IsCancellationRequested)
+                    yield break;
 
                 using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
