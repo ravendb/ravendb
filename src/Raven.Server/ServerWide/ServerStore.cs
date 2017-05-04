@@ -293,6 +293,8 @@ namespace Raven.Server.ServerWide
                     DatabasesLandlord.ClusterOnDatabaseChanged(this, (db.Item1, 0));
                 }
             }
+
+            Task.Run(ClusterMaintanceSetupTask, ServerShutdown);
         }
 
         public IEnumerable<string> GetSecretKeysNames(TransactionOperationContext context)
