@@ -104,7 +104,6 @@ namespace Raven.Server.Web.System
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var node = GetStringQueryString("node", false);
-            var encrypted = GetBoolValueQueryString("encrypted", required: false) ?? false;
 
             string errorMessage;
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
@@ -145,7 +144,7 @@ namespace Raven.Server.Web.System
 
                 var topologyJson = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                var index = await ServerStore.WriteDbAsync(context, name, topologyJson, etag, encrypted);
+                var index = await ServerStore.WriteDbAsync(context, name, topologyJson, etag, databaseRecord.Encrypted);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
