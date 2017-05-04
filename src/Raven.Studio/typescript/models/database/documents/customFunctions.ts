@@ -4,16 +4,8 @@ class customFunctions {
     functions: string;
     __metadata: documentMetadata;
 
-    constructor(dto?: customFunctionsDto) {
-        if (!dto) {
-            dto = {
-                Functions: ""
-            };
-            this.__metadata = new documentMetadata();
-        } else {
-            this.__metadata = new documentMetadata((dto as any)["@metadata"]);
-        }
-
+    constructor(dto: customFunctionsDto) {
+        this.__metadata = new documentMetadata((dto as any)["@metadata"]);
         this.functions = dto.Functions;
     }
 
@@ -26,12 +18,6 @@ class customFunctions {
             (dto as any)['@metadata'] = this.__metadata.toDto();
         }
         return dto;
-    }
-
-    clone(): customFunctions {
-        const copy = new customFunctions(this.toDto());
-        copy.functions = this.functions;
-        return copy;
     }
 
     static empty(): customFunctions {
