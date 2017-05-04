@@ -17,6 +17,8 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -49,13 +51,14 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public long SubscriptionId => _options.SubscriptionId;
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
+        ServerStore _serverStore;
 
-        public SubscriptionConnection(TcpConnectionOptions connectionOptions)
+        public SubscriptionConnection(TcpConnectionOptions connectionOptions, ServerStore serverStore)
         {
             TcpConnection = connectionOptions;
             ClientUri = connectionOptions.TcpClient.Client.RemoteEndPoint.ToString();
             _logger = LoggingSource.Instance.GetLogger<SubscriptionConnection>(connectionOptions.DocumentDatabase.Name);
-
+            _serverStore = serverStore;
             CancellationTokenSource =
                 CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
 
@@ -65,10 +68,15 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private void GetTypeSpecificStats(JsonOperationContext context, DynamicJsonValue val)
         {
-            var details =
-                TcpConnection.DocumentDatabase.SubscriptionStorage.GetRunningSubscriptionConnectionHistory(context,
-                    SubscriptionId);
-            val["Details"] = details;
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
+            {
+                var details =
+                TcpConnection.DocumentDatabase.SubscriptionStorage.GetRunningSubscriptionConnectionHistory(serverStoreContext,
+                    SubscriptionId);                
+
+                val["Details"] = context.ReadObject(details, "subscriptions/stats"); ;
+            }
+            
         }
 
         private async Task<bool> ParseSubscriptionOptionsAsync()
@@ -111,7 +119,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             try
             {
-                TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdExists(SubscriptionId);
+                TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdExists(SubscriptionId, TimeSpan.FromSeconds(15));
             }
             catch (SubscriptionDoesNotExistException e)
             {
@@ -200,12 +208,12 @@ namespace Raven.Server.Documents.TcpHandlers
             _buffer.SetLength(0);
         }
 
-        public static void SendSubscriptionDocuments(TcpConnectionOptions tcpConnectionOptions)
+        public static void SendSubscriptionDocuments(TcpConnectionOptions tcpConnectionOptions, ServerStore serverStore)
         {
             Task.Run(async () =>
             {
                 using (tcpConnectionOptions)
-                using (var connection = new SubscriptionConnection(tcpConnectionOptions))
+                using (var connection = new SubscriptionConnection(tcpConnectionOptions, serverStore))
                 using (tcpConnectionOptions.ConnectionProcessingInProgress("Subscription"))
                 {
                     try
@@ -313,12 +321,19 @@ namespace Raven.Server.Documents.TcpHandlers
             using (DisposeOnDisconnect)
             using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out dbContext))
             {
-                long startEtag;
+                ChangeVectorEntry[] startChangeVector;
                 SubscriptionCriteria criteria;
 
-
                 TcpConnection.DocumentDatabase.SubscriptionStorage.GetCriteriaAndEtag(_options.SubscriptionId, dbContext,
-                    out criteria, out startEtag);
+                    out criteria, out startChangeVector);                
+                
+                long startEtag = 0;
+                var dbId = TcpConnection.DocumentDatabase.DbId;
+                foreach (var changeVectorEntry in startChangeVector)
+                {
+                    if (changeVectorEntry.DbId == dbId)
+                        startEtag = changeVectorEntry.Etag;
+                }
 
 
                 var replyFromClientTask = GetReplyFromClient();
@@ -331,11 +346,15 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         bool anyDocumentsSentInCurrentIteration = false;
                         using (dbContext.OpenReadTransaction())
-                        {
-                            var documents = TcpConnection.DocumentDatabase.DocumentsStorage.GetDocumentsFrom(dbContext,
+                        {                            
+                            var documents = TcpConnection.DocumentDatabase.DocumentsStorage.GetDocumentsFrom(
+                                dbContext,
                                 criteria.Collection,
-                                startEtag + 1, 0, _options.MaxDocsPerBatch);
+                                startEtag + 1, 
+                                0, 
+                                _options.MaxDocsPerBatch);
                             _buffer.SetLength(0);
+
                             var docsToFlush = 0;
 
                             var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
@@ -345,11 +364,16 @@ namespace Raven.Server.Documents.TcpHandlers
                             using (var writer = new BlittableJsonTextWriter(context, _buffer))
                             {
                                 foreach (var doc in documents)
-                                {
+                                {                                    
                                     using (doc.Data)
                                     {
                                         anyDocumentsSentInCurrentIteration = true;
                                         startEtag = doc.Etag;
+
+                                        if (ConflictsStorage.GetConflictStatus(doc.ChangeVector, startChangeVector) ==
+                                            ConflictsStorage.ConflictStatus.Update)                                                                                
+                                            continue;                                        
+
                                         BlittableJsonReaderObject transformResult;
                                         if (DocumentMatchCriteriaScript(patch, dbContext, doc, out transformResult) ==
                                             false)
@@ -450,7 +474,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             switch (clientReply.Type)
                             {
                                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
-                                    TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+                                    await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
                                         _options.SubscriptionId,
                                         clientReply.Etag);
                                     Stats.LastAckReceivedAt = DateTime.UtcNow;
