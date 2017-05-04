@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Linq
         public Type Type { get; private set; }
 
         /// <summary>
-        /// Whatever the expression is of a nested path
+        /// Whether the expression is of a nested path
         /// </summary>
         public bool IsNestedPath { get; private set; }
         /// <summary>

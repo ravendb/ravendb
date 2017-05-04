@@ -145,7 +145,7 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
         }
 
         /// <summary>
-        /// Whatever the page size was explicitly set or still at its default value
+        /// Whether the page size was explicitly set or still at its default value
         /// </summary>
         protected internal bool PageSizeSet { get; private set; }
 

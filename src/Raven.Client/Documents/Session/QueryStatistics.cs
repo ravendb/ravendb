@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Whatever the query returned potentially stale results
+        /// Whether the query returned potentially stale results
         /// </summary>
         public bool IsStale { get; set; }
 

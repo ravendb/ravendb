@@ -39,7 +39,7 @@ namespace Raven.Client.Documents
         public abstract event EventHandler AfterDispose;
 
         /// <summary>
-        /// Whatever the instance has been disposed
+        /// Whether the instance has been disposed
         /// </summary>
         public bool WasDisposed { get; protected set; }
 

@@ -20,7 +20,7 @@ namespace Raven.Server.Config.Categories
             _root = root;
         }
 
-        [Description("Whatever the indexes should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
+        [Description("Whether the indexes should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Raven/Indexing/RunInMemory", setDefaultValueIfNeeded: false)]
         public virtual bool RunInMemory

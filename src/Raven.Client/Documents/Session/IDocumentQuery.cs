@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Session
         string IndexName { get; }
 
         /// <summary>
-        ///     Whatever we should apply distinct operation to the query on the server side
+        ///     Whether we should apply distinct operation to the query on the server side
         /// </summary>
         bool IsDistinct { get; }
 

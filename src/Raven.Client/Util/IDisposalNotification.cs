@@ -3,7 +3,7 @@ using System;
 namespace Raven.Client.Util
 {
     /// <summary>
-    /// Provide a way for interested party to tell whatever implementers have been disposed
+    /// Provide a way for interested party to tell whether implementers have been disposed
     /// </summary>
     public interface IDisposalNotification : IDisposable
     {
@@ -13,7 +13,7 @@ namespace Raven.Client.Util
         event EventHandler AfterDispose;
 
         /// <summary>
-        /// Whatever the instance has been disposed
+        /// Whether the instance has been disposed
         /// </summary>
         bool WasDisposed { get; }
     }
