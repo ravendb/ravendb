@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +20,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.ServerWide;
+using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -352,13 +354,11 @@ namespace Raven.Server.Documents.TcpHandlers
                     out criteria, out startChangeVector);                
                 
                 long startEtag = 0;
-                var dbId = TcpConnection.DocumentDatabase.DbId;
-                foreach (var changeVectorEntry in startChangeVector)
+                
+                if (startChangeVector != null)
                 {
-                    if (changeVectorEntry.DbId == dbId)
-                        startEtag = changeVectorEntry.Etag;
+                    startEtag = GetStartEtagByStartChangeVector(startChangeVector, startEtag, dbContext, criteria);
                 }
-
 
                 var replyFromClientTask = GetReplyFromClient();                
                 var registrenNotificationDisposable = RegisterForNotificationOnNewDocuments(criteria);
@@ -514,7 +514,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     await WriteJsonAsync(new DynamicJsonValue
                                     {
                                         ["Type"] = "Confirm",
-                                        ["ChangeVector"] = clientReply.ChangeVector.ToJson()
+                                        ["ChangeVector"] = clientReply.ChangeVector.ToJson() // todo: not sure we use this data anyway
                                     });
 
                                     break;
@@ -535,6 +535,91 @@ namespace Raven.Server.Documents.TcpHandlers
                     registrenNotificationDisposable.Dispose();
                 }
             }
+        }
+
+        private long GetStartEtagByStartChangeVector(ChangeVectorEntry[] startChangeVector, long startEtag, DocumentsOperationContext dbContext, SubscriptionCriteria criteria)
+        {
+            var dbId = TcpConnection.DocumentDatabase.DbId;
+            var startChangeVectorAsDictionary = startChangeVector.ToDictionary(x => x.DbId, x => x.Etag);
+
+            if (startChangeVectorAsDictionary.TryGetValue(dbId, out long tempStartEtag))
+                startEtag = tempStartEtag;
+
+            var isLastChangeVectorEqualsToChangeVectorMatchingDatabasesEtag = true;
+
+            // first, try to get the first document by etag, in case we continued from the point we stopped
+            if (startEtag != 0)
+            {
+                using (dbContext.OpenReadTransaction())
+                {
+                    var doc = TcpConnection.DocumentDatabase.DocumentsStorage.GetDocumentsFrom(dbContext, startEtag, 0, 1).FirstOrDefault();
+
+                    if (doc != null)
+                    {
+                        if (startChangeVector.Length == doc.ChangeVector.Length)
+                        {
+                            foreach (var changeVectorItem in doc.ChangeVector)
+                            {
+                                if (startChangeVectorAsDictionary.TryGetValue(changeVectorItem.DbId, out long curEtag) == false
+                                    || changeVectorItem.Etag != curEtag)
+                                {
+                                    isLastChangeVectorEqualsToChangeVectorMatchingDatabasesEtag = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (isLastChangeVectorEqualsToChangeVectorMatchingDatabasesEtag == false)
+            {
+                startEtag = 0;
+                using (dbContext.OpenReadTransaction())
+                {
+                    var highestEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(dbContext, criteria.Collection);
+
+                    long low = 0, midpoint = 0;
+                    long high = highestEtag;
+
+                    while (low <= high)
+                    {
+                        midpoint = low + (high - low) / 2;
+
+                        var curDocument = TcpConnection.DocumentDatabase.DocumentsStorage.GetDocumentsFrom(dbContext, midpoint).FirstOrDefault();
+
+
+                        var conflictStatus = ConflictsStorage.GetConflictStatus(
+                            remote: curDocument.ChangeVector,
+                            local: startChangeVector);
+
+                        // meaning startCHangeVector >= curDocument.Changevector
+                        if (conflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged)
+                        {
+                            // as long as startChangeVector is >= then current document's change vector, we take it
+                            startEtag = curDocument.Etag;
+                            if (curDocument.ChangeVector.EqualTo(startChangeVector))
+                                low = high + 1; // stop here
+                            // meaning startChangeVector is greater
+                            else
+                            {
+                                low = midpoint + 1;
+                            }
+                        }
+                        else if (conflictStatus == ConflictsStorage.ConflictStatus.Conflict)
+                        {
+                            // we want to get to a point before the conflict
+                            high = midpoint - 1;
+                        }
+                        // meaning curDocument.ChangeVector is greater
+                        else
+                        {
+                            high = midpoint - 1;
+                        }
+                    }
+                }
+            }
+            return startEtag;
         }
 
         private async Task SendHeartBeat()
