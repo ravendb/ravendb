@@ -20,6 +20,11 @@ class customFunctions {
         return dto;
     }
 
+    get hasEmptyScript() {
+        // check if scripts contains any non-whitespace character and inverse condition 
+        return !(/\S/.test(this.functions));
+    }
+
     static empty(): customFunctions {
         return new customFunctions({
             Functions: ""
