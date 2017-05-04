@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Logging;
@@ -10,12 +9,6 @@ namespace Sparrow.LowMemory
 {
     public class LowMemoryFlag
     {
-        public LowMemoryFlag()
-        {
-            if (LowMemoryNotification.Instance != null)
-                LowMemoryState = LowMemoryNotification.Instance.LowMemoryState ? 1 : 0;
-        }
-
         public int LowMemoryState;
 
         public static LowMemoryFlag None = new LowMemoryFlag();
@@ -93,20 +86,22 @@ namespace Sparrow.LowMemory
 
         public static void Initialize(CancellationToken shutdownNotification, long lowMemoryThreshold, double physicalRatioForLowMemDetection)
         {
-            Instance = new LowMemoryNotification(shutdownNotification, lowMemoryThreshold, physicalRatioForLowMemDetection);
+            Instance._lowMemoryThreshold = lowMemoryThreshold;
+            Instance._physicalRatioForLowMemDetection = physicalRatioForLowMemDetection;
+
+            shutdownNotification.Register(() => Instance._shutdownRequested.Set());
         }
 
-        private readonly long _lowMemoryThreshold;
+        private long _lowMemoryThreshold;
+        private double _physicalRatioForLowMemDetection;
         private readonly ManualResetEvent _simulatedLowMemory = new ManualResetEvent(false);
         private readonly ManualResetEvent _shutdownRequested = new ManualResetEvent(false);
         private readonly ManualResetEvent _warnAllocation = new ManualResetEvent(false);
-        private readonly double _physicalRatioForLowMemDetection;
 
-        public LowMemoryNotification(CancellationToken shutdownNotification, long lowMemoryThreshold, double physicalRatioForLowMemDetection)
+        public LowMemoryNotification(long lowMemoryThreshold, double physicalRatioForLowMemDetection)
         {
             _logger = LoggingSource.Instance.GetLogger<LowMemoryNotification>("Server");
 
-            shutdownNotification.Register(() => _shutdownRequested.Set());
             _lowMemoryThreshold = lowMemoryThreshold;
             _physicalRatioForLowMemDetection = physicalRatioForLowMemDetection;
             new Thread(MonitorMemoryUsage)
@@ -136,15 +131,15 @@ namespace Sparrow.LowMemory
                             clearInactiveHandlersCounter = 0;
                             ClearInactiveHandlers();
                         }
-                        var memInfo = MemoryInformation.GetMemoryInfo();
-                        foreach (var stats in NativeMemory.ThreadAllocations.Values
-                            .Where(x => x.ThreadInstance.IsAlive)
-                            .GroupBy(x => x.Name)
-                            .OrderByDescending(x => x.Sum(y => y.Allocations)))
+                        foreach (var stats in NativeMemory.ThreadAllocations.Values)
                         {
-                            var unmanagedAllocations = stats.Sum(x => x.Allocations);
-                            totalUnmanagedAllocations += unmanagedAllocations;
+                            if (stats.ThreadInstance.IsAlive == false)
+                                continue;
+
+                            totalUnmanagedAllocations += stats.Allocations;
                         }
+
+                        var memInfo = MemoryInformation.GetMemoryInfo();
 
                         var availableMem = memInfo.AvailableMemory.GetValue(SizeUnit.Bytes);
                         if (availableMem < _lowMemoryThreshold && 
