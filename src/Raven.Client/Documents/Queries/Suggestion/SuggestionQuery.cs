@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Queries.Suggestion
         public float? Accuracy { get; set; }
 
         /// <summary>
-        /// Whatever to return the terms in order of popularity
+        /// Whether to return the terms in order of popularity
         /// </summary>
         public bool Popularity { get; set; }
     }

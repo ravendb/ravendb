@@ -53,7 +53,7 @@ namespace Raven.Client.Documents
         /// </summary>
         /// <param name="cacheDuration">Specify the aggressive cache duration</param>
         /// <remarks>
-        /// Aggressive caching means that we will not check the server to see whatever the response
+        /// Aggressive caching means that we will not check the server to see whether the response
         /// we provide is current or not, but will serve the information directly from the local cache
         /// without touching the server.
         /// </remarks>
@@ -63,7 +63,7 @@ namespace Raven.Client.Documents
         /// Setup the context for aggressive caching.
         /// </summary>
         /// <remarks>
-        /// Aggressive caching means that we will not check the server to see whatever the response
+        /// Aggressive caching means that we will not check the server to see whether the response
         /// we provide is current or not, but will serve the information directly from the local cache
         /// without touching the server.
         /// </remarks>

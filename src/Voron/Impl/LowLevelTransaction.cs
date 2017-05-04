@@ -750,7 +750,7 @@ namespace Voron.Impl
                 ThrowAsyncCommitAlreadyCalled();
 
             // we have to check the state before we complete the transaction
-            // because that would change whatever we need to write to the journal
+            // because that would change whether we need to write to the journal
             var writeToJournalIsRequired = WriteToJournalIsRequired();
 
             CommitStage1_CompleteTransaction();

@@ -347,7 +347,7 @@ namespace Raven.Client.Documents.Indexes
         }
 
         /// <summary>
-        /// Whatever this is a temporary test only index
+        /// Whether this is a temporary test only index
         /// </summary>
         public bool IsTestIndex { get; set; }
 

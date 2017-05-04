@@ -137,7 +137,7 @@ namespace Raven.Client.Documents.Session
         bool HasChanged(object entity);
 
         /// <summary>
-        ///     Returns whatever a document with the specified id is loaded in the
+        ///     Returns whether a document with the specified id is loaded in the
         ///     current session
         /// </summary>
         bool IsLoaded(string id);
