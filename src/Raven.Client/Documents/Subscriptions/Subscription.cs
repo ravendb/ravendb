@@ -481,12 +481,17 @@ namespace Raven.Client.Documents.Subscriptions
 
         private void NotifySubscribers(BlittableJsonReaderObject curDoc, out ChangeVectorEntry[] lastReceivedChangeVector)
         {
-            if (curDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+            BlittableJsonReaderObject metadata;
+            string id;
+            lastReceivedChangeVector = null;
+            if (curDoc.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
                 ThrowMetadataRequired();
             if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
                 ThrowIdRequired();
-            if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out lastReceivedChangeVector) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out BlittableJsonReaderArray changeVectorAsObject) == false || changeVectorAsObject == null)
                 ThrowEtagRequired();
+            else
+                lastReceivedChangeVector = changeVectorAsObject.ToVector();
 
             if (_logger.IsInfoEnabled)
             {
