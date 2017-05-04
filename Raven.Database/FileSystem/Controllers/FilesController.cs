@@ -18,6 +18,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Database.Extensions;
@@ -264,67 +265,87 @@ namespace Raven.Database.FileSystem.Controllers
             targetFilename = FileHeader.Canonize(targetFilename);
             var etag = GetEtag();
 
-            Storage.Batch(accessor =>
+            var retriesCount = 0;
+
+            while (true)
             {
-                FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
-
-                var existingFile = accessor.ReadFile(name);
-                if (existingFile == null || existingFile.Metadata.Value<bool>(SynchronizationConstants.RavenDeleteMarker))
-                    throw new FileNotFoundException();
-
-                var renamingFile = accessor.ReadFile(targetFilename);
-                if (renamingFile != null && renamingFile.Metadata.Value<bool>(SynchronizationConstants.RavenDeleteMarker) == false)
-                    throw new FileExistsException("Cannot copy because file " + targetFilename + " already exists");
-
-                var metadata = existingFile.Metadata;
-
-                if (etag != null && existingFile.Etag != etag)
-                    throw new ConcurrencyException("Operation attempted on file '" + name + "' using a non current etag")
+                try
+                {
+                    Storage.Batch(accessor =>
                     {
-                        ActualETag = existingFile.Etag,
-                        ExpectedETag = etag
-                    };
+                        FileSystem.Synchronizations.AssertFileIsNotBeingSynced(name);
 
-                Historian.UpdateLastModified(metadata);
+                        var existingFile = accessor.ReadFile(name);
+                        if (existingFile == null || existingFile.Metadata.Value<bool>(SynchronizationConstants.RavenDeleteMarker))
+                            throw new FileNotFoundException();
 
-                var operation = new CopyFileOperation
-                {
-                    FileSystem = FileSystem.Name,
-                    SourceFilename = name,
-                    TargetFilename = targetFilename,
-                    MetadataAfterOperation = metadata
-                };
+                        var renamingFile = accessor.ReadFile(targetFilename);
+                        if (renamingFile != null && renamingFile.Metadata.Value<bool>(SynchronizationConstants.RavenDeleteMarker) == false)
+                            throw new FileExistsException("Cannot copy because file " + targetFilename + " already exists");
 
-                accessor.SetConfig(RavenFileNameHelper.CopyOperationConfigNameForFile(name,targetFilename), JsonExtensions.ToJObject(operation));
-                var configName = RavenFileNameHelper.CopyOperationConfigNameForFile(operation.SourceFilename, operation.TargetFilename);
-                Files.AssertPutOperationNotVetoed(operation.TargetFilename, operation.MetadataAfterOperation);
+                        var metadata = existingFile.Metadata;
 
-                var targetTombstrone = accessor.ReadFile(operation.TargetFilename);
+                        if (etag != null && existingFile.Etag != etag)
+                            throw new ConcurrencyException("Operation attempted on file '" + name + "' using a non current etag")
+                            {
+                                ActualETag = existingFile.Etag,
+                                ExpectedETag = etag
+                            };
 
-                if (targetTombstrone != null &&
-                    targetTombstrone.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
-                {
-                    // if there is a tombstone delete it
-                    accessor.Delete(targetTombstrone.FullPath);
-                }
+                        Historian.UpdateLastModified(metadata);
 
-                FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(operation.TargetFilename, operation.MetadataAfterOperation));
+                        var operation = new CopyFileOperation
+                        {
+                            FileSystem = FileSystem.Name,
+                            SourceFilename = name,
+                            TargetFilename = targetFilename,
+                            MetadataAfterOperation = metadata
+                        };
 
-                accessor.CopyFile(operation.SourceFilename, operation.TargetFilename, true);
-                var putResult = accessor.UpdateFileMetadata(operation.TargetFilename, operation.MetadataAfterOperation, null);
+                        accessor.SetConfig(RavenFileNameHelper.CopyOperationConfigNameForFile(name,targetFilename), JsonExtensions.ToJObject(operation));
+                        var configName = RavenFileNameHelper.CopyOperationConfigNameForFile(operation.SourceFilename, operation.TargetFilename);
+                        Files.AssertPutOperationNotVetoed(operation.TargetFilename, operation.MetadataAfterOperation);
 
-                FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(operation.TargetFilename, null, operation.MetadataAfterOperation));
+                        var targetTombstrone = accessor.ReadFile(operation.TargetFilename);
 
-                accessor.DeleteConfig(configName);
+                        if (targetTombstrone != null &&
+                            targetTombstrone.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
+                        {
+                            // if there is a tombstone delete it
+                            accessor.Delete(targetTombstrone.FullPath);
+                        }
 
-                Search.Index(operation.TargetFilename, operation.MetadataAfterOperation, putResult.Etag);
+                        FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(operation.TargetFilename, operation.MetadataAfterOperation));
+
+                        accessor.CopyFile(operation.SourceFilename, operation.TargetFilename, true);
+                        var putResult = accessor.UpdateFileMetadata(operation.TargetFilename, operation.MetadataAfterOperation, null);
+
+                        FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(operation.TargetFilename, null, operation.MetadataAfterOperation));
+
+                        accessor.DeleteConfig(configName);
+
+                        Search.Index(operation.TargetFilename, operation.MetadataAfterOperation, putResult.Etag);
               
 
-                Publisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
-                Publisher.Publish(new FileChangeNotification { File = operation.TargetFilename, Action = FileChangeAction.Add });
+                        Publisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
+                        Publisher.Publish(new FileChangeNotification { File = operation.TargetFilename, Action = FileChangeAction.Add });
 
                 
-            });
+                    });
+
+                    break;
+                }
+                catch (ConcurrencyException)
+                {
+                    // due to IncrementUsageCount performed concurrently on Voron storage
+                    // Esent deals with that much better using Api.EscrowUpdate
+
+                    if (retriesCount++ > 100)
+                        throw;
+
+                    Thread.Sleep(new Random().Next(1, 13));
+                }
+            }
 
             if (Log.IsDebugEnabled)
                 Log.Debug("File '{0}' was copied to '{1}'", name, targetFilename);
