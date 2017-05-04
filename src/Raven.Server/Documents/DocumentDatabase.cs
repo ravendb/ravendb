@@ -178,6 +178,12 @@ namespace Raven.Server.Documents
                 using (ctx.OpenReadTransaction())
                 {
                     MasterKey = _serverStore.GetSecretKey(ctx, Name);
+
+                    var databaseRecord = _serverStore.Cluster.ReadDatabase(ctx, Name);
+                    if (databaseRecord.Encrypted && MasterKey == null)
+                        throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
+                    if (databaseRecord.Encrypted == false && MasterKey != null)
+                        throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
                 }
                 DocumentsStorage.Initialize();
                 InitializeInternal();
