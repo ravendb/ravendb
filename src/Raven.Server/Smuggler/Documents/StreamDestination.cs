@@ -2,12 +2,14 @@
 using System.IO;
 using System.IO.Compression;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 
@@ -17,10 +19,10 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly Stream _stream;
         private GZipStream _gzipStream;
-        private readonly JsonOperationContext _context;
+        private readonly DocumentsOperationContext _context;
         private BlittableJsonTextWriter _writer;
 
-        public StreamDestination(Stream stream, JsonOperationContext context)
+        public StreamDestination(Stream stream, DocumentsOperationContext context)
         {
             _stream = stream;
             _context = context;
@@ -136,11 +138,11 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class StreamDocumentActions : StreamActionsBase, IDocumentActions
+        public class StreamDocumentActions : StreamActionsBase, IDocumentActions
         {
-            private readonly JsonOperationContext _context;
+            private readonly DocumentsOperationContext _context;
 
-            public StreamDocumentActions(BlittableJsonTextWriter writer, JsonOperationContext context, bool isRevision)
+            public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, bool isRevision)
                 : base(writer, isRevision ? "RevisionDocuments" : "Docs")
             {
                 _context = context;
@@ -159,10 +161,34 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            public JsonOperationContext GetContextForNewDocument()
+            public DocumentsOperationContext GetContextForNewDocument()
             {
                 _context.CachedProperties.NewDocument();
                 return _context;
+            }
+
+            public void WriteAttachmentStream(LazyStringValue hash, Stream stream)
+            {
+                if (First == false)
+                    Writer.WriteComma();
+                First = false;
+
+                Writer.WriteStartObject();
+
+                Writer.WritePropertyName(DocumentItem.Key);
+                Writer.WriteInteger((byte)DocumentType.Attachment);
+                Writer.WriteComma();
+
+                Writer.WritePropertyName(nameof(AttachmentResult.Hash));
+                Writer.WriteString(hash);
+                Writer.WriteComma();
+
+                Writer.WritePropertyName(nameof(AttachmentResult.Size));
+                Writer.WriteInteger(stream.Length);
+
+                Writer.WriteEndObject();
+
+                Writer.WriteStream(stream);
             }
         }
 
@@ -189,7 +215,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private abstract class StreamActionsBase : IDisposable
+        public abstract class StreamActionsBase : IDisposable
         {
             protected readonly BlittableJsonTextWriter Writer;
 
