@@ -496,11 +496,11 @@ namespace Sparrow
         public const int DefaultAllocationBlockSizeInBytes = 1 * MinBlockSizeInBytes;
         public const int MinReusableBlockSizeInBytes = 8;
 
-        public ByteStringContext(int allocationBlockSize = DefaultAllocationBlockSizeInBytes) : base(allocationBlockSize)
+        public ByteStringContext(LowMemoryFlag lowMemoryFlag, int allocationBlockSize = DefaultAllocationBlockSizeInBytes) : base(lowMemoryFlag, allocationBlockSize)
         { }
     }
 
-    public unsafe class ByteStringContext<TAllocator> : ILowMemoryHandler, IDisposable where TAllocator : struct, IByteStringAllocator
+    public unsafe class ByteStringContext<TAllocator> : IDisposable where TAllocator : struct, IByteStringAllocator
     {
         public static TAllocator Allocator;
 
@@ -575,11 +575,12 @@ namespace Sparrow
 
         private static readonly UTF8Encoding Encoding = new UTF8Encoding();
 
-        public ByteStringContext(int allocationBlockSize = ByteStringContext.DefaultAllocationBlockSizeInBytes)
+        public ByteStringContext(LowMemoryFlag lowMemoryFlag, int allocationBlockSize = ByteStringContext.DefaultAllocationBlockSizeInBytes)
         {
             if (allocationBlockSize < ByteStringContext.MinBlockSizeInBytes)
                 throw new ArgumentException($"It is not a good idea to allocate chunks of less than the {nameof(ByteStringContext.MinBlockSizeInBytes)} value of {ByteStringContext.MinBlockSizeInBytes}");
 
+            _lowMemoryFlag = lowMemoryFlag;
             this._allocationBlockSize = allocationBlockSize;
 
             this._wholeSegments = new List<SegmentInformation>();
@@ -592,8 +593,6 @@ namespace Sparrow
             AllocateExternalSegment(allocationBlockSize);
 
             this._externalStringPool = new FastStack<IntPtr>(64);
-
-            LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
 
             PrepareForValidation();
         }
@@ -1416,7 +1415,7 @@ namespace Sparrow
         }
 
         [ThreadStatic] private static bool _isFinalizerThread;
-        private LowMemoryFlag _lowMemoryFlag = new LowMemoryFlag();
+        private readonly LowMemoryFlag _lowMemoryFlag;
 
         private void ReleaseSegment(SegmentInformation segment)
         {
@@ -1436,17 +1435,6 @@ namespace Sparrow
             {
                 Allocator.Free(segment.Memory);
             }
-        }
-
-        public void LowMemory()
-        {
-            Interlocked.CompareExchange(ref _lowMemoryFlag.LowMemoryState, 1, 0);
-        }
-
-        public void LowMemoryOver()
-        {
-            Interlocked.CompareExchange(ref _lowMemoryFlag.LowMemoryState, 0, 1);
-
         }
     }
 

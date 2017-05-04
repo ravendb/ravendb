@@ -1,5 +1,6 @@
 ﻿using Sparrow;
 using System;
+using Sparrow.LowMemory;
 using Xunit;
 
 namespace FastTests.Sparrow
@@ -9,7 +10,7 @@ namespace FastTests.Sparrow
         [Fact]
         public void Lifecycle()
         {
-            using (var context = new ByteStringContext<ByteStringDirectAllocator>())
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(LowMemoryFlag.None))
             {
                 context.Allocate(512, out var byteString);
 
@@ -36,7 +37,7 @@ namespace FastTests.Sparrow
         [Fact]
         public void ConstructionInsideWholeSegment()
         {
-            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(LowMemoryFlag.None,ByteStringContext.MinBlockSizeInBytes))
             {
                 context.Allocate((ByteStringContext.MinBlockSizeInBytes / 2) - sizeof(ByteStringStorage), out var byteStringInFirstSegment);
                 context.Allocate((ByteStringContext.MinBlockSizeInBytes / 2) - sizeof(ByteStringStorage), out var byteStringWholeSegment);
@@ -51,15 +52,15 @@ namespace FastTests.Sparrow
         [Fact]
         public void ConstructionInsideWholeSegmentWithHistory()
         {
-            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(LowMemoryFlag.None, ByteStringContext.MinBlockSizeInBytes))
             {
                 for (int i = 0; i < 10; i++)
                 {
                     context.Allocate(ByteStringContext.MinBlockSizeInBytes * 2, out var _);
                 }
             }
-            using (new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
-            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
+            using (new ByteStringContext<ByteStringDirectAllocator>(LowMemoryFlag.None, ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(LowMemoryFlag.None, ByteStringContext.MinBlockSizeInBytes))
             {
                 context.Allocate((ByteStringContext.MinBlockSizeInBytes / 2) - sizeof(ByteStringStorage), out var byteStringInFirstSegment);
                 context.Allocate((ByteStringContext.MinBlockSizeInBytes / 2) - sizeof(ByteStringStorage), out var byteStringWholeSegment);
@@ -74,7 +75,7 @@ namespace FastTests.Sparrow
         [Fact]
         public void ConstructionReleaseForReuseTheLeftOver()
         {
-            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(LowMemoryFlag.None, ByteStringContext.MinBlockSizeInBytes))
             {
                 context.Allocate((ByteStringContext.MinBlockSizeInBytes / 2) - sizeof(ByteStringStorage), out var byteStringInFirstSegment);
                 context.Allocate((ByteStringContext.MinBlockSizeInBytes / 2) - sizeof(ByteStringStorage) + 1, out var byteStringInNewSegment);
@@ -89,7 +90,7 @@ namespace FastTests.Sparrow
         [Fact]
         public void AllocateAndReleaseShouldReuse()
         {
-            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(LowMemoryFlag.None, ByteStringContext.MinBlockSizeInBytes))
             {
                 context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage), out var byteStringInFirst);
                 context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage), out var byteStringInSecond);
@@ -113,7 +114,7 @@ namespace FastTests.Sparrow
         public void AllocateAndReleaseShouldReuseAsSegment()
         {
             int allocationBlockSize = 2 * ByteStringContext.MinBlockSizeInBytes + 128 + sizeof(ByteStringStorage);
-            using (var context = new ByteStringContext<ByteStringDirectAllocator>(allocationBlockSize))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(LowMemoryFlag.None, allocationBlockSize))
             {
                 // Will be only 128 bytes left for the allocation unit.
                 context.Allocate(2 * ByteStringContext.MinBlockSizeInBytes - sizeof(ByteStringStorage), out var byteStringInFirst);
@@ -140,7 +141,7 @@ namespace FastTests.Sparrow
         [Fact]
         public void AllocateAndReleaseShouldReuseRepeatedly()
         {
-            using (var context = new ByteStringContext<ByteStringDirectAllocator>(ByteStringContext.MinBlockSizeInBytes))
+            using (var context = new ByteStringContext<ByteStringDirectAllocator>(LowMemoryFlag.None, ByteStringContext.MinBlockSizeInBytes))
             {
                 context.Allocate(ByteStringContext.MinBlockSizeInBytes / 2 - sizeof(ByteStringStorage), out var first);
                 long ptrLocation = (long)first._pointer;

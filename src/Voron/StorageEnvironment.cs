@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Sparrow.Platform.Posix;
 using Sparrow.Utils;
 using Voron.Data;
@@ -49,7 +50,7 @@ namespace Voron
         /// This is the shared storage where we are going to store all the static constants for names.
         /// WARNING: This context will never be released, so only static constants should be added here.
         /// </summary>
-        public static readonly ByteStringContext LabelsContext = new ByteStringContext(ByteStringContext.MinBlockSizeInBytes);
+        public static readonly ByteStringContext LabelsContext = new ByteStringContext(LowMemoryFlag.None, ByteStringContext.MinBlockSizeInBytes);
 
         private readonly StorageEnvironmentOptions _options;
 

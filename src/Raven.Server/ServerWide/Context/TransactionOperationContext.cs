@@ -39,7 +39,7 @@ namespace Raven.Server.ServerWide.Context
         protected TransactionOperationContext(int initialSize, int longLivedSize, LowMemoryFlag lowMemoryFlag):
             base(initialSize, longLivedSize, lowMemoryFlag)
         {
-            Allocator = new ByteStringContext();
+            Allocator = new ByteStringContext(lowMemoryFlag);
         }
 
         public TTransaction OpenReadTransaction()
@@ -127,7 +127,7 @@ namespace Raven.Server.ServerWide.Context
         {
             base.Renew();
             if (Allocator == null)
-                Allocator = new ByteStringContext();
+                Allocator = new ByteStringContext(LowMemoryFlag);
         }
 
         protected override void Reset(bool forceResetLongLivedAllocator = false)

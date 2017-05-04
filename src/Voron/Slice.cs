@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Json;
+using Sparrow.LowMemory;
 
 namespace Voron
 {
@@ -209,7 +210,7 @@ namespace Voron
 
     public static class Slices
     {
-        private static readonly ByteStringContext SharedSliceContent = new ByteStringContext();
+        private static readonly ByteStringContext SharedSliceContent = new ByteStringContext(LowMemoryFlag.None);
 
         public static readonly Slice AfterAllKeys;
         public static readonly Slice BeforeAllKeys;

@@ -10,6 +10,7 @@ using Voron.Impl;
 using Voron.Global;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Xunit;
 
 namespace SlowTests.Voron
@@ -20,7 +21,7 @@ namespace SlowTests.Voron
         protected StorageEnvironmentOptions _options;
         protected readonly string DataDir = GenerateDataDir();
 
-        private ByteStringContext _allocator = new ByteStringContext();
+        private ByteStringContext _allocator = new ByteStringContext(LowMemoryFlag.None);
 
         public static string GenerateDataDir()
         {

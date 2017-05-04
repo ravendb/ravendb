@@ -5,6 +5,7 @@ using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.MapReduce
@@ -16,7 +17,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
         {
             using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("ReduceKeyProcessorTests"))
             using (var context = JsonOperationContext.ShortTermSingleUse())
-            using (var bsc = new ByteStringContext())
+            using (var bsc = new ByteStringContext(LowMemoryFlag.None))
             {
                 var sut = new ReduceKeyProcessor(9, bufferPool);
 

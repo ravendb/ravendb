@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sparrow;
+using Sparrow.LowMemory;
 using Voron;
 using Voron.Impl;
 
@@ -16,7 +17,7 @@ namespace Regression.PageLocator
     {
         private const ushort Invalid = 0;
 
-        private readonly ByteStringContext _allocator = new ByteStringContext();
+        private readonly ByteStringContext _allocator = new ByteStringContext(LowMemoryFlag.None);
         private readonly LowLevelTransaction _tx;
 
         private readonly int _cacheSize;
