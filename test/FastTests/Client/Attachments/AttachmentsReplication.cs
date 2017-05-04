@@ -94,7 +94,7 @@ namespace FastTests.Client.Attachments
                     {
                         var name = orderedNames[i];
                         var attachment = attachments[i];
-                        Assert.Equal(name, attachment.GetString(nameof(Attachment.Name)));
+                        Assert.Equal(name, attachment.GetString(nameof(AttachmentResult.Name)));
                         var hash = attachment.GetString(nameof(AttachmentResult.Hash));
                         if (i == 0)
                         {
@@ -212,7 +212,7 @@ namespace FastTests.Client.Attachments
                     Assert.Equal((DocumentFlags.HasAttachments | DocumentFlags.FromReplication).ToString(), metadata[Constants.Documents.Metadata.Flags]);
                     var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
                     var attachment = attachments.Single();
-                    Assert.Equal(name, attachment.GetString(nameof(Attachment.Name)));
+                    Assert.Equal(name, attachment.GetString(nameof(AttachmentResult.Name)));
                 }
 
                 using (var session = store2.OpenSession())
@@ -260,9 +260,9 @@ namespace FastTests.Client.Attachments
                     Assert.Equal((DocumentFlags.HasAttachments | DocumentFlags.FromReplication).ToString(), metadata[Constants.Documents.Metadata.Flags]);
                     var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
                     Assert.Equal(2, attachments.Length);
-                    Assert.Equal("file1", attachments[0].GetString(nameof(Attachment.Name)));
+                    Assert.Equal("file1", attachments[0].GetString(nameof(AttachmentResult.Name)));
                     Assert.Equal("JCS/B3EIIB2gNVjsXTCD1aXlTgzuEz50", attachments[0].GetString(nameof(AttachmentResult.Hash)));
-                    Assert.Equal("file3", attachments[1].GetString(nameof(Attachment.Name)));
+                    Assert.Equal("file3", attachments[1].GetString(nameof(AttachmentResult.Name)));
                     Assert.Equal("5VAt5Ayu6fKD6IGJimMLj73IlN8kgtGd", attachments[1].GetString(nameof(AttachmentResult.Hash)));
                 }
 
@@ -599,7 +599,7 @@ namespace FastTests.Client.Attachments
             {
                 var name = orderedNames[i];
                 var attachment = attachments[i];
-                Assert.Equal(name, attachment.GetString(nameof(Attachment.Name)));
+                Assert.Equal(name, attachment.GetString(nameof(AttachmentResult.Name)));
                 var hash = attachment.GetString(nameof(AttachmentResult.Hash));
                 if (name == names[1])
                 {
@@ -728,7 +728,7 @@ namespace FastTests.Client.Attachments
                 Assert.Equal(names.Length, attachments.Length);
                 for (int i = 0; i < names.Length; i++)
                 {
-                    Assert.Equal(names[i], attachments[i].GetString(nameof(Attachment.Name)));
+                    Assert.Equal(names[i], attachments[i].GetString(nameof(AttachmentResult.Name)));
                 }
             }
         }

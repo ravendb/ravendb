@@ -176,7 +176,7 @@ namespace FastTests.Client.Attachments
             {
                 var name = orderedNames[i];
                 var attachment = attachments[i];
-                Assert.Equal(name, attachment.GetString(nameof(Attachment.Name)));
+                Assert.Equal(name, attachment.GetString(nameof(AttachmentResult.Name)));
                 var hash = attachment.GetString(nameof(AttachmentResult.Hash));
                 if (name == names[1])
                 {

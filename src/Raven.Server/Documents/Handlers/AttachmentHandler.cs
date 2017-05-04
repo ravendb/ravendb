@@ -202,6 +202,10 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WritePropertyName(nameof(AttachmentResult.Hash));
                     writer.WriteString(result.Hash);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(AttachmentResult.Size));
+                    writer.WriteInteger(result.Size);
 
                     writer.WriteEndObject();
                 }
