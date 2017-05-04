@@ -199,7 +199,7 @@ class connectedDocuments {
         return deferred.promise();
     }
 
-    fetchAttachments(skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> { // TODO: implement skip & take 
+    fetchAttachments(skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> { 
         const doc = this.document();
         const search = this.searchInput().toLocaleLowerCase();
         
