@@ -26,6 +26,20 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public int Count => _inner.Count();
 
+
+        public dynamic Get(params int[] indexes)
+        {
+            if (indexes == null)
+                return DynamicNullObject.Null;
+
+            dynamic val = this;
+            foreach (int index in indexes)
+            {
+                val = val[index];
+            }
+            return val;
+        }
+
         public override bool TryGetMember(GetMemberBinder binder, out object result)
         {
             const string lengthName = "Length";
@@ -44,6 +58,23 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
         {
+            if (indexes == null)
+            {
+                result = DynamicNullObject.Null;
+                return true;
+            }
+            if (indexes.Length != 1)
+            {
+                var ints = new int[indexes.Length];
+                for (int j = 0; j < indexes.Length; j++)
+                {
+                    if (indexes[j] is int num)
+                        ints[j] = num;
+                }
+                result = Get(ints);
+                return true;
+            }
+
             var i = (int)indexes[0];
             var resultObject = _inner.ElementAt(i);
 
