@@ -22,6 +22,7 @@ using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
 namespace Raven.Server
@@ -240,6 +241,12 @@ namespace Raven.Server
         {
             if (response.HasStarted)
                 return;
+
+            if (exception is LowMemoryException)
+            {
+                response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                return;
+            }
 
             if (exception is DocumentConflictException)
             {

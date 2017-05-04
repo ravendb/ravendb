@@ -54,11 +54,6 @@ namespace Sparrow.Json
 
         public ArenaMemoryAllocator(LowMemoryFlag lowMemoryFlag, int initialSize = 1024 * 1024)
         {
-            if (lowMemoryFlag.LowMemoryState != 0 && initialSize > 1024 * 1024)
-            {                
-                Console.WriteLine("Avoiding arena creation");
-                throw new LowMemoryException("Will not renew arena due to low memory stress");
-            }
             _initialSize = initialSize;
             _ptrStart = _ptrCurrent = NativeMemory.AllocateMemory(initialSize, out _allocatingThread);
             _allocated = initialSize;
@@ -152,9 +147,7 @@ namespace Sparrow.Json
         private void GrowArena(int requestedSize)
         {
             if (_lowMemoryFlag.LowMemoryState != 0)
-            {
-                throw new LowMemoryException("Will not grow arena due to low memory stress");
-            }
+                throw new LowMemoryException($"Request to grow the arena by {requestedSize} because we are under memory pressure");
 
             if (requestedSize >= MaxArenaSize)
                 throw new ArgumentOutOfRangeException(nameof(requestedSize));
