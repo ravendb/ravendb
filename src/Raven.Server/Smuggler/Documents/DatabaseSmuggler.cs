@@ -29,7 +29,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly Action<IOperationProgress> _onProgress;
         private readonly SmugglerPatcher _patcher;
         private CancellationToken _token;
-        private HashSet<LazyStringValue> attachmentStreamsAlreadyExported;
+        private HashSet<LazyStringValue> _attachmentStreamsAlreadyExported;
 
         public DatabaseSmuggler(
             ISmugglerSource source,
@@ -423,15 +423,15 @@ namespace Raven.Server.Smuggler.Documents
                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                 return;
 
-            if (attachmentStreamsAlreadyExported == null)
-                attachmentStreamsAlreadyExported = new HashSet<LazyStringValue>();
+            if (_attachmentStreamsAlreadyExported == null)
+                _attachmentStreamsAlreadyExported = new HashSet<LazyStringValue>();
 
             foreach (BlittableJsonReaderObject attachment in attachments)
             {
                 if (attachment.TryGet(nameof(AttachmentResult.Hash), out LazyStringValue hash) == false)
                     throw new ArgumentException($"Hash field is mandatory in attachment's metadata: {attachment}");
 
-                if (attachmentStreamsAlreadyExported.Add(hash))
+                if (_attachmentStreamsAlreadyExported.Add(hash))
                 {
                     using (var stream = source.GetAttachmentStream(hash))
                     {

@@ -161,8 +161,6 @@ namespace Raven.Server.Smuggler.Documents
                     Type = DocumentType.Attachment,
                     Attachment = attachment,
                 });
-
-                HandleBatchOfDocumentsIfNecessary();
             }
 
             public StreamSource.AttachmentStream CreateAttachment()
