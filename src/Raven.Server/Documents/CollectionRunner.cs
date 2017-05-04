@@ -84,26 +84,24 @@ namespace Raven.Server.Documents
                             ids.Enqueue(document.Key);
                         }
 
-                        var currentBatchSize = ids.Count;
-
-                        if (currentBatchSize == 0)
+                        if (ids.Count == 0)
                             break;
                         
                         do
                         {
-                            var command = new ExecuteOperationsOnCollection(ids, action, rateGate, token);
+                            var command = new ExecuteRateLimitedOperations<LazyStringValue>(ids, action, rateGate, token);
 
                             await Database.TxMerger.Enqueue(command);
+
+                            progress.Processed += command.Processed;
+
+                            onProgress(progress);
 
                             if (command.NeedWait)
                                 rateGate?.WaitToProceed();
 
                         } while (ids.Count > 0);
-
-                        progress.Processed += currentBatchSize;
-
-                        onProgress(progress);
-
+                        
                         if (end)
                             break;
                     }
@@ -131,53 +129,6 @@ namespace Raven.Server.Documents
         protected virtual long GetLastEtagForCollection(DocumentsOperationContext context, string collection)
         {
             return Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
-        }
-
-        private class ExecuteOperationsOnCollection : TransactionOperationsMerger.MergedTransactionCommand
-        {
-            private readonly Queue<LazyStringValue> _documentIds;
-            private readonly Action<LazyStringValue, DocumentsOperationContext> _action;
-            private readonly RateGate _rateGate;
-            private readonly OperationCancelToken _token;
-            private CancellationToken _cancellationToken;
-
-            public ExecuteOperationsOnCollection(Queue<LazyStringValue> documentIds, Action<LazyStringValue, DocumentsOperationContext> action, RateGate rateGate,
-                OperationCancelToken token)
-            {
-                _documentIds = documentIds;
-                _action = action;
-                _rateGate = rateGate;
-                _token = token;
-                _cancellationToken = token.Token;
-            }
-
-            public override int Execute(DocumentsOperationContext context)
-            {
-                var count = 0;
-
-                while (_documentIds.Count > 0)
-                {
-                    _cancellationToken.ThrowIfCancellationRequested();
-
-                    _token.Delay();
-
-                    if (_rateGate != null && _rateGate.WaitToProceed(0) == false)
-                    {
-                        NeedWait = true;
-                        break;
-                    }
-
-                    var id = _documentIds.Dequeue();
-
-                    _action(id, context);
-
-                    count++;
-                }
-
-                return count;
-            }
-
-            public bool NeedWait { get; private set; }
         }
     }
 }
