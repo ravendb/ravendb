@@ -189,7 +189,7 @@ namespace Raven.Server.Documents.Indexes
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                 options.TimeToSyncAfterFlashInSeconds = documentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
                 options.NumOfCocurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
-
+                options.MasterKey = documentDatabase.MasterKey;
 
                 environment = new StorageEnvironment(options);
 
@@ -306,7 +306,7 @@ namespace Raven.Server.Documents.Indexes
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                 options.TimeToSyncAfterFlashInSeconds = documentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
                 options.NumOfCocurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
-
+                options.MasterKey = documentDatabase.MasterKey;
 
                 try
                 {
@@ -2135,7 +2135,7 @@ namespace Raven.Server.Documents.Indexes
             _indexOutputsPerDocumentWarning.LastWarnedAt = SystemTime.UtcNow;
 
             var hint = PerformanceHint.Create("High indexing fanout ratio",
-                $"Index '{Name}' has produced more than {PerformanceHints.MaxWarnIndexOutputsPerDocument} map results from a single document",
+                $"Index '{Name}' has produced more than {PerformanceHints.MaxWarnIndexOutputsPerDocument:#,#} map results from a single document",
                 PerformanceHintType.Indexing,
                 NotificationSeverity.Warning,
                 source: Name,
@@ -2244,6 +2244,7 @@ namespace Raven.Server.Documents.Indexes
                     srcOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
                     srcOptions.TimeToSyncAfterFlashInSeconds = DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
                     srcOptions.NumOfCocurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
+                    srcOptions.MasterKey = DocumentDatabase.MasterKey;
 
                     var wasRunning = _indexingThread != null;
 
@@ -2260,7 +2261,7 @@ namespace Raven.Server.Documents.Indexes
                         compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                         compactOptions.TimeToSyncAfterFlashInSeconds = DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlashInSeconds;
                         compactOptions.NumOfCocurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumOfCocurrentSyncsPerPhysDrive;
-
+                        srcOptions.MasterKey = DocumentDatabase.MasterKey;
 
                         StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
                         {

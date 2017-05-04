@@ -65,9 +65,9 @@ namespace Raven.Server.Documents.Queries
                                 DefaultOperator = defaultOperator,
                                 FieldName = new FieldName(defaultField ?? string.Empty)
                             });
-                        // The parser should throw ParseException in this case.
-                        if (res == null) throw new ParseException("Could not parse query");
-                        return res;
+                        // The parser already throws parse exception if there is a syntax error.
+                        // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
+                        return res??new BooleanQuery();
                     }
                     catch (ParseException pe)
                     {

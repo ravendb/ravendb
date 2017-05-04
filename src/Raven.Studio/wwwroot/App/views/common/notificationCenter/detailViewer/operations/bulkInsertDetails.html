@@ -17,8 +17,8 @@
         </div>
         <div class="modal-body">
             <div data-bind="with: progress">
-                <div>Processed: <span data-bind="text: Processed"></span></div>
-                <div>Batch count: <span data-bind="text: BatchCount"></span></div>
+                <div>Processed: <span data-bind="text: Processed.toLocaleString()"></span></div>
+                <div>Batch count: <span data-bind="text: BatchCount.toLocaleString()"></span></div>
                 <div>Last processed document id <span data-bind="text: LastProcessedId"></span></div>
             </div>
             <div data-bind="with: result">

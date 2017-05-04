@@ -69,7 +69,7 @@ namespace Raven.Server
         public static bool SkipHttpLogging;
 
         private static readonly HashSet<string> RoutesAllowedInUnsafeMode = new HashSet<string> {
-            "/admin/stats/server-id"
+            "/debug/server-id"
         };
 
         private Task UnsafeRequestHandler(HttpContext context)

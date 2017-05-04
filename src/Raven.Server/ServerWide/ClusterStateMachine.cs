@@ -646,6 +646,7 @@ namespace Raven.Server.ServerWide
         public string Name;
         public BlittableJsonReaderObject Value;
         public long? Etag;
+        public bool Encrypted;
     }
 
     public class RemoveNodeFromDatabaseCommand
