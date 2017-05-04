@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Voron;
 using Voron.Data.BTrees;
@@ -237,7 +238,7 @@ namespace Raven.Server.Documents.Indexes
             private readonly ulong _m;
             private readonly int _ptrSize;
             private readonly uint _partitionCount;
-            private readonly Dictionary<ulong, Partition> _partitions = new Dictionary<ulong, Partition>();
+            private readonly FastDictionary<ulong, Partition, NumericEqualityStructComparer> _partitions = new FastDictionary<ulong, Partition, NumericEqualityStructComparer>(default(NumericEqualityStructComparer));
             private readonly ByteStringContext _allocator;
             private readonly long _initialCount;
 

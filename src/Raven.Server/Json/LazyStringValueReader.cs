@@ -33,13 +33,12 @@ namespace Raven.Server.Json
             return _reader;
         }
 
-        public string GetStringFor(LazyStringValue value)
+        public static string GetStringFor(LazyStringValue value)
         {
             if (value == null)
                 return null;
 
             return Encoding.UTF8.GetString(value.Buffer, value.Size);
-
         }
 
         public void Dispose()
