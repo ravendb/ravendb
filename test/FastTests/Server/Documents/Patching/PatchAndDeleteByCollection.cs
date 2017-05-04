@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -9,14 +8,16 @@ namespace FastTests.Server.Documents.Patching
 {
     public class PatchAndDeleteByCollection : RavenTestBase
     {
-        [Fact]
-        public void CanDeleteCollection()
+        [Theory]
+        [InlineData(100)]
+        [InlineData(1300)]
+        public void CanDeleteCollection(int count)
         {
             using (var store = GetDocumentStore())
             {
                 using (var x = store.OpenSession())
                 {
-                    for (int i = 0; i < 100; i++)
+                    for (int i = 0; i < count; i++)
                     {
                         x.Store(new User { }, "users/");
                     }
@@ -31,14 +32,16 @@ namespace FastTests.Server.Documents.Patching
             }
         }
 
-        [Fact]
-        public void CanPatchCollection()
+        [Theory]
+        [InlineData(100)]
+        [InlineData(1300)]
+        public void CanPatchCollection(int count)
         {
             using (var store = GetDocumentStore())
             {
                 using (var x = store.OpenSession())
                 {
-                    for (int i = 0; i < 100; i++)
+                    for (int i = 0; i < count; i++)
                     {
                         x.Store(new User { }, "users/");
                     }
@@ -52,17 +55,21 @@ namespace FastTests.Server.Documents.Patching
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
                 var stats = store.Admin.Send(new GetStatisticsOperation());
-                Assert.True(stats.LastDocEtag >= 200);
-                Assert.Equal(100, stats.CountOfDocuments);
+                Assert.True(stats.LastDocEtag >= 2 * count);
+                Assert.Equal(count, stats.CountOfDocuments);
 
-                using (var x = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    var users = x.Load<User>(Enumerable.Range(1, 100).Select(i => "users/" + i));
-                    Assert.Equal(100, users.Count);
-
-                    foreach (var user in users)
+                    for (int i = 1; i < count; i += 100)
                     {
-                        Assert.NotNull(user.Value.Name);
+                        var users = session.Load<User>(Enumerable.Range(i, 100).Select(x => "users/" + x));
+
+                        Assert.Equal(100, users.Count);
+
+                        foreach (var user in users)
+                        {
+                            Assert.NotNull(user.Value.Name);
+                        }
                     }
                 }
             }

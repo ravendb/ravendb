@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util.RateLimiting;
@@ -56,52 +57,54 @@ namespace Raven.Server.Documents
                     ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1))
                     : null)
             {
-                bool done = false;
-                //The reason i do this nested loop is because i can't operate on a document while iterating the document tree.
+                var end = false;
+
                 while (startEtag <= lastEtag)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var wait = false;
 
                     using (context.OpenReadTransaction())
                     {
-                        var documents = GetDocuments(context, collectionName, startEtag, batchSize);
+                        var ids = new Queue<LazyStringValue>(batchSize);
 
-                        var ids = new List<LazyStringValue>();
-
-                        foreach (var document in documents)
+                        foreach (var document in GetDocuments(context, collectionName, startEtag, batchSize))
                         {
-                            token.Delay();
-
                             cancellationToken.ThrowIfCancellationRequested();
 
-                            if (document.Etag > lastEtag)// we don't want to go over the documents that we have patched
+                            token.Delay();
+                            
+                            if (document.Etag > lastEtag) // we don't want to go over the documents that we have patched
                             {
-                                done = true;
-                                break;
-                            }
-
-                            if (rateGate != null && rateGate.WaitToProceed(0) == false)
-                            {
-                                wait = true;
+                                end = true;
                                 break;
                             }
 
                             startEtag = document.Etag + 1;
 
-                            ids.Add(document.Key);
-
-                            progress.Processed++;
-
+                            ids.Enqueue(document.Key);
                         }
 
-                        await Database.TxMerger.Enqueue(new ExecuteOperationsOnCollection(ids, action));
+                        var currentBatchSize = ids.Count;
+
+                        if (currentBatchSize == 0)
+                            break;
+                        
+                        do
+                        {
+                            var command = new ExecuteOperationsOnCollection(ids, action, rateGate, token);
+
+                            await Database.TxMerger.Enqueue(command);
+
+                            if (command.NeedWait)
+                                rateGate?.WaitToProceed();
+
+                        } while (ids.Count > 0);
+
+                        progress.Processed += currentBatchSize;
 
                         onProgress(progress);
 
-                        if (wait)
-                            rateGate.WaitToProceed();
-                        if (done || documents.Count == 0)
+                        if (end)
                             break;
                     }
                 }
@@ -113,9 +116,9 @@ namespace Raven.Server.Documents
             };
         }
 
-        protected virtual List<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize)
+        protected virtual IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize)
         {
-            return Database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag, 0, batchSize).ToList();
+            return Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, batchSize);
         }
 
         protected virtual long GetTotalCountForCollection(DocumentsOperationContext context, string collectionName)
@@ -132,21 +135,40 @@ namespace Raven.Server.Documents
 
         private class ExecuteOperationsOnCollection : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly List<LazyStringValue> _documentIds;
+            private readonly Queue<LazyStringValue> _documentIds;
             private readonly Action<LazyStringValue, DocumentsOperationContext> _action;
+            private readonly RateGate _rateGate;
+            private readonly OperationCancelToken _token;
+            private CancellationToken _cancellationToken;
 
-            public ExecuteOperationsOnCollection(List<LazyStringValue> documentIds, Action<LazyStringValue, DocumentsOperationContext> action)
+            public ExecuteOperationsOnCollection(Queue<LazyStringValue> documentIds, Action<LazyStringValue, DocumentsOperationContext> action, RateGate rateGate,
+                OperationCancelToken token)
             {
                 _documentIds = documentIds;
                 _action = action;
+                _rateGate = rateGate;
+                _token = token;
+                _cancellationToken = token.Token;
             }
 
             public override int Execute(DocumentsOperationContext context)
             {
                 var count = 0;
 
-                foreach (var id in _documentIds)
+                while (_documentIds.Count > 0)
                 {
+                    _cancellationToken.ThrowIfCancellationRequested();
+
+                    _token.Delay();
+
+                    if (_rateGate != null && _rateGate.WaitToProceed(0) == false)
+                    {
+                        NeedWait = true;
+                        break;
+                    }
+
+                    var id = _documentIds.Dequeue();
+
                     _action(id, context);
 
                     count++;
@@ -154,6 +176,8 @@ namespace Raven.Server.Documents
 
                 return count;
             }
+
+            public bool NeedWait { get; private set; }
         }
     }
 }

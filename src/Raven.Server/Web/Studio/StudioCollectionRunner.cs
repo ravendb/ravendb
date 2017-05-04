@@ -59,10 +59,10 @@ namespace Raven.Server.Web.Studio
             }, token);
         }
 
-        protected override List<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize)
+        protected override IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize)
         {
             if (collectionName == Constants.Documents.Indexing.AllDocumentsCollection)
-                return Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, batchSize).ToList();
+                return Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, batchSize);
 
             return base.GetDocuments(context, collectionName, startEtag, batchSize);
         }
