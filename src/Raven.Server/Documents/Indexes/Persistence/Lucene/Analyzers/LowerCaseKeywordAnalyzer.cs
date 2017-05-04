@@ -10,7 +10,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
         {
             var previousTokenStream = (LowerCaseKeywordTokenizer)PreviousTokenStream;
             if (previousTokenStream == null)
-                return TokenStream(fieldName, reader);
+            {
+                var newStream = TokenStream(fieldName, reader);
+                PreviousTokenStream = newStream;
+                return newStream;
+            }
             previousTokenStream.Reset(reader);
             return previousTokenStream;
         }

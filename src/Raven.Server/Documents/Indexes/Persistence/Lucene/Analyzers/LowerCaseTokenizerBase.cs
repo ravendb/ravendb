@@ -51,8 +51,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
         private int offset = 0, bufferIndex = 0, dataLen = 0;
 
         private const int IO_BUFFER_SIZE = 4096;
-        private static ObjectPool<char[]> bufferPool = new ObjectPool<char[]>(() => new char[IO_BUFFER_SIZE], 10);
-
+        private char[] ioBuffer = new char[IO_BUFFER_SIZE];
         private readonly ITermAttribute termAtt;
         private readonly IOffsetAttribute offsetAtt;
 
@@ -62,8 +61,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 
             int length = 0;
             int start = bufferIndex;
-
-            char[] ioBuffer = bufferPool.Allocate();
 
             char[] buffer = termAtt.TermBuffer();
             while (true)
@@ -78,7 +75,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
                         if (length > 0)
                             break;
 
-                        bufferPool.Free(ioBuffer);
                         return false;
                     }
                     bufferIndex = 0;
@@ -106,8 +102,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
             termAtt.SetTermLength(length);
             offsetAtt.SetOffset(CorrectOffset(start), CorrectOffset(start + length));
 
-
-            bufferPool.Free(ioBuffer);
             return true;
         }
 
