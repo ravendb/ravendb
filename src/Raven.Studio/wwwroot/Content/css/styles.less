@@ -280,10 +280,24 @@ a {
 
 .flex-row {
     @media (min-width: @screen-sm) {
-        display: flex;        
+        display: flex;
         flex-wrap: wrap;
+
         .flex-bottom {
             align-self: flex-end;
+        }
+    }
+
+    hr.hr-vertical {
+        @media (min-width: @screen-sm) {
+            width: 0px;
+            height: auto;
+            border-right: 1px solid @gray-dark;
+            margin-left: -1px;
+            margin-top: 0;
+            margin-bottom: 0;
+            border-top: none;
+            display: block;
         }
     }
 }

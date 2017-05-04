@@ -39,6 +39,19 @@ class extensions {
             message: 'Invalid json format.'
         };
 
+        (ko.validation.rules as any)['validJavascript'] = {
+            validator: (text: string) => {
+                try {
+                    eval("throw 0;" + text);
+                } catch (e) {
+                    if (e === 0)
+                        return true;
+                }
+                return false;
+            },
+            message: 'Invalid javascript.'
+        };
+
         ko.validation.init({
             errorElementClass: 'has-error',
             errorMessageClass: 'help-block',

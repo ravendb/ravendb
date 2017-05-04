@@ -131,7 +131,6 @@ interface replicationDestinationDto {
     IgnoredClient: boolean;
     Disabled: boolean;
     ClientVisibleUrl: string;
-    SkipIndexReplication: boolean;
     SpecifiedCollections: dictionary<string>;
     HasGlobal?: boolean;
     HasLocal?: boolean;

@@ -1,0 +1,20 @@
+﻿<form class="custom-functions-form docEditor flex-vertical content-margin" id="customFunctionsContainer">
+    <div class="flex-header flex-horizontal">
+        <div>
+            <button type="submit" class="btn btn-primary" data-bind="click: saveChanges, enable: isSaveEnabled(), css: { 'btn-spinner': spinners.save() }" title="Save Changes (Alt+S)" accesskey="S">
+                <i class="icon-save"></i>
+                <span>Save</span>
+            </button>
+        </div>
+        <div>
+            You can create custom JavaScript functions here by writing simple <a href="http://wiki.commonjs.org/wiki/Modules/1.1" target="about:blank">commonjs module</a>.
+            <span id="customFunctionsExample" class="help-cursor text-info" data-placement="auto bottom" data-trigger="hover">
+                See the example. <i class="icon-info"></i>
+            </span>
+        </div>
+    </div>
+    <pre class="editor flex-grow" id="customFunctionsEditor" data-bind="aceEditor: { code: documentText, fontSize: '18px', lang: 'ace/mode/javascript' }, validationElement: documentText"></pre>
+    <div data-bind="validationElement: documentText">
+        <div class="help-block" data-bind="validationMessage: documentText"></div>
+    </div>
+</form>

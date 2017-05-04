@@ -21,40 +21,6 @@ class globalConfigReplications extends viewModelBase {
 
     activated = ko.observable<boolean>(false);
 
-    skipIndexReplicationForAllDestinationsStatus = ko.observable<string>();
-
-    skipIndexReplicationForAll = ko.observable<boolean>();
-
-    private skipIndexReplicationForAllSubscription: KnockoutSubscription;
-
-    private refereshSkipIndexReplicationForAllDestinations() {
-        if (this.skipIndexReplicationForAllSubscription != null)
-            this.skipIndexReplicationForAllSubscription.dispose();
-
-        var newStatus = this.getIndexReplicationStatusForAllDestinations();
-        this.skipIndexReplicationForAll(newStatus === 'all');
-
-        this.skipIndexReplicationForAllSubscription = this.skipIndexReplicationForAll.subscribe(newValue => this.toggleIndexReplication(newValue));
-    }
-
-    private getIndexReplicationStatusForAllDestinations(): string {
-        var countOfSkipIndexReplication: number = 0;
-        ko.utils.arrayForEach(this.replicationsSetup().destinations(), dest => {
-            if (dest.skipIndexReplication()) {
-                countOfSkipIndexReplication++;
-            }
-        });
-
-        // ReSharper disable once ConditionIsAlwaysConst
-        if (countOfSkipIndexReplication === 0)
-            return 'none';
-
-        if (countOfSkipIndexReplication === this.replicationsSetup().destinations().length)
-            return 'all';
-
-        return 'mixed';
-    }
-
     canActivate(args: any): JQueryPromise<any> {
         var deferred = $.Deferred();
         var db: database = null;
@@ -74,7 +40,6 @@ class globalConfigReplications extends viewModelBase {
     attached() {
         super.attached();
         this.bindPopover();
-        this.refereshSkipIndexReplicationForAllDestinations();
     }
 
     bindPopover() {
@@ -120,8 +85,6 @@ class globalConfigReplications extends viewModelBase {
     fetchReplications(db: database): JQueryPromise<any> {
         var deferred = $.Deferred();
 
-        ko.postbox.subscribe('skip-index-replication', () => this.refereshSkipIndexReplicationForAllDestinations());
-
         new getGlobalConfigReplicationsCommand(db)
             .execute()
             .done((repSetup: replicationsDto) => {
@@ -139,7 +102,6 @@ class globalConfigReplications extends viewModelBase {
 
     createNewDestination() {
         this.replicationsSetup().destinations.unshift(replicationDestination.empty("{databaseName}"));
-        this.refereshSkipIndexReplicationForAllDestinations();
         this.bindPopover();
     }
 
@@ -178,12 +140,6 @@ class globalConfigReplications extends viewModelBase {
                 }
             }
         }
-    }
-
-    toggleIndexReplication(skipReplicationValue: boolean) {
-        this.replicationsSetup().destinations().forEach(dest => {
-            dest.skipIndexReplication(skipReplicationValue);
-        });
     }
 
     private prepareAndSaveReplicationSetup(source: string) {

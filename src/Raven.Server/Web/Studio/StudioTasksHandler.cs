@@ -1,12 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Jint;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Server.Routing;
+using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio
 {
@@ -60,6 +63,53 @@ namespace Raven.Server.Web.Studio
 
             HttpContext.Response.WriteAsync("\"The key is ok!\"");
             return Task.CompletedTask;
+        }
+
+
+        public class FuncitonValidation
+        {
+            public List<string> Functions;
+        }
+
+        [RavenAction("/databases/*/studio-tasks/validateCustomFunctions", "POST")]
+        public Task ValidateCustomFunctions()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                try
+                {
+                    var functionsBlittable = context.Read(HttpContext.Request.Body, "ValidateCustomFunctions");
+                    ValidateCustomFunctions(functionsBlittable);
+                }
+                catch (Exception) 
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    return HttpContext.Response.WriteAsync("\"Failed to validate custom functions!\"");
+                }
+
+                HttpContext.Response.WriteAsync("\"Validation Complete!\"");
+                return Task.CompletedTask;
+            }
+        }
+
+        private void ValidateCustomFunctions(BlittableJsonReaderObject document)
+        {
+            var engine = new Engine(cfg =>
+            {
+                cfg.AllowDebuggerStatement();
+                cfg.MaxStatements(1000);
+                cfg.NullPropagation();
+            });
+
+            engine.Execute(string.Format(@"
+                        var customFunctions = function() {{ 
+                        var exports = {{ }};
+                        {0};
+                        return exports;
+                        }}();
+                        for(var customFunction in customFunctions) {{
+                        this[customFunction] = customFunctions[customFunction];
+                        }};", document["Functions"]));
         }
     }
 }
