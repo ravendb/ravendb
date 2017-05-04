@@ -48,7 +48,7 @@ class customFunctionsEditor extends viewModelBase {
             html: true,
             template: popoverUtils.longPopoverTemplate,
             trigger: "hover",
-            content: "<p>Examples:</p><pre>exports.greet = <span class=\"token keyword\">function</span>(name) {<br/>    <span class=\"token keyword\">return</span> <span class=\"token string\">\"Hello \" + name + \"!\"</span>;<br/>}</pre>"
+            content: "<p>Example:</p><pre>exports.greet = <span class=\"token keyword\">function</span>(name) {<br/>    <span class=\"token keyword\">return</span> <span class=\"token string\">\"Hello \" + name + \"!\"</span>;<br/>}</pre>"
         });
     }
 
