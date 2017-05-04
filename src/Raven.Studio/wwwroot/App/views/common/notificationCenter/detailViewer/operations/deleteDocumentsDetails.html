@@ -17,7 +17,7 @@
         </div>
         <div class="modal-body">
             <div data-bind="with: progress">
-                Processed: <span data-bind="text: Processed"></span> / <span data-bind="text: Total"></span>
+                Processed: <span data-bind="text: Processed.toLocaleString()"></span> / <span data-bind="text: Total.toLocaleString()"></span>
             </div>
             <div data-bind="with: result">
                 <span data-bind="text: Message"></span>
