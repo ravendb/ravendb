@@ -68,7 +68,7 @@ namespace Raven.Server.Smuggler.Documents
         private class OperationScope : PatcherOperationScope
         {
             public OperationScope()
-                : base(null, null)
+                : base(null)
             {
             }
 

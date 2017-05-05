@@ -30,7 +30,12 @@ namespace Raven.Server.Documents
 
         public Task<IOperationResult> ExecutePatch(string collectionName, CollectionOperationOptions options, PatchRequest patch, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(collectionName, options, Context, onProgress, (key, context) => Database.Patcher.Apply(context, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false), token);
+            return ExecuteOperation(collectionName, options, Context, onProgress, (key, context) =>
+            {
+                // TODO arek
+                Database.Patcher.GetPatchDocumentCommand(key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false)
+                    .Execute(context);
+            }, token);
         }
 
         protected async Task<IOperationResult> ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,

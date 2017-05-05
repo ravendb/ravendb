@@ -18,7 +18,6 @@ namespace Raven.Server.Documents.Patch
     public class PatcherOperationScope : IDisposable
     {
         private readonly DocumentDatabase _database;
-        private readonly DocumentsOperationContext _context;
         private readonly Dictionary<string, KeyValuePair<object, JsValue>> _propertiesByValue = new Dictionary<string, KeyValuePair<object, JsValue>>();
 
         public readonly DynamicJsonArray DebugInfo = new DynamicJsonArray();
@@ -32,6 +31,8 @@ namespace Raven.Server.Documents.Patch
             "Remove"
         };
 
+        private DocumentsOperationContext _context;
+
         public bool DebugMode { get; }
 
         public readonly PatchDebugActions DebugActions;
@@ -39,20 +40,29 @@ namespace Raven.Server.Documents.Patch
         public string CustomFunctions { get; set; }
 
         public int AdditionalStepsPerSize { get; set; }
+
         public int MaxSteps { get; set; }
+
+        public int TotalScriptSteps;
 
         public JsValue ActualPatchResult { get; set; }
         public JsValue PatchObject;
 
-        public PatcherOperationScope(DocumentDatabase database, DocumentsOperationContext context, bool debugMode = false)
+        public PatcherOperationScope(DocumentDatabase database, bool debugMode = false)
         {
             _database = database;
-            _context = context;
             DebugMode = debugMode;
             if (DebugMode)
             {
                 DebugActions = new PatchDebugActions();
             }
+        }
+
+        public PatcherOperationScope Initialize(DocumentsOperationContext context)
+        {
+            _context = context;
+
+            return this;
         }
 
         public JsValue ToJsArray(Engine engine, BlittableJsonReaderArray json, string propertyKey)
@@ -457,6 +467,9 @@ namespace Raven.Server.Documents.Patch
 
         public virtual JsValue LoadDocument(string documentKey, Engine engine, ref int totalStatements)
         {
+            if (_context == null)
+                ThrowDocumentsOperationContextIsNotSet();
+
             var document = _database.DocumentsStorage.Get(_context, documentKey);
 
             if (DebugMode)
@@ -472,8 +485,16 @@ namespace Raven.Server.Documents.Patch
             return ToJsObject(engine, document.Data);
         }
 
+        private void ThrowDocumentsOperationContextIsNotSet()
+        {
+            throw new InvalidOperationException("Documents operation context is not set");
+        }
+
         public virtual string PutDocument(string key, JsValue document, JsValue metadata, JsValue etagJs, Engine engine)
         {
+            if (_context == null)
+                ThrowDocumentsOperationContextIsNotSet();
+
             if (document == null || document.IsObject() == false)
             {
                 throw new InvalidOperationException(
