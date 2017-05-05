@@ -213,8 +213,6 @@ namespace Raven.Database.Config
                 new StringSetting(settings["Raven/CompiledIndexCacheDirectory"], @"~\CompiledIndexCache");
             TaskScheduler =
                 new StringSetting(settings["Raven/TaskScheduler"], (string)null);
-            AllowLocalAccessWithoutAuthorization =
-                new BooleanSetting(settings["Raven/AllowLocalAccessWithoutAuthorization"], false);
             RejectClientsModeEnabled =
                 new BooleanSetting(settings[Constants.RejectClientsModeEnabled], false);
 

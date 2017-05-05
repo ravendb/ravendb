@@ -45,7 +45,7 @@ namespace Raven.Abstractions.Connection
             this.response = response;
         }
 
-        public ErrorResponseException(HttpResponseMessage response, string msg, string responseString, Exception inner)
+        public ErrorResponseException(HttpResponseMessage response, string msg, string responseString = null, Exception inner = null)
             : base(msg,inner)
         {
             this.response = response;
