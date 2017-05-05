@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.RegularExpressions;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
@@ -8,6 +9,10 @@ namespace Raven.Server.Documents.Patch
     /// </summary>
     public class PatchRequest
     {
+        private static readonly Regex PutDocumentMethodRegex = new Regex($@"{DocumentPatcher.PutDocument}(\s)*\(", RegexOptions.Compiled);
+
+        private bool? _hasPutDocumentMethod;
+
         /// <summary>
         /// JavaScript function to use to patch a document
         /// </summary>
@@ -49,6 +54,19 @@ namespace Raven.Server.Documents.Patch
                 patch.Values = values;
 
             return patch;
+        }
+
+        public bool IsPuttingDocuments
+        {
+            get
+            {
+                // we don't care about DeleteDocument since we don't support it at the moment
+
+                if (_hasPutDocumentMethod == null)
+                    _hasPutDocumentMethod = PutDocumentMethodRegex.Matches(Script).Count > 0;
+
+                return _hasPutDocumentMethod.Value;
+            }
         }
     }
 }

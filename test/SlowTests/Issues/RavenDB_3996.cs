@@ -24,7 +24,7 @@ namespace SlowTests.Issues
             {
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
-                using (var scope = new PatcherOperationScope(database, context))
+                using (var scope = new PatcherOperationScope(database).Initialize(context))
                 {
                     var engine = new Engine();
                     var jsObject = engine.Object.Construct(Arguments.Empty);

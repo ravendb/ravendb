@@ -18,14 +18,13 @@ namespace Raven.Server.Documents.Handlers
 {
     public class BatchHandler : DatabaseRequestHandler
     {
-
         [RavenAction("/databases/*/bulk_docs", "POST")]
         public async Task BulkDocs()
         {
             DocumentsOperationContext ctx;
             using (ContextPool.AllocateOperationContext(out ctx))
             {
-                var cmds = await BatchRequestParser.ParseAsync(ctx, RequestBodyStream());
+                var cmds = await BatchRequestParser.ParseAsync(ctx, RequestBodyStream(), Database.Patcher);
                
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
 
@@ -37,6 +36,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     if (waitForIndexesTimeout != null)
                         mergedCmd.ModifiedCollections = new HashSet<string>();
+
                     try
                     {
                         await Database.TxMerger.Enqueue(mergedCmd);
@@ -262,15 +262,16 @@ namespace Raven.Server.Documents.Handlers
                             Reply.Add(putReply);
                             break;
                         case BatchRequestParser.CommandType.PATCH:
-                            // TODO: Move this code out of the merged transaction
-                            // TODO: We should have an object that handles this externally, 
-                            // TODO: and apply it there
 
-                            var patchResult = Database.Patcher.Apply(context, cmd.Key, cmd.Etag, cmd.Patch, cmd.PatchIfMissing, skipPatchIfEtagMismatch: false, debugMode: false);
+                            cmd.PatchCommand.Execute(context);
+
+                            var patchResult = cmd.PatchCommand.PatchResult;
                             if (patchResult.ModifiedDocument != null)
                                 context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, patchResult.ModifiedDocument.Size);
+
                             if (patchResult.Etag != null)
                                 LastEtag = patchResult.Etag.Value;
+
                             if (patchResult.Collection != null)
                                 ModifiedCollections?.Add(patchResult.Collection);
 

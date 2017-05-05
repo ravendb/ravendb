@@ -26,8 +26,6 @@ namespace Raven.Server.Documents.ETL
 
         protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
         {
-            base.RemoveEngineCustomizations(engine, scope);
-
             engine.Global.Delete(LoadTo, true);
 
             // ReSharper disable once ForCanBeConvertedToForeach
@@ -39,8 +37,6 @@ namespace Raven.Server.Documents.ETL
 
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
-            base.CustomizeEngine(engine, scope);
-
             engine.SetValue(LoadTo, new Action<string, JsValue>((tableName, colsAsObject) => LoadToFunction(tableName, colsAsObject, scope)));
 
             // ReSharper disable once ForCanBeConvertedToForeach
