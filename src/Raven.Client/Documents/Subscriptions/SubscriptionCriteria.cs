@@ -5,13 +5,46 @@
 // -----------------------------------------------------------------------
 
 using System;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Subscriptions
 {
+    public class SubscriptionRaftState:IDatabaseTask
+    {
+        public SubscriptionRaftState()
+        {
+
+        }
+        public SubscriptionCriteria Criteria { get; set; }
+        public ChangeVectorEntry[] ChangeVector { get; set; }
+        public long Etag { get; set; }
+        
+        public ulong GetTaskKey()
+        {
+            return (ulong)Etag;
+        }
+    }
+
+    public class SubscriptionCreationParams
+    {
+        public SubscriptionCriteria Criteria { get; set; }
+        public ChangeVectorEntry[] ChangeVector { get; set; }
+    }
+
+    public class SubscriptionCreationParams<T>
+    {
+        public SubscriptionCreationParams()
+        {
+            
+        }
+        public SubscriptionCriteria<T> Criteria { get; set; }
+        public ChangeVectorEntry[] ChangeVector { get; set; }
+    }
     public class SubscriptionCriteria : IFillFromBlittableJson
     {
-        private SubscriptionCriteria()
+        public SubscriptionCriteria()
         {
             // for deserialization
         }
@@ -44,6 +77,10 @@ namespace Raven.Client.Documents.Subscriptions
 
     public class SubscriptionCriteria<T>
     {
+        public SubscriptionCriteria()
+        {
+
+        }
         public string FilterJavaScript { get; set; }
     }
 }

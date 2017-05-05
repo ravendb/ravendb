@@ -9,13 +9,13 @@ namespace Raven.Client.Documents.Subscriptions
         /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription criteria for a given type.
         /// </summary>
         /// <returns>Created subscription identifier.</returns>
-        long Create<T>(SubscriptionCriteria<T> criteria, long startEtag = 0, string database = null);
+        long Create<T>(SubscriptionCreationParams<T> criteria, string database = null);
 
         /// <summary>
         /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription criteria.
         /// </summary>
         /// <returns>Created subscription identifier.</returns>
-        long Create(SubscriptionCriteria criteria, long startEtag = 0, string database = null);
+        long Create(SubscriptionCreationParams criteria, string database = null);
 
         /// <summary>
         /// It opens a subscription and starts pulling documents since a last processed document for that subscription (in document's long? order).

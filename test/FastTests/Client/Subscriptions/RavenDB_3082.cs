@@ -52,13 +52,16 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
 
-                var criteria = new SubscriptionCriteria<PersonWithAddress>
+                var subscriptionCreationParams = new SubscriptionCreationParams<PersonWithAddress>()
                 {
-                    FilterJavaScript = "return this.Name == 'James' && this.Address.ZipCode != 54321"
+                    Criteria = new SubscriptionCriteria<PersonWithAddress>
+                    {
+                        FilterJavaScript = "return this.Name == 'James' && this.Address.ZipCode != 54321"
+                    }
                 };
 
 
-                var id = await store.AsyncSubscriptions.CreateAsync(criteria);
+                var id = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
 
                 using (
                     var subscription =

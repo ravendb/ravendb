@@ -105,7 +105,11 @@ namespace SubscriptionsBenchmark
             {
                 if (_subscriptionId.HasValue == false)
                 {
-                    _subscriptionId = await _store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria(_collectionName)).ConfigureAwait(false);
+                    var subscriptionCreationParams = new SubscriptionCreationParams
+                    {
+                        Criteria = new SubscriptionCriteria(_collectionName)
+                    };
+                    _subscriptionId = await _store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams).ConfigureAwait(false);
                 }
 
 

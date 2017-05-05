@@ -11,16 +11,14 @@ namespace Raven.Server.Documents.Handlers
 {
     public class SubscriptionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/subscriptions", "PUT", "/databases/{databaseName:string}/subscriptions?startEtag={startEtag:long|optional}")]
+        [RavenAction("/databases/*/subscriptions", "PUT", "/databases/{databaseName:string}/subscriptions")]
         public async Task Create()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var startEtag = GetLongQueryString("startEtag", required: false) ?? 0;
-
                 var json = await context.ReadForDiskAsync(RequestBodyStream(), null);
-                var subscriptionId = Database.SubscriptionStorage.CreateSubscription(json, startEtag);
+                var subscriptionId = await Database.SubscriptionStorage.CreateSubscription(json);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created; // Created
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -34,13 +32,13 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/subscriptions", "DELETE", "/databases/{databaseName:string}/subscriptions?id={subscriptionId:long}")]
-        public Task Delete()
+        public async Task Delete()
         {
             var id = GetLongQueryString("id").Value;
 
-            Database.SubscriptionStorage.DeleteSubscription(id);
+            await Database.SubscriptionStorage.DeleteSubscription(id);
 
-            return NoContent();
+            await NoContent();
         }
 
         [RavenAction("/databases/*/subscriptions", "GET", "/databases/{databaseName:string}/subscriptions/running")]
@@ -52,8 +50,8 @@ namespace Raven.Server.Documents.Handlers
             var running = GetBoolValueQueryString("running", required: false) ?? false;
             var id = GetLongQueryString("id", required: false);
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))                
             using (context.OpenReadTransaction())
             {
                 IEnumerable<DynamicJsonValue> subscriptions;
