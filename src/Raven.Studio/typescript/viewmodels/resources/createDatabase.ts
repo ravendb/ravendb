@@ -27,6 +27,10 @@ class createDatabase extends dialogViewModelBase {
         }
     ];
 
+    spinners = {
+        create: ko.observable<boolean>(false)
+    }
+
     bundlesEnabled = {
         encryption: this.isBundleActiveComputed("Encryption"),
         replication: this.isBundleActiveComputed("Replication")
@@ -189,6 +193,8 @@ class createDatabase extends dialogViewModelBase {
     }
 
     private createDatabaseInternal(): JQueryPromise<void> {
+        this.spinners.create(true);
+
         const databaseDocument = this.databaseModel.toDto();
         const replicationFactor = this.databaseModel.replicationFactor();
 
@@ -200,8 +206,10 @@ class createDatabase extends dialogViewModelBase {
                     .execute()
                     .always(() => {
                         dialog.close(this);
+                        this.spinners.create(false);
                     });
-            });
+            })
+            .fail(() => this.spinners.create(false));
     }
 
     private configureEncryptionIfNeeded(databaseName: string, encryptionKey: string): JQueryPromise<void> {
