@@ -148,12 +148,12 @@ namespace Raven.Server.Documents.Handlers
                 using (var collector = new LiveReplicationPerformanceCollector(Database))
                 {
                     // 1. Send data to webSocket without making UI wait upon openning webSocket
-                    await GetDataFromQueue(receive, webSocket, collector, ms, 100);
+                    await SendDataOrHeartbeatToWebSocket(receive, webSocket, collector, ms, 100);
 
                     // 2. Send data to webSocket when available
                     while (Database.DatabaseShutdown.IsCancellationRequested == false)
                     {
-                        if (await GetDataFromQueue(receive, webSocket, collector, ms, 4000) == false)
+                        if (await SendDataOrHeartbeatToWebSocket(receive, webSocket, collector, ms, 4000) == false)
                         {
                             break;
                         }
@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task<bool> GetDataFromQueue(Task<WebSocketReceiveResult> receive, WebSocket webSocket, LiveReplicationPerformanceCollector collector, MemoryStream ms, int timeToWait)
+        private async Task<bool> SendDataOrHeartbeatToWebSocket(Task<WebSocketReceiveResult> receive, WebSocket webSocket, LiveReplicationPerformanceCollector collector, MemoryStream ms, int timeToWait)
         {
             if (receive.IsCompleted || webSocket.State != WebSocketState.Open)
                 return false; 
