@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Routing;
@@ -85,6 +86,7 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
             return Task.CompletedTask;
         }
