@@ -42,36 +42,50 @@ namespace Raven.Server.Documents.Handlers
                 using (var ms = new MemoryStream())
                 using (var collector = new LiveIOStatsCollector(Database))
                 {
+                    // 1. Send data to webSocket without making UI wait upon openning webSocket
+                    await GetDataFromQueue(receive, webSocket, collector, ms, 100);
+
+                    // 2. Send data to webSocket when available
                     while (Database.DatabaseShutdown.IsCancellationRequested == false)
                     {
-                        if (receive.IsCompleted || webSocket.State != WebSocketState.Open)
+                        if (await GetDataFromQueue(receive, webSocket, collector, ms, 4000) == false)
+                        {
                             break;
-
-                        // Check queue for new data from server
-                        var tuple = await collector.MetricsQueue.TryDequeueAsync(TimeSpan.FromSeconds(4));
-                        if (tuple.Item1 == false)
-                        {
-                            // No new info, Send heart beat
-                            await webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
-                            continue;
                         }
-
-                        // New info, Send data 
-                        ms.SetLength(0);
-                        JsonOperationContext context;
-
-                        using (ContextPool.AllocateOperationContext(out context))
-                        using (var writer = new BlittableJsonTextWriter(context, ms))
-                        {
-                            context.Write(writer, tuple.Item2.ToJson());
-                        }
-
-                        ArraySegment<byte> bytes;
-                        ms.TryGetBuffer(out bytes);
-                        await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
                     }
                 }
             }
+        }
+
+        private async Task<bool> GetDataFromQueue(Task<WebSocketReceiveResult> receive, WebSocket webSocket, LiveIOStatsCollector collector, MemoryStream ms, int timeToWait)
+        {
+            if (receive.IsCompleted || webSocket.State != WebSocketState.Open)
+                return false; 
+
+            // Check queue for new data from server
+            var tuple = await collector.MetricsQueue.TryDequeueAsync(TimeSpan.FromMilliseconds(timeToWait));
+            if (tuple.Item1 == false)
+            {
+                // No new info, Send heart beat
+                await webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                return true; 
+            }
+
+            // New info, Send data 
+            ms.SetLength(0);
+            JsonOperationContext context;
+
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ms))
+            {
+                context.Write(writer, tuple.Item2.ToJson());
+            }
+
+            ArraySegment<byte> bytes;
+            ms.TryGetBuffer(out bytes);
+            await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+
+            return true;
         }
 
         public static IOMetricsResponse GetIoMetricsResponse(DocumentDatabase documentDatabase)

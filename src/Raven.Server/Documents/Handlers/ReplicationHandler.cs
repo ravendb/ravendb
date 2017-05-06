@@ -147,37 +147,51 @@ namespace Raven.Server.Documents.Handlers
                 using (var ms = new MemoryStream())
                 using (var collector = new LiveReplicationPerformanceCollector(Database))
                 {
+                    // 1. Send data to webSocket without making UI wait upon openning webSocket
+                    await GetDataFromQueue(receive, webSocket, collector, ms, 100);
+
+                    // 2. Send data to webSocket when available
                     while (Database.DatabaseShutdown.IsCancellationRequested == false)
                     {
-                        if (receive.IsCompleted || webSocket.State != WebSocketState.Open)
+                        if (await GetDataFromQueue(receive, webSocket, collector, ms, 4000) == false)
+                        {
                             break;
-
-                        var tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromSeconds(4));
-                        if (tuple.Item1 == false)
-                        {
-                            await webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
-                            continue;
                         }
-
-                        ms.SetLength(0);
-
-                        JsonOperationContext context;
-                        using (ContextPool.AllocateOperationContext(out context))
-                        using (var writer = new BlittableJsonTextWriter(context, ms))
-                        {
-                            writer.WriteArray(context, tuple.Item2, (w, c, p) =>
-                            {
-                                p.Write(c, w);
-                            });
-                        }
-
-                        ArraySegment<byte> bytes;
-                        ms.TryGetBuffer(out bytes);
-
-                        await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
                     }
                 }
             }
+        }
+
+        private async Task<bool> GetDataFromQueue(Task<WebSocketReceiveResult> receive, WebSocket webSocket, LiveReplicationPerformanceCollector collector, MemoryStream ms, int timeToWait)
+        {
+            if (receive.IsCompleted || webSocket.State != WebSocketState.Open)
+                return false; 
+
+            var tuple = await collector.Stats.TryDequeueAsync(TimeSpan.FromMilliseconds(timeToWait));
+            if (tuple.Item1 == false)
+            {
+                await webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+                return true ; 
+            }
+
+            ms.SetLength(0);
+
+            JsonOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ms))
+            {
+                writer.WriteArray(context, tuple.Item2, (w, c, p) =>
+                {
+                    p.Write(c, w);
+                });
+            }
+
+            ArraySegment<byte> bytes;
+            ms.TryGetBuffer(out bytes);
+
+            await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
+
+            return true;
         }
 
         [RavenAction("/databases/*/replication/topology", "GET")]
