@@ -13,12 +13,39 @@
                             <input type="text" id="resourceName" data-bind="textInput: databaseModel.name" autofocus class="form-control">
                         </div>
                         
+                        <div class="form-group" data-bind="validationElement: databaseModel.replicationFactor">
+                            <p>Replication factor</p>
+                            <input type="number" data-bind="numericInput: databaseModel.replicationFactor" class="form-control">
+                        </div>
+                        
+                        <p class="bg-warning padding padding-xs" data-bind="visible: showReplicationFactorWarning">With replication factor set to 1 data won't be replicated.</p>
+                        
+                        <h3>BUNDLES</h3>
+                        <div class="settings-group" data-bind="foreach: getAvailableBundles()">
+                            <div class="checkbox settings-item" data-bind="css: { 'active': $root.advancedBundleConfigurationVisible() === name }">
+                                <input class="styled" type="checkbox" data-bind="checked: $root.databaseModel.selectedBundles, checkedValue: name, attr: { id: 'bundle_' + $index() }">
+                                <label data-bind="text: displayName, attr: { 'for': 'bundle_' + $index() }"></label>
+                                <button type="button" class="btn pull-right btn-toggle"
+                                        data-bind="visible: hasAdvancedConfiguration, click: $root.showAdvancedConfigurationFor.bind($root, name), css: { 'btn-danger': validationGroup && !validationGroup.isValid() }">
+                                    <i data-bind="attr: { 'class' : validationGroup && !validationGroup.isValid() ? 'icon-danger' : 'icon-settings' }"></i>
+                                </button>
+                            </div>
+                        </div>
+
                         <button type="button"
                                 data-bind="click: showAdvancedConfiguration, attr: { 'class': 'btn btn-block btn-toggle ' + (databaseModel.advancedValidationGroup.isValid() ? 'btn-info' : 'btn-danger')  }">
                             <i data-bind="attr: { 'class': databaseModel.advancedValidationGroup.isValid() ? 'icon-settings' : 'icon-danger' }"></i><span>Advanced</span>
                         </button>
                     </div>
                     <div class="modal-settings-panel-slideout">
+                        <div data-bind="if: bundlesEnabled.encryption()">
+                            <div class="encryption" data-bind="template: { name: 'create-db-encryption' }, visible: advancedVisibility.encryption()">
+                            </div>
+                        </div>
+                        <div data-bind="if: bundlesEnabled.replication()">
+                            <div class="replication" data-bind="template: { name: 'create-db-replication' }, visible: advancedVisibility.replication()">
+                            </div>
+                        </div>
                         <div>
                             <div class="advanced" data-bind="template: { name: 'create-db-advanced' }, visible: advancedConfigurationVisible()">
                             </div>
@@ -104,6 +131,37 @@
                     </ul>
                 </div>
             </div>
+        </div>
+    </div>
+</script>
+
+
+<script type="text/html" id="create-db-replication">
+    Replication
+</script>
+
+<script type="text/html" id="create-db-encryption">
+    <div class="form-group row" data-bind="validationElement: databaseModel.encryption.key">
+        <div class="col-md-6">
+            <label class="control-label">
+                Select Key <small class="text-muted">(Base64 Encoding)</small>
+            </label>
+        </div>
+        <div class="col-md-6">
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="Key" autocomplete="off"
+                       data-bind="textInput: databaseModel.encryption.key">
+                <span class="input-group-btn">
+                    <button class="btn btn-default" type="button" data-bind="click: generateEncryptionKey">
+                        <i class="icon-reset"></i>
+                    </button>
+                </span>
+            </div>
+        </div>
+        <div class="col-sm-12">
+            <p class="bg-info padding padding-sm small">
+                <i class="icon-warning"></i> Save this key in a safe place. If you lose this key you could lose access to your data.
+            </p>
         </div>
     </div>
 </script>

@@ -5,6 +5,7 @@ import configuration = require("configuration");
 class databaseCreationModel {
 
     name = ko.observable<string>("");
+    replicationFactor = ko.observable<number>(1);
 
     indexesPath = ko.observable<string>();
     incrementalBackup = ko.observable<boolean>();
@@ -21,7 +22,11 @@ class databaseCreationModel {
     journalsPath = ko.observable<string>();
     tempPath = ko.observable<string>();
 
-    activeBundles = ko.observableArray<string>([]);
+    selectedBundles = ko.observableArray<string>([]);
+
+    encryption = {
+        key: ko.observable<string>()
+    }
 
     advancedValidationGroup = ko.validatedObservable({
         dataPath: this.dataPath,
@@ -30,8 +35,17 @@ class databaseCreationModel {
         indexesPath: this.indexesPath
     });
 
+    encryptionValidationGroup = ko.validatedObservable({
+        key: this.encryption.key
+    });
+
+    replicationValidationGroup = ko.validatedObservable({
+        //TODO empty for now
+    });
+
     globalValidationGroup = ko.validatedObservable({
-        name: this.name
+        name: this.name,
+        replicationFactor: this.replicationFactor
     });
 
     protected setupPathValidation(observable: KnockoutObservable<string>, name: string) {
@@ -58,13 +72,19 @@ class databaseCreationModel {
         });
     }
 
-    setupValidation(databaseDoesntExist: (name: string) => boolean) {
+    setupValidation(databaseDoesntExist: (name: string) => boolean, maxReplicationFactor: number) {
         const rg1 = /^[^\\/:\*\?"<>\|]*$/; // forbidden characters \ / : * ? " < > |
         const rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
 
         this.setupPathValidation(this.dataPath, "Data");
         this.setupPathValidation(this.tempPath, "Temp");
         this.setupPathValidation(this.journalsPath, "Journals");
+
+        this.replicationFactor.extend({
+            required: true,
+            min: 1,
+            max: maxReplicationFactor
+        });
 
         this.name.extend({
             required: true,
@@ -90,6 +110,11 @@ class databaseCreationModel {
         });
 
         this.setupPathValidation(this.indexesPath, "Indexes");
+
+        this.encryption.key.extend({
+            required: true,
+            base64: true //TODO: any other validaton ?
+        });
     }
 
     toDto(): Raven.Client.Documents.DatabaseRecord {
@@ -116,10 +141,7 @@ class databaseCreationModel {
             settings[configuration.storage.journalsStoragePath] = this.journalsPath();
         }
 
-        /* TODO
-                if (!clusterWide) settings["Raven-Non-Cluster-Database"] = "true";
-
-        //TODO: return alertTimeout as null if left with default values (24/7)
+        /*TODO: return alertTimeout as null if left with default values (24/7)
                 if (alertTimeout !== "") {
                     settings["Raven/IncrementalBackup/AlertTimeoutHours"] = alertTimeout;
                 }
@@ -132,8 +154,13 @@ class databaseCreationModel {
             DatabaseName: this.name(),
             Settings: settings,
             SecuredSettings: securedSettings,
-            Disabled: false
+            Disabled: false,
+            Encrypted: this.encryptionWasEnabled
         } as Raven.Client.Documents.DatabaseRecord;
+    }
+
+    private get encryptionWasEnabled() {
+        return _.includes(this.selectedBundles(), "Encryption");
     }
 
     setAlertTimeout(value: number) {

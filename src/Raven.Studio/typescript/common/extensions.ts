@@ -161,8 +161,8 @@ class extensions {
 
         ko.bindingHandlers["numericValue"] = {
             init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
-                var underlyingObservable = valueAccessor();
-                var interceptor = ko.pureComputed({
+                const underlyingObservable = valueAccessor();
+                const interceptor = ko.pureComputed({
                     read: underlyingObservable,
                     write: (value: any) => {
                         if (value && !isNaN(value)) {
@@ -173,9 +173,42 @@ class extensions {
                     },
                     disposeWhenNodeIsRemoved: element
                 });
+
+                // copy validation 
+                interceptor.rules = underlyingObservable.rules;
+                interceptor.isValid = underlyingObservable.isValid;
+                interceptor.isModified = underlyingObservable.isModified;
+                interceptor.error = underlyingObservable.error;
+
                 ko.bindingHandlers.value.init(element, () => interceptor, allBindingsAccessor, viewModel, bindingContext);
             },
             update: ko.bindingHandlers.value.update
+        };
+
+        ko.bindingHandlers["numericInput"] = {
+            init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
+                const underlyingObservable = valueAccessor();
+                const interceptor = ko.pureComputed({
+                    read: underlyingObservable,
+                    write: (value: any) => {
+                        if (value && !isNaN(value)) {
+                            underlyingObservable(parseFloat(value));
+                        } else {
+                            underlyingObservable(undefined);
+                        }
+                    },
+                    disposeWhenNodeIsRemoved: element
+                });
+
+                // copy validation 
+                interceptor.rules = underlyingObservable.rules;
+                interceptor.isValid = underlyingObservable.isValid;
+                interceptor.isModified = underlyingObservable.isModified;
+                interceptor.error = underlyingObservable.error;
+                
+                ko.bindingHandlers.textInput.init(element, () => interceptor, allBindingsAccessor, viewModel, bindingContext);
+            },
+            update: ko.bindingHandlers.textInput.update
         };
 
         ko.bindingHandlers["customValidity"] = { //TODO: remove it and use knockout validation
