@@ -697,15 +697,14 @@ namespace Raven.Server.ServerWide
             return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
         }
 
-        public async Task<long> WriteDbAsync(TransactionOperationContext context, string dbId, BlittableJsonReaderObject dbDoc, long? etag, bool encrypted = false)
+        public async Task<long> WriteDbAsync(TransactionOperationContext context, string dbId, BlittableJsonReaderObject dbDoc, long? etag)
         {
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
                 ["Type"] = nameof(AddDatabaseCommand),
                 [nameof(AddDatabaseCommand.Name)] = dbId,
                 [nameof(AddDatabaseCommand.Value)] = dbDoc,
-                [nameof(AddDatabaseCommand.Etag)] = etag,
-                [nameof(AddDatabaseCommand.Encrypted)] = encrypted
+                [nameof(AddDatabaseCommand.Etag)] = etag
             }, "put-cmd"))
             {
                 return await SendToLeaderAsync(putCmd);

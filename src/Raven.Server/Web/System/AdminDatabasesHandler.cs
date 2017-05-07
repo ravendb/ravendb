@@ -144,7 +144,7 @@ namespace Raven.Server.Web.System
 
                 var topologyJson = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
-                var index = await ServerStore.WriteDbAsync(context, name, topologyJson, etag, databaseRecord.Encrypted);
+                var index = await ServerStore.WriteDbAsync(context, name, topologyJson, etag);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
 
@@ -167,7 +167,6 @@ namespace Raven.Server.Web.System
         public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var encrypted = GetBoolValueQueryString("encrypted", required: false) ?? false;
 
             string errorMessage;
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
@@ -222,7 +221,7 @@ namespace Raven.Server.Web.System
                     [nameof(DatabaseRecord.Topology)] = topologyJson,
                 };
 
-                var index = await ServerStore.WriteDbAsync(context, name, json, etag, encrypted);
+                var index = await ServerStore.WriteDbAsync(context, name, json, etag);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
@@ -491,7 +490,7 @@ namespace Raven.Server.Web.System
 
                     var json = EntityToBlittable.ConvertEntityToBlittable(dbDoc, DocumentConventions.Default, context);
 
-                    var index = await ServerStore.WriteDbAsync(context, name, json, null, dbDoc.Encrypted);
+                    var index = await ServerStore.WriteDbAsync(context, name, json, null);
                     await ServerStore.Cluster.WaitForIndexNotification(index);
 
                     ServerStore.NotificationCenter.Add(DatabaseChanged.Create(name, DatabaseChangeType.Put));
