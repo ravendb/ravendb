@@ -214,7 +214,7 @@ class createDatabase extends dialogViewModelBase {
 
     private configureEncryptionIfNeeded(databaseName: string, encryptionKey: string): JQueryPromise<void> {
         if (this.bundlesEnabled.encryption()) {
-            return new putSecretCommand(databaseName, encryptionKey, true)
+            return new putSecretCommand(databaseName, encryptionKey, false)
                 .execute();
         } else {
             return $.Deferred<void>().resolve();
