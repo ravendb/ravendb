@@ -1,20 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using FastTests.Client.Attachments;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
-using Raven.Server.Rachis;
-using Tests.Infrastructure;
 using Xunit;
 
-namespace RachisTests
+namespace RachisTests.DatabaseCluster
 {
-    public class ReplicationTests : ReplicationBasicTests
+    public class ReplicationTests : ReplicationTestsBase
     {
         [Fact]
         public async Task EnsureDocumentsReplication()
@@ -30,7 +26,7 @@ namespace RachisTests
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
                 var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-                Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes.Count());
+                Assert.Equal(clusterSize, databaseResult.Topology.AllReplicationNodes().Count());
                 foreach (var server in Servers)
                 {
                     await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.ETag ?? -1);
@@ -49,13 +45,6 @@ namespace RachisTests
                     "users/1",
                     u => u.Name.Equals("Karmel"),
                     TimeSpan.FromSeconds(clusterSize + 5)));
-                await Task.Delay(TimeSpan.FromMilliseconds(500));
-                var stats = leader.ServerStore.ClusterStats();
-                Assert.NotEmpty(stats);
-                foreach (var server in databaseResult.Topology.AllReplicationNodes)
-                {
-                    Assert.Equal(1,stats[server.NodeTag].LastReport[databaseName].LastDocumentChangeVector.Length);
-                }
             }
         }      
     }

@@ -129,7 +129,7 @@ namespace Tests.Infrastructure
         private List<DocumentStore> GetDocumentStores(DatabaseTopology topology)
         {
             var stores = new List<DocumentStore>();
-            foreach (var node in topology.AllReplicationNodes)
+            foreach (var node in topology.AllReplicationNodes())
             {
                 stores.Add(new DocumentStore
                 {
@@ -246,9 +246,9 @@ namespace Tests.Infrastructure
             return leader;
         }
 
-        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true)
+        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null)
         {
-            var leaderIndex = _random.Next(0, numberOfNodes);
+            leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
             RavenServer leader = null;
             var serversToPorts = new Dictionary<RavenServer,string>();
             for (var i = 0; i < numberOfNodes; i++)

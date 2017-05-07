@@ -3,27 +3,37 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
-namespace Raven.Server.Rachis
+namespace Raven.Server.ServerWide.Maintance
 {
     public class ClusterMaintenanceSlave : IDisposable
     {
         private readonly TcpConnectionOptions _tcp;
         private readonly ServerStore _server;
+        private CancellationToken _token;
         private readonly CancellationTokenSource _cts;
         private Task _collectingTask;
-        private Dictionary<string, DatabaseStatusReport> _cachedReport = new Dictionary<string, DatabaseStatusReport>();
+        private readonly Logger _logger;
 
-        public ClusterMaintenanceSlave(TcpConnectionOptions tcp, ServerStore serverStore)
+        public readonly long CurrentTerm;
+
+        public readonly long NodeSamplePeriod;
+
+        public ClusterMaintenanceSlave(TcpConnectionOptions tcp, CancellationToken externalToken, ServerStore serverStore,long term)
         {
             _tcp = tcp;
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
+            _token = _cts.Token;
             _server = serverStore;
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(_server.ServerShutdown);
+            NodeSamplePeriod = (long)_server.Configuration.ClusterMaintaince.NodeSamplePeriod.AsTimeSpan.TotalMilliseconds;
+            _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceSlave>($"Logger on {serverStore.NodeTag}");
+            CurrentTerm = term;
         }
 
         public void Start()
@@ -33,7 +43,7 @@ namespace Raven.Server.Rachis
 
         public async Task CollectReport()
         {
-            while (_cts.IsCancellationRequested == false)
+            while (_token.IsCancellationRequested == false)
             {
                 try
                 {
@@ -43,15 +53,21 @@ namespace Raven.Server.Rachis
                         var dbs = CollectDatabaseInformation(ctx);
                         using (var writer = new BlittableJsonTextWriter(ctx, _tcp.Stream))
                         {
-                            ctx.Write(writer, DynamicJsonValue.Convert(dbs.ToDictionary(k => k.Item1,v=>v.Item2)));
+                            ctx.Write(writer, DynamicJsonValue.Convert(dbs.ToDictionary(k => k.Item1, v => v.Item2)));
                         }
                     }
-                    
-                    await Task.Delay(TimeSpan.FromMilliseconds(500), _cts.Token);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    // TODO: log and abort
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"Exception occured while collecting info from {_server.NodeTag}", e);
+                    }
+                    return;
+                }
+                finally
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(NodeSamplePeriod), _token);
                 }
             }
         }
@@ -60,7 +76,7 @@ namespace Raven.Server.Rachis
         {
             foreach (var dbName in _server.Cluster.GetDatabaseNames(ctx))
             {
-                if (_cts.IsCancellationRequested)
+                if (_token.IsCancellationRequested)
                     yield break;
 
                 DatabaseStatusReport report;
@@ -73,6 +89,7 @@ namespace Raven.Server.Rachis
                         Status = DatabaseStatus.Unloaded
                     };
                     yield return (dbName, report);
+                       
                     continue;
                 }
 
@@ -103,23 +120,24 @@ namespace Raven.Server.Rachis
                 var documentsStorage = dbInstance.DocumentsStorage;
                 var indexStorage = dbInstance.IndexStore;
 
-                if (dbInstance.DatabaseShutdown.IsCancellationRequested)
-                {
-                    report.Status = DatabaseStatus.Shutdown;
-                    yield return (dbName, report);
-                    continue;
-                }
+                if (_token.IsCancellationRequested)
+                    yield break;
 
                 using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
+                using (var tx = context.OpenReadTransaction())
                 {
+                    report.LastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
+                    report.LastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(tx.InnerTransaction);
+                    report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
                     report.LastDocumentChangeVector = documentsStorage.GetDatabaseChangeVector(context);
                 }
-                foreach (var index in indexStorage.GetIndexes())
+                if (indexStorage != null)
                 {
-                    report.LastIndexedDocumentEtag.Add(index.Name, index.Etag);
+                    foreach (var index in indexStorage.GetIndexes())
+                    {
+                        report.LastIndexedDocumentEtag.Add(index.Name, report.LastEtag - index.Etag);
+                    }
                 }
-
                 yield return (dbName, report);
             }
         }
@@ -128,10 +146,11 @@ namespace Raven.Server.Rachis
         {
             _cts.Cancel();
             _tcp.Dispose();
-            if (_collectingTask.Wait(TimeSpan.FromSeconds(5)) == false)
+            if (_collectingTask.Wait(TimeSpan.FromSeconds(30)) == false)
             {
                 throw new ObjectDisposedException($"Collecting report task on {_server.NodeTag} still running and can't be closed");
             }
+            _cts.Dispose();
         }
 
         //TODO: consider creating finalizer to absolutely make sure we dispose the socket

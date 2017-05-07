@@ -7,6 +7,7 @@
 using System;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Replication.Messages;
 
 namespace Raven.Client.Documents.Operations
 {
@@ -56,6 +57,11 @@ namespace Raven.Client.Documents.Operations
         /// Statistics for each index in database.
         /// </summary>
         public IndexInformation[] Indexes { get; set; }
+
+        /// <summary>
+        /// Global change vector of the database.
+        /// </summary>
+        public ChangeVectorEntry[] DatabaseChangeVector { get; set; }
 
         /// <summary>
         /// Database identifier.

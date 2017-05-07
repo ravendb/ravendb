@@ -1,7 +1,9 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Server;
+using Raven.Client.Server.Commands;
 using Raven.Client.Server.Operations;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
@@ -36,10 +38,13 @@ namespace SlowTests.Server.Rachis
                 numberOfInstances = 0;
                 await AssertNumberOfNodesContainingDatabase(databaseResult.ETag ?? 0, databaseName, numberOfInstances, replicationFactor);
                 DeleteDatabaseResult deleteResult;
-                var startReplicationFactor = replicationFactor;
                 while (replicationFactor>0)
                 {
-                    var serverTagToBeDeleted = databaseResult.Topology.Members[startReplicationFactor-replicationFactor].NodeTag;
+                    
+                    WaitForValue(() => (store.Admin.Server.Send(new GetDatabaseTopologyOperation(databaseName))).Members.Count, replicationFactor);
+                    var res = await store.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(databaseName));
+
+                    var serverTagToBeDeleted = res.Members[0].NodeTag;
                     replicationFactor--;
                     deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted));
                     //The +1 is for NotifyLeaderAboutRemoval

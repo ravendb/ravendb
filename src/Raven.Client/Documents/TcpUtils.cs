@@ -58,54 +58,7 @@ namespace Raven.Client.Documents
                 throw;
             }
         }
-
-        internal static void ConnectSocket(TcpConnectionInfo connection, TcpClient tcpClient, Logger log, CancellationToken token)
-        {
-            var uri = new Uri(connection.Url);
-            var host = uri.Host;
-            var port = uri.Port;
-
-            try
-            {
-                tcpClient.ConnectAsync(host, port).Wait(token);
-            }
-            catch (AggregateException ae) when (ae.InnerException is SocketException)
-            {
-                if (log.IsInfoEnabled)
-                    log.Info(
-                        $"Failed to connect to remote replication destination {connection.Url}. Socket Error Code = {((SocketException)ae.InnerException).SocketErrorCode}",
-                        ae.InnerException);
-                throw;
-            }
-            catch (AggregateException ae) when (ae.InnerException is OperationCanceledException)
-            {
-                if (log.IsInfoEnabled)
-                    log.Info(
-                        $@"Tried to connect to remote replication destination {connection.Url}, but the operation was aborted. 
-                            This is not necessarily an issue, it might be that replication destination document has changed at 
-                            the same time we tried to connect. We will try to reconnect later.",
-                        ae.InnerException);
-                throw;
-            }
-            catch (OperationCanceledException e)
-            {
-                if (log.IsInfoEnabled)
-                    log.Info(
-                        $@"Tried to connect to remote replication destination {connection.Url}, but the operation was aborted. 
-                            This is not necessarily an issue, it might be that replication destination document has changed at 
-                            the same time we tried to connect. We will try to reconnect later.",
-                        e);
-                throw;
-            }
-            catch (Exception e)
-            {
-                if (log.IsInfoEnabled)
-                    log.Info($"Failed to connect to remote replication destination {connection.Url}", e);
-                throw;
-            }
-        }
-
-
+        
         internal static async Task<Stream> WrapStreamWithSslAsync(TcpClient tcpClient, TcpConnectionInfo info)
         {
             Stream stream = tcpClient.GetStream();

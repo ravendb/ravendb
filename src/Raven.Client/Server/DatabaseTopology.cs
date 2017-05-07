@@ -92,25 +92,19 @@ namespace Raven.Client.Documents
         ulong GetTaskKey();
     }
 
-    public class DatabaseMember : ReplicationNode
+    public class DatabaseTopologyNode : ReplicationNode, IDatabaseTask
     {
     }
 
     public class DatabaseWatcher : ReplicationNode, IDatabaseTask
     {
     }
-
-    public class DatabasePromotable : ReplicationNode, IDatabaseTask
-    {
-    }
-
+    
     public class DatabaseTopology
     {
-        public List<DatabaseMember> Members = new List<DatabaseMember>();
-        public List<DatabasePromotable> Promotables = new List<DatabasePromotable>();
+        public List<DatabaseTopologyNode> Members = new List<DatabaseTopologyNode>();
+        public List<DatabaseTopologyNode> Promotables = new List<DatabaseTopologyNode>();
         public List<DatabaseWatcher> Watchers = new List<DatabaseWatcher>();
-
-        public Dictionary<string,string> NameToUrlMap = new Dictionary<string, string>();
 
         public bool RelevantFor(string nodeTag)
         {
@@ -127,16 +121,6 @@ namespace Raven.Client.Documents
             list.AddRange(Watchers.Where(w => IsItMyTask(w, nodeTag)));
             list.Sort();
             return list;
-        }
-
-        public void AddMember(string nodeTag, string databaseName)
-        {
-            Members.Add(new DatabaseMember
-            {
-                NodeTag = nodeTag,
-                Url = NameToUrlMap[nodeTag],
-                Database = databaseName
-            });
         }
 
         public static (List<ReplicationNode> nodesToAdd, List<ReplicationNode> nodesToRemove) FindConnectionChanges(List<ReplicationNode> oldDestinations, List<ReplicationNode> newDestinations)
@@ -198,7 +182,7 @@ namespace Raven.Client.Documents
             }
             return (addDestinations, removeDestinations);
         }
-   
+
         public IEnumerable<string> AllNodes
         {
             get
@@ -218,22 +202,19 @@ namespace Raven.Client.Documents
             }
         }
 
-        public IEnumerable<ReplicationNode> AllReplicationNodes
+        public IEnumerable<ReplicationNode> AllReplicationNodes()
         {
-            get
+            foreach (var member in Members)
             {
-                foreach (var member in Members)
-                {
-                    yield return member;
-                }
-                foreach (var promotable in Promotables)
-                {
-                    yield return promotable;
-                }
-                foreach (var watcher in Watchers)
-                {
-                    yield return watcher;
-                }
+                yield return member;
+            }
+            foreach (var promotable in Promotables)
+            {
+                yield return promotable;
+            }
+            foreach (var watcher in Watchers)
+            {
+                yield return watcher;
             }
         }
 
@@ -244,7 +225,6 @@ namespace Raven.Client.Documents
                 [nameof(Members)] = new DynamicJsonArray(Members.Select(m => m.ToJson())),
                 [nameof(Promotables)] = new DynamicJsonArray(Promotables.Select(p => p.ToJson())),
                 [nameof(Watchers)] = new DynamicJsonArray(Watchers.Select(w => w.ToJson())),
-                [nameof(NameToUrlMap)] = DynamicJsonValue.Convert(NameToUrlMap)
             };
         }
 

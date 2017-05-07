@@ -21,6 +21,7 @@ namespace FastTests.Server.Replication
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
+            
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
             {
