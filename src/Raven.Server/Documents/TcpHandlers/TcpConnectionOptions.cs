@@ -22,9 +22,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private bool _isDisposed;
 
         public DocumentDatabase DocumentDatabase;
-
-        public Action<JsonOperationContext, DynamicJsonValue> GetTypeSpecificStats;
-
+        
         public TcpConnectionHeaderMessage.OperationTypes Operation;
 
         public Stream Stream;
@@ -149,8 +147,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             _bytesReceivedMetric.SetMinimalMeterData("Received", stats);
             _bytesSentMetric.SetMinimalMeterData("Sent", stats);
-
-            GetTypeSpecificStats?.Invoke(context, stats);
+                        
             return stats;
         }
     }

@@ -6,6 +6,9 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Sparrow.Json;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Conventions;
+using System.Linq;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -54,7 +57,7 @@ namespace Raven.Server.Documents.Handlers
             using (ServerStore.ContextPool.AllocateOperationContext(out context))                
             using (context.OpenReadTransaction())
             {
-                IEnumerable<DynamicJsonValue> subscriptions;
+                IEnumerable<Subscriptions.SubscriptionStorage.SubscriptionGeneralDataAndStats> subscriptions;
                 if (id.HasValue == false)
                 {
                     subscriptions = running
@@ -82,9 +85,13 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteStartObject();
+                    DocumentConventions documentConventions = new DocumentConventions();
 
-                    writer.WriteResults(context, subscriptions, (w, c, subscription) =>
+                    writer.WriteStartObject();
+                    var subscriptionsAsBlittable = subscriptions.Select(x => EntityToBlittable.ConvertEntityToBlittable(x, documentConventions, context));
+                    
+                    
+                    writer.WriteResults(context, subscriptionsAsBlittable, (w, c, subscription) =>
                     {
                         c.Write(w, subscription);
                     });
