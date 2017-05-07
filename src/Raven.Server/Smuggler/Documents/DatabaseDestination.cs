@@ -137,31 +137,10 @@ namespace Raven.Server.Smuggler.Documents
                 };
             }
 
-            public void WriteDocument(Document document)
+            public void WriteDocument(DocumentItem item)
             {
-                _command.Add(new DocumentItem
-                {
-                    Type = DocumentType.Document,
-                    Document = document,
-                });
-
+                _command.Add(item);
                 HandleBatchOfDocumentsIfNecessary();
-            }
-
-            public void WriteAttachment(StreamSource.AttachmentStream attachment)
-            {
-                _command.Add(new DocumentItem
-                {
-                    Type = DocumentType.Attachment,
-                    Attachment = attachment,
-                });
-            }
-
-            public StreamSource.AttachmentStream CreateAttachment()
-            {
-                var attachment = new StreamSource.AttachmentStream();
-                attachment.FileDispose = _database.DocumentsStorage.AttachmentsStorage.GetTempFile(out attachment.File, "smuggler-");
-                return attachment;
             }
 
             public DocumentsOperationContext GetContextForNewDocument()
@@ -299,14 +278,16 @@ namespace Raven.Server.Smuggler.Documents
 
                 foreach (var documentType in Documents)
                 {
-                    if (documentType.Type == DocumentType.Attachment)
+                    if (documentType.Attachments != null)
                     {
-                        using (var attachment = documentType.Attachment)
-                        using (Slice.From(context.Allocator, "Smuggler", out Slice tag)) // TODO: Export the tag also
+                        foreach (var attachment in documentType.Attachments)
                         {
-                            _database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, tag, attachment.Base64Hash, attachment.File);
+                            using (attachment)
+                            using (Slice.From(context.Allocator, "Smuggler", out Slice tag)) // TODO: Export the tag also
+                            {
+                                _database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, tag, attachment.Base64Hash, attachment.File);
+                            }
                         }
-                        continue;
                     }
 
                     var document = documentType.Document;
