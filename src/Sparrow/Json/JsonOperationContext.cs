@@ -153,6 +153,7 @@ namespace Sparrow.Json
             _objectJsonParser = new ObjectJsonParser(_jsonParserState, this);
             _documentBuilder = new BlittableJsonDocumentBuilder(this, _jsonParserState, _objectJsonParser);
             LowMemoryFlag = lowMemoryFlag;
+
 #if MEM_GUARD_STACK
             ElectricFencedMemory.IncrementConext();
             ElectricFencedMemory.RegisterContextAllocation(this,Environment.StackTrace);
@@ -277,7 +278,7 @@ namespace Sparrow.Json
         {
             LazyStringValue value;
 
-            var field = key.Value;
+            var field = key.Value; // This will allocate if we are using a substring. 
             if (_fieldNames.TryGetValue(field, out value))
             {
                 //sanity check, in case the 'value' is manually disposed outside of this function

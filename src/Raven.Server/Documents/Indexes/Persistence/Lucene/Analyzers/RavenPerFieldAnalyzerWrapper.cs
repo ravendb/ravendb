@@ -7,30 +7,36 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
+using Sparrow;
+using Sparrow.Collections;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 {
     public sealed class RavenPerFieldAnalyzerWrapper : Analyzer
     {
         private readonly Analyzer _defaultAnalyzer;
-        private readonly IDictionary<string, Analyzer> _analyzerMap = new Dictionary<string, Analyzer>(new PerFieldAnalyzerComparer());
+        private readonly FastDictionary<string, Analyzer, PerFieldAnalyzerComparer> _analyzerMap = new FastDictionary<string, Analyzer, PerFieldAnalyzerComparer>(default(PerFieldAnalyzerComparer));
 
-        public class PerFieldAnalyzerComparer : IEqualityComparer<string>
+        public struct PerFieldAnalyzerComparer : IEqualityComparer<string>
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Equals(string inDictionary, string value)
-            {
+            {                
                 if (value.Length == 0 || value[0] != '@')
                     return string.Equals(inDictionary, value, StringComparison.Ordinal);
+
                 var start = value.IndexOf('<', 1) + 1;
                 var end = value.IndexOf('>', start + 1);
                 if (end == -1)
                     return string.Equals(inDictionary, value, StringComparison.Ordinal);
+
                 return string.CompareOrdinal(inDictionary, 0, value, start, inDictionary.Length) == 0;
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int GetHashCode(string obj)
             {
                 if (obj.Length == 0)

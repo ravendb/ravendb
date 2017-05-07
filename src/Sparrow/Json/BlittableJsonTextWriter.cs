@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Sparrow.Extensions;
 
 namespace Sparrow.Json
 {
@@ -27,6 +28,7 @@ namespace Sparrow.Json
         private readonly int _bufferLen;
         private JsonOperationContext.ReturnBuffer _returnBuffer;
         private readonly JsonOperationContext.ManagedPinnedBuffer _pinnedBuffer;
+        private readonly AllocatedMemoryData _dateTimeMemory;
 
         public BlittableJsonTextWriter(JsonOperationContext context, Stream stream)
         {
@@ -35,6 +37,7 @@ namespace Sparrow.Json
             _returnBuffer = context.GetManagedBuffer(out _pinnedBuffer);
             _buffer = _pinnedBuffer.Pointer;
             _bufferLen = _pinnedBuffer.Length;
+            _dateTimeMemory = context.GetMemory(32);
         }
 
         public int Position => _pos;
@@ -147,6 +150,16 @@ namespace Sparrow.Json
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteDateTime(DateTime value, bool isUtc = false)
+        {
+            int size = value.GetDefaultRavenFormat(_dateTimeMemory, isUtc);
+
+            var strBuffer = _dateTimeMemory.Address;       
+
+            WriteRawStringWhichMustBeWithoutEscapeChars(strBuffer, size);
+        }
+
         public void WriteString(string str)
         {
             using (var lazyStr = _context.GetLazyString(str))
@@ -181,16 +194,16 @@ namespace Sparrow.Json
                 return;
             }
 
-            UnlikelyWriteEscapeSequences(str, numberOfEscapeSequences, escapeSequencePos, strBuffer, size);
+            UnlikelyWriteEscapeSequences(strBuffer, size, numberOfEscapeSequences, escapeSequencePos);
         }
 
-        private void UnlikelyWriteEscapeSequences(LazyStringValue str, int numberOfEscapeSequences, int escapeSequencePos,
-            byte* strBuffer, int size)
+        private void UnlikelyWriteEscapeSequences(byte* strBuffer, int size, int numberOfEscapeSequences, int escapeSequencePos)
         {
+            var ptr = strBuffer;
             while (numberOfEscapeSequences > 0)
             {
                 numberOfEscapeSequences--;
-                var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+                var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, ref escapeSequencePos);
                 WriteRawString(strBuffer, bytesToSkip);
                 strBuffer += bytesToSkip;
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
@@ -273,10 +286,9 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteRawStringWhichMustBeWithoutEscapeChars(byte* buffer, int size)
         {
-            EnsureBuffer(1);
+            EnsureBuffer(size + 2);
             _buffer[_pos++] = Quote;
-            WriteRawString(buffer, size);
-            EnsureBuffer(1);
+            WriteRawString(buffer, size);            
             _buffer[_pos++] = Quote;
         }
 
@@ -389,6 +401,7 @@ namespace Sparrow.Json
         {
             EnsureBuffer(1);
             _buffer[_pos++] = Comma;
+
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -487,6 +500,7 @@ namespace Sparrow.Json
             finally
             {
                 _returnBuffer.Dispose();
+                _context.ReturnMemory(_dateTimeMemory);
             }
         }
 
@@ -510,5 +524,7 @@ namespace Sparrow.Json
                 Flush();
             }
         }
+
+
     }
 }

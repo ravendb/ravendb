@@ -536,7 +536,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         ew.WriteStartObject();
                         ew.WritePropertyName(nameof(error.Timestamp));
-                        ew.WriteString(error.Timestamp.GetDefaultRavenFormat());
+                        ew.WriteDateTime(error.Timestamp);
                         ew.WriteComma();
 
                         ew.WritePropertyName(nameof(error.Document));
