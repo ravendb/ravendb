@@ -19,5 +19,5 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
                 [nameof(Exception)] = Exception
             };
         }
-    }    
+    }
 }
