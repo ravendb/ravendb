@@ -94,32 +94,31 @@ namespace Raven.Client.Json
                     switch (propertyDetails.Token & BlittableJsonReaderBase.TypesMask)
                     {
                         case BlittableJsonToken.StartArray:
-                            //in this case it can only be change vector (since it is the only array in the metadata)
-                            ThrowIfNotSupportedArrayProperty(propertyDetails);
-
                             _manualBlittableJsonDocumentBuilder.StartWriteArray();
-                            var changeVectorArray = propertyDetails.Value as BlittableJsonReaderArray;
-                            if (changeVectorArray != null)
+                            var array = propertyDetails.Value as BlittableJsonReaderArray;
+                            if (array != null)
                             {
-                                var changeVectorEntryPropDetails = new BlittableJsonReaderObject.PropertyDetails();
-                                foreach (BlittableJsonReaderObject entry in changeVectorArray)
+                                var propDetails = new BlittableJsonReaderObject.PropertyDetails();
+                                foreach (BlittableJsonReaderObject entry in array)
                                 {
                                     _manualBlittableJsonDocumentBuilder.StartWriteObject();
                                     var propsIndexes = entry.GetPropertiesByInsertionOrder();
                                     foreach (var index in propsIndexes)
                                     {
-                                        entry.GetPropertyByIndex(index, ref changeVectorEntryPropDetails);
-                                        _manualBlittableJsonDocumentBuilder.WritePropertyName(changeVectorEntryPropDetails.Name);
-                                        switch (changeVectorEntryPropDetails.Token)
+                                        entry.GetPropertyByIndex(index, ref propDetails);
+                                        _manualBlittableJsonDocumentBuilder.WritePropertyName(propDetails.Name);
+                                        switch (propDetails.Token)
                                         {
                                             case BlittableJsonToken.Integer:
-                                                _manualBlittableJsonDocumentBuilder.WriteValue((long)changeVectorEntryPropDetails.Value);;
+                                                _manualBlittableJsonDocumentBuilder.WriteValue((long)propDetails.Value);
+                                                ;
                                                 break;
                                             case BlittableJsonToken.String:
-                                                _manualBlittableJsonDocumentBuilder.WriteValue(changeVectorEntryPropDetails.Value.ToString());
+                                                _manualBlittableJsonDocumentBuilder.WriteValue(propDetails.Value.ToString());
                                                 break;
+                                            default:
+                                                throw new NotSupportedException($"Found property token of type '{propDetails.Token}' which is not supported.");
                                         }
-
                                     }
                                     _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
                                 }
@@ -165,15 +164,6 @@ namespace Raven.Client.Json
                 }
 
                 _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
-            }
-        }
-
-        private static void ThrowIfNotSupportedArrayProperty(BlittableJsonReaderObject.PropertyDetails propertyDetails)
-        {
-            if (propertyDetails.Name != Constants.Documents.Metadata.ChangeVector)
-            {
-                throw new NotSupportedException("Expected to the array to be property called 'ChangeVector', but found " +
-                                                propertyDetails.Name + ", this is not supported.");
             }
         }
 
