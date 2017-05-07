@@ -7,7 +7,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Replication.Messages
 {
-    public class FullTopologyInfo
+    public class LiveTopologyInfo
     {
         public string DatabaseId;
 

@@ -47,8 +47,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, NodeTopologyInfo> NodeTopologyInfo =
             GenerateJsonDeserializationRoutine<NodeTopologyInfo>();
 
-        public static readonly Func<BlittableJsonReaderObject, FullTopologyInfo> FullTopologyInfo =
-            GenerateJsonDeserializationRoutine<FullTopologyInfo>();
+        public static readonly Func<BlittableJsonReaderObject, LiveTopologyInfo> LiveTopologyInfo =
+            GenerateJsonDeserializationRoutine<LiveTopologyInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, ActiveNodeStatus> ActiveNodeStatus =
             GenerateJsonDeserializationRoutine<ActiveNodeStatus>();

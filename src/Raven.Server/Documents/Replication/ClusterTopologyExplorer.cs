@@ -41,14 +41,14 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public async Task<FullTopologyInfo> DiscoverTopologyAsync()
+        public async Task<LiveTopologyInfo> DiscoverTopologyAsync()
         {
-            var topology = new FullTopologyInfo { DatabaseId = _database.DbId.ToString() };
+            var topology = new LiveTopologyInfo { DatabaseId = _database.DbId.ToString() };
             if (_discoverers.Count == 0) //either no destinations or we already visited all destinations
                 return topology;
 
             var discoveryTasks =
-                new Dictionary<NodeTopologyExplorer, Task<FullTopologyInfo>>(_discoverers.Count);
+                new Dictionary<NodeTopologyExplorer, Task<LiveTopologyInfo>>(_discoverers.Count);
             foreach (var d in _discoverers)
             {
                 try
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Replication
             return topology;
         }
 
-        private static void ObserveTaskException(Task<FullTopologyInfo> t)
+        private static void ObserveTaskException(Task<LiveTopologyInfo> t)
         {
             t.ContinueWith(done => GC.KeepAlive(done.Exception));
         }

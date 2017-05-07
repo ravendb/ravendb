@@ -269,11 +269,11 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected FullTopologyInfo GetFullTopology(IDocumentStore store)
+        protected LiveTopologyInfo GetLiveTopology(IDocumentStore store)
         {
             using (var commands = store.Commands())
             {
-                var command = new GetFullTopologyCommand();
+                var command = new GetLiveTopologyCommand();
 
                 commands.RequestExecutor.Execute(command, commands.Context);
 
@@ -474,13 +474,13 @@ namespace FastTests.Server.Replication
             }
         }
 
-        private class GetFullTopologyCommand : RavenCommand<FullTopologyInfo>
+        private class GetLiveTopologyCommand : RavenCommand<LiveTopologyInfo>
         {
             public override bool IsReadRequest => true;
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/topology/full";
+                url = $"{node.Url}/databases/{node.Database}/debug/live-topology";
 
                 return new HttpRequestMessage
                 {
@@ -493,7 +493,7 @@ namespace FastTests.Server.Replication
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationClient.FullTopologyInfo(response);
+                Result = JsonDeserializationClient.LiveTopologyInfo(response);
             }
         }
 

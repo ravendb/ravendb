@@ -64,7 +64,7 @@ namespace FastTests.Issues
 
                 WaitForDocumentToReplicate<Bar>(storeC, "bar", 10000);
 
-                var topologyInfo = GetFullTopology(storeA);
+                var topologyInfo = GetLiveTopology(storeA);
                 
                 Assert.NotNull(topologyInfo); //sanity check
                 var idOfA = dbA.DbId.ToString();
