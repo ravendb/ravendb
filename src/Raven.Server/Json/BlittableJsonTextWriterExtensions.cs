@@ -696,6 +696,10 @@ namespace Raven.Server.Json
             writer.WriteInteger(statistics.CountOfTransformers);
             writer.WriteComma();
 
+            writer.WritePropertyName((nameof(statistics.DatabaseChangeVector)));
+            writer.WriteChangeVector(statistics.DatabaseChangeVector);
+            writer.WriteComma();
+
             writer.WritePropertyName((nameof(statistics.DatabaseId)));
             writer.WriteString((statistics.DatabaseId.ToString()));
             writer.WriteComma();

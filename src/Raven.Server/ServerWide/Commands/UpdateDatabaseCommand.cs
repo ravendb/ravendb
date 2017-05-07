@@ -8,6 +8,8 @@ namespace Raven.Server.ServerWide.Commands
     {
         public string DatabaseName;
 
+        public long? Etag;
+
         protected UpdateDatabaseCommand(string databaseName)
         {
             DatabaseName = databaseName;

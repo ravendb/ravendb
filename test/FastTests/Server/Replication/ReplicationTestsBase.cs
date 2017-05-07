@@ -207,28 +207,7 @@ namespace FastTests.Server.Replication
             }
             return false;
         }
-
-        protected T WaitForValue<T>(Func<T> act, T expectedVal)
-        {
-            int timeout = 10000;
-            if (Debugger.IsAttached)
-                timeout *= 100;
-            var sw = Stopwatch.StartNew();
-            do
-            {
-                var currentVal = act();
-                if (expectedVal.Equals(currentVal))
-                {
-                    return currentVal;
-                }
-                if (sw.ElapsedMilliseconds > timeout)
-                {
-                    return currentVal;
-                }
-                Thread.Sleep(16);
-            } while (true);
-        }
-
+        
         protected List<string> WaitUntilHasTombstones(
                 IDocumentStore store,
                 int count = 1)

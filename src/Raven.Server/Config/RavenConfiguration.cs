@@ -14,6 +14,7 @@ using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Maintance;
 using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
 using Sparrow.Platform;
 
@@ -30,6 +31,8 @@ namespace Raven.Server.Config
         public EtlConfiguration Etl { get; }
 
         public ReplicationConfiguration Replication { get; }
+
+        public ClusterMaintainceConfiguration ClusterMaintaince { get; }
 
         public StorageConfiguration Storage { get; }
 
@@ -82,6 +85,7 @@ namespace Raven.Server.Config
             Core = new CoreConfiguration();
 
             Replication = new ReplicationConfiguration();
+            ClusterMaintaince = new ClusterMaintainceConfiguration();
             Etl = new EtlConfiguration();
             Storage = new StorageConfiguration();
             Encryption = new EncryptionConfiguration();
@@ -142,6 +146,7 @@ namespace Raven.Server.Config
         {
             Core.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Replication.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            ClusterMaintaince.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Etl.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Queries.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Patching.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);

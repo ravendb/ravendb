@@ -9,20 +9,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http.OAuth;
-using Raven.Client.Server;
-using Raven.Client.Server.Expiration;
-using Raven.Client.Server.PeriodicExport;
 using Raven.Client.Server.Tcp;
-using Raven.Client.Server.Versioning;
-using Raven.Server.Config.Categories;
-using Raven.Server.Documents.Versioning;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
@@ -107,6 +99,7 @@ namespace Raven.Server.ServerWide
                 case nameof(EditExpirationCommand):
                 case nameof(ModifyDatabaseWatchersCommand):
                 case nameof(ModifyConflictSolverCommand):
+                case nameof(UpdateTopologyCommand):
                     UpdateDatabase(context, type, cmd, index, leader);
                     break;
                 case nameof(PutValueCommand):
@@ -119,7 +112,10 @@ namespace Raven.Server.ServerWide
         }
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
-        public Task WaitForIndexNotification(long index) => _rachisLogIndexNotifications.WaitForIndexNotification(index);
+        public Task WaitForIndexNotification(long index)
+        {
+            return _rachisLogIndexNotifications.WaitForIndexNotification(index);
+        }
 
         private unsafe void RemoveNodeFromDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
@@ -212,7 +208,6 @@ namespace Raven.Server.ServerWide
                 if (databaseRecord.DeletionInProgress == null)
                     databaseRecord.DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
 
-
                 if (string.IsNullOrEmpty(delDb.FromNode) == false)
                 {
                     if (databaseRecord.Topology.RelevantFor(delDb.FromNode) == false)
@@ -230,15 +225,15 @@ namespace Raven.Server.ServerWide
                         .Concat(databaseRecord.Topology.Promotables.Select(p => p.NodeTag));
 
                     foreach (var node in allNodes)
-                    {
                         databaseRecord.DeletionInProgress[node] = deletionInProgressStatus;
-                    }
 
                     databaseRecord.Topology = new DatabaseTopology();
                 }
                 
                 using (var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context))
+                {
                     UpdateDatabaseRecord(index, items, loweredKey, key, updated);
+                }
 
                 NotifyDatabaseChanged(context, databaseName, index);
             }
@@ -340,9 +335,7 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
-                {
                     _rachisLogIndexNotifications.NotifyListenersAbout(index);
-                }
             };
         }
 
@@ -351,12 +344,10 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
-                {
                     TaskExecuter.Execute(_ =>
                     {
                         try
                         {
-
                             DatabaseChanged?.Invoke(this, (databaseName, index));
                         }
                         finally
@@ -364,7 +355,6 @@ namespace Raven.Server.ServerWide
                             _rachisLogIndexNotifications.NotifyListenersAbout(index);
                         }
                     }, null);
-                }
             };
         }
 
@@ -389,7 +379,7 @@ namespace Raven.Server.ServerWide
                 {
                     long etag;
                     var doc = ReadInternal(context, out etag, valueNameLowered);
-
+                    
                     if (doc == null)
                     {
                         NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
@@ -399,6 +389,14 @@ namespace Raven.Server.ServerWide
                     bool doUpdate;
                     var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
                     var updateCommand = JsonDeserializationCluster.UpdateDatabaseCommands[type](cmd);
+
+                    if (updateCommand.Etag != null && etag != updateCommand.Etag.Value)
+                    {
+                        NotifyLeaderAboutError(index, leader,
+                            new ConcurrencyException($"Concurrency violation at executing {type} command, the database {databaseRecord.DatabaseName} has etag {etag} but was expecting {updateCommand.Etag}"));
+                        return;
+                    }
+
                     try
                     {
                         updateCommand.UpdateDatabaseRecord(databaseRecord, index);
@@ -465,7 +463,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<string> GetDatabaseNames(TransactionOperationContext context, int start = 0, int take = Int32.MaxValue)
+        public IEnumerable<string> GetDatabaseNames(TransactionOperationContext context, int start = 0, int take = int.MaxValue)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -473,7 +471,6 @@ namespace Raven.Server.ServerWide
             Slice loweredPrefix;
             using (Slice.From(context.Allocator, dbKey, out loweredPrefix))
             {
-
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
                     if (take-- <= 0)
@@ -615,9 +612,7 @@ namespace Raven.Server.ServerWide
                 TaskExecuter.Execute(_ =>
                 {
                     foreach (var db in listOfDatabaseName)
-                    {
                         onDatabaseChanged.Invoke(this, (db, lastIncludedIndex));
-                    }
                 }, null);
             }
         }
@@ -668,18 +663,14 @@ namespace Raven.Server.ServerWide
         public async Task WaitForIndexNotification(long index)
         {
             while (index > Volatile.Read(ref _lastModifiedIndex))
-            {
                 await _notifiedListeners.WaitAsync();
-            }
         }
 
         public void NotifyListenersAbout(long index)
         {
             var lastModifed = _lastModifiedIndex;
             while (index > lastModifed)
-            {
                 lastModifed = Interlocked.CompareExchange(ref _lastModifiedIndex, index, lastModifed);
-            }
             _notifiedListeners.SetAndResetAtomically();
         }
     }

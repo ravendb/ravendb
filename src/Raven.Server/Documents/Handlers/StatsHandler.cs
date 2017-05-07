@@ -36,6 +36,7 @@ namespace Raven.Server.Documents.Handlers
                 stats.CountOfUniqueAttachments = attachments.StreamsCount;
                 stats.CountOfIndexes = indexes.Count;
                 stats.CountOfTransformers = transformersCount;
+                stats.DatabaseChangeVector = Database.DocumentsStorage.GetDatabaseChangeVector(context);
                 stats.DatabaseId = Database.DocumentsStorage.Environment.DbId;
                 stats.Is64Bit = IntPtr.Size == sizeof(long);
                 stats.Pager = Database.DocumentsStorage.Environment.Options.DataPager.GetType().ToString();

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Rachis
+namespace Raven.Server.ServerWide.Maintance
 {
     public enum DatabaseStatus
     {
@@ -21,12 +21,12 @@ namespace Raven.Server.Rachis
 
         public ChangeVectorEntry[] LastDocumentChangeVector;
 
-        public ChangeVectorEntry[] LastAttachmentChangeVector;
-
-        // <collection,etag>
+        // <index name,etag diff>
         public Dictionary<string,long> LastIndexedDocumentEtag = new Dictionary<string, long>();
 
         public long LastEtag;
+        public long LastTombstoneEtag;
+        public long NumberOfConflicts;
 
         public DatabaseStatus Status;
         public string FailureToLoad;
@@ -35,31 +35,18 @@ namespace Raven.Server.Rachis
         {
             return new DynamicJsonValue
             {
-                [nameof(LastDocumentChangeVector)] = LastDocumentChangeVector?.ToJson(),
-                [nameof(LastAttachmentChangeVector)] = LastAttachmentChangeVector?.ToJson(),
-                [nameof(LastIndexedDocumentEtag)] = DynamicJsonValue.Convert(LastIndexedDocumentEtag),
-                [nameof(LastEtag)] = LastEtag,
-                [nameof(Status)] = Status,
                 [nameof(Name)] = Name,
-                [nameof(NodeName)] = NodeName,              
+                [nameof(NodeName)] = NodeName,
+                [nameof(Status)] = Status,
+                [nameof(LastEtag)] = LastEtag,
+                [nameof(LastTombstoneEtag)] = LastTombstoneEtag,
+                [nameof(NumberOfConflicts)] = NumberOfConflicts,
+                [nameof(LastDocumentChangeVector)] = LastDocumentChangeVector?.ToJson(),
+                [nameof(LastIndexedDocumentEtag)] = DynamicJsonValue.Convert(LastIndexedDocumentEtag),
+                [nameof(FailureToLoad)] = FailureToLoad,              
             };
         }
     }
-
-/*    public class NodeReport : IDynamicJson
-    {
-        // <db name,report>
-        public Dictionary<string, DatabaseStatusReport> ReportPerDatabase = new Dictionary<string, DatabaseStatusReport>();
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                //    [nameof(ClusterTag)] = ClusterTag,
-                [nameof(ReportPerDatabase)] = DynamicJsonValue.Convert(ReportPerDatabase),
-            };
-        }
-    }*/
 
     public class ClusterNodeStatusReport
     {
