@@ -35,11 +35,8 @@ namespace Raven.Client.Documents.Replication
         /// <value>The URL.</value>
         public string Url
         {
-            get { return _url; }
-            set
-            {
-                _url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
-            }
+            get => _url;
+            set => _url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
         }
 
         /// <summary>

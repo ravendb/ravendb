@@ -193,8 +193,8 @@ namespace Raven.Server.Web.System
                 var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required: false) ?? 0);
 
                 DatabaseTopology topology = document.Topology?.Members?.Count > 0 ? 
-                    AssignNodesToDatabase(context, factor, name, json) : 
-                    document.Topology;
+                    document.Topology :  // TODO: need to validate that those are cluster members
+                    AssignNodesToDatabase(context, factor, name, json);
 
                 var index = await ServerStore.WriteDbAsync(context, name, json, etag);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
