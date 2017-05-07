@@ -448,7 +448,7 @@ namespace Raven.Server
                 var old = _clusterMaintainance;
                 using (old)
                 {
-                    _clusterMaintainance = new ClusterMaintenanceSlave(tcp, ServerStore.ServerShutdown, ServerStore);
+                    _clusterMaintainance = new ClusterMaintenanceSlave(tcp, ServerStore);
                     _clusterMaintainance.Start();
                 }
                 return true;
