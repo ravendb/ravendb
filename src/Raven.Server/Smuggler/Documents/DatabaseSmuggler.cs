@@ -29,7 +29,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly Action<IOperationProgress> _onProgress;
         private readonly SmugglerPatcher _patcher;
         private CancellationToken _token;
-        private HashSet<LazyStringValue> _attachmentStreamsAlreadyExported;
+        private HashSet<string> _attachmentStreamsAlreadyExported;
 
         public DatabaseSmuggler(
             ISmugglerSource source,
@@ -459,7 +459,7 @@ namespace Raven.Server.Smuggler.Documents
                 return;
 
             if (_attachmentStreamsAlreadyExported == null)
-                _attachmentStreamsAlreadyExported = new HashSet<LazyStringValue>();
+                _attachmentStreamsAlreadyExported = new HashSet<string>();
 
             foreach (BlittableJsonReaderObject attachment in attachments)
             {
