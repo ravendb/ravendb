@@ -11,12 +11,12 @@ namespace SlowTests.Server.Replication
     public class ReplicationTopologyDiscoveryTests : ReplicationTestsBase
     {
         [Fact]
-        public async Task Without_replication_full_topology_should_return_empty_topology_info()
+        public async Task Without_replication_live_topology_should_return_empty_topology_info()
         {
             using (var store = GetDocumentStore())
             {
                 var storeDocumentDatabase = await GetDocumentDatabaseInstanceFor(store);
-                var topologyInfo = GetFullTopology(store);
+                var topologyInfo = GetLiveTopology(store);
 
                 Assert.NotNull(topologyInfo); //sanity check
                 Assert.Empty(topologyInfo.NodesById);
@@ -25,7 +25,7 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
-        public async Task Master_slave_full_topology_should_be_correctly_detected()
+        public async Task Master_slave_live_topology_should_be_correctly_detected()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -35,7 +35,7 @@ namespace SlowTests.Server.Replication
 
                 await SetupReplicationAsync(master, slave);
                 EnsureReplicating(master, slave);
-                var topologyInfo = GetFullTopology(master);
+                var topologyInfo = GetLiveTopology(master);
 
                 Assert.NotNull(topologyInfo); //sanity check
 
@@ -50,7 +50,7 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
-        public async Task Master_slave_that_goes_offline_with_full_topology_that_should_be_correctly_detected()
+        public async Task Master_slave_that_goes_offline_with_live_topology_that_should_be_correctly_detected()
         {
             DocumentStore slave = null;
             try
@@ -62,7 +62,7 @@ namespace SlowTests.Server.Replication
 
                     await SetupReplicationAsync(master, slave);
                     EnsureReplicating(master, slave);
-                    var topologyInfo = GetFullTopology(master);
+                    var topologyInfo = GetLiveTopology(master);
 
                     Assert.NotNull(topologyInfo); //sanity check
 
@@ -80,7 +80,7 @@ namespace SlowTests.Server.Replication
                         session.SaveChanges();
                     }
 
-                    topologyInfo = GetFullTopology(master);
+                    topologyInfo = GetLiveTopology(master);
                     Assert.Equal(0, topologyInfo.NodesById[masterDocumentDatabase.DbId.ToString()].Outgoing.Count);
                     Assert.Equal(1, topologyInfo.NodesById[masterDocumentDatabase.DbId.ToString()].Offline.Count);
 
@@ -102,7 +102,7 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
-        public async Task Master_slave_full_topology_incoming_nodes_should_be_correctly_detected()
+        public async Task Master_slave_live_topology_incoming_nodes_should_be_correctly_detected()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -112,7 +112,7 @@ namespace SlowTests.Server.Replication
 
                 await SetupReplicationAsync(master, slave);
                 EnsureReplicating(master, slave);
-                var topologyInfo = GetFullTopology(master);
+                var topologyInfo = GetLiveTopology(master);
 
                 Assert.NotNull(topologyInfo); //sanity check
 
@@ -137,7 +137,7 @@ namespace SlowTests.Server.Replication
          *    --> (C) --> 
          */
         [Fact]
-        public async Task Master_slave_two_tiers_with_full_topology_incoming_should_be_correctly_detected()
+        public async Task Master_slave_two_tiers_with_live_topology_incoming_should_be_correctly_detected()
         {
             using (var A = GetDocumentStore())
             using (var B = GetDocumentStore())
@@ -156,7 +156,7 @@ namespace SlowTests.Server.Replication
                 await SetupReplicationAsync(C, D);
                 EnsureReplicating(C, D);
 
-                var topologyInfo = GetFullTopology(A);
+                var topologyInfo = GetLiveTopology(A);
 
                 Assert.NotNull(topologyInfo); //sanity check
 
@@ -173,7 +173,7 @@ namespace SlowTests.Server.Replication
 
         // (A) --> (B) --> (C)
         [Fact]
-        public async Task Master_slave_two_tiers_with_full_topology_with_nodes_that_goes_offline_they_should_be_correctly_detected()
+        public async Task Master_slave_two_tiers_with_live_topology_with_nodes_that_goes_offline_they_should_be_correctly_detected()
         {
             DocumentStore B = null;
             try
@@ -190,7 +190,7 @@ namespace SlowTests.Server.Replication
                     await SetupReplicationAsync(B, C);
                     EnsureReplicating(B, C);
 
-                    var topologyInfo = GetFullTopology(A);
+                    var topologyInfo = GetLiveTopology(A);
                     //total two nodes, master and slave
                     Assert.Equal(3, topologyInfo.NodesById.Count);
 
@@ -201,7 +201,7 @@ namespace SlowTests.Server.Replication
                     B.Dispose();
                     B = null;
 
-                    topologyInfo = GetFullTopology(A);
+                    topologyInfo = GetLiveTopology(A);
 
                     //C is unreachable after B is down
                     Assert.Equal(1, topologyInfo.NodesById.Count);
@@ -226,7 +226,7 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
-        public async Task Master_with_offline_slaves_should_be_properly_detected_in_full_topology()
+        public async Task Master_with_offline_slaves_should_be_properly_detected_in_live_topology()
         {
             using (var master = GetDocumentStore())
             {
@@ -246,7 +246,7 @@ namespace SlowTests.Server.Replication
 
                 await SetupReplicationWithCustomDestinations(master, destinations);
 
-                var topologyInfo = GetFullTopology(master);
+                var topologyInfo = GetLiveTopology(master);
 
                 Assert.NotNull(topologyInfo); //sanity check
                 Assert.Equal(1, topologyInfo.NodesById.Count);
@@ -268,7 +268,7 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
-        public async Task Master_two_slaves_full_topology_should_be_correctly_detected()
+        public async Task Master_two_slaves_live_topology_should_be_correctly_detected()
         {
             using (var master = GetDocumentStore())
             using (var slave1 = GetDocumentStore())
@@ -282,7 +282,7 @@ namespace SlowTests.Server.Replication
                 EnsureReplicating(master, slave1);
                 EnsureReplicating(master, slave2);
 
-                var topologyInfo = GetFullTopology(master);
+                var topologyInfo = GetLiveTopology(master);
 
                 Assert.NotNull(topologyInfo); //sanity check
                 Assert.Equal(3, topologyInfo.NodesById.Count);
@@ -294,7 +294,7 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
-        public async Task Master_master_full_topology_should_be_correctly_detected()
+        public async Task Master_master_live_topology_should_be_correctly_detected()
         {
             using (var nodeA = GetDocumentStore())
             using (var nodeB = GetDocumentStore())
@@ -323,7 +323,7 @@ namespace SlowTests.Server.Replication
                 var nodeADocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeA);
                 var nodeBDocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeB);
 
-                var topologyInfo = GetFullTopology(nodeA);
+                var topologyInfo = GetLiveTopology(nodeA);
                 Assert.Equal(2, topologyInfo.NodesById.Count);
 
                 var nodeAOutgoing = topologyInfo.NodesById[nodeADocumentDatabase.DbId.ToString()].Outgoing;
@@ -344,7 +344,7 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
-        public async Task Master_master_master_full_topology_should_be_correctly_detected()
+        public async Task Master_master_master_live_topology_should_be_correctly_detected()
         {
             using (var nodeA = GetDocumentStore())
             using (var nodeB = GetDocumentStore())
@@ -362,7 +362,7 @@ namespace SlowTests.Server.Replication
                 var nodeBDocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeB);
                 var nodeCDocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeC);
 
-                var topologyInfo = GetFullTopology(nodeA);
+                var topologyInfo = GetLiveTopology(nodeA);
                 Assert.Equal(3, topologyInfo.NodesById.Count);
 
                 var nodeAOutgoing = topologyInfo.NodesById[nodeADocumentDatabase.DbId.ToString()].Outgoing;
@@ -382,7 +382,7 @@ namespace SlowTests.Server.Replication
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public async Task Cluster_with_master_master_master_and_some_leaves_full_topology_should_be_correctly_detected(bool useSsl)
+        public async Task Cluster_with_master_master_master_and_some_leaves_live_topology_should_be_correctly_detected(bool useSsl)
         {
             if (useSsl)
             {
@@ -410,7 +410,7 @@ namespace SlowTests.Server.Replication
                 var nodeCDocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeC);
                 var nodeCLeafDocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeCLeaf);
 
-                var topologyInfo = GetFullTopology(nodeA);
+                var topologyInfo = GetLiveTopology(nodeA);
                 Assert.Equal(5, topologyInfo.NodesById.Count);
 
                 var nodeAOutgoing = topologyInfo.NodesById[nodeADocumentDatabase.DbId.ToString()].Outgoing;
@@ -430,7 +430,7 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
-        public async Task Master_slave_slaveOfslave_full_topology_should_be_correctly_detected()
+        public async Task Master_slave_slaveOfslave_live_topology_should_be_correctly_detected()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -450,7 +450,7 @@ namespace SlowTests.Server.Replication
                 var slaveOfSlaveDocumentDatabase = await GetDocumentDatabaseInstanceFor(slaveOfSlave);
                 slaveOfSlaveDocumentDatabase.Configuration.Replication.ReplicationTopologyDiscoveryTimeout = new TimeSetting(24, TimeUnit.Hours);
 
-                var topologyInfo = GetFullTopology(master);
+                var topologyInfo = GetLiveTopology(master);
                 Assert.Equal(3, topologyInfo.NodesById.Count);
                 var masterNodeOutgoing = topologyInfo.NodesById[masterDocumentDatabase.DbId.ToString()].Outgoing;
                 Assert.Equal(1, masterNodeOutgoing.Count);

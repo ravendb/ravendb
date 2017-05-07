@@ -18,43 +18,8 @@ namespace Raven.Server.Documents.Handlers
 {
     public class TopologyHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/topology", "GET")]
-        public Task GetTopology()
-        {
-            BlittableJsonReaderObject configurationDocumentData = null;
-            try
-            {
-                DocumentsOperationContext context;
-                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    Document configurationDocument;
-                    using (context.OpenReadTransaction())
-                    {
-                        configurationDocument = Database.DocumentsStorage.Get(context,
-                            Constants.Documents.Replication.ReplicationConfigurationDocument);
-                        configurationDocumentData = configurationDocument?.Data.Clone(context);
-                    }
-                    //This is the case where we don't have real replication topology.
-                    if (configurationDocument == null)
-                    {
-                        GenerateTopology(context, writer);
-                        return Task.CompletedTask;
-                    }
-                    //here we need to fetch the topology from database 
-                    var nodes = GenerateNodesFromReplicationDocument(Database.ReplicationLoader?.Destinations?.ToList());
-                    GenerateTopology(context, writer, nodes, configurationDocument.Etag);
-                }
-                return Task.CompletedTask;
-            }
-            finally
-            {
-                configurationDocumentData?.Dispose();
-            }
-        }
-
-        [RavenAction("/databases/*/topology/full", "GET")]
-        public async Task GetFullTopology()
+        [RavenAction("/databases/*/debug/live-topology", "GET")]
+        public async Task GetLiveTopology()
         {
             var sp = Stopwatch.StartNew();
            
@@ -93,7 +58,7 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                context.Write(writer, new FullTopologyInfo
+                context.Write(writer, new LiveTopologyInfo
                 {
                     DatabaseId = Database.DbId.ToString()
                 }.ToJson());

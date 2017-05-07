@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Replication
 
                 if (header.AlreadyVisited.Contains(localDbId))
                 {
-                    WriteDiscoveryResponse(tcp, context, new FullTopologyInfo
+                    WriteDiscoveryResponse(tcp, context, new LiveTopologyInfo
                     {
                         DatabaseId = localDbId
                     }, null, TopologyDiscoveryResponseHeader.Status.AlreadyKnown);
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     //return record of node without any incoming or outgoing connections
                     var localNodeTopologyInfo = new NodeTopologyInfo();
-                    var topology = new FullTopologyInfo
+                    var topology = new LiveTopologyInfo
                     {
                         DatabaseId = localDbId,
                         NodesById =
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         var discoveryTask = topologyDiscoverer.DiscoverTopologyAsync();
                         discoveryTask.Wait(tcp.DocumentDatabase.DatabaseShutdown);
-                        var topology = GetFullTopologyWithLocalNodes(localDbId, localTopology);
+                        var topology = GetLiveTopologyWithLocalNodes(localDbId, localTopology);
                         foreach (var nodeInfo in discoveryTask.Result.NodesById)
                             topology.NodesById[nodeInfo.Key] = nodeInfo.Value;
 
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Replication
                     }
                     catch (Exception e)
                     {
-                        var topology = GetFullTopologyWithLocalNodes(localDbId, localTopology);
+                        var topology = GetLiveTopologyWithLocalNodes(localDbId, localTopology);
                         WriteDiscoveryResponse(
                             tcp,
                             context,
@@ -96,9 +96,9 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private static FullTopologyInfo GetFullTopologyWithLocalNodes(string localDbId, NodeTopologyInfo localTopology)
+        private static LiveTopologyInfo GetLiveTopologyWithLocalNodes(string localDbId, NodeTopologyInfo localTopology)
         {
-            var topology = new FullTopologyInfo
+            var topology = new LiveTopologyInfo
             {
                 DatabaseId = localDbId
             };
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Replication
         private static void WriteDiscoveryResponse(
             TcpConnectionOptions tcp, 
             JsonOperationContext context, 
-            FullTopologyInfo fullTopology, 
+            LiveTopologyInfo liveTopology, 
             string exception, 
             TopologyDiscoveryResponseHeader.Status responseStatus)
         {
@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Replication
                     [nameof(TopologyDiscoveryResponseHeader.Exception)] = exception
                 });
 
-                context.Write(writer, fullTopology.ToJson());
+                context.Write(writer, liveTopology.ToJson());
                 writer.Flush();
             }
         }

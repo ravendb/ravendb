@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Replication
 
         
 
-        public async Task<FullTopologyInfo> DiscoverTopologyAsync()
+        public async Task<LiveTopologyInfo> DiscoverTopologyAsync()
         {
             JsonOperationContext context;
             using (_pool.AllocateOperationContext(out context))
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Replication
                             buffer))
                         {
                             topologyInfoJson.BlittableValidation();
-                            var topology = JsonDeserializationServer.FullTopologyInfo(topologyInfoJson);
+                            var topology = JsonDeserializationServer.LiveTopologyInfo(topologyInfoJson);
                             return topology;
                         }
                     }
