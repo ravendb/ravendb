@@ -347,17 +347,13 @@ namespace Raven.Server.Documents.TcpHandlers
             using (DisposeOnDisconnect)
             using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out dbContext))
             {
-                ChangeVectorEntry[] startChangeVector;
-                SubscriptionCriteria criteria;
-
-                TcpConnection.DocumentDatabase.SubscriptionStorage.GetCriteriaAndChangeVector(_options.SubscriptionId, dbContext,
-                    out criteria, out startChangeVector);                
+                (var criteria, var startChangeVector) = TcpConnection.DocumentDatabase.SubscriptionStorage.GetCriteriaAndChangeVector(_options.SubscriptionId, dbContext);                
                 
                 long startEtag = 0;
                 
                 if (startChangeVector != null && startChangeVector.Length >0)
                 {
-                    startEtag = GetStartEtagByStartChangeVector(startChangeVector, startEtag, dbContext, criteria);
+                    startEtag = GetStartEtagByStartChangeVector(startChangeVector, dbContext, criteria);
                 }
 
                 var replyFromClientTask = GetReplyFromClient();                
@@ -533,8 +529,9 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private long GetStartEtagByStartChangeVector(ChangeVectorEntry[] startChangeVector, long startEtag, DocumentsOperationContext dbContext, SubscriptionCriteria criteria)
+        private long GetStartEtagByStartChangeVector(ChangeVectorEntry[] startChangeVector, DocumentsOperationContext dbContext, SubscriptionCriteria criteria)
         {
+            long startEtag = 0;
             var dbId = TcpConnection.DocumentDatabase.DbId;
             var startChangeVectorAsDictionary = startChangeVector.ToDictionary(x => x.DbId, x => x.Etag);
 
@@ -595,19 +592,14 @@ namespace Raven.Server.Documents.TcpHandlers
                             // as long as startChangeVector is >= then current document's change vector, we take it
                             startEtag = curDocument.Etag;
                             if (curDocument.ChangeVector.EqualTo(startChangeVector))
-                                low = high + 1; // stop here
+                                break;
                             // meaning startChangeVector is greater
                             else
                             {
                                 low = midpoint + 1;
                             }
                         }
-                        else if (conflictStatus == ConflictsStorage.ConflictStatus.Conflict)
-                        {
-                            // we want to get to a point before the conflict
-                            high = midpoint - 1;
-                        }
-                        // meaning curDocument.ChangeVector is greater
+                        // we want to get to a point before the conflict or where curDocument.ChangeVector is greater
                         else
                         {
                             high = midpoint - 1;

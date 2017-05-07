@@ -26,6 +26,7 @@ using Raven.Client.Server.Tcp;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
+using System.Linq;
 
 namespace Raven.Client.Documents.Subscriptions
 {
@@ -346,7 +347,7 @@ namespace Raven.Client.Documents.Subscriptions
                         if (_proccessingCts.IsCancellationRequested)
                             return;
 
-                        ChangeVectorEntry[] lastReceivedEtag = null;
+                        ChangeVectorEntry[] lastReceivedChangeVector = null;
 
                         Task notifiedSubscribers = Task.CompletedTask;
 
@@ -482,20 +483,22 @@ namespace Raven.Client.Documents.Subscriptions
         private void NotifySubscribers(BlittableJsonReaderObject curDoc, out ChangeVectorEntry[] lastReceivedChangeVector)
         {
             BlittableJsonReaderObject metadata;
-            string id;
+            string id;            
             lastReceivedChangeVector = null;
+
             if (curDoc.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
                 ThrowMetadataRequired();
             if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
                 ThrowIdRequired();
             if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out BlittableJsonReaderArray changeVectorAsObject) == false || changeVectorAsObject == null)
-                ThrowEtagRequired();
+                ThrowChangeVectorRequired();
             else
                 lastReceivedChangeVector = changeVectorAsObject.ToVector();
 
             if (_logger.IsInfoEnabled)
             {
-                _logger.Info($"Got {id} (etag: {lastReceivedChangeVector} on subscription {_options.SubscriptionId}, size {curDoc.Size}");
+                // todo: make writing of change vector more efficient, maybe move ChangeVectorExtensions from server to client..
+                _logger.Info($"Got {id} (etag: [{string.Join(",", lastReceivedChangeVector.Select(x => $"{x.DbId.ToString()}:{x.Etag}"))}] on subscription {_options.SubscriptionId}, size {curDoc.Size}");
             }
 
             T instance;
@@ -549,9 +552,9 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private static void ThrowEtagRequired()
+        private static void ThrowChangeVectorRequired()
         {
-            throw new InvalidOperationException("Document must have an ETag");
+            throw new InvalidOperationException("Document must have a ChangeVector");
         }
 
         private static void ThrowIdRequired()
