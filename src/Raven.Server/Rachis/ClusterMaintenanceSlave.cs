@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -18,17 +15,15 @@ namespace Raven.Server.Rachis
     {
         private readonly TcpConnectionOptions _tcp;
         private readonly ServerStore _server;
-        private CancellationToken _token;
         private readonly CancellationTokenSource _cts;
         private Task _collectingTask;
-        private Dictionary<string,DatabaseStatusReport> _cachedReport = new Dictionary<string, DatabaseStatusReport>();
+        private Dictionary<string, DatabaseStatusReport> _cachedReport = new Dictionary<string, DatabaseStatusReport>();
 
-        public ClusterMaintenanceSlave(TcpConnectionOptions tcp, CancellationToken externalToken, ServerStore serverStore)
+        public ClusterMaintenanceSlave(TcpConnectionOptions tcp, ServerStore serverStore)
         {
             _tcp = tcp;
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
-            _token = _cts.Token;
             _server = serverStore;
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(_server.ServerShutdown);
         }
 
         public void Start()
@@ -38,7 +33,7 @@ namespace Raven.Server.Rachis
 
         public async Task CollectReport()
         {
-            while (_token.IsCancellationRequested == false)
+            while (_cts.IsCancellationRequested == false)
             {
                 try
                 {
@@ -52,7 +47,7 @@ namespace Raven.Server.Rachis
                         }
                     }
                     
-                    await Task.Delay(TimeSpan.FromMilliseconds(500), _token);
+                    await Task.Delay(TimeSpan.FromMilliseconds(500), _cts.Token);
                 }
                 catch (Exception)
                 {
@@ -65,7 +60,7 @@ namespace Raven.Server.Rachis
         {
             foreach (var dbName in _server.Cluster.GetDatabaseNames(ctx))
             {
-                if (_token.IsCancellationRequested)
+                if (_cts.IsCancellationRequested)
                     yield break;
 
                 DatabaseStatusReport report;
@@ -78,7 +73,6 @@ namespace Raven.Server.Rachis
                         Status = DatabaseStatus.Unloaded
                     };
                     yield return (dbName, report);
-                       
                     continue;
                 }
 
@@ -109,8 +103,12 @@ namespace Raven.Server.Rachis
                 var documentsStorage = dbInstance.DocumentsStorage;
                 var indexStorage = dbInstance.IndexStore;
 
-                if (_token.IsCancellationRequested)
-                    yield break;
+                if (dbInstance.DatabaseShutdown.IsCancellationRequested)
+                {
+                    report.Status = DatabaseStatus.Shutdown;
+                    yield return (dbName, report);
+                    continue;
+                }
 
                 using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())

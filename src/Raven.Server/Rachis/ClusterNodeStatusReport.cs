@@ -11,6 +11,7 @@ namespace Raven.Server.Rachis
         Loading,
         Faulted,
         Unloaded,
+        Shutdown,
     }
     
     public class DatabaseStatusReport : IDynamicJson
