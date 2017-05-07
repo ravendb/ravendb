@@ -18,6 +18,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -62,7 +63,8 @@ namespace Raven.Server.Documents
                 e.Message,
                 AlertType.NonDurableFileSystem,
                 NotificationSeverity.Warning,
-                Name));
+                Name,
+                details: new WarningDetails(e.Details)));
         }
 
         internal void HandleOnRecoveryError(object sender, RecoveryErrorEventArgs e)
