@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide.Maintance
         public ChangeVectorEntry[] LastDocumentChangeVector;
 
         // <index name,etag diff>
-        public Dictionary<string,long> LastIndexedDocumentEtag = new Dictionary<string, long>();
+        public Dictionary<string,DateTime> LastIndexedTime = new Dictionary<string, DateTime>();
 
         public long LastEtag;
         public long LastTombstoneEtag;
@@ -42,7 +42,7 @@ namespace Raven.Server.ServerWide.Maintance
                 [nameof(LastTombstoneEtag)] = LastTombstoneEtag,
                 [nameof(NumberOfConflicts)] = NumberOfConflicts,
                 [nameof(LastDocumentChangeVector)] = LastDocumentChangeVector?.ToJson(),
-                [nameof(LastIndexedDocumentEtag)] = DynamicJsonValue.Convert(LastIndexedDocumentEtag),
+                [nameof(LastIndexedTime)] = DynamicJsonValue.Convert(LastIndexedTime),
                 [nameof(FailureToLoad)] = FailureToLoad,              
             };
         }

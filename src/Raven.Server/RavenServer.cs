@@ -401,6 +401,7 @@ namespace Raven.Server
                     }
                     catch (Exception e)
                     {
+                        Console.WriteLine("Tcp error" + e.StackTrace);
                         if (_tcpLogger.IsInfoEnabled)
                         {
                             _tcpLogger.Info("Failed to process TCP connection run", e);
@@ -431,7 +432,7 @@ namespace Raven.Server
             });
         }
 
-        private ClusterMaintenanceSlave _clusterMaintainance;
+        private ClusterMaintenanceWorker _clusterMaintainanceWorker;
 
         private async Task<bool> DispatchServerwideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, TcpClient tcpClient)
         {
@@ -444,9 +445,6 @@ namespace Raven.Server
 
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Heartbeats)
             {
-                //TODO: add ClusterMaintenanceSlave as a handler for this connection
-                //TODO: do not forget that the "client" should dispose the tcp connection
-                
                 // check for the term          
                 using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                 using (var headerJson = await context.ParseToMemoryAsync(
@@ -457,22 +455,22 @@ namespace Raven.Server
                 ))
                 {
                     
-                    var maintanceHeader = JsonDeserializationRachis<ClusterMaintenanceMaster.ClusterMaintenanceConnectionHeader>.Deserialize(headerJson);
-                    if (_clusterMaintainance?.CurrentTerm >= maintanceHeader.Term)
+                    var maintenanceHeader = JsonDeserializationRachis<ClusterMaintenanceSupervisor.ClusterMaintenanceConnectionHeader>.Deserialize(headerJson);
+                    if (_clusterMaintainanceWorker?.CurrentTerm >= maintenanceHeader.Term)
                     {
                         if (_tcpLogger.IsInfoEnabled)
                         {
-                            _tcpLogger.Info($"Request for maintainance with term {maintanceHeader.Term} was rejected, " +
-                                            $"because we are already connected to the recent leader with the term {_clusterMaintainance.CurrentTerm}");
+                            _tcpLogger.Info($"Request for maintainance with term {maintenanceHeader.Term} was rejected, " +
+                                            $"because we are already connected to the recent leader with the term {_clusterMaintainanceWorker.CurrentTerm}");
                         }
                         tcp.Dispose();
                         return true;
                     }
-                    var old = _clusterMaintainance;
+                    var old = _clusterMaintainanceWorker;
                     using (old)
                     {
-                        _clusterMaintainance = new ClusterMaintenanceSlave(tcp, ServerStore.ServerShutdown, ServerStore, maintanceHeader.Term);
-                        _clusterMaintainance.Start();
+                        _clusterMaintainanceWorker = new ClusterMaintenanceWorker(tcp, ServerStore.ServerShutdown, ServerStore, maintenanceHeader.Term);
+                        _clusterMaintainanceWorker.Start();
                     }
                     return true;
                 }

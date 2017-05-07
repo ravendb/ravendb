@@ -127,19 +127,6 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static async Task<DatabaseStatistics> GetDatabaseStatistics(string url, string database, string apiKey)
-        {
-            JsonOperationContext context;
-            using (var requestExecuter = RequestExecutor.CreateForSingleNode(url, database, apiKey))
-            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
-            {
-                var getTcpInfoCommand = new GetStatisticsCommand();
-                await requestExecuter.ExecuteAsync(getTcpInfoCommand, context);
-
-                return getTcpInfoCommand.Result;
-            }
-        }
-
         public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string apiKey)
         {
             JsonOperationContext context;

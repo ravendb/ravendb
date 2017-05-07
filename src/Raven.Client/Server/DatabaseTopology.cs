@@ -117,13 +117,13 @@ namespace Raven.Client.Documents
         {
             var list = new List<ReplicationNode>();
             list.AddRange(Members.Where(m => m.NodeTag != nodeTag));
-            list.AddRange(Promotables.Where(p => IsItMyTask(p, nodeTag)));
-            list.AddRange(Watchers.Where(w => IsItMyTask(w, nodeTag)));
+            list.AddRange(Promotables.Where(p => WhoseTaskIsIt(p,AllReplicationNodes()) == nodeTag));
+            list.AddRange(Watchers.Where(w => WhoseTaskIsIt(w,AllReplicationNodes()) == nodeTag));
             list.Sort();
             return list;
         }
 
-        public static (List<ReplicationNode> nodesToAdd, List<ReplicationNode> nodesToRemove) FindConnectionChanges(List<ReplicationNode> oldDestinations, List<ReplicationNode> newDestinations)
+        public static (List<ReplicationNode> addDestinations, List<ReplicationNode> removeDestinations) FindConnectionChanges(List<ReplicationNode> oldDestinations, List<ReplicationNode> newDestinations)
         {
             var addDestinations = new List<ReplicationNode>();
             var removeDestinations = new List<ReplicationNode>();
@@ -195,10 +195,6 @@ namespace Raven.Client.Documents
                 {
                     yield return promotable.NodeTag;
                 }
-                foreach (var watcher in Watchers)
-                {
-                    yield return watcher.NodeTag;
-                }
             }
         }
 
@@ -211,10 +207,6 @@ namespace Raven.Client.Documents
             foreach (var promotable in Promotables)
             {
                 yield return promotable;
-            }
-            foreach (var watcher in Watchers)
-            {
-                yield return watcher;
             }
         }
 
@@ -232,19 +224,24 @@ namespace Raven.Client.Documents
         {
             Members.RemoveAll(m => m.NodeTag == delDbFromNode);
             Promotables.RemoveAll(p=> p.NodeTag == delDbFromNode);
-            Watchers.RemoveAll(w=> w.NodeTag == delDbFromNode);
         }
 
-        public bool IsItMyTask(IDatabaseTask task, string nodeTag)
+        public static string WhoseTaskIsIt(IDatabaseTask task, IEnumerable<ReplicationNode> incomingTopology)
         {
-            var myPosition = Members.FindIndex(s => s.NodeTag == nodeTag);
-            if (myPosition == -1) //not a member
+            var topology = new List<ReplicationNode>(incomingTopology); // local copy so we can safely change it
+            var key = task.GetTaskKey();
+            while (true)
             {
-                return false;
-            }
+                var index = (int)Hashing.JumpConsistentHash.Calculate(key, topology.Count);
+                var entry = topology[index];
+                if (entry.Disabled == false)
+                    return entry.NodeTag;
 
-            //TODO : ask Oren here about suspentions.. (review comments in github)
-            return Hashing.JumpConsistentHash.Calculate(task.GetTaskKey(), Members.Count) == myPosition;
+                topology.RemoveAt(index);
+
+                key = Hashing.Combine(key, (ulong)topology.Count);
+            }
         }
+
     }
 }

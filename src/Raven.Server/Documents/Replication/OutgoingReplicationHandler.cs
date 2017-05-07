@@ -123,9 +123,14 @@ namespace Raven.Server.Documents.Replication
 
                 using (_tcpClient = new TcpClient())
                 {
-                    TcpUtils.ConnectSocketAsync(connectionInfo, _tcpClient, _log, CancellationToken).Wait(CancellationToken);
+                    TcpUtils.ConnectSocketAsync(connectionInfo, _tcpClient, _log)
+                        .Wait(CancellationToken);
+                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo);
 
-                    using (_stream = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo).Result)
+                    wrapSsl
+                        .Wait(CancellationToken);
+
+                    using (_stream = wrapSsl.Result)
                     using (_interruptableRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
                     using (_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                     {

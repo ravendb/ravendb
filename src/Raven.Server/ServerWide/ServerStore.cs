@@ -109,12 +109,12 @@ namespace Raven.Server.ServerWide
         private bool _disposed;      
         public RachisConsensus<ClusterStateMachine> Engine => _engine;
 
-        private ClusterMaintenanceMaster _clusterMaintenanceMaster;
+        private ClusterMaintenanceSupervisor _clusterMaintenanceSupervisor;
         public Dictionary<string, ClusterNodeStatusReport> ClusterStats()
         {
             if (_engine.LeaderTag != NodeTag)
                 throw new NotLeadingException($"Stats can be requested only from the raft leader {_engine.LeaderTag}");
-            return _clusterMaintenanceMaster?.GetStats();
+            return _clusterMaintenanceSupervisor?.GetStats();
         }
         public async Task ClusterMaintanceSetupTask()
         {
@@ -127,8 +127,8 @@ namespace Raven.Server.ServerWide
                         await _engine.WaitForState(RachisConsensus.State.Leader);
                         continue;
                     }
-                    using (_clusterMaintenanceMaster = new ClusterMaintenanceMaster(this,_engine.Tag, _engine.CurrentTerm))
-                    using (new ClusterObserver(_clusterMaintenanceMaster,this,_engine,ContextPool,ServerShutdown))
+                    using (_clusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this,_engine.Tag, _engine.CurrentTerm))
+                    using (new ClusterObserver(this,_clusterMaintenanceSupervisor,_engine,ContextPool,ServerShutdown))
                     {
                         var oldNodes = new Dictionary<string, string>();
                         while (_engine.LeaderTag == NodeTag)
@@ -145,11 +145,11 @@ namespace Raven.Server.ServerWide
                             oldNodes = newNodes;
                             foreach (var node in nodesChanges.removedValues)
                             {
-                                _clusterMaintenanceMaster.RemoveFromCluster(node.Key);
+                                _clusterMaintenanceSupervisor.RemoveFromCluster(node.Key);
                             }
                             foreach (var node in nodesChanges.addedValues)
                             {
-                                var task = _clusterMaintenanceMaster.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key));
+                                var task = _clusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key));
                                 GC.KeepAlive(task);
                             }
 
@@ -269,7 +269,7 @@ namespace Raven.Server.ServerWide
 
 
             _engine = new RachisConsensus<ClusterStateMachine>();
-            _engine.Initialize(_env);
+            _engine.Initialize(_env, Configuration.Cluster);
 
             _engine.StateMachine.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
 

@@ -12,7 +12,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.ServerWide.Maintance
 {
-    public class ClusterMaintenanceSlave : IDisposable
+    public class ClusterMaintenanceWorker : IDisposable
     {
         private readonly TcpConnectionOptions _tcp;
         private readonly ServerStore _server;
@@ -23,16 +23,16 @@ namespace Raven.Server.ServerWide.Maintance
 
         public readonly long CurrentTerm;
 
-        public readonly long NodeSamplePeriod;
+        public readonly TimeSpan NodeSamplePeriod;
 
-        public ClusterMaintenanceSlave(TcpConnectionOptions tcp, CancellationToken externalToken, ServerStore serverStore,long term)
+        public ClusterMaintenanceWorker(TcpConnectionOptions tcp, CancellationToken externalToken, ServerStore serverStore,long term)
         {
             _tcp = tcp;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
             _token = _cts.Token;
             _server = serverStore;
-            NodeSamplePeriod = (long)_server.Configuration.ClusterMaintaince.NodeSamplePeriod.AsTimeSpan.TotalMilliseconds;
-            _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceSlave>($"Logger on {serverStore.NodeTag}");
+            NodeSamplePeriod = _server.Configuration.Cluster.WorkerSamplePeriod.AsTimeSpan;
+            _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceWorker>($"Logger on {serverStore.NodeTag}");
             CurrentTerm = term;
         }
 
@@ -51,11 +51,17 @@ namespace Raven.Server.ServerWide.Maintance
                     using (ctx.OpenReadTransaction())
                     {
                         var dbs = CollectDatabaseInformation(ctx);
+                        var djv = new DynamicJsonValue();
+                        foreach (var tuple in dbs)
+                        {
+                            djv[tuple.name] = tuple.report;
+                        }
                         using (var writer = new BlittableJsonTextWriter(ctx, _tcp.Stream))
                         {
-                            ctx.Write(writer, DynamicJsonValue.Convert(dbs.ToDictionary(k => k.Item1, v => v.Item2)));
+                            ctx.Write(writer, djv);
                         }
                     }
+                    await Task.Delay(NodeSamplePeriod, _token);
                 }
                 catch (Exception e)
                 {
@@ -65,14 +71,10 @@ namespace Raven.Server.ServerWide.Maintance
                     }
                     return;
                 }
-                finally
-                {
-                    await Task.Delay(TimeSpan.FromMilliseconds(NodeSamplePeriod), _token);
-                }
             }
         }
 
-        private IEnumerable<(string,DatabaseStatusReport)> CollectDatabaseInformation(TransactionOperationContext ctx)
+        private IEnumerable<(string name ,DatabaseStatusReport report)> CollectDatabaseInformation(TransactionOperationContext ctx)
         {
             foreach (var dbName in _server.Cluster.GetDatabaseNames(ctx))
             {
@@ -135,7 +137,7 @@ namespace Raven.Server.ServerWide.Maintance
                 {
                     foreach (var index in indexStorage.GetIndexes())
                     {
-                        report.LastIndexedDocumentEtag.Add(index.Name, report.LastEtag - index.Etag);
+                       report.LastIndexedTime.Add(index.Name, index.LastIndexingTime ?? default(DateTime));
                     }
                 }
                 yield return (dbName, report);
@@ -146,11 +148,17 @@ namespace Raven.Server.ServerWide.Maintance
         {
             _cts.Cancel();
             _tcp.Dispose();
-            if (_collectingTask.Wait(TimeSpan.FromSeconds(30)) == false)
+            try
             {
-                throw new ObjectDisposedException($"Collecting report task on {_server.NodeTag} still running and can't be closed");
+                if (_collectingTask.Wait(TimeSpan.FromSeconds(30)) == false)
+                {
+                    throw new ObjectDisposedException($"Collecting report task on {_server.NodeTag} still running and can't be closed");
+                }
             }
-            _cts.Dispose();
+            finally
+            {
+                _cts.Dispose();
+            }           
         }
 
         //TODO: consider creating finalizer to absolutely make sure we dispose the socket

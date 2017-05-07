@@ -16,7 +16,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.ServerWide.Maintance
 {
-    public class ClusterMaintenanceMaster : IDisposable
+    public class ClusterMaintenanceSupervisor : IDisposable
     {
         private readonly string _leaderClusterTag;
 
@@ -29,12 +29,12 @@ namespace Raven.Server.ServerWide.Maintance
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private readonly JsonContextPool _contextPool = new JsonContextPool();
 
-        internal readonly ClusterMaintainceConfiguration Config;
-        public ClusterMaintenanceMaster(ServerStore server,string leaderClusterTag, long term)
+        internal readonly ClusterConfiguration Config;
+        public ClusterMaintenanceSupervisor(ServerStore server,string leaderClusterTag, long term)
         {
             _leaderClusterTag = leaderClusterTag;
             _term = term;
-            Config = server.Configuration.ClusterMaintaince;
+            Config = server.Configuration.Cluster;
         }
 
         public async Task AddToCluster(string clusterTag, string url)
@@ -97,7 +97,7 @@ namespace Raven.Server.ServerWide.Maintance
         public class ClusterNode : IDisposable
         {
             private readonly JsonContextPool _contextPool;
-            private readonly ClusterMaintenanceMaster _parent;
+            private readonly ClusterMaintenanceSupervisor _parent;
             private readonly CancellationToken _token;
             private readonly CancellationTokenSource _cts;
 
@@ -119,7 +119,7 @@ namespace Raven.Server.ServerWide.Maintance
                 string clusterTag,
                 TcpConnectionInfo tcpConnectionConnectionInfo,
                 JsonContextPool contextPool,
-                ClusterMaintenanceMaster parent,
+                ClusterMaintenanceSupervisor parent,
                 CancellationToken token)
             {
                 ClusterTag = clusterTag;
@@ -136,14 +136,14 @@ namespace Raven.Server.ServerWide.Maintance
 
             public Task StartListening()
             {
-                return ListenToClusterNode();
+                return ListenToMaintenanceWorker();
             }
 
-            private async Task ListenToClusterNode()
+            private async Task ListenToMaintenanceWorker()
             {
                 bool needToWait = false;
-                var onErrorDelayTime = (int)_parent.Config.OnErrorDelayTime.AsTimeSpan.TotalMilliseconds;
-                var recieveFromNodeTimeout = (int)_parent.Config.RecieveFromNodeTimeout.AsTimeSpan.TotalMilliseconds;
+                var onErrorDelayTime = _parent.Config.OnErrorDelayTime.AsTimeSpan;
+                var recieveFromNodeTimeout = _parent.Config.RecieveFromNodeTimeout.AsTimeSpan;
 
                 while (_token.IsCancellationRequested == false)
                 {
@@ -217,7 +217,7 @@ namespace Raven.Server.ServerWide.Maintance
 
             private async Task<Stream> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo)
             {
-                await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, _tcpClient, _log, _token);
+                await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, _tcpClient, _log);
                 return await TcpUtils.WrapStreamWithSslAsync(_tcpClient, tcpConnectionInfo);
             }
 

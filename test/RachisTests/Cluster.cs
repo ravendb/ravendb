@@ -14,6 +14,16 @@ namespace SlowTests.Server.Rachis
     
     public class Cluster: ClusterTestBase
     {
+        private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName)
+        {
+            var res = await store.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(databaseName));
+            if (res == null)
+            {
+                return -1;
+            }
+            return res.Members.Count;
+        }
+
         [Fact]
         public async Task CanCreateAddAndDeleteDatabaseFromNodes()
         {
@@ -40,8 +50,8 @@ namespace SlowTests.Server.Rachis
                 DeleteDatabaseResult deleteResult;
                 while (replicationFactor>0)
                 {
-                    
-                    WaitForValue(() => (store.Admin.Server.Send(new GetDatabaseTopologyOperation(databaseName))).Members.Count, replicationFactor);
+                    var val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), replicationFactor);
+                    Assert.Equal(replicationFactor, val);
                     var res = await store.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(databaseName));
 
                     var serverTagToBeDeleted = res.Members[0].NodeTag;
