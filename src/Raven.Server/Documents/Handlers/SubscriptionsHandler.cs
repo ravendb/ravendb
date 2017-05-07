@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var json = await context.ReadForDiskAsync(RequestBodyStream(), null);
-                var subscriptionId = await Database.SubscriptionStorage.CreateSubscription(json);
+                var subscriptionId = await Database.SubscriptionStorage.CreateSubscription(JsonDeserializationServer.SubscriptionCreationParams(json));
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created; // Created
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

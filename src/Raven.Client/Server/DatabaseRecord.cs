@@ -169,11 +169,11 @@ namespace Raven.Client.Documents
             Transformers?.Remove(name);
         }
 
-        public void CreateSubscription(SubscriptionCriteria criteria, long etag, ChangeVectorEntry[] initialChangeVector = null)
+        public void CreateSubscription(SubscriptionCriteria criteria, long subscriptionId, ChangeVectorEntry[] initialChangeVector = null)
         {
-            Subscriptions.Add(etag.ToString(), new SubscriptionRaftState()
+            Subscriptions.Add(subscriptionId.ToString(), new SubscriptionRaftState()
             {
-                Etag = etag,
+                SubscriptionId = subscriptionId,
                 ChangeVector = initialChangeVector,
                 Criteria = criteria
             });

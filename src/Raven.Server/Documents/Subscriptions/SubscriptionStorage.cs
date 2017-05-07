@@ -55,16 +55,12 @@ namespace Raven.Server.Documents.Subscriptions
           
         }
         
-        public async Task<long> CreateSubscription(BlittableJsonReaderObject criteria)
-        {
-            // Validate that this can be properly parsed into a criteria object
-            // and doing that without holding the tx lock
-            var criteriaInstance = JsonDeserializationServer.SubscriptionCreationParams(criteria);
-            
+        public async Task<long> CreateSubscription(SubscriptionCreationParams creationParams)
+        {            
             var command = new CreateSubscriptionCommand(_db.Name)
             {
-                Criteria = criteriaInstance.Criteria,
-                InitialChangeVector = criteriaInstance.ChangeVector
+                Criteria = creationParams.Criteria,
+                InitialChangeVector = creationParams.ChangeVector
             };
 
             var etag = await _serverStore.SendToLeaderAsync(command);
@@ -99,15 +95,21 @@ namespace Raven.Server.Documents.Subscriptions
             await _db.WaitForIndexNotification(etag);            
         }
 
-        public void GetCriteriaAndChangeVector(long id, DocumentsOperationContext context, out SubscriptionCriteria criteria, out ChangeVectorEntry[] startChangeVector)
+        public (SubscriptionCriteria criteria, ChangeVectorEntry[] startChangeVector) GetCriteriaAndChangeVector(long id, DocumentsOperationContext context)
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
             {
                 var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name);
-                var subscriptionRaftState = databaseRecord.Subscriptions[id.ToString()];
-                criteria = subscriptionRaftState.Criteria;
-                startChangeVector = subscriptionRaftState.ChangeVector;
+                if (databaseRecord.Subscriptions.TryGetValue(id.ToString(), out SubscriptionRaftState subscriptionRaftState) == false)
+                {
+                    throw new SubscriptionDoesNotExistException(
+                            "There is no subscription configuration for specified identifier (id: " + id + ")");
+                }                
+                var criteria = subscriptionRaftState.Criteria;
+                var startChangeVector = subscriptionRaftState.ChangeVector;
+
+                return (criteria, startChangeVector);
             }            
         }
 
@@ -160,16 +162,13 @@ namespace Raven.Server.Documents.Subscriptions
 
         public IEnumerable<DynamicJsonValue> GetAllSubscriptions(TransactionOperationContext serverStoreContext, bool history, int start, int take)
         {
-            var databaseRecord = _serverStore.Cluster.Read(serverStoreContext, _db.Name);
-
-            databaseRecord.TryGet(nameof(DatabaseRecord.Subscriptions), out BlittableJsonReaderArray subscriptionsBlittable);
-
-            foreach (BlittableJsonReaderObject curSubscriptionKeyValuePair in subscriptionsBlittable)
+            var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name);
+                        
+            foreach (var subscription in databaseRecord.Subscriptions.Values)
             {
-                curSubscriptionKeyValuePair.TryGet("Key", out long subscriptionId);
-                curSubscriptionKeyValuePair.TryGet("Value", out BlittableJsonReaderObject curSubscription);
-
-                yield return GetSubscriptionInternal(subscriptionId, curSubscription, history);
+                DynamicJsonValue subscriptionJsonValue = subscription.ToJson();
+                GetSubscriptionInternal(subscription.SubscriptionId, subscriptionJsonValue, history);
+                yield return subscriptionJsonValue;
             }
         }
 
@@ -213,7 +212,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public IEnumerable<DynamicJsonValue> GetAllRunningSubscriptions(TransactionOperationContext context, bool history, int start, int take)
         {            
-            var databaseRecord = _serverStore.Cluster.Read(context, _db.Name);
+            var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
                 
             foreach (var kvp in _subscriptionStates)
             {
@@ -232,51 +231,32 @@ namespace Raven.Server.Documents.Subscriptions
                 if (take-- <= 0)
                     yield break;
                 
-                BlittableJsonReaderObject currentSubscriptionReader = 
-                    GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, subscriptionId);                
-
-                Debug.Assert(currentSubscriptionReader != null);
-
-                yield return GetRunningSubscriptionInternal(history, currentSubscriptionReader, subscriptionState);
+                var curSubscriptionJsonValue = GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, subscriptionId);
+                GetRunningSubscriptionInternal(history, curSubscriptionJsonValue, subscriptionState);
+                yield return curSubscriptionJsonValue;
             }
 
-        }
+        }     
 
-        private static BlittableJsonReaderObject GetSubscriptionFromDatabaseRecordBlittable(BlittableJsonReaderObject databaseRecord, long subscriptionId)
+        public DynamicJsonValue GetSubscriptionFromDatabaseRecordBlittable(DatabaseRecord databaseRecord, long id)
         {
-            BlittableJsonReaderObject foundSubscriptionReader = null;
-            databaseRecord.TryGet(nameof(DatabaseRecord.Subscriptions), out BlittableJsonReaderArray subscriptionsReader);
+            if (databaseRecord.Subscriptions.TryGetValue(id.ToString(), out SubscriptionRaftState subscriptionInDatabaseRecord) == false)
+                throw new SubscriptionDoesNotExistException(
+                        "There is no subscription configuration for specified identifier (id: " + id + ")");
 
-            int low = 0, high = subscriptionsReader.Length - 1, midpoint = 0;
-
-            while (low <= high)
-            {
-                midpoint = low + (high - low) / 2;
-
-                var curSubscriptionKeyValuePair = subscriptionsReader[midpoint] as BlittableJsonReaderObject;
-                curSubscriptionKeyValuePair.TryGet("Key", out long curSubscriptionId);
-
-                if (subscriptionId == curSubscriptionId)
-                {
-                    curSubscriptionKeyValuePair.TryGet("Value", out foundSubscriptionReader);
-                    low = high + 1;
-                }
-                else if (subscriptionId < curSubscriptionId)
-                    high = midpoint - 1;
-                else
-                    low = midpoint + 1;
-            }
-
-            return foundSubscriptionReader;
+            return subscriptionInDatabaseRecord.ToJson();
+            
         }
 
         public unsafe DynamicJsonValue GetSubscription(TransactionOperationContext context, long id, bool history)
         {
-            var databaseRecord = _serverStore.Cluster.Read(context, _db.Name);
+            var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
 
-            var subscriptionBlittable = GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, id);
+            var subscriptionJsonValue = GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, id);
 
-            return GetSubscriptionInternal(id, subscriptionBlittable, history);
+            GetSubscriptionInternal(id, subscriptionJsonValue, history);
+
+            return subscriptionJsonValue;
         }
 
         public DynamicJsonValue GetRunningSubscription(TransactionOperationContext context, long id, bool history)
@@ -289,10 +269,11 @@ namespace Raven.Server.Documents.Subscriptions
                 return null;
 
 
-            var databaseRecord = _serverStore.Cluster.Read(context, _db.Name);
+            var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
 
-            var subscriptionBlittable = GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, id);
-            return GetRunningSubscriptionInternal(history, subscriptionBlittable, subscriptionState);            
+            var subscriptionJsonValue = GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, id);
+            GetRunningSubscriptionInternal(history, subscriptionJsonValue, subscriptionState);
+            return subscriptionJsonValue;
         }
 
         public DynamicJsonValue GetRunningSubscriptionConnectionHistory(TransactionOperationContext context, long subscriptionId)
@@ -305,10 +286,9 @@ namespace Raven.Server.Documents.Subscriptions
             if (subscriptionConnection == null)
                 return null;
 
-            var databaseRecord = _serverStore.Cluster.Read(context, _db.Name);
-            var subscriptionBlittable = GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, subscriptionId);
-            
-            var subscriptionData = new DynamicJsonValue(subscriptionBlittable);
+            var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
+            var subscriptionData = GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, subscriptionId);
+                        
             SetSubscriptionStateData(subscriptionState, subscriptionData);
             SetSubscriptionHistory(subscriptionState, subscriptionData);
 
@@ -355,36 +335,29 @@ namespace Raven.Server.Documents.Subscriptions
 
         }
 
-        private DynamicJsonValue GetRunningSubscriptionInternal(bool history, BlittableJsonReaderObject subscriptionReader, SubscriptionState subscriptionState)
-        {            
-            var subscriptionData = new DynamicJsonValue(subscriptionReader);          
-
+        private void GetRunningSubscriptionInternal(bool history, DynamicJsonValue subscriptionData, SubscriptionState subscriptionState)
+        {
             SetSubscriptionStateData(subscriptionState, subscriptionData);
 
             if (history)
-                SetSubscriptionHistory(subscriptionState, subscriptionData);
-            return subscriptionData;
+                SetSubscriptionHistory(subscriptionState, subscriptionData);            
         }
 
-        private DynamicJsonValue GetSubscriptionInternal(long id , BlittableJsonReaderObject subscriptionRaftState, bool history)
+        private void GetSubscriptionInternal(long id , DynamicJsonValue subscriptionJsonValue, bool history)
         {
-            var subscriptionData = new DynamicJsonValue(subscriptionRaftState);
-
             SubscriptionState subscriptionState;
             if (_subscriptionStates.TryGetValue(id, out subscriptionState))
             {
-                SetSubscriptionStateData(subscriptionState, subscriptionData);
+                SetSubscriptionStateData(subscriptionState, subscriptionJsonValue);
 
                 if (history)
-                    SetSubscriptionHistory(subscriptionState, subscriptionData);
+                    SetSubscriptionHistory(subscriptionState, subscriptionJsonValue);
             }
             else
             {
                 // always include property in output json
-                subscriptionData[nameof(SubscriptionState.Connection)] = null;
-            }
-
-            return subscriptionData;
+                subscriptionJsonValue[nameof(SubscriptionState.Connection)] = null;
+            }            
         }       
     }
 

@@ -8,6 +8,7 @@ using System;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Subscriptions
 {
@@ -19,11 +20,26 @@ namespace Raven.Client.Documents.Subscriptions
         }
         public SubscriptionCriteria Criteria { get; set; }
         public ChangeVectorEntry[] ChangeVector { get; set; }
-        public long Etag { get; set; }
+        public long SubscriptionId { get; set; }
         
         public ulong GetTaskKey()
         {
-            return (ulong)Etag;
+            return (ulong)SubscriptionId;
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(this.Criteria)] = new DynamicJsonValue
+                {
+                    [nameof(SubscriptionCriteria.Collection)] = Criteria.Collection,
+                    [nameof(SubscriptionCriteria.FilterJavaScript)] = Criteria.FilterJavaScript
+                },
+                [nameof(ChangeVector)] = ChangeVector?.ToJson(),
+                [nameof(SubscriptionId)] = SubscriptionId
+
+            };
         }
     }
 

@@ -12,6 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Voron.Impl.Backup;
+using Raven.Server.Json;
 
 namespace FastTests.Voron.Backups
 {
@@ -36,7 +37,8 @@ namespace FastTests.Voron.Backups
                 streamWriter.Flush();
                 stream.Position = 0;
                 var reader = context.Read(stream, "docs/1");
-                database.SubscriptionStorage.CreateSubscription(reader);
+                
+                await database.SubscriptionStorage.CreateSubscription(JsonDeserializationServer.SubscriptionCreationParams(reader));
 
                 await database.IndexStore.CreateIndex(new IndexDefinition()
                 {
@@ -117,7 +119,7 @@ namespace FastTests.Voron.Backups
                     streamWriter.Flush();
                     stream.Position = 0;
                     var reader = context.Read(stream, "docs/1");
-                    database.SubscriptionStorage.CreateSubscription(reader);
+                    await database.SubscriptionStorage.CreateSubscription(JsonDeserializationServer.SubscriptionCreationParams(reader));
 
                     await database.IndexStore.CreateIndex(new IndexDefinition()
                     {
