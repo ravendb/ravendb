@@ -212,7 +212,7 @@ namespace Raven.Server.ServerWide
                     AlertType.NonDurableFileSystem,
                     NotificationSeverity.Warning,
                     "NonDurable Error System",
-                    details: new WarningDetails(e.Details));
+                    details: new MessageDetails{Message=e.Details});
                 if (NotificationCenter.IsInitialized)
                 {
                     NotificationCenter.Add(alert);
