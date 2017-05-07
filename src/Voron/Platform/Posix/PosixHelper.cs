@@ -116,6 +116,27 @@ namespace Voron.Platform.Posix
             return syncAllowed;
         }
 
+        public static string GetFileSystemOfPath(string path)
+        {
+            var allMounts = DriveInfo.GetDrives();
+            string filesystem = "Unresolved";
+            var matchSize = 0;
+            foreach (var m in allMounts)
+            {
+                var mountNameSize = m.Name.Length;
+                if (path.StartsWith(m.Name))
+                {
+                    if (mountNameSize > matchSize)
+                    {
+                        matchSize = mountNameSize;
+                        filesystem = m.DriveType == DriveType.Unknown ? "Unknown" : m.DriveFormat;
+                        // do not break foreach statement to get longest substring path match
+                    }
+                }
+            }
+            return filesystem;
+        }
+
         public static int SyncDirectory(string path)
         {
             var dir = Path.GetDirectoryName(path);

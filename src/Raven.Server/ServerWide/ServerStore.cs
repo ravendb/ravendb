@@ -19,6 +19,7 @@ using Raven.Server.Documents;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -210,7 +211,8 @@ namespace Raven.Server.ServerWide
                     e.Message,
                     AlertType.NonDurableFileSystem,
                     NotificationSeverity.Warning,
-                    "NonDurable Error System");
+                    "NonDurable Error System",
+                    details: new WarningDetails(e.Details));
                 if (NotificationCenter.IsInitialized)
                 {
                     NotificationCenter.Add(alert);

@@ -67,7 +67,7 @@ namespace Voron
             handler(this, new RecoveryErrorEventArgs(message, e));
         }
 
-        public void InvokeNonDurableFileSystemError(object sender, string message, Exception e)
+        public void InvokeNonDurableFileSystemError(object sender, string message, Exception e, string details)
         {
             var handler = OnNonDurableFileSystemError;
             if (handler == null)
@@ -77,7 +77,7 @@ namespace Voron
                     e);
             }
 
-            handler(this, new NonDurabilitySupportEventArgs(message, e));
+            handler(this, new NonDurabilitySupportEventArgs(message, e, details));
         }
 
         public long? InitialFileSize { get; set; }
@@ -938,7 +938,8 @@ namespace Voron
                 SafePosixOpenFlags &= ~PerPlatformValues.OpenFlags.O_DIRECT;
                 var message = "Path " + BasePath +
                               " not supporting O_DIRECT writes. As a result - data durability is not guarenteed";
-                InvokeNonDurableFileSystemError(this, message, new NonDurableFileSystemException(message));
+                var details = $"Storage type '{PosixHelper.GetFileSystemOfPath(BasePath)}' doesn't support direct write to disk (non durable file system)";
+                InvokeNonDurableFileSystemError(this, message, new NonDurableFileSystemException(message), details);
             }
 
             PosixOpenFlags = SafePosixOpenFlags;
