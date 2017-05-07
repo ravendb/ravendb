@@ -331,18 +331,17 @@ namespace Raven.Server.Smuggler.Documents
                         _onProgress.Invoke(result.Progress);
                     }
 
-                    var document = item.Document;
-                    if (document == null)
+                    if (item.Document == null)
                     {
                         result.RevisionDocuments.ErroredCount++;
                         continue;
                     }
 
-                    Debug.Assert(document.Key != null);
+                    Debug.Assert(item.Document.Key != null);
 
-                    WriteUniqueAttachmentStreams(document, actions, result.RevisionDocuments);
+                    WriteUniqueAttachmentStreams(item.Document, actions, result.RevisionDocuments);
 
-                    document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+                    item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
                     if (item.Attachments != null)
                     {
@@ -351,7 +350,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     actions.WriteDocument(item);
 
-                    result.RevisionDocuments.LastEtag = document.Etag;
+                    result.RevisionDocuments.LastEtag = item.Document.Etag;
                 }
             }
 
@@ -376,34 +375,33 @@ namespace Raven.Server.Smuggler.Documents
                         _onProgress.Invoke(result.Progress);
                     }
 
-                    var document = item.Document;
-                    if (document == null)
+                    if (item.Document == null)
                     {
                         result.Documents.ErroredCount++;
                         continue;
                     }
 
-                    if (document.Key == null)
+                    if (item.Document.Key == null)
                         ThrowInvalidData();
 
-                    if (CanSkipDocument(document, buildType))
+                    if (CanSkipDocument(item.Document, buildType))
                     {
                         SkipDocument(item, result);
                         continue;
                     }
 
-                    if (_options.IncludeExpired == false && document.Expired(_time.GetUtcNow()))
+                    if (_options.IncludeExpired == false && item.Document.Expired(_time.GetUtcNow()))
                     {
                         SkipDocument(item, result);
                         continue;
                     }
 
-                    WriteUniqueAttachmentStreams(document, actions, result.Documents);
+                    WriteUniqueAttachmentStreams(item.Document, actions, result.Documents);
 
                     if (_patcher != null)
                     {
-                        document = _patcher.Transform(document, actions.GetContextForNewDocument());
-                        if (document == null)
+                        item.Document = _patcher.Transform(item.Document, actions.GetContextForNewDocument());
+                        if (item.Document == null)
                         {
                             result.Documents.SkippedCount++;
                             continue;
@@ -412,7 +410,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     // TODO: RavenDB-6931 - Make sure that patching cannot change the @attachments and @collectoin in metadata
 
-                    document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+                    item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
                     if (item.Attachments != null)
                     {
@@ -421,7 +419,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     actions.WriteDocument(item);
 
-                    result.Documents.LastEtag = document.Etag;
+                    result.Documents.LastEtag = item.Document.Etag;
                 }
             }
 
