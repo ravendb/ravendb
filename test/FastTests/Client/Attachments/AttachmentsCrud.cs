@@ -468,5 +468,99 @@ namespace FastTests.Client.Attachments
                 }
             }
         }
+
+        [Fact]
+        public void PutAttachmentAndModifyDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Fitzchak" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    user.Country = "Israel";
+                    session.SaveChanges();
+                }
+            }
+        }
+
+        [Fact]
+        public void PutAttachmentThanEvictAndModifyDocumentInTheSameSession()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Name = "Fitzchak" };
+                    session.Store(user, "users/1");
+                    session.SaveChanges();
+
+                    using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
+                    }
+
+                    session.Advanced.Evict(user);
+                    user = session.Load<User>("users/1");
+                    user.Country = "Israel";
+                    session.SaveChanges();
+                }
+            }
+        }
+
+        [Fact]
+        public void PutAttachmentAndModifyDocumentInTheSameSession()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Name = "Fitzchak" };
+                    session.Store(user, "users/1");
+                    session.SaveChanges();
+
+                    using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
+                    }
+
+                    user = session.Load<User>("users/1");
+                    user.Country = "Israel";
+                    session.SaveChanges();
+                }
+            }
+        }
+
+        [Fact]
+        public void PutAttachmentAndModifyDocumentInTheSameSession_WithoutAnotherLoad()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Name = "Fitzchak" };
+                    session.Store(user, "users/1");
+                    session.SaveChanges();
+
+                    using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        store.Operations.Send(new PutAttachmentOperation("users/1", "Profile", profileStream, "image/png"));
+                    }
+
+                    user.Country = "Israel";
+                    session.SaveChanges();
+                }
+            }
+        }
     }
 }
