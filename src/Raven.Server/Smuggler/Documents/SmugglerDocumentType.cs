@@ -14,7 +14,7 @@ namespace Raven.Server.Smuggler.Documents
         Attachment = 2,
     }
 
-    public struct DocumentItem
+    public class DocumentItem
     {
         public const string Key = "@document-type";
 
