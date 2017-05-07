@@ -64,22 +64,8 @@ namespace Raven.Server.Documents.TcpHandlers
             CancellationTokenSource =
                 CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
 
-            Stats = new SubscriptionConnectionStats();
-            TcpConnection.GetTypeSpecificStats = GetTypeSpecificStats;
-        }
-
-        private void GetTypeSpecificStats(JsonOperationContext context, DynamicJsonValue val)
-        {
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
-            {
-                var details =
-                TcpConnection.DocumentDatabase.SubscriptionStorage.GetRunningSubscriptionConnectionHistory(serverStoreContext,
-                    SubscriptionId);                
-
-                val["Details"] = context.ReadObject(details, "subscriptions/stats"); ;
-            }
-            
-        }
+            Stats = new SubscriptionConnectionStats();            
+        }       
 
         private async Task<bool> ParseSubscriptionOptionsAsync()
         {

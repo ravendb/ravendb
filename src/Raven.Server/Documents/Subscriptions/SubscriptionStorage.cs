@@ -160,28 +160,19 @@ namespace Raven.Server.Documents.Subscriptions
             return true;
         }
 
-        public IEnumerable<DynamicJsonValue> GetAllSubscriptions(TransactionOperationContext serverStoreContext, bool history, int start, int take)
+        public IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions(TransactionOperationContext serverStoreContext, bool history, int start, int take)
         {
             var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name);
                         
-            foreach (var subscription in databaseRecord.Subscriptions.Values)
+            foreach (var subscriptionGeneralData in databaseRecord.Subscriptions.Values.Select(x=> new SubscriptionGeneralDataAndStats
             {
-                DynamicJsonValue subscriptionJsonValue = subscription.ToJson();
-                GetSubscriptionInternal(subscription.SubscriptionId, subscriptionJsonValue, history);
-                yield return subscriptionJsonValue;
+                General = x
+            }))
+            {                            
+                GetSubscriptionInternal(subscriptionGeneralData, history);
+                yield return subscriptionGeneralData;
             }
-        }
-
-        private DynamicJsonValue GetSubscriptionConnection(SubscriptionConnection connection)
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(SubscriptionConnection.ClientUri)] = connection.ClientUri,
-                [nameof(SubscriptionConnection.ConnectionException)] = connection.ConnectionException?.ToString(),
-                [nameof(SubscriptionConnection.Stats)] = GetSubscriptionConnectionStats(connection.Stats),
-                [nameof(SubscriptionConnection.Options)] = GetSubscriptionConnectionOptions(connection.Options)
-            };
-        }
+        }     
 
         private DynamicJsonValue GetSubscriptionConnectionStats(SubscriptionConnectionStats stats)
         {
@@ -210,7 +201,7 @@ namespace Raven.Server.Documents.Subscriptions
             };
         }
 
-        public IEnumerable<DynamicJsonValue> GetAllRunningSubscriptions(TransactionOperationContext context, bool history, int start, int take)
+        public IEnumerable<SubscriptionGeneralDataAndStats> GetAllRunningSubscriptions(TransactionOperationContext context, bool history, int start, int take)
         {            
             var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
                 
@@ -231,35 +222,37 @@ namespace Raven.Server.Documents.Subscriptions
                 if (take-- <= 0)
                     yield break;
                 
-                var curSubscriptionJsonValue = GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, subscriptionId);
-                GetRunningSubscriptionInternal(history, curSubscriptionJsonValue, subscriptionState);
-                yield return curSubscriptionJsonValue;
+                var subscriptionData = GetSubscriptionGeneralData(databaseRecord, subscriptionId);
+                GetRunningSubscriptionInternal(history, subscriptionData, subscriptionState);
+                yield return subscriptionData;
             }
 
         }     
 
-        public DynamicJsonValue GetSubscriptionFromDatabaseRecordBlittable(DatabaseRecord databaseRecord, long id)
+        public SubscriptionGeneralDataAndStats GetSubscriptionGeneralData(DatabaseRecord databaseRecord, long id)
         {
             if (databaseRecord.Subscriptions.TryGetValue(id.ToString(), out SubscriptionRaftState subscriptionInDatabaseRecord) == false)
                 throw new SubscriptionDoesNotExistException(
                         "There is no subscription configuration for specified identifier (id: " + id + ")");
 
-            return subscriptionInDatabaseRecord.ToJson();
-            
+            return new SubscriptionGeneralDataAndStats
+            {
+                General = subscriptionInDatabaseRecord
+            };
         }
 
-        public unsafe DynamicJsonValue GetSubscription(TransactionOperationContext context, long id, bool history)
+        public unsafe SubscriptionGeneralDataAndStats GetSubscription(TransactionOperationContext context, long id, bool history)
         {
             var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
 
-            var subscriptionJsonValue = GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, id);
+            var subscriptionJsonValue = GetSubscriptionGeneralData(databaseRecord, id);
 
-            GetSubscriptionInternal(id, subscriptionJsonValue, history);
+            GetSubscriptionInternal(subscriptionJsonValue, history);
 
             return subscriptionJsonValue;
         }
 
-        public DynamicJsonValue GetRunningSubscription(TransactionOperationContext context, long id, bool history)
+        public SubscriptionGeneralDataAndStats GetRunningSubscription(TransactionOperationContext context, long id, bool history)
         {
             SubscriptionState subscriptionState;
             if (_subscriptionStates.TryGetValue(id, out subscriptionState) == false)
@@ -268,15 +261,20 @@ namespace Raven.Server.Documents.Subscriptions
             if (subscriptionState.Connection == null)
                 return null;
 
-
             var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
 
-            var subscriptionJsonValue = GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, id);
+            var subscriptionJsonValue = GetSubscriptionGeneralData(databaseRecord, id);
             GetRunningSubscriptionInternal(history, subscriptionJsonValue, subscriptionState);
             return subscriptionJsonValue;
         }
-
-        public DynamicJsonValue GetRunningSubscriptionConnectionHistory(TransactionOperationContext context, long subscriptionId)
+        public class SubscriptionGeneralDataAndStats
+        {
+            public SubscriptionRaftState General;
+            public SubscriptionConnection Connection;
+            public SubscriptionConnection[] RecentConnections;
+            public SubscriptionConnection[] RecentRejectedConnections;
+        }
+        public SubscriptionGeneralDataAndStats GetRunningSubscriptionConnectionHistory(TransactionOperationContext context, long subscriptionId)
         {
             SubscriptionState subscriptionState;
             if (!_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState))
@@ -287,9 +285,9 @@ namespace Raven.Server.Documents.Subscriptions
                 return null;
 
             var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
-            var subscriptionData = GetSubscriptionFromDatabaseRecordBlittable(databaseRecord, subscriptionId);
-                        
-            SetSubscriptionStateData(subscriptionState, subscriptionData);
+
+            var subscriptionData = GetSubscriptionGeneralData(databaseRecord, subscriptionId);
+            subscriptionData.Connection = subscriptionState.Connection;
             SetSubscriptionHistory(subscriptionState, subscriptionData);
 
             return subscriptionData;            
@@ -310,78 +308,30 @@ namespace Raven.Server.Documents.Subscriptions
             }            
         }        
 
-        private void SetSubscriptionStateData(SubscriptionState subscriptionState, DynamicJsonValue subscriptionData)
-        {
-            var subscriptionConnection = subscriptionState.Connection;
-            subscriptionData[nameof(SubscriptionState.Connection)] = subscriptionConnection != null ? GetSubscriptionConnection(subscriptionConnection) : null;
+        private void SetSubscriptionHistory(SubscriptionState subscriptionState, SubscriptionGeneralDataAndStats subscriptionData)
+        {            
+            subscriptionData.RecentConnections = subscriptionState.RecentConnections;                                    
+            subscriptionData.RecentRejectedConnections = subscriptionState.RecentRejectedConnections;
         }
 
-        private void SetSubscriptionHistory(SubscriptionState subscriptionState, DynamicJsonValue subscriptionData)
+        private void GetRunningSubscriptionInternal(bool history, SubscriptionGeneralDataAndStats subscriptionData, SubscriptionState subscriptionState)
         {
-            var recentConnections = new DynamicJsonArray();
-            subscriptionData["RecentConnections"] = recentConnections;
-
-            foreach (var connection in subscriptionState.RecentConnections)
-            {
-                recentConnections.Add(GetSubscriptionConnection(connection));
-            }
-
-            var rejectedConnections = new DynamicJsonArray();
-            subscriptionData["RecentRejectedConnections"] = rejectedConnections;
-            foreach (var connection in subscriptionState.RecentRejectedConnections)
-            {
-                rejectedConnections.Add(GetSubscriptionConnection(connection));
-            }
-
-        }
-
-        private void GetRunningSubscriptionInternal(bool history, DynamicJsonValue subscriptionData, SubscriptionState subscriptionState)
-        {
-            SetSubscriptionStateData(subscriptionState, subscriptionData);
-
+            subscriptionData.Connection = subscriptionState.Connection;
             if (history)
                 SetSubscriptionHistory(subscriptionState, subscriptionData);            
         }
 
-        private void GetSubscriptionInternal(long id , DynamicJsonValue subscriptionJsonValue, bool history)
+        private void GetSubscriptionInternal(SubscriptionGeneralDataAndStats subscriptionData, bool history)
         {
             SubscriptionState subscriptionState;
-            if (_subscriptionStates.TryGetValue(id, out subscriptionState))
+            if (_subscriptionStates.TryGetValue(subscriptionData.General.SubscriptionId, out subscriptionState))
             {
-                SetSubscriptionStateData(subscriptionState, subscriptionJsonValue);
+                subscriptionData.Connection = subscriptionState.Connection;                
 
                 if (history)
-                    SetSubscriptionHistory(subscriptionState, subscriptionJsonValue);
-            }
-            else
-            {
-                // always include property in output json
-                subscriptionJsonValue[nameof(SubscriptionState.Connection)] = null;
-            }            
+                    SetSubscriptionHistory(subscriptionState, subscriptionData);
+            }                        
         }       
-    }
-
-    // ReSharper disable once ClassNeverInstantiated.Local
-    public static class SubscriptionSchema
-    {
-        public const string IdsTree = "SubscriptionsIDs";
-        public const string SubsTree = "Subscriptions";
-        public static readonly Slice Id;
-
-        static SubscriptionSchema()
-        {
-            Slice.From(StorageEnvironment.LabelsContext, "Id", ByteStringType.Immutable, out Id);
-        }
-
-        public static class SubscriptionTable
-        {
-#pragma warning disable 169
-            public const int IdIndex = 0;
-            public const int CriteriaIndex = 1;
-            public const int AckEtagIndex = 2;
-            public const int TimeOfReceivingLastAck = 3;
-#pragma warning restore 169
-        }
     }
 }
  
