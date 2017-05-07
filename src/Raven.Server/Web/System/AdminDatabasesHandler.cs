@@ -22,6 +22,7 @@ using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Rachis;
@@ -192,9 +193,17 @@ namespace Raven.Server.Web.System
                 }
                 var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required: false) ?? 0);
 
-                DatabaseTopology topology = document.Topology?.Members?.Count > 0 ? 
-                    document.Topology :  // TODO: need to validate that those are cluster members
-                    AssignNodesToDatabase(context, factor, name, json);
+                DatabaseTopology topology;
+                if (document.Topology?.Members?.Count > 0)
+                {
+                    topology = document.Topology;
+                    ValidateClusterMembers(context, topology);
+                }
+                else
+                {
+                    topology = AssignNodesToDatabase(context, factor, name, json);
+                }
+
 
                 var index = await ServerStore.WriteDbAsync(context, name, json, etag);
                 await ServerStore.Cluster.WaitForIndexNotification(index);
@@ -249,6 +258,18 @@ namespace Raven.Server.Web.System
             };
 
             return topology;
+        }
+
+        private void ValidateClusterMembers(TransactionOperationContext context, DatabaseTopology topology)
+        {
+            var clusterTopology = ServerStore.GetClusterTopology(context);
+
+            foreach (var node in topology.AllReplicationNodes)
+            {
+                var result = clusterTopology.TryGetNodeTagByUrl(node.Url);
+                if(result.hasUrl == false || result.nodeTag != node.NodeTag)
+                    throw new InvalidOperationException($"The Url {node.Url} for node {node.NodeTag} is not a part of the cluster, the incoming topology is wrong!");
+            }
         }
 
         [RavenAction("/admin/expiration/config", "POST", "/admin/config-expiration?name={databaseName:string}")]

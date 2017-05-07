@@ -21,7 +21,7 @@ namespace Raven.Server.Rachis
         }
 
         //Try to avoid using this since it is expensive
-        public (bool hasUrl,string nodeTag) HasUrl(string nodeUrl)
+        public (bool hasUrl,string nodeTag) TryGetNodeTagByUrl(string nodeUrl)
         {
             foreach (var memeber in Members)
             {
@@ -44,7 +44,7 @@ namespace Raven.Server.Rachis
                     return (true, watcher.Key);
                 }
             }
-            return (false, "does not exists");
+            return (false, (string)null);
         }
 
         public ClusterTopology()
