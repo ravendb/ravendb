@@ -71,7 +71,9 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 EnsureStepProcessed(result.Documents);
+                EnsureStepProcessed(result.Documents.Attachemnts);
                 EnsureStepProcessed(result.RevisionDocuments);
+                EnsureStepProcessed(result.RevisionDocuments.Attachemnts);
                 EnsureStepProcessed(result.Indexes);
                 EnsureStepProcessed(result.Transformers);
                 EnsureStepProcessed(result.Identities);
@@ -318,7 +320,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (var actions = _destination.RevisionDocuments())
             {
-                foreach (var document in _source.GetRevisionDocuments(_options.CollectionsToExport, actions, _options.RevisionDocumentsLimit ?? int.MaxValue))
+                foreach (var item in _source.GetRevisionDocuments(_options.CollectionsToExport, actions, _options.RevisionDocumentsLimit ?? int.MaxValue))
                 {
                     _token.ThrowIfCancellationRequested();
                     result.RevisionDocuments.ReadCount++;
@@ -329,6 +331,7 @@ namespace Raven.Server.Smuggler.Documents
                         _onProgress.Invoke(result.Progress);
                     }
 
+                    var document = item.Document;
                     if (document == null)
                     {
                         result.RevisionDocuments.ErroredCount++;
@@ -337,11 +340,16 @@ namespace Raven.Server.Smuggler.Documents
 
                     Debug.Assert(document.Key != null);
 
-                    WriteAttachments(document, actions);
+                    WriteUniqueAttachmentStreams(document, actions, result.RevisionDocuments);
 
                     document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
-                    actions.WriteDocument(document);
+                    if (item.Attachments != null)
+                    {
+                        result.Documents.Attachemnts.ReadCount += item.Attachments.Count;
+                    }
+
+                    actions.WriteDocument(item);
 
                     result.RevisionDocuments.LastEtag = document.Etag;
                 }
@@ -354,41 +362,43 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (var actions = _destination.Documents())
             {
-                foreach (var doc in _source.GetDocuments(_options.CollectionsToExport, actions))
+                foreach (var item in _source.GetDocuments(_options.CollectionsToExport, actions))
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Documents.ReadCount++;
 
                     if (result.Documents.ReadCount % 1000 == 0)
                     {
-                        result.AddInfo($"Read {result.Documents.ReadCount:#,#;;0} documents.");
+                        var message = $"Read {result.Documents.ReadCount:#,#;;0} documents.";
+                        if (result.Documents.Attachemnts.ReadCount > 0)
+                            message += $" Read {result.Documents.Attachemnts.ReadCount:#,#;;0} attachments.";
+                        result.AddInfo(message);
                         _onProgress.Invoke(result.Progress);
                     }
 
-                    if (doc == null)
+                    var document = item.Document;
+                    if (document == null)
                     {
                         result.Documents.ErroredCount++;
                         continue;
                     }
 
-                    if (doc.Key == null)
+                    if (document.Key == null)
                         ThrowInvalidData();
-
-                    var document = doc;
 
                     if (CanSkipDocument(document, buildType))
                     {
-                        result.Documents.SkippedCount++;
+                        SkipDocument(item, result);
                         continue;
                     }
 
                     if (_options.IncludeExpired == false && document.Expired(_time.GetUtcNow()))
                     {
-                        result.Documents.SkippedCount++;
+                        SkipDocument(item, result);
                         continue;
                     }
 
-                    WriteAttachments(document, actions);
+                    WriteUniqueAttachmentStreams(document, actions, result.Documents);
 
                     if (_patcher != null)
                     {
@@ -400,9 +410,16 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
 
+                    // TODO: RavenDB-6931 - Make sure that patching cannot change the @attachments and @collectoin in metadata
+
                     document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
-                    actions.WriteDocument(document);
+                    if (item.Attachments != null)
+                    {
+                        result.Documents.Attachemnts.ReadCount += item.Attachments.Count;
+                    }
+
+                    actions.WriteDocument(item);
 
                     result.Documents.LastEtag = document.Etag;
                 }
@@ -411,7 +428,25 @@ namespace Raven.Server.Smuggler.Documents
             return result.Documents;
         }
 
-        private void WriteAttachments(Document document, IDocumentActions actions)
+        private void SkipDocument(DocumentItem item, SmugglerResult result)
+        {
+            result.Documents.SkippedCount++;
+
+            if (item.Document != null)
+            {
+                item.Document.Data.Dispose();
+
+                if (item.Attachments != null)
+                {
+                    foreach (var attachment in item.Attachments)
+                    {
+                        attachment.Dispose();
+                    }
+                }
+            }
+        }
+
+        private void WriteUniqueAttachmentStreams(Document document, IDocumentActions actions, SmugglerProgressBase.CountsWithLastEtag progress)
         {
             var source = _source as DatabaseSource;
             var streamDestination = actions as StreamDestination.StreamDocumentActions;
@@ -429,7 +464,14 @@ namespace Raven.Server.Smuggler.Documents
             foreach (BlittableJsonReaderObject attachment in attachments)
             {
                 if (attachment.TryGet(nameof(AttachmentResult.Hash), out LazyStringValue hash) == false)
+                {
+                    progress.Attachemnts.ErroredCount++;
+
+                    // TODO: How should we handle errors here?
                     throw new ArgumentException($"Hash field is mandatory in attachment's metadata: {attachment}");
+                }
+
+                progress.Attachemnts.ReadCount++;
 
                 if (_attachmentStreamsAlreadyExported.Add(hash))
                 {

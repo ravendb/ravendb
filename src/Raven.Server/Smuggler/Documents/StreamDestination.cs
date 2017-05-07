@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -148,8 +147,12 @@ namespace Raven.Server.Smuggler.Documents
                 _context = context;
             }
 
-            public void WriteDocument(Document document)
+            public void WriteDocument(DocumentItem item)
             {
+                if (item.Attachments != null)
+                    throw new NotSupportedException();
+
+                var document = item.Document;
                 using (document.Data)
                 {
                     if (First == false)
