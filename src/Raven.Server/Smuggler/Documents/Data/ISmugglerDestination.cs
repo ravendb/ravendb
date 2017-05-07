@@ -20,7 +20,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface IDocumentActions : INewDocumentActions, IDisposable
     {
-        void WriteDocument(Document document);
+        void WriteDocument(DocumentItem item);
     }
 
     public interface INewDocumentActions
