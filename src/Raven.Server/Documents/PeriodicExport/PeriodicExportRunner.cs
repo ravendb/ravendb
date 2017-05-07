@@ -310,7 +310,7 @@ namespace Raven.Server.Documents.PeriodicExport
                         {
                             var smugglerSource = new DatabaseSource(_database, startDocsEtag ?? 0, 0);
 
-                            var smugglerDestination = new StreamDestination(file, context);
+                            var smugglerDestination = new StreamDestination(file, context, _database);
                             var smuggler = new DatabaseSmuggler(
                                 smugglerSource,
                                 smugglerDestination,

@@ -100,14 +100,6 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public Stream GetAttachmentStream(LazyStringValue hash)
-        {
-            using (Slice.External(_context.Allocator, hash, out Slice hashSlice))
-            {
-                return _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(_context, hashSlice);
-            }
-        }
-
         public IEnumerable<IndexDefinitionAndType> GetIndexes()
         {
             foreach (var index in _database.IndexStore.GetIndexes())
