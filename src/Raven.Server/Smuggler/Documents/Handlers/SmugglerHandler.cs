@@ -136,7 +136,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (token)
             {
                 var source = new DatabaseSource(Database, 0, 0);
-                var destination = new StreamDestination(ResponseBodyStream(), context);
+                var destination = new StreamDestination(ResponseBodyStream(), context, source);
                 var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, onProgress: onProgress, token: token.Token);
                 return smuggler.Execute();
             }

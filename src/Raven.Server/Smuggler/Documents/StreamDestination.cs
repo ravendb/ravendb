@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -19,12 +22,14 @@ namespace Raven.Server.Smuggler.Documents
         private readonly Stream _stream;
         private GZipStream _gzipStream;
         private readonly DocumentsOperationContext _context;
+        private readonly DatabaseSource _source;
         private BlittableJsonTextWriter _writer;
 
-        public StreamDestination(Stream stream, DocumentsOperationContext context)
+        public StreamDestination(Stream stream, DocumentsOperationContext context, DatabaseSource source)
         {
             _stream = stream;
             _context = context;
+            _source = source;
         }
 
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, long buildVersion)
@@ -47,12 +52,12 @@ namespace Raven.Server.Smuggler.Documents
 
         public IDocumentActions Documents()
         {
-            return new StreamDocumentActions(_writer, _context, isRevision: false);
+            return new StreamDocumentActions(_writer, _context, _source, isRevision: false);
         }
 
         public IDocumentActions RevisionDocuments()
         {
-            return new StreamDocumentActions(_writer, _context, isRevision: true);
+            return new StreamDocumentActions(_writer, _context, _source, isRevision: true);
         }
 
         public IIdentityActions Identities()
@@ -137,17 +142,20 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public class StreamDocumentActions : StreamActionsBase, IDocumentActions
+        private class StreamDocumentActions : StreamActionsBase, IDocumentActions
         {
             private readonly DocumentsOperationContext _context;
+            private readonly DatabaseSource _source;
+            private HashSet<string> _attachmentStreamsAlreadyExported;
 
-            public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, bool isRevision)
+            public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, DatabaseSource source, bool isRevision)
                 : base(writer, isRevision ? "RevisionDocuments" : "Docs")
             {
                 _context = context;
+                _source = source;
             }
 
-            public void WriteDocument(DocumentItem item)
+            public void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress)
             {
                 if (item.Attachments != null)
                     throw new NotSupportedException();
@@ -155,6 +163,8 @@ namespace Raven.Server.Smuggler.Documents
                 var document = item.Document;
                 using (document.Data)
                 {
+                    WriteUniqueAttachmentStreams(document, progress);
+
                     if (First == false)
                         Writer.WriteComma();
                     First = false;
@@ -164,13 +174,45 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
+            private void WriteUniqueAttachmentStreams(Document document, SmugglerProgressBase.CountsWithLastEtag progress)
+            {
+                if ((document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments ||
+                    document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                    metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                    return;
+
+                if (_attachmentStreamsAlreadyExported == null)
+                    _attachmentStreamsAlreadyExported = new HashSet<string>();
+
+                foreach (BlittableJsonReaderObject attachment in attachments)
+                {
+                    if (attachment.TryGet(nameof(AttachmentResult.Hash), out LazyStringValue hash) == false)
+                    {
+                        progress.Attachemnts.ErroredCount++;
+
+                        // TODO: How should we handle errors here?
+                        throw new ArgumentException($"Hash field is mandatory in attachment's metadata: {attachment}");
+                    }
+
+                    progress.Attachemnts.ReadCount++;
+
+                    if (_attachmentStreamsAlreadyExported.Add(hash))
+                    {
+                        using (var stream = _source.GetAttachmentStream(hash))
+                        {
+                            WriteAttachmentStream(hash, stream);
+                        }
+                    }
+                }
+            }
+
             public DocumentsOperationContext GetContextForNewDocument()
             {
                 _context.CachedProperties.NewDocument();
                 return _context;
             }
 
-            public void WriteAttachmentStream(LazyStringValue hash, Stream stream)
+            private void WriteAttachmentStream(LazyStringValue hash, Stream stream)
             {
                 if (First == false)
                     Writer.WriteComma();
@@ -218,7 +260,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public abstract class StreamActionsBase : IDisposable
+        private abstract class StreamActionsBase : IDisposable
         {
             protected readonly BlittableJsonTextWriter Writer;
 
