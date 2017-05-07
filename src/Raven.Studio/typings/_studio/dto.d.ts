@@ -283,6 +283,7 @@ interface pagedResultWithAvailableColumns<T> extends pagedResult<T> {
 interface clusterTopologyDto {
     Topology: Raven.Server.Rachis.ClusterTopology;
     Leader: string;
+    NodeTag: string;
 }
 
 type clusterNodeType = "Member" | "Promotable" | "Watcher";

@@ -29,7 +29,6 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
 import getSupportCoverageCommand = require("commands/auth/getSupportCoverageCommand");
 import getServerConfigsCommand = require("commands/database/studio/getServerConfigsCommand");
-import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessHelper = require("viewmodels/shell/accessHelper");
