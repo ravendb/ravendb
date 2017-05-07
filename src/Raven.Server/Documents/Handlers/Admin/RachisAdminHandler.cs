@@ -54,13 +54,13 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var topology = ServerStore.GetClusterTopology(context);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 var blit = EntityToBlittable.ConvertEntityToBlittable(topology, DocumentConventions.Default, context);
-                (var hasUrl, var nodeTag) = topology.HasUrl(ServerStore.LeaderTag);
+                var result = topology.TryGetNodeTagByUrl(ServerStore.LeaderTag);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
                         ["Topology"] = blit,
-                        ["Leader"] = hasUrl? nodeTag:"No leader",
+                        ["Leader"] = result.hasUrl ? result.nodeTag : "No leader",
                         ["NodeTag"] = ServerStore.NodeTag
                     });
                     writer.Flush();
