@@ -64,7 +64,7 @@ namespace Raven.Server.Documents
                 AlertType.NonDurableFileSystem,
                 NotificationSeverity.Warning,
                 Name,
-                details: new WarningDetails(e.Details)));
+                details: new MessageDetails { Message = e.Details }));
         }
 
         internal void HandleOnRecoveryError(object sender, RecoveryErrorEventArgs e)
