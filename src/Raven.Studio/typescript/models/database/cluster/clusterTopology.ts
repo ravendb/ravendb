@@ -4,11 +4,13 @@ import clusterNode = require("models/database/cluster/clusterNode");
 class clusterTopology {
 
     leader = ko.observable<string>();
+    nodeTag = ko.observable<string>();
 
     nodes = ko.observableArray<clusterNode>([]);
 
     constructor(dto: clusterTopologyDto) {
         this.leader(dto.Leader);
+        this.nodeTag(dto.NodeTag);
 
         const topologyDto = dto.Topology;
 

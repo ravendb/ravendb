@@ -60,7 +60,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                     context.Write(writer, new DynamicJsonValue
                     {
                         ["Topology"] = blit,
-                        ["Leader"] = hasUrl? nodeTag:"No leader"
+                        ["Leader"] = hasUrl? nodeTag:"No leader",
+                        ["NodeTag"] = ServerStore.NodeTag
                     });
                     writer.Flush();
                 }
