@@ -4,7 +4,7 @@
 
     public class NonDurabilitySupportEventArgs : EventArgs
     {
-        public NonDurabilitySupportEventArgs(string message, Exception exception, string details) 
+        internal NonDurabilitySupportEventArgs(string message, Exception exception, string details) 
         {
             Message = message;
             Exception = exception;
