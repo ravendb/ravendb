@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -14,8 +13,6 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -29,7 +26,6 @@ namespace Raven.Server.Smuggler.Documents
         private readonly Action<IOperationProgress> _onProgress;
         private readonly SmugglerPatcher _patcher;
         private CancellationToken _token;
-        private HashSet<string> _attachmentStreamsAlreadyExported;
 
         public DatabaseSmuggler(
             ISmugglerSource source,
@@ -339,16 +335,9 @@ namespace Raven.Server.Smuggler.Documents
 
                     Debug.Assert(item.Document.Key != null);
 
-                    WriteUniqueAttachmentStreams(item.Document, actions, result.RevisionDocuments);
-
                     item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
-                    if (item.Attachments != null)
-                    {
-                        result.Documents.Attachemnts.ReadCount += item.Attachments.Count;
-                    }
-
-                    actions.WriteDocument(item);
+                    actions.WriteDocument(item, result.RevisionDocuments);
 
                     result.RevisionDocuments.LastEtag = item.Document.Etag;
                 }
@@ -396,8 +385,6 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    WriteUniqueAttachmentStreams(item.Document, actions, result.Documents);
-
                     if (_patcher != null)
                     {
                         item.Document = _patcher.Transform(item.Document, actions.GetContextForNewDocument());
@@ -412,12 +399,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
-                    if (item.Attachments != null)
-                    {
-                        result.Documents.Attachemnts.ReadCount += item.Attachments.Count;
-                    }
-
-                    actions.WriteDocument(item);
+                    actions.WriteDocument(item, result.Documents);
 
                     result.Documents.LastEtag = item.Document.Etag;
                 }
@@ -439,43 +421,6 @@ namespace Raven.Server.Smuggler.Documents
                     foreach (var attachment in item.Attachments)
                     {
                         attachment.Dispose();
-                    }
-                }
-            }
-        }
-
-        private void WriteUniqueAttachmentStreams(Document document, IDocumentActions actions, SmugglerProgressBase.CountsWithLastEtag progress)
-        {
-            var source = _source as DatabaseSource;
-            var streamDestination = actions as StreamDestination.StreamDocumentActions;
-            if (source == null || streamDestination == null)
-                return;
-
-            if ((document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments || 
-                document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false || 
-                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
-                return;
-
-            if (_attachmentStreamsAlreadyExported == null)
-                _attachmentStreamsAlreadyExported = new HashSet<string>();
-
-            foreach (BlittableJsonReaderObject attachment in attachments)
-            {
-                if (attachment.TryGet(nameof(AttachmentResult.Hash), out LazyStringValue hash) == false)
-                {
-                    progress.Attachemnts.ErroredCount++;
-
-                    // TODO: How should we handle errors here?
-                    throw new ArgumentException($"Hash field is mandatory in attachment's metadata: {attachment}");
-                }
-
-                progress.Attachemnts.ReadCount++;
-
-                if (_attachmentStreamsAlreadyExported.Add(hash))
-                {
-                    using (var stream = source.GetAttachmentStream(hash))
-                    {
-                        streamDestination.WriteAttachmentStream(hash, stream);
                     }
                 }
             }

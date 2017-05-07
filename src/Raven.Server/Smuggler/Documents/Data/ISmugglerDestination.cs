@@ -19,7 +19,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface IDocumentActions : INewDocumentActions, IDisposable
     {
-        void WriteDocument(DocumentItem item);
+        void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress);
     }
 
     public interface INewDocumentActions
