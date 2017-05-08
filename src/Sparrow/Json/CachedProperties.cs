@@ -49,17 +49,19 @@ namespace Sparrow.Json
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private bool Equals(PropertyName other)
+            public bool Equals(PropertyName other)
             {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
                 return HashCode == other.HashCode;
-            }
+            }                    
 
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
                 var a = obj as PropertyName;
-                return a != null && Equals(a);
+                return a != null && HashCode == a.HashCode;
             }
 
             public override int GetHashCode()

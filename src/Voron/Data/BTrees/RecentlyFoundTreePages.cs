@@ -6,8 +6,6 @@
 
 using System;
 using Sparrow;
-using Voron.Data.Compression;
-using Voron.Impl;
 
 namespace Voron.Data.BTrees
 {

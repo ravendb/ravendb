@@ -11,9 +11,9 @@ namespace Voron.Data.BTrees
     {
         public FastStack<TreePage> Pages = new FastStack<TreePage>();
 
-        private static readonly ObjectPool<Dictionary<long, TreePage>> _pagesByNumPool = new ObjectPool<Dictionary<long, TreePage>>(() => new Dictionary<long, TreePage>(NumericEqualityComparer.Instance), 50);
+        private static readonly ObjectPool<FastDictionary<long, TreePage, NumericEqualityStructComparer>> _pagesByNumPool = new ObjectPool<FastDictionary<long, TreePage, NumericEqualityStructComparer>>(() => new FastDictionary<long, TreePage, NumericEqualityStructComparer>(50, default(NumericEqualityStructComparer)));
 
-        private readonly Dictionary<long, TreePage> _pagesByNum;
+        private readonly FastDictionary<long, TreePage, NumericEqualityStructComparer> _pagesByNum;
 
         private bool _anyOverrides;
 
@@ -64,17 +64,12 @@ namespace Voron.Data.BTrees
                 TreePage result;
                 if (Pages.TryPeek(2, out result))
                     return result;
+
                 throw new InvalidOperationException("No parent page in cursor");
             }
         }
 
-        public TreePage CurrentPage
-        {
-            get
-            {
-                return Pages.Peek();
-            }
-        }
+        public TreePage CurrentPage => Pages.Peek();
 
         public int PageCount => Pages.Count;
 
