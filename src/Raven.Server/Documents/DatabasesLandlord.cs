@@ -322,22 +322,9 @@ namespace Raven.Server.Documents
         {
             try
             {
-                var tcs = new TaskCompletionSource<DocumentDatabase>(TaskCreationOptions.RunContinuationsAsynchronously);
-                var task = new Task(delegate (object state) {
-                    var taskCompletionSource = (TaskCompletionSource<DocumentDatabase>)state;
-                    try
-                    {
-                        var r = ActuallyCreateDatabase(databaseName, config);
-                        taskCompletionSource.TrySetResult(r);
-                    }
-                    catch (Exception e)
-                    {
-                        taskCompletionSource.TrySetException(e);
-                    }
-                }, tcs);
-                
-                var database = DatabasesCache.GetOrAdd(databaseName, tcs.Task);
-                if (database == tcs.Task)
+                var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config), TaskCreationOptions.RunContinuationsAsynchronously);
+                var database = DatabasesCache.GetOrAdd(databaseName, task);
+                if (database == task)
                     task.Start(); // the semaphore will be released here at the end of the task
                 else
                     _resourceSemaphore.Release();

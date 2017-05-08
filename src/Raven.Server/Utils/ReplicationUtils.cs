@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
@@ -120,6 +122,19 @@ namespace Raven.Server.Utils
             {
                 var getTcpInfoCommand = new GetTcpInfoCommand();
                 requestExecuter.Execute(getTcpInfoCommand, context);
+
+                return getTcpInfoCommand.Result;
+            }
+        }
+
+        public static async Task<DatabaseStatistics> GetDatabaseStatistics(string url, string database, string apiKey)
+        {
+            JsonOperationContext context;
+            using (var requestExecuter = RequestExecutor.CreateForSingleNode(url, database, apiKey))
+            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+            {
+                var getTcpInfoCommand = new GetStatisticsCommand();
+                await requestExecuter.ExecuteAsync(getTcpInfoCommand, context);
 
                 return getTcpInfoCommand.Result;
             }

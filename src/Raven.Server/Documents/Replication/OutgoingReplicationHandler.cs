@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Replication
 
                 using (_tcpClient = new TcpClient())
                 {
-                    TcpUtils.ConnectSocket(connectionInfo, _tcpClient, _log, CancellationToken);
+                    TcpUtils.ConnectSocketAsync(connectionInfo, _tcpClient, _log, CancellationToken).Wait(CancellationToken);
 
                     using (_stream = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo).Result)
                     using (_interruptableRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
@@ -294,7 +294,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     ["Type"] = "GetLastEtag",
                     [nameof(ReplicationLatestEtagRequest.SourceDatabaseId)] = _database.DbId.ToString(),
-                    [nameof(ReplicationLatestEtagRequest.SourceMachineName)] = _database.Name,
+                    [nameof(ReplicationLatestEtagRequest.SourceDatabaseName)] = _database.Name,
                     [nameof(ReplicationLatestEtagRequest.SourceUrl)] = _database.Configuration.Core.ServerUrl,
                     [nameof(ReplicationLatestEtagRequest.SourceTag)] = _parent._server.NodeTag,
                     [nameof(ReplicationLatestEtagRequest.SourceMachineName)] = Environment.MachineName,

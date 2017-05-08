@@ -18,7 +18,9 @@ namespace Raven.Client.Documents.Replication
     /// </summary>
     public class ReplicationNode : IEquatable<ReplicationNode>, IComparable<ReplicationNode>
     {
-
+        /// <summary>
+        /// The name of the node 
+        /// </summary>
         public string NodeTag;
 
         /// <summary>

@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -12,12 +10,11 @@ using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Json;
 using Raven.Server.Utils;
-using Sparrow.Collections;
 using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Logging;
 
-namespace Raven.Server.Rachis
+namespace Raven.Server.ServerWide.Maintance
 {
     public class ClusterMaintenanceMaster : IDisposable
     {
@@ -28,17 +25,16 @@ namespace Raven.Server.Rachis
         private bool _isDisposed;
 
         private readonly ConcurrentDictionary<string, ClusterNode> _clusterNodes = new ConcurrentDictionary<string, ClusterNode>();
-        private readonly ConcurrentDictionary<ClusterNode, long> _failedNodes = new ConcurrentDictionary<ClusterNode, long>();
-        private readonly ConcurrentDictionary<ClusterNode, long> _timedOutNodes = new ConcurrentDictionary<ClusterNode, long>();
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-
         private readonly JsonContextPool _contextPool = new JsonContextPool();
 
-        public ClusterMaintenanceMaster(string leaderClusterTag, long term)
+        internal readonly ClusterMaintainceConfiguration Config;
+        public ClusterMaintenanceMaster(ServerStore server,string leaderClusterTag, long term)
         {
             _leaderClusterTag = leaderClusterTag;
             _term = term;
+            Config = server.Configuration.ClusterMaintaince;
         }
 
         public async Task AddToCluster(string clusterTag, string url)
@@ -62,8 +58,10 @@ namespace Raven.Server.Rachis
 
         public void RemoveFromCluster(string clusterTag)
         {
-            _clusterNodes[clusterTag]?.Dispose();
-            _clusterNodes.Remove(clusterTag);
+            if (_clusterNodes.TryRemove(clusterTag, out ClusterNode node))
+            {
+                node.Dispose();
+            }
         }
 
         public void Dispose()
@@ -113,7 +111,7 @@ namespace Raven.Server.Rachis
                 new Dictionary<string, DatabaseStatusReport>(), ClusterNodeStatusReport.ReportStatus.WaitingForResponse,
                 null, DateTime.MinValue, DateTime.MinValue
                 );
-
+            private DateTime _lastSuccessfulUpdateDateTime;
             private bool _isDisposed;
             private readonly string _readStatusUpdateDebugString;
             private readonly TcpConnectionInfo _tcpConnection;
@@ -138,40 +136,43 @@ namespace Raven.Server.Rachis
 
             public Task StartListening()
             {
-                return ListenToSlave();
+                return ListenToClusterNode();
             }
 
-            private async Task ListenToSlave()
+            private async Task ListenToClusterNode()
             {
                 bool needToWait = false;
-                var startUpdateTime = DateTime.UtcNow;
+                var onErrorDelayTime = (int)_parent.Config.OnErrorDelayTime.AsTimeSpan.TotalMilliseconds;
+                var recieveFromNodeTimeout = (int)_parent.Config.RecieveFromNodeTimeout.AsTimeSpan.TotalMilliseconds;
+
                 while (_token.IsCancellationRequested == false)
                 {
-                    var timeoutInMilliseconds = 5000;
                     try
                     {
                         if (needToWait)
                         {
                             needToWait = false; // avoid tight loop if there was timeout / error
-                            await Task.Delay(timeoutInMilliseconds, _token);
+                            await Task.Delay(onErrorDelayTime, _token);
                         }
                         using (var connection = await ConnectToClientNodeAsync(_tcpConnection))
                         {
                             while (_token.IsCancellationRequested == false)
                             {
                                 using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
-                                {
-                                    var timeout = Task.Delay(timeoutInMilliseconds, _token);
-                                    startUpdateTime = DateTime.UtcNow;
+                                {                                    
                                     var readResponseTask = context.ReadForMemoryAsync(connection, _readStatusUpdateDebugString, _token);
+                                    var timeout = Task.Delay(recieveFromNodeTimeout, _token);
                                     if (await Task.WhenAny(readResponseTask, timeout) == timeout)
                                     {
-                                        //TODO : logging about timeout
+                                        if (_log.IsInfoEnabled)
+                                        {
+                                            _log.Info($"Timeout occured while collection info from {ClusterTag}");
+                                        }
                                         ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(), 
                                             ClusterNodeStatusReport.ReportStatus.Timeout,
                                             null,
-                                            startUpdateTime,
-                                            DateTime.UtcNow);
+                                            DateTime.UtcNow,
+                                            _lastSuccessfulUpdateDateTime);
                                         await readResponseTask;
                                         needToWait = true;
                                         break;
@@ -185,27 +186,31 @@ namespace Raven.Server.Rachis
                                             var value = (BlittableJsonReaderObject)statusUpdateJson[property];
                                             report.Add(property, JsonDeserializationServer.DatabaseStatusReport(value));
                                         }
+                                        _lastSuccessfulUpdateDateTime = DateTime.Now;
+                                        
                                         ReceivedReport = new ClusterNodeStatusReport(
                                             report,
                                             ClusterNodeStatusReport.ReportStatus.Ok,
                                             null,
-                                            startUpdateTime,
-                                            DateTime.UtcNow);
+                                            DateTime.UtcNow,
+                                            _lastSuccessfulUpdateDateTime);
                                     }
                                 }
                             }
-
                         }
                     }
                     catch (Exception e)
                     {
-                        //TODO : do not forget to add this to log as well
+                        if (_log.IsInfoEnabled)
+                        {
+                            _log.Info($"Exception was thrown while collection info from {ClusterTag}", e);
+                        }
                         ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(), 
                             ClusterNodeStatusReport.ReportStatus.Error,
                             e,
-                            startUpdateTime,
-                            DateTime.UtcNow);
-                        needToWait = true;
+                            DateTime.UtcNow,
+                            _lastSuccessfulUpdateDateTime);
+                        needToWait = true;                      
                     }
                 }
             }
@@ -264,6 +269,8 @@ namespace Raven.Server.Rachis
                 {
                     writer.WritePropertyName(nameof(ClusterMaintenanceConnectionHeader.LeaderClusterTag));
                     writer.WriteString(_parent._leaderClusterTag);
+                    writer.WritePropertyName(nameof(ClusterMaintenanceConnectionHeader.Term));
+                    writer.WriteInteger(_parent._term);
                 }
                 writer.WriteEndObject();
                 writer.Flush();
@@ -312,6 +319,8 @@ namespace Raven.Server.Rachis
         public class ClusterMaintenanceConnectionHeader
         {
             public string LeaderClusterTag { get; set; }
+
+            public long Term { get; set; }
         }
     }
 }

@@ -79,9 +79,8 @@ namespace Raven.Server.Rachis
 
             foreach (var kvp in oldDic)
             {
-                var value = kvp.Value;
                 var key = kvp.Key;
-                if (temp.ContainsKey(key))
+                if (temp.TryGetValue(key, out TValue value))
                 {
                     if (temp[key] == null || temp[key].Equals(value) == false)
                     {
@@ -110,15 +109,15 @@ namespace Raven.Server.Rachis
                 var dic = new Dictionary<string,string>();
                 foreach (var node in Members)
                 {
-                    dic.Add(node.Key,node.Value);
+                    dic[node.Key] = node.Value;
                 }
                 foreach (var node in Promotables)
                 {
-                    dic.Add(node.Key, node.Value);
+                    dic[node.Key] = node.Value;
                 }
                 foreach (var node in Watchers)
                 {
-                    dic.Add(node.Key, node.Value);
+                    dic[node.Key] = node.Value;
                 }
                 return dic;
             }

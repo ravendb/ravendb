@@ -27,6 +27,7 @@ using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
+using Raven.Server.ServerWide.Maintance;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -390,7 +391,7 @@ namespace Raven.Server
                             }
                         }
 
-                        if (DispatchServerwideTcpConnection(tcp, header, tcpClient))
+                        if (await DispatchServerwideTcpConnection(tcp, header, tcpClient))
                         {
                             tcp = null; //do not keep reference -> tcp will be disposed by server-wide connection handlers
                             return;
@@ -432,7 +433,7 @@ namespace Raven.Server
 
         private ClusterMaintenanceSlave _clusterMaintainance;
 
-        private bool DispatchServerwideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, TcpClient tcpClient)
+        private async Task<bool> DispatchServerwideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, TcpClient tcpClient)
         {
             tcp.Operation = header.Operation;
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
@@ -445,13 +446,37 @@ namespace Raven.Server
             {
                 //TODO: add ClusterMaintenanceSlave as a handler for this connection
                 //TODO: do not forget that the "client" should dispose the tcp connection
-                var old = _clusterMaintainance;
-                using (old)
+                
+                // check for the term          
+                using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (var headerJson = await context.ParseToMemoryAsync(
+                    tcp.Stream,
+                    "maintance-heartbeat-header",
+                    BlittableJsonDocumentBuilder.UsageMode.None,
+                    tcp.PinnedBuffer
+                ))
                 {
-                    _clusterMaintainance = new ClusterMaintenanceSlave(tcp, ServerStore);
-                    _clusterMaintainance.Start();
+                    
+                    var maintanceHeader = JsonDeserializationRachis<ClusterMaintenanceMaster.ClusterMaintenanceConnectionHeader>.Deserialize(headerJson);
+                    if (_clusterMaintainance?.CurrentTerm >= maintanceHeader.Term)
+                    {
+                        if (_tcpLogger.IsInfoEnabled)
+                        {
+                            _tcpLogger.Info($"Request for maintainance with term {maintanceHeader.Term} was rejected, " +
+                                            $"because we are already connected to the recent leader with the term {_clusterMaintainance.CurrentTerm}");
+                        }
+                        tcp.Dispose();
+                        return true;
+                    }
+                    var old = _clusterMaintainance;
+                    using (old)
+                    {
+                        _clusterMaintainance = new ClusterMaintenanceSlave(tcp, ServerStore.ServerShutdown, ServerStore, maintanceHeader.Term);
+                        _clusterMaintainance.Start();
+                    }
+                    return true;
                 }
-                return true;
+                
             }
             return false;
         }
@@ -472,7 +497,6 @@ namespace Raven.Server
                 var resultingTask = await Task.WhenAny(databaseLoadingTask, Task.Delay(databaseLoadTimeout));
                 if (resultingTask != databaseLoadingTask)
                 {
-                    if (databaseLoadingTask.IsCompleted == false)
                         ThrowTimeoutOnDatabaseLoad(header);
                 }
             }
