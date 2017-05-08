@@ -34,7 +34,7 @@ namespace Raven.Server.Web.Studio
                 {
                     using (var stream = new GZipStream(sampleData, CompressionMode.Decompress))
                     {
-                        var source = new StreamSource(stream, context);
+                        var source = new StreamSource(stream, context, Database);
                         var destination = new DatabaseDestination(Database);
 
                         var smuggler = new DatabaseSmuggler(source, destination, Database.Time);

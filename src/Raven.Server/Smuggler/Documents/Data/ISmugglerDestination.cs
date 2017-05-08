@@ -2,7 +2,6 @@
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 
@@ -20,7 +19,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface IDocumentActions : INewDocumentActions, IDisposable
     {
-        void WriteDocument(Document document);
+        void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress);
     }
 
     public interface INewDocumentActions

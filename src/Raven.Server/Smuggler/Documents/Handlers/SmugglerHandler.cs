@@ -122,7 +122,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 }
                 else
                 {
-                    ExportDatabaseInternal(options, null, context, token);
+                    var result = (SmugglerResult)ExportDatabaseInternal(options, null, context, token);
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, result.ToJson());
+                    }
                 }
             }
         }
@@ -132,7 +136,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (token)
             {
                 var source = new DatabaseSource(Database, 0, 0);
-                var destination = new StreamDestination(ResponseBodyStream(), context);
+                var destination = new StreamDestination(ResponseBodyStream(), context, source);
                 var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, onProgress: onProgress, token: token.Token);
                 return smuggler.Execute();
             }
@@ -201,7 +205,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         using (var file = await getFile())
                         using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                         {
-                            var source = new StreamSource(stream, context);
+                            var source = new StreamSource(stream, context, Database);
                             var destination = new DatabaseDestination(Database);
 
                             var smuggler = new DatabaseSmuggler(source, destination, Database.Time);
@@ -222,10 +226,12 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 finalResult.Documents.ReadCount += importResult.Documents.ReadCount;
                 finalResult.Documents.ErroredCount += importResult.Documents.ErroredCount;
                 finalResult.Documents.LastEtag = Math.Max(finalResult.Documents.LastEtag, importResult.Documents.LastEtag);
+                finalResult.Documents.Attachemnts = importResult.Documents.Attachemnts;
 
                 finalResult.RevisionDocuments.ReadCount += importResult.RevisionDocuments.ReadCount;
                 finalResult.RevisionDocuments.ErroredCount += importResult.RevisionDocuments.ErroredCount;
                 finalResult.RevisionDocuments.LastEtag = Math.Max(finalResult.RevisionDocuments.LastEtag, importResult.RevisionDocuments.LastEtag);
+                finalResult.RevisionDocuments.Attachemnts = importResult.RevisionDocuments.Attachemnts;
 
                 finalResult.Identities.ReadCount += importResult.Identities.ReadCount;
                 finalResult.Identities.ErroredCount += importResult.Identities.ErroredCount;
@@ -285,7 +291,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 using (var stream = new GZipStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                 using (token)
                 {
-                    var source = new StreamSource(stream, context);
+                    var source = new StreamSource(stream, context, Database);
                     var destination = new DatabaseDestination(Database);
 
                     var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, token: token.Token);
@@ -385,7 +391,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (stream)
             using (token)
             {
-                var source = new StreamSource(stream, context);
+                var source = new StreamSource(stream, context, Database);
                 var destination = new DatabaseDestination(Database);
                 var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, result, onProgress, token.Token);
 
