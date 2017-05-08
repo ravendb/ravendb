@@ -172,6 +172,10 @@ namespace Raven.Smuggler
 
             string lastEtag = databaseOptions.StartDocsEtag;
             var totalCount = 0;
+            var numberOfSkippedDocs = 0;
+            var totalOfSkippedDocs = 0;
+            var lastForcedFlush = SystemTime.UtcNow;
+            var maxFlushInterval = TimeSpan.FromSeconds(1);
             var lastReport = SystemTime.UtcNow;
             var reportInterval = TimeSpan.FromSeconds(2);
             ShowProgress("Exporting Documents");
@@ -189,6 +193,14 @@ namespace Raven.Smuggler
                         {
                             while (await documents.MoveNextAsync().ConfigureAwait(false))
                             {
+                                if (numberOfSkippedDocs > 0 && (SystemTime.UtcNow - lastForcedFlush) > maxFlushInterval)
+                                {
+                                    totalOfSkippedDocs += numberOfSkippedDocs;
+                                    ShowProgress("Skipped {0:#,#} documents", totalOfSkippedDocs);
+                                    lastForcedFlush = SystemTime.UtcNow;
+                                    numberOfSkippedDocs = 0;
+                                }
+
                                 hasDocs = true;
                                 var document = documents.Current;
 
@@ -199,10 +211,16 @@ namespace Raven.Smuggler
                                 lastEtag = tempLastEtag;
 
                                 if (!databaseOptions.MatchFilters(document))
+                                {
+                                    numberOfSkippedDocs++;
                                     continue;
+                                }
 
                                 if (databaseOptions.ShouldExcludeExpired && databaseOptions.ExcludeExpired(document, now))
+                                {
+                                    numberOfSkippedDocs++;
                                     continue;
+                                }
 
                                 if (databaseOptions.StripReplicationInformation)
                                     document["@metadata"] = StripReplicationInformationFromMetadata(document["@metadata"] as RavenJObject);
@@ -211,6 +229,15 @@ namespace Raven.Smuggler
                                     document["@metadata"] = DisableVersioning(document["@metadata"] as RavenJObject);
 
                                 document["@metadata"] = SmugglerHelper.HandleConflictDocuments(document["@metadata"] as RavenJObject);
+
+                                if (string.IsNullOrEmpty(databaseOptions.TransformScript) == false)
+                                    document = await exportOperations.TransformDocument(document, databaseOptions.TransformScript).ConfigureAwait(false);
+
+                                if (document == null)
+                                {
+                                    numberOfSkippedDocs++;
+                                    continue;
+                                }
 
                                 await importOperations.PutDocument(document, (int) DocumentHelpers.GetRoughSize(document)).ConfigureAwait(false);
                                 totalCount++;
