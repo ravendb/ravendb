@@ -62,6 +62,9 @@ interface documentMetadataDto {
 
 }
 
+interface updateDatabaseConfigurationsResult {
+    ETag: number;
+}
 interface changeVectorDto {
     DbId: string;
     Etag: number;

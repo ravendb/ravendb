@@ -767,6 +767,7 @@ namespace Raven.Server.ServerWide
             TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
+                //TODO: timeout, server shutdown handling, etc
                 while (true)
                 {
                     var logChange = _engine.WaitForHeartbeat();
