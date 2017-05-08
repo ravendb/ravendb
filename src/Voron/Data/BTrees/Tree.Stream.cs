@@ -269,8 +269,7 @@ namespace Voron.Data.BTrees
                 }
             }
 
-            var pagerRef = new LowLevelTransaction.PagerRef();
-            var page = _llt.GetPage(lastChunk.PageNumber, pagerRef);
+            var page = _llt.GetPage(lastChunk.PageNumber);
 
             if (writeable)
                 page = _llt.ModifyPage(page.PageNumber);
@@ -315,7 +314,6 @@ namespace Voron.Data.BTrees
                     for (int i = 0; i < numberOfPages; i++)
                     {
                         llt.FreePage(pageNumber + i);
-                        _pageLocator.Reset(pageNumber + i);
                     }
                     State.OverflowPages -= numberOfPages;
                 } while (it.MoveNext());

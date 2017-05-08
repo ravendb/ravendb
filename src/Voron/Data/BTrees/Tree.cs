@@ -25,11 +25,9 @@ namespace Voron.Data.BTrees
 #endif
 
         private readonly TreeMutableState _state;
-        private readonly bool _isPageLocatorOwned;
         private readonly RecentlyFoundTreePages _recentlyFoundPages;
 
         private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
-        private PageLocator _pageLocator;
 
         public event Action<long, PageFlags> PageModified;
         public event Action<long, PageFlags> PageFreed;
@@ -44,15 +42,13 @@ namespace Voron.Data.BTrees
 
         public LowLevelTransaction Llt => _llt;
 
-        private Tree(LowLevelTransaction llt, Transaction tx, long root, Slice name, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
+        private Tree(LowLevelTransaction llt, Transaction tx, long root, Slice name, NewPageAllocator newPageAllocator = null)
         {
             _llt = llt;
             _tx = tx;
             Name = name;
             _newPageAllocator = newPageAllocator;
-            _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2);
-            _isPageLocatorOwned = pageLocator == null;
-            _pageLocator = pageLocator ?? llt.PersistentContext.AllocatePageLocator(llt);
+            _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2); 
 
             _state = new TreeMutableState(llt)
             {
@@ -66,8 +62,6 @@ namespace Voron.Data.BTrees
             _tx = tx;
             Name = name;
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2);
-            _isPageLocatorOwned = true;
-            _pageLocator = llt.PersistentContext.AllocatePageLocator(llt);
             _state = new TreeMutableState(llt);
             _state = state;
         }
@@ -81,7 +75,7 @@ namespace Voron.Data.BTrees
         public static Tree Open(LowLevelTransaction llt, Transaction tx, Slice name, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree,
              NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
         {
-            return new Tree(llt, tx, header->RootPageNumber, name, newPageAllocator, pageLocator)
+            return new Tree(llt, tx, header->RootPageNumber, name, newPageAllocator)
             {
                 _state =
                 {
@@ -108,7 +102,7 @@ namespace Voron.Data.BTrees
 
             TreePage newRootPage = PrepareTreePage(TreePageFlags.Leaf, 1, newPage);
 
-            var tree = new Tree(llt, tx, newRootPage.PageNumber, name, newPageAllocator, pageLocator)
+            var tree = new Tree(llt, tx, newRootPage.PageNumber, name, newPageAllocator)
             {
                 _state =
                 {
@@ -550,20 +544,20 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal TreePage GetReadOnlyTreePage(long pageNumber)
         {
-            var page = _pageLocator.GetReadOnlyPage(pageNumber);
+            var page = _llt.GetPage(pageNumber);
             return new TreePage(page.Pointer, Constants.Storage.PageSize);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal Page GetReadOnlyPage(long pageNumber)
         {
-            return _pageLocator.GetReadOnlyPage(pageNumber);
+            return _llt.GetPage(pageNumber);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal TreePage GetWriteableTreePage(long pageNumber)
         {
-            var page = _pageLocator.GetWritablePage(pageNumber);
+            var page = _llt.ModifyPage(pageNumber);
             return new TreePage(page.Pointer, Constants.Storage.PageSize);
         }
 
@@ -919,7 +913,6 @@ namespace Voron.Data.BTrees
                 for (int i = 0; i < numberOfPages; i++)
                 {
                     _llt.FreePage(p.PageNumber + i);
-                    _pageLocator.Reset(p.PageNumber + i);
                 }
 
                 State.RecordFreedPage(p, numberOfPages);
@@ -930,7 +923,7 @@ namespace Voron.Data.BTrees
                     _newPageAllocator.FreePage(p.PageNumber);
                 else
                     _llt.FreePage(p.PageNumber);
-                _pageLocator.Reset(p.PageNumber);
+
                 State.RecordFreedPage(p, 1);
             }
         }
@@ -1156,12 +1149,6 @@ namespace Voron.Data.BTrees
                 {
                     tree.Value.Dispose();
                 }
-            }
-
-            if (_pageLocator != null && _isPageLocatorOwned)
-            {
-                _llt.PersistentContext.FreePageLocator(_pageLocator);
-                _pageLocator = null;
             }
 
             DecompressionsCache?.Dispose();

@@ -4,12 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
-using System.Threading;
 using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.LowMemory;
-using Sparrow.Platform.Win32;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Data.BTrees;
@@ -32,6 +30,7 @@ namespace Voron.Impl
         private readonly StorageEnvironment _env;
         private readonly long _id;
         private readonly ByteStringContext _allocator;
+        private readonly PageLocator _pageLocator;
         private bool _disposeAllocator;
 
         private Tree _root;
@@ -204,6 +203,8 @@ namespace Voron.Impl
             _pagesToFreeOnCommit = new Stack<long>();
 
             _state = previous._state.Clone();
+
+            _pageLocator = PersistentContext.AllocatePageLocator(this);
             InitializeRoots();
             InitTransactionHeader();
         }
@@ -220,8 +221,8 @@ namespace Voron.Impl
             _freeSpaceHandling = freeSpaceHandling;
             _allocator = context ?? new ByteStringContext(LowMemoryFlag.None);
             _disposeAllocator = context == null;
-            _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
-
+            _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);           
+            
             PersistentContext = transactionPersistentContext;
             Flags = flags;
 
@@ -240,6 +241,7 @@ namespace Voron.Impl
 
                 _state = env.State.Clone();
 
+                _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
                 InitializeRoots();
 
                 JournalSnapshots = _journal.GetSnapshots();
@@ -266,6 +268,8 @@ namespace Voron.Impl
             _pagesToFreeOnCommit = new Stack<long>();
 
             _state = env.State.Clone();
+
+            _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
             InitializeRoots();
             InitTransactionHeader();
         }
@@ -348,16 +352,26 @@ namespace Voron.Impl
             return _freedPages;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal Page ModifyPage(long num)
         {
             _env.Options.AssertNoCatastrophicFailure();
 
-            // Check if we can hit the lowest level locality cache.
+            if (_pageLocator.TryGetWritablePage(num, out Page result))
+                return result;
+
+            return ModifyPageInternal(num);
+        }
+
+        private Page ModifyPageInternal(long num)
+        {
             Page currentPage = GetPage(num);
 
+            // Check if we can hit the second level locality cache.            
             if (_dirtyPages.Contains(num))
-                return currentPage;
+                return currentPage;                
 
+            // No cache hits.
             int pageSize;
             Page newPage;
             if (currentPage.IsOverflow)
@@ -378,6 +392,8 @@ namespace Voron.Impl
 
             TrackWritablePage(newPage);
 
+            _pageLocator.SetWritable(num, newPage);
+
             return newPage;
         }
 
@@ -391,11 +407,74 @@ namespace Voron.Impl
             public long PagerPageNumber;
         }
 
-        public Page GetPage(long pageNumber, PagerRef pagerRef = null)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Page GetPage(long pageNumber)
         {
             if (_disposed)
                 ThrowObjectDisposed();
 
+            if (_pageLocator.TryGetReadOnlyPage(pageNumber, out Page result))
+                return result;
+
+            return GetPageInternal(pageNumber);
+        }
+
+        private Page GetPageInternal(long pageNumber)
+        {
+            // Check if we can hit the lowest level locality cache.
+            Page p;
+            PageFromScratchBuffer value;
+            if (_scratchPagesTable != null && _scratchPagesTable.TryGetValue(pageNumber, out value)) // Scratch Pages Table will be null in read transactions
+            {
+                Debug.Assert(value != null);
+                PagerState state = null;
+                if (_scratchPagerStates != null)
+                {
+                    var lastUsed = _lastScratchFileUsed;
+                    if (lastUsed.FileNumber == value.ScratchFileNumber)
+                    {
+                        state = lastUsed.State;
+                    }
+                    else
+                    {
+                        state = _scratchPagerStates[value.ScratchFileNumber];
+                        _lastScratchFileUsed = new PagerStateCacheItem(value.ScratchFileNumber, state);
+                    }
+                }
+
+                p = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer, state);
+                Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from scratch", pageNumber, p.PageNumber));
+            }
+            else
+            {
+                var pageFromJournal = _journal.ReadPage(this, pageNumber, _scratchPagerStates, null);
+                if (pageFromJournal != null)
+                {
+                    p = pageFromJournal.Value;
+                    Debug.Assert(p.PageNumber == pageNumber,
+                        string.Format("Requested ReadOnly page #{0}. Got #{1} from journal", pageNumber, p.PageNumber));
+                }
+                else
+                {
+                    p = DataPager.ReadPage(this, pageNumber);
+
+                    Debug.Assert(p.PageNumber == pageNumber,
+                        string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
+
+                    // When encryption is off, we do validation by checksum
+                    if (_env.Options.EncryptionEnabled == false)
+                        _env.ValidatePageChecksum(pageNumber, (PageHeader*)p.Pointer);
+                }
+            }
+
+            TrackReadOnlyPage(p);
+
+            _pageLocator.SetReadable(p.PageNumber, p);
+            return p;
+        }
+
+        public Page GetPage(long pageNumber, PagerRef pagerRef)
+        {
             // Check if we can hit the lowest level locality cache.
             Page p;
             PageFromScratchBuffer value;
@@ -661,6 +740,8 @@ namespace Voron.Impl
             if (_disposeAllocator)
                 _allocator.Dispose();
 
+
+
             OnDispose?.Invoke(this);
         }
 
@@ -677,8 +758,9 @@ namespace Voron.Impl
             UntrackPage(pageNumber);
             Debug.Assert(pageNumber >= 0);
 
-            _freeSpaceHandling.FreePage(this, pageNumber);
+            _pageLocator.Reset(pageNumber); // Remove it from the page locator.
 
+            _freeSpaceHandling.FreePage(this, pageNumber);
             _freedPages.Add(pageNumber);
 
             PageFromScratchBuffer scratchPage;
@@ -873,7 +955,7 @@ namespace Voron.Impl
             {
                 ValidateAllPages();
 
-                Allocator.Release(ref _txHeaderMemory);
+                Allocator.Release(ref _txHeaderMemory);                
 
                 Committed = true;
                 _env.TransactionAfterCommit(this);
@@ -891,6 +973,9 @@ namespace Voron.Impl
                         journalFile.Release();
                     }
                 }
+
+                // Releasing the page locator is the last thing we do. 
+                PersistentContext.FreePageLocator(_pageLocator);
             }
             catch (Exception e)
             {
