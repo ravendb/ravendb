@@ -1,3 +1,5 @@
+using Sparrow.Json.Parsing;
+
 namespace Raven.Client.Server.Versioning
 {
     public class VersioningConfigurationCollection
@@ -30,6 +32,16 @@ namespace Raven.Client.Server.Versioning
                 hashCode = (hashCode * 397) ^ PurgeOnDelete.GetHashCode();
                 return hashCode;
             }
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Active)] = Active,
+                [nameof(MaxRevisions)] = MaxRevisions,
+                [nameof(PurgeOnDelete)] = PurgeOnDelete
+            };
         }
     }
 }

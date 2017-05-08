@@ -2,13 +2,11 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import versioningEntry = require("models/database/documents/versioningEntry");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
-import getVersioningsCommand = require("commands/database/documents/getVersioningsCommand");
-import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
-import deleteDocumentCommand = require("commands/database/documents/deleteDocumentCommand");
-import document = require("models/database/documents/document");
+import saveVersioningCommand = require("commands/database/documents/saveVersioningCommand");
 import eventsCollector = require("common/eventsCollector");
 import messagePublisher = require("common/messagePublisher");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import getVersioningCommand = require("commands/database/documents/getVersioningCommand");
 
 class versioning extends viewModelBase {
 
@@ -18,7 +16,6 @@ class versioning extends viewModelBase {
     versionings = ko.observableArray<versioningEntry>();
     isSaveEnabled: KnockoutComputed<boolean>;
     versioningEnabled = ko.observable<boolean>(false);
-
     collections = collectionsTracker.default.collections;
 
     constructor() {
@@ -62,8 +59,11 @@ class versioning extends viewModelBase {
     }
 
     private fetchVersioningEntries(db: database): JQueryPromise<Raven.Client.Server.Versioning.VersioningConfiguration> {
-        return new getVersioningsCommand(db).execute()
-            .done((versionings: Raven.Client.Server.Versioning.VersioningConfiguration) => this.versioningsLoaded(versionings));
+        return new getVersioningCommand(db)
+            .execute()
+            .done((versioningConfig: Raven.Client.Server.Versioning.VersioningConfiguration) => {
+                this.versioningsLoaded(versioningConfig);
+            });
     }
 
     toDto(): Raven.Client.Server.Versioning.VersioningConfiguration {
@@ -96,20 +96,23 @@ class versioning extends viewModelBase {
 
             eventsCollector.default.reportEvent("versioning", "save");
 
-            if (this.versioningEnabled()) {
-                const dto = this.toDto();
-                const versioningDocument = new document(dto);
+            const dto = this.toDto();
+            let disableVersioning = false;
 
-                new saveDocumentCommand(versioning.versioningDocumentKey, versioningDocument, this.activeDatabase())
-                    .execute()
-                    .done((saveResult: saveDocumentResponseDto) => this.versioningsSaved(saveResult))
-                    .always(() => this.spinners.save(false));
-            } else {
-                new deleteDocumentCommand(versioning.versioningDocumentKey, this.activeDatabase())
-                    .execute()
-                    .done(() => this.onVersioningDeleted())
-                    .always(() => this.spinners.save(false));
+            if (!this.versioningEnabled()) {
+                dto.Default.Active = false;
+                disableVersioning = true;
             }
+
+            const versioningStatus = disableVersioning ? "disabled" : "enabled";
+            new saveVersioningCommand(this.activeDatabase(), dto)
+                .execute()
+                .done(() => {
+                    this.dirtyFlag().reset();
+                    messagePublisher.reportSuccess(`Versioning has been ${versioningStatus}.`);
+                    
+                })
+                .always(() => this.spinners.save(false));
         }
     }
 
@@ -138,26 +141,12 @@ class versioning extends viewModelBase {
             });
 
             this.versionings(versionings);
-            this.versioningEnabled(true);
+            this.versioningEnabled(data.Default.Active);
             this.dirtyFlag().reset();
         } else {
             this.versioningEnabled(false);
             this.defaultVersioning(versioningEntry.defaultConfiguration());
         }
-    }
-
-    versioningsSaved(saveResult: saveDocumentResponseDto) {
-        //TODO: test if we have to update etag in metadata to allow subsequent saves
-        this.dirtyFlag().reset();
-    }
-
-    onVersioningDeleted() {
-        messagePublisher.reportSuccess("Versioning has been disabled.");
-
-        this.defaultVersioning(versioningEntry.defaultConfiguration());
-        this.versionings([]);
-        
-        this.dirtyFlag().reset();
     }
 
     createCollectionNameAutocompleter(item: versioningEntry) {
