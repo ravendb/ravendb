@@ -708,7 +708,7 @@ namespace Raven.Abstractions.Smuggler
                                 {
                                     totalOfSkippedDocs += numberOfSkippedDocs;
                                     Operations.ShowProgress("Skipped {0:#,#} documents", totalOfSkippedDocs);
-                                    var currentJsonTextWriter = jsonWriter.GetCurrentJsonTextWriter(); // force flush
+                                    var currentJsonTextWriter = jsonWriter.GetCurrentJsonTextWriter();
                                     currentJsonTextWriter.WriteWhitespace(" ");
                                     currentJsonTextWriter.Flush();
                                     lastForcedFlush = SystemTime.UtcNow;
