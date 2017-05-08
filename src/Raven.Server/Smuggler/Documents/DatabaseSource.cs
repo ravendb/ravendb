@@ -69,27 +69,34 @@ namespace Raven.Server.Smuggler.Documents
             return _types[_currentTypeIndex++];
         }
 
-        public IEnumerable<Document> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
+        public IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            return collectionsToExport.Count != 0
+            var documents = collectionsToExport.Count != 0
                 ? _database.DocumentsStorage.GetDocumentsFrom(_context, collectionsToExport, _startDocsEtag, int.MaxValue)
                 : _database.DocumentsStorage.GetDocumentsFrom(_context, _startDocsEtag, 0, int.MaxValue);
+
+            foreach (var document in documents)
+            {
+                yield return new DocumentItem
+                {
+                    Document = document,
+                };
+            }
         }
 
-        public IEnumerable<Document> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions, int limit)
+        public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions, int limit)
         {
             var versioningStorage = _database.BundleLoader.VersioningStorage;
             if (versioningStorage == null)
-                return Enumerable.Empty<Document>();
+                yield break;
 
-            return versioningStorage.GetRevisionsFrom(_context, _startRevisionDocumentsEtag, limit);
-        }
-
-        public Stream GetAttachmentStream(LazyStringValue hash)
-        {
-            using (Slice.External(_context.Allocator, hash, out Slice hashSlice))
+            var documents = versioningStorage.GetRevisionsFrom(_context, _startRevisionDocumentsEtag, limit);
+            foreach (var document in documents)
             {
-                return _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(_context, hashSlice);
+                yield return new DocumentItem
+                {
+                    Document = document,
+                };
             }
         }
 
