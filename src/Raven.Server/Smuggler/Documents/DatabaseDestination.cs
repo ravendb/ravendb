@@ -232,16 +232,30 @@ namespace Raven.Server.Smuggler.Documents
                     if (_identities.Count == 0)
                         return;
 
-                    using (var tx = _context.OpenWriteTransaction())
-                    {
-                        _database.DocumentsStorage.Identities.Update(_context, _identities);
-
-                        tx.Commit();
-                    }
+                    _database.TxMerger.Enqueue(new UpdateIdentitiesCommand(_identities, _database)).Wait();
                 }
                 finally
                 {
                     _returnContext?.Dispose();
+                }
+            }
+
+            private class UpdateIdentitiesCommand : TransactionOperationsMerger.MergedTransactionCommand
+            {
+                private readonly Dictionary<string, long> _identities;
+                private readonly DocumentDatabase _database;
+
+                public UpdateIdentitiesCommand(Dictionary<string, long> identities, DocumentDatabase database)
+                {
+                    _identities = identities;
+                    _database = database;
+                }
+
+                public override int Execute(DocumentsOperationContext context)
+                {
+                    _database.DocumentsStorage.Identities.Update(context, _identities);
+
+                    return 1;
                 }
             }
         }
