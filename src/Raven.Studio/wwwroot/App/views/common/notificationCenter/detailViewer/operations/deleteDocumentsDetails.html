@@ -3,7 +3,7 @@
         <div class="modal-header">
             <div class="flex-horizontal">
                 <div class="flex-grow">
-                    <h3 class="modal-title" id="myModalLabel" data-bind="text: op.title"></h3>
+                    <h3 class="modal-title" id="myModalLabel" data-bind="text: op.title, attr:{ class: 'modal-title ' + op.headerClass() }"></h3>
                 </div>
                 <div class="flex-grow text-right">
                     <span class="text-muted">Time elapsed:</span> <span data-bind="text: op.duration"></span>
@@ -16,11 +16,24 @@
             </div>
         </div>
         <div class="modal-body">
-            <div data-bind="with: progress">
-                Processed: <span data-bind="text: Processed.toLocaleString()"></span> / <span data-bind="text: Total.toLocaleString()"></span>
+            <div class="modal-details" data-bind="with: progress">
+                <div class="details-item">
+                    <div class="row">
+                        <div class="col-sm-6 text-right">
+                            Processed:
+                        </div>
+                        <div class="col-sm-6 details-value">
+                            <span data-bind="text: Processed.toLocaleString()"></span> / <span data-bind="text: Total.toLocaleString()"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" data-bind="style: {'width': Processed/Total*100 + '%'}">
+                    </div>
+                </div>
             </div>
             <div data-bind="with: result">
-                <span data-bind="text: Message"></span>
+                <h3 class="text-center" data-bind="text: Message"></h3>
             </div>
             <div data-bind="if: operationFailed">
                 <h3 class="text-danger">Operation failed</h3>
