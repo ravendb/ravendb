@@ -196,10 +196,11 @@ namespace FastTests.Client.Subscriptions
                     await session.StoreAsync(us5);
                     await session.SaveChangesAsync();
 
-                    var user2Etag = session.Advanced.GetEtagFor(us2);
+                    var user2ChangeVector = session.Advanced.GetChangeVectorFor(us2);
                     var subscriptionCreationParams = new SubscriptionCreationParams
                     {
-                        Criteria = new SubscriptionCriteria("Users")
+                        Criteria = new SubscriptionCriteria("Users"),
+                        ChangeVector = user2ChangeVector
                     };
                     subscriptionId = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
 

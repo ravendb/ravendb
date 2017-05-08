@@ -11,7 +11,7 @@ namespace FastTests.Client.Subscriptions
 {
     public class SubscriptionOperationsSignaling : RavenTestBase
     {
-        private readonly TimeSpan _reasonableWaitTime = TimeSpan.FromSeconds(20);// todo: reduce to 20
+        private readonly TimeSpan _reasonableWaitTime = TimeSpan.FromSeconds(60);
 
         [Fact]
         public void WaitOnSubscriptionTaskWhenSubscriptionIsOvertaken()
@@ -122,6 +122,7 @@ namespace FastTests.Client.Subscriptions
                 var beforeAckMre = new ManualResetEvent(false);
                 var users = new BlockingCollection<User>();
                 subscription.Subscribe(users.Add);
+                subscription.BeforeAcknowledgment += () => beforeAckMre.WaitOne();
                 subscription.Start();
                 using (var session = store.OpenSession())
                 {
@@ -133,7 +134,7 @@ namespace FastTests.Client.Subscriptions
                 Assert.True(users.TryTake(out User, _reasonableWaitTime));
 
 
-                subscription.BeforeAcknowledgment += () => beforeAckMre.WaitOne();
+                
 
                 store.Subscriptions.Delete(subscriptionId);
                 beforeAckMre.Set();
