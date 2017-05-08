@@ -154,8 +154,8 @@ namespace Raven.Server.ServerWide
                                         .AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key))
                                         .ContinueWith(t =>
                                         {
-                                            if(_logger.IsInfoEnabled)
-                                                _logger.Info($"ClusterMaintenanceSetupTask() => Failed to add to cluster node key = {node.Key}",t.Exception);
+                                            if(Logger.IsInfoEnabled)
+                                                Logger.Info($"ClusterMaintenanceSetupTask() => Failed to add to cluster node key = {node.Key}",t.Exception);
                                         },TaskContinuationOptions.OnlyOnFaulted);
                                 GC.KeepAlive(task);
                             }
