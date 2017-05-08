@@ -59,7 +59,7 @@ namespace Raven.Server
         {
             if (_server.Configuration.Server.AnonymousUserAccessMode == AnonymousUserAccessModeValues.None)
                 return true;
-            if (_server.Configuration.Server.AllowEverybodyToAccessTheServerAsAdmin)
+            if (_server.Configuration.Server.AllowAnonymousUserToAccessTheServer)
                 return true;
             var url = _server.Configuration.Core.ServerUrl.ToLowerInvariant();
             var uri = new Uri(url);
@@ -110,7 +110,7 @@ namespace Raven.Server
             "The server is running in a potentially unsafe mode.",
             "This means that Raven/AnonymousUserAccessMode is set to Admin and expose to the world.",
             "Prevent unsafe access to the server by setting Raven/AnonymousUserAccessMode to None.",
-            "If you intended to give everybody admin access to the server than set Raven/AllowEverybodyToAccessTheServerAsAdmin to true.",
+            "If you intended to give everybody admin access to the server then set Raven/AllowAnonymousUserToAccessTheServer to true.",
             "In order to gain access to the server please run in on localhost."
         };
 

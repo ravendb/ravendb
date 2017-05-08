@@ -1,6 +1,6 @@
 FROM microsoft/dotnet:runtime-nanoserver
 
-ENV AllowEverybodyToAccessTheServerAsAdmin=false DataDir=APPDRIVE:/databases CustomConfigFilename=""
+ENV AllowAnonymousUserToAccessTheServer=false DataDir=APPDRIVE:/databases CustomConfigFilename=""
 
 VOLUME c:/databases c:/raven-config
 EXPOSE 8080 38888

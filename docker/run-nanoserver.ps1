@@ -4,7 +4,7 @@ param(
     $ConfigPath = "",
     $DataDir = "",
     $DataVolumeName = "ravendb",
-    [switch]$AllowEverybodyToAccessTheServerAsAdmin,
+    [switch]$AllowAnonymousUserToAccessTheServer,
     [switch]$RemoveOnExit,
     [switch]$DryRun)
 
@@ -63,9 +63,9 @@ if ([string]::IsNullOrEmpty($DataDir)) {
     $dockerArgs += "$($DataDir):c:/databases"
 }
 
-if ($AllowEverybodyToAccessTheServerAsAdmin) {
+if ($AllowAnonymousUserToAccessTheServer) {
     $dockerArgs += '-e'
-    $dockerArgs += "AllowEverybodyToAccessTheServerAsAdmin=true"
+    $dockerArgs += "AllowAnonymousUserToAccessTheServer=true"
 }
 
 $dockerArgs += '-p'

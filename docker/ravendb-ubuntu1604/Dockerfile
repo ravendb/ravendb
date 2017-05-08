@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-ENV AllowEverybodyToAccessTheServerAsAdmin=false DataDir=APPDRIVE:/databases
+ENV AllowAnonymousUserToAccessTheServer=false DataDir=APPDRIVE:/databases
 
 COPY RavenDB-4.0.*-*-*-ubuntu.16.04-x64.tar.bz2 /opt/RavenDB.tar.bz2
 COPY run-raven.sh /opt/run-raven.sh

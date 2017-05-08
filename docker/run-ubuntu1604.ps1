@@ -4,7 +4,7 @@ param(
     $ConfigPath = "",
     $DataDir = "",
     $DataVolumeName = "ravendb",
-    [switch]$AllowEverybodyToAccessTheServerAsAdmin,
+    [switch]$AllowAnonymousUserToAccessTheServer,
     [switch]$RemoveOnExit,
     [switch]$DryRun,
     [switch]$DontScanVmSubnet)
@@ -90,9 +90,9 @@ if ($RemoveOnExit) {
     $dockerArgs += '--rm'
 }
 
-if ($AllowEverybodyToAccessTheServerAsAdmin) {
+if ($AllowAnonymousUserToAccessTheServer) {
     $dockerArgs += '-e'
-    $dockerArgs += "AllowEverybodyToAccessTheServerAsAdmin=true"
+    $dockerArgs += "AllowAnonymousUserToAccessTheServer=true"
 }
 
 if ([string]::IsNullOrEmpty($DataDir)) {
