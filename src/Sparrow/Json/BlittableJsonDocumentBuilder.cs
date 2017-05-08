@@ -125,7 +125,12 @@ namespace Sparrow.Json
         public void Dispose()
         {
             _writer.Dispose();
-        }       
+        }
+
+        public void DisposeIfNeeded()
+        {
+            _writer.DisposeIfNeeded();
+        }
 
         private bool ReadInternal<TWriteStrategy>() where TWriteStrategy : IWriteStrategy
         {

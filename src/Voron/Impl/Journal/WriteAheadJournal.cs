@@ -859,11 +859,20 @@ namespace Voron.Impl.Journal
                     }
                     catch (Exception e)
                     {
-                        _tcs.TrySetException(e);
+                        _tcs.TrySetException(ExceptionForTaskCompletionSource(e));
                     }
                 }
 
-                private void UpdateDatabaseStateAfterSync()
+                public static Exception ExceptionForTaskCompletionSource(Exception e)
+                {
+#if DEBUG
+                    e.Data.Add("stacktrace", Environment.StackTrace);
+#endif
+                    return e;
+                }
+
+
+                    private void UpdateDatabaseStateAfterSync()
                 {
                     lock (_parent._flushingLock)
                     {

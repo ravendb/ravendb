@@ -3,7 +3,9 @@ using System.Diagnostics;
 using FastTests.Client.Attachments;
 using FastTests.Smuggler;
 using System.Threading.Tasks;
+using FastTests.Client.Subscriptions;
 using FastTests.Issues;
+using FastTests.Server.Documents;
 using FastTests.Server.Documents.Indexing;
 using FastTests.Server.Documents.PeriodicExport;
 using FastTests.Server.OAuth;
@@ -22,10 +24,10 @@ namespace Tryouts
 
             for (int i = 0; i < 1000; i++)
             {
-                Console.WriteLine("              "+ i);
-                using (var a = new RachisTests.DatabaseCluster.ClusterDatabaseMaintance())
+                Console.WriteLine(i);
+                using (var a = new DocumentsCrud())
                 {
-                    a.DemoteOnServerDown().Wait();
+                    a.CanDelete("USERs/1");
                 }
             }
         }

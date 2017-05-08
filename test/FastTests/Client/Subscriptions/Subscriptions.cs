@@ -82,32 +82,31 @@ namespace FastTests.Client.Subscriptions
                 {
 
                     var acceptedSusbscriptionList = new BlockingCollection<Thing>();
-                    acceptedSubscription.Subscribe(x =>
+                    using (acceptedSubscription.Subscribe(x =>
                     {
                         acceptedSusbscriptionList.Add(x);
-                    });
-                    await acceptedSubscription.StartAsync();
-
-                    Thing thing;
-
-                    // wait until we know that connection was established
-                    for (var i = 0; i < 5; i++)
+                    }))
                     {
-                        Assert.True(acceptedSusbscriptionList.TryTake(out thing, 1000));
+                        await acceptedSubscription.StartAsync();
+
+                        Thing thing;
+
+                        // wait until we know that connection was established
+                        for (var i = 0; i < 5; i++)
+                        {
+                            Assert.True(acceptedSusbscriptionList.TryTake(out thing, 1000));
+                        }
+
+                        Assert.False(acceptedSusbscriptionList.TryTake(out thing, 50));
                     }
-
-                    Assert.False(acceptedSusbscriptionList.TryTake(out thing, 50));
-
                     // open second subscription
-                    using (
-                        var rejectedSusbscription =
+                    using (var rejectedSusbscription =
                             store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
                             {
                                 Strategy = SubscriptionOpeningStrategy.OpenIfFree,
                                 TimeToWaitBeforeConnectionRetryMilliseconds = 2000
                             }))
                     {
-
                         rejectedSusbscription.Subscribe(thing1 => { });
 
                         // sometime not throwing (on linux) when written like this:
@@ -116,13 +115,11 @@ namespace FastTests.Client.Subscriptions
                         try
                         {
                             await rejectedSusbscription.StartAsync();
-                            Assert.False(true); // we didn't throw - so test failed
+                            Assert.False(true, "Exepcted a throw here");
                         }
                         catch (SubscriptionInUseException)
                         {
-
                         }
-
                     }
                 }
             }

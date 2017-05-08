@@ -868,6 +868,11 @@ namespace Sparrow.Json.Parsing
             _unmanagedWriteBuffer.Dispose();
         }
 
+        public void DisposeIfNeeded()
+        {
+            _unmanagedWriteBuffer.DisposeIfNeeded();
+        }
+
         public string GenerateErrorState()
         {
             var s = Encoding.UTF8.GetString(_inputBuffer, (int)_bufSize);

@@ -98,7 +98,7 @@ namespace Raven.Client.Documents.Operations
                     _work = false;
                     var exceptionResult = (OperationExceptionResult)change.State.Result;
                     Debug.Assert(exceptionResult!=null);
-                    _result.TrySetException(ExceptionDispatcher.Get(exceptionResult.Message, exceptionResult.Error, exceptionResult.Type, exceptionResult.StatusCode));
+                    _result.TrySetException(ExceptionDispatcher.Get(exceptionResult.Message, exceptionResult.Error, exceptionResult.Type, exceptionResult.StatusCode).ExceptionForTaskCompletionSource());
                     break;
                 case OperationStatus.Canceled:
                     _work = false;
@@ -113,6 +113,8 @@ namespace Raven.Client.Documents.Operations
 
         public void OnCompleted()
         {
+            if (_result.Task.IsFaulted)
+                _result.Task.IgnoreUnobservedExceptions();
         }
 
         public Task<IOperationResult> WaitForCompletionAsync(TimeSpan? timeout = null)
