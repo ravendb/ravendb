@@ -185,6 +185,7 @@ namespace Raven.Client.Documents
             if (this.Topology.IsItMyTask(subscriptionRaftState, nodeTag) == false)
                 throw new InvalidOperationException($"Can't update subscription with id {etag} by node {nodeTag}, because it's not it's task to update this subscription");
 
+            subscriptionRaftState.TimeOfLastClientActivity = DateTime.UtcNow;
             // todo: implement change vector comparison here, need to move some extention methods from server to client first
             
             subscriptionRaftState.ChangeVector = changeVectorUpdate;

@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class GetSubscriptionsCommand : RavenCommand<SubscriptionConfig[]>
+    public class GetSubscriptionsCommand : RavenCommand<SubscriptionRaftState[]>
     {
         private readonly int _start;
         private readonly int _pageSize;

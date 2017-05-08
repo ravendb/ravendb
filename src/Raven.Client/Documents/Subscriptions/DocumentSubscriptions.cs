@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Subscriptions
             return _innerAsync.Open<T>(options, database);
         }
 
-        public List<SubscriptionConfig> GetSubscriptions(int start, int take, string database = null)
+        public List<SubscriptionRaftState> GetSubscriptions(int start, int take, string database = null)
         {
             return AsyncHelpers.RunSync(() => _innerAsync.GetSubscriptionsAsync(start, take, database));
         }
