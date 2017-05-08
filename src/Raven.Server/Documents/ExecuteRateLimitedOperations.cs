@@ -10,17 +10,17 @@ namespace Raven.Server.Documents
     public class ExecuteRateLimitedOperations<T> : TransactionOperationsMerger.MergedTransactionCommand
     {
         private readonly Queue<T> _documentIds;
-        private readonly Action<T, DocumentsOperationContext> _action;
+        private readonly Func<T, TransactionOperationsMerger.MergedTransactionCommand> _commandToExecute;
         private readonly RateGate _rateGate;
         private readonly OperationCancelToken _token;
         private readonly int? _batchSize;
         private CancellationToken _cancellationToken;
 
-        internal ExecuteRateLimitedOperations(Queue<T> documentIds, Action<T, DocumentsOperationContext> action, RateGate rateGate,
+        internal ExecuteRateLimitedOperations(Queue<T> documentIds, Func<T, TransactionOperationsMerger.MergedTransactionCommand> commandToExecute, RateGate rateGate,
             OperationCancelToken token, int? batchSize = null)
         {
             _documentIds = documentIds;
-            _action = action;
+            _commandToExecute = commandToExecute;
             _rateGate = rateGate;
             _token = token;
             _batchSize = batchSize;
@@ -47,9 +47,11 @@ namespace Raven.Server.Documents
 
                 var id = _documentIds.Dequeue();
 
-                _action(id, context);
+                var command = _commandToExecute(id);
 
-                Processed++;
+                var count = command?.Execute(context) ?? 0;
+
+                Processed += count;
 
                 if (_batchSize != null && Processed >= _batchSize)
                     break;
@@ -57,7 +59,5 @@ namespace Raven.Server.Documents
 
             return Processed;
         }
-
-        
     }
 }

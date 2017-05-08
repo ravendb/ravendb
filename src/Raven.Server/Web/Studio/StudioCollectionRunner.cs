@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
+using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -28,21 +28,21 @@ namespace Raven.Server.Web.Studio
                 if (_excludeIds.Count == 0)
                 {
                     // all documents w/o exclusions -> filter system documents
-                    return ExecuteOperation(collectionName, options, Context, onProgress, (key, context) =>
+                    return ExecuteOperation(collectionName, options, Context, onProgress, key =>
                     {
                         if (CollectionName.IsSystemDocument(key.Buffer, key.Length, out _) == false)
-                        {
-                            Database.DocumentsStorage.Delete(context, key, null);
-                        }
+                            return new DeleteDocumentCommand(key, null, Database);
+
+                        return null;
                     }, token);
                 }
                 // all documents w/ exluclusions -> delete only not excluded and not system
-                return ExecuteOperation(collectionName, options, Context, onProgress, (key, context) =>
+                return ExecuteOperation(collectionName, options, Context, onProgress, key =>
                 {
                     if (_excludeIds.Contains(key) == false && CollectionName.IsSystemDocument(key.Buffer, key.Length, out _) == false)
-                    {
-                        Database.DocumentsStorage.Delete(context, key, null);
-                    }
+                        return new DeleteDocumentCommand(key, null, Database);
+
+                    return null;
                 }, token);
             }
 
@@ -50,12 +50,12 @@ namespace Raven.Server.Web.Studio
                 return base.ExecuteDelete(collectionName, options, onProgress, token);
 
             // specific collection w/ exclusions
-            return ExecuteOperation(collectionName, options, Context, onProgress, (key, context) =>
+            return ExecuteOperation(collectionName, options, Context, onProgress, key =>
             {
                 if (_excludeIds.Contains(key) == false)
-                {
-                    Database.DocumentsStorage.Delete(context, key, null);
-                }
+                    return new DeleteDocumentCommand(key, null, Database);
+
+                return null;
             }, token);
         }
 

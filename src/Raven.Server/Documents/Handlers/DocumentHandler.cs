@@ -17,6 +17,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -364,12 +365,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var etag = GetLongFromHeaders("If-Match");
 
-                var cmd = new MergedDeleteCommand
-                {
-                    Key = id,
-                    Database = Database,
-                    ExpectedEtag = etag
-                };
+                var cmd = new DeleteDocumentCommand(id, etag, Database, catchConcurrencyErrors: true);
 
                 await Database.TxMerger.Enqueue(cmd);
 
@@ -580,27 +576,6 @@ namespace Raven.Server.Documents.Handlers
                 try
                 {
                     PutResult = _database.DocumentsStorage.Put(context, _id, _expectedEtag, _document);
-                }
-                catch (ConcurrencyException e)
-                {
-                    ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
-                }
-                return 1;
-            }
-        }
-
-        private class MergedDeleteCommand : TransactionOperationsMerger.MergedTransactionCommand
-        {
-            public string Key;
-            public long? ExpectedEtag;
-            public DocumentDatabase Database;
-            public ExceptionDispatchInfo ExceptionDispatchInfo;
-
-            public override int Execute(DocumentsOperationContext context)
-            {
-                try
-                {
-                    Database.DocumentsStorage.Delete(context, Key, ExpectedEtag);
                 }
                 catch (ConcurrencyException e)
                 {
