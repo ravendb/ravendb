@@ -333,7 +333,30 @@ namespace Raven.Server.Documents.Subscriptions
                 if (history)
                     SetSubscriptionHistory(subscriptionState, subscriptionData);
             }                        
-        }       
+        }
+
+        public void HandleDatabaseRecordChange()
+        {
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
+
+
+                foreach (var subscripitonId in _subscriptionStates.Keys)
+                {
+                    if (databaseRecord.Subscriptions.ContainsKey(subscripitonId.ToString()) == false)
+                    {
+                        DropSubscriptionConnection(subscripitonId, "Deleted");
+                    }
+                }
+
+                // todo: treat here cases when a we should disconnect from subscription?
+
+
+            }
+            
+        }
     }
 }
  
