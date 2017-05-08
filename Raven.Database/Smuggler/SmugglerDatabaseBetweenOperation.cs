@@ -197,6 +197,7 @@ namespace Raven.Smuggler
                                 {
                                     totalOfSkippedDocs += numberOfSkippedDocs;
                                     ShowProgress("Skipped {0:#,#} documents", totalOfSkippedDocs);
+                                    await importOperations.PutDocument(null, -1).ConfigureAwait(false); // force flush
                                     lastForcedFlush = SystemTime.UtcNow;
                                     numberOfSkippedDocs = 0;
                                 }
@@ -250,6 +251,8 @@ namespace Raven.Smuggler
                             }
                         }
 
+                        await importOperations.PutDocument(null, -1).ConfigureAwait(false); // force flush
+
                         if (hasDocs)
                             continue;
 
@@ -299,7 +302,7 @@ namespace Raven.Smuggler
                     }
                 });
 
-                await importOperations.PutDocument(null, -1).ConfigureAwait(false); // force flush 
+                await importOperations.PutDocument(null, -1).ConfigureAwait(false); // force flush
 
                 ShowProgress("Done with reading documents, total: {0}, lastEtag: {1}", totalCount, lastEtag);
                 return lastEtag;
