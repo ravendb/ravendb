@@ -207,18 +207,12 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public AllocatedMemoryData GetMemory(int requestedSize)
         {
-            return GetMemory(requestedSize, longLived: false);
-        }
-
-        private AllocatedMemoryData GetMemory(int requestedSize, bool longLived)
-        {
+#if DEBUG || VALIDATE
             if (requestedSize <= 0)
                 throw new ArgumentException(nameof(requestedSize));
+#endif
 
-            var allocatedMemory = longLived
-                                        ? _arenaAllocatorForLongLivedValues.Allocate(requestedSize)
-                                        : _arenaAllocator.Allocate(requestedSize);
-
+            var allocatedMemory = _arenaAllocator.Allocate(requestedSize);
             allocatedMemory.ContextGeneration = Generation;
             allocatedMemory.Parent = this;
 #if DEBUG
@@ -226,6 +220,22 @@ namespace Sparrow.Json
 #endif
             return allocatedMemory;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public AllocatedMemoryData GetLongLivedMemory(int requestedSize)
+        {
+#if DEBUG || VALIDATE
+            if (requestedSize <= 0)
+                throw new ArgumentException(nameof(requestedSize));
+#endif
+            var allocatedMemory = _arenaAllocatorForLongLivedValues.Allocate(requestedSize);
+            allocatedMemory.ContextGeneration = Generation;
+            allocatedMemory.Parent = this;
+#if DEBUG
+            allocatedMemory.IsLongLived = longLived;
+#endif
+            return allocatedMemory;
+        }        
 
         /// <summary>
         /// Generates new unmanaged stream. Should be disposed at the end of the usage.
@@ -329,7 +339,8 @@ namespace Sparrow.Json
 
             int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(field);
 
-            var memory = GetMemory(maxByteCount + escapePositionsSize, longLived: longLived);
+            int memorySize = maxByteCount + escapePositionsSize;
+            var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
 
             fixed (char* pField = field.String)
             {
