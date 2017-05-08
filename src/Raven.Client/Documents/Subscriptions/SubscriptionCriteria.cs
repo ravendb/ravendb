@@ -7,21 +7,24 @@
 using System;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class SubscriptionRaftState:IDatabaseTask
+    public class SubscriptionRaftState:IFillFromBlittableJson, IDatabaseTask
     {
         public SubscriptionRaftState()
         {
 
         }
-        public SubscriptionCriteria Criteria { get; set; }
+
+        public SubscriptionCriteria Criteria { get; set; } 
         public ChangeVectorEntry[] ChangeVector { get; set; }
         public long SubscriptionId { get; set; }
-        
+        public DateTime TimeOfLastClientActivity { get; set; }
+
         public ulong GetTaskKey()
         {
             return (ulong)SubscriptionId;
@@ -37,9 +40,36 @@ namespace Raven.Client.Documents.Subscriptions
                     [nameof(SubscriptionCriteria.FilterJavaScript)] = Criteria.FilterJavaScript
                 },
                 [nameof(ChangeVector)] = ChangeVector?.ToJson(),
-                [nameof(SubscriptionId)] = SubscriptionId
-
+                [nameof(SubscriptionId)] = SubscriptionId,
+                [nameof(TimeOfLastClientActivity)] = TimeOfLastClientActivity
             };
+        }
+
+        public void FillFromBlittableJson(BlittableJsonReaderObject json)
+        {
+            if (json == null)
+                return;
+
+            long subscriptionId;
+            if (json.TryGet(nameof(SubscriptionId), out subscriptionId))
+                SubscriptionId = subscriptionId;
+
+
+            if (json.TryGet(nameof(ChangeVector), out BlittableJsonReaderArray changeVector))
+            {
+                ChangeVector = changeVector.ToVector();
+            }
+
+            DateTime timeOfLastClientActivity;
+            if (json.TryGet(nameof(TimeOfLastClientActivity), out timeOfLastClientActivity))
+                TimeOfLastClientActivity = timeOfLastClientActivity;
+
+            BlittableJsonReaderObject criteria;
+            if (json.TryGet(nameof(Criteria), out criteria))
+            {
+                Criteria = new SubscriptionCriteria(Constants.Documents.Indexing.AllDocumentsCollection);
+                Criteria.FillFromBlittableJson(criteria);
+            }
         }
     }
 

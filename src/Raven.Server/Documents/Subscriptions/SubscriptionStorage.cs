@@ -164,10 +164,7 @@ namespace Raven.Server.Documents.Subscriptions
         {
             var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name);
                         
-            foreach (var subscriptionGeneralData in databaseRecord.Subscriptions.Values.Select(x=> new SubscriptionGeneralDataAndStats
-            {
-                General = x
-            }))
+            foreach (var subscriptionGeneralData in databaseRecord.Subscriptions.Values.Select(x=> new SubscriptionGeneralDataAndStats(x)))
             {                            
                 GetSubscriptionInternal(subscriptionGeneralData, history);
                 yield return subscriptionGeneralData;
@@ -235,10 +232,7 @@ namespace Raven.Server.Documents.Subscriptions
                 throw new SubscriptionDoesNotExistException(
                         "There is no subscription configuration for specified identifier (id: " + id + ")");
 
-            return new SubscriptionGeneralDataAndStats
-            {
-                General = subscriptionInDatabaseRecord
-            };
+            return new SubscriptionGeneralDataAndStats(subscriptionInDatabaseRecord);
         }
 
         public unsafe SubscriptionGeneralDataAndStats GetSubscription(TransactionOperationContext context, long id, bool history)
@@ -267,12 +261,20 @@ namespace Raven.Server.Documents.Subscriptions
             GetRunningSubscriptionInternal(history, subscriptionJsonValue, subscriptionState);
             return subscriptionJsonValue;
         }
-        public class SubscriptionGeneralDataAndStats
+        public class SubscriptionGeneralDataAndStats: SubscriptionRaftState
         {
-            public SubscriptionRaftState General;
             public SubscriptionConnection Connection;
             public SubscriptionConnection[] RecentConnections;
             public SubscriptionConnection[] RecentRejectedConnections;
+
+            public SubscriptionGeneralDataAndStats(){}
+
+            public SubscriptionGeneralDataAndStats(SubscriptionRaftState @base)
+            {
+                Criteria = @base.Criteria;
+                ChangeVector = @base.ChangeVector;
+                SubscriptionId = @base.SubscriptionId;
+            }
         }
         public SubscriptionGeneralDataAndStats GetRunningSubscriptionConnectionHistory(TransactionOperationContext context, long subscriptionId)
         {
@@ -324,7 +326,7 @@ namespace Raven.Server.Documents.Subscriptions
         private void GetSubscriptionInternal(SubscriptionGeneralDataAndStats subscriptionData, bool history)
         {
             SubscriptionState subscriptionState;
-            if (_subscriptionStates.TryGetValue(subscriptionData.General.SubscriptionId, out subscriptionState))
+            if (_subscriptionStates.TryGetValue(subscriptionData.SubscriptionId, out subscriptionState))
             {
                 subscriptionData.Connection = subscriptionState.Connection;                
 
