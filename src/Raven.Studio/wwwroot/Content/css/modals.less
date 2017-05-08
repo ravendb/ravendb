@@ -249,3 +249,23 @@
     }
 
 }
+
+.modal-details {
+    margin: @grid-gutter-width 0;
+
+    .details-item {
+        margin-bottom: @grid-gutter-width/4;
+
+        & + .details-item {
+            padding-top: @grid-gutter-width/4;
+            border-top: 1px solid @gray-dark;
+        }
+
+        .details-value {
+            font-size: 18px;
+            line-height: 27px;
+            color: @brand-primary;
+            font-weight: bold;
+        }
+    }
+}

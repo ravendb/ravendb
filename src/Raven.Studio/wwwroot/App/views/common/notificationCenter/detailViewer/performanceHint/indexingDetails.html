@@ -3,7 +3,7 @@
         <div class="modal-header">
             <div class="flex-horizontal">
                 <div class="flex-grow">
-                    <h3 class="modal-title" id="myModalLabel" data-bind="text: hint.title"></h3>
+                    <h3 class="modal-title" id="myModalLabel" data-bind="text: hint.title, attr:{ class: 'modal-title ' + hint.headerClass() }"></h3>
                 </div>
                 <div>
                     <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
@@ -13,30 +13,36 @@
             </div>
         </div>
         <div class="modal-body">
-            <div data-bind="text: hint.message"></div>
-            
-            <div data-bind="with: hint.details">
-                <div class="row">
-                    <div class="col-md-6">Number of exceeding documents</div>
-                    <div class="col-md-6" data-bind="text: NumberOfExceedingDocuments.toLocaleString()"></div>
-                </div>
+            <h3 data-bind="text: hint.message"></h3>
 
-                <div class="row">
-                    <div class="col-md-6">Sample document id</div>
-                    <div class="col-md-6" data-bind="text: SampleDocumentId"></div>
+            <div data-bind="with: hint.details">
+                <div class="modal-details">
+                    <div class="details-item">
+                        <div class="row">
+                            <div class="col-md-8 text-right">Number of exceeding documents</div>
+                            <div class="col-md-4 details-value" data-bind="text: NumberOfExceedingDocuments.toLocaleString()"></div>
+                        </div>
+                    </div>
+
+                    <div class="details-item">
+                        <div class="row">
+                            <div class="col-md-8 text-right">Sample document id</div>
+                            <div class="col-md-4 details-value" data-bind="text: SampleDocumentId"></div>
+                        </div>
+                    </div>
+
+                    <div class="details-item">
+                        <div class="row">
+                            <div class="col-md-8 text-right">Max number outputs per document</div>
+                            <div class="col-md-4 details-value" data-bind="text: MaxNumberOutputsPerDocument.toLocaleString()"></div>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="row">
-                    <div class="col-md-6">Suggestion:</div>
-                    <div class="col-md-6" data-bind="text: Suggestion"></div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-6">Max number outputs per document</div>
-                    <div class="col-md-6" data-bind="text: MaxNumberOutputsPerDocument".toLocaleString()></div>
+                <div class="bg-info padding padding-sm ">
+                    <strong>Suggestion:</strong>
+                    <div class="small" data-bind="text: Suggestion"></div>
                 </div>
             </div>
-          
         </div>
         <div class="modal-footer" data-bind="compose: 'common/notificationCenter/detailViewer/performanceHint/footerPartial.html'">
         </div>

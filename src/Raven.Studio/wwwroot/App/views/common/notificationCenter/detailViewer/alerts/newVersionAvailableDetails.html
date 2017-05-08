@@ -3,7 +3,7 @@
         <div class="modal-header">
             <div class="flex-horizontal">
                 <div class="flex-grow">
-                    <h3 class="modal-title" id="myModalLabel" data-bind="text: alert.title"></h3>
+                    <h3 class="modal-title" id="myModalLabel" data-bind="text: alert.title, attr:{ class: 'modal-title ' + alert.headerClass() }"></h3>
                 </div>
                 <div>
                     <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
@@ -13,20 +13,24 @@
             </div>
         </div>
         <div class="modal-body">
-            <div data-bind="text: alert.message"></div>
-            
-            <div data-bind="with: alert.details">
-                <div class="row">
-                    <div class="col-md-6">Build Type</div>
-                    <div class="col-md-6" data-bind="text: VersionInfo.BuildType"></div>
+            <h3 class="text-center" data-bind="text: alert.message"></h3>
+
+            <div class="modal-details" data-bind="with: alert.details">
+                <div class="details-item">
+                    <div class="row">
+                        <div class="col-md-4 text-right">Build Type</div>
+                        <div class="col-md-8 details-value" data-bind="text: VersionInfo.BuildType"></div>
+                    </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-6">Release date</div>
-                    <div class="col-md-6" data-bind="text: $parent.releaseDate"></div>
+                <div class="details-item">
+                    <div class="row">
+                        <div class="col-md-4 text-right">Release date</div>
+                        <div class="col-md-8 details-value" data-bind="text: $parent.releaseDate"></div>
+                    </div>
                 </div>
             </div>
-          
+
         </div>
         <div class="modal-footer" data-bind="compose: 'common/notificationCenter/detailViewer/alerts/footerPartial.html'">
         </div>
