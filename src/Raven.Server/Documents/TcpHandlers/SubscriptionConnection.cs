@@ -65,6 +65,8 @@ namespace Raven.Server.Documents.TcpHandlers
                 CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
 
             Stats = new SubscriptionConnectionStats();            
+
+            
         }       
 
         private async Task<bool> ParseSubscriptionOptionsAsync()

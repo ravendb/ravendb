@@ -575,6 +575,7 @@ namespace Raven.Server.Documents
                 BundleLoader.HandleDatabaseRecordChange();
                 IndexStore.HandleDatabaseRecordChange();
                 ReplicationLoader?.HandleDatabaseRecordChange();
+                SubscriptionStorage?.HandleDatabaseRecordChange();
             }
             finally
             {
