@@ -1,11 +1,13 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import operation = require("common/notifications/models/operation");
 import notificationCenter = require("common/notifications/notificationCenter");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 abstract class abstractOperationDetails extends dialogViewModelBase {
 
     protected readonly op: operation;
     protected readonly killFunction: () => void;
+    protected readonly openDetails: () => void;
 
     operationFailed: KnockoutComputed<boolean>;
     killable: KnockoutComputed<boolean>;
@@ -20,6 +22,7 @@ abstract class abstractOperationDetails extends dialogViewModelBase {
         this.bindToCurrentInstance("close", "killOperation");
         this.op = op;
         this.killFunction = () => notificationCenter.killOperation(op);
+        this.openDetails = () => notificationCenter.openDetails(op);
 
         this.registerDisposable(this.op.status.subscribe(status => {
             if (status === "Canceled") {
@@ -41,9 +44,17 @@ abstract class abstractOperationDetails extends dialogViewModelBase {
     }
 
     killOperation() {
-        this.spinners.kill(true);
-        this.killFunction();
-        // note we don't set kill back to false - we close details view when operation is cancelled
+        this.close();
+        viewHelpers.confirmationMessage("Are you sure?", "Do you want to abort current operation?", ["No", "Yes"], true)
+            .done((result: confirmDialogResult) => {
+                if (result.can) {
+                    this.spinners.kill(true);
+                    this.killFunction();
+                    // note we don't set kill back to false - we close details view when operation is cancelled
+                } else {
+                    this.openDetails();
+                }
+            });
     }
 
 }

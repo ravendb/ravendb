@@ -1,4 +1,6 @@
-﻿/*
+﻿/// <reference path="../../typings/tsd.d.ts" />
+
+/*
 Taken from: https://github.com/mbejda/BootstrapModalDurandalJS/blob/master/bootstrapModal.js
 
 with LOCAL modifications!
