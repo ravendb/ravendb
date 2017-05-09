@@ -136,10 +136,7 @@ namespace Voron
                 if (_avoidDuplicates.Add(item.Env) == false)
                     continue; // avoid duplicates in batch
 
-                if (ThreadPool.QueueUserWorkItem(state => SyncEnvironment((EnvSyncReq)state), item) == false)
-                {
-                    SyncEnvironment(item);
-                }
+                ThreadPool.QueueUserWorkItem(state => SyncEnvironment((EnvSyncReq)state), item);
             }
         }
 
