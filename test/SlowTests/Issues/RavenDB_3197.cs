@@ -25,7 +25,7 @@ namespace SlowTests.Issues
             public string LastName { get; set; }
         }
 
-        [Fact(Skip = "Fix this as part of RavenDB-6809, code conflict, probably bad merge")]
+        [Fact]
         public async Task ScriptPatchShouldGenerateNiceException()
         {
             using (var store = GetDocumentStore())
@@ -61,12 +61,13 @@ exports.c = function(v) { throw 'oops'; }
                 {
                     var e = Assert.Throws<JavaScriptException>(() =>
                     {
-                        //TODO: fix this, probably bad merge
-//                        database.Patcher.Apply(context, "simpleUsers/1", null, new PatchRequest
-//                        {
-//                            Script = @"var s = 1234; 
-//a(s);"
-//                        }, null, skipPatchIfEtagMismatch: false, debugMode: false);
+                        var document = database.DocumentsStorage.Get(context, "simpleUsers/1");
+
+                        database.Patcher.Apply(context, document, new PatchRequest
+                        {
+                            Script = @"var s = 1234; 
+a(s);"
+                        });
                     });
 
                     Assert.Equal(@"Unable to execute JavaScript: 
