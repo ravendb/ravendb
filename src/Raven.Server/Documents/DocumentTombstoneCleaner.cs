@@ -90,7 +90,7 @@ namespace Raven.Server.Documents
                     {
                         foreach (var tombstone in subscription.GetLastProcessedDocumentTombstonesPerCollection())
                         {
-                            if (tombstone.Key == Constants.Documents.Replication.AllDocumentsCollection)
+                            if (tombstone.Key == Constants.Documents.Collections.AllDocumentsCollection)
                             {
                                 minAllDocsEtag = Math.Min(tombstone.Value, minAllDocsEtag);
                                 break;

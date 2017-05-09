@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Subscriptions
             BlittableJsonReaderObject criteria;
             if (json.TryGet(nameof(Criteria), out criteria))
             {
-                Criteria = new SubscriptionCriteria(Constants.Documents.Indexing.AllDocumentsCollection);
+                Criteria = new SubscriptionCriteria(Constants.Documents.Collections.AllDocumentsCollection);
                 Criteria.FillFromBlittableJson(criteria);
             } 
         }

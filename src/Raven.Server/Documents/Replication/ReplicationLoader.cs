@@ -615,7 +615,7 @@ namespace Raven.Server.Documents.Replication
             var minEtag = MinimalEtagForReplication;
             var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
             {
-                {Constants.Documents.Replication.AllDocumentsCollection, minEtag}
+                {Constants.Documents.Collections.AllDocumentsCollection, minEtag}
             };
 
             if (Destinations == null)

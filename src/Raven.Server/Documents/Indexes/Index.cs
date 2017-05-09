@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Indexes
             Definition = definition;
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
 
-            if (Collections.Contains(Constants.Documents.Indexing.AllDocumentsCollection))
+            if (Collections.Contains(Constants.Documents.Collections.AllDocumentsCollection))
                 HandleAllDocs = true;
         }
 
@@ -2297,14 +2297,14 @@ namespace Raven.Server.Documents.Indexes
 
         public long GetLastDocumentEtagInCollection(DocumentsOperationContext databaseContext, string collection)
         {
-            return collection == Constants.Documents.Indexing.AllDocumentsCollection
+            return collection == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastDocumentEtag(databaseContext.Transaction.InnerTransaction)
                 : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
         }
 
         public long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, string collection)
         {
-            return collection == Constants.Documents.Indexing.AllDocumentsCollection
+            return collection == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)
                 : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
         }
