@@ -42,63 +42,75 @@ namespace Raven.Server
 
             LoggingSource.Instance.SetupLogMode(mode, Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
 
-            try
+
+            var rerun = false;
+            do
             {
-                using (var server = new RavenServer(configuration))
+                if (rerun)
                 {
-                    try
-                    {
-                        server.Initialize();
-
-                        if (printServerId)
-                            Console.WriteLine($"Server ID is {server.ServerStore.GetServerId()}.");
-
-                        Console.WriteLine($"Listening to: {string.Join(", ", server.WebUrls)}");
-
-                        var serverWebUrl = server.WebUrls[0];
-                        server.GetTcpServerStatusAsync()
-                            .ContinueWith(tcp =>
-                            {
-                                if (tcp.IsCompleted)
-                                {
-                                    Console.WriteLine($"Tcp listening on {string.Join(", ", tcp.Result.Listeners.Select(l => l.LocalEndpoint))}");
-                                }
-                                else
-                                {
-                                    Console.Error.WriteLine($"Tcp listen failure (see {serverWebUrl}/info/tcp for details) {tcp.Exception.Message}");
-                                }
-                            });
-                        Console.WriteLine("Server started, listening to requests...");
-
-                        if (configuration.Core.RunAsService)
-                        {
-                            RunAsService();
-                        }
-                        else
-                        {
-                            RunInteractive(server);
-                        }
-                        Console.WriteLine("Starting shut down...");
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info("Server is shutting down");
-                    }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations("Failed to initialize the server", e);
-                        Console.WriteLine(e);
-                        return -1;
-                    }
+                    Console.WriteLine("\nRestarting Server...");
+                    rerun = false;
                 }
-                Console.WriteLine("Shutdown completed");
-                return 0;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error during shutdown");
-                Console.WriteLine(e);
-                return -2;
-            }
+
+                try
+                {
+                    using (var server = new RavenServer(configuration))
+                    {
+                        try
+                        {
+                            server.Initialize();
+
+                            if (printServerId)
+                                Console.WriteLine($"Server ID is {server.ServerStore.GetServerId()}.");
+
+                            Console.WriteLine($"Listening to: {string.Join(", ", server.WebUrls)}");
+
+                            var serverWebUrl = server.WebUrls[0];
+                            server.GetTcpServerStatusAsync()
+                                .ContinueWith(tcp =>
+                                {
+                                    if (tcp.IsCompleted)
+                                    {
+                                        Console.WriteLine($"Tcp listening on {string.Join(", ", tcp.Result.Listeners.Select(l => l.LocalEndpoint))}");
+                                    }
+                                    else
+                                    {
+                                        Console.Error.WriteLine($"Tcp listen failure (see {serverWebUrl}/info/tcp for details) {tcp.Exception.Message}");
+                                    }
+                                });
+                            Console.WriteLine("Server started, listening to requests...");
+
+                            if (configuration.Core.RunAsService)
+                            {
+                                RunAsService();
+                            }
+                            else
+                            {
+                                rerun = RunInteractive(server);
+                            }
+                            Console.WriteLine("Starting shut down...");
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info("Server is shutting down");
+                        }
+                        catch (Exception e)
+                        {
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations("Failed to initialize the server", e);
+                            Console.WriteLine(e);
+                            return -1;
+                        }
+                    }
+                    Console.WriteLine("Shutdown completed");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Error during shutdown");
+                    Console.WriteLine(e);
+                    return -2;
+                }
+            } while (rerun);
+
+            return 0;
         }
 
         private static string ParseCustomConfigPath(string[] args)
@@ -132,11 +144,11 @@ namespace Raven.Server
             mre.WaitOne();
         }
 
-        private static void RunInteractive(RavenServer server)
+        private static bool RunInteractive(RavenServer server)
         {
             var configuration = server.Configuration;
 
-            bool ctrlCPressed = false;
+            var ctrlCPressed = false;
             Console.CancelKeyPress += (sender, args) =>
             {
                 ctrlCPressed = true;
@@ -158,14 +170,17 @@ namespace Raven.Server
                             break;
                         Console.WriteLine("End of standard input detected, switching to server mode...");
                         RunAsService();
-                        return;
+                        return false;
 
                     case "q":
-                        return;
+                        return false;
 
                     case "cls":
                         Console.Clear();
                         break;
+
+                    case "reset":
+                        return true;
 
                     case "log -n":
                     case "log no http":
@@ -247,7 +262,10 @@ namespace Raven.Server
             Console.WriteLine($"    stats {description, 37}");
 
             description = "collect gc max generation";
-            Console.WriteLine($"    gc2 {description,36}");
+            Console.WriteLine($"    gc2 {description, 36}");
+
+            description = "reset the server";
+            Console.WriteLine($"    reset {description, 25}");
 
             description = "quit";
             Console.WriteLine($"    q {description, 17}");
