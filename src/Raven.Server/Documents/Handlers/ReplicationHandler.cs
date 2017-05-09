@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
@@ -63,19 +64,30 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
+                var skip = GetStart();
+                var pageSize = GetPageSize();
+
+                var alreadyAdded = new HashSet<LazyStringValue>(LazyStringValueComparer.Instance);
                 var array = new DynamicJsonArray();
-                var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsAfter(context, etag);
+                var conflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsAfter(context, etag);
                 foreach (var conflict in conflicts)
                 {
-                    array.Add(new DynamicJsonValue
+                    if (alreadyAdded.Add(conflict.Key))
                     {
-                        [nameof(GetConflictsResult.Key)] = conflict.Key,
-                        [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector.ToJson(),
-                    });
+                        if (skip > 0)
+                        {
+                            skip--;
+                            continue;
+                        }
+                        if (pageSize-- <= 0)
+                            break;
+                        array.Add(conflict.Key);
+                    }
                 }
 
                 context.Write(writer, new DynamicJsonValue
                 {
+                    [nameof(Database.DocumentsStorage.ConflictsStorage.ConflictsCount)] = Database.DocumentsStorage.ConflictsStorage.ConflictsCount,
                     [nameof(GetConflictsResult.Results)] = array
                 });
 
