@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         writer.WriteComma();
 
                         writer.WritePropertyName((nameof(query.StartTime)));
-                        writer.WriteDateTime(query.StartTime);
+                        writer.WriteDateTime(query.StartTime, isUtc: true);
                         writer.WriteComma();
 
                         writer.WritePropertyName((nameof(query.QueryInfo)));
