@@ -71,7 +71,7 @@ namespace SlowTests.MailingList
                     var user3 = session.Load<User>(user1.InternalId);
                     Assert.NotNull(user3);
                     var metadata = session.Advanced.GetMetadataFor(user3);
-                    var lastModified = DateTime.Parse(metadata.GetString(Constants.Documents.Metadata.LastModified));
+                    var lastModified = DateTime.Parse(metadata.GetString(Constants.Documents.Metadata.LastModified)).ToUniversalTime();
 
                     var modifiedDocuments = (from u in session.Query<User, AmazingIndex2>()
                                                 .TransformWith<AmazingTransformer2, AmazingTransformer2.ModifiedDocuments>()

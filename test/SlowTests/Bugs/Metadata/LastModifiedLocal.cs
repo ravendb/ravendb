@@ -37,7 +37,7 @@ namespace SlowTests.Bugs.Metadata
                     var lastModified = Convert.ToDateTime(session.Advanced.GetMetadataFor(user)[Constants.Documents.Metadata.LastModified]);
 
                     Assert.NotNull(lastModified);
-                    Assert.InRange(lastModified, before, after);
+                    Assert.InRange(lastModified.ToUniversalTime(), before, after);
 
                 }
             }
