@@ -102,9 +102,9 @@ namespace Raven.Client.Documents
     
     public class DatabaseTopology
     {
-        public List<DatabaseTopologyNode> Members = new List<DatabaseTopologyNode>();
-        public List<DatabaseTopologyNode> Promotables = new List<DatabaseTopologyNode>();
-        public List<DatabaseWatcher> Watchers = new List<DatabaseWatcher>();
+        public List<DatabaseTopologyNode> Members = new List<DatabaseTopologyNode>(); // Member of the master to master replication inside cluster
+        public List<DatabaseTopologyNode> Promotables = new List<DatabaseTopologyNode>(); // Promotable is in a receive state until Leader decides it can become a Member
+        public List<DatabaseWatcher> Watchers = new List<DatabaseWatcher>(); // Watcher only recieves (slave)
 
         public bool RelevantFor(string nodeTag)
         {
