@@ -520,25 +520,29 @@ namespace Sparrow.Json
             return GetPropertyIndex(new StringSegment(name));
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetPropertyIndex(StringSegment name)
         {
             if (_propCount == 0)
-                return -1;
+                goto NotFound;
 
             int min = 0, max = _propCount - 1;
             var comparer = _context.GetLazyStringForFieldWithCaching(name);
 
+            long currentOffsetSize = _currentOffsetSize;
+            long currentPropertyIdSize = _currentPropertyIdSize;
+            long metadataSize = currentOffsetSize + currentPropertyIdSize + sizeof(byte);
+            byte* metadataPtr = _metadataPtr;
+
             int mid = comparer.LastFoundAt ?? (min + max) / 2;
             if (mid > max)
                 mid = max;
+
             do
-            {
-                var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
-                var propertyIntPtr = (long)_metadataPtr + (mid) * metadataSize;
+            {               
+                var propertyIntPtr = metadataPtr + (mid) * metadataSize;
 
-                var propertyId = ReadNumber((byte*)propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
-
+                var propertyId = ReadNumber(propertyIntPtr + currentOffsetSize, currentPropertyIdSize);
 
                 var cmpResult = ComparePropertyName(propertyId, comparer);
                 if (cmpResult == 0)
@@ -557,7 +561,8 @@ namespace Sparrow.Json
                 mid = (min + max) / 2;
 
             } while (min <= max);
-            return -1;
+
+            NotFound: return -1;
         }
 
         /// <summary>
@@ -567,7 +572,7 @@ namespace Sparrow.Json
         /// <param name="comparer">Comparer of a specific string value</param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe int ComparePropertyName(int propertyId, LazyStringValue comparer)
+        private int ComparePropertyName(int propertyId, LazyStringValue comparer)
         {
             // Get the offset of the property name from the _proprNames position
             var propertyNameOffsetPtr = _propNames + 1 + propertyId * _propNamesDataOffsetSize;
