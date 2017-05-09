@@ -81,7 +81,11 @@ namespace Raven.Server.Documents.Handlers
                         }
                         if (pageSize-- <= 0)
                             break;
-                        array.Add(conflict.Key);
+                        array.Add(new DynamicJsonValue
+                        {
+                            [nameof(GetConflictsResult.Key)] = conflict.Key,
+                            [nameof(conflict.LastModified)] = conflict.LastModified
+                        });
                     }
                 }
 
