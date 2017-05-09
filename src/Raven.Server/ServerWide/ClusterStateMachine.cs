@@ -431,7 +431,7 @@ namespace Raven.Server.ServerWide
 
             leader.SetStateOf(index, tcs =>
             {
-                tcs.TrySetException(e.ExceptionForTaskCompletionSource());
+                tcs.TrySetException(e);
             });
         }
 

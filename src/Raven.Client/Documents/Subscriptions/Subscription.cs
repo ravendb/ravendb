@@ -400,18 +400,6 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private void LogAndThrowForUnreasonableNextObjectValue()
-        {
-            var msg =
-                $@"Retrieved null from ReadNextObject() of the subscription, but the Subscription<T> was not disposed. {
-                        Environment.NewLine
-                    } This is not supposed to happen and is likely a bug. Stack trace: {Environment.StackTrace}";
-            if (_logger.IsInfoEnabled)
-                _logger.Info(msg);
-
-            throw new InvalidOperationException(msg);
-        }
-
         private async Task<Tuple<List<SubscriptionConnectionServerMessage>, IDisposable>> ReadSingleSubscriptionBatchFromServer(JsonContextPool contextPool, Stream tcpStream, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             JsonOperationContext context;
@@ -538,7 +526,7 @@ namespace Raven.Client.Documents.Subscriptions
                         IsErroredBecauseOfSubscriber = true;
                         LastSubscriberException = ex;
                         SubscriptionConnectionInterrupted(ex, false);
-                        _taskCompletionSource.TrySetException(ex.ExceptionForTaskCompletionSource());
+                        _taskCompletionSource.TrySetException(ex);
 
                         try
                         {
@@ -607,9 +595,7 @@ namespace Raven.Client.Documents.Subscriptions
                         SubscriptionConnectionInterrupted(ex, true);
                         return;
                     }
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                    firstConnectionCompleted.TrySetException(ex.ExceptionForTaskCompletionSource());
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                    firstConnectionCompleted.TrySetException(ex);
                     if (_logger.IsInfoEnabled)
                     {
                         _logger.Info(
@@ -653,17 +639,11 @@ namespace Raven.Client.Documents.Subscriptions
             // someone forced us to drop the connection by calling Subscriptions.Release
             {
                 IsConnectionClosed = true;
-                _taskCompletionSource.TrySetException(ex.ExceptionForTaskCompletionSource());
+                _taskCompletionSource.TrySetException(ex);
                 SubscriptionConnectionInterrupted(ex, false);
 
-                try
-                {
-                    await DisposeAsync().ConfigureAwait(false);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                }
+                await DisposeAsync().ConfigureAwait(false);
+
                 return true;
             }
 

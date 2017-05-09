@@ -391,7 +391,7 @@ namespace Sparrow.Json
             while (_current != null &&
                    _current.Address != null) //prevent double dispose
             {
-                _context.TryReturnMemory(_current.Allocation);
+                _context.ReturnMemory(_current.Allocation);
                 _current.Address = null; //precaution, to make memory issues more visible
                 _current = _current.PreviousAllocated;
             }

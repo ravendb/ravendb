@@ -153,27 +153,6 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static async Task<(TcpConnectionInfo, Exception,bool)> TryGetTcpInfoAsync(string url, string databaseName, string apiKey)
-        {
-            using (var requestExecuter = RequestExecutor.CreateForSingleNode(url, databaseName, apiKey))
-            using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                var getTcpInfoCommand = new GetTcpInfoCommand();
-                try
-                {
-                    await requestExecuter.ExecuteAsync(getTcpInfoCommand, context);
-                }                
-                catch (Exception e) when (e is AllTopologyNodesDownException || 
-                                          e is InvalidOperationException)
-                {
-                    return (null, e, false);
-                }
-
-                return (getTcpInfoCommand.Result, null, true);
-            }
-        }
-
-
         public static void EnsureCollectionTag(BlittableJsonReaderObject obj, string collection)
         {
             string actualCollection;

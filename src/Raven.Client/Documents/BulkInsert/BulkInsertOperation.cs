@@ -84,10 +84,8 @@ namespace Raven.Client.Documents.BulkInsert
                 _done.TrySetCanceled();
 
                 //after dispose we don't care for unobserved exceptions
-                if (_done.Task.IsFaulted)
-                    _done.Task.IgnoreUnobservedExceptions();
-                if(_outputStreamTcs.Task.IsFaulted)
-                    _outputStreamTcs.Task.IgnoreUnobservedExceptions(); 
+                _done.Task.IgnoreUnobservedExceptions();
+                _outputStreamTcs.Task.IgnoreUnobservedExceptions();
             }
         }
 
@@ -193,7 +191,7 @@ namespace Raven.Client.Documents.BulkInsert
             }
 
             JsonOperationContext tempContext;
-            using(_requestExecuter.ContextPool.AllocateOperationContext(out tempContext))
+            using (_requestExecuter.ContextPool.AllocateOperationContext(out tempContext))
             using (var doc = EntityToBlittable.ConvertEntityToBlittable(entity, _conventions, tempContext, new DocumentInfo
             {
                 Collection = _conventions.GetCollectionName(entity)
@@ -286,7 +284,7 @@ namespace Raven.Client.Documents.BulkInsert
             try
             {
                 Exception flushEx = null;
-                
+
                 if (_stream != null)
                 {
                     try

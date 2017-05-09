@@ -417,7 +417,9 @@ namespace Sparrow.Json
             string debugTag,
             CancellationToken cancellationToken)
         {
-            ThrowObjectDisposedIfRelevant();
+
+            if (_disposed)
+                ThrowObjectDisposed();
 
             _jsonParserState.Reset();
             ManagedPinnedBuffer bytes;
@@ -478,7 +480,9 @@ namespace Sparrow.Json
             BlittableJsonDocumentBuilder.UsageMode mode,
             ManagedPinnedBuffer bytes, IBlittableDocumentModifier modifier = null)
         {
-            ThrowObjectDisposedIfRelevant();
+
+            if (_disposed)
+                ThrowObjectDisposed();
 
             _jsonParserState.Reset();
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
@@ -515,7 +519,8 @@ namespace Sparrow.Json
            CancellationToken token = default(CancellationToken)
            )
         {
-            ThrowObjectDisposedIfRelevant();
+            if (_disposed)
+                ThrowObjectDisposed();
 
             _jsonParserState.Reset();
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
@@ -554,7 +559,8 @@ namespace Sparrow.Json
 
         public async Task<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, ManagedPinnedBuffer bytes, CancellationToken? token = null)
         {
-            ThrowObjectDisposedIfRelevant();
+            if (_disposed)
+                ThrowObjectDisposed();
 
             _jsonParserState.Reset();
             UnmanagedJsonParser parser = null;
@@ -599,10 +605,9 @@ namespace Sparrow.Json
             }
         }
 
-        private void ThrowObjectDisposedIfRelevant()
+        private void ThrowObjectDisposed()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(JsonOperationContext));
+            throw new ObjectDisposedException(nameof(JsonOperationContext));
         }
 
 
@@ -840,16 +845,6 @@ namespace Sparrow.Json
         public bool GrowAllocation(AllocatedMemoryData allocation, int sizeIncrease)
         {
             return _arenaAllocator.GrowAllocation(allocation, sizeIncrease);
-        }
-
-
-        public bool TryReturnMemory(AllocatedMemoryData allocation)
-        {
-            if (_generation != allocation.ContextGeneration)
-                return false;
-
-            _arenaAllocator.Return(allocation);
-            return true;
         }
 
         public void ReturnMemory(AllocatedMemoryData allocation)

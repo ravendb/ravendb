@@ -25,10 +25,6 @@ namespace Raven.Client.Util.Helpers
         {
             if (SystemTime.UtcNow > BlowupDateTime)
             {
-#if DEBUG
-                //in case that the exception is thrown in UnobservedTaskException 
-                Console.WriteLine("Development time bomb has thrown, the date is " + BlowupDateTime);
-#endif           
                 throw new DevelopmentTimebombException("Development time bomb, the date is " + BlowupDateTime);
             }
         }

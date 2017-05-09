@@ -34,25 +34,14 @@ namespace Raven.Server.ServerWide.Maintance
         public ClusterMaintenanceMaster(ServerStore server,string leaderClusterTag, long term)
         {
             _leaderClusterTag = leaderClusterTag;
-            _logger = LoggingSource.Instance.GetLogger(_leaderClusterTag, typeof(ClusterMaintenanceMaster).FullName);
+            _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceMaster>(_leaderClusterTag);
             _term = term;
             Config = server.Configuration.ClusterMaintaince;
         }
 
         public async Task AddToCluster(string clusterTag, string url)
         {
-            var (connectionInfo, requestException, hasGetSucceeded) = 
-                await ReplicationUtils.TryGetTcpInfoAsync(MultiDatabase.GetRootDatabaseUrl(url), null, null);
-
-            if (hasGetSucceeded == false)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info("Failed to add to cluster, got exception while trying to get TcpInfo from remote node.",requestException);
-                }
-                //TODO: consider throwing warning here? (so it would be visible in the studio..)
-                return;
-            }
+            var connectionInfo = await ReplicationUtils.GetTcpInfoAsync(MultiDatabase.GetRootDatabaseUrl(url), null, null);
 
             var clusterNode = new ClusterNode(clusterTag, connectionInfo, _contextPool, this, _cts.Token);
             _clusterNodes.Add(clusterTag, clusterNode);

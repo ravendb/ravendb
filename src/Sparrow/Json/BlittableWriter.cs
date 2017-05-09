@@ -701,7 +701,7 @@ namespace Sparrow.Json
         {
             _unmanagedWriteBuffer.DisposeIfNeeded();
             if (_compressionBuffer != null)
-                _context.TryReturnMemory(_compressionBuffer);
+                _context.ReturnMemory(_compressionBuffer);
 
             _compressionBuffer = null;
         }

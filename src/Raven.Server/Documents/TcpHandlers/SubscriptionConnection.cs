@@ -281,8 +281,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
 
             TcpConnection.DocumentDatabase.Changes.OnDocumentChange += RegisterNotification;
-            return
-                new DisposableAction(
+            return new DisposableAction(
                     () =>
                     {
                         TcpConnection.DocumentDatabase.Changes.OnDocumentChange -= RegisterNotification;

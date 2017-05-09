@@ -49,12 +49,6 @@ namespace FastTests
 
                 var e = args.Exception.ExtractSingleInnerException();
 
-                if (e is DevelopmentTimebombException)
-                {
-                    args.SetObserved(); //don't fail on the time bomb exceptions..
-                    return;
-                }
-
                 var sb = new StringBuilder();
                 sb.AppendLine("===== UNOBSERVED TASK EXCEPTION =====");
                 sb.AppendLine(e.ExceptionToString(null));

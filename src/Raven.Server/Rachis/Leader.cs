@@ -584,7 +584,7 @@ namespace Raven.Server.Rachis
                         }
                         else
                         {
-                            entry.Value.TaskCompletionSource.TrySetException(te.ExceptionForTaskCompletionSource());
+                            entry.Value.TaskCompletionSource.TrySetException(te);
                         }
                     }
                 }, null);

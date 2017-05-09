@@ -180,7 +180,7 @@ namespace Raven.Server.Documents
         {
             if (cmd.Exception != null)
             {
-                cmd.TaskCompletionSource.TrySetException(ExceptionExtensions.ExceptionForTaskCompletionSource(cmd.Exception));
+                cmd.TaskCompletionSource.TrySetException(cmd.Exception);
             }
             else
             {
