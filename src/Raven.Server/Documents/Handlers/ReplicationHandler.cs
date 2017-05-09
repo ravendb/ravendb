@@ -421,7 +421,7 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
-                var advisor = new ConflictResovlerAdvisor(conflicts.Select(c => c.Doc), context);
+                var advisor = new ConflictResolverAdvisor(conflicts.Select(c => c.Doc), context);
                 var resovled = advisor.Resolve();
 
                 context.Write(writer, new DynamicJsonValue

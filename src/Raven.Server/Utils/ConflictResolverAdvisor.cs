@@ -5,13 +5,13 @@ using Sparrow.Json;
 using Constants = Raven.Client.Constants;
 namespace Raven.Server.Utils
 {
-    public class ConflictResovlerAdvisor
+    public class ConflictResolverAdvisor
     {
         private readonly BlittableJsonReaderObject[] _docs;
         internal readonly bool IsMetadataResolver;
         private readonly JsonOperationContext _context;
 
-        public ConflictResovlerAdvisor(IEnumerable<BlittableJsonReaderObject> docs, JsonOperationContext ctx, bool isMetadataResolver = false)
+        public ConflictResolverAdvisor(IEnumerable<BlittableJsonReaderObject> docs, JsonOperationContext ctx, bool isMetadataResolver = false)
         {
             _docs = docs.ToArray();
             IsMetadataResolver = isMetadataResolver;
