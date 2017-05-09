@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Stats;
@@ -35,7 +36,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract void Dispose();
 
-        public abstract void NotifyAboutWork();
+        public abstract void NotifyAboutWork(DocumentChange change);
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
@@ -47,6 +48,7 @@ namespace Raven.Server.Documents.ETL
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim();
         private readonly CancellationTokenSource _cts;
         private readonly EtlStorage _storage;
+        private readonly HashSet<string> _collections;
 
         private readonly ConcurrentQueue<EtlStatsAggregator> _lastEtlStats =
             new ConcurrentQueue<EtlStatsAggregator>();
@@ -74,6 +76,9 @@ namespace Raven.Server.Documents.ETL
             Database = database;
             _storage = Database.ConfigurationStorage.EtlStorage;
             Statistics = new EtlProcessStatistics(tag, Transformation.Name, Database.NotificationCenter);
+
+            if (transformation.ApplyToAllDocuments == false)
+                _collections = new HashSet<string>(Transformation.Collections, StringComparer.OrdinalIgnoreCase);
         }
 
         protected CancellationToken CancellationToken => _cts.Token;
@@ -284,9 +289,10 @@ namespace Raven.Server.Documents.ETL
             Metrics.BatchSizeMeter.Mark(stats.NumberOfExtractedItems);
         }
 
-        public override void NotifyAboutWork()
+        public override void NotifyAboutWork(DocumentChange change)
         {
-            _waitForChanges.Set();
+            if (Transformation.ApplyToAllDocuments || _collections.Contains(change.CollectionName))
+                _waitForChanges.Set();
         }
 
         public override void Start()
