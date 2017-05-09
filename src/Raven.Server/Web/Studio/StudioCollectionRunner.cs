@@ -22,7 +22,7 @@ namespace Raven.Server.Web.Studio
 
         public override unsafe Task<IOperationResult> ExecuteDelete(string collectionName, CollectionOperationOptions options, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            if (collectionName == Constants.Documents.Indexing.AllDocumentsCollection)
+            if (collectionName == Constants.Documents.Collections.AllDocumentsCollection)
             {
                 bool _;
                 if (_excludeIds.Count == 0)
@@ -61,7 +61,7 @@ namespace Raven.Server.Web.Studio
 
         protected override IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize)
         {
-            if (collectionName == Constants.Documents.Indexing.AllDocumentsCollection)
+            if (collectionName == Constants.Documents.Collections.AllDocumentsCollection)
                 return Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, batchSize);
 
             return base.GetDocuments(context, collectionName, startEtag, batchSize);
@@ -69,7 +69,7 @@ namespace Raven.Server.Web.Studio
 
         protected override long GetTotalCountForCollection(DocumentsOperationContext context, string collectionName)
         {
-            if (collectionName == Constants.Documents.Indexing.AllDocumentsCollection)
+            if (collectionName == Constants.Documents.Collections.AllDocumentsCollection)
                 return Database.DocumentsStorage.GetNumberOfDocuments(context);
 
             return base.GetTotalCountForCollection(context, collectionName);
@@ -77,7 +77,7 @@ namespace Raven.Server.Web.Studio
 
         protected override long GetLastEtagForCollection(DocumentsOperationContext context, string collection)
         {
-            return collection == Constants.Documents.Indexing.AllDocumentsCollection
+            return collection == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction)
                 : base.GetLastEtagForCollection(context, collection);
         }

@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes
             if (fields == null)
                 throw new ArgumentNullException(nameof(fields));
 
-            collection = collection == Constants.Documents.Indexing.AllDocumentsCollection ? "AllDocs" : collection;
+            collection = collection == Constants.Documents.Collections.AllDocumentsCollection ? "AllDocs" : collection;
 
             if (fields.Count == 0)
                 return $"Auto/{collection}";

@@ -242,7 +242,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         private IEnumerable<Document> GetDocumentsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
         {
-            if (collection == Constants.Documents.Indexing.AllDocumentsCollection)
+            if (collection == Constants.Documents.Collections.AllDocumentsCollection)
                 return _documentsStorage.GetDocumentsFrom(databaseContext, lastEtag + 1, 0, pageSize);
             return _documentsStorage.GetDocumentsFrom(databaseContext, collection, lastEtag + 1, 0, pageSize);
         }

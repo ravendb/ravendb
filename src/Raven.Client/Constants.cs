@@ -124,15 +124,17 @@ namespace Raven.Client
                 public const string Content = "Content";
             }
 
+            public class Collections
+            {
+                public const string AllDocumentsCollection = "@all_docs";
+            }
+
             public class Indexing
             {
                 private Indexing()
                 {
                 }
-
-
-                public const string AllDocumentsCollection = "@all_docs";
-
+                
                 public const string SideBySideIndexNamePrefix = "ReplacementOf/";
 
                 public class Fields
@@ -223,8 +225,6 @@ namespace Raven.Client
 
             public class Replication
             {
-                public const string AllDocumentsCollection = Indexing.AllDocumentsCollection;
-
                 public const string ReplicationDestinationsId = "Raven/Replication/Destinations";
 
                 public const string ReplicationConfigurationDocument = "Raven/Replication/Documents/Configuration";

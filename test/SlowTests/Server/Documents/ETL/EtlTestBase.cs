@@ -23,12 +23,12 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        protected static void SetupEtl(DocumentStore src, DocumentStore dst, string collection, string script, bool applyToAllDocuments = false)
+        protected static void SetupEtl(DocumentStore src, DocumentStore dst, string collection, string script, bool applyToAllDocuments = false, bool disabled = false)
         {
-            SetupEtl(src, dst, new[] { collection }, script, applyToAllDocuments);
+            SetupEtl(src, dst, new[] { collection }, script, applyToAllDocuments, disabled);
         }
 
-        protected static void SetupEtl(DocumentStore src, DocumentStore dst, IEnumerable<string> collections, string script, bool applyToAllDocuments = false)
+        protected static void SetupEtl(DocumentStore src, DocumentStore dst, IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false)
         {
             SetupEtl(src, new EtlDestinationsConfig
             {
@@ -48,7 +48,8 @@ namespace SlowTests.Server.Documents.ETL
                                 Name = $"ETL : {src.DefaultDatabase}@{src.Url} to {dst.DefaultDatabase}@{dst.Url}",
                                 Collections = new List<string>(collections),
                                 Script = script,
-                                ApplyToAllDocuments = applyToAllDocuments
+                                ApplyToAllDocuments = applyToAllDocuments,
+                                Disabled = disabled
                             }
                         }
                     }
