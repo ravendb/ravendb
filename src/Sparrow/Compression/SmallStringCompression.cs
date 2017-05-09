@@ -64,7 +64,7 @@ namespace Sparrow.Compression
             _hashTable = new byte*[byte.MaxValue][];
             for (int i = 0; i < termsTable.Length; i++)
             {
-                var byteCount = Encoding.UTF8.GetByteCount(termsTable[i]);
+                var byteCount = Encodings.Utf8.GetByteCount(termsTable[i]);
                 if (byteCount > byte.MaxValue)
                     throw new InvalidOperationException("Term " + termsTable[i] + " is too big");
                 var ptr = (byte*)NativeMemory.AllocateMemory(byteCount + 2);
@@ -72,7 +72,7 @@ namespace Sparrow.Compression
                 ptr[0] = (byte)byteCount;
                 fixed (char* pChars = termsTable[i])
                 {
-                    var bytes = Encoding.UTF8.GetBytes(pChars, termsTable[i].Length, ptr + 1, byteCount);
+                    var bytes = Encodings.Utf8.GetBytes(pChars, termsTable[i].Length, ptr + 1, byteCount);
                     if (bytes != byteCount)
                         throw new InvalidOperationException("Bug, UTF8 encoding mismatch for GetByteCount and GetBytes for " + termsTable[i]);
                 }

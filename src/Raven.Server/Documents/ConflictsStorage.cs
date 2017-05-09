@@ -126,7 +126,7 @@ namespace Raven.Server.Documents
             var scope = context.Allocator.Allocate(lowerKeySize + 1, out keyMem);
 
             Memory.Copy(keyMem.Ptr, lowerKey, lowerKeySize);
-            keyMem.Ptr[lowerKeySize] = SpecialChars.RecordSeperator;
+            keyMem.Ptr[lowerKeySize] = SpecialChars.RecordSeparator;
 
             prefixSlice = new Slice(SliceOptions.Key, keyMem);
             return scope;
@@ -530,7 +530,7 @@ namespace Raven.Server.Documents
                     using (conflictsTable.Allocate(out tbv))
                     {
                         tbv.Add(lowerKey);
-                        tbv.Add(SpecialChars.RecordSeperator);
+                        tbv.Add(SpecialChars.RecordSeparator);
                         tbv.Add((byte*)pChangeVector, existingDoc.ChangeVector.Length * sizeof(ChangeVectorEntry));
                         tbv.Add(keyPtr);
                         tbv.Add(existingDoc.Data.BasePointer, existingDoc.Data.Size);
@@ -562,7 +562,7 @@ namespace Raven.Server.Documents
                     using (conflictsTable.Allocate(out tableValueBuilder))
                     {
                         tableValueBuilder.Add(lowerKey);
-                        tableValueBuilder.Add(SpecialChars.RecordSeperator);
+                        tableValueBuilder.Add(SpecialChars.RecordSeparator);
                         tableValueBuilder.Add((byte*)pChangeVector, existingTombstone.ChangeVector.Length * sizeof(ChangeVectorEntry));
                         tableValueBuilder.Add(keyPtr);
                         tableValueBuilder.Add(null, 0);
@@ -631,7 +631,7 @@ namespace Raven.Server.Documents
                 using (conflictsTable.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(lowerKey);
-                    tvb.Add(SpecialChars.RecordSeperator);
+                    tvb.Add(SpecialChars.RecordSeparator);
                     tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * incomingChangeVector.Length);
                     tvb.Add(keyPtr);
                     tvb.Add(doc, docSize);

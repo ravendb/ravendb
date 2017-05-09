@@ -37,7 +37,7 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string ToDebugString(TreeNodeHeader* node)
         {
-            return Encoding.UTF8.GetString((byte*)node + Constants.Tree.NodeHeaderSize, node->KeySize);
+            return Encodings.Utf8.GetString((byte*)node + Constants.Tree.NodeHeaderSize, node->KeySize);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

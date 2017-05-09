@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Raven.Client.Util.Encryption;
+using Sparrow;
 
 namespace Raven.Client.Http.OAuth
 {
@@ -35,7 +36,7 @@ namespace Raven.Client.Http.OAuth
 
         public static string Hash(string data)
         {
-            var bytes = Encoding.UTF8.GetBytes(data);
+            var bytes = Encodings.Utf8.GetBytes(data);
 
             if (_sha1 == null)
                 _sha1 = Encryptor.Current.CreateHash();
@@ -45,7 +46,7 @@ namespace Raven.Client.Http.OAuth
 
         public static string EncryptAsymmetric(byte[] exponent, byte[] modulus, string data)
         {
-            var bytes = Encoding.UTF8.GetBytes(data);
+            var bytes = Encodings.Utf8.GetBytes(data);
             var results = new List<byte>();
 
             using (var aesKeyGen = Encryptor.Current.CreateSymmetrical(keySize: 256))

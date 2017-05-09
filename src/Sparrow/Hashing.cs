@@ -462,6 +462,17 @@ namespace Sparrow
                     return CalculateInline(buffer, (ulong)buf.Length, seed);
                 }
             }
+
+            public static ulong Calculate(string value, UTF8Encoding encoder, ulong seed = 0)
+            {
+                var buf = encoder.GetBytes(value);
+
+                fixed (byte* buffer = buf)
+                {
+                    return CalculateInline(buffer, (ulong)buf.Length, seed);
+                }
+            }
+
             public static ulong CalculateRaw(string buf, ulong seed = 0)
             {
                 fixed (char* buffer = buf)

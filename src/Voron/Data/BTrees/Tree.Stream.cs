@@ -334,7 +334,7 @@ namespace Voron.Data.BTrees
             Slice result;
             using (Slice.From(_tx.Allocator, StreamInfo.GetTagPtr(info), info->TagSize, out result))
             {
-                return result.ToString().Replace((char)SpecialChars.RecordSeperator, '|');
+                return result.ToString().Replace((char)SpecialChars.RecordSeparator, '|');
             }
         }
 

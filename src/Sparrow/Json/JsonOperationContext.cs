@@ -119,8 +119,6 @@ namespace Sparrow.Json
 
         private Stack<ManagedPinnedBuffer> _managedBuffers;
 
-        public static readonly UTF8Encoding Encoding = new UTF8Encoding();
-
         public CachedProperties CachedProperties;
 
         internal DateTime InPoolSince;
@@ -335,7 +333,7 @@ namespace Sparrow.Json
         private unsafe LazyStringValue GetLazyString(StringSegment field, bool longLived)
         {
             var state = new JsonParserState();
-            var maxByteCount = Encoding.GetMaxByteCount(field.Length);
+            var maxByteCount = Encodings.Utf8.GetMaxByteCount(field.Length);
 
             int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(field);
 
@@ -345,7 +343,7 @@ namespace Sparrow.Json
             fixed (char* pField = field.String)
             {
                 var address = memory.Address;
-                var actualSize = Encoding.GetBytes(pField + field.Start, field.Length, address, memory.SizeInBytes);
+                var actualSize = Encodings.Utf8.GetBytes(pField + field.Start, field.Length, address, memory.SizeInBytes);
 
                 state.FindEscapePositionsIn(address, actualSize, escapePositionsSize);
 

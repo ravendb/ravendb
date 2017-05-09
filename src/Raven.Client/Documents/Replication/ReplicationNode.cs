@@ -152,7 +152,7 @@ namespace Raven.Client.Documents.Replication
 
         protected static ulong CalculateStringHash(string s)
         {
-            return string.IsNullOrEmpty(s) ? 0 : Hashing.XXHash64.Calculate(s, Encoding.UTF8);
+            return string.IsNullOrEmpty(s) ? 0 : Hashing.XXHash64.Calculate(s, Encodings.Utf8);
         }
 
         public DynamicJsonValue ToJson()

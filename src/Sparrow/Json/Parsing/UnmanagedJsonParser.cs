@@ -2,7 +2,6 @@
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Sparrow.Json.Parsing
@@ -817,7 +816,7 @@ namespace Sparrow.Json.Parsing
             {
                 throw new FormatException("Could not convert value " + val + " to char", e);
             }
-            var byteCount = Encoding.UTF8.GetBytes(chars, 1, smallBuffer, 8);
+            var byteCount = Encodings.Utf8.GetBytes(chars, 1, smallBuffer, 8);
             _unmanagedWriteBuffer.Write(smallBuffer, byteCount);
         }
 
@@ -870,7 +869,7 @@ namespace Sparrow.Json.Parsing
         
         public string GenerateErrorState()
         {
-            var s = Encoding.UTF8.GetString(_inputBuffer, (int)_bufSize);
+            var s = Encodings.Utf8.GetString(_inputBuffer, (int)_bufSize);
             return " (" + _line + "," + _charPos + ") around: " + s;
         }
     }
