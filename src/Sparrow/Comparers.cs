@@ -17,7 +17,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(long obj)
         {
-            return Hashing.Combine((int)(obj >> 32), (int)obj);
+            return Hashing.Mix(obj);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -29,7 +29,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(int obj)
         {
-            return obj;
+            return Hashing.Mix(obj);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -41,7 +41,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(ulong obj)
         {
-            return Hashing.Combine((int)(obj >> 32), (int)obj);
+            return Hashing.Mix((long)obj);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -53,11 +53,11 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(uint obj)
         {
-            return (int)obj;
+            return Hashing.Mix(obj);
         }
     }
 
-    public struct NumericComparer : IComparer<long>, IComparer<int>
+    public struct NumericComparer : IComparer<long>, IComparer<int>, IComparer<uint>, IComparer<ulong>
     {
         public static readonly NumericComparer Instance = new NumericComparer();
 
@@ -72,9 +72,23 @@ namespace Sparrow
         {
             return x - y;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Compare(ulong x, ulong y)
+        {
+            // We need to use branching here because without sign flags we can overflow and return wrong values.
+            return x == y ? 0 : x > y ? 1 : -1;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Compare(uint x, uint y)
+        {
+            // We need to use branching here because without sign flags we can overflow and return wrong values.
+            return x == y ? 0 : x > y ? 1 : -1;
+        }
     }
 
-    public struct NumericDescendingComparer : IComparer<long>, IComparer<int>
+    public struct NumericDescendingComparer : IComparer<long>, IComparer<int>, IComparer<uint>, IComparer<ulong>
     {
         public static readonly NumericDescendingComparer Instance = new NumericDescendingComparer();
 
@@ -88,6 +102,20 @@ namespace Sparrow
         public int Compare(int x, int y)
         {
             return y - x;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Compare(ulong x, ulong y)
+        {
+            // We need to use branching here because without sign flags we can overflow and return wrong values.
+            return x == y ? 0 : x < y ? 1 : -1;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Compare(uint x, uint y)
+        {
+            // We need to use branching here because without sign flags we can overflow and return wrong values.
+            return x == y ? 0 : x < y ? 1 : -1;
         }
     }
 }
