@@ -197,7 +197,7 @@ namespace Sparrow
                 _start = DateTime.UtcNow;
             }
 
-            public void IncreamentCounter(long incVal) => _counter += incVal;
+            public void IncrementCounter(long incVal) => _counter += incVal;
             public void IncreamentCommands(int incVal) => _commandsCounter += incVal;
             public void MarkInternalWindowStart() => _parent.MarkInternalWindowStart();
             public void MarkInternalWindowEnd() => _parent.MarkInternalWindowEnd();
