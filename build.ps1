@@ -11,7 +11,7 @@ $DEV_BUILD_NUMBER = 40
 . '.\scripts\package.ps1'
 . '.\scripts\buildProjects.ps1'
 . '.\scripts\getScriptDirectory.ps1'
-. '.\scripts\copyDocs.ps1'
+. '.\scripts\copyAssets.ps1'
 . '.\scripts\env.ps1'
 . '.\scripts\updateSourceWithBuildInfo.ps1'
 . '.\scripts\nuget.ps1'
