@@ -103,7 +103,7 @@ namespace Raven.Server.Documents
                     {
                         using (var generalMeter = GeneralWaitPerformanceMetrics.MeterPerformanceRate())
                         {
-                            generalMeter.IncreamentCounter(1);
+                            generalMeter.IncrementCounter(1);
                             _waitHandle.Wait(_shutdown);
                         }
                         _waitHandle.Reset();
@@ -332,7 +332,7 @@ namespace Raven.Server.Documents
                             {
                                 transactionMeter.Dispose();
                             }
-                            CompletePreviousTransction(previous, previousPendingOps, throwOnError: true);
+                            CompletePreviousTransaction(previous, previousPendingOps, throwOnError: true);
                         }
                         catch (Exception e)
                         {
@@ -342,7 +342,7 @@ namespace Raven.Server.Documents
                                     $"Failed to run merged transaction with {currentPendingOps.Count:#,#} operations in async manner, will retry independently",
                                     e);
                             }
-                            CompletePreviousTransction(previous, previousPendingOps,
+                            CompletePreviousTransaction(previous, previousPendingOps,
                                 // if this previous threw, it won't throw again
                                 throwOnError: false);
                             previous.Dispose();
@@ -393,7 +393,7 @@ namespace Raven.Server.Documents
             }
         }
        
-        private void CompletePreviousTransction(
+        private void CompletePreviousTransaction(
             RavenTransaction previous,
             List<MergedTransactionCommand> previousPendingOps,
             bool throwOnError)
@@ -444,7 +444,7 @@ namespace Raven.Server.Documents
                     break;
 
                 pendingOps.Add(op);
-                meter.IncreamentCounter(1);
+                meter.IncrementCounter(1);
                 meter.IncreamentCommands(op.Execute(context));
 
 
