@@ -14,6 +14,7 @@ using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Client.Util;
@@ -81,6 +82,12 @@ namespace Raven.Client.Documents.BulkInsert
             protected override void Dispose(bool disposing)
             {
                 _done.TrySetCanceled();
+
+                //after dispose we don't care for unobserved exceptions
+                if (_done.Task.IsFaulted)
+                    _done.Task.IgnoreUnobservedExceptions();
+                if(_outputStreamTcs.Task.IsFaulted)
+                    _outputStreamTcs.Task.IgnoreUnobservedExceptions(); 
             }
         }
 
@@ -279,6 +286,7 @@ namespace Raven.Client.Documents.BulkInsert
             try
             {
                 Exception flushEx = null;
+                
                 if (_stream != null)
                 {
                     try

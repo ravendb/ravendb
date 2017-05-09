@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -13,6 +14,7 @@ using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Global;
 using static Sparrow.DatabasePerformanceMetrics;
+using ExceptionExtensions = Raven.Client.Extensions.ExceptionExtensions;
 
 namespace Raven.Server.Documents
 {
@@ -178,7 +180,7 @@ namespace Raven.Server.Documents
         {
             if (cmd.Exception != null)
             {
-                cmd.TaskCompletionSource.TrySetException(cmd.Exception);
+                cmd.TaskCompletionSource.TrySetException(ExceptionExtensions.ExceptionForTaskCompletionSource(cmd.Exception));
             }
             else
             {
@@ -208,6 +210,7 @@ namespace Raven.Server.Documents
                             command.Exception = e;
                             DoCommandNotification(command);
                         }
+
                         return;
                     }
                     PendingOperations result;

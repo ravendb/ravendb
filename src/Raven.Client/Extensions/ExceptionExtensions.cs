@@ -8,6 +8,14 @@ namespace Raven.Client.Extensions
     ///</summary>
     internal static class ExceptionExtensions
     {
+        public static Exception ExceptionForTaskCompletionSource(this Exception e)
+        {
+#if DEBUG
+            e.Data.Add("stacktrace",Environment.StackTrace);
+#endif
+            return e;
+        }
+
         /// <summary>
         /// Recursively examines the inner exceptions of an <see cref="AggregateException"/> and returns a single child exception.
         /// </summary>
