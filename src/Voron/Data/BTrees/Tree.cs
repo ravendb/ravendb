@@ -469,7 +469,7 @@ namespace Voron.Data.BTrees
 
         private long WriteToOverflowPages(int overflowSize, out byte* dataPos)
         {
-            var numberOfPages = _llt.DataPager.GetNumberOfOverflowPages(overflowSize);
+            var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(overflowSize);
             var newPage = _llt.AllocatePage(numberOfPages);
 
             TreePage overflowPageStart = PrepareTreePage(TreePageFlags.Value, numberOfPages, newPage);
@@ -909,7 +909,7 @@ namespace Voron.Data.BTrees
 
             if (p.IsOverflow)
             {
-                var numberOfPages = _llt.DataPager.GetNumberOfOverflowPages(p.OverflowSize);
+                var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(p.OverflowSize);
                 for (int i = 0; i < numberOfPages; i++)
                 {
                     _llt.FreePage(p.PageNumber + i);
@@ -1102,7 +1102,7 @@ namespace Voron.Data.BTrees
                     {
                         // This is an overflow page
                         var overflowPage = GetReadOnlyTreePage(pageNumber);
-                        var numberOfPages = _llt.DataPager.GetNumberOfOverflowPages(overflowPage.OverflowSize);
+                        var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(overflowPage.OverflowSize);
                         for (long j = 0; j < numberOfPages; ++j)
                             results.Add(overflowPage.PageNumber + j);
                     }
@@ -1162,9 +1162,9 @@ namespace Voron.Data.BTrees
 
                 if (len <= readOnlyOverflowPage.OverflowSize)
                 {
-                    var availableOverflows = _llt.DataPager.GetNumberOfOverflowPages(readOnlyOverflowPage.OverflowSize);
+                    var availableOverflows = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(readOnlyOverflowPage.OverflowSize);
 
-                    var requestedOverflows = _llt.DataPager.GetNumberOfOverflowPages(len);
+                    var requestedOverflows = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(len);
 
                     var overflowsToFree = availableOverflows - requestedOverflows;
 

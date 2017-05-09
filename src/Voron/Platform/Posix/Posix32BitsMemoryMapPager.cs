@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow;
 using Sparrow.Collections;
-using Sparrow.Logging;
 using Sparrow.Platform.Posix;
 using Sparrow.Utils;
 using Voron.Data;
@@ -17,7 +15,7 @@ using Voron.Impl.Paging;
 
 namespace Voron.Platform.Posix
 {
-    public unsafe class Posix32BitsMemoryMapPager : PosixAbstractPager
+    public sealed unsafe class Posix32BitsMemoryMapPager : PosixAbstractPager
     {
         private readonly StorageEnvironmentOptions _options;
         private int _fd;
@@ -153,7 +151,7 @@ namespace Voron.Platform.Posix
                 int numberOfPages = 1;
                 if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
                 {
-                    numberOfPages = this.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+                    numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
                 }
 
 

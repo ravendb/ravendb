@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using Sparrow.Json;
 
 namespace Voron.Impl.Paging
 {
-    public class TempPagerTransaction : IPagerLevelTransactionState
+    public sealed class TempPagerTransaction : IPagerLevelTransactionState
     {
         private readonly bool _isWriteTransaction;
 

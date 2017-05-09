@@ -12,6 +12,7 @@ using Voron.Data;
 using Voron.Data.RawData;
 using Voron.Data.Tables;
 using Voron.Global;
+using Voron.Impl;
 using Voron.Impl.Paging;
 
 namespace Voron.Recovery
@@ -125,8 +126,7 @@ namespace Voron.Recovery
                         if (pageHeader->Flags.HasFlag(PageFlags.Overflow))
                         {
 
-                            var endOfOverflow = pageHeader +
-                                                Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize)*_pageSize;
+                            var endOfOverflow = pageHeader + VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize) * _pageSize;
                             // the endOfOeverFlow can be equal to eof if the last page is overflow
                             if (endOfOverflow > eof)
                             {
@@ -145,11 +145,9 @@ namespace Voron.Recovery
                                 mem = PrintErrorAndAdvanceMem(message, mem, logFile);
                                 continue;
                             }
-                            if (WriteDocument((byte*) pageHeader + PageHeader.SizeOf, pageHeader->OverflowSize,
-                                writer,
-                                logFile, context, startOffset))
+                            if (WriteDocument((byte*) pageHeader + PageHeader.SizeOf, pageHeader->OverflowSize, writer, logFile, context, startOffset))
                             {
-                                var numberOfPages = Pager.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+                                var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
                                 mem += numberOfPages*_pageSize;
                             }
                             else

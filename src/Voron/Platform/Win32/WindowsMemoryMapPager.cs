@@ -13,7 +13,6 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Win32;
 using Sparrow.Utils;
-using Voron.Data.BTrees;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -35,6 +34,7 @@ namespace Voron.Platform.Win32
         private readonly bool _copyOnWriteMode;
         private readonly Logger _logger;
         public override long TotalAllocationSize => _totalAllocationSize;
+
         [StructLayout(LayoutKind.Explicit)]
         public struct SplitValue
         {
@@ -440,8 +440,7 @@ namespace Voron.Platform.Win32
                 return; // not supported
 
             var pagerState = PagerState;
-            var entries =
-                stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagerState.AllocationInfos.Length];
+            var entries = stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagerState.AllocationInfos.Length];
 
             for (var i = 0; i < pagerState.AllocationInfos.Length; i++)
             {

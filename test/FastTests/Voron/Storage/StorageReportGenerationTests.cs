@@ -335,7 +335,7 @@ namespace FastTests.Voron.Storage
                 tree.Add(key, new MemoryStream(new byte[overflowSize]));
 
                 entriesAdded.Add(key);
-                overflowsAdded += tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(overflowSize);
+                overflowsAdded += VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(overflowSize);
             }
 
             return new OverflowsAddResult

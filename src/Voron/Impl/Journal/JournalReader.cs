@@ -3,17 +3,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using Sparrow.Compression;
-using Sparrow.Platform.Win32;
 using Sparrow.Utils;
-using Voron.Data;
 using Voron.Global;
 using Voron.Impl.Paging;
 
 namespace Voron.Impl.Journal
 {
-    public unsafe class JournalReader : IPagerLevelTransactionState
+    public sealed unsafe class JournalReader : IPagerLevelTransactionState
     {
         private readonly AbstractPager _journalPager;
         private readonly AbstractPager _dataPager;

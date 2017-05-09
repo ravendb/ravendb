@@ -922,7 +922,7 @@ namespace Voron
             var dataLength = Constants.Storage.PageSize - (PageHeader.ChecksumOffset + sizeof(ulong));
             if ((current->Flags & PageFlags.Overflow) == PageFlags.Overflow)
             {
-                if (pageNumber + _dataPager.GetNumberOfOverflowPages(current->OverflowSize) > _dataPager.NumberOfAllocatedPages)
+                if (pageNumber + VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(current->OverflowSize) > _dataPager.NumberOfAllocatedPages)
                     ThrowInvalidOverflowSize(pageNumber, current);
 
                 dataLength = current->OverflowSize - (PageHeader.ChecksumOffset + sizeof(ulong));

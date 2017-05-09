@@ -115,7 +115,7 @@ namespace Voron.Data
             }
 
             var page = _llt.GetPage(chunk.PageNumber, _pagerRef);
-            _pagerRef.Pager.EnsureMapped(_llt, _pagerRef.PagerPageNumber, _pagerRef.Pager.GetNumberOfOverflowPages(page.OverflowSize));
+            _pagerRef.Pager.EnsureMapped(_llt, _pagerRef.PagerPageNumber, VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize));
 
             return page.DataPointer[_positions[_index]++];
         }
@@ -143,7 +143,7 @@ namespace Voron.Data
                 count = len - pos;
 
             var page = _llt.GetPage(_chunksDetails[_index].PageNumber, _pagerRef);
-            _pagerRef.Pager.EnsureMapped(_llt, _pagerRef.PagerPageNumber, _pagerRef.Pager.GetNumberOfOverflowPages(page.OverflowSize));
+            _pagerRef.Pager.EnsureMapped(_llt, _pagerRef.PagerPageNumber, VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize));
 
             fixed (byte* dst = buffer)
             {

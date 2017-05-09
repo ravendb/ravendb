@@ -265,7 +265,8 @@ namespace Voron.Impl.Scratch
             return _scratchPager.CopyPage(destI4KbBatchWrites, p, pagerState);
         }
 
-        public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState = null, LowLevelTransaction.PagerRef pagerRef = null)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState, LowLevelTransaction.PagerRef pagerRef)
         {
             if (pagerRef != null)
             {
@@ -275,11 +276,19 @@ namespace Voron.Impl.Scratch
             return new Page(_scratchPager.AcquirePagePointerWithOverflowHandling(tx, p, pagerState));
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState = null)
+        {
+            return new Page(_scratchPager.AcquirePagePointerWithOverflowHandling(tx, p, pagerState));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public byte* AcquirePagePointerWithOverflowHandling(LowLevelTransaction tx, long p)
         {
             return _scratchPager.AcquirePagePointerWithOverflowHandling(tx, p);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public byte* AcquirePagePointerForNewPage(LowLevelTransaction tx, long p, int numberOfPages)
         {
             return _scratchPager.AcquirePagePointerForNewPage(tx, p, numberOfPages);

@@ -21,7 +21,7 @@ namespace Voron.Platform.Posix
     /// files for that purpose (so we'll get assured allocation of space on disk, and then be able to mmap them).
     /// 
     /// </summary>
-    public unsafe class PosixTempMemoryMapPager : PosixAbstractPager
+    public sealed unsafe class PosixTempMemoryMapPager : PosixAbstractPager
     {
         private readonly StorageEnvironmentOptions _options;
         private int _fd;
