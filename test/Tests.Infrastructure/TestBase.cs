@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
+using Raven.Client.Util.Helpers;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -40,14 +41,20 @@ namespace FastTests
 
         static TestBase()
         {
-#if DEBUG2
+#if DEBUG
             TaskScheduler.UnobservedTaskException += (sender, args) =>
             {
                 if (args.Observed)
                     return;
 
                 var e = args.Exception.ExtractSingleInnerException();
-                
+
+                if (e is DevelopmentTimebombException)
+                {
+                    args.SetObserved(); //don't fail on the time bomb exceptions..
+                    return;
+                }
+
                 var sb = new StringBuilder();
                 sb.AppendLine("===== UNOBSERVED TASK EXCEPTION =====");
                 sb.AppendLine(e.ExceptionToString(null));

@@ -10,10 +10,7 @@ namespace FastTests
 
         public TimeBombedFactAttribute(int year, int month, int day, string skipMessage)
         {
-            if (skipMessage == null)
-                throw new ArgumentNullException(nameof(skipMessage));
-
-            _skipMessage = skipMessage;
+            _skipMessage = skipMessage ?? throw new ArgumentNullException(nameof(skipMessage));
             _skipUntil = new DateTime(year, month, day);
         }
 

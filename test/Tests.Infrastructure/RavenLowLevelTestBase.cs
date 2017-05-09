@@ -96,8 +96,7 @@ namespace FastTests
             if (_databases.Count == 0)
                 return;
 
-            TransactionOperationContext context;
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 foreach (var database in _databases)
                 {
@@ -115,6 +114,9 @@ namespace FastTests
                                 await Server.ServerStore.DeleteDatabaseAsync(context, database, hardDelete: true, fromNode: Server.ServerStore.NodeTag);
                             }
                             catch (DatabaseDoesNotExistException)
+                            {
+                            }
+                            catch (Exception e) when (e.InnerException is DatabaseDoesNotExistException)
                             {
                             }
                         });
