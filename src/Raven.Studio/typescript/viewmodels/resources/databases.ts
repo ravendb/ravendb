@@ -229,7 +229,7 @@ class databases extends viewModelBase {
             .sortedDatabases()
             .find(x => x.name.toLowerCase() === deletedDatabaseResult.Name.toLowerCase());
 
-        // Databases will be removed from the the sortedDatabases in method removeDatabase through the global changes api flow..
+        // Databases will be removed from the sortedDatabases in method removeDatabase through the global changes api flow..
         // So only enable the 'delete' button and display err msg if relevant                                
         if (matchedDatabase && (deletedDatabaseResult.Reason)) {                           
                 matchedDatabase.isBeingDeleted(false);
