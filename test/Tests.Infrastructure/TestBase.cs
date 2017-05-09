@@ -41,7 +41,7 @@ namespace FastTests
 
         static TestBase()
         {
-#if DEBUG
+#if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>
             {
                 if (args.Observed)

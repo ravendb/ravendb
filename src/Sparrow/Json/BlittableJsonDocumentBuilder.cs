@@ -127,11 +127,6 @@ namespace Sparrow.Json
             _writer.Dispose();
         }
 
-        public void DisposeIfNeeded()
-        {
-            _writer.DisposeIfNeeded();
-        }
-
         private bool ReadInternal<TWriteStrategy>() where TWriteStrategy : IWriteStrategy
         {
             var continuationState = _continuationState;

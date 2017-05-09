@@ -422,17 +422,22 @@ namespace Sparrow.Json
                 ThrowObjectDisposed();
 
             _jsonParserState.Reset();
-            ManagedPinnedBuffer bytes;
-            using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
-            using (GetManagedBuffer(out bytes))
+            UnmanagedJsonParser parser = null;
+            BlittableJsonDocumentBuilder builder = null;
+            var managedBuffer = default(ReturnBuffer);
+            var generation = _generation;
+
+            try
             {
-                var builder = new BlittableJsonDocumentBuilder(this,
+                parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag);
+                builder = new BlittableJsonDocumentBuilder(this,
                     BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, _jsonParserState);
+                managedBuffer = GetManagedBuffer(out var bytes);
                 try
                 {
                     builder.ReadObjectDocument();
                     var result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken);
-                    
+
                     if (result.MessageType == WebSocketMessageType.Close)
                         return null;
                     bytes.Valid = result.Count;
@@ -458,6 +463,12 @@ namespace Sparrow.Json
                     builder.Dispose();
                     throw;
                 }
+            }
+            finally
+            {
+                DisposeIfNeeded(generation, parser, builder);
+                if(generation == _generation)
+                    managedBuffer.Dispose();
             }
         }
 
@@ -523,9 +534,13 @@ namespace Sparrow.Json
                 ThrowObjectDisposed();
 
             _jsonParserState.Reset();
-            using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
-            using (var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState))
+            UnmanagedJsonParser parser = null;
+            BlittableJsonDocumentBuilder builder = null;
+            var generation = _generation;
+            try
             {
+                parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag);
+                builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState);
                 CachedProperties.NewDocument();
                 builder.ReadObjectDocument();
                 while (true)
@@ -549,6 +564,10 @@ namespace Sparrow.Json
                 var reader = builder.CreateReader();
                 return reader;
             }
+            finally
+            {
+                DisposeIfNeeded(generation, parser, builder);
+            }
         }
 
         private async Task<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, CancellationToken? token = null)
@@ -565,6 +584,7 @@ namespace Sparrow.Json
             _jsonParserState.Reset();
             UnmanagedJsonParser parser = null;
             BlittableJsonDocumentBuilder builder = null;
+            var generation = _generation;
             try
             {
                 parser = new UnmanagedJsonParser(this, _jsonParserState, documentId);
@@ -598,10 +618,21 @@ namespace Sparrow.Json
             }
             finally
             {
-                //if the context is disposed before ParseToMemoryAsync() finishes,
-                //do nothing, otherwise reclaim memory
-                parser?.DisposeIfNeeded();
-                builder?.DisposeIfNeeded();
+                DisposeIfNeeded(generation, parser, builder);
+            }
+        }
+
+        private void DisposeIfNeeded(int generation, UnmanagedJsonParser parser, BlittableJsonDocumentBuilder builder)
+        {
+            // if the generation has changed, that means that we had reset the context
+            // this can happen if we were waiting on an async call for a while, got timed out / error / something
+            // and the context was reset before we got back from the async call
+            // since the full context was reset, there is no point in trying to dispose things, they were already 
+            // taken care of
+            if (generation == _generation)
+            {
+                parser?.Dispose();
+                builder?.Dispose();
             }
         }
 

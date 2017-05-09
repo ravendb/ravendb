@@ -696,15 +696,5 @@ namespace Sparrow.Json
 
             _compressionBuffer = null;
         }
-
-        public void DisposeIfNeeded()
-        {
-            _unmanagedWriteBuffer.DisposeIfNeeded();
-            if (_compressionBuffer != null)
-                _context.ReturnMemory(_compressionBuffer);
-
-            _compressionBuffer = null;
-        }
-
     }
 }
