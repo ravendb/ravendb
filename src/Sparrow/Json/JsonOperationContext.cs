@@ -216,7 +216,7 @@ namespace Sparrow.Json
             allocatedMemory.ContextGeneration = Generation;
             allocatedMemory.Parent = this;
 #if DEBUG
-            allocatedMemory.IsLongLived = longLived;
+            allocatedMemory.IsLongLived = false;
 #endif
             return allocatedMemory;
         }
@@ -232,7 +232,7 @@ namespace Sparrow.Json
             allocatedMemory.ContextGeneration = Generation;
             allocatedMemory.Parent = this;
 #if DEBUG
-            allocatedMemory.IsLongLived = longLived;
+            allocatedMemory.IsLongLived = true;
 #endif
             return allocatedMemory;
         }        
