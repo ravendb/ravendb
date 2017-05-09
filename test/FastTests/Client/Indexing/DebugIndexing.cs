@@ -114,7 +114,7 @@ namespace FastTests.Client.Indexing
 
                         string startTimeAsString;
                         Assert.True(info.TryGet(nameof(ExecutingQueryInfo.StartTime), out startTimeAsString));
-                        Assert.Equal(now, DateTime.Parse(startTimeAsString));
+                        Assert.Equal(now, DateTime.Parse(startTimeAsString).ToUniversalTime());
 
                         object token;
                         Assert.False(info.TryGetMember(nameof(ExecutingQueryInfo.Token), out token));
