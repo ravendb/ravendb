@@ -81,11 +81,11 @@ class conflicts extends viewModelBase {
             [
                 new checkedColumn(true),
                 //TODO: format date (as ago ? )
-                new hyperlinkColumn<replicationConflictListItemDto>(x => x.Key, x => appUrl.forConflicts(this.activeDatabase(), x.Key), "Document", "75%",
+                new hyperlinkColumn<replicationConflictListItemDto>(x => x.Key, x => appUrl.forConflicts(this.activeDatabase(), x.Key), "Document", "50%",
                     {
                         handler: (item, event) => this.handleLoadAction(item, event)
                     }),
-                new textColumn<replicationConflictListItemDto>(x => x.LastModified, "Date", "25%")
+                new textColumn<replicationConflictListItemDto>(x => x.LastModified, "Date", "50%")
             ]
         );
     }

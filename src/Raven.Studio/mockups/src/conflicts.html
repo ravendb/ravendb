@@ -1,0 +1,83 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+{{> head }}
+
+<body>
+
+    {{> spinner }}
+
+    <div class="durandal-wrapper">
+        {{> topbar }}
+
+        <div class="prime-container">
+            {{> menu }}
+
+            <div class="content-container">
+                <div class="conflicts-page flex-horizontal flex-stretch-items absolute-fill content-margin">
+
+                    <div class="conflicts-list-container flex-vertical">
+                        <ul class="well conflicts-list flex-grow">
+                            <li>
+                                <div class="name">
+                                    Animals
+                                </div>
+                                <a href="javascript:void(0)">
+                                    <i class="icon-trash"></i>
+                                </a>
+                            </li>
+                            <li>
+                                <div class="name">
+                                    Employees
+                                </div>
+                                <a href="javascript:void(0)">
+                                    <i class="icon-trash"></i>
+                                </a>
+                            </li>
+                            <li>
+                                <div class="name">
+                                    Other
+                                </div>
+                                <a href="javascript:void(0)">
+                                    <i class="icon-trash"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="flex-grow flex-vertical">
+                        <div class="conflicted-files flex-stretch-items flex-horizontal flex-grow" data-filecount="3">
+                            <div class="file">
+                                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam egestas enim ipsum. Sed eu ex est. Nam justo nunc, convallis in risus sed, congue vehicula enim. Integer porttitor eu urna in rutrum. Sed faucibus mauris nec augue interdum lobortis. Maecenas dignissim euismod lacus et interdum. Duis in porttitor turpis. Phasellus mollis nulla a tempor facilisis. Mauris sapien dui, auctor id lorem a, vehicula maximus erat. Sed at euismod nunc, non molestie nibh. Nunc porttitor, nisi et cursus facilisis, nisi massa vestibulum odio, a bibendum ante sem et odio. Curabitur venenatis egestas augue, sit amet vulputate nulla elementum vitae.</p>
+                                <p>Maecenas porttitor, risus in feugiat lobortis, erat dolor tempus magna, et molestie erat lacus sed leo. Cras vulputate arcu eu felis elementum iaculis. Proin vitae faucibus urna. Vestibulum tempor est in dictum vehicula. Donec interdum non dolor ut volutpat. Nulla vel lacus non dolor ornare sodales a a mauris. Maecenas volutpat sed augue non tristique. Praesent venenatis molestie odio. Phasellus mauris turpis, pellentesque id bibendum at, interdum non leo. Aenean vel nulla magna. Donec quis facilisis leo, eget tempor justo. Sed turpis nunc, feugiat sit amet eleifend ut, aliquet pharetra orci.</p>
+                            </div>
+                            <div class="file">
+                                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam egestas enim ipsum. Sed eu ex est. Nam justo nunc, convallis in risus sed, congue vehicula enim. Integer porttitor eu urna in rutrum. Sed faucibus mauris nec augue interdum lobortis. Maecenas dignissim euismod lacus et interdum. Duis in porttitor turpis. Phasellus mollis nulla a tempor facilisis. Mauris sapien dui, auctor id lorem a, vehicula maximus erat. Sed at euismod nunc, non molestie nibh. Nunc porttitor, nisi et cursus facilisis, nisi massa vestibulum odio, a bibendum ante sem et odio. Curabitur venenatis egestas augue, sit amet vulputate nulla elementum vitae.</p>
+                                <p>Maecenas porttitor, risus in feugiat lobortis, erat dolor tempus magna, et molestie erat lacus sed leo. Cras vulputate arcu eu felis elementum iaculis. Proin vitae faucibus urna. Vestibulum tempor est in dictum vehicula. Donec interdum non dolor ut volutpat. Nulla vel lacus non dolor ornare sodales a a mauris. Maecenas volutpat sed augue non tristique. Praesent venenatis molestie odio. Phasellus mauris turpis, pellentesque id bibendum at, interdum non leo. Aenean vel nulla magna. Donec quis facilisis leo, eget tempor justo. Sed turpis nunc, feugiat sit amet eleifend ut, aliquet pharetra orci.</p>
+                            </div>
+                        </div>
+                        <div class="result-file flex-grow">
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{> notification-center }}
+        </div>{{> footer }}
+    </div>
+    <script type="text/javascript">
+        function changeState(el) {
+            if (el.readOnly) el.checked = el.readOnly = false;
+            else if (!el.checked) el.readOnly = el.indeterminate = true;
+        }
+    </script>
+
+    {{> modals/includeAll }}
+    {{> scripts }}
+    <div class="prerelease-alert bg-prerelease">
+        <i class="icon-hammer-driver pull-left"></i>
+        <p>
+            CAUTION: This is a pre-release version of RavenDB 4.0<br />
+            <small>it is not intended for business use.</small>
+        </p>
+    </div>
+</body>
+</html>
