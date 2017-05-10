@@ -163,14 +163,24 @@ class documentHelpers {
 
         let [firstDocument] = objects;
 
+        const isArray = firstDocument instanceof Array;
+        result = isArray ? [] : {};
+
         for (let prop in firstDocument) {
-            if (firstDocument.hasOwnProperty(prop)) {
-                var defaultValue = documentHelpers.findSchemaDefaultValue(objects, prop);
-                if (typeof (defaultValue) !== "undefined") {
-                    result[prop] = defaultValue;
-                }
+            if (firstDocument.hasOwnProperty(prop) === false)
+                continue;
+
+            const defaultValue = documentHelpers.findSchemaDefaultValue(objects, prop);
+            if (typeof (defaultValue) === "undefined")
+                continue;
+
+            if (isArray) {
+                result.push(defaultValue);
+            } else {
+                result[prop] = defaultValue;
             }
         }
+
         return result;
     }
 
