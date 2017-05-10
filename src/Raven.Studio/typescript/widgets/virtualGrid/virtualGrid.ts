@@ -5,6 +5,7 @@ import itemFetch = require("widgets/virtualGrid/itemFetch");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridConfig = require("widgets/virtualGrid/virtualGridConfig");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
+import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
 import virtualGridSelection = require("widgets/virtualGrid/virtualGridSelection");
@@ -532,9 +533,12 @@ class virtualGrid<T> {
         if (e.target) {
             const $target = this.normalizeTarget($(e.target));
             const actionValue = $target.attr("data-action");
+            const linkActionValue = $target.attr("data-link-action");
 
             if (actionValue) {
                 this.handleAction(actionValue, this.findRowForCell($target));
+            } else if (linkActionValue) {
+                this.handleLinkAction(linkActionValue, e, this.findRowForCell($target));
             } else if ($target.hasClass("checked-column-header")) {
                 // If we clicked the the checked column header, toggle select all.
                 this.handleSelectAllClicked();
@@ -717,6 +721,15 @@ class virtualGrid<T> {
         }
 
         handler.handle(row);
+    }
+
+    private handleLinkAction(actionId: string, event: JQueryEventObject, row: virtualRow) {
+        const handler = this.columns().find(x => x instanceof hyperlinkColumn && x.canHandle(actionId)) as hyperlinkColumn<T>;
+        if (!handler) {
+            throw new Error("Unable to find handler for link action: " + actionId + " at index: " + row.index);
+        }
+
+        handler.handle(row, event);
     }
 
     private handleSelectAllClicked() {

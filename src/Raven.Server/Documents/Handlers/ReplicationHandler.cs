@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Handlers
 
                 context.Write(writer, new DynamicJsonValue
                 {
-                    [nameof(Database.DocumentsStorage.ConflictsStorage.ConflictsCount)] = Database.DocumentsStorage.ConflictsStorage.ConflictsCount,
+                    ["TotalResults"] = Database.DocumentsStorage.ConflictsStorage.GetCountOfDocumentsConflicts(context),
                     [nameof(GetConflictsResult.Results)] = array
                 });
 
@@ -426,8 +426,8 @@ namespace Raven.Server.Documents.Handlers
 
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["Document"] = resovled.Document,
-                    ["Metadata"] = resovled.Metadata
+                    [nameof(ConflictResolverAdvisor.MergeResult.Document)] = resovled.Document,
+                    [nameof(ConflictResolverAdvisor.MergeResult.Metadata)] = resovled.Metadata
                 });
 
                 return Task.CompletedTask;
