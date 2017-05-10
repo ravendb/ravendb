@@ -15,17 +15,21 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (Fields != null)
                 return node;
 
-            var last = node.DescendantNodes(descendIntoChildren: syntaxNode => true)
+            var last = node.DescendantNodes(descendIntoChildren: syntaxNode =>
+                {
+                    if (syntaxNode is AnonymousObjectCreationExpressionSyntax)
+                    {
+                        return false;
+                    }
+                    return true;
+                })
                 .LastOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression)) as AnonymousObjectCreationExpressionSyntax;
 
             if (last == null)
                 return node;
+           
 
-            // check if maybe we are nested
-            var parent = last.Ancestors(ascendOutOfTrivia: true)
-                .FirstOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression)) as AnonymousObjectCreationExpressionSyntax;
-
-            Fields = RewritersHelper.ExtractFields(parent ?? last);
+            Fields = RewritersHelper.ExtractFields(last);
 
             return node;
         }
@@ -35,17 +39,20 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (Fields != null)
                 return node;
 
-            var last = node.DescendantNodes(descendIntoChildren: syntaxNode => true)
+            var last = node.DescendantNodes(descendIntoChildren: syntaxNode =>
+                {
+                    if (syntaxNode is AnonymousObjectCreationExpressionSyntax)
+                    {
+                        return false;
+                    }
+                    return true;
+                })
                 .LastOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression)) as AnonymousObjectCreationExpressionSyntax;
 
             if (last == null)
                 return node;
 
-            // check if maybe we are nested
-            var parent = last.Ancestors(ascendOutOfTrivia: true)
-                .FirstOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression)) as AnonymousObjectCreationExpressionSyntax;
-
-            Fields = RewritersHelper.ExtractFields(parent ?? last);
+            Fields = RewritersHelper.ExtractFields(last);
 
             return node;
         }
