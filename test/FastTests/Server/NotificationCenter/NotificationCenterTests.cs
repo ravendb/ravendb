@@ -27,7 +27,7 @@ namespace FastTests.Server.NotificationCenter
             using (var database = CreateDocumentDatabase())
             {
                 var actions = new AsyncQueue<Notification>();
-                var writer = new TestWebSockerWriter();
+                var writer = new TestWebSocketWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
                 {
@@ -153,7 +153,7 @@ namespace FastTests.Server.NotificationCenter
                 var postponeUntil = SystemTime.UtcNow.AddDays(1);
 
                 var actions = new AsyncQueue<Notification>();
-                var writer = new TestWebSockerWriter();
+                var writer = new TestWebSocketWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
                 {
@@ -196,7 +196,7 @@ namespace FastTests.Server.NotificationCenter
                 database.NotificationCenter.Add(alert);
 
                 var actions = new AsyncQueue<Notification>();
-                var writer = new TestWebSockerWriter();
+                var writer = new TestWebSocketWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
                 {
@@ -250,7 +250,7 @@ namespace FastTests.Server.NotificationCenter
                 database.NotificationCenter.Add(alert);
 
                 var actions = new AsyncQueue<Notification>();
-                var writer = new TestWebSockerWriter();
+                var writer = new TestWebSocketWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
                 {
@@ -310,7 +310,7 @@ namespace FastTests.Server.NotificationCenter
                 database.NotificationCenter.Add(alert3);
 
                 var actions = new AsyncQueue<Notification>();
-                var writer = new TestWebSockerWriter();
+                var writer = new TestWebSocketWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
                 {
@@ -346,7 +346,7 @@ namespace FastTests.Server.NotificationCenter
                 database.NotificationCenter.Postpone(alert.Id, SystemTime.UtcNow.AddDays(1));
 
                 var actions = new AsyncQueue<Notification>();
-                var writer = new TestWebSockerWriter();
+                var writer = new TestWebSocketWriter();
                 
                 using (database.NotificationCenter.TrackActions(actions, writer))
                 {
@@ -389,7 +389,7 @@ namespace FastTests.Server.NotificationCenter
                 database.NotificationCenter.Add(alert);
 
                 var notifications = new AsyncQueue<Notification>();
-                var writer = new TestWebSockerWriter();
+                var writer = new TestWebSocketWriter();
 
                 database.NotificationCenter.Postpone(alert.Id, DateTime.MaxValue);
 
@@ -410,11 +410,11 @@ namespace FastTests.Server.NotificationCenter
                 database.NotificationCenter.Options.DatabaseStatsThrottle = TimeSpan.FromMilliseconds(100);
 
                 var actions = new AsyncQueue<Notification>();
-                var writer = new TestWebSockerWriter();
+                var writer = new TestWebSocketWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
                 {
-                    var notification = await actions.TryDequeueAsync(TimeSpan.FromMilliseconds(150));
+                    var notification = await actions.TryDequeueAsync(TimeSpan.FromMilliseconds(500));
                     Assert.True(notification.Item1);
 
                     DocumentsOperationContext context;
@@ -451,7 +451,7 @@ namespace FastTests.Server.NotificationCenter
             }
         }
 
-        protected class TestWebSockerWriter : IWebsocketWriter
+        protected class TestWebSocketWriter : IWebsocketWriter
         {
             public List<string> SentNotifications { get; } = new List<string>();
 
