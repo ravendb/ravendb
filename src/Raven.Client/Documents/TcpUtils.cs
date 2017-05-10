@@ -13,7 +13,7 @@ namespace Raven.Client.Documents
 {
     internal static class TcpUtils
     {
-        internal static async Task ConnectSocketAsync(TcpConnectionInfo connection, TcpClient tcpClient, Logger log, CancellationToken token)
+        internal static async Task ConnectSocketAsync(TcpConnectionInfo connection, TcpClient tcpClient, Logger log)
         {
             var uri = new Uri(connection.Url);
             var host = uri.Host;

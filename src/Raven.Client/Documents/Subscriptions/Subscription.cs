@@ -26,7 +26,6 @@ using Raven.Client.Server.Tcp;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
-using System.Linq;
 using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Subscriptions

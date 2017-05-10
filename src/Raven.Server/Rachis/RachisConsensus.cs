@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintance;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -143,7 +144,7 @@ namespace Raven.Server.Rachis
                 StartIndex = 0,
             });
         }
-        public int ElectionTimeoutMs = Debugger.IsAttached ? 3000 : 300;
+        public int ElectionTimeoutMs;
 
         private Leader _currentLeader;
         private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -157,12 +158,12 @@ namespace Raven.Server.Rachis
             _seed = seed;
         }
 
-        public unsafe void Initialize(StorageEnvironment env)
+        public unsafe void Initialize(StorageEnvironment env, ClusterConfiguration configuration)
         {
             try
             {
                 _persistentState = env;
-
+                ElectionTimeoutMs = configuration.ElectionTimeout.AsTimeSpan.Milliseconds * (Debugger.IsAttached ? 10 : 1);
                 ContextPool = new TransactionContextPool(_persistentState);
 
                 ClusterTopology topology;

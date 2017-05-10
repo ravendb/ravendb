@@ -6,7 +6,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
+using Raven.Client.Documents.Identity;
 using Raven.Client.Extensions;
 using Sparrow;
 using Sparrow.Json.Parsing;
@@ -109,16 +111,13 @@ namespace Raven.Client.Documents.Replication
                    DictionaryExtensions.ContentEquals(SpecifiedCollections, other.SpecifiedCollections);
         }
 
-        // We need a _deterministic_ sorting, so we can efficiently compare between two lists of replication nodes.
         public int CompareTo(ReplicationNode other)
         {
-            var myValue = GetHashCode();
-            var otherValue = other.GetHashCode();
-            if (myValue > otherValue)
-                return 1;
-            if (otherValue < myValue)
-                return -1;
-            return 0;
+            var rc = string.Compare(NodeTag ?? Url, other.NodeTag ?? Url, StringComparison.OrdinalIgnoreCase);
+            if (rc != 0)
+                return rc;
+            
+            return string.Compare(Database, other.Database, StringComparison.OrdinalIgnoreCase);
         }
 
         public override bool Equals(object obj)
