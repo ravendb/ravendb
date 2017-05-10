@@ -51,15 +51,17 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             using(context.OpenReadTransaction())
             {
+                
                 var topology = ServerStore.GetClusterTopology(context);
                 if (topology.Members.Count == 0)
                 {
+                    var serverUrl = GetStringQueryString("url");
                     topology = new ClusterTopology(
                         Guid.NewGuid().ToString(),
                         null,
                         new Dictionary<string, string>
                         {
-                            ["A"] = HttpContext.Request.GetHostnameUrl()
+                            ["A"] = serverUrl
                         },
                         new Dictionary<string, string>(),
                         new Dictionary<string, string>(),

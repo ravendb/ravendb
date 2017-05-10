@@ -33,7 +33,11 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var id = store.Subscriptions.Create(new SubscriptionCriteria("Companies"));
+                var subscriptionCreationParams = new SubscriptionCreationParams
+                {
+                    Criteria = new SubscriptionCriteria("Companies")
+                };
+                var id = store.Subscriptions.Create(subscriptionCreationParams);
 
                 var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
                 {

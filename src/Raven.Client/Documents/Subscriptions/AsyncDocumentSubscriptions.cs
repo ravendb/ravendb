@@ -26,22 +26,28 @@ namespace Raven.Client.Documents.Subscriptions
             _store = store;
         }
 
-        public Task<long> CreateAsync<T>(SubscriptionCriteria<T> criteria, long startEtag = 0, string database = null)
+        public Task<long> CreateAsync<T>(SubscriptionCreationParams<T> subscriptionCreationParams, string database = null)
         {
-            if (criteria == null)
+            if (subscriptionCreationParams == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
-
+            
             var nonGenericCriteria = new SubscriptionCriteria(_store.Conventions.GetCollectionName(typeof(T)))
             {
-                FilterJavaScript = criteria.FilterJavaScript
+                FilterJavaScript = subscriptionCreationParams.Criteria.FilterJavaScript,
             };
 
-            return CreateAsync(nonGenericCriteria, startEtag, database);
+            var subscriptionCreationDto = new SubscriptionCreationParams()
+            {
+                Criteria =  nonGenericCriteria,
+                ChangeVector =  subscriptionCreationParams.ChangeVector
+            };
+
+            return CreateAsync(subscriptionCreationDto, database);
         }
 
-        public async Task<long> CreateAsync(SubscriptionCriteria criteria, long startEtag = 0, string database = null)
+        public async Task<long> CreateAsync(SubscriptionCreationParams subscriptionCreationParams, string database = null)
         {
-            if (criteria == null)
+            if (subscriptionCreationParams == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
 
             JsonOperationContext jsonOperationContext;
@@ -51,8 +57,7 @@ namespace Raven.Client.Documents.Subscriptions
             var command = new CreateSubscriptionCommand()
             {
                 Context = jsonOperationContext,
-                Criteria = criteria,
-                StartEtag = startEtag
+                SubscriptionCreationParams =  subscriptionCreationParams
             };
             await requestExecuter.ExecuteAsync(command, jsonOperationContext);
 
@@ -80,7 +85,7 @@ namespace Raven.Client.Documents.Subscriptions
             return subscription;
         }
 
-        public async Task<List<SubscriptionConfig>> GetSubscriptionsAsync(int start, int take, string database = null)
+        public async Task<List<SubscriptionRaftState>> GetSubscriptionsAsync(int start, int take, string database = null)
         {
             JsonOperationContext jsonOperationContext;
             var requestExecuter = _store.GetRequestExecuter(database ?? _store.DefaultDatabase);

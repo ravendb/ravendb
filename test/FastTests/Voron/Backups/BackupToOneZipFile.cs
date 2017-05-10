@@ -12,6 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Voron.Impl.Backup;
+using Raven.Server.Json;
 
 namespace FastTests.Voron.Backups
 {
@@ -36,7 +37,8 @@ namespace FastTests.Voron.Backups
                 streamWriter.Flush();
                 stream.Position = 0;
                 var reader = context.Read(stream, "docs/1");
-                database.SubscriptionStorage.CreateSubscription(reader);
+                
+                await database.SubscriptionStorage.CreateSubscription(JsonDeserializationServer.SubscriptionCreationParams(reader));
 
                 await database.IndexStore.CreateIndex(new IndexDefinition()
                 {
@@ -66,10 +68,7 @@ namespace FastTests.Voron.Backups
 
                     tx.Commit();
                 }
-
-                database.SubscriptionStorage.Environment().Options.ManualFlushing = true;
-                database.SubscriptionStorage.Environment().FlushLogToDataFile();
-
+                
                 foreach (var index in database.IndexStore.GetIndexes())
                 {
                     index._indexStorage.Environment().Options.ManualFlushing = true;
@@ -107,8 +106,7 @@ namespace FastTests.Voron.Backups
             {
                 database.DocumentsStorage.Environment.Options.IncrementalBackupEnabled = true;
                 database.DocumentsStorage.Environment.Options.ManualFlushing = true;
-                database.SubscriptionStorage.Environment().Options.ManualFlushing = true;
-                database.SubscriptionStorage.Environment().Options.IncrementalBackupEnabled = true;
+                
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
 
@@ -121,7 +119,7 @@ namespace FastTests.Voron.Backups
                     streamWriter.Flush();
                     stream.Position = 0;
                     var reader = context.Read(stream, "docs/1");
-                    database.SubscriptionStorage.CreateSubscription(reader);
+                    await database.SubscriptionStorage.CreateSubscription(JsonDeserializationServer.SubscriptionCreationParams(reader));
 
                     await database.IndexStore.CreateIndex(new IndexDefinition()
                     {
@@ -150,9 +148,7 @@ namespace FastTests.Voron.Backups
                         database.DocumentsStorage.Put(context, "users/2", null, doc2);
 
                         tx.Commit();
-                    }
-
-                    database.SubscriptionStorage.Environment().FlushLogToDataFile();
+                    }               
 
                     foreach (var index in database.IndexStore.GetIndexes())
                     {
@@ -191,9 +187,7 @@ namespace FastTests.Voron.Backups
                         database.DocumentsStorage.Put(context, "users/1", null, doc);
 
                         tx.Commit();
-                    }
-
-                    database.SubscriptionStorage.Environment().FlushLogToDataFile();
+                    }                                        
 
                     foreach (var index in database.IndexStore.GetIndexes())
                     {

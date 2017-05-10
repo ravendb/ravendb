@@ -8,6 +8,6 @@ namespace Raven.Client.Documents.Subscriptions
 {
     public class GetSubscriptionsResult
     {
-        public SubscriptionConfig[] Results;
+        public SubscriptionRaftState[] Results;
     }
 }

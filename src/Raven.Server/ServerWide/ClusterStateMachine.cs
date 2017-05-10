@@ -20,6 +20,7 @@ using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Commands.Transformers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -103,12 +104,88 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdateTopologyCommand):
                     UpdateDatabase(context, type, cmd, index, leader);
                     break;
+                case nameof(AcknowledgeSubscriptionBatchCommand):
+                case nameof(CreateSubscriptionCommand):
+                case nameof(DeleteSubscriptionCommand):
+                    SetValueForTypedDatabaseCommand(context,type, cmd, index, leader);
+                    break;
                 case nameof(PutValueCommand):
                     PutValue(context, cmd, index, leader);
                     break;
                 case nameof(AddDatabaseCommand):
                     AddDatabase(context, cmd, index, leader);
                     break;
+            }
+        }
+
+        private unsafe void SetValueForTypedDatabaseCommand(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        {
+            UpdateValueForDatabaseCommand updateCommand = null;
+            try
+            {
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+                updateCommand = JsonDeserializationCluster.UpdateValueCommands[type](cmd);
+                
+                var record = ReadDatabase(context, updateCommand.DatabaseName);
+                if (record == null)
+                {
+                    NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because does not exist"));
+                    return;
+                }
+
+                DynamicJsonValue djv;
+                BlittableJsonReaderObject existingValue = null;
+
+                var itemKey = updateCommand.GetItemId();
+                using (Slice.From(context.Allocator, itemKey, out Slice valueName))
+                using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
+                {
+                    if (items.ReadByKey(valueNameLowered, out TableValueReader reader))
+                    {
+                        var ptr = reader.Read(2, out int size);
+                        existingValue = new BlittableJsonReaderObject(ptr, size, context);
+                    }
+
+
+                    try
+                    {
+                        djv = updateCommand.GetUpdatedValue(index, record, existingValue);
+
+                        // if returned null, means, there is nothing to update and we just wanted to delete the value
+                        if (djv == null)
+                        {
+                            items.DeleteByKey(valueNameLowered);
+                            return;
+                        }
+
+                        // here we get the item key again, in case it was changed (a new entity, etc)
+                        itemKey = updateCommand.GetItemId();
+                    }
+                    catch (Exception e)
+                    {
+                        NotifyLeaderAboutError(index, leader,
+                            new CommandExecutionException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because does not exist", e));
+                        return;
+                    }
+                }
+
+                using (Slice.From(context.Allocator, itemKey, out Slice valueName))
+                using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
+                {
+                    if (existingValue==null)
+                        existingValue = context.ReadObject(djv, updateCommand.GetItemId());
+
+                    using (var rec = context.ReadObject(existingValue, "inner-val"))
+                    {
+                        UpdateDatabaseRecord(index, items, valueNameLowered, valueName, rec);
+                    }
+                   
+                }
+            }
+            finally
+            {
+                NotifyDatabaseChanged(context, updateCommand?.DatabaseName, index);
             }
         }
 
@@ -361,7 +438,7 @@ namespace Raven.Server.ServerWide
 
         private static readonly StringSegment DatabaseName = new StringSegment("DatabaseName");
 
-        private unsafe void UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private void UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             string databaseName;
             if (cmd.TryGet(DatabaseName, out databaseName) == false)
@@ -369,7 +446,6 @@ namespace Raven.Server.ServerWide
 
             try
             {
-               
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 var dbKey = "db/" + databaseName;
 
@@ -386,8 +462,7 @@ namespace Raven.Server.ServerWide
                         NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute update command of type {type} for {databaseName} because it does not exists"));
                         return;
                     }
-
-                    bool doUpdate;
+                    
                     var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
                     var updateCommand = JsonDeserializationCluster.UpdateDatabaseCommands[type](cmd);
 
@@ -401,19 +476,16 @@ namespace Raven.Server.ServerWide
                     try
                     {
                         updateCommand.UpdateDatabaseRecord(databaseRecord, index);
-                        doUpdate = true;
                     }
                     catch (Exception e)
                     {
                         NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type} for database {databaseName}", e));
-                        doUpdate = false;
+                        return;
                     }
-                    if (doUpdate)
-                    {
-                        var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
-
-                       UpdateDatabaseRecord(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
-                    }
+                    
+                    var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
+                    UpdateDatabaseRecord(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
+                    
                 }
             }
             finally
@@ -547,6 +619,44 @@ namespace Raven.Server.ServerWide
             Debug.Assert(size == sizeof(long));
             
             return doc;
+        }
+
+        public static IEnumerable<(long, BlittableJsonReaderObject)> ReadValuesStartingWith(TransactionOperationContext context, string startsWithKey)
+        {
+            var startsWithKeyLower = startsWithKey.ToLowerInvariant();
+            Slice startsWithSlice;
+            using (Slice.From(context.Allocator, startsWithKeyLower, out startsWithSlice))
+            {
+                return ReadValuesStartingWith(context, startsWithSlice);
+            }
+        }
+
+        public static IEnumerable<(long, BlittableJsonReaderObject)> ReadValuesStartingWith(TransactionOperationContext context, Slice startsWithKey)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            
+            foreach (var holder in items.SeekByPrimaryKeyPrefix(startsWithKey, Slices.Empty, 0))
+            {
+                var reader = holder.Reader;
+                int size;
+                BlittableJsonReaderObject doc;
+                long etag;
+                size = GetDataAndEtagTupleFromReader(context, reader, out doc, out etag);
+                Debug.Assert(size == sizeof(long));
+
+                yield return (etag, doc);
+            }
+            
+        }
+
+        private static unsafe int GetDataAndEtagTupleFromReader(TransactionOperationContext context, TableValueReader reader, out BlittableJsonReaderObject doc, out long etag)
+        {
+            int size;
+            var ptr = reader.Read(2, out size);
+            doc = new BlittableJsonReaderObject(ptr, size, context);
+
+            etag = Bits.SwapBytes(*(long*)reader.Read(3, out size));
+            return size;
         }
 
         public override async Task<Stream> ConnectToPeer(string url, string apiKey)

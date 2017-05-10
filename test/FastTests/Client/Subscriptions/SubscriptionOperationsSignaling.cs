@@ -11,14 +11,18 @@ namespace FastTests.Client.Subscriptions
 {
     public class SubscriptionOperationsSignaling : RavenTestBase
     {
-        private readonly TimeSpan _reasonableWaitTime = TimeSpan.FromSeconds(20);// todo: reduce to 20
+        private readonly TimeSpan _reasonableWaitTime = TimeSpan.FromSeconds(60);
 
         [Fact]
         public void WaitOnSubscriptionTaskWhenSubscriptionIsOvertaken()
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+                var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                {
+                    Criteria = new SubscriptionCriteria<User>()
+                };
+                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
 
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
 
@@ -63,7 +67,11 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+                var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                {
+                    Criteria = new SubscriptionCriteria<User>()
+                };
+                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var users = new BlockingCollection<User>();
 
@@ -104,12 +112,17 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+                var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                {
+                    Criteria = new SubscriptionCriteria<User>()
+                };
+                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
 
                 var beforeAckMre = new ManualResetEvent(false);
                 var users = new BlockingCollection<User>();
                 subscription.Subscribe(users.Add);
+                subscription.BeforeAcknowledgment += () => beforeAckMre.WaitOne();
                 subscription.Start();
                 using (var session = store.OpenSession())
                 {
@@ -121,7 +134,7 @@ namespace FastTests.Client.Subscriptions
                 Assert.True(users.TryTake(out User, _reasonableWaitTime));
 
 
-                subscription.BeforeAcknowledgment += () => beforeAckMre.WaitOne();
+                
 
                 store.Subscriptions.Delete(subscriptionId);
                 beforeAckMre.Set();
@@ -139,7 +152,11 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+                var subscriptionCriteria = new SubscriptionCreationParams<User>
+                {
+                    Criteria = new SubscriptionCriteria<User>()
+                };
+                var subscriptionId = store.Subscriptions.Create(subscriptionCriteria);
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var users = new BlockingCollection<User>();
 
@@ -177,7 +194,11 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+                var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                {
+                    Criteria = new SubscriptionCriteria<User>()
+                };
+                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var users = new BlockingCollection<User>();
                 subscription.Subscribe(users.Add);
@@ -207,7 +228,11 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create(new SubscriptionCriteria<User>());
+                var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                {
+                    Criteria = new SubscriptionCriteria<User>()
+                };
+                var subscriptionId = store.Subscriptions.Create(subscriptionCreationParams);
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var exceptions = new BlockingCollection<Exception>();
 

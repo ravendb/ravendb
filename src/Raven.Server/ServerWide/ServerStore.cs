@@ -745,28 +745,7 @@ namespace Raven.Server.ServerWide
                 var djv = cmd.ToJson();
                 var cmdJson = context.ReadObject(djv, "raft/command");
 
-                while (true)
-                {
-                    var logChange = _engine.WaitForHeartbeat();
-
-                    if (_engine.CurrentState == RachisConsensus.State.Leader)
-                    {
-                        return await _engine.PutAsync(cmdJson);
-                    }
-
-                    var engineLeaderTag = _engine.LeaderTag; // not actually working
-                    try
-                    {
-                        return await SendToNodeAsync(context, engineLeaderTag, cmdJson);
-                    }
-                    catch (Exception ex)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info("Tried to send message to leader, retrying", ex);
-                    }
-
-                    await logChange;
-                }
+                return await SendToLeaderAsyncInternal(cmdJson, context);
             }
         }
 
@@ -775,29 +754,44 @@ namespace Raven.Server.ServerWide
             TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                //TODO: timeout, server shutdown handling, etc
-                while (true)
+                return await SendToLeaderAsyncInternal(cmd, context);
+            }
+        }
+
+        public async Task<long> SendToLeaderAsync(DynamicJsonValue cmd)
+        {
+            TransactionOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                var cmdJson = context.ReadObject(cmd, "raft/command");
+
+                return await SendToLeaderAsyncInternal(cmdJson, context);
+            }
+        }
+
+        private async Task<long> SendToLeaderAsyncInternal(BlittableJsonReaderObject cmdJson, TransactionOperationContext context)
+        {
+            while (true)
+            {
+                var logChange = _engine.WaitForHeartbeat();
+
+                if (_engine.CurrentState == RachisConsensus.State.Leader)
                 {
-                    var logChange = _engine.WaitForHeartbeat();
-
-                    if (_engine.CurrentState == RachisConsensus.State.Leader)
-                    {
-                        return await _engine.PutAsync(cmd);
-                    }
-
-                    var engineLeaderTag = _engine.LeaderTag; // not actually working
-                    try
-                    {
-                        return await SendToNodeAsync(context, engineLeaderTag, cmd);
-                    }
-                    catch (Exception ex)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info("Tried to send message to leader, retrying", ex);
-                    }
-
-                    await logChange;
+                    return await _engine.PutAsync(cmdJson);
                 }
+
+                var engineLeaderTag = _engine.LeaderTag; // not actually working
+                try
+                {
+                    return await SendToNodeAsync(context, engineLeaderTag, cmdJson);
+                }
+                catch (Exception ex)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Tried to send message to leader, retrying", ex);
+                }
+
+                await logChange;
             }
         }
 

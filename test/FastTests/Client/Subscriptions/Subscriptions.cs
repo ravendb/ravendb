@@ -18,15 +18,18 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionCriteria = new SubscriptionCriteria("People");
-                var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria);
+                var subscriptionCreationParams = new SubscriptionCreationParams
+                {
+                    Criteria = new SubscriptionCriteria("People")
+                };  
+                var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
 
                 var subscriptionsConfig = await store.AsyncSubscriptions.GetSubscriptionsAsync(0, 10);
 
                 Assert.Equal(1, subscriptionsConfig.Count);
-                Assert.Equal(subscriptionCriteria.Collection, subscriptionsConfig[0].Criteria.Collection);
-                Assert.Equal(subscriptionCriteria.FilterJavaScript, subscriptionsConfig[0].Criteria.FilterJavaScript);
-                Assert.Equal(0, subscriptionsConfig[0].AckEtag);
+                Assert.Equal(subscriptionCreationParams.Criteria.Collection, subscriptionsConfig[0].Criteria.Collection);
+                Assert.Equal(subscriptionCreationParams.Criteria.FilterJavaScript, subscriptionsConfig[0].Criteria.FilterJavaScript);
+                Assert.Equal(0, subscriptionsConfig[0].ChangeVector.Length);
                 Assert.Equal(subsId, subscriptionsConfig[0].SubscriptionId);
             }
         }
@@ -38,11 +41,15 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCriteria = new SubscriptionCriteria("Things");
-                var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
+                var subscriptionCreationParams = new SubscriptionCreationParams()
+                {
+                    Criteria = new SubscriptionCriteria("Things"),
+                    ChangeVector = lastChangeVector
+                };
+                var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
                 using (var subscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
                     var list = new BlockingCollection<Thing>();
@@ -69,11 +76,15 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector ?? null;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCriteria = new SubscriptionCriteria("Things");
-                var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
+                var subscriptionCreationParams = new SubscriptionCreationParams()
+                {
+                    Criteria = new SubscriptionCriteria("Things"),
+                    ChangeVector = lastChangeVector
+                };
+                var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
                 using (
                     var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
                     {
@@ -132,11 +143,15 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCriteria = new SubscriptionCriteria("Things");
-                var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
+                var subscriptionCreationParams = new SubscriptionCreationParams()
+                {
+                    Criteria = new SubscriptionCriteria("Things"),
+                    ChangeVector = lastChangeVector
+                };
+                var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
                 using (
                     var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
                 {
@@ -208,11 +223,16 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
+                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector ?? null;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCriteria = new SubscriptionCriteria("Things");
-                var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
+                var subscriptionCreationParams = new SubscriptionCreationParams()
+                {
+                    Criteria = new SubscriptionCriteria("Things"),
+                    ChangeVector = lastChangeVector
+                };
+
+                var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
 
                 using (
                     var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))

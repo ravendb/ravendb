@@ -28,6 +28,7 @@ function LayoutRegularPackage ( $packageDir, $projectDir, $outDirs, $spec ) {
     CopyStudioPackage $outDirs
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
+    CopyStartScript $spec $packageDir
     CreatePackageServerLayout $projectDir $($outDirs.Server) $packageDir $spec
 }
 

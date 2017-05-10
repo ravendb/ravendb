@@ -35,8 +35,14 @@ namespace FastTests.Client.Subscriptions
                     await session.StoreAsync(us5);
                     await session.SaveChangesAsync();
 
-                    var user2Etag = session.Advanced.GetEtagFor(us2);
-                    var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria("Users"), user2Etag ?? 0);
+                    var user2ChangeVector = session.Advanced.GetChangeVectorFor(us2);
+                    var subscriptionCreationParams = new SubscriptionCreationParams
+                    {
+                        Criteria = new SubscriptionCriteria("Users"),
+                        ChangeVector = user2ChangeVector
+                    };
+
+                    var id = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
 
                     var users = new List<dynamic>();
 
@@ -110,8 +116,13 @@ namespace FastTests.Client.Subscriptions
                     await session.StoreAsync(us5);
                     await session.SaveChangesAsync();
 
-                    var user2Etag = session.Advanced.GetEtagFor(us2);
-                    var id = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria<User>(), user2Etag ?? 0);
+                    var user2ChangeVector = session.Advanced.GetChangeVectorFor(us2);
+                    var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                    {
+                        Criteria = new SubscriptionCriteria<User>(),
+                        ChangeVector = user2ChangeVector
+                    };
+                    var id = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
 
                     var users = new List<User>();
 
@@ -185,8 +196,13 @@ namespace FastTests.Client.Subscriptions
                     await session.StoreAsync(us5);
                     await session.SaveChangesAsync();
 
-                    var user2Etag = session.Advanced.GetEtagFor(us2);
-                    subscriptionId = await store.AsyncSubscriptions.CreateAsync(new SubscriptionCriteria("Users"), user2Etag ?? 0);
+                    var user2ChangeVector = session.Advanced.GetChangeVectorFor(us2);
+                    var subscriptionCreationParams = new SubscriptionCreationParams
+                    {
+                        Criteria = new SubscriptionCriteria("Users"),
+                        ChangeVector = user2ChangeVector
+                    };
+                    subscriptionId = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
 
                     var users = new List<dynamic>();
 

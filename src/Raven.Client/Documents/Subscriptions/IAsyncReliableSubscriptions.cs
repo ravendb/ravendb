@@ -16,13 +16,13 @@ namespace Raven.Client.Documents.Subscriptions
         /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription criteria for a given type.
         /// </summary>
         /// <returns>Created subscription identifier.</returns>
-        Task<long> CreateAsync<T>(SubscriptionCriteria<T> criteria, long startEtag = 0, string database = null);
+        Task<long> CreateAsync<T>(SubscriptionCreationParams<T> subscriptionCreationParams, string database = null);
 
         /// <summary>
         /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription criteria.
         /// </summary>
         /// <returns>Created subscription identifier.</returns>
-        Task<long> CreateAsync(SubscriptionCriteria criteria, long startEtag = 0, string database = null);
+        Task<long> CreateAsync(SubscriptionCreationParams subscriptionCreationParams, string database = null);
 
         /// <summary>
         /// It opens a subscription and starts pulling documents since a last processed document for that subscription (in document's long? order).
@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// It downloads a list of all existing subscriptions in a database.
         /// </summary>
         /// <returns>Existing subscriptions' configurations.</returns>
-        Task<List<SubscriptionConfig>> GetSubscriptionsAsync(int start, int take, string database = null);
+        Task<List<SubscriptionRaftState>> GetSubscriptionsAsync(int start, int take, string database = null);
 
         /// <summary>
         /// It deletes a subscription.

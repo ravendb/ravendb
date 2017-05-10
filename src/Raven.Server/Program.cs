@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.ServerWide;
@@ -20,19 +21,21 @@ namespace Raven.Server
 
         public static int Main(string[] args)
         {
+            args = CommandLineSwitches.ParseAndRemove(args);
+
+            if (CommandLineSwitches.PrintVersionAndExit)
+            {
+                Console.WriteLine(ServerVersion.FullVersion);
+                return 0;
+            }
+
             WelcomeMessage.Print();
 
             var customConfigPath = ParseCustomConfigPath(args);
             var configuration = new RavenConfiguration(null, ResourceType.Server, customConfigPath);
-            bool printServerId = false;
-            if (args != null)
-            {
-                var list = args.ToList();
-                printServerId = list.Remove("--print-id");
-                args = list.ToArray();
 
+            if (args != null)
                 configuration.AddCommandLine(args);
-            }
 
             configuration.Initialize();
 
@@ -60,10 +63,13 @@ namespace Raven.Server
                         {
                             server.Initialize();
 
-                            if (printServerId)
+                            if (CommandLineSwitches.PrintServerId)
                                 Console.WriteLine($"Server ID is {server.ServerStore.GetServerId()}.");
 
-                            Console.WriteLine($"Listening to: {string.Join(", ", server.WebUrls)}");
+                            if (CommandLineSwitches.LaunchBrowser)
+                                BrowserHelper.OpenStudioInBrowser(server);
+
+                            Console.WriteLine($"Listening on: {string.Join(", ", server.WebUrls)}");
 
                             var serverWebUrl = server.WebUrls[0];
                             server.GetTcpServerStatusAsync()
@@ -189,7 +195,7 @@ namespace Raven.Server
                         goto case "log";
 
                     case "log":
-                        
+
                         LoggingSource.Instance.EnableConsoleLogging();
                         LoggingSource.Instance.SetupLogMode(LogMode.Information,
                             Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
@@ -244,31 +250,31 @@ namespace Raven.Server
             Console.WriteLine("Available Commands:");
 
             var description = "clear screen";
-            Console.WriteLine($"    cls {description, 23}");
+            Console.WriteLine($"    cls {description,23}");
 
             description = "dump logs to console";
-            Console.WriteLine($"    log [-n] {description, 26}");
+            Console.WriteLine($"    log [-n] {description,26}");
 
             description = "-n to dump logs without outputting http request logs";
-            Console.WriteLine($"    {description, 67}");
+            Console.WriteLine($"    {description,67}");
 
             description = "stop dumping logs to console";
-            Console.WriteLine($"    no-log {description, 36}");
+            Console.WriteLine($"    no-log {description,36}");
 
             description = "simulate low memory";
-            Console.WriteLine($"    low-mem {description, 26}"); 
+            Console.WriteLine($"    low-mem {description,26}");
 
             description = "dump statistical information";
-            Console.WriteLine($"    stats {description, 37}");
+            Console.WriteLine($"    stats {description,37}");
 
             description = "collect gc max generation";
-            Console.WriteLine($"    gc2 {description, 36}");
+            Console.WriteLine($"    gc2 {description,36}");
 
             description = "reset the server";
-            Console.WriteLine($"    reset {description, 25}");
+            Console.WriteLine($"    reset {description,25}");
 
             description = "quit";
-            Console.WriteLine($"    q {description, 17}");
+            Console.WriteLine($"    q {description,17}");
 
             Console.WriteLine();
 
@@ -285,7 +291,7 @@ namespace Raven.Server
                 var humaneProp = (json["Humane"] as DynamicJsonValue);
                 var reqCounter = server.Metrics.RequestsMeter;
 
-                Console.Write($"\r {((i++%2) == 0 ? "*" : "+")} ");
+                Console.Write($"\r {((i++ % 2) == 0 ? "*" : "+")} ");
 
                 Console.Write($" {humaneProp?["WorkingSet"],-14} ");
                 Console.Write($" | {humaneProp?["TotalUnmanagedAllocations"],-14} ");
@@ -297,7 +303,7 @@ namespace Raven.Server
                 long allDocs = 0;
                 foreach (var value in server.ServerStore.DatabasesLandlord.DatabasesCache.Values)
                 {
-                    if(value.Status != TaskStatus.RanToCompletion)
+                    if (value.Status != TaskStatus.RanToCompletion)
                         continue;
 
                     try

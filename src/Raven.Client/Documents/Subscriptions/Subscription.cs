@@ -16,6 +16,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Identity;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
@@ -25,6 +26,7 @@ using Raven.Client.Server.Tcp;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
+using System.Linq;
 
 namespace Raven.Client.Documents.Subscriptions
 {
@@ -345,8 +347,6 @@ namespace Raven.Client.Documents.Subscriptions
                         if (_proccessingCts.IsCancellationRequested)
                             return;
 
-                        long lastReceivedEtag = 0;
-
                         Task notifiedSubscribers = Task.CompletedTask;
 
                         while (_proccessingCts.IsCancellationRequested == false)
@@ -364,19 +364,20 @@ namespace Raven.Client.Documents.Subscriptions
                             }
                             notifiedSubscribers = Task.Run(() =>
                             {
+                                ChangeVectorEntry[] lastReceivedChangeVector = null;
                                 // ReSharper disable once AccessToDisposedClosure
                                 using (incomingBatch.Item2)
                                 {
                                     foreach (var curDoc in incomingBatch.Item1)
                                     {
-                                        NotifySubscribers(curDoc.Data, out lastReceivedEtag);
+                                        NotifySubscribers(curDoc.Data, out lastReceivedChangeVector);
                                     }
                                 }
                                 try
                                 {
                                     if (tcpStream != null) //possibly prevent ObjectDisposedException
                                     {
-                                        SendAck(lastReceivedEtag, tcpStream);
+                                        SendAck(lastReceivedChangeVector, tcpStream);
                                     }
                                 }
                                 catch (ObjectDisposedException)
@@ -478,18 +479,24 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private void NotifySubscribers(BlittableJsonReaderObject curDoc, out long lastReceivedEtag)
+        private void NotifySubscribers(BlittableJsonReaderObject curDoc, out ChangeVectorEntry[] lastReceivedChangeVector)
         {
-            if (curDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+            BlittableJsonReaderObject metadata;
+            lastReceivedChangeVector = null;
+
+            if (curDoc.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)
                 ThrowMetadataRequired();
             if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
                 ThrowIdRequired();
-            if (metadata.TryGet(Constants.Documents.Metadata.Etag, out lastReceivedEtag) == false)
-                ThrowEtagRequired();
+            if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out BlittableJsonReaderArray changeVectorAsObject) == false || changeVectorAsObject == null)
+                ThrowChangeVectorRequired();
+            else
+                lastReceivedChangeVector = changeVectorAsObject.ToVector();
 
             if (_logger.IsInfoEnabled)
             {
-                _logger.Info($"Got {id} (etag: {lastReceivedEtag} on subscription {_options.SubscriptionId}, size {curDoc.Size}");
+                // todo: make writing of change vector more efficient, maybe move ChangeVectorExtensions from server to client..
+                _logger.Info($"Got {id} (etag: [{string.Join(",", lastReceivedChangeVector.Select(x => $"{x.DbId.ToString()}:{x.Etag}"))}] on subscription {_options.SubscriptionId}, size {curDoc.Size}");
             }
 
             T instance;
@@ -543,9 +550,9 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private static void ThrowEtagRequired()
+        private static void ThrowChangeVectorRequired()
         {
-            throw new InvalidOperationException("Document must have an ETag");
+            throw new InvalidOperationException("Document must have a ChangeVector");
         }
 
         private static void ThrowIdRequired()
@@ -558,13 +565,13 @@ namespace Raven.Client.Documents.Subscriptions
             throw new InvalidOperationException("Document must have a metadata");
         }
 
-        private void SendAck(long lastReceivedEtag, Stream networkStream)
+        private void SendAck(ChangeVectorEntry[] lastReceivedChangeVector, Stream networkStream)
         {
             BeforeAcknowledgment();
 
             var ack = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new SubscriptionConnectionClientMessage
             {
-                Etag = lastReceivedEtag,
+                ChangeVector = lastReceivedChangeVector,
                 Type = SubscriptionConnectionClientMessage.MessageType.Acknowledge
             }));
 
