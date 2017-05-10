@@ -60,17 +60,22 @@ namespace Raven.Server.Documents.Indexes
                 writer.Flush();
 
                 stream.Position = 0;
-
-                if (options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
-                {
-                    using (var metadata = File.Open(Path.Combine(options.BasePath, MetadataFileName), FileMode.Create))
-                    using (var metadataWriter = new StreamWriter(metadata, Encoding.UTF8))
+                
+                if (options.EncryptionEnabled == false)
+                {                
+                    // This will write the index definitions to a file on disk (not through voron) --> not encrypted even if encryption is on.
+                    // So we will disable it (temporarily) when working with encryption. 
+                    if (options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
                     {
-                        metadataWriter.WriteLine(Name);
-                        metadataWriter.Flush();
+                        using (var metadata = File.Open(Path.Combine(options.BasePath, MetadataFileName), FileMode.Create))
+                        using (var metadataWriter = new StreamWriter(metadata, Encoding.UTF8))
+                        {
+                            metadataWriter.WriteLine(Name);
+                            metadataWriter.Flush();
 
-                        stream.CopyTo(metadata);
-                        stream.Position = 0;
+                            stream.CopyTo(metadata);
+                            stream.Position = 0;
+                        }
                     }
                 }
 
