@@ -51,7 +51,7 @@ class cluster extends viewModelBase {
     }
 
     fetchTopology() {
-        return new getClusterTopologyCommand()
+        return new getClusterTopologyCommand(window.location.host)
             .execute()
             .done(topology => {
                 this.topology(topology);
@@ -60,6 +60,7 @@ class cluster extends viewModelBase {
     }
 
     refresh() {
+
         this.fetchTopology();
     }
 
