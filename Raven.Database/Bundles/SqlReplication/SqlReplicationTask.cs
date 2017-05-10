@@ -301,22 +301,8 @@ namespace Raven.Database.Bundles.SqlReplication
 							var lastReplicatedEtag = GetLastEtagFor(localReplicationStatus, replicationConfig);
 							var deletedDocs = deletedDocsByConfig[replicationConfig];
 							var docsToReplicate = itemsToReplicate
-								.Where(x => lastReplicatedEtag.CompareTo(x.Etag) < 0) // haven't replicate the etag yet
-                                .Where(document =>
-                                {
-                                    var info = Database.GetRecentTouchesFor(document.Key);
-                                    if (info != null)
-                                    {
-                                        if (info.TouchedEtag.CompareTo(lastReplicatedEtag) > 0)
-                                        {
-                                            log.Debug(
-                                                "Will not replicate document '{0}' to '{1}' because the updates after etag {2} are related document touches",
-                                                document.Key, replicationConfig.Name, info.TouchedEtag);
-                                            return false;
-                                        }
-                                    }
-	                                return true;
-                                });
+								.Where(x => lastReplicatedEtag.CompareTo(x.Etag) < 0); // haven't replicate the etag yet
+
 							if (deletedDocs.Count >= MaxNumberOfDeletionsToReplicate + 1)
 								docsToReplicate = docsToReplicate.Where(x => EtagUtil.IsGreaterThan(x.Etag, deletedDocs[deletedDocs.Count - 1].Etag) == false);
 
