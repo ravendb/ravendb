@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using Voron.Util;
 
 namespace Voron.Data
 {
@@ -40,6 +37,8 @@ namespace Voron.Data
             _index = 0;
             _llt = llt;
             _pagerRef = new LowLevelTransaction.PagerRef();
+            _lastChunk = Chunk.Invalid;            
+
             foreach (var cd in _chunksDetails)
             {
                 Length += cd.ChunkSize;
@@ -97,6 +96,24 @@ namespace Voron.Data
             }
         }
 
+        private struct Chunk
+        {
+            public static readonly Chunk Invalid = default(Chunk);
+
+            public readonly Page Page;
+            public readonly LowLevelTransaction.PagerRef Pager;
+            public readonly int OverflowPages;
+
+            public Chunk(Page page, LowLevelTransaction.PagerRef pager, int overflowPages)
+            {
+                this.Page = page;
+                this.Pager = pager;
+                this.OverflowPages = overflowPages;
+            }
+        }
+
+        private Chunk _lastChunk;
+
         public override int ReadByte()
         {
             int pos = _positions[_index];
@@ -114,10 +131,13 @@ namespace Voron.Data
                     return -1;
             }
 
-            var page = _llt.GetPage(chunk.PageNumber, _pagerRef);
-            _pagerRef.Pager.EnsureMapped(_llt, _pagerRef.PagerPageNumber, VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize));
+            if (!_lastChunk.Page.IsValid || _lastChunk.Page.PageNumber != chunk.PageNumber)
+            {
+                var page = _llt.GetPage(chunk.PageNumber, _pagerRef);
+                _lastChunk = new Chunk(page, _pagerRef, VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize));
+            }
 
-            return page.DataPointer[_positions[_index]++];
+            return _lastChunk.Page.DataPointer[_positions[_index]++];
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -142,12 +162,16 @@ namespace Voron.Data
             if (count > len - pos)
                 count = len - pos;
 
-            var page = _llt.GetPage(_chunksDetails[_index].PageNumber, _pagerRef);
-            _pagerRef.Pager.EnsureMapped(_llt, _pagerRef.PagerPageNumber, VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize));
+            ref Tree.ChunkDetails chunk = ref _chunksDetails[_index];
+            if (!_lastChunk.Page.IsValid || _lastChunk.Page.PageNumber != chunk.PageNumber)
+            {
+                var page = _llt.GetPage(chunk.PageNumber, _pagerRef);
+                _lastChunk = new Chunk(page, _pagerRef, VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize));
+            }
 
             fixed (byte* dst = buffer)
             {
-                Memory.Copy(dst + offset, page.DataPointer + pos, count);
+                Memory.Copy(dst + offset, _lastChunk.Page.DataPointer + pos, count);
             }
 
             _positions[_index] += count;
