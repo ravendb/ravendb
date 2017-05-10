@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -34,6 +35,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Rachis;
 using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -208,6 +210,10 @@ namespace TypingsGenerator
             // replication stats
             scripter.AddType(typeof(LiveReplicationPerformanceCollector.OutgoingPerformanceStats));
             scripter.AddType(typeof(LiveReplicationPerformanceCollector.IncomingPerformanceStats));
+
+            // conflicts
+            scripter.AddType(typeof(GetConflictsResult));
+            scripter.AddType(typeof(ConflictResolverAdvisor.MergeResult));
 
             return scripter;
         }

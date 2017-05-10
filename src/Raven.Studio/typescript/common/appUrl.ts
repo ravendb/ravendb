@@ -478,9 +478,10 @@ class appUrl {
         return "#/databases/documents?" + collectionPart + "&database=" + encodeURIComponent(dbName);;
     }
 
-    static forConflicts(db: database): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/conflicts?" + databasePart;
+    static forConflicts(db: database, documentId?: string): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const docIdUrlPart = documentId ? "&id=" + encodeURIComponent(documentId) : "";
+        return "#databases/replicationEtl/conflicts?" + databasePart + docIdUrlPart;
     }
 
     static forPatch(db: database, hashOfRecentPatch?: number): string {

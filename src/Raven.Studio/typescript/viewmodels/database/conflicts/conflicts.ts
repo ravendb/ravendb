@@ -1,7 +1,6 @@
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
-import conflictVersion = require("models/database/replication/conflictVersion");
 import getReplicationSourcesCommand = require("commands/database/replication/getReplicationSourcesCommand");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import getSingleTransformerCommand = require("commands/database/transformers/getSingleTransformerCommand");
@@ -11,26 +10,184 @@ import eventsCollector = require("common/eventsCollector");
 
 import viewModelBase = require("viewmodels/viewModelBase");
 
+import getConflictsCommand = require("commands/database/replication/getConflictsCommand");
+import getConflictsForDocumentCommand = require("commands/database/replication/getConflictsForDocumentCommand");
+import getSuggestedConflictResolutionCommand = require("commands/database/replication/getSuggestedConflictResolutionCommand");
+
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
+import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
+import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
+import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import messagePublisher = require("common/messagePublisher");
+
+import document = require("models/database/documents/document");
+import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
+
+class conflictItem {
+
+    formattedValue = ko.observable<string>();
+    deletedMarker = ko.observable<boolean>();
+
+    constructor(dto: Raven.Client.Documents.Commands.GetConflictsResult.Conflict) {
+        //TODO: use change vector?
+        if (dto.Doc) {
+            const json = JSON.stringify(dto.Doc, null, 4);
+            
+            this.formattedValue(Prism.highlight(json, (Prism.languages as any).javascript));
+            this.deletedMarker(false);
+        } else {
+            this.deletedMarker(true);
+        }
+    }
+}
+
 class conflicts extends viewModelBase {
 
-    displayName = "conflicts";
+    //TODO: map db is from change vector to some meaningful names? 
+    //TODO: handle conflicts on deletion 
+    //TODO: resolve selected to newest etc.
+
+    private isSaving = ko.observable<boolean>(false);
+
+    private gridController = ko.observable<virtualGridController<replicationConflictListItemDto>>();
+
+    currentConflict = ko.observable<Raven.Client.Documents.Commands.GetConflictsResult>();
+    conflictItems = ko.observableArray<conflictItem>([]);
+    suggestedResolution = ko.observable<string>(); //TODO: add validation  + block when loading / saving conflict resolution 
+    documentId = ko.observable<string>();
+
+    constructor() {
+        super();
+
+        aceEditorBindingHandler.install();
+    }
+
+    activate(navigationArgs: { id: string }) {
+        super.activate(navigationArgs);
+
+        if (navigationArgs && navigationArgs.id) {
+            this.loadConflictForDocument(navigationArgs.id);
+        }
+    }
+
+    compositionComplete(): void {
+        super.compositionComplete();
+
+        const grid = this.gridController();
+        grid.headerVisible(true);
+        grid.init((s, t) => this.fetchConflicts(s, t), () =>
+            [
+                new checkedColumn(true),
+                //TODO: format date (as ago ? )
+                new hyperlinkColumn<replicationConflictListItemDto>(x => x.Key, x => appUrl.forConflicts(this.activeDatabase(), x.Key), "Document", "75%",
+                    {
+                        handler: (item, event) => this.handleLoadAction(item, event)
+                    }),
+                new textColumn<replicationConflictListItemDto>(x => x.LastModified, "Date", "25%")
+            ]
+        );
+    }
+
+    private fetchConflicts(start: number, pageSize: number) {
+        return new getConflictsCommand(this.activeDatabase(), start, pageSize)
+            .execute();
+    }
+
+    private handleLoadAction(conflictToLoad: replicationConflictListItemDto, event: JQueryEventObject) {
+        event.preventDefault();
+
+        const documentId = conflictToLoad.Key;
+        this.updateUrl(appUrl.forConflicts(this.activeDatabase(), documentId));
+
+        this.loadConflictForDocument(documentId);
+    }
+
+    private loadConflictForDocument(documentId: string) {
+        this.suggestedResolution(null);
+
+        return new getConflictsForDocumentCommand(this.activeDatabase(), documentId)
+            .execute()
+            .done(result => {
+                this.currentConflict(result);
+                this.conflictItems(result.Results.map(x => new conflictItem((x))));
+                this.loadSuggestedConflictResolution(documentId);
+            })
+            .fail((xhr: JQueryXHR) => {
+                if (xhr.status === 404) {
+                    messagePublisher.reportError("Unable to find conflicted document: " + documentId + ". Maybe conflict was already resolved?");
+                } else {
+                    messagePublisher.reportError("Failed to load conflict!", xhr.responseText, xhr.statusText);
+                }
+            });
+    }
+
+    private loadSuggestedConflictResolution(documentId: string) {
+        return new getSuggestedConflictResolutionCommand(this.activeDatabase(), documentId)
+            .execute()
+            .done(result => {
+                (result.Document as any)["@metadata"] = result.Metadata;
+                const serializedResolution = JSON.stringify(result.Document, null, 4);
+                this.suggestedResolution(serializedResolution);
+                this.documentId(documentId);
+            });
+    }
+
+    saveDocument() {
+        //TODO: validation 
+
+        let message = "";
+        let updatedDto: any;
+
+        try {
+            updatedDto = JSON.parse(this.suggestedResolution());
+        } catch (e) {
+            if (updatedDto == undefined) {
+                message = "The document data isn't a legal JSON expression!";
+            }
+        }
+
+        if (message) {
+            messagePublisher.reportError(message, undefined, undefined, false);
+            return;
+        }
+
+        if (!updatedDto['@metadata']) {
+            updatedDto["@metadata"] = {};
+        }
+
+        const meta = updatedDto['@metadata'];
+
+        // force document id to support save as new
+        meta['@id'] = this.documentId();
+        meta['@etag'] = 0;
+
+        const newDoc = new document(updatedDto);
+        const saveCommand = new saveDocumentCommand(this.documentId(), newDoc, this.activeDatabase());
+        this.isSaving(true);
+        saveCommand
+            .execute()
+            .done((saveResult: saveDocumentResponseDto) => this.onDocumentSaved(saveResult, updatedDto))
+            .fail(() => {
+                this.isSaving(false);
+            });
+    }
+
+    private onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any) {
+        //TODO:
+    }
+
+    /* TODO
     sourcesLookup: dictionary<string> = {};
 
     private refreshConflictsObservable = ko.observable<number>();
     private conflictsSubscription: KnockoutSubscription;
-    //TODO: currentColumns = ko.observable(customColumns.empty());
     hasAnyConflict: KnockoutComputed<boolean>;
 
     static performedIndexChecks: Array<string> = [];
-    static conflictsIndexName = "Raven/ConflictDocuments";
-    static conflictsTransformerName = "Raven/ConflictDocumentsTransformer";
-
-    currentConflictsPagedItems = ko.observable<any>(); //TODO: use virtualGrid + type
-    selectedDocumentIndices = ko.observableArray<number>();
 
     serverConflictResolution = ko.observable<string>();
-
-    static gridSelector = "#conflictsGrid";
 
     afterClientApiConnected(): void {
         const changesApi = this.changesContext.databaseChangesApi();
@@ -64,13 +221,6 @@ class conflicts extends viewModelBase {
             return false;
         });
 
-        /* TODO
-        this.currentColumns().columns([
-            new customColumnParams({ Header: "Detected At (UTC)", Binding: "conflictDetectedAt", DefaultWidth: 300 }),
-            new customColumnParams({ Header: "Versions", Binding: "versions", DefaultWidth: 400, Template: 'versions-template' })
-        ]);
-        this.currentColumns().customMode(true);*/
-
         return this.performIndexCheck(this.activeDatabase()).then(() => {
             return this.loadReplicationSources(this.activeDatabase());
         }).done(() => {
@@ -97,30 +247,6 @@ class conflicts extends viewModelBase {
             .done(results => this.replicationSourcesLoaded(results, db));
     }
 
-    performIndexCheck(db: database): JQueryPromise<any> {
-
-        // first look in cache
-        if (_.includes(conflicts.performedIndexChecks, db.name)) {
-            return $.Deferred<any>().resolve();
-        }
-
-        var performCheckTask = $.Deferred<any>();
-
-        // perform index check against DB
-        $.when<any>(new getIndexDefinitionCommand(conflicts.conflictsIndexName, db).execute(),
-            new getSingleTransformerCommand(conflicts.conflictsTransformerName, db).execute())
-            .done(() => {
-                conflicts.performedIndexChecks.push(db.name);
-                performCheckTask.resolve();
-            })
-            .fail( 
-            function () {
-                conflicts.performedIndexChecks.push(db.name);
-            });
-
-        return performCheckTask;
-    }
-
     replicationSourcesLoaded(sources: dictionary<string> , db: database) {
         this.sourcesLookup = sources;
     }
@@ -139,7 +265,7 @@ class conflicts extends viewModelBase {
     private createPagedList(database: database): pagedList {
         var fetcher = (skip: number, take: number) => new getConflictsCommand(database, skip, take).execute();
         return new pagedList(fetcher);
-    }*/
+    }*
 
     getUrlForConflict(conflictVersion: conflictVersion) {
         return appUrl.forEditDoc(conflictVersion.id, this.activeDatabase());
@@ -188,7 +314,7 @@ class conflicts extends viewModelBase {
             .done(() => {
                 this.fetchConflicts(this.activeDatabase());
             });
-    }
+    }*/
 
 }
 

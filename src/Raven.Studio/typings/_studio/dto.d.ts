@@ -213,6 +213,11 @@ interface storedQueryDto extends queryDto {
     hash: number;
 }
 
+interface replicationConflictListItemDto {
+    Key: string;
+    LastModified: string;
+}
+
 type databaseDisconnectionCause = "Error" | "DatabaseDeleted" | "DatabaseDisabled" | "ChangingDatabase";
 
 type querySortType = "Ascending" | "Descending" | "Range Ascending" | "Range Descending";

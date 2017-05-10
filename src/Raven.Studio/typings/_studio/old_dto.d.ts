@@ -3,9 +3,6 @@
 interface collectionInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<documentDto>> {
 }
 
-interface conflictsInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<conflictDto>> {
-}
-
 interface logNotificationDto {
     Level: string;
     TimeStamp: string;
@@ -296,21 +293,10 @@ interface facetValueDto {
     Average: number;
 }
 
-interface conflictDto extends documentDto {
-    Id: string;
-    ConflictDetectedAt: string;
-    Versions: conflictVersionsDto[];
-}
-
 interface replicationSourceDto extends documentDto {
     LastDocumentEtag?: string;
     ServerInstanceId: string;
     Source: string;
-}
-
-interface conflictVersionsDto {
-    Id: string;
-    SourceId: string;
 }
 
 interface documentBase extends dictionary<any> {

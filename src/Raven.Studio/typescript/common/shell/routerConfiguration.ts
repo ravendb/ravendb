@@ -10,6 +10,7 @@ import getTasksMenuItem = require("common/shell/menu/items/tasks");
 import getIndexesMenuItem = require("common/shell/menu/items/indexes");
 import getTransformersMenuItems = require("common/shell/menu/items/transformers");
 import getDocumentsMenuItem = require("common/shell/menu/items/documents");
+import getReplicationMenuItem = require("common/shell/menu/items/replication");
 
 export = getRouterConfiguration();
 
@@ -18,7 +19,7 @@ function getRouterConfiguration(): Array<DurandalRouteConfiguration> {
         .map(getMenuItemDurandalRoutes)
         .reduce((result, next) => result.concat(next), [])
         .reduce((result: any[], next: any) => {
-            let nextJson = JSON.stringify(next);
+            const nextJson = JSON.stringify(next);
             if (!result.some(x => JSON.stringify(x) === nextJson)) {
                 result.push(next);
             }
@@ -59,6 +60,7 @@ function generateAllMenuItems() {
         getDocumentsMenuItem(appUrls),
         getIndexesMenuItem(appUrls),
         ...getTransformersMenuItems(appUrls),
+        getReplicationMenuItem(appUrls),
         getTasksMenuItem(appUrls),
         getSettingsMenuItem(appUrls),
         getStatsMenuItem(appUrls),

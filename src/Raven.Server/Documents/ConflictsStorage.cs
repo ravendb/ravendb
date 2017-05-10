@@ -31,6 +31,7 @@ namespace Raven.Server.Documents
         public static readonly Slice AllConflictedDocsEtagsSlice;
         private static readonly Slice ConflictedCollectionSlice;
         public static readonly Slice ConflictsSlice;
+        private static readonly Slice LoweredKeySlice;
 
         public static readonly TableSchema ConflictsSchema = new TableSchema();
 
@@ -55,6 +56,7 @@ namespace Raven.Server.Documents
         static ConflictsStorage()
         {
             Slice.From(StorageEnvironment.LabelsContext, "Key", ByteStringType.Immutable, out KeySlice);
+            Slice.From(StorageEnvironment.LabelsContext, "LoweredKey", ByteStringType.Immutable, out LoweredKeySlice);
             Slice.From(StorageEnvironment.LabelsContext, "KeyAndChangeVector", ByteStringType.Immutable, out KeyAndChangeVectorSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AllConflictedDocsEtags", ByteStringType.Immutable, out AllConflictedDocsEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "ConflictedCollection", ByteStringType.Immutable, out ConflictedCollectionSlice);
@@ -86,6 +88,13 @@ namespace Raven.Server.Documents
                 Count = 3,
                 IsGlobal = false,
                 Name = KeyAndChangeVectorSlice
+            });
+            ConflictsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)ConflictsTable.LoweredKey,
+                Count = 1,
+                IsGlobal = true,
+                Name = LoweredKeySlice
             });
             ConflictsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
@@ -827,6 +836,16 @@ namespace Raven.Server.Documents
             Update,
             Conflict,
             AlreadyMerged
+        }
+
+        public long GetCountOfDocumentsConflicts(DocumentsOperationContext context)
+        {
+            if (ConflictsCount == 0)
+                return 0;
+
+            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
+
+            return conflictsTable.GetTree(ConflictsSchema.Indexes[LoweredKeySlice]).State.NumberOfEntries;
         }
     }
 }
