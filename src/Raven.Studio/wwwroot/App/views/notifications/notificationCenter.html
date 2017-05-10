@@ -21,7 +21,7 @@
                 <p data-bind="text: message"></p>
                 <p data-bind="visible: isCanceled" class="text-warning">The operation was cancelled.</p>
 
-                <div class="text-right">
+                <div class="flex-horizontal">
                     <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                             class="btn btn-sm">
                         <i class="icon-details"></i>
@@ -45,12 +45,13 @@
                     </div>
                 </div>
 
-                <div class="text-right">
+                <div class="flex-horizontal">
                     <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                             class="btn btn-sm">
                         <i class="icon-details"></i>
                         <span>Details</span>
                     </button>
+                    <div class="flex-separator"></div>
                     <button class="btn btn-sm btn-danger" data-bind="click: _.partial($parent.killOperation, $data), visible: killable(), enable: !_.includes($parent.spinners.kill(), id), css: { 'btn-spinner': _.includes($parent.spinners.kill(), id) }">
                         <i class="icon-cancel"></i>
                         <span>Abort</span>
@@ -69,15 +70,15 @@
             <h3 class="text-warning" data-bind="text: title"></h3>
             <div class="time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: message"></p>
-            <div class="text-right">
+            <div class="flex-horizontal">
                 <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                         class="btn btn-sm">
                     <i class="icon-details"></i>
                     <span>Details</span>
                 </button>
-
+                <div class="flex-separator"></div>
                 <div class="dropdown" data-bind="visible: canBePostponed">
-                    <button class="btn btn-sm dropdown-toggle" data-toggle="dropdown" data-bind="enable: !_.includes($parent.spinners.postpone(), id), css: { 'btn-spinner': _.includes($parent.spinners.postpone(), id) }">
+                    <button class="btn btn-sm btn-info dropdown-toggle" data-toggle="dropdown" data-bind="enable: !_.includes($parent.spinners.postpone(), id), css: { 'btn-spinner': _.includes($parent.spinners.postpone(), id) }">
                         <i class="icon-clock"></i><span>Postpone</span>
                         <span class="caret"></span>
                     </button>
@@ -98,7 +99,7 @@
             <h3 class="text-warning" data-bind="text: title"></h3>
             <div class="time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: message"></p>
-            <div class="text-right">
+            <div class="flex-horizontal">
                 <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                         class="btn btn-sm">
                     Details
@@ -124,7 +125,7 @@
                 </label>
             </div>
 
-            <div class="text-right">
+            <div class="flex-horizontal">
                 <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                         class="btn btn-sm">
                     Details
