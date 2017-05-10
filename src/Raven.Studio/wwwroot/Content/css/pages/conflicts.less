@@ -1,0 +1,32 @@
+﻿.conflicts-page {
+    .conflicts-list-container {
+        width: 400px;
+        position: relative;
+    }
+
+    .conflicted-files {
+        margin-bottom: @grid-gutter-width/4;
+        height: 50%;
+        flex-shrink: 0;
+
+        & > div {
+            .padding;
+            flex-grow: 1;
+            background-color: @gray-darker;
+            flex-shrink: 0;
+            .scroll;
+            width: 10%;
+
+            & + div {
+                margin-left: @grid-gutter-width/4;
+            }
+        }
+    }
+
+
+    .result-file {
+        height: 50%;
+        flex-shrink: 0;
+        background-color: @gray;
+    }
+}

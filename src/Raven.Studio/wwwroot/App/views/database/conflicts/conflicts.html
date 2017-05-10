@@ -1,33 +1,42 @@
-<div>
-    <button class="btn btn-primary" data-bind="click: saveDocument">Resolve conflict</button>    
-</div>
-
-
-
-<div>
-    <div style="height: 300px; position: relative">
-        <div class="flex-window-scroll">
-            <div class="scroll-stretch">
-                <div class="panel-body">
-                    <virtual-grid class="resizable virtual-grid" params="controller: gridController, emptyTemplate: 'no-conflicts-found-template'"></virtual-grid>
+<div class="conflicts-page flex-horizontal flex-stretch-items absolute-fill content-margin">
+    <div class="flex-vertical">
+        <div class="margin-bottom">
+            <div class="btn-group-label" data-bind="css: { active: 1 }" data-label="Selection" role="group">
+                <div class="dropdown">
+                    <button class="btn btn-primary dropdown-toggle" type="button" id="resolveConflicts" data-toggle="dropdown">
+                        <i class="icon-force"></i> <span>Resolve conflict</span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="resolveConflicts">
+                        <li><a href="#"><i class="icon-arrow-filled-down"></i> <span>Resolve to local</span> </a></li>
+                        <li><a href="#"><i class="icon-arrow-filled-up"></i> <span>Resolve to newest remote</span></span> </a></li>
+                        <li><a href="#"><i class="icon-clock"></i> <span>Resolve to latest</span></a></li>
+                    </ul>
                 </div>
+            </div>
+            <!--<button class="btn btn-primary" data-bind="click: saveDocument"></button>-->
+        </div>
+        <div class="conflicts-list-container flex-vertical flex-grow" style="position:relative;">
+            <virtual-grid class="resizable virtual-grid" params="controller: gridController, emptyTemplate: 'no-conflicts-found-template'"></virtual-grid>
+        </div>
+    </div>
+    <div class="flex-vertical flex-grow">
+        <div class="margin-bottom">
+            <button class="btn btn-success" data-bind="click: saveDocument"><i class="icon-save"></i> <span>Save edited</span></button>
+        </div>
+        <div class="flex-grow flex-vertical">
+            <div class="conflicted-files flex-stretch-items flex-horizontal flex-grow" data-filecount="3">
+                <div class="file" data-bind="foreach: conflictItems">
+                    <pre data-bind="html: formattedValue"></pre>
+                </div>
+            </div>
+
+            <div class="result-file flex-grow scroll">
+                <pre id="docEditor" class="form-control absolute-fill"
+                     data-bind="aceEditor: { code: suggestedResolution, fontSize:'16px', lang: 'ace/mode/json' }, attr: { disabled: isBusy }, validationElement: suggestedResolution"></pre>
             </div>
         </div>
     </div>
-    
-    <div>
-        <div data-bind="foreach: conflictItems">
-            <pre data-bind="html: formattedValue"></pre>
-        </div>
-    </div>
-
-    <div style="height: 300px; position: relative">
-        <div class="flex-window-scroll">
-            <pre id="docEditor" class="form-control absolute-fill"
-                 data-bind="aceEditor: { code: suggestedResolution, fontSize:'16px', lang: 'ace/mode/json' }, attr: { disabled: isBusy }, validationElement: suggestedResolution"></pre>
-        </div>
-    </div>
-
 </div>
 
 <script type="text/html" id="no-conflicts-found-template">
