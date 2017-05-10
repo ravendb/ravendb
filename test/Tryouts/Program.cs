@@ -25,9 +25,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new DocumentsCrud())
+                using (var a = new FastTests.Issues.RavenDB_5610())
                 {
-                    a.CanDelete("USERs/1");
+                    a.UpdateType().Wait();
                 }
             }
         }

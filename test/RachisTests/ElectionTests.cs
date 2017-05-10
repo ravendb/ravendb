@@ -56,7 +56,7 @@ namespace SlowTests.Server.Rachis
             var newLeaderLastIndex = await IssueCommandsAndWaitForCommit(newLeader, 3, "test", 1);
             ReconnectToNode(firstLeader);
             Assert.True(await firstLeader.WaitForState(RachisConsensus.State.Follower).WaitAsync(timeToWait), "Old leader didn't become follower after two election timeouts");
-            var waitForCommitIndexChange = firstLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, newLeaderLastIndex);
+            var waitForCommitIndexChange = firstLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newLeaderLastIndex);
             Assert.True(await waitForCommitIndexChange.WaitAsync(timeToWait), "Old leader didn't rollback his log to the new leader log");
             var leaderUrl = new HashSet<string>();
             foreach (var consensus in RachisConsensuses)
