@@ -144,13 +144,14 @@ namespace FastTests.Client.Subscriptions
                 await CreateDocuments(store, 1);
 
                 var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastChangeVector;
-                await CreateDocuments(store, 5);
 
                 var subscriptionCreationParams = new SubscriptionCreationOptions()
                 {
                     Criteria = new SubscriptionCriteria("Things"),
                     ChangeVector = lastChangeVector
                 };
+
+                await CreateDocuments(store, 5);
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCreationParams);
                 using (
                     var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
