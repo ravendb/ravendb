@@ -6,11 +6,11 @@
 
     .conflicted-files {
         margin-bottom: @grid-gutter-width/4;
-        height: 50%;
-        flex-shrink: 0;
+        flex-basis: 40%;
+        height: 40%;
+        flex-shrink: 1;
 
         & > div {
-            .padding;
             flex-grow: 1;
             background-color: @gray-darker;
             flex-shrink: 0;
@@ -20,13 +20,16 @@
             & + div {
                 margin-left: @grid-gutter-width/4;
             }
+
+            pre {
+                min-height: 100%;
+            }
         }
     }
 
 
     .result-file {
-        height: 50%;
-        flex-shrink: 0;
+        flex-grow: 1;
         background-color: @gray;
     }
 }
