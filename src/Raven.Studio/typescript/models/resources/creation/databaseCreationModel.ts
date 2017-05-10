@@ -89,7 +89,7 @@ class databaseCreationModel {
                 },
                 {
                     validator: (val: number) => val <= maxReplicationFactor,
-                    message: `Max avaliable nodes: {0}`,
+                    message: `Max available nodes: {0}`,
                     params: maxReplicationFactor
                 }]
         });

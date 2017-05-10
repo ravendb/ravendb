@@ -4,10 +4,18 @@ import clusterTopology = require("models/database/cluster/clusterTopology");
 
 class getClusterTopologyCommand extends commandBase {
 
+    constructor(private serverUrl?: string) {
+        super();
+    }
+
     execute(): JQueryPromise<clusterTopology> {
+        
+        const args = {
+            url: this.serverUrl
+        };
         const url = endpoints.global.rachisAdmin.adminClusterTopology;
 
-        return this.query(url, null, null, dto => new clusterTopology(dto));
+        return this.query(url, args["url"] ? args : null, null, dto => new clusterTopology(dto));
     }
 }
 
