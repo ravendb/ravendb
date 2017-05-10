@@ -1,14 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Net.Http.Headers;
 using Raven.Client;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -21,54 +26,76 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/bulk_docs", "POST")]
         public async Task BulkDocs()
         {
-            DocumentsOperationContext ctx;
-            using (ContextPool.AllocateOperationContext(out ctx))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (var mergedCmd = new MergedBatchCommand{Database = Database})
             {
-                var cmds = await BatchRequestParser.ParseAsync(ctx, RequestBodyStream(), Database.Patcher);
-               
-                var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
-
-                using (var mergedCmd = new MergedBatchCommand
+                if (HttpContext.Request.ContentType != null) // multipart/mixed
                 {
-                    Database = Database,
-                    ParsedCommands = cmds,
-                })
-                {
-                    if (waitForIndexesTimeout != null)
-                        mergedCmd.ModifiedCollections = new HashSet<string>();
-
-                    try
+                    var boundary = MultipartRequestHelper.GetBoundary(
+                        MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
+                        MultipartRequestHelper.MultipartBoundaryLengthLimit);
+                    var reader = new MultipartReader(boundary, RequestBodyStream());
+                    for (int i = 0; i < int.MaxValue; i++)
                     {
-                        await Database.TxMerger.Enqueue(mergedCmd);
-                    }
-                    catch (ConcurrencyException)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                        throw;
-                    }
+                        var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
+                        if (section == null)
+                            break;
 
-                    var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
-                    if (waitForReplicasTimeout != null)
-                    {
-                        await WaitForReplicationAsync(waitForReplicasTimeout.Value, mergedCmd);
-                    }
-
-                    if (waitForIndexesTimeout != null)
-                    {
-                        await
-                            WaitForIndexesAsync(waitForIndexesTimeout.Value, mergedCmd.LastEtag,
-                                mergedCmd.ModifiedCollections);
-                    }
-
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                    using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
-                    {
-                        ctx.Write(writer, new DynamicJsonValue
+                        var bodyStream = GetBodyStream(section);
+                        if (i == 0)
                         {
-                            ["Results"] = mergedCmd.Reply
-                        });
+                            mergedCmd.ParsedCommands = await BatchRequestParser.ParseAsync(ctx, bodyStream, Database.Patcher);
+                            continue;
+                        }
+
+                        if (mergedCmd.AttachmentStreams == null)
+                            mergedCmd.AttachmentStreams = new Queue<MergedBatchCommand.AttachmentStream>();
+
+                        var attachmentStream = new MergedBatchCommand.AttachmentStream();
+                        attachmentStream.FileDispose = Database.DocumentsStorage.AttachmentsStorage.GetTempFile(out attachmentStream.File);
+                        attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(ctx, bodyStream, attachmentStream.File, Database.DatabaseShutdown);
+                        mergedCmd.AttachmentStreams.Enqueue(attachmentStream);
                     }
+                }
+                else
+                {
+                    mergedCmd.ParsedCommands = await BatchRequestParser.ParseAsync(ctx, RequestBodyStream(), Database.Patcher);
+                }
+
+                var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
+                if (waitForIndexesTimeout != null)
+                    mergedCmd.ModifiedCollections = new HashSet<string>();
+                try
+                {
+                    await Database.TxMerger.Enqueue(mergedCmd);
+                }
+                catch (ConcurrencyException)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                    throw;
+                }
+
+                var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
+                if (waitForReplicasTimeout != null)
+                {
+                    await WaitForReplicationAsync(waitForReplicasTimeout.Value, mergedCmd);
+                }
+
+                if (waitForIndexesTimeout != null)
+                {
+                    await
+                        WaitForIndexesAsync(waitForIndexesTimeout.Value, mergedCmd.LastEtag,
+                            mergedCmd.ModifiedCollections);
+                }
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
+                {
+                    ctx.Write(writer, new DynamicJsonValue
+                    {
+                        ["Results"] = mergedCmd.Reply
+                    });
                 }
             }
         }
@@ -202,6 +229,7 @@ namespace Raven.Server.Documents.Handlers
         {
             public DynamicJsonArray Reply;
             public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
+            public Queue<AttachmentStream> AttachmentStreams;
             public DocumentDatabase Database;
             public long LastEtag;
 
@@ -210,10 +238,14 @@ namespace Raven.Server.Documents.Handlers
             public override string ToString()
             {
                 var sb = new StringBuilder($"{ParsedCommands.Count} commands").AppendLine();
+                if (AttachmentStreams != null)
+                {
+                    sb.AppendLine($"{AttachmentStreams.Count} attachment streams.");
+                }
                 foreach (var cmd in ParsedCommands)
                 {
                     sb.Append("\t")
-                        .Append(cmd.Method)
+                        .Append(cmd.Type)
                         .Append(" ")
                         .Append(cmd.Key)
                         .AppendLine();
@@ -227,9 +259,10 @@ namespace Raven.Server.Documents.Handlers
                 for (int i = ParsedCommands.Offset; i < ParsedCommands.Count; i++)
                 {
                     var cmd = ParsedCommands.Array[ParsedCommands.Offset + i];
-                    switch (cmd.Method)
+                    switch (cmd.Type)
                     {
-                        case BatchRequestParser.CommandType.PUT:
+                        case CommandType.PUT:
+                        {
                             var putResult = Database.DocumentsStorage.Put(context, cmd.Key, cmd.Etag, cmd.Document);
 
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, cmd.Document.Size);
@@ -244,11 +277,11 @@ namespace Raven.Server.Documents.Handlers
                                 foreach (var entry in putResult.ChangeVector)
                                     changeVector.Add(entry.ToJson());
                             }
-                            
+
                             // Make sure all the metadata fields are always been add
                             var putReply = new DynamicJsonValue
                             {
-                                ["Method"] = "PUT",
+                                ["Type"] = CommandType.PUT.ToString(),
                                 [Constants.Documents.Metadata.Id] = putResult.Key,
                                 [Constants.Documents.Metadata.Etag] = putResult.Etag,
                                 [Constants.Documents.Metadata.Collection] = putResult.Collection.Name,
@@ -260,9 +293,9 @@ namespace Raven.Server.Documents.Handlers
                                 putReply[Constants.Documents.Metadata.Flags] = putResult.Flags;
 
                             Reply.Add(putReply);
+                        }
                             break;
-                        case BatchRequestParser.CommandType.PATCH:
-
+                        case CommandType.PATCH:
                             cmd.PatchCommand.Execute(context);
 
                             var patchResult = cmd.PatchCommand.PatchResult;
@@ -279,11 +312,11 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 ["Key"] = cmd.Key,
                                 ["Etag"] = patchResult.Etag,
-                                ["Method"] = "PATCH",
+                                    ["Type"] = CommandType.PATCH.ToString(),
                                 ["PatchStatus"] = patchResult.Status.ToString(),
                             });
                             break;
-                        case BatchRequestParser.CommandType.DELETE:
+                        case CommandType.DELETE:
                             
                             if (cmd.KeyPrefixed == false)
                             {
@@ -298,7 +331,7 @@ namespace Raven.Server.Documents.Handlers
                                 Reply.Add(new DynamicJsonValue
                                 {
                                     ["Key"] = cmd.Key,
-                                    ["Method"] = "DELETE",
+                                    ["Type"] = CommandType.DELETE.ToString(),
                                     ["Deleted"] = deleted != null
                                 });
                             }
@@ -315,11 +348,33 @@ namespace Raven.Server.Documents.Handlers
                                 Reply.Add(new DynamicJsonValue
                                 {
                                     ["Key"] = cmd.Key,
-                                    ["Method"] = "DELETE",
+                                    ["Type"] = CommandType.DELETE.ToString(),
                                     ["Deleted"] = deleteResults.Count > 0
                                 });
                             }
                             
+                            break;
+                        case CommandType.AttachmentPUT:
+                            using (var attachmentStream = AttachmentStreams.Dequeue())
+                            {
+                                var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Key, cmd.Name, cmd.ContentType, attachmentStream.Hash, cmd.Etag, attachmentStream.File);
+                                LastEtag = attachmentPutResult.Etag;
+
+                                // Make sure all the metadata fields are always been add
+                                var attachmentPutReply = new DynamicJsonValue
+                                {
+                                    ["Type"] = CommandType.AttachmentPUT.ToString(),
+                                    [Constants.Documents.Metadata.Id] = attachmentPutResult.DocumentId,
+                                    ["Name"] = attachmentPutResult.Name,
+                                    [Constants.Documents.Metadata.Etag] = attachmentPutResult.Etag,
+                                    ["Hash"] = attachmentPutResult.Hash,
+                                    ["ContentType"] = attachmentPutResult.ContentType,
+                                    ["Size"] = attachmentPutResult.Size,
+                                };
+
+                                Reply.Add(attachmentPutReply);
+                            }
+
                             break;
                     }
                 }
@@ -333,6 +388,19 @@ namespace Raven.Server.Documents.Handlers
                     cmd.Document?.Dispose();
                 }
                 BatchRequestParser.ReturnBuffer(ParsedCommands);
+            }
+
+            public struct AttachmentStream : IDisposable
+            {
+                public string Hash;
+
+                public FileStream File;
+                public AttachmentsStorage.ReleaseTempFile FileDispose;
+
+                public void Dispose()
+                {
+                    FileDispose.Dispose();
+                }
             }
         }
 

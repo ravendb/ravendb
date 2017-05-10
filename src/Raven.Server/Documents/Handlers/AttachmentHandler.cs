@@ -130,52 +130,24 @@ namespace Raven.Server.Documents.Handlers
                 var contentType = GetStringQueryString("contentType", false) ?? "";
 
                 AttachmentResult result;
-                FileStream file;
-                using (Database.DocumentsStorage.AttachmentsStorage.GetTempFile(out file))
+                using (Database.DocumentsStorage.AttachmentsStorage.GetTempFile(out FileStream file))
                 {
-                    JsonOperationContext.ManagedPinnedBuffer buffer;
-                    using (context.GetManagedBuffer(out buffer))
+                    var hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, RequestBodyStream(), file, Database.DatabaseShutdown);
+                    var etag = GetLongFromHeaders("If-Match");
+
+                    var cmd = new MergedPutAttachmentCommand
                     {
-                        var requestStream = RequestBodyStream();
-                        var metroCtx = Hashing.Streamed.Metro128.BeginProcess();
-                        var xxhas64Ctx = Hashing.Streamed.XXHash64.BeginProcess();
-                        var bufferRead = 0;
-                        while (true)
-                        {
-                            var count = await requestStream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset + bufferRead, buffer.Buffer.Count - bufferRead, Database.DatabaseShutdown);
-                            if (count == 0)
-                                break;
-
-                            bufferRead += count;
-
-                            if (bufferRead == buffer.Buffer.Count)
-                            {
-                                PartialComputeHash(metroCtx,xxhas64Ctx, buffer, bufferRead);
-                                await file.WriteAsync(buffer.Buffer.Array, buffer.Buffer.Offset, bufferRead, Database.DatabaseShutdown);
-                                bufferRead = 0;
-                            }
-                        }
-                        await file.WriteAsync(buffer.Buffer.Array, buffer.Buffer.Offset, bufferRead, Database.DatabaseShutdown);
-                        file.Position = 0;
-                        PartialComputeHash(metroCtx, xxhas64Ctx, buffer, bufferRead);
-                        var hash = FinalizeGetHash(metroCtx, xxhas64Ctx);
-
-                        var etag = GetLongFromHeaders("If-Match");
-
-                        var cmd = new MergedPutAttachmentCommand
-                        {
-                            Database = Database,
-                            ExpectedEtag = etag,
-                            DocumentId = id,
-                            Name = name,
-                            Stream = file,
-                            Hash = hash,
-                            ContentType = contentType
-                        };
-                        await Database.TxMerger.Enqueue(cmd);
-                        cmd.ExceptionDispatchInfo?.Throw();
-                        result = cmd.Result;
-                    }
+                        Database = Database,
+                        ExpectedEtag = etag,
+                        DocumentId = id,
+                        Name = name,
+                        Stream = file,
+                        Hash = hash,
+                        ContentType = contentType
+                    };
+                    await Database.TxMerger.Enqueue(cmd);
+                    cmd.ExceptionDispatchInfo?.Throw();
+                    result = cmd.Result;
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -210,28 +182,6 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
             }
-        }
-
-        private static unsafe string FinalizeGetHash(Hashing.Streamed.Metro128Context metroCtx, Hashing.Streamed.XXHash64Context xxhas64Ctx)
-        {
-            var metro128Hash = Hashing.Streamed.Metro128.EndProcess(metroCtx);
-            var xxHash64 = Hashing.Streamed.XXHash64.EndProcess(xxhas64Ctx);
-
-            var hash = new byte[sizeof(ulong) * 3];
-            fixed (byte* pHash = hash)
-            {
-                var longs = (ulong*)pHash;
-                longs[0] = metro128Hash.H1;
-                longs[1] = metro128Hash.H2;
-                longs[2] = xxHash64;
-            }
-            return Convert.ToBase64String(hash);
-        }
-
-        private static unsafe void PartialComputeHash(Hashing.Streamed.Metro128Context metroCtx, Hashing.Streamed.XXHash64Context xxHash64Context, JsonOperationContext.ManagedPinnedBuffer buffer, int bufferRead)
-        {
-            Hashing.Streamed.Metro128.Process(metroCtx, buffer.Pointer, bufferRead);
-            Hashing.Streamed.XXHash64.Process(xxHash64Context, buffer.Pointer, bufferRead);
         }
 
         [RavenAction("/databases/*/attachments", "DELETE")]

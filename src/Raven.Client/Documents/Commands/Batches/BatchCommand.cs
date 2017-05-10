@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
@@ -14,6 +15,7 @@ namespace Raven.Client.Documents.Commands.Batches
     {
         private readonly JsonOperationContext _context;
         private readonly BlittableJsonReaderObject[] _commands;
+        private readonly List<Stream> _attachmentStreams;
         private readonly BatchOptions _options;
 
         public BatchCommand(DocumentConventions conventions, JsonOperationContext context, List<ICommandData> commands, BatchOptions options = null)
@@ -30,6 +32,13 @@ namespace Raven.Client.Documents.Commands.Batches
             {
                 var command = commands[i];
                 _commands[i] = _context.ReadObject(command.ToJson(conventions, context), "command");
+
+                if (command is PutAttachmentCommandData putAttachmentCommandData)
+                {
+                    if (_attachmentStreams == null)
+                        _attachmentStreams = new List<Stream>();
+                    _attachmentStreams.Add(putAttachmentCommandData.Stream);
+                }
             }
 
             _options = options;
@@ -60,6 +69,17 @@ namespace Raven.Client.Documents.Commands.Batches
                     }
                 })
             };
+
+            if (_attachmentStreams != null && _attachmentStreams.Count > 0)
+            {
+                var multipartContent = new MultipartContent();
+                multipartContent.Add(request.Content);
+                foreach (var stream in _attachmentStreams)
+                {
+                    multipartContent.Add(new GzipStreamContent(stream, "AttachmentStream"));
+                }
+                request.Content = multipartContent;
+            }
 
             var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/bulk_docs");
 

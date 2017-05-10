@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Routing;
@@ -88,7 +89,7 @@ namespace Raven.Server.Documents.Handlers
                                 }
 
                                 var commandData = await task;
-                                if (commandData.Method == BatchRequestParser.CommandType.None)
+                                if (commandData.Type == CommandType.None)
                                     break;
 
                                 totalSize += commandData.Document.Size;
@@ -145,7 +146,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 foreach (var cmd in Commands)
                 {
-                    Debug.Assert(cmd.Method == BatchRequestParser.CommandType.PUT);
+                    Debug.Assert(cmd.Type == CommandType.PUT);
                     Database.DocumentsStorage.Put(context, cmd.Key, null, cmd.Document);
                 }
                 if (Logger.IsInfoEnabled)
