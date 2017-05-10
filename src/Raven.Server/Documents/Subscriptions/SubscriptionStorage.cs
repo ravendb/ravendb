@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Subscriptions
             if (_logger.IsInfoEnabled)
                 _logger.Info($"New Subscription With ID {etag} was created");
 
-            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, etag);
+            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, etag);
             //await _db.WaitForIndexNotification(etag);
             return etag;
         }
@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Subscriptions
             };
 
             var etag = await _serverStore.SendToLeaderAsync(command.ToJson());
-            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, etag);
+            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, etag);
             //await _db.WaitForIndexNotification(etag);            
         }
 
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public void AssertSubscriptionIdExists(long id, TimeSpan timeout)
         {
-            Task.WaitAny(_serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, id), Task.Delay(timeout));
+            Task.WaitAny(_serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id), Task.Delay(timeout));
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Subscriptions
                 _logger.Info($"Subscription with id {id} was deleted");
             }
             //await _db.WaitForIndexNotification(etag);           
-            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, etag);
+            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, etag);
         }
 
         public bool DropSubscriptionConnection(long subscriptionId, string reason)

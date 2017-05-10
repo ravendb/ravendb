@@ -329,7 +329,6 @@ namespace Raven.Server.Rachis
 
         public enum CommitIndexModification
         {
-            Equal,
             GreaterOrEqual,
             AnyChange
         }
@@ -990,12 +989,6 @@ namespace Raven.Server.Rachis
                     var commitIndex = GetLastCommitIndex(context);
                     switch (modification)
                     {
-                        case CommitIndexModification.Equal:
-                            if (value == commitIndex)
-                                return;
-                            if(value < commitIndex)
-                                throw new TimeoutException($"We are waiting for commit index to be equal to {value} but we are already in commit index = {commitIndex}");
-                            break;
                         case CommitIndexModification.GreaterOrEqual:
                             if (value <= commitIndex)
                                 return;
