@@ -68,11 +68,7 @@ namespace Voron.Platform.Posix
                     var err = Marshal.GetLastWin32Error();
                     Syscall.ThrowLastError(err, "fsync " + path);
                 }
-                if (CheckSyncDirectoryAllowed(path) && SyncDirectory(path) == -1)
-                {
-                    var err = Marshal.GetLastWin32Error();
-                    Syscall.ThrowLastError(err, "fsync dir " + path);
-                }
+                Syscall.FsyncDirectoryFor(path);
             }
             finally
             {
@@ -84,37 +80,6 @@ namespace Voron.Platform.Posix
             }
         }
 
-        public static bool CheckSyncDirectoryAllowed(string path)
-        {
-            var allMounts = DriveInfo.GetDrives();
-            var syncAllowed = true;
-            var matchSize = 0;
-            foreach (var m in allMounts)
-            {
-                var mountNameSize = m.Name.Length;
-                if (path.StartsWith(m.Name))
-                {
-                    if (mountNameSize > matchSize)
-                    {
-                        matchSize = mountNameSize;
-                        switch (m.DriveFormat)
-                        {
-                            // TODO : Add other types                            
-                            case "cifs":
-                            case "nfs":
-                                syncAllowed = false;
-                                break;
-                            default:
-                                syncAllowed = true;
-                                break;
-                        }
-                        if (m.DriveType == DriveType.Unknown)
-                            syncAllowed = false;
-                    }
-                }
-            }
-            return syncAllowed;
-        }
 
         public static string GetFileSystemOfPath(string path)
         {
@@ -137,17 +102,7 @@ namespace Voron.Platform.Posix
             return filesystem;
         }
 
-        public static int SyncDirectory(string path)
-        {
-            var dir = Path.GetDirectoryName(path);
-            var fd = Syscall.open(dir, 0, 0);
-            if (fd == -1)
-                return -1;
-            var fsyncRc = Syscall.fsync(fd);
-            if (fsyncRc == -1)
-                return -1;
-            return Syscall.close(fd);
-        }
+   
 
         public static unsafe bool TryReadFileHeader(FileHeader* header, string path)
         {
