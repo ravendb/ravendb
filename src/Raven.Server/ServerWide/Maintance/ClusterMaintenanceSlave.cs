@@ -9,6 +9,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Maintance
 {
@@ -67,7 +68,7 @@ namespace Raven.Server.ServerWide.Maintance
                 }
                 finally
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(NodeSamplePeriod), _token);
+                    await TimeoutManager.WaitFor((int)NodeSamplePeriod, _token).ConfigureAwait(false);
                 }
             }
         }

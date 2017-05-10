@@ -13,6 +13,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Maintance
 {
@@ -155,7 +156,7 @@ namespace Raven.Server.ServerWide.Maintance
                         if (needToWait)
                         {
                             needToWait = false; // avoid tight loop if there was timeout / error
-                            await Task.Delay(onErrorDelayTime, _token);
+                            await TimeoutManager.WaitFor(onErrorDelayTime, _token).ConfigureAwait(false);
                         }
                         using (var connection = await ConnectToClientNodeAsync(_tcpConnection))
                         {
@@ -164,7 +165,8 @@ namespace Raven.Server.ServerWide.Maintance
                                 using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
                                 {                                    
                                     var readResponseTask = context.ReadForMemoryAsync(connection, _readStatusUpdateDebugString, _token);
-                                    var timeout = Task.Delay(recieveFromNodeTimeout, _token);
+                                    var timeout = TimeoutManager.WaitFor(recieveFromNodeTimeout, _token);
+
                                     if (await Task.WhenAny(readResponseTask, timeout) == timeout)
                                     {
                                         if (_log.IsInfoEnabled)

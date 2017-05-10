@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using FastTests.Client.Attachments;
 using FastTests.Smuggler;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ using FastTests.Server.OAuth;
 using FastTests.Server.Replication;
 using SlowTests.Issues;
 using Sparrow;
+using Sparrow.Logging;
 
 namespace Tryouts
 {
@@ -21,6 +23,8 @@ namespace Tryouts
         {
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
+
+            LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
 
             for (int i = 0; i < 1000; i++)
             {
@@ -32,4 +36,6 @@ namespace Tryouts
             }
         }
     }
+
+    
 }

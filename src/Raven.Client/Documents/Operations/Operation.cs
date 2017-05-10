@@ -9,6 +9,7 @@ using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Client.Util.Helpers;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations
 {
@@ -50,7 +51,7 @@ namespace Raven.Client.Documents.Operations
                     if (_work == false)
                         break;
 
-                    await Task.Delay(500).ConfigureAwait(false);
+                    await TimeoutManager.WaitFor(500).ConfigureAwait(false);
                 }
             }
             catch (Exception e)

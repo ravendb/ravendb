@@ -10,6 +10,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -60,7 +61,7 @@ namespace Raven.Server.Documents.Replication
             {
                 while (token.IsCancellationRequested == false)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(3), token);
+                    await TimeoutManager.WaitFor(3000, token).ConfigureAwait(false);
 
                     if (token.IsCancellationRequested)
                         break;

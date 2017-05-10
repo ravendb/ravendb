@@ -17,6 +17,7 @@ using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
+using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Session
 {
@@ -73,7 +74,7 @@ namespace Raven.Client.Documents.Session
 
                 while (await ExecuteLazyOperationsSingleStep(responseTimeDuration).WithCancellation(token).ConfigureAwait(false))
                 {
-                    await Task.Delay(100, token).ConfigureAwait(false);
+                    await TimeoutManager.WaitFor(100, token).ConfigureAwait(false);
                 }
 
                 responseTimeDuration.ComputeServerTotal();

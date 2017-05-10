@@ -233,7 +233,7 @@ namespace Voron
                     }
                     else
                     {
-                        await Task.Delay(1000, cancellationToken);
+                        await TimeoutManager.WaitFor(1000, cancellationToken).ConfigureAwait(false);
                     }
                 }
                 catch (ObjectDisposedException)
