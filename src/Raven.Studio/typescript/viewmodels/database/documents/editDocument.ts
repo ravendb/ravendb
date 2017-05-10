@@ -337,14 +337,16 @@ class editDocument extends viewModelBase {
             new getDocumentsFromCollectionCommand(new collection(collectionForNewDocument, this.activeDatabase()), 0, 3)
                 .execute()
                 .done((documents: pagedResult<document>) => {
-                    const schemaDoc = documentHelpers.findSchema(documents.items);
+                    const schemaDoc: any = documentHelpers.findSchema(documents.items);
                     this.document(schemaDoc); 
                     documentTask.resolve(schemaDoc);
                 })
                 .fail(() => documentTask.reject());
         } else {
-            const doc = document.empty();
+            const doc: any = document.empty();
+            doc["Name"] = "...";
             this.document(doc);
+
             documentTask.resolve(doc);
         }
 
