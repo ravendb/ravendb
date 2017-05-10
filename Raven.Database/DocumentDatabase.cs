@@ -158,8 +158,6 @@ namespace Raven.Database
 
         private static readonly ILog log = LogManager.GetCurrentClassLogger();
 
-        private readonly SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo> recentTouches;
-
         public DocumentDatabase(InMemoryRavenConfiguration configuration, TransportState transportState = null)
         {
             DocumentLock = new PutSerialLock();
@@ -185,8 +183,6 @@ namespace Raven.Database
                 Configuration = configuration;
 
                 ExecuteAlterConfiguration();
-
-                recentTouches = new SizeLimitedConcurrentDictionary<string, TouchedDocumentInfo>(configuration.MaxRecentTouchesToRemember, StringComparer.OrdinalIgnoreCase);
 
                 configuration.Container.SatisfyImportsOnce(this);
 
@@ -875,9 +871,6 @@ namespace Raven.Database
 
 		internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions, string[] participatingIds = null)
 		{
-			TouchedDocumentInfo touch;
-			recentTouches.TryRemove(key, out touch);
-
 			using (TransactionalStorage.DisableBatchNesting())
 			{
 				// in external transaction number of references will be >= from current transaction references
@@ -904,12 +897,6 @@ namespace Raven.Database
 							continue;
 
 						actions.General.MaybePulseTransaction();
-
-						recentTouches.Set(referencing, new TouchedDocumentInfo
-						{
-							PreTouchEtag = preTouchEtag,
-							TouchedEtag = afterTouchEtag
-						});
 					}
 				});
 			}
@@ -2563,13 +2550,6 @@ namespace Raven.Database
                 workContext.ShouldNotifyAboutWork(() => "BulkInsert of " + documents + " docs");
             });
             return documents;
-        }
-
-        public TouchedDocumentInfo GetRecentTouchesFor(string key)
-        {
-            TouchedDocumentInfo info;
-            recentTouches.TryGetValue(key, out info);
-            return info;
         }
 
         public void AddTask(Task task, object state, out long id)
