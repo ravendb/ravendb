@@ -95,8 +95,8 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/add-database", "POST", "/admin/add-database?name={databaseName:string}&node={nodeName:string|optional}")]
-        public async Task Add()
+        [RavenAction("/admin/databases/add-node", "POST", "/admin/databases/add-node?name={databaseName:string}&node={nodeName:string|optional}")]
+        public async Task AddDatabaseNode()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var node = GetStringQueryString("node", false);

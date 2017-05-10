@@ -33,7 +33,7 @@ namespace SlowTests.Server.Rachis
 
                 int numberOfInstances = 0;
                 await AssertNumberOfNodesContainingDatabase(databaseResult.ETag??0, databaseName, numberOfInstances, replicationFactor);
-                databaseResult = store.Admin.Server.Send(new AddDatabaseOperation(databaseName));
+                databaseResult = store.Admin.Server.Send(new AddDatabaseNodeOperation(databaseName));
                 Assert.Equal(databaseResult.Topology.AllNodes.Count(), ++replicationFactor);
                 numberOfInstances = 0;
                 await AssertNumberOfNodesContainingDatabase(databaseResult.ETag ?? 0, databaseName, numberOfInstances, replicationFactor);
