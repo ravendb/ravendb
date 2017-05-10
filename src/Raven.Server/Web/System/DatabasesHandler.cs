@@ -5,8 +5,8 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
-using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -35,27 +35,26 @@ namespace Raven.Server.Web.System
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
             //TODO: fill all required information (see: RavenDB-5438) - return Raven.Client.Data.DatabasesInfo
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 context.OpenReadTransaction();
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-
                     writer.WritePropertyName(nameof(DatabasesInfo.Databases));
-                    writer.WriteArray(context, ServerStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, GetStart(), GetPageSize()), (w, c, dbDoc) =>
-                    {
-                        var databaseName = dbDoc.Item1.Substring(Constants.Documents.Prefix.Length);
-                        if (namesOnly)
-                        {
-                            w.WriteString(databaseName);
-                            return;
-                        }
 
-                        WriteDatabaseInfo(databaseName, dbDoc.Item2, context, w);
-                    });
+                    var items = ServerStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, GetStart(), GetPageSize());
+                    writer.WriteArray(context, items, (w, c, dbDoc) =>
+                                                        {
+                                                            var databaseName = dbDoc.Item1.Substring(Constants.Documents.Prefix.Length);
+                                                            if (namesOnly)
+                                                            {
+                                                                w.WriteString(databaseName);
+                                                                return;
+                                                            }
 
+                                                            WriteDatabaseInfo(databaseName, dbDoc.Item2, context, w);
+                                                        });
                     writer.WriteEndObject();
                 }
             }
@@ -69,13 +68,12 @@ namespace Raven.Server.Web.System
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             // TODO: need to figure out who am I and then return this URL for me
             // var url = GetStringQueryString("url", false);
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var dbId = Constants.Documents.Prefix + name;
-                long etag;
                 using (context.OpenReadTransaction())
-                using (var dbBlit = ServerStore.Cluster.Read(context, dbId, out etag))
+                using (var dbBlit = ServerStore.Cluster.Read(context, dbId, out long etag))
                 {
                     if (dbBlit == null)
                     {
@@ -138,15 +136,13 @@ namespace Raven.Server.Web.System
 
         private Task DbInfo(string dbName)
         {
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 context.OpenReadTransaction();
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var dbId = Constants.Documents.Prefix + dbName;
-                    long etag;
-                    using (var dbDoc = ServerStore.Cluster.Read(context, dbId, out etag))
+                    using (var dbDoc = ServerStore.Cluster.Read(context, dbId, out long etag))
                     {
                         WriteDatabaseInfo(dbName, dbDoc, context, writer);
                         return Task.CompletedTask;
@@ -158,75 +154,97 @@ namespace Raven.Server.Web.System
         private void WriteDatabaseInfo(string databaseName, BlittableJsonReaderObject data,
             TransactionOperationContext context, BlittableJsonTextWriter writer)
         {
-            bool disabled;
-            data.TryGet("Disabled", out disabled);
+            var online = ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out Task<DocumentDatabase> dbTask) &&
+                         dbTask != null && 
+                         dbTask.IsCompleted;
 
-            Task<DocumentDatabase> dbTask;
-            var online =
-                ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out dbTask) &&
-                dbTask != null && dbTask.IsCompleted;
-
+            // Check for exceptions
             if (dbTask != null && dbTask.IsFaulted)
             {
                 WriteFaultedDatabaseInfo(context, writer, dbTask, databaseName);
                 return;
             }
-
+           
             var db = online ? dbTask.Result : null;
 
-            var indexingStatus = db != null
-                ? db.IndexStore.Status.ToString()
-                : "Running";
+            IndexRunningStatus indexingStatus = db != null ? db.IndexStore.Status : IndexRunningStatus.Running;
 
-            //Looking for disabled indexing flag inside the database settings for offline database status
-            BlittableJsonReaderObject settings;
-            if (data.TryGet("Settings", out settings))
+            // Looking for disabled indexing flag inside the database settings for offline database status
+            if (data.TryGet("Settings", out BlittableJsonReaderObject settings))
             {
-                bool indexingDisable;
-                if (settings.TryGet(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out indexingDisable) &&
+                if (settings.TryGet(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out bool indexingDisable) &&
                     indexingDisable)
-                    indexingStatus = "Disabled";
+                {
+                    indexingStatus = IndexRunningStatus.Disabled;
+                }
             }
+
+            data.TryGet("Disabled", out bool disabled);
 
             if (online == false)
             {
-                // if state of database is found in the cache we can continue
+                // If state of database is found in the cache we can continue
                 if (ServerStore.DatabaseInfoCache.TryWriteOfflineDatabaseStatustoRequest(
                     context, writer, databaseName, disabled, indexingStatus))
                 {
                     return;
                 }
-                // we won't find it if it is a new database or after a dirty shutdown, so just report empty values then
+                // We won't find it if it is a new database or after a dirty shutdown, so just report empty values then
             }
 
             var size = new Size(GetTotalSize(db));
-            var backupInfo = GetBackupInfo(db);
 
-            var doc = new DynamicJsonValue
+            NodesTopology nodesTopology = new NodesTopology();
+
+            if (data.TryGet("Topology", out BlittableJsonReaderObject topology))
             {
-                [nameof(DatabaseInfo.Bundles)] = new DynamicJsonArray(GetBundles(db)),
-                [nameof(DatabaseInfo.IsAdmin)] = true, //TODO: implement me!
-                [nameof(DatabaseInfo.Name)] = databaseName,
-                [nameof(DatabaseInfo.Disabled)] = disabled,
-                [nameof(DatabaseInfo.TotalSize)] = new DynamicJsonValue
+                if (topology.TryGet("Members", out BlittableJsonReaderArray members))
                 {
-                    [nameof(Size.HumaneSize)] = size.HumaneSize,
-                    [nameof(Size.SizeInBytes)] = size.SizeInBytes
-                },
-                [nameof(DatabaseInfo.IndexingErrors)] = online
-                    ? db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount())
-                    : 0,
-                [nameof(DatabaseInfo.Alerts)] = online ? db.NotificationCenter.GetAlertCount() : 0,
-                [nameof(DatabaseInfo.UpTime)] = online ? GetUptime(db).ToString() : null,
-                [nameof(DatabaseInfo.BackupInfo)] = backupInfo,
-                [nameof(DatabaseInfo.DocumentsCount)] = online
-                    ? db.DocumentsStorage.GetNumberOfDocuments()
-                    : 0,
-                [nameof(DatabaseInfo.IndexesCount)] = online ? db.IndexStore.GetIndexes().Count() : 0,
-                [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
-                [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus
+                    foreach (BlittableJsonReaderObject member in members)
+                    {
+                        nodesTopology.Members.Add(GetNodeId(member));
+                    }
+                }
+                if (data.TryGet("Promotables", out BlittableJsonReaderArray promotables))
+                {
+                    foreach (BlittableJsonReaderObject promotable in promotables)
+                    {
+                        nodesTopology.Members.Add(GetNodeId(promotable));
+                    }
+                }
+                if (data.TryGet("Watchers", out BlittableJsonReaderArray watchers))
+                {
+                    foreach (BlittableJsonReaderObject watcher in watchers)
+                    {
+                        nodesTopology.Members.Add(GetNodeId(watcher));
+                    }
+                }
+            }
+
+            DatabaseInfo databaseInfo = new DatabaseInfo
+            {
+                Name = databaseName,
+                Disabled = disabled,
+                TotalSize = size,
+
+                IsAdmin = true, //TODO: implement me!
+                UpTime = online ? (TimeSpan?)GetUptime(db) : null,
+                BackupInfo = GetBackupInfo(db),
+                
+                Alerts = online ? db.NotificationCenter.GetAlertCount() : 0,
+                RejectClients = false, //TODO: implement me!
+                LoadError = null,
+                IndexingErrors = online ? db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount()) : 0,
+
+                DocumentsCount = online ? db.DocumentsStorage.GetNumberOfDocuments() : 0,
+                Bundles = GetBundles(db),
+                IndexesCount = online ? db.IndexStore.GetIndexes().Count() : 0,
+                IndexingStatus = indexingStatus,
+
+                NodesTopology = nodesTopology
             };
 
+            var doc = databaseInfo.ToJson();
             context.Write(writer, doc);
         }
 
@@ -242,8 +260,8 @@ namespace Raven.Server.Web.System
 
             context.Write(writer, doc);
         }
-
-        private DynamicJsonValue GetBackupInfo(DocumentDatabase db)
+        
+        private BackupInfo GetBackupInfo(DocumentDatabase db)
         {
             var periodicExportRunner = db?.BundleLoader.PeriodicExportRunner;
 
@@ -252,12 +270,12 @@ namespace Raven.Server.Web.System
                 return null;
             }
 
-            return new DynamicJsonValue
+            return new BackupInfo()
             {
-                [nameof(BackupInfo.IncrementalBackupInterval)] = periodicExportRunner.IncrementalInterval,
-                [nameof(BackupInfo.FullBackupInterval)] = periodicExportRunner.FullExportInterval,
-                [nameof(BackupInfo.LastIncrementalBackup)] = periodicExportRunner.ExportTime,
-                [nameof(BackupInfo.LastFullBackup)] = periodicExportRunner.FullExportTime
+                IncrementalBackupInterval = periodicExportRunner.IncrementalInterval,
+                FullBackupInterval = periodicExportRunner.FullExportInterval,
+                LastIncrementalBackup = periodicExportRunner.ExportTime,
+                LastFullBackup = periodicExportRunner.FullExportTime
             };
         }
 
@@ -272,15 +290,32 @@ namespace Raven.Server.Web.System
                 return 0;
 
             return
-                db.GetAllStoragesEnvironment()
-                    .Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes);
+                db.GetAllStoragesEnvironment().Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes);
         }
 
         private List<string> GetBundles(DocumentDatabase db)
         {
             if (db != null)
                 return db.BundleLoader.GetActiveBundles();
+
             return new List<string>();
+        }
+
+        private NodeId GetNodeId(BlittableJsonReaderObject node)
+        {
+            NodeId nodeId = new NodeId();
+
+            if (node.TryGet("NodeTag", out string nodeTag))
+            {
+                nodeId.NodeTag = nodeTag;
+            }
+
+            if (node.TryGet("Url", out string nodeUrl))
+            {
+                nodeId.NodeUrl = nodeUrl;
+            }
+
+            return nodeId;
         }
     }
 }

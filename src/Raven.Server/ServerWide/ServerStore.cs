@@ -149,7 +149,11 @@ namespace Raven.Server.ServerWide
                             }
                             foreach (var node in nodesChanges.addedValues)
                             {
-                                var task = _clusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key));
+                                var task = _clusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key)).ContinueWith(t =>
+                                        {
+                                            if(Logger.IsInfoEnabled)
+                                                Logger.Info($"ClusterMaintenanceSupervisor() => Failed to add to cluster node key = {node.Key}",t.Exception);
+                                        },TaskContinuationOptions.OnlyOnFaulted);
                                 GC.KeepAlive(task);
                             }
 
@@ -376,7 +380,8 @@ namespace Raven.Server.ServerWide
                     Sparrow.Memory.Copy(pHash + hashLen, pKey, key.Length);
 
                     var entropy = Sodium.GenerateRandomBuffer(256);
-                    var protectedData = ProtectedData.Protect(hash, entropy, DataProtectionScope.CurrentUser);
+
+                    var protectedData = SecretProtection.Protect(hash, entropy);
 
                     var ms = new MemoryStream();
                     ms.Write(entropy, 0, entropy.Length);
@@ -411,7 +416,7 @@ namespace Raven.Server.ServerWide
             var protectedData = new byte[reader.Length - entropy.Length];
             reader.Read(protectedData, 0, protectedData.Length);
 
-            var data = ProtectedData.Unprotect(protectedData, entropy, DataProtectionScope.CurrentUser);
+            var data = SecretProtection.Unprotect(protectedData, entropy);
 
             var hashLen = Sodium.crypto_generichash_bytes_max();
 
@@ -767,6 +772,7 @@ namespace Raven.Server.ServerWide
             TransactionOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
+                //TODO: timeout, server shutdown handling, etc
                 while (true)
                 {
                     var logChange = _engine.WaitForHeartbeat();

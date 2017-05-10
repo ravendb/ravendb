@@ -1,5 +1,6 @@
 ﻿{
   "Raven/ServerUrl": "http://0.0.0.0:8080",
-  "Raven/AllowEverybodyToAccessTheServerAsAdmin": false,
+  "Raven/AllowAnonymousUserToAccessTheServer": false,
+  "Raven/AnonymousUserAccessMode": "Admin",
   "Raven/RunInMemory": false
 }

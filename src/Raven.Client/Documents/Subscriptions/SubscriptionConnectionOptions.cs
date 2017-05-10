@@ -15,17 +15,16 @@ namespace Raven.Client.Documents.Subscriptions
         internal enum MessageType
         {
             None,
-            Acknowledge
+            Acknowledge,
+            DisposedNotification
         }
 
         public MessageType Type { get; set; }
         public long Etag { get; set; }
     }
 
-    internal class SubscriptionConnectionServerMessage : IDisposable
+    internal class SubscriptionConnectionServerMessage
     {
-        internal BlittableJsonReaderObject ParentObjectToDispose;
-
         internal enum MessageType
         {
             None,
@@ -49,12 +48,6 @@ namespace Raven.Client.Documents.Subscriptions
         public ConnectionStatus Status { get; set; }
         public BlittableJsonReaderObject Data { get; set; }
         public string Exception { get; set; }
-
-        public void Dispose()
-        {
-            ParentObjectToDispose?.Dispose();
-            ParentObjectToDispose = null;
-        }
     }
 
     public class SubscriptionConnectionOptions

@@ -24,7 +24,7 @@ namespace Raven.Server.ServerWide.Maintance
         private readonly TransactionContextPool _contextPool;
         private readonly Logger _logger;
 
-        public readonly TimeSpan LeaderSamplePeriod;
+        public readonly TimeSpan SupervisorSamplePeriod;
         private readonly ServerStore _server;
 
         public ClusterObserver(
@@ -43,7 +43,7 @@ namespace Raven.Server.ServerWide.Maintance
             _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
 
             var config = server.Configuration.Cluster;
-            LeaderSamplePeriod = config.SupervisorSamplePeriod.AsTimeSpan;
+            SupervisorSamplePeriod = config.SupervisorSamplePeriod.AsTimeSpan;
             
             _observe = Run(_cts.Token);
         }
@@ -56,7 +56,7 @@ namespace Raven.Server.ServerWide.Maintance
                 try
                 {
                     var newStats = _maintenance.GetStats();
-                    var delay = Task.Delay(LeaderSamplePeriod, token);
+                    var delay = Task.Delay(SupervisorSamplePeriod, token);
                     await AnalyzeLatestStats(newStats, prevStats);
                     prevStats = newStats;
                     await delay;

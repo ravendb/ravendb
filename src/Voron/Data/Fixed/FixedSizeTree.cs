@@ -34,9 +34,6 @@ namespace Voron.Data.Fixed
         private readonly int _entrySize;
         private readonly int _maxEmbeddedEntries;
 
-        private PageLocator _pageLocator;
-        private readonly bool _isPageLocatorOwned;
-
         private RootObjectType? _type;
         private FastStack<FixedSizeTreePage> _cursor;
         private int _changes;
@@ -155,9 +152,6 @@ namespace Voron.Data.Fixed
             _parent = parent;
             _valSize = valSize;
             _newPageAllocator = newPageAllocator;
-
-            _isPageLocatorOwned = pageLocator == null;
-            _pageLocator = pageLocator ?? tx.PersistentContext.AllocatePageLocator(tx);
 
             _entrySize = sizeof(long) + _valSize;
             _maxEmbeddedEntries = (Constants.Storage.PageSize / 8) / _entrySize;
@@ -365,7 +359,7 @@ namespace Voron.Data.Fixed
 
         internal FixedSizeTreePage GetReadOnlyPage(long pageNumber)
         {
-            var readOnlyPage = _pageLocator.GetReadOnlyPage(pageNumber);
+            var readOnlyPage = _tx.GetPage(pageNumber);
             return new FixedSizeTreePage(readOnlyPage.Pointer, _entrySize, Constants.Storage.PageSize);
         }
 
@@ -428,8 +422,6 @@ namespace Voron.Data.Fixed
                 else
                     _tx.FreePage(pageNumber);
             }
-
-            _pageLocator.Reset(pageNumber);
         }
 
         private FixedSizeTreePage ModifyPage(FixedSizeTreePage page)
@@ -437,7 +429,7 @@ namespace Voron.Data.Fixed
             if (page.Dirty)
                 return page;
 
-            var writablePage = _pageLocator.GetWritablePage(page.PageNumber);
+            var writablePage = _tx.ModifyPage(page.PageNumber);
             var newPage = new FixedSizeTreePage(writablePage.Pointer, _entrySize, Constants.Storage.PageSize)
             {
                 LastSearchPosition = page.LastSearchPosition,
@@ -1545,11 +1537,6 @@ namespace Voron.Data.Fixed
 
         public void Dispose()
         {
-            if (_pageLocator != null && _isPageLocatorOwned)
-            {
-                _tx.PersistentContext.FreePageLocator(_pageLocator);
-                _pageLocator = null;
-            }
         }
 
         private Tree.DirectAddScope ModifyLargeHeader(out FixedSizeTreeHeader.Large* largeHeader)

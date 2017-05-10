@@ -243,7 +243,7 @@ namespace FastTests
                         throw;
                     }
                 }
-                await Task.Delay(50);
+                await Task.Delay(100);
             } while (true);
         }
 

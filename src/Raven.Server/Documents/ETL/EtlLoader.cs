@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Json;
@@ -86,6 +87,7 @@ namespace Raven.Server.Documents.ETL
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < _processes.Length; i++)
             {
+                _database.DocumentTombstoneCleaner.Subscribe(_processes[i]);
                 _processes[i].Start();
             }
         }
@@ -148,7 +150,7 @@ namespace Raven.Server.Documents.ETL
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < _processes.Length; i++)
             {
-                _processes[i].NotifyAboutWork();
+                _processes[i].NotifyAboutWork(documentChange);
             }
         }
 
@@ -157,11 +159,18 @@ namespace Raven.Server.Documents.ETL
             if (change.Key.Equals(Constants.Documents.ETL.RavenEtlDocument, StringComparison.OrdinalIgnoreCase) == false)
                 return;
 
-            Parallel.ForEach(_processes, x => x.Dispose());
+            var old = _processes;
+
+            Parallel.ForEach(old, x => x.Dispose());
 
             _processes = new EtlProcess[0];
 
             LoadProcesses();
+
+            // unsubscribe old etls _after_ we start new processes to ensure the tombsone cleaner 
+            // constantly keeps track of tombstones processed by ETLs so it won't delete them during etl processes reloading
+
+            old.ForEach(x => _database.DocumentTombstoneCleaner.Unsubscribe(x)); 
         }
 
         public virtual void Dispose()

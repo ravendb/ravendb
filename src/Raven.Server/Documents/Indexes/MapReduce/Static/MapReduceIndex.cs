@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             var collections = index.Maps.Keys.ToArray();
 
-            if (collections.Contains(Constants.Documents.Indexing.AllDocumentsCollection, StringComparer.OrdinalIgnoreCase))
+            if (collections.Contains(Constants.Documents.Collections.AllDocumentsCollection, StringComparer.OrdinalIgnoreCase))
             {
                 throw new IndexInvalidException($"Cannot output documents from index ({definition.Name}) to the collection name ({outputReduceToCollection}) because the index is mapping all documents and this will result in an infinite loop.");
             }

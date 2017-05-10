@@ -47,7 +47,7 @@ namespace SlowTests.Bugs.Metadata
 
                     Assert.NotNull(lastModified);
                     int msPrecision = 1000;
-                    Assert.InRange(lastModified, before.AddMilliseconds(-msPrecision), after.AddMilliseconds(msPrecision));
+                    Assert.InRange(lastModified.ToUniversalTime(), before.AddMilliseconds(-msPrecision), after.AddMilliseconds(msPrecision));
 
                 }
             }

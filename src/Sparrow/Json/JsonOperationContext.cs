@@ -207,25 +207,35 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public AllocatedMemoryData GetMemory(int requestedSize)
         {
-            return GetMemory(requestedSize, longLived: false);
-        }
-
-        private AllocatedMemoryData GetMemory(int requestedSize, bool longLived)
-        {
+#if DEBUG || VALIDATE
             if (requestedSize <= 0)
                 throw new ArgumentException(nameof(requestedSize));
+#endif
 
-            var allocatedMemory = longLived
-                                        ? _arenaAllocatorForLongLivedValues.Allocate(requestedSize)
-                                        : _arenaAllocator.Allocate(requestedSize);
-
+            var allocatedMemory = _arenaAllocator.Allocate(requestedSize);
             allocatedMemory.ContextGeneration = Generation;
             allocatedMemory.Parent = this;
 #if DEBUG
-            allocatedMemory.IsLongLived = longLived;
+            allocatedMemory.IsLongLived = false;
 #endif
             return allocatedMemory;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public AllocatedMemoryData GetLongLivedMemory(int requestedSize)
+        {
+#if DEBUG || VALIDATE
+            if (requestedSize <= 0)
+                throw new ArgumentException(nameof(requestedSize));
+#endif
+            var allocatedMemory = _arenaAllocatorForLongLivedValues.Allocate(requestedSize);
+            allocatedMemory.ContextGeneration = Generation;
+            allocatedMemory.Parent = this;
+#if DEBUG
+            allocatedMemory.IsLongLived = true;
+#endif
+            return allocatedMemory;
+        }        
 
         /// <summary>
         /// Generates new unmanaged stream. Should be disposed at the end of the usage.
@@ -329,7 +339,8 @@ namespace Sparrow.Json
 
             int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(field);
 
-            var memory = GetMemory(maxByteCount + escapePositionsSize, longLived: longLived);
+            int memorySize = maxByteCount + escapePositionsSize;
+            var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
 
             fixed (char* pField = field.String)
             {
@@ -406,18 +417,27 @@ namespace Sparrow.Json
             string debugTag,
             CancellationToken cancellationToken)
         {
+
+            if (_disposed)
+                ThrowObjectDisposed();
+
             _jsonParserState.Reset();
-            ManagedPinnedBuffer bytes;
-            using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
-            using (GetManagedBuffer(out bytes))
+            UnmanagedJsonParser parser = null;
+            BlittableJsonDocumentBuilder builder = null;
+            var managedBuffer = default(ReturnBuffer);
+            var generation = _generation;
+
+            try
             {
-                var builder = new BlittableJsonDocumentBuilder(this,
+                parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag);
+                builder = new BlittableJsonDocumentBuilder(this,
                     BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, _jsonParserState);
+                managedBuffer = GetManagedBuffer(out var bytes);
                 try
                 {
                     builder.ReadObjectDocument();
                     var result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken);
-                    
+
                     if (result.MessageType == WebSocketMessageType.Close)
                         return null;
                     bytes.Valid = result.Count;
@@ -444,6 +464,12 @@ namespace Sparrow.Json
                     throw;
                 }
             }
+            finally
+            {
+                DisposeIfNeeded(generation, parser, builder);
+                if(generation == _generation)
+                    managedBuffer.Dispose();
+            }
         }
 
         public BlittableJsonReaderObject Read(Stream stream, string documentId, IBlittableDocumentModifier modifier = null)
@@ -465,6 +491,10 @@ namespace Sparrow.Json
             BlittableJsonDocumentBuilder.UsageMode mode,
             ManagedPinnedBuffer bytes, IBlittableDocumentModifier modifier = null)
         {
+
+            if (_disposed)
+                ThrowObjectDisposed();
+
             _jsonParserState.Reset();
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
             using (var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState, modifier: modifier))
@@ -500,10 +530,17 @@ namespace Sparrow.Json
            CancellationToken token = default(CancellationToken)
            )
         {
+            if (_disposed)
+                ThrowObjectDisposed();
+
             _jsonParserState.Reset();
-            using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
-            using (var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState))
+            UnmanagedJsonParser parser = null;
+            BlittableJsonDocumentBuilder builder = null;
+            var generation = _generation;
+            try
             {
+                parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag);
+                builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState);
                 CachedProperties.NewDocument();
                 builder.ReadObjectDocument();
                 while (true)
@@ -527,6 +564,10 @@ namespace Sparrow.Json
                 var reader = builder.CreateReader();
                 return reader;
             }
+            finally
+            {
+                DisposeIfNeeded(generation, parser, builder);
+            }
         }
 
         private async Task<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, CancellationToken? token = null)
@@ -537,20 +578,28 @@ namespace Sparrow.Json
 
         public async Task<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, ManagedPinnedBuffer bytes, CancellationToken? token = null)
         {
+            if (_disposed)
+                ThrowObjectDisposed();
+
             _jsonParserState.Reset();
-            using (var parser = new UnmanagedJsonParser(this, _jsonParserState, documentId))
-            using (var builder = new BlittableJsonDocumentBuilder(this, mode, documentId, parser, _jsonParserState))
+            UnmanagedJsonParser parser = null;
+            BlittableJsonDocumentBuilder builder = null;
+            var generation = _generation;
+            try
             {
+                parser = new UnmanagedJsonParser(this, _jsonParserState, documentId);
+                builder = new BlittableJsonDocumentBuilder(this, mode, documentId, parser, _jsonParserState);
+
                 CachedProperties.NewDocument();
                 builder.ReadObjectDocument();
                 while (true)
                 {
                     token?.ThrowIfCancellationRequested();
                     if (bytes.Valid == bytes.Used)
-                    { 
-                        var read = token.HasValue ? 
-                            await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length, token.Value) :
-                            await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
+                    {
+                        var read = token.HasValue
+                            ? await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length, token.Value)
+                            : await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
                         bytes.Valid = read;
@@ -565,9 +614,31 @@ namespace Sparrow.Json
                 builder.FinalizeDocument();
 
                 var reader = builder.CreateReader();
-
                 return reader;
             }
+            finally
+            {
+                DisposeIfNeeded(generation, parser, builder);
+            }
+        }
+
+        private void DisposeIfNeeded(int generation, UnmanagedJsonParser parser, BlittableJsonDocumentBuilder builder)
+        {
+            // if the generation has changed, that means that we had reset the context
+            // this can happen if we were waiting on an async call for a while, got timed out / error / something
+            // and the context was reset before we got back from the async call
+            // since the full context was reset, there is no point in trying to dispose things, they were already 
+            // taken care of
+            if (generation == _generation)
+            {
+                parser?.Dispose();
+                builder?.Dispose();
+            }
+        }
+
+        private void ThrowObjectDisposed()
+        {
+            throw new ObjectDisposedException(nameof(JsonOperationContext));
         }
 
 
@@ -807,19 +878,23 @@ namespace Sparrow.Json
             return _arenaAllocator.GrowAllocation(allocation, sizeIncrease);
         }
 
-
         public void ReturnMemory(AllocatedMemoryData allocation)
         {
             if (_generation != allocation.ContextGeneration)
-                ThrowUseAfterFree();
+                ThrowUseAfterFree(allocation);
 
             _arenaAllocator.Return(allocation);
         }
 
-        private static void ThrowUseAfterFree()
+        private static void ThrowUseAfterFree(AllocatedMemoryData allocation)
         {
+#if MEM_GUARD_STACK || TRACK_ALLOCATED_MEMORY_DATA
+            throw new InvalidOperationException(
+                "UseAfterFree detected! Attempt to return memory from previous generation, Reset has already been called and the memory reused! Allocated by:" + allocation.AllocatedBy);
+#else
             throw new InvalidOperationException(
                 "UseAfterFree detected! Attempt to return memory from previous generation, Reset has already been called and the memory reused!");
+#endif
         }
 
         public IntPtr PinObjectAndGetAddress(object obj)

@@ -7,6 +7,11 @@ namespace Raven.Client.Extensions
 {
     internal static class TaskExtensions
     {
+        public static Task IgnoreUnobservedExceptions(this Task task)
+        {
+            return task.ContinueWith(t => GC.KeepAlive(t.Exception), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnFaulted);
+        }
+
         public static Task AssertNotFailed(this Task task)
         {
             if (task.IsFaulted)

@@ -61,11 +61,13 @@ exports.c = function(v) { throw 'oops'; }
                 {
                     var e = Assert.Throws<JavaScriptException>(() =>
                     {
-                        database.Patcher.Apply(context, "simpleUsers/1", null, new PatchRequest
+                        var document = database.DocumentsStorage.Get(context, "simpleUsers/1");
+
+                        database.Patcher.Apply(context, document, new PatchRequest
                         {
                             Script = @"var s = 1234; 
 a(s);"
-                        }, null, skipPatchIfEtagMismatch: false, debugMode: false);
+                        });
                     });
 
                     Assert.Equal(@"Unable to execute JavaScript: 

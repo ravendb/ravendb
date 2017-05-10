@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
@@ -45,11 +46,60 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        //get conflicts for specified document
-        [RavenAction("/databases/*/replication/conflicts", "GET", "/databases/{databaseName:string}/replication/conflicts?docId={documentId:string}")]
-        public Task GetReplicationConflictsById()
+       
+        [RavenAction("/databases/*/replication/conflicts", "GET", "/databases/{databaseName:string}/replication/conflicts?[docId={documentId:string, optional} | etag={etag:long, optional}]")]
+        public Task GetReplicationConflicts()
         {
-            var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
+            var docId = GetStringQueryString("docId", required: false);
+            var etag = GetLongQueryString("etag", required: false) ?? 0;
+            return string.IsNullOrWhiteSpace(docId) ? 
+                GetConflictsByEtag(etag) :
+                GetConflictsForDocument(docId);
+        }
+
+        private Task GetConflictsByEtag(long etag)
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (context.OpenReadTransaction())
+            {
+                var skip = GetStart();
+                var pageSize = GetPageSize();
+
+                var alreadyAdded = new HashSet<LazyStringValue>(LazyStringValueComparer.Instance);
+                var array = new DynamicJsonArray();
+                var conflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsAfter(context, etag);
+                foreach (var conflict in conflicts)
+                {
+                    if (alreadyAdded.Add(conflict.Key))
+                    {
+                        if (skip > 0)
+                        {
+                            skip--;
+                            continue;
+                        }
+                        if (pageSize-- <= 0)
+                            break;
+                        array.Add(new DynamicJsonValue
+                        {
+                            [nameof(GetConflictsResult.Key)] = conflict.Key,
+                            [nameof(conflict.LastModified)] = conflict.LastModified
+                        });
+                    }
+                }
+
+                context.Write(writer, new DynamicJsonValue
+                {
+                    [nameof(Database.DocumentsStorage.ConflictsStorage.ConflictsCount)] = Database.DocumentsStorage.ConflictsStorage.ConflictsCount,
+                    [nameof(GetConflictsResult.Results)] = array
+                });
+
+                return Task.CompletedTask;
+            }
+        }
+        private Task GetConflictsForDocument(string docId)
+        {
             DocumentsOperationContext context;
             long maxEtag = 0;
             using (ContextPool.AllocateOperationContext(out context))
@@ -76,7 +126,6 @@ namespace Raven.Server.Documents.Handlers
                     [nameof(GetConflictsResult.LargestEtag)] = maxEtag,
                     [nameof(GetConflictsResult.Results)] = array
                 });
-
                 return Task.CompletedTask;
             }
         }
@@ -372,7 +421,7 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
-                var advisor = new ConflictResovlerAdvisor(conflicts.Select(c => c.Doc), context);
+                var advisor = new ConflictResolverAdvisor(conflicts.Select(c => c.Doc), context);
                 var resovled = advisor.Resolve();
 
                 context.Write(writer, new DynamicJsonValue

@@ -20,14 +20,19 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
-            // override to make it "no-op"
+
+        }
+
+        protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
+        {
+            
         }
 
         public bool MatchCriteria(DocumentsOperationContext context, Document document, out BlittableJsonReaderObject transformResult)
         {
             transformResult = null;
 
-            using (var scope = CreateOperationScope(context, debugMode: false))
+            using (var scope = CreateOperationScope(debugMode: false).Initialize(context))
             {
                 ApplySingleScript(context, document.Key, document, _patchRequest, scope);
 

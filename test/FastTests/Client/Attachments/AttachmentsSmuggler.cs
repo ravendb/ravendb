@@ -25,7 +25,8 @@ namespace FastTests.Client.Attachments
                     using (var bigStream = new MemoryStream(Enumerable.Range(1, 999 * 1024).Select(x => (byte)x).ToArray()))
                         store1.Operations.Send(new PutAttachmentOperation("users/1", "big-file", bigStream, "image/png"));
 
-                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), file);
+                    /*var result = */await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), file);
+                    // TODO: RavenDB-6936 store.Smuggler.Export and Import method should return the SmugglerResult
 
                     var stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);

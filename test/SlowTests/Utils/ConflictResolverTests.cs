@@ -18,7 +18,7 @@ namespace SlowTests.Utils
                 DynamicJsonValue obj1 = new DynamicJsonValue();
                 DynamicJsonValue obj2 = new DynamicJsonValue();
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
@@ -37,7 +37,7 @@ namespace SlowTests.Utils
                 obj1["name"] = "Oren";
                 obj2["name"] = "Oren";
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
@@ -58,7 +58,7 @@ namespace SlowTests.Utils
                 obj1["name"] = new DynamicJsonArray();
                 obj2["name"] = new DynamicJsonArray();
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
@@ -79,7 +79,7 @@ namespace SlowTests.Utils
                 obj1["name"] = new DynamicJsonArray {1};
                 obj2["name"] = new DynamicJsonArray();
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
@@ -102,7 +102,7 @@ namespace SlowTests.Utils
                 obj1["Name"] = "Oren";
                 obj2["Age"] = 2;
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
@@ -127,7 +127,7 @@ namespace SlowTests.Utils
                 obj1["Name"] = "Oren";
                 obj2["Name"] = "Ayende";
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
@@ -157,7 +157,7 @@ namespace SlowTests.Utils
                     ["Last"] = "Eini"
                 };
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
@@ -182,7 +182,7 @@ namespace SlowTests.Utils
                 };
                 obj2["Name"] = "Eini";
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
@@ -206,7 +206,7 @@ namespace SlowTests.Utils
                 obj1["Nicks"] = new DynamicJsonArray {"Oren"};
                 obj2["Nicks"] = new DynamicJsonArray {"Ayende"};
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
@@ -230,7 +230,7 @@ namespace SlowTests.Utils
                 obj1["Comments"] = new DynamicJsonArray {1, 2, 4};
                 obj2["Comments"] = new DynamicJsonArray {1, 2, 5};
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Document;
@@ -256,7 +256,7 @@ namespace SlowTests.Utils
                 obj1["@metadata"] = new DynamicJsonValue();
                 obj2["@metadata"] = new DynamicJsonValue();
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Metadata;
@@ -281,7 +281,7 @@ namespace SlowTests.Utils
                     ["Foo"] = "Bar"
                 };
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Metadata;
@@ -308,7 +308,7 @@ namespace SlowTests.Utils
                     ["Foo"] = new DynamicJsonArray()
                 };
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Metadata;
@@ -335,7 +335,7 @@ namespace SlowTests.Utils
                     ["Foo"] = new DynamicJsonArray()
                 };
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Metadata;
@@ -365,7 +365,7 @@ namespace SlowTests.Utils
                     ["Age"] = 2
                 };
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Metadata;
@@ -395,7 +395,7 @@ namespace SlowTests.Utils
                     ["Name"] = "Ayende"
                 };
 
-                var conflictResovlerAdvisor = new ConflictResovlerAdvisor(
+                var conflictResovlerAdvisor = new ConflictResolverAdvisor(
                     new List<BlittableJsonReaderObject> {ctx.ReadObject(obj1, "doc/1"), ctx.ReadObject(obj2, "doc/1")},
                     ctx);
                 var resolvled = conflictResovlerAdvisor.Resolve().Metadata;

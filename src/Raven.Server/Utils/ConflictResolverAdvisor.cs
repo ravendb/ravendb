@@ -5,13 +5,13 @@ using Sparrow.Json;
 using Constants = Raven.Client.Constants;
 namespace Raven.Server.Utils
 {
-    public class ConflictResovlerAdvisor
+    public class ConflictResolverAdvisor
     {
         private readonly BlittableJsonReaderObject[] _docs;
         internal readonly bool IsMetadataResolver;
         private readonly JsonOperationContext _context;
 
-        public ConflictResovlerAdvisor(IEnumerable<BlittableJsonReaderObject> docs, JsonOperationContext ctx, bool isMetadataResolver = false)
+        public ConflictResolverAdvisor(IEnumerable<BlittableJsonReaderObject> docs, JsonOperationContext ctx, bool isMetadataResolver = false)
         {
             _docs = docs.ToArray();
             IsMetadataResolver = isMetadataResolver;
@@ -74,7 +74,7 @@ namespace Raven.Server.Utils
                 others.Add(token);
             }
 
-            result.Add(prop.Key, new ConflictResovlerAdvisor(
+            result.Add(prop.Key, new ConflictResolverAdvisor(
                 others.ToArray(), _context, prop.Key == Constants.Documents.Metadata.Key || IsMetadataResolver));
             return true;
         }
@@ -254,7 +254,7 @@ namespace Raven.Server.Utils
         }
 
         private void WriteConflictResolver(string name, ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> documentWriter,
-            ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> metadataWriter, ConflictResovlerAdvisor resolver, int indent)
+            ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> metadataWriter, ConflictResolverAdvisor resolver, int indent)
         {
             MergeResult result = resolver.Resolve(indent);
 
@@ -293,7 +293,7 @@ namespace Raven.Server.Utils
 
                 foreach (var o in result)
                 {
-                    var resolver = o.Value as ConflictResovlerAdvisor;
+                    var resolver = o.Value as ConflictResolverAdvisor;
                     if (resolver != null)
                     {
                         WriteConflictResolver(o.Key, documentWriter, metadataWriter, resolver, 

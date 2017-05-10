@@ -176,10 +176,9 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task WriteJsonAsync(DynamicJsonValue value)
         {
-            JsonOperationContext context;
 
-            int writtenBytes = 0;
-            using (TcpConnection.ContextPool.AllocateOperationContext(out context))
+            int writtenBytes;
+            using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, TcpConnection.Stream))
             {
                 context.Write(writer, value);
@@ -274,29 +273,54 @@ namespace Raven.Server.Documents.TcpHandlers
         private IDisposable RegisterForNotificationOnNewDocuments(SubscriptionCriteria criteria)
         {
             _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
-            Action<DocumentChange> registerNotification = notification =>
+
+            void RegisterNotification(DocumentChange notification)
             {
                 if (notification.CollectionName == criteria.Collection)
                     _waitForMoreDocuments.SetByAsyncCompletion();
-            };
-            TcpConnection.DocumentDatabase.Changes.OnDocumentChange += registerNotification;
-            return
-                new DisposableAction(
-                    () => { TcpConnection.DocumentDatabase.Changes.OnDocumentChange -= registerNotification; });
+            }
+
+            TcpConnection.DocumentDatabase.Changes.OnDocumentChange += RegisterNotification;
+            return new DisposableAction(
+                    () =>
+                    {
+                        TcpConnection.DocumentDatabase.Changes.OnDocumentChange -= RegisterNotification;
+                    });
         }
 
         private async Task<SubscriptionConnectionClientMessage> GetReplyFromClient()
         {
-            JsonOperationContext context;
-            using (TcpConnection.ContextPool.AllocateOperationContext(out context))
-            using (var reader = await context.ParseToMemoryAsync(
-                TcpConnection.Stream,
-                "Reply from subscription client",
-                BlittableJsonDocumentBuilder.UsageMode.None,
-                TcpConnection.PinnedBuffer))
+            try
             {
-                TcpConnection.RegisterBytesReceived(reader.Size);
-                return JsonDeserializationServer.SubscriptionConnectionClientMessage(reader);
+                using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (var reader = await context.ParseToMemoryAsync(
+                    TcpConnection.Stream,
+                    "Reply from subscription client",
+                    BlittableJsonDocumentBuilder.UsageMode.None,
+                    TcpConnection.PinnedBuffer))
+                {
+                    TcpConnection.RegisterBytesReceived(reader.Size);
+                    return JsonDeserializationServer.SubscriptionConnectionClientMessage(reader);
+                }
+            }
+            catch (IOException)
+            {
+                if (_isDisposed == false)
+                    throw;
+
+                return new SubscriptionConnectionClientMessage
+                {
+                    Etag = -1,
+                    Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
+                };
+            }
+            catch (ObjectDisposedException)
+            {
+                return new SubscriptionConnectionClientMessage
+                {
+                    Etag = -1,
+                    Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
+                };
             }
         }
 
@@ -321,7 +345,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     out criteria, out startEtag);
 
 
-                var replyFromClientTask = GetReplyFromClient();
+                var replyFromClientTask = GetReplyFromClient();                
                 var registrenNotificationDisposable = RegisterForNotificationOnNewDocuments(criteria);
                 try
                 {
@@ -442,11 +466,19 @@ namespace Raven.Server.Documents.TcpHandlers
                                 if (result == replyFromClientTask)
                                 {
                                     clientReply = await replyFromClientTask;
+                                    if (clientReply.Type == SubscriptionConnectionClientMessage.MessageType.DisposedNotification)
+                                    {
+                                        CancellationTokenSource.Cancel();
+                                        break;
+                                    }
                                     replyFromClientTask = GetReplyFromClient();
                                     break;
                                 }
                                 await SendHeartBeat();
                             }
+
+                            CancellationTokenSource.Token.ThrowIfCancellationRequested();
+
                             switch (clientReply.Type)
                             {
                                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
@@ -461,6 +493,11 @@ namespace Raven.Server.Documents.TcpHandlers
                                         ["Etag"] = clientReply.Etag
                                     });
 
+                                    break;
+
+                                //precaution, should not reach this case...
+                                case SubscriptionConnectionClientMessage.MessageType.DisposedNotification: 
+                                    CancellationTokenSource.Cancel();
                                     break;
                                 default:
                                     throw new ArgumentException("Unknown message type from client " +
@@ -560,18 +597,15 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public void Dispose()
         {
-            if (
-                _isDisposed)
+            if (_isDisposed)
                 return;
             _isDisposed = true;
             Stats.Dispose();
             try
             {
-                TcpConnection.Dispose
-                    ();
+                TcpConnection.Dispose();
             }
-            catch (
-                Exception)
+            catch (Exception)
             {
 // ignored
             }

@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                             if (lastCollectionEtag == -1)
                                 lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, collection);
 
-                            var tombstones = collection == Constants.Documents.Indexing.AllDocumentsCollection
+                            var tombstones = collection == Constants.Documents.Collections.AllDocumentsCollection
                                 ? _documentsStorage.GetTombstonesFrom(databaseContext, lastEtag + 1, 0, pageSize)
                                 : _documentsStorage.GetTombstonesFrom(databaseContext, collection, lastEtag + 1, 0, pageSize);
 

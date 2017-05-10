@@ -33,6 +33,7 @@ namespace Raven.Server.Documents.Handlers
             public PatchRequest PatchIfMissing;
             public long? Etag;
             public bool KeyPrefixed;
+            public PatchDocumentCommand PatchCommand;
         }
 
         [ThreadStatic]
@@ -56,7 +57,7 @@ namespace Raven.Server.Documents.Handlers
             _cache.Push(cmds);
         }
 
-        public static async Task<ArraySegment<CommandData>> ParseAsync(JsonOperationContext ctx, Stream stream)
+        public static async Task<ArraySegment<CommandData>> ParseAsync(JsonOperationContext ctx, Stream stream, DocumentPatcher patcher)
         {
             CommandData[] cmds = Empty;
 
@@ -88,7 +89,15 @@ namespace Raven.Server.Documents.Handlers
                         cmds = IncreaseSizeOfCommandsBuffer(index, cmds);
                     }
 
-                    cmds[index] = await ReadSingleCommand(ctx, stream, state, parser, buffer, default(CancellationToken));
+                    var commandData = await ReadSingleCommand(ctx, stream, state, parser, buffer, default(CancellationToken));
+
+                    if (commandData.Method == CommandType.PATCH)
+                    {
+                        commandData.PatchCommand = patcher.GetPatchDocumentCommand(commandData.Key, commandData.Etag, commandData.Patch, commandData.PatchIfMissing,
+                            skipPatchIfEtagMismatch: false, debugMode: false);
+                    }
+
+                    cmds[index] = commandData;
                 }
             }
             return new ArraySegment<CommandData>(cmds, 0, index + 1);

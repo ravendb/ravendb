@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide.Maintance
 
         public readonly long CurrentTerm;
 
-        public readonly TimeSpan NodeSamplePeriod;
+        public readonly TimeSpan WorkerSamplePeriod;
 
         public ClusterMaintenanceWorker(TcpConnectionOptions tcp, CancellationToken externalToken, ServerStore serverStore,long term)
         {
@@ -31,7 +31,7 @@ namespace Raven.Server.ServerWide.Maintance
             _cts = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
             _token = _cts.Token;
             _server = serverStore;
-            NodeSamplePeriod = _server.Configuration.Cluster.WorkerSamplePeriod.AsTimeSpan;
+            WorkerSamplePeriod = _server.Configuration.Cluster.WorkerSamplePeriod.AsTimeSpan;
             _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceWorker>($"Logger on {serverStore.NodeTag}");
             CurrentTerm = term;
         }
@@ -61,7 +61,7 @@ namespace Raven.Server.ServerWide.Maintance
                             ctx.Write(writer, djv);
                         }
                     }
-                    await Task.Delay(NodeSamplePeriod, _token);
+                    await Task.Delay(WorkerSamplePeriod, _token);
                 }
                 catch (Exception e)
                 {

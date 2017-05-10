@@ -23,6 +23,7 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly Stream _stream;
         private readonly DocumentsOperationContext _context;
+        private readonly DocumentDatabase _database;
         private JsonOperationContext.ManagedPinnedBuffer _buffer;
         private JsonOperationContext.ReturnBuffer _returnBuffer;
         private JsonOperationContext.ManagedPinnedBuffer _writeBuffer;
@@ -37,10 +38,11 @@ namespace Raven.Server.Smuggler.Documents
 
         private Size _totalObjectsRead = new Size(0, SizeUnit.Bytes);
 
-        public StreamSource(Stream stream, DocumentsOperationContext context)
+        public StreamSource(Stream stream, DocumentsOperationContext context, DocumentDatabase database)
         {
             _stream = stream;
             _context = context;
+            _database = database;
         }
 
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
@@ -107,12 +109,12 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
+        public IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
             return ReadDocuments(actions);
         }
 
-        public IEnumerable<Document> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions, int limit)
+        public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions, int limit)
         {
             return ReadDocuments(actions);
         }
@@ -298,7 +300,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private IEnumerable<Document> ReadDocuments(INewDocumentActions actions = null)
+        private IEnumerable<DocumentItem> ReadDocuments(INewDocumentActions actions = null)
         {
             if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
                 ThrowInvalidJson();
@@ -311,6 +313,7 @@ namespace Raven.Server.Smuggler.Documents
             var builder = CreateBuilder(context, modifier);
             try
             {
+                List<DocumentItem.AttachmentStream> attachments = null;
                 while (true)
                 {
                     if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
@@ -339,18 +342,29 @@ namespace Raven.Server.Smuggler.Documents
                     if (data.TryGet(DocumentItem.Key, out byte type) &&
                         type == (byte)DocumentType.Attachment)
                     {
-                        AddAttachmentStream(context, data, actions);
+                        if (attachments == null)
+                            attachments = new List<DocumentItem.AttachmentStream>();
+
+                        var attachment = new DocumentItem.AttachmentStream();
+                        attachment.FileDispose = _database.DocumentsStorage.AttachmentsStorage.GetTempFile(out attachment.File, "smuggler-");
+                        ProcessAttachmentStream(context, data, ref attachment);
+                        attachments.Add(attachment);
                         continue;
                     }
 
-                    yield return new Document
+                    yield return new DocumentItem
                     {
-                        Data = data,
-                        Key = modifier.Id,
-                        ChangeVector = modifier.ChangeVector,
-                        Flags = modifier.Flags,
-                        NonPersistentFlags = modifier.NonPersistentFlags,
+                        Document = new Document
+                        {
+                            Data = data,
+                            Key = modifier.Id,
+                            ChangeVector = modifier.ChangeVector,
+                            Flags = modifier.Flags,
+                            NonPersistentFlags = modifier.NonPersistentFlags,
+                        },
+                        Attachments = attachments,
                     };
+                    attachments = null;
                 }
             }
             finally
@@ -359,30 +373,8 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public struct AttachmentStream : IDisposable
+        private unsafe void ProcessAttachmentStream(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)
         {
-            public Slice Base64Hash;
-            public ByteStringContext<ByteStringMemoryCache>.ExternalScope Base64HashDispose;
-
-            public FileStream File;
-            public AttachmentsStorage.ReleaseTempFile FileDispose;
-
-            public BlittableJsonReaderObject Data;
-
-            public void Dispose()
-            {
-                Base64HashDispose.Dispose();
-                FileDispose.Dispose();
-                Data.Dispose();
-            }
-        }
-
-        private unsafe void AddAttachmentStream(DocumentsOperationContext context, BlittableJsonReaderObject data, INewDocumentActions actions)
-        {
-            var documentActions = actions as DatabaseDestination.DatabaseDocumentActions;
-            if (documentActions == null)
-                return;
-
             if (data.TryGet(nameof(AttachmentResult.Hash), out LazyStringValue hash) == false ||
                 data.TryGet(nameof(AttachmentResult.Size), out long size) == false)
                 throw new ArgumentException($"Data of attachment stream is not valid: {data}");
@@ -390,7 +382,6 @@ namespace Raven.Server.Smuggler.Documents
             if (_writeBuffer == null)
                 _returnWriteBuffer = _context.GetManagedBuffer(out _writeBuffer);
 
-            var attachment = documentActions.CreateAttachment();
             attachment.Data = data;
             attachment.Base64HashDispose = Slice.External(context.Allocator, hash, out attachment.Base64Hash);
 
@@ -410,8 +401,6 @@ namespace Raven.Server.Smuggler.Documents
                 size -= read.bytesRead;
             }
             attachment.File.Position = 0;
-
-            documentActions.WriteAttachment(attachment);
         }
 
         private BlittableJsonDocumentBuilder CreateBuilder(JsonOperationContext context, BlittableMetadataModifier modifier)

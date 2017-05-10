@@ -36,7 +36,7 @@ Above mentioned Powershell scripts are simplifying usage of our images allowing 
 
 - `-BindTcpPort [port]` - default `38888` - the port number on which RavenDB Server listens for TCP connections exposed on the container
 
-- `-AllowEverybodyToAccessTheServerAsAdmin` - HERE BE DRAGONS - allows everybody to access RavenDB server as admin
+- `-AllowAnonymousUserToAccessTheServer` - HERE BE DRAGONS - allows everybody to access RavenDB server
 
 - `-RemoveOnExit` - removes container when the main process exits
 

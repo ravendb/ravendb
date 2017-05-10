@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Sparrow.Binary;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
@@ -34,7 +35,7 @@ namespace Sparrow.Json
         private readonly int _initialSize;
 
         public long TotalUsed;
-        private LowMemoryFlag _lowMemoryFlag;
+        private readonly LowMemoryFlag _lowMemoryFlag;
 
         public long Allocated
         {
@@ -65,7 +66,7 @@ namespace Sparrow.Json
 
         public bool GrowAllocation(AllocatedMemoryData allocation, int sizeIncrease)
         {
-            var end = allocation.Address + allocation.SizeInBytes;
+            byte* end = allocation.Address + allocation.SizeInBytes;
             var distance = end - _ptrCurrent;
             if (distance != 0)
                 return false;
@@ -83,14 +84,14 @@ namespace Sparrow.Json
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public AllocatedMemoryData Allocate(int size)
         {
             if (_isDisposed)
-                ThrowAlreadyDisposedException();
+                goto ErrorDisposed;
 
             if (_ptrStart == null)
-                ThrowInvalidAllocateFromResetWithoutRenew();
-
+                goto ErrorResetted;
 
 #if MEM_GUARD
             return new AllocatedMemoryData
@@ -101,17 +102,20 @@ namespace Sparrow.Json
 #else
             size = Bits.NextPowerOf2(Math.Max(sizeof(FreeSection), size));
 
+            AllocatedMemoryData allocation;
+
             var index = Bits.MostSignificantBit(size) - 1;
             if (_freed[index] != null)
             {
                 var section = _freed[index];
                 _freed[index] = section->Previous;
 
-                return new AllocatedMemoryData
+                allocation = new AllocatedMemoryData
                 {
                     Address = (byte*)section,
                     SizeInBytes = section->SizeInBytes
                 };
+                goto Return;
             }
 
             if (_used + size > _allocated)
@@ -119,7 +123,7 @@ namespace Sparrow.Json
                 GrowArena(size);
             }
 
-            var allocation = new AllocatedMemoryData()
+            allocation = new AllocatedMemoryData
             {
                 SizeInBytes = size,
                 Address = _ptrCurrent
@@ -129,9 +133,12 @@ namespace Sparrow.Json
             _used += size;
             TotalUsed += size;
 
-            return allocation;
+            Return: return allocation;
 #endif
 
+            ErrorDisposed: ThrowAlreadyDisposedException();
+            ErrorResetted: ThrowInvalidAllocateFromResetWithoutRenew();
+            return null; // Will never happen.
         }
 
         private static void ThrowInvalidAllocateFromResetWithoutRenew()
@@ -277,6 +284,7 @@ namespace Sparrow.Json
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Return(AllocatedMemoryData allocation)
         {
             if (_isDisposed)
@@ -346,7 +354,7 @@ namespace Sparrow.Json
         public JsonOperationContext Parent;
         public NativeMemory.ThreadStats AllocatingThread;
 
-#if MEM_GUARD_STACK
+#if MEM_GUARD_STACK || TRACK_ALLOCATED_MEMORY_DATA
         public string AllocatedBy = Environment.StackTrace;
         public string FreedBy;
 #endif

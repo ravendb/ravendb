@@ -82,8 +82,16 @@ class databaseCreationModel {
 
         this.replicationFactor.extend({
             required: true,
-            min: 1,
-            max: maxReplicationFactor
+            validation: [
+                {
+                    validator: (val: number) => val >= 1,
+                    message: `Replication factor must be at least 1`
+                },
+                {
+                    validator: (val: number) => val <= maxReplicationFactor,
+                    message: `Max available nodes: {0}`,
+                    params: maxReplicationFactor
+                }]
         });
 
         this.name.extend({

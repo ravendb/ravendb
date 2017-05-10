@@ -1,13 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Server.Extensions;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -51,10 +51,28 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             using(context.OpenReadTransaction())
             {
+                
                 var topology = ServerStore.GetClusterTopology(context);
+                if (topology.Members.Count == 0)
+                {
+                    var serverUrl = GetStringQueryString("url");
+                    topology = new ClusterTopology(
+                        Guid.NewGuid().ToString(),
+                        null,
+                        new Dictionary<string, string>
+                        {
+                            ["A"] = serverUrl
+                        },
+                        new Dictionary<string, string>(),
+                        new Dictionary<string, string>(),
+                        "A"
+                    );
+                }
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                
                 var blit = EntityToBlittable.ConvertEntityToBlittable(topology, DocumentConventions.Default, context);
                 var result = topology.TryGetNodeTagByUrl(ServerStore.LeaderTag);
+                
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue

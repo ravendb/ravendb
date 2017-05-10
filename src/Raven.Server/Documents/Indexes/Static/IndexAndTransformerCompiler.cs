@@ -379,7 +379,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var optimized = new RavenLinqOptimizer().Visit(new RavenLinqPrettifier().Visit(rewrittenExpression))
                 as StatementSyntax;
 
-            var collectionName = string.IsNullOrWhiteSpace(mapRewriter.CollectionName) ? Constants.Documents.Indexing.AllDocumentsCollection : mapRewriter.CollectionName;
+            var collectionName = string.IsNullOrWhiteSpace(mapRewriter.CollectionName) ? Constants.Documents.Collections.AllDocumentsCollection : mapRewriter.CollectionName;
 
             var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
             var results = new List<StatementSyntax>();

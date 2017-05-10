@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Patch
 
         public bool TryResolveConflict(DocumentsOperationContext context, PatchRequest patch, out BlittableJsonReaderObject resolved)
         {
-            using (var scope = CreateOperationScope(context, debugMode: false))
+            using (var scope = CreateOperationScope(debugMode: false).Initialize(context))
             {
                 var run = new SingleScriptRun(this, patch, scope);
                 try
@@ -80,14 +80,15 @@ namespace Raven.Server.Documents.Patch
 
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
-            base.CustomizeEngine(engine, scope);
+            engine.SetValue("ResolveToTombstone", new Func<string>(() => TombstoneResolverValue));
+            engine.SetValue("HasTombstone", _hasTombstone);
+        }
 
+        protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
+        {
             engine.Global.Delete("ResolveToTombstone", false);
             engine.Global.Delete(TombstoneResolverValue, false);
-            engine.SetValue("ResolveToTombstone", new Func<string>(() => TombstoneResolverValue));
-
             engine.Global.Delete("HasTombstone", false);
-            engine.SetValue("HasTombstone", _hasTombstone);
         }
 
         private bool TryParse(DocumentsOperationContext context, PatcherOperationScope scope, out BlittableJsonReaderObject val)

@@ -377,7 +377,6 @@ namespace Sparrow.Json
                 _current = _current.PreviousAllocated;
             }
             GC.KeepAlive(start);
-
         }
 
 #if MEM_GUARD

@@ -11,8 +11,8 @@ namespace Raven.Server.Smuggler.Documents.Data
     {
         IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion);
         DatabaseItemType GetNextType();
-        IEnumerable<Document> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions);
-        IEnumerable<Document> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions, int limit);
+        IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions);
+        IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions, int limit);
         IEnumerable<IndexDefinitionAndType> GetIndexes();
         IEnumerable<TransformerDefinition> GetTransformers();
         IEnumerable<KeyValuePair<string, long>> GetIdentities();

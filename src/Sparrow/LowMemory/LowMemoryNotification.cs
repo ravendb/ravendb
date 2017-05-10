@@ -73,7 +73,7 @@ namespace Sparrow.LowMemory
             _lowMemoryHandlers.Add(new WeakReference<ILowMemoryHandler>(handler));
         }
 
-        public readonly static LowMemoryNotification Instance = new LowMemoryNotification(1024 * 1024 * 256, 0.1);
+        public static readonly LowMemoryNotification Instance = new LowMemoryNotification(1024 * 1024 * 256, 0.1);
 
         public bool LowMemoryState { get; set; }
 

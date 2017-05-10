@@ -6,6 +6,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Server.Commands;
 using Raven.Server.Documents;
@@ -129,10 +130,9 @@ namespace Raven.Server.Utils
 
         public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string apiKey)
         {
-            JsonOperationContext context;
             using (var requestExecuter = RequestExecutor.CreateForSingleNode(url, databaseName, apiKey))
-            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
-            {
+            using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {                
                 var getTcpInfoCommand = new GetTcpInfoCommand();
                 await requestExecuter.ExecuteAsync(getTcpInfoCommand, context);
 

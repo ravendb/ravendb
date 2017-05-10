@@ -25,7 +25,7 @@ namespace Voron.Platform.Posix
             _options = options;
             FileName = file;
             _copyOnWriteMode = options.CopyOnWriteMode && file.EndsWith(Constants.DatabaseFilename);
-            _isSyncDirAllowed = PosixHelper.CheckSyncDirectoryAllowed(FileName);
+            _isSyncDirAllowed = Syscall.CheckSyncDirectoryAllowed(FileName);
 
             PosixHelper.EnsurePathExists(FileName);
 
@@ -52,7 +52,7 @@ namespace Voron.Platform.Posix
                 PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, file);
             }
 
-            if (_isSyncDirAllowed && PosixHelper.SyncDirectory(file) == -1)
+            if (_isSyncDirAllowed && Syscall.SyncDirectory(file) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err, "sync dir for " + file);
@@ -102,7 +102,7 @@ namespace Voron.Platform.Posix
 
             PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize + allocationSize, FileName);
 
-            if (_isSyncDirAllowed && PosixHelper.SyncDirectory(FileName) == -1)
+            if (_isSyncDirAllowed && Syscall.SyncDirectory(FileName) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err);

@@ -1,4 +1,10 @@
-﻿using Raven.Server.Documents;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using Raven.Server.Documents;
+using Sparrow;
+using Sparrow.Json;
+using Voron;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -8,12 +14,29 @@ namespace Raven.Server.Smuggler.Documents
         Attachment = 2,
     }
 
-    public struct DocumentItem
+    public class DocumentItem
     {
         public const string Key = "@document-type";
 
-        public DocumentType Type;
         public Document Document;
-        public StreamSource.AttachmentStream Attachment;
+        public List<AttachmentStream> Attachments;
+
+        public struct AttachmentStream : IDisposable
+        {
+            public Slice Base64Hash;
+            public ByteStringContext<ByteStringMemoryCache>.ExternalScope Base64HashDispose;
+
+            public FileStream File;
+            public AttachmentsStorage.ReleaseTempFile FileDispose;
+
+            public BlittableJsonReaderObject Data;
+
+            public void Dispose()
+            {
+                Base64HashDispose.Dispose();
+                FileDispose.Dispose();
+                Data.Dispose();
+            }
+        }
     }
 }

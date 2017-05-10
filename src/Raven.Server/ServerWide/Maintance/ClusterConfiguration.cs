@@ -20,20 +20,20 @@ namespace Raven.Server.ServerWide.Maintance
         [Description("How freuqent we sample the information about the databases and send it to the maintenancenet supervisor.")]
         [DefaultValue(250)]
         [TimeUnit(TimeUnit.Milliseconds)]
-        [ConfigurationEntry("Raven/Cluster/NodeSamplePeriod")]
+        [ConfigurationEntry("Raven/Cluster/WorkerSamplePeriod")]
         public TimeSetting WorkerSamplePeriod { get; set; }
 
         [Description("As the maintenancenet supervisor, how freuqent we sample the information received from the nodes.")]
         [DefaultValue(500)]
         [TimeUnit(TimeUnit.Milliseconds)]
-        [ConfigurationEntry("Raven/Cluster/LeaderSamplePeriod")]
+        [ConfigurationEntry("Raven/Cluster/SupervisorSamplePeriod")]
         public TimeSetting SupervisorSamplePeriod { get; set; }
 
         [Description("As the maintenancenet supervisor, how long we wait to hear from a worker before it is timeouted.")]
         [DefaultValue(1000)]
         [TimeUnit(TimeUnit.Milliseconds)]
-        [ConfigurationEntry("Raven/Cluster/RecieveFromNodeTimeout")]
-        public TimeSetting RecieveFromNodeTimeout { get; set; }
+        [ConfigurationEntry("Raven/Cluster/RecieveFromWorkerTimeout")]
+        public TimeSetting RecieveFromWorkerTimeout { get; set; }
 
         [Description("As the maintenancenet supervisor, how long we wait after we recived an exception from a worker. Before we retry.")]
         [DefaultValue(5000)]

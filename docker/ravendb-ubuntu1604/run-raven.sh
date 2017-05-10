@@ -9,7 +9,7 @@ then
     ./Raven.Server \
         /Raven/RunAsService=true \
         /Raven/ServerUrl/Tcp=38888 \
-        /Raven/AllowEverybodyToAccessTheServerAsAdmin=${AllowEverybodyToAccessTheServerAsAdmin} \
+        /Raven/AllowAnonymousUserToAccessTheServer=${AllowAnonymousUserToAccessTheServer} \
         /Raven/DataDir=${DataDir} \
         --print-id
 else

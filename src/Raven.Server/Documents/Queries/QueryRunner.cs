@@ -13,13 +13,15 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-
+using DeleteDocumentCommand = Raven.Server.Documents.TransactionCommands.DeleteDocumentCommand;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries
@@ -180,43 +182,36 @@ namespace Raven.Server.Documents.Queries
 
         public Task<IOperationResult> ExecuteDeleteQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(indexName, query, options, context, onProgress, (key, ctx, retrieveDetails) =>
+            return ExecuteOperation(indexName, query, options, context, onProgress, (key, retrieveDetails) =>
             {
-                var result = _database.DocumentsStorage.Delete(ctx, key, null);
-                if (retrieveDetails && result != null)
-                {
-                    return new BulkOperationResult.DeleteDetails
-                    {
-                        Id = key,
-                        Etag = result.Value.Etag
-                    };
-                }
+                var command = new DeleteDocumentCommand(key, null, _database);
 
-                return null;
+                return new BulkOperationCommand<DeleteDocumentCommand>(command, retrieveDetails, x => new BulkOperationResult.DeleteDetails
+                {
+                    Id = key,
+                    Etag = x.DeleteResult?.Etag,
+                });
             }, token);
         }
 
         public Task<IOperationResult> ExecutePatchQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(indexName, query, options, context, onProgress, (key, ctx, retrieveDetails) =>
+            return ExecuteOperation(indexName, query, options, context, onProgress, (key, retrieveDetails) =>
             {
-                var result = _database.Patcher.Apply(ctx, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false);
-                if (retrieveDetails && result != null)
-                {
-                    return new BulkOperationResult.PatchDetails
-                    {
-                        Id = key,
-                        Etag = result.Etag,
-                        Status = result.Status
-                    };
-                }
+                var command = _database.Patcher.GetPatchDocumentCommand(key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false);
 
-                return null;
+                return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails, x => new BulkOperationResult.PatchDetails
+                {
+                    Id = key,
+                    Etag = x.PatchResult.Etag,
+                    Status = x.PatchResult.Status
+                });
             }, token);
         }
 
-        private async Task<IOperationResult> ExecuteOperation(string indexName, IndexQueryServerSide query, QueryOperationOptions options,
-            DocumentsOperationContext context, Action<DeterminateProgress> onProgress, Func<string, DocumentsOperationContext, bool, IBulkOperationDetails> func, OperationCancelToken token)
+        private async Task<IOperationResult> ExecuteOperation<T>(string indexName, IndexQueryServerSide query, QueryOperationOptions options,
+            DocumentsOperationContext context, Action<DeterminateProgress> onProgress, Func<string, bool, BulkOperationCommand<T>> func, OperationCancelToken token)
+            where T : TransactionOperationsMerger.MergedTransactionCommand
         {
             var index = GetIndex(indexName);
 
@@ -260,17 +255,17 @@ namespace Raven.Server.Documents.Queries
             {
                 while (resultIds.Count > 0)
                 {
-                    IBulkOperationDetails details = null;
-
-                    var command = new ExecuteRateLimitedOperations<string>(resultIds, (id, ctx) =>
+                    var command = new ExecuteRateLimitedOperations<string>(resultIds, id =>
                     {
-                        details = func(id, ctx, options.RetrieveDetails);
+                        var subCommand = func(id, options.RetrieveDetails);
+
+                        if (options.RetrieveDetails)
+                            subCommand.AfterExecute = details => result.Details.Add(details);
+
+                        return subCommand;
                     }, rateGate, token, batchSize);
 
                     await _database.TxMerger.Enqueue(command);
-
-                    if (options.RetrieveDetails && details != null)
-                        result.Details.Add(details);
 
                     progress.Processed += command.Processed;
 
@@ -310,6 +305,32 @@ namespace Raven.Server.Documents.Queries
                 IndexDoesNotExistException.ThrowFor(indexName);
 
             return index;
+        }
+
+        private class BulkOperationCommand<T> : TransactionOperationsMerger.MergedTransactionCommand where T : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly T _command;
+            private readonly bool _retieveDetails;
+            private readonly Func<T, IBulkOperationDetails> _getDetails;
+
+            public BulkOperationCommand(T command, bool retieveDetails, Func<T, IBulkOperationDetails> getDetails)
+            {
+                _command = command;
+                _retieveDetails = retieveDetails;
+                _getDetails = getDetails;
+            }
+
+            public override int Execute(DocumentsOperationContext context)
+            {
+                var count = _command.Execute(context);
+
+                if (_retieveDetails)
+                    AfterExecute?.Invoke(_getDetails(_command));
+
+                return count;
+            }
+
+            public Action<IBulkOperationDetails> AfterExecute { get; set; }
         }
     }
 }

@@ -30,6 +30,7 @@ namespace Raven.Server.Web.System
 {
     public class AdminDatabasesHandler : RequestHandler
     {
+
         [RavenAction("/admin/databases/is-loaded", "GET", "/admin/databases/is-loaded?name={databaseName:string}")]
         public Task IsDatabaseLoaded()
         {
@@ -94,9 +95,9 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        // add database to already existing database cluster
-        [RavenAction("/admin/add-database", "POST", "/admin/add-database?name={databaseName:string}&node={nodeName:string|optional}")]
-        public async Task Add()
+        // add database to already existing database group
+        [RavenAction("/admin/databases/add-node", "POST", "/admin/databases/add-node?name={databaseName:string}&node={nodeName:string|optional}")]
+        public async Task AddDatabaseNode()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var node = GetStringQueryString("node", false);

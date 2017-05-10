@@ -401,7 +401,6 @@ namespace Raven.Server
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine("Tcp error" + e.StackTrace);
                         if (_tcpLogger.IsInfoEnabled)
                         {
                             _tcpLogger.Info("Failed to process TCP connection run", e);

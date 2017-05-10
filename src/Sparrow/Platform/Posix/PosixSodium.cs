@@ -71,6 +71,30 @@ namespace Sparrow.Platform.Posix
             byte* k);
 
         [DllImport(LIB_SODIUM)]
+        public static extern int crypto_aead_chacha20poly1305_encrypt(
+            byte* c,
+            ulong* clen,
+            byte* m,
+            ulong mlen,
+            byte* ad,
+            ulong adlen,
+            byte* nsec,
+            byte* npub,
+            byte* k);
+        
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_aead_chacha20poly1305_decrypt(
+            byte* m,
+            ulong* mlen,
+            byte* nsec,
+            byte* c,
+            ulong clen,
+            byte* ad,
+            ulong adlen,
+            byte* npub,
+            byte* k);
+
+        [DllImport(LIB_SODIUM)]
         public static extern int crypto_box_seal(byte* b, byte* b1, ulong mlen, byte* pk);
 
         [DllImport(LIB_SODIUM)]
@@ -112,6 +136,9 @@ namespace Sparrow.Platform.Posix
 
         [DllImport(LIB_SODIUM)]
         public static extern IntPtr crypto_box_noncebytes();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern IntPtr crypto_aead_chacha20poly1305_abytes();
 
         [DllImport(LIB_SODIUM)]
         public static extern int crypto_kx_client_session_keys(

@@ -166,6 +166,15 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<DocumentConflict> GetConflictsAfter(DocumentsOperationContext context, long etag)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
+            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag, 0))
+            {
+                yield return TableValueToConflictDocument(context, ref tvr.Reader);
+            }
+        }
+
         private static DocumentConflict TableValueToConflictDocument(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var result = new DocumentConflict

@@ -71,6 +71,22 @@ namespace Sparrow
             return Platform.Win32.WinSodium.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
         }
 
+        public static int crypto_aead_chacha20poly1305_encrypt(
+            byte* c,
+            ulong* clen,
+            byte* m,
+            ulong mlen,
+            byte* ad,
+            ulong adlen,
+            byte* nsec,
+            byte* npub,
+            byte* k)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+            return Platform.Win32.WinSodium.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+        }
+
 
         public static int crypto_aead_chacha20poly1305_decrypt_detached(
             byte* m,
@@ -86,6 +102,22 @@ namespace Sparrow
             if (Platform.PlatformDetails.RunningOnPosix)
                 return Platform.Posix.PosixSodium.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
             return Platform.Win32.WinSodium.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+        }
+
+        public static int crypto_aead_chacha20poly1305_decrypt(
+            byte* m,
+            ulong* mlen,
+            byte* nsec,
+            byte* c,
+            ulong clen,
+            byte* ad,
+            ulong adlen,
+            byte* npub,
+            byte* k)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+            return Platform.Win32.WinSodium.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
         }
 
         public static int crypto_box_seal(byte* c, byte* m, ulong mlen, byte* pk)
@@ -297,6 +329,13 @@ namespace Sparrow
             return (int)(Platform.PlatformDetails.RunningOnPosix
                 ? Platform.Posix.PosixSodium.crypto_box_noncebytes()
                 : Platform.Win32.WinSodium.crypto_box_noncebytes());
+        }
+
+        public static int crypto_aead_chacha20poly1305_ABYTES()
+        {
+            return (int)(Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_aead_chacha20poly1305_abytes()
+                : Platform.Win32.WinSodium.crypto_aead_chacha20poly1305_abytes());
         }
 
         public static int crypto_kx_client_session_keys(

@@ -1254,7 +1254,7 @@ namespace Voron.Impl.Journal
             var sizeOfPagesHeader = numberOfPages * sizeof(TransactionHeaderPageInfo);
             var overhead = sizeOfPagesHeader + (long)numberOfPages * sizeof(long);
             var overheadInPages = checked((int)(overhead / Constants.Storage.PageSize + (overhead % Constants.Storage.PageSize == 0 ? 0 : 1)));
-           
+
             // The pages required includes the intermediate pages and the required output pages. 
             const int transactionHeaderPageOverhead = 1;
             var pagesRequired = (transactionHeaderPageOverhead + pagesCountIncludingAllOverflowPages + overheadInPages);
@@ -1272,7 +1272,7 @@ namespace Voron.Impl.Journal
             {
                 var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointerWithOverflowHandling(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
                 var pageHeader = (PageHeader*)scratchPage;
-                
+
                 // When encryption is off, we do validation by checksum
                 if (_env.Options.EncryptionEnabled == false)
                 {

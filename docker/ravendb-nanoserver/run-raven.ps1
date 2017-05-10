@@ -14,7 +14,7 @@ else {
     ./Raven.Server.exe `
         /Raven/RunAsService=true `
         /Raven/ServerUrl/Tcp=38888 `
-        /Raven/AllowEverybodyToAccessTheServerAsAdmin=$($env:AllowEverybodyToAccessTheServerAsAdmin) `
+        /Raven/AllowAnonymousUserToAccessTheServer=$($env:AllowAnonymousUserToAccessTheServer) `
         /Raven/DataDir=$($env:DataDir) `
         --print-id
 }

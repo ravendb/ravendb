@@ -40,6 +40,7 @@ namespace Raven.Server.ServerWide.Maintance
         public async Task AddToCluster(string clusterTag, string url)
         {
             var connectionInfo = await ReplicationUtils.GetTcpInfoAsync(MultiDatabase.GetRootDatabaseUrl(url), null, null);
+
             var clusterNode = new ClusterNode(clusterTag, connectionInfo, _contextPool, this, _cts.Token);
             _clusterNodes.Add(clusterTag, clusterNode);
             var task = clusterNode.StartListening();
@@ -143,7 +144,7 @@ namespace Raven.Server.ServerWide.Maintance
             {
                 bool needToWait = false;
                 var onErrorDelayTime = _parent.Config.OnErrorDelayTime.AsTimeSpan;
-                var recieveFromNodeTimeout = _parent.Config.RecieveFromNodeTimeout.AsTimeSpan;
+                var recieveFromWorkerTimeout = _parent.Config.RecieveFromWorkerTimeout.AsTimeSpan;
 
                 while (_token.IsCancellationRequested == false)
                 {
@@ -161,7 +162,7 @@ namespace Raven.Server.ServerWide.Maintance
                                 using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
                                 {                                    
                                     var readResponseTask = context.ReadForMemoryAsync(connection, _readStatusUpdateDebugString, _token);
-                                    var timeout = Task.Delay(recieveFromNodeTimeout, _token);
+                                    var timeout = Task.Delay(recieveFromWorkerTimeout, _token);
                                     if (await Task.WhenAny(readResponseTask, timeout) == timeout)
                                     {
                                         if (_log.IsInfoEnabled)

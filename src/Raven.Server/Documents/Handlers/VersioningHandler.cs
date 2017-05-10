@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -14,11 +15,48 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
     public class VersioningHandler : DatabaseRequestHandler
     {
+
+        [RavenAction("/databases/*/versioning/config", "GET")]
+        public Task GetVersioningConfig()
+        {
+            TransactionOperationContext context;
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+                var databaseRecord = Server.ServerStore.Cluster.ReadDatabase(context, Database.Name);
+                var versioningConfig = databaseRecord?.Versioning;
+                if (versioningConfig != null)
+                {
+
+                    var versioningCollection = new DynamicJsonValue();
+                    foreach (var collection in versioningConfig.Collections)
+                    {
+                        versioningCollection[collection.Key] = collection.Value.ToJson();
+                    }
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            [nameof(versioningConfig.Default)] = versioningConfig.Default.ToJson(),
+                            [nameof(versioningConfig.Collections)] = versioningCollection
+                        });
+                    }
+                }
+                else
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                }
+            }
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/revisions", "GET")]
         public Task GetRevisionsFor()
         {

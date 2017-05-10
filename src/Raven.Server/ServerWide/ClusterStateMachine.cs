@@ -13,6 +13,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Extensions;
 using Raven.Client.Http.OAuth;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Json;

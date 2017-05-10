@@ -14,7 +14,6 @@ namespace Voron.Data.RawData
     {
         protected const ushort ReservedHeaderSpace = 96;
 
-        private PageLocator _pageLocator;
 
         protected readonly LowLevelTransaction _tx;
 
@@ -33,10 +32,9 @@ namespace Voron.Data.RawData
         {
             PageNumber = pageNumber;
             _tx = tx;
-            _pageLocator = tx.PersistentContext.AllocatePageLocator(tx);
 
             
-            _sectionHeader = (RawDataSmallSectionPageHeader*)_pageLocator.GetReadOnlyPage(pageNumber).Pointer;
+            _sectionHeader = (RawDataSmallSectionPageHeader*)_tx.GetPage(pageNumber).Pointer;
         }
 
         public long PageNumber { get; }
@@ -309,24 +307,19 @@ namespace Voron.Data.RawData
 
         public void Dispose()
         {
-            if (_pageLocator != null)
-            {
-                _tx.PersistentContext.FreePageLocator(_pageLocator);
-                _pageLocator = null;
-            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void EnsureHeaderModified()
         {
-            var page = _pageLocator.GetWritablePage(_sectionHeader->PageNumber);
+            var page = _tx.ModifyPage(_sectionHeader->PageNumber);
             _sectionHeader = (RawDataSmallSectionPageHeader*)page.Pointer;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected RawDataSmallPageHeader* ModifyPage(RawDataSmallPageHeader* pageHeader)
         {
-            var page = _pageLocator.GetWritablePage(pageHeader->PageNumber);
+            var page = _tx.ModifyPage(pageHeader->PageNumber);
             return (RawDataSmallPageHeader*)page.Pointer;
         }
 

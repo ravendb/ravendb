@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Stats;
@@ -18,7 +20,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.ETL
 {
-    public abstract class EtlProcess : IDisposable
+    public abstract class EtlProcess : IDisposable, IDocumentTombstoneAware
     {
         public string Tag { get; protected set; }
 
@@ -34,15 +36,19 @@ namespace Raven.Server.Documents.ETL
 
         public abstract void Dispose();
 
-        public abstract void NotifyAboutWork();
+        public abstract void NotifyAboutWork(DocumentChange change);
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
+
+        public abstract Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection();
     }
 
     public abstract class EtlProcess<TExtracted, TTransformed, TDestination> : EtlProcess where TExtracted : ExtractedItem where TDestination : EtlDestination
     {
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim();
         private readonly CancellationTokenSource _cts;
+        private readonly EtlStorage _storage;
+        private readonly HashSet<string> _collections;
 
         private readonly ConcurrentQueue<EtlStatsAggregator> _lastEtlStats =
             new ConcurrentQueue<EtlStatsAggregator>();
@@ -68,7 +74,11 @@ namespace Raven.Server.Documents.ETL
             Tag = tag;
             Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
             Database = database;
+            _storage = Database.ConfigurationStorage.EtlStorage;
             Statistics = new EtlProcessStatistics(tag, Transformation.Name, Database.NotificationCenter);
+
+            if (transformation.ApplyToAllDocuments == false)
+                _collections = new HashSet<string>(Transformation.Collections, StringComparer.OrdinalIgnoreCase);
         }
 
         protected CancellationToken CancellationToken => _cts.Token;
@@ -279,9 +289,10 @@ namespace Raven.Server.Documents.ETL
             Metrics.BatchSizeMeter.Mark(stats.NumberOfExtractedItems);
         }
 
-        public override void NotifyAboutWork()
+        public override void NotifyAboutWork(DocumentChange change)
         {
-            _waitForChanges.Set();
+            if (Transformation.ApplyToAllDocuments || _collections.Contains(change.CollectionName))
+                _waitForChanges.Set();
         }
 
         public override void Start()
@@ -396,7 +407,7 @@ namespace Raven.Server.Documents.ETL
 
                     if (didWork)
                     {
-                        Database.ConfigurationStorage.EtlStorage.StoreLastProcessedEtag(Destination, Name, Statistics.LastProcessedEtag);
+                        _storage.StoreLastProcessedEtag(Destination, Name, Statistics.LastProcessedEtag);
 
                         if (CancellationToken.IsCancellationRequested == false)
                         {
@@ -430,6 +441,28 @@ namespace Raven.Server.Documents.ETL
         protected void EnsureThreadAllocationStats()
         {
             _threadAllocations = NativeMemory.ThreadAllocations.Value;
+        }
+
+        public override Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        {
+            var lastProcessedEtag = _storage.GetLastProcessedEtag(Destination, Name);
+
+            if (Transformation.ApplyToAllDocuments)
+            {
+                return new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [Constants.Documents.Collections.AllDocumentsCollection] = lastProcessedEtag
+                };
+            }
+
+            var lastProcessedTombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var collection in Transformation.Collections)
+            {
+                lastProcessedTombstones[collection] = lastProcessedEtag;
+            }
+
+            return lastProcessedTombstones;
         }
 
         private void AddPerformanceStats(EtlStatsAggregator stats)

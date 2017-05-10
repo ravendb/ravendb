@@ -151,7 +151,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteDateTime(DateTime value, bool isUtc = false)
+        public void WriteDateTime(DateTime value, bool isUtc)
         {
             int size = value.GetDefaultRavenFormat(_dateTimeMemory, isUtc);
 

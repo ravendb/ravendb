@@ -211,10 +211,8 @@ namespace FastTests.Client.Subscriptions
                 var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
                 var exceptions = new BlockingCollection<Exception>();
 
-                subscription.Subscribe(_ =>
-                {
-                    throw new InvalidCastException();
-                }, exceptions.Add);
+                subscription.Subscribe(_ => throw new InvalidCastException(), exceptions.Add);
+
                 subscription.Start();
                 using (var session = store.OpenSession())
                 {

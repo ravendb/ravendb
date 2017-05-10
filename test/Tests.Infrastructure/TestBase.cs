@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
+using Raven.Client.Util.Helpers;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -47,7 +48,7 @@ namespace FastTests
                     return;
 
                 var e = args.Exception.ExtractSingleInnerException();
-                
+
                 var sb = new StringBuilder();
                 sb.AppendLine("===== UNOBSERVED TASK EXCEPTION =====");
                 sb.AppendLine(e.ExceptionToString(null));

@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Queries
             _documents = documents;
             _fieldsToFetch = fieldsToFetch;
             _collection = collection;
-            _isAllDocsCollection = collection == Constants.Documents.Indexing.AllDocumentsCollection;
+            _isAllDocsCollection = collection == Constants.Documents.Collections.AllDocumentsCollection;
             _query = query;
             _context = context;
         }

@@ -113,6 +113,7 @@ namespace Raven.Client.Documents.Operations
 
         public void OnCompleted()
         {
+            _result.Task.IgnoreUnobservedExceptions();
         }
 
         public Task<IOperationResult> WaitForCompletionAsync(TimeSpan? timeout = null)

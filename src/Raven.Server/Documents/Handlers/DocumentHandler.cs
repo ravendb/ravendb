@@ -17,6 +17,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -364,12 +365,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var etag = GetLongFromHeaders("If-Match");
 
-                var cmd = new MergedDeleteCommand
-                {
-                    Key = id,
-                    Database = Database,
-                    ExpectedEtag = etag
-                };
+                var cmd = new DeleteDocumentCommand(id, etag, Database, catchConcurrencyErrors: true);
 
                 await Database.TxMerger.Enqueue(cmd);
 
@@ -391,13 +387,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var etag = GetLongFromHeaders("If-Match");
 
-                var cmd = new MergedPutCommand
-                {
-                    Database = Database,
-                    ExpectedEtag = etag,
-                    Key = id,
-                    Document = doc
-                };
+                var cmd = new MergedPutCommand(doc, id, etag, Database);
 
                 await Database.TxMerger.Enqueue(cmd);
 
@@ -422,13 +412,13 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/docs", "PATCH", "/databases/{databaseName:string}/docs?id={documentId:string}&test={isTestOnly:bool|optional(false)} body{ Patch:PatchRequest, PatchIfMissing:PatchRequest }")]
-        public Task Patch()
+        public async Task Patch()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
             var etag = GetLongFromHeaders("If-Match");
-            var isTestOnly = GetBoolValueQueryString("test", required: false) ?? false;
-            var isDebugOnly = GetBoolValueQueryString("debug", required: false) ?? isTestOnly;
+            var isTest = GetBoolValueQueryString("test", required: false) ?? false;
+            var debugMode = GetBoolValueQueryString("debug", required: false) ?? isTest;
             var skipPatchIfEtagMismatch = GetBoolValueQueryString("skipPatchIfEtagMismatch", required: false) ?? false;
 
             DocumentsOperationContext context;
@@ -446,45 +436,38 @@ namespace Raven.Server.Documents.Handlers
                 if (request.TryGet("PatchIfMissing", out patchIfMissingCmd) && patchIfMissingCmd != null)
                     patchIfMissing = PatchRequest.Parse(patchIfMissingCmd);
 
-                // TODO: In order to properly move this to the transaction merger, we need
-                // TODO: move a lot of the costs (such as script parsing) out, so we create
-                // TODO: an object that we'll apply, otherwise we'll slow down a lot the transactions
-                // TODO: just by doing the javascript parsing and preparing the engine
-
                 BlittableJsonReaderObject origin = null;
                 try
                 {
-                    PatchResult patchResult;
-                    using (context.OpenWriteTransaction())
-                    {
-                        patchResult = Database.Patcher.Apply(context, id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode: isDebugOnly);
+                    var command = Database.Patcher.GetPatchDocumentCommand(id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode);
 
-                        if (isTestOnly == false)
+                    if (isTest == false)
+                        await Database.TxMerger.Enqueue(command);
+                    else
+                    {
+                        using (patch.IsPuttingDocuments == false ? 
+                            context.OpenReadTransaction() : 
+                            context.OpenWriteTransaction()) // PutDocument requires the write access to the docs storage
                         {
-                            context.Transaction.Commit();
-                        }
-                        else
-                        {
-                            if (patchResult.OriginalDocument != null)
-                            {
-                                // origin document is only accessible from the transaction, and we are closing it
-                                // so we have hold on to a copy of it
-                                origin = patchResult.OriginalDocument.Clone(context);
-                            }
+                            command.Execute(context);
+
+                            // origin document is only accessible from the transaction, and we are closing it
+                            // so we have hold on to a copy of it
+                            origin = command.PatchResult.OriginalDocument.Clone(context);
                         }
                     }
 
-                    switch (patchResult.Status)
+                    switch (command.PatchResult.Status)
                     {
                         case PatchStatus.DocumentDoesNotExist:
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            return Task.CompletedTask;
+                            return;
                         case PatchStatus.Created:
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
                             break;
                         case PatchStatus.Skipped:
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                            return Task.CompletedTask;
+                            return;
                         case PatchStatus.Patched:
                         case PatchStatus.NotModified:
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -497,18 +480,18 @@ namespace Raven.Server.Documents.Handlers
                     {
                         writer.WriteStartObject();
 
-                        writer.WritePropertyName(nameof(patchResult.Status));
-                        writer.WriteString(patchResult.Status.ToString());
+                        writer.WritePropertyName(nameof(command.PatchResult.Status));
+                        writer.WriteString(command.PatchResult.Status.ToString());
                         writer.WriteComma();
 
-                        writer.WritePropertyName(nameof(patchResult.ModifiedDocument));
-                        writer.WriteObject(patchResult.ModifiedDocument);
+                        writer.WritePropertyName(nameof(command.PatchResult.ModifiedDocument));
+                        writer.WriteObject(command.PatchResult.ModifiedDocument);
 
-                        if (isDebugOnly)
+                        if (debugMode)
                         {
                             writer.WriteComma();
 
-                            writer.WritePropertyName(nameof(patchResult.OriginalDocument));
+                            writer.WritePropertyName(nameof(command.PatchResult.OriginalDocument));
                             if (origin != null)
                                 writer.WriteObject(origin);
                             else
@@ -516,9 +499,9 @@ namespace Raven.Server.Documents.Handlers
 
                             writer.WriteComma();
 
-                            writer.WritePropertyName(nameof(patchResult.Debug));
-                            if (patchResult.Debug != null)
-                                writer.WriteObject(patchResult.Debug);
+                            writer.WritePropertyName(nameof(command.PatchResult.Debug));
+                            if (command.PatchResult.Debug != null)
+                                writer.WriteObject(command.PatchResult.Debug);
                             else
                                 writer.WriteNull();
                         }
@@ -531,8 +514,6 @@ namespace Raven.Server.Documents.Handlers
                     origin?.Dispose();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/docs/class", "GET")]
@@ -574,39 +555,27 @@ namespace Raven.Server.Documents.Handlers
 
         private class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            public string Key;
-            public long? ExpectedEtag;
-            public BlittableJsonReaderObject Document;
-            public DocumentDatabase Database;
+            private readonly string _id;
+            private readonly long? _expectedEtag;
+            private readonly BlittableJsonReaderObject _document;
+            private readonly DocumentDatabase _database;
+
             public ExceptionDispatchInfo ExceptionDispatchInfo;
             public DocumentsStorage.PutOperationResults PutResult;
 
-            public override int Execute(DocumentsOperationContext context)
+            public MergedPutCommand(BlittableJsonReaderObject doc, string id, long? etag, DocumentDatabase database)
             {
-                try
-                {
-                    PutResult = Database.DocumentsStorage.Put(context, Key, ExpectedEtag, Document);
-                }
-                catch (ConcurrencyException e)
-                {
-                    ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
-                }
-                return 1;
+                _document = doc;
+                _id = id;
+                _expectedEtag = etag;
+                _database = database;
             }
-        }
-
-        private class MergedDeleteCommand : TransactionOperationsMerger.MergedTransactionCommand
-        {
-            public string Key;
-            public long? ExpectedEtag;
-            public DocumentDatabase Database;
-            public ExceptionDispatchInfo ExceptionDispatchInfo;
 
             public override int Execute(DocumentsOperationContext context)
             {
                 try
                 {
-                    Database.DocumentsStorage.Delete(context, Key, ExpectedEtag);
+                    PutResult = _database.DocumentsStorage.Put(context, _id, _expectedEtag, _document);
                 }
                 catch (ConcurrencyException e)
                 {
