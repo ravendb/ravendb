@@ -418,10 +418,7 @@ namespace Raven.Client.Documents.Subscriptions
                 }
 
                 var receivedMessage = await readObjectTask.ConfigureAwait(false);
-                if (_proccessingCts.IsCancellationRequested)
-                    break;
-
-                if (_proccessingCts.IsCancellationRequested)
+                if (receivedMessage == null || _proccessingCts.IsCancellationRequested)
                     break;
 
                 switch (receivedMessage.Type)

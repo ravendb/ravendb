@@ -25,9 +25,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Issues.RavenDB_5610())
+                using (var a = new FastTests.Client.Subscriptions.RavenDB_3491())
                 {
-                    a.UpdateType().Wait();
+                    a.SubscribtionWithEtag_MultipleOpens().Wait();
                 }
             }
         }

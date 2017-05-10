@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 return false;
             }
             _state = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
-            var timeout = 0;
+            var timeout = 16;
 
             while (true)
             {
