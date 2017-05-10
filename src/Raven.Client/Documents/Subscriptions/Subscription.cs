@@ -347,8 +347,6 @@ namespace Raven.Client.Documents.Subscriptions
                         if (_proccessingCts.IsCancellationRequested)
                             return;
 
-                        ChangeVectorEntry[] lastReceivedChangeVector = null;
-
                         Task notifiedSubscribers = Task.CompletedTask;
 
                         while (_proccessingCts.IsCancellationRequested == false)
@@ -366,19 +364,20 @@ namespace Raven.Client.Documents.Subscriptions
                             }
                             notifiedSubscribers = Task.Run(() =>
                             {
+                                ChangeVectorEntry[] lastReceivedChangeVector = null;
                                 // ReSharper disable once AccessToDisposedClosure
                                 using (incomingBatch.Item2)
                                 {
                                     foreach (var curDoc in incomingBatch.Item1)
                                     {
-                                        NotifySubscribers(curDoc.Data, out lastReceivedEtag);
+                                        NotifySubscribers(curDoc.Data, out lastReceivedChangeVector);
                                     }
                                 }
                                 try
                                 {
                                     if (tcpStream != null) //possibly prevent ObjectDisposedException
                                     {
-                                        SendAck(lastReceivedEtag, tcpStream);
+                                        SendAck(lastReceivedChangeVector, tcpStream);
                                     }
                                 }
                                 catch (ObjectDisposedException)
@@ -483,7 +482,6 @@ namespace Raven.Client.Documents.Subscriptions
         private void NotifySubscribers(BlittableJsonReaderObject curDoc, out ChangeVectorEntry[] lastReceivedChangeVector)
         {
             BlittableJsonReaderObject metadata;
-            string id;            
             lastReceivedChangeVector = null;
 
             if (curDoc.TryGet(Constants.Documents.Metadata.Key, out metadata) == false)

@@ -19,6 +19,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.Extensions;
 
@@ -308,7 +309,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 return new SubscriptionConnectionClientMessage
                 {
-                    Etag = -1,
+                    ChangeVector = new ChangeVectorEntry[] {},
                     Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
                 };
             }
@@ -316,7 +317,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 return new SubscriptionConnectionClientMessage
                 {
-                    Etag = -1,
+                    ChangeVector = new ChangeVectorEntry[] {},
                     Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
                 };
             }

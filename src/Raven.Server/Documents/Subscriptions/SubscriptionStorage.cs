@@ -23,6 +23,8 @@ using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Client.Documents.Replication.Messages;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Json.Converters;
+using Raven.Server.Rachis;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -62,13 +64,14 @@ namespace Raven.Server.Documents.Subscriptions
                 Criteria = creationParams.Criteria,
                 InitialChangeVector = creationParams.ChangeVector
             };
-
-            var etag = await _serverStore.SendToLeaderAsync(command);
+            
+            var etag = await _serverStore.SendToLeaderAsync(command.ToJson());
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"New Subscription With ID {etag} was created");
 
-            await _db.WaitForIndexNotification(etag);
+            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, etag);
+            //await _db.WaitForIndexNotification(etag);
             return etag;
         }
 
@@ -87,12 +90,12 @@ namespace Raven.Server.Documents.Subscriptions
             {                
                 ChangeVector = changeVectorForEtag,
                 NodeTag = _serverStore.NodeTag,
-                SubscriptionEtag = id
+                SubscriptionId = id
             };
 
-            var etag = await _serverStore.SendToLeaderAsync(command);
-
-            await _db.WaitForIndexNotification(etag);            
+            var etag = await _serverStore.SendToLeaderAsync(command.ToJson());
+            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, etag);
+            //await _db.WaitForIndexNotification(etag);            
         }
 
         public (SubscriptionCriteria criteria, ChangeVectorEntry[] startChangeVector) GetCriteriaAndChangeVector(long id, DocumentsOperationContext context)
@@ -100,31 +103,19 @@ namespace Raven.Server.Documents.Subscriptions
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
             {
-                var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name);
-                if (databaseRecord.Subscriptions.TryGetValue(id.ToString(), out SubscriptionRaftState subscriptionRaftState) == false)
-                {
-                    throw new SubscriptionDoesNotExistException(
-                            "There is no subscription configuration for specified identifier (id: " + id + ")");
-                }                
-                var criteria = subscriptionRaftState.Criteria;
-                var startChangeVector = subscriptionRaftState.ChangeVector;
-
-                return (criteria, startChangeVector);
+                var subscription = GetSubscriptionFromServerStore(serverStoreContext, id);
+                return (subscription.Criteria, subscription.ChangeVector);
             }            
         }
 
         public void AssertSubscriptionIdExists(long id, TimeSpan timeout)
         {
-            Task.WaitAny(_db.WaitForIndexNotification(id), Task.Delay(timeout));
-            
+            Task.WaitAny(_serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, id), Task.Delay(timeout));
+
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
             {
-                var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name);
-
-                if (databaseRecord.Subscriptions.ContainsKey(id.ToString()) == false)
-                    throw new SubscriptionDoesNotExistException(
-                            "There is no subscription configuration for specified identifier (id: " + id + ")");
+                GetSubscriptionFromServerStore(serverStoreContext, id);
             }
         }
 
@@ -132,16 +123,17 @@ namespace Raven.Server.Documents.Subscriptions
         {
             var command = new DeleteSubscriptionCommand(_db.Name)
             {
-                SubscriptionEtag = id                
+                SubscriptionId = id                
             };
 
-            var etag = await _serverStore.SendToLeaderAsync(command);
+            var etag = await _serverStore.SendToLeaderAsync(command.ToJson());
 
             if (_logger.IsInfoEnabled)
             {
                 _logger.Info($"Subscription with id {id} was deleted");
             }
-            await _db.WaitForIndexNotification(etag);           
+            //await _db.WaitForIndexNotification(etag);           
+            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.Equal, etag);
         }
 
         public bool DropSubscriptionConnection(long subscriptionId, string reason)
@@ -162,10 +154,9 @@ namespace Raven.Server.Documents.Subscriptions
 
         public IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions(TransactionOperationContext serverStoreContext, bool history, int start, int take)
         {
-            var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name);
-                        
-            foreach (var subscriptionGeneralData in databaseRecord.Subscriptions.Values.Select(x=> new SubscriptionGeneralDataAndStats(x)))
-            {                            
+            foreach (var subscriptionGeneralData in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
+                SubscriptionRaftState.GenerateSubscriptionPrefix(_db.Name)).Select(x=> new SubscriptionGeneralDataAndStats(JsonDeserializationClient.SubscriptionRaftState(x.Item2))))
+            {
                 GetSubscriptionInternal(subscriptionGeneralData, history);
                 yield return subscriptionGeneralData;
             }
@@ -199,9 +190,8 @@ namespace Raven.Server.Documents.Subscriptions
         }
 
         public IEnumerable<SubscriptionGeneralDataAndStats> GetAllRunningSubscriptions(TransactionOperationContext context, bool history, int start, int take)
-        {            
-            var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
-                
+        {
+
             foreach (var kvp in _subscriptionStates)
             {
                 var subscriptionState = kvp.Value;
@@ -218,31 +208,31 @@ namespace Raven.Server.Documents.Subscriptions
 
                 if (take-- <= 0)
                     yield break;
-                
-                var subscriptionData = GetSubscriptionGeneralData(databaseRecord, subscriptionId);
+
+                var subscriptionData = GetSubscriptionFromServerStore(context, subscriptionId);
                 GetRunningSubscriptionInternal(history, subscriptionData, subscriptionState);
                 yield return subscriptionData;
             }
-
-        }     
-
-        public SubscriptionGeneralDataAndStats GetSubscriptionGeneralData(DatabaseRecord databaseRecord, long id)
-        {
-            if (databaseRecord.Subscriptions.TryGetValue(id.ToString(), out SubscriptionRaftState subscriptionInDatabaseRecord) == false)
-                throw new SubscriptionDoesNotExistException(
-                        "There is no subscription configuration for specified identifier (id: " + id + ")");
-
-            return new SubscriptionGeneralDataAndStats(subscriptionInDatabaseRecord);
         }
 
         public unsafe SubscriptionGeneralDataAndStats GetSubscription(TransactionOperationContext context, long id, bool history)
         {
-            var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
+            var subscription = GetSubscriptionFromServerStore(context, id);
 
-            var subscriptionJsonValue = GetSubscriptionGeneralData(databaseRecord, id);
+            GetSubscriptionInternal(subscription, history);
 
-            GetSubscriptionInternal(subscriptionJsonValue, history);
+            return subscription;
+        }
 
+        private SubscriptionGeneralDataAndStats GetSubscriptionFromServerStore(TransactionOperationContext context, long id)
+        {
+            var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionRaftState.GenerateSubscriptionItemName(_db.Name,id));
+
+            if (subscriptionBlittable == null)
+                throw new SubscriptionDoesNotExistException($"Subscripiton with id {id} was not found in server store");
+
+            var subscriptionRaftState = JsonDeserializationClient.SubscriptionRaftState(subscriptionBlittable);
+            var subscriptionJsonValue = new SubscriptionGeneralDataAndStats(subscriptionRaftState);
             return subscriptionJsonValue;
         }
 
@@ -254,10 +244,8 @@ namespace Raven.Server.Documents.Subscriptions
 
             if (subscriptionState.Connection == null)
                 return null;
-
-            var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
-
-            var subscriptionJsonValue = GetSubscriptionGeneralData(databaseRecord, id);
+            
+            var subscriptionJsonValue = GetSubscriptionFromServerStore(context, id);
             GetRunningSubscriptionInternal(history, subscriptionJsonValue, subscriptionState);
             return subscriptionJsonValue;
         }
@@ -288,7 +276,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
 
-            var subscriptionData = GetSubscriptionGeneralData(databaseRecord, subscriptionId);
+            var subscriptionData = GetSubscriptionFromServerStore(context, subscriptionId);
             subscriptionData.Connection = subscriptionState.Connection;
             SetSubscriptionHistory(subscriptionState, subscriptionData);
 
@@ -303,10 +291,10 @@ namespace Raven.Server.Documents.Subscriptions
         public long GetAllSubscriptionsCount()
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                var databaseRecord = _serverStore.Cluster.Read(context, _db.Name);
-                databaseRecord.TryGet(nameof(DatabaseRecord.Subscriptions), out BlittableJsonReaderArray subscriptionsReader);
-                return subscriptionsReader.Length;
+                return ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionRaftState.GenerateSubscriptionPrefix(_db.Name))
+                    .Count();
             }            
         }        
 
@@ -341,21 +329,26 @@ namespace Raven.Server.Documents.Subscriptions
             using (context.OpenReadTransaction())
             {
                 var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
-
-
-                foreach (var subscripitonId in _subscriptionStates.Keys)
+                
+                foreach (var subscripitonStateKVP in _subscriptionStates)
                 {
-                    if (databaseRecord.Subscriptions.ContainsKey(subscripitonId.ToString()) == false)
+                    var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionRaftState.GenerateSubscriptionItemName(_db.Name, subscripitonStateKVP.Key));
+                    if (subscriptionBlittable== null)
                     {
-                        DropSubscriptionConnection(subscripitonId, "Deleted");
+                        DropSubscriptionConnection(subscripitonStateKVP.Key, "Deleted");
+                        continue;
+                    }
+                    var subscriptionRaftState = JsonDeserializationClient.SubscriptionRaftState(subscriptionBlittable);
+                    
+
+                    if (databaseRecord.Topology.IsItMyTask(subscriptionRaftState, _serverStore.NodeTag) == false)
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Disconnected subscripiton with id {subscripitonStateKVP.Key}, because it was is no longer managed by this nod ({_serverStore.NodeTag})");
+                        DropSubscriptionConnection(subscripitonStateKVP.Key, "Moved to another server");
                     }
                 }
-
-                // todo: treat here cases when a we should disconnect from subscription?
-
-
             }
-            
         }
     }
 }
