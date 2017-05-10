@@ -9,12 +9,12 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class AddDatabaseOperation : IServerOperation<CreateDatabaseResult>
+    public class AddDatabaseNodeOperation : IServerOperation<CreateDatabaseResult>
     {
         private readonly string _databaseName;
         private readonly string _node;
 
-        public AddDatabaseOperation(string databaseName, string node = null)
+        public AddDatabaseNodeOperation(string databaseName, string node = null)
         {
             MultiDatabase.AssertValidName(databaseName);
             _databaseName = databaseName;
@@ -23,16 +23,16 @@ namespace Raven.Client.Server.Operations
 
         public RavenCommand<CreateDatabaseResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new AddDatabaseCommand(_databaseName, _node, this);
+            return new AddDatabaseNodeCommand(_databaseName, _node, this);
         }
 
-        private class AddDatabaseCommand : RavenCommand<CreateDatabaseResult>
+        private class AddDatabaseNodeCommand : RavenCommand<CreateDatabaseResult>
         {
             private readonly string _databaseName;
             private readonly string _node;
 
-            public AddDatabaseCommand(string databaseName,
-                string node, AddDatabaseOperation addDatabaseOperation)
+            public AddDatabaseNodeCommand(string databaseName,
+                string node, AddDatabaseNodeOperation addDatabaseNodeOperation)
             {
                 if (string.IsNullOrEmpty(databaseName))
                     throw new ArgumentNullException(databaseName);
@@ -43,7 +43,7 @@ namespace Raven.Client.Server.Operations
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/add-database?name={_databaseName}";
+                url = $"{node.Url}/admin/databases/add-node?name={_databaseName}";
                 if (string.IsNullOrEmpty(_node) == false)
                 {
                     url += $"node={node}";

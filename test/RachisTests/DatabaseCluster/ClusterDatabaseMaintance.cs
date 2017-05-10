@@ -66,7 +66,7 @@ namespace RachisTests.DatabaseCluster
                     }
                 }
                 // to here
-                var res = await store.Admin.Server.SendAsync(new AddDatabaseOperation(databaseName));
+                var res = await store.Admin.Server.SendAsync(new AddDatabaseNodeOperation(databaseName));
 
                 Assert.Equal(1, res.Topology.Members.Count);
                 Assert.Equal(1, res.Topology.Promotables.Count);
