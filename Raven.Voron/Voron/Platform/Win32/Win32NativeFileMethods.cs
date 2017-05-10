@@ -317,7 +317,7 @@ namespace Voron.Platform.Win32
             public IntPtr NumberOfBytes;
         }
 
-        [DllImport("kernel32.dll", SetLastError = true)]
+        [DllImport("kernel32.dll", SetLastError = true, CallingConvention =CallingConvention.Winapi)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public extern static bool PrefetchVirtualMemory(IntPtr hProcess, UIntPtr NumberOfEntries,
             WIN32_MEMORY_RANGE_ENTRY* VirtualAddresses, ulong Flags);
