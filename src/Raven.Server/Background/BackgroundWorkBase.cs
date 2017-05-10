@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Background
 {
@@ -78,7 +79,8 @@ namespace Raven.Server.Background
         {
             try
             {
-                await Task.Delay(time, CancellationToken).ConfigureAwait(false); // if cancellation requested then it will throw TaskCancelledException and we stop the work
+                // if cancellation requested then it will throw TaskCancelledException and we stop the work
+                await TimeoutManager.WaitFor((int)time.TotalMilliseconds, CancellationToken).ConfigureAwait(false); 
             }
             catch (Exception e) when (e is OperationCanceledException == false)
             {

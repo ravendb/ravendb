@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Sparrow.Collections;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -64,7 +65,7 @@ namespace Raven.Server.Documents.Indexes
 
                 while (token.IsCancellationRequested == false)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(3), token);
+                    await TimeoutManager.WaitFor(3000, token).ConfigureAwait(false);
 
                     if (token.IsCancellationRequested)
                         break;

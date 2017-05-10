@@ -25,6 +25,7 @@ using Raven.Client.Server.Tcp;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Subscriptions
 {
@@ -608,7 +609,8 @@ namespace Raven.Client.Documents.Subscriptions
                         return;
                     }
 
-                    await Task.Delay(_options.TimeToWaitBeforeConnectionRetryMilliseconds).ConfigureAwait(false);
+                    await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetryMilliseconds).ConfigureAwait(false);
+
                 }
             }
             if (_proccessingCts.Token.IsCancellationRequested)

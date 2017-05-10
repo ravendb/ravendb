@@ -10,6 +10,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Maintance
 {
@@ -55,7 +56,7 @@ namespace Raven.Server.ServerWide.Maintance
                 try
                 {
                     var newStats = _maintenance.GetStats();
-                    var delay = Task.Delay(TimeSpan.FromMilliseconds(LeaderSamplePeriod), token);
+                    var delay = TimeoutManager.WaitFor((int)LeaderSamplePeriod, token);
                     await OnNewStatsArrival(newStats, prevStats);
                     prevStats = newStats;
                     await delay;
