@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Handlers
 
                     var commandData = await ReadSingleCommand(ctx, stream, state, parser, buffer, default(CancellationToken));
 
-                    if (commandData.Method == CommandType.PATCH)
+                    if (commandData.Type == CommandType.PATCH)
                     {
                         commandData.PatchCommand = patcher.GetPatchDocumentCommand(commandData.Key, commandData.Etag, commandData.Patch, commandData.PatchIfMissing,
                             skipPatchIfEtagMismatch: false, debugMode: false);

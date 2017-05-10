@@ -296,15 +296,15 @@ namespace Raven.Server.Documents.Handlers
                         }
                             break;
                         case CommandType.PATCH:
-                            // TODO: Move this code out of the merged transaction
-                            // TODO: We should have an object that handles this externally, 
-                            // TODO: and apply it there
+                            cmd.PatchCommand.Execute(context);
 
-                            var patchResult = Database.Patcher.Apply(context, cmd.Key, cmd.Etag, cmd.Patch, cmd.PatchIfMissing, skipPatchIfEtagMismatch: false, debugMode: false);
+                            var patchResult = cmd.PatchCommand.PatchResult;
                             if (patchResult.ModifiedDocument != null)
                                 context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, patchResult.ModifiedDocument.Size);
+
                             if (patchResult.Etag != null)
                                 LastEtag = patchResult.Etag.Value;
+
                             if (patchResult.Collection != null)
                                 ModifiedCollections?.Add(patchResult.Collection);
 
@@ -312,7 +312,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 ["Key"] = cmd.Key,
                                 ["Etag"] = patchResult.Etag,
-                                ["Type"] = CommandType.PATCH.ToString(),
+                                    ["Type"] = CommandType.PATCH.ToString(),
                                 ["PatchStatus"] = patchResult.Status.ToString(),
                             });
                             break;
