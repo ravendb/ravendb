@@ -4,15 +4,17 @@ using System.Text;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class CreateSubscriptionCommand: UpdateDatabaseCommand
+    public class CreateSubscriptionCommand: UpdateValueForDatabaseCommand
     {
         public SubscriptionCriteria Criteria;
         public ChangeVectorEntry[] InitialChangeVector;
 
+        private long? _subscriptionId;
         // for serialization
         private CreateSubscriptionCommand():base(null){}
 
@@ -20,9 +22,27 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string GetItemId()
         {
-            record.CreateSubscription(Criteria,etag, InitialChangeVector);
+            if (_subscriptionId.HasValue)
+                return SubscriptionRaftState.GenerateSubscriptionItemName(DatabaseName, _subscriptionId.Value);
+            return $"noValue";
+        }
+
+        public override DynamicJsonValue GetUpdatedValue(long index, DatabaseRecord record, BlittableJsonReaderObject existingValue)
+        {
+            if (existingValue != null)
+                throw new InvalidOperationException(); // todo: should not happen
+            _subscriptionId = index;
+            var rafValue = new SubscriptionRaftState()
+            {
+                Criteria = Criteria,
+                ChangeVector = InitialChangeVector,
+                SubscriptionId = index
+            };
+
+            return rafValue.ToJson();
+
         }
 
         public override void FillJson(DynamicJsonValue json)

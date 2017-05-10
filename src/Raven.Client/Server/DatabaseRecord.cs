@@ -56,8 +56,6 @@ namespace Raven.Client.Documents
 
         public PeriodicBackupConfiguration PeriodicBackup { get; set; }
 
-        public Dictionary<string, SubscriptionRaftState> Subscriptions;
-
         public void AddIndex(IndexDefinition definition)
         {
             if (Transformers != null && Transformers.ContainsKey(definition.Name))
@@ -168,35 +166,6 @@ namespace Raven.Client.Documents
         {
             Transformers?.Remove(name);
         }
-
-        public void CreateSubscription(SubscriptionCriteria criteria, long subscriptionId, ChangeVectorEntry[] initialChangeVector = null)
-        {
-            Subscriptions.Add(subscriptionId.ToString(), new SubscriptionRaftState()
-            {
-                SubscriptionId = subscriptionId,
-                ChangeVector = initialChangeVector,
-                Criteria = criteria
-            });
-        }
-
-        public void UpdateSusbscriptionChangeVector(long etag, ChangeVectorEntry[] changeVectorUpdate, string nodeTag)
-        {
-            var subscriptionRaftState = Subscriptions[etag.ToString()];
-            if (this.Topology.IsItMyTask(subscriptionRaftState, nodeTag) == false)
-                throw new InvalidOperationException($"Can't update subscription with id {etag} by node {nodeTag}, because it's not it's task to update this subscription");
-
-            subscriptionRaftState.TimeOfLastClientActivity = DateTime.UtcNow;
-            // todo: implement change vector comparison here, need to move some extention methods from server to client first
-            
-            subscriptionRaftState.ChangeVector = changeVectorUpdate;
-        }
-
-        public void DeleteSubscription(long etag)
-        {
-            Subscriptions.Remove(etag.ToString());
-        }
-
-        
     }
 
     public enum DeletionInProgressStatus

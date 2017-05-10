@@ -1,16 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Documents.Subscriptions;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class AcknowledgeSubscriptionBatchCommand:UpdateDatabaseCommand
+    public class AcknowledgeSubscriptionBatchCommand: UpdateValueForDatabaseCommand, IDatabaseTask
     {
         public ChangeVectorEntry[] ChangeVector;
-        public long SubscriptionEtag;
+        public long SubscriptionId;
         public string NodeTag;
 
         // for serializtion
@@ -20,16 +20,35 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
         }
 
-        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override string GetItemId() => SubscriptionRaftState.GenerateSubscriptionItemName(DatabaseName, SubscriptionId);
+        
+        public override DynamicJsonValue GetUpdatedValue(long index, DatabaseRecord record, BlittableJsonReaderObject existingValue)
         {
-            record.UpdateSusbscriptionChangeVector(SubscriptionEtag, ChangeVector,NodeTag);
+            if (existingValue == null)
+                throw new InvalidOperationException($"Subscription with id {SubscriptionId} does not exist");
+
+
+            if (record.Topology.IsItMyTask(this, NodeTag) == false)
+                throw new InvalidOperationException($"Can't update subscription with id {SubscriptionId} by node {NodeTag}, because it's not it's task to update this subscription");
+            
+            // todo: implement change vector comparison here, need to move some extention methods from server to client first
+            return new DynamicJsonValue(existingValue)
+            {
+                [nameof(SubscriptionRaftState.ChangeVector)] = ChangeVector.ToJson(),
+                [nameof(SubscriptionRaftState.TimeOfLastClientActivity)] = DateTime.UtcNow
+            };
         }
 
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(ChangeVector)] = ChangeVector?.ToJson();
-            json[nameof(SubscriptionEtag)] = SubscriptionEtag;
+            json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(NodeTag)] = NodeTag;
+        }
+
+        public ulong GetTaskKey()
+        {
+            return (ulong)SubscriptionId;
         }
     }
 }
