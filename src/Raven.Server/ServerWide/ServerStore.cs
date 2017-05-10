@@ -383,7 +383,8 @@ namespace Raven.Server.ServerWide
                     Sparrow.Memory.Copy(pHash + hashLen, pKey, key.Length);
 
                     var entropy = Sodium.GenerateRandomBuffer(256);
-                    var protectedData = ProtectedData.Protect(hash, entropy, DataProtectionScope.CurrentUser);
+
+                    var protectedData = SecretProtection.Protect(hash, entropy);
 
                     var ms = new MemoryStream();
                     ms.Write(entropy, 0, entropy.Length);
@@ -418,7 +419,7 @@ namespace Raven.Server.ServerWide
             var protectedData = new byte[reader.Length - entropy.Length];
             reader.Read(protectedData, 0, protectedData.Length);
 
-            var data = ProtectedData.Unprotect(protectedData, entropy, DataProtectionScope.CurrentUser);
+            var data = SecretProtection.Unprotect(protectedData, entropy);
 
             var hashLen = Sodium.crypto_generichash_bytes_max();
 

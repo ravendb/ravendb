@@ -72,7 +72,7 @@ namespace Voron.Platform.Posix
                 }
             }
 
-            if (PosixHelper.CheckSyncDirectoryAllowed(_filename) && PosixHelper.SyncDirectory(filename) == -1)
+            if (Syscall.CheckSyncDirectoryAllowed(_filename) && Syscall.SyncDirectory(filename) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err, "when syncing dir for on " + filename);
@@ -219,7 +219,7 @@ namespace Voron.Platform.Posix
                 Syscall.ThrowLastError(err, "when fsycning " + _filename);
             }
 
-            if (PosixHelper.CheckSyncDirectoryAllowed(_filename) && PosixHelper.SyncDirectory(_filename) == -1)
+            if (Syscall.CheckSyncDirectoryAllowed(_filename) && Syscall.SyncDirectory(_filename) == -1)
             {
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err, "when syncing dir for " + _filename);

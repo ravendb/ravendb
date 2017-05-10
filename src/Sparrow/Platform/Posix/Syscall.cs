@@ -95,6 +95,24 @@ namespace Sparrow.Platform.Posix
         public static extern int unlink(
             [MarshalAs(UnmanagedType.LPStr)] string filename);
 
+
+
+        // flock(2)
+        //    int flock(int fd, int operation); 
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int flock(
+            int fd,
+            FLockOperations operation);
+
+        [Flags]
+        public enum FLockOperations 
+        {
+            LOCK_SH = 1,
+            LOCK_EX = 2,
+            LOCK_NB = 4,
+            LOCK_UN = 8
+        }
+
         // open(2)
         //    int open(const char *pathname, int flags, mode_t mode);
         [DllImport(LIBC_6, SetLastError = true)]
@@ -206,6 +224,60 @@ namespace Sparrow.Platform.Posix
                 default:
                     throw new InvalidOperationException(error + " " + msg);
             }
+        }
+
+
+        public static void FsyncDirectoryFor(string file)
+        {
+            if (CheckSyncDirectoryAllowed(file) && SyncDirectory(file) == -1)
+            {
+                var err = Marshal.GetLastWin32Error();
+                Syscall.ThrowLastError(err, "fsync dir " + file);
+            }
+        }
+
+        public static bool CheckSyncDirectoryAllowed(string filepath)
+        {
+            var allMounts = DriveInfo.GetDrives();
+            var syncAllowed = true;
+            var matchSize = 0;
+            foreach (var m in allMounts)
+            {
+                var mountNameSize = m.Name.Length;
+                if (filepath.StartsWith(m.Name))
+                {
+                    if (mountNameSize > matchSize)
+                    {
+                        matchSize = mountNameSize;
+                        switch (m.DriveFormat)
+                        {
+                            // TODO : Add other types                            
+                            case "cifs":
+                            case "nfs":
+                                syncAllowed = false;
+                                break;
+                            default:
+                                syncAllowed = true;
+                                break;
+                        }
+                        if (m.DriveType == DriveType.Unknown)
+                            syncAllowed = false;
+                    }
+                }
+            }
+            return syncAllowed;
+        }
+
+        public static int SyncDirectory(string file)
+        {
+            var dir = Path.GetDirectoryName(file);
+            var fd = Syscall.open(dir, 0, 0);
+            if (fd == -1)
+                return -1;
+            var fsyncRc = Syscall.fsync(fd);
+            if (fsyncRc == -1)
+                return -1;
+            return Syscall.close(fd);
         }
     }
 }
