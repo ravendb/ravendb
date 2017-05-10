@@ -21,8 +21,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         }
 
         public override string GetItemId() => SubscriptionRaftState.GenerateSubscriptionItemName(DatabaseName, SubscriptionId);
-        
-        public override DynamicJsonValue GetUpdatedValue(long index, DatabaseRecord record, BlittableJsonReaderObject existingValue)
+        public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             if (existingValue == null)
                 throw new InvalidOperationException($"Subscription with id {SubscriptionId} does not exist");
@@ -30,13 +29,15 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             if (record.Topology.WhoseTaskIsIt(this) != NodeTag)
                 throw new InvalidOperationException($"Can't update subscription with id {SubscriptionId} by node {NodeTag}, because it's not it's task to update this subscription");
-            
+
             // todo: implement change vector comparison here, need to move some extention methods from server to client first
-            return new DynamicJsonValue(existingValue)
+            existingValue.Modifications = new DynamicJsonValue
             {
                 [nameof(SubscriptionRaftState.ChangeVector)] = ChangeVector.ToJson(),
                 [nameof(SubscriptionRaftState.TimeOfLastClientActivity)] = DateTime.UtcNow
             };
+
+            return context.ReadObject(existingValue, GetItemId());
         }
 
         public override void FillJson(DynamicJsonValue json)

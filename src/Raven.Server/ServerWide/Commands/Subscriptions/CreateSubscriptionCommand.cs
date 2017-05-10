@@ -29,10 +29,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             return $"noValue";
         }
 
-        public override DynamicJsonValue GetUpdatedValue(long index, DatabaseRecord record, BlittableJsonReaderObject existingValue)
+        public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
-            if (existingValue != null)
-                throw new InvalidOperationException(); // todo: should not happen
             _subscriptionId = index;
             var rafValue = new SubscriptionRaftState()
             {
@@ -41,8 +39,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 SubscriptionId = index
             };
 
-            return rafValue.ToJson();
-
+            return context.ReadObject(rafValue.ToJson(), GetItemId());
         }
 
         public override void FillJson(DynamicJsonValue json)

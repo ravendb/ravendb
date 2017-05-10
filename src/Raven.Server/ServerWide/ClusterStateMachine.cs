@@ -133,9 +133,8 @@ namespace Raven.Server.ServerWide
                     NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because does not exist"));
                     return;
                 }
-
-                DynamicJsonValue djv;
-                BlittableJsonReaderObject existingValue = null;
+                
+                BlittableJsonReaderObject itemBlittable = null;
 
                 var itemKey = updateCommand.GetItemId();
                 using (Slice.From(context.Allocator, itemKey, out Slice valueName))
@@ -144,16 +143,16 @@ namespace Raven.Server.ServerWide
                     if (items.ReadByKey(valueNameLowered, out TableValueReader reader))
                     {
                         var ptr = reader.Read(2, out int size);
-                        existingValue = new BlittableJsonReaderObject(ptr, size, context);
+                        itemBlittable = new BlittableJsonReaderObject(ptr, size, context);
                     }
 
 
                     try
                     {
-                        djv = updateCommand.GetUpdatedValue(index, record, existingValue);
+                        itemBlittable = updateCommand.GetUpdatedValue(index, record, context , itemBlittable);
 
                         // if returned null, means, there is nothing to update and we just wanted to delete the value
-                        if (djv == null)
+                        if (itemBlittable == null)
                         {
                             items.DeleteByKey(valueNameLowered);
                             return;
@@ -173,14 +172,7 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, itemKey, out Slice valueName))
                 using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    if (existingValue==null)
-                        existingValue = context.ReadObject(djv, updateCommand.GetItemId());
-
-                    using (var rec = context.ReadObject(existingValue, "inner-val"))
-                    {
-                        UpdateDatabaseRecord(index, items, valueNameLowered, valueName, rec);
-                    }
-                   
+                    UpdateDatabaseRecord(index, items, valueNameLowered, valueName, itemBlittable);
                 }
             }
             finally
