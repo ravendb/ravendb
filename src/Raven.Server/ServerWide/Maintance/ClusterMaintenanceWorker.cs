@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
@@ -26,7 +27,7 @@ namespace Raven.Server.ServerWide.Maintance
 
         public readonly TimeSpan WorkerSamplePeriod;
 
-        public ClusterMaintenanceWorker(TcpConnectionOptions tcp, CancellationToken externalToken, ServerStore serverStore,long term)
+        public ClusterMaintenanceWorker(TcpConnectionOptions tcp, CancellationToken externalToken, ServerStore serverStore, long term)
         {
             _tcp = tcp;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
@@ -76,7 +77,7 @@ namespace Raven.Server.ServerWide.Maintance
             }
         }
 
-        private IEnumerable<(string name ,DatabaseStatusReport report)> CollectDatabaseInformation(TransactionOperationContext ctx)
+        private IEnumerable<(string name, DatabaseStatusReport report)> CollectDatabaseInformation(TransactionOperationContext ctx)
         {
             foreach (var dbName in _server.Cluster.GetDatabaseNames(ctx))
             {
@@ -93,7 +94,7 @@ namespace Raven.Server.ServerWide.Maintance
                         Status = DatabaseStatus.Unloaded
                     };
                     yield return (dbName, report);
-                       
+
                     continue;
                 }
 
@@ -134,12 +135,20 @@ namespace Raven.Server.ServerWide.Maintance
                     report.LastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(tx.InnerTransaction);
                     report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
                     report.LastDocumentChangeVector = documentsStorage.GetDatabaseChangeVector(context);
-                }
-                if (indexStorage != null)
-                {
-                    foreach (var index in indexStorage.GetIndexes())
+
+                    if (indexStorage != null)
                     {
-                       report.LastIndexedTime.Add(index.Name, index.LastIndexingTime ?? default(DateTime));
+                        foreach (var index in indexStorage.GetIndexes())
+                        {
+                            var stats = index.GetIndexStats(context);
+
+                            report.LastIndexStats.Add(index.Name, new DatabaseStatusReport.ObservedIndexStatus
+                            {
+                                LastIndexedEtag = stats.lastProcessedEtag,
+                                IsSideBySide = false, // TODO: fix this so it get whatever this has side by side or not
+                                IsStale = stats.isStale
+                            });
+                        }
                     }
                 }
                 yield return (dbName, report);
@@ -152,17 +161,18 @@ namespace Raven.Server.ServerWide.Maintance
             _tcp.Dispose();
             try
             {
-            if (_collectingTask.Wait(TimeSpan.FromSeconds(30)) == false)
-            {
-                throw new ObjectDisposedException($"Collecting report task on {_server.NodeTag} still running and can't be closed");
-            }
+                if (_collectingTask.Wait(TimeSpan.FromSeconds(30)) == false)
+                {
+                    _collectingTask.IgnoreUnobservedExceptions();
+
+                    throw new ObjectDisposedException($"Collecting report task on {_server.NodeTag} still running and can't be closed");
+                }
             }
             finally
             {
-            _cts.Dispose();
-        }
+                _cts.Dispose();
+            }
         }
 
-        //TODO: consider creating finalizer to absolutely make sure we dispose the socket
     }
 }

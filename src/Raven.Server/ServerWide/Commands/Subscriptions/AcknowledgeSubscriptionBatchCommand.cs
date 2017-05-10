@@ -28,7 +28,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 throw new InvalidOperationException($"Subscription with id {SubscriptionId} does not exist");
 
 
-            if (record.Topology.IsItMyTask(this, NodeTag) == false)
+            if (record.Topology.WhoseTaskIsIt(this) != NodeTag)
                 throw new InvalidOperationException($"Can't update subscription with id {SubscriptionId} by node {NodeTag}, because it's not it's task to update this subscription");
             
             // todo: implement change vector comparison here, need to move some extention methods from server to client first

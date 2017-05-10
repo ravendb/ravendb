@@ -116,10 +116,22 @@ namespace Raven.Client.Documents
         public List<ReplicationNode> GetDestinations(string nodeTag, string databaseName)
         {
             var list = new List<ReplicationNode>();
-            list.AddRange(Members.Where(m => m.NodeTag != nodeTag));
-            list.AddRange(Promotables.Where(p => WhoseTaskIsIt(p,AllReplicationNodes()) == nodeTag));
-            list.AddRange(Watchers.Where(w => WhoseTaskIsIt(w,AllReplicationNodes()) == nodeTag));
-            list.Sort();
+            foreach (var member in Members)
+            {
+                if (member.NodeTag == nodeTag) //skip me
+                    continue;
+                list.Add(member);
+            }
+            foreach (var promotable in Promotables)
+            {
+                if (WhoseTaskIsIt(promotable) == nodeTag)
+                    list.Add(promotable);
+            }
+            foreach (var watcher in Watchers)
+            {
+                if (WhoseTaskIsIt(watcher) == nodeTag)
+                    list.Add(watcher);
+            }
             return list;
         }
 
@@ -226,9 +238,11 @@ namespace Raven.Client.Documents
             Promotables.RemoveAll(p=> p.NodeTag == delDbFromNode);
         }
 
-        public static string WhoseTaskIsIt(IDatabaseTask task, IEnumerable<ReplicationNode> incomingTopology)
+        public string WhoseTaskIsIt(IDatabaseTask task)
         {
-            var topology = new List<ReplicationNode>(incomingTopology); // local copy so we can safely change it
+            bool needCopy = true;
+
+            var topology = Members;
             var key = task.GetTaskKey();
             while (true)
             {
@@ -237,9 +251,16 @@ namespace Raven.Client.Documents
                 if (entry.Disabled == false)
                     return entry.NodeTag;
 
+                if (needCopy)
+                {
+                    needCopy = false; // copy so we can modify the list safely
+                    topology = new List<DatabaseTopologyNode>(Members);
+                }
+
                 topology.RemoveAt(index);
 
-                key = Hashing.Combine(key, (ulong)topology.Count);
+                // rehash so it will likely go to a different member in the cluster
+                key = Hashing.Mix(key);
             }
         }
 

@@ -163,7 +163,7 @@ namespace Raven.Server.Rachis
             try
             {
                 _persistentState = env;
-                ElectionTimeoutMs = configuration.ElectionTimeout.AsTimeSpan.Milliseconds * (Debugger.IsAttached ? 10 : 1);
+                ElectionTimeoutMs = (int)configuration.ElectionTimeout.AsTimeSpan.TotalMilliseconds * (Debugger.IsAttached ? 10 : 1);
                 ContextPool = new TransactionContextPool(_persistentState);
 
                 ClusterTopology topology;

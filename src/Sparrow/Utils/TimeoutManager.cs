@@ -57,33 +57,36 @@ namespace Sparrow.Utils
 
         public static Task WaitFor(int duration)
         {
-            var mod = duration % 50;
-            if (mod != 0)
-                duration += 50 - mod;
+            return Task.Delay(duration);
 
-            if (Values.TryGetValue(duration, out var value))
-                return value.NextTask;
+            //var mod = duration % 50;
+            //if (mod != 0)
+            //    duration += 50 - mod;
 
-            value = Values.GetOrAdd(duration, d => new TimerTaskHolder(d));
-            return value.NextTask;
+            //if (Values.TryGetValue(duration, out var value))
+            //    return value.NextTask;
+
+            //value = Values.GetOrAdd(duration, d => new TimerTaskHolder(d));
+            //return value.NextTask;
         }
 
-        public static async Task WaitFor(int duration, CancellationToken token)
+        public static  Task WaitFor(int duration, CancellationToken token)
         {
-            token.ThrowIfCancellationRequested();
-            // ReSharper disable once MethodSupportsCancellation
-            var task = WaitFor(duration);
-            if (token == CancellationToken.None || token.CanBeCanceled == false)
-            {
-                await task;
-                return;
-            }
+            return Task.Delay(duration, token);
+            //token.ThrowIfCancellationRequested();
+            //// ReSharper disable once MethodSupportsCancellation
+            //var task = WaitFor(duration);
+            //if (token == CancellationToken.None || token.CanBeCanceled == false)
+            //{
+            //    await task;
+            //    return;
+            //}
 
-            var onCancel = new TaskCompletionSource<object>();
-            using (token.Register(tcs => onCancel.TrySetCanceled(), onCancel))
-            {
-                await Task.WhenAny(task, onCancel.Task);
-            }
+            //var onCancel = new TaskCompletionSource<object>();
+            //using (token.Register(tcs => onCancel.TrySetCanceled(), onCancel))
+            //{
+            //    await Task.WhenAny(task, onCancel.Task);
+            //}
         }
     }
 }

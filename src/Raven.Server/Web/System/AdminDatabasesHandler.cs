@@ -168,7 +168,6 @@ namespace Raven.Server.Web.System
             }
         }
         
-        // create new database cluster
         [RavenAction("/admin/databases", "PUT", "/admin/databases/{databaseName:string}")]
         public async Task Put()
         {
