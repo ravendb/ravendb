@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -37,7 +36,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public string Key { get; }
         public long? Etag { get; }
         public T Document { get; }
-        public HttpMethod Method => HttpMethod.Put;
+        public CommandType Type { get; } = CommandType.PUT;
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
@@ -46,7 +45,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(Key)] = Key,
                 [nameof(Etag)] = Etag,
                 [nameof(Document)] = Document,
-                [nameof(Method)] = Method.Method
+                [nameof(Type)] = Type.ToString()
             };
         }
     }

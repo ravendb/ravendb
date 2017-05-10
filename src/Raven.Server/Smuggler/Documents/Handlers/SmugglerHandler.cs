@@ -347,11 +347,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                     if (section == null)
                                         break;
 
-                                    ContentDispositionHeaderValue contentDisposition;
-                                    var hasContentDispositionHeader = ContentDispositionHeaderValue.TryParse(section.ContentDisposition,
-                                        out contentDisposition);
-
-                                    if (hasContentDispositionHeader == false)
+                                    if (ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out ContentDispositionHeaderValue contentDisposition) == false)
                                         continue;
 
                                     if (MultipartRequestHelper.HasFormDataContentDisposition(contentDisposition))

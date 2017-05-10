@@ -41,39 +41,33 @@ namespace Raven.Client.Documents.Session.Operations
                 return;
             }
 
-            for (var i = _deferredCommandsCount; i < result.Results.Length; i++)
+            for (var i = 0; i < result.Results.Length - _deferredCommandsCount; i++)
             {
                 var batchResult = result.Results[i] as BlittableJsonReaderObject;
                 if (batchResult == null)
                     throw new ArgumentNullException();
 
-                string methodType;
-                batchResult.TryGet("Method", out methodType);
+                batchResult.TryGet("Type", out string type);
 
-                if (methodType != "PUT")
+                if (type != "PUT")
                     continue;
 
-                var entity = _entities[i - _deferredCommandsCount];
-                DocumentInfo documentInfo;
-
-                if (_session.DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
+                var entity = _entities[i];
+                if (_session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo documentInfo) == false)
                     continue;
 
-                long? etag;
-                if (batchResult.TryGet(Constants.Documents.Metadata.Etag, out etag) == false || etag == null)
+                if (batchResult.TryGet(Constants.Documents.Metadata.Etag, out long? etag) == false || etag == null)
                     throw new InvalidOperationException("PUT response is invalid. @etag is missing.");
 
-                string key;
-                if (batchResult.TryGet(Constants.Documents.Metadata.Id, out key) == false || key == null)
+                if (batchResult.TryGet(Constants.Documents.Metadata.Id, out string key) == false || key == null)
                     throw new InvalidOperationException("PUT response is invalid. @id is missing.");
-
 
                 documentInfo.Metadata.Modifications = null;
                 documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
 
                 foreach (var propertyName in batchResult.GetPropertyNames())
                 {
-                    if(propertyName == "Method")
+                    if(propertyName == "Type")
                         continue;
 
                     documentInfo.Metadata.Modifications[propertyName] = batchResult[propertyName];

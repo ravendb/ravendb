@@ -25,5 +25,15 @@ namespace Raven.Client.Documents.Session
         /// Returns the revision attachment by the document id and attachment name.
         /// </summary>
         AttachmentResult GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector, Action<AttachmentResult, Stream> stream);
+
+        /// <summary>
+        /// Stores attachment to be sent in the session.
+        /// </summary>
+        void StoreAttachment(string documentId, string name, Stream stream, string contentType = null);
+        
+        /// <summary>
+        /// Stores attachment to be sent in the session.
+        /// </summary>
+        void StoreAttachment(object entity, string name, Stream stream, string contentType = null);
     }
 }

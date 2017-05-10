@@ -1,5 +1,4 @@
-﻿using System.Net.Http;
-using Raven.Client.Documents.Conventions;
+﻿using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -11,8 +10,17 @@ namespace Raven.Client.Documents.Commands.Batches
 
         long? Etag { get; }
 
-        HttpMethod Method { get; }
+        CommandType Type { get; }
 
         DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context);
+    }
+
+    public enum CommandType
+    {
+        None,
+        PUT,
+        PATCH,
+        DELETE,
+        AttachmentPUT
     }
 }

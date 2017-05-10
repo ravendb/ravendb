@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -19,6 +20,7 @@ using Raven.Client.Documents.Exceptions.Session;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -137,7 +139,7 @@ namespace Raven.Client.Documents.Session
         /// <value></value>
         public bool UseOptimisticConcurrency { get; set; }
 
-        private readonly List<ICommandData> _deferedCommands = new List<ICommandData>();
+        protected readonly List<ICommandData> _deferedCommands = new List<ICommandData>();
         public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; }
         public EntityToBlittable EntityToBlittable { get; }
 
@@ -707,14 +709,44 @@ more responsive application.
             var result = new SaveChangesData
             {
                 Entities = new List<object>(),
-                Commands = new List<ICommandData>(_deferedCommands),
+                Commands = new List<ICommandData>(),
                 DeferredCommandsCount = _deferedCommands.Count,
                 Options = _saveChangesOptions
             };
-            _deferedCommands.Clear();
 
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
+
+            if (result.DeferredCommandsCount == 0)
+            {
+                result.Commands.AddRange(_deferedCommands);
+            }
+            else
+            {
+                foreach (var deferedCommand in _deferedCommands)
+                {
+                    foreach (var command in result.Commands)
+                    {
+                        if (deferedCommand.Type == CommandType.AttachmentPUT)
+                        {
+                            if (command is PutAttachmentCommandData putAttachmentCommand &&
+                                ((PutAttachmentCommandData)command).Name == putAttachmentCommand.Name &&
+                                deferedCommand.Key == command.Key)
+                            {
+                                // TODO: Throw here and test.
+                            }
+                            continue;
+                        }
+
+                        if ((command.Type != CommandType.PATCH || deferedCommand.Type != CommandType.PATCH) &&
+                            deferedCommand.Key == command.Key)
+                            ThrowInvalidModifiedDocumentWithDefferredCommand(deferedCommand);
+                    }
+
+                    result.Commands.Add(deferedCommand);
+                }
+            }
+            _deferedCommands.Clear();
 
             return result;
         }
@@ -737,8 +769,7 @@ more responsive application.
         {
             foreach (var deletedEntity in DeletedEntities)
             {
-                DocumentInfo documentInfo;
-                if (!DocumentsByEntity.TryGetValue(deletedEntity, out documentInfo)) continue;
+                if (!DocumentsByEntity.TryGetValue(deletedEntity, out DocumentInfo documentInfo)) continue;
                 if (changes != null)
                 {
                     var docChanges = new List<DocumentsChanges>();
@@ -788,15 +819,6 @@ more responsive application.
                 if (entity.Value.IgnoreChanges || EntityChanged(document, entity.Value, null) == false)
                     continue;
 
-                if (result.DeferredCommandsCount > 0)
-                {
-                    foreach (var resultCommand in result.Commands)
-                    {
-                        if(resultCommand.Key == entity.Value.Id)
-                            ThrowInvalidModifiedDocumentWithDefferredCommand(resultCommand);
-                    }
-                }
-
                 var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
                 OnBeforeStore?.Invoke(this, beforeStoreEventArgs);
                 if ((OnBeforeStore != null) && EntityChanged(document, entity.Value, null))
@@ -823,7 +845,7 @@ more responsive application.
         private static void ThrowInvalidModifiedDocumentWithDefferredCommand(ICommandData resultCommand)
         {
             throw new InvalidOperationException(
-                $"Cannot perfrom save because document {resultCommand.Key} has been modified by the session and is also taking part in deferred {resultCommand.Method} command");
+                $"Cannot perfrom save because document {resultCommand.Key} has been modified by the session and is also taking part in deferred {resultCommand.Type} command");
         }
 
         protected bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)

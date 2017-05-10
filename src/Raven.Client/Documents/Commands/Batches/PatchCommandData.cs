@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public long? Etag { get; }
         public PatchRequest Patch { get; }
         public PatchRequest PatchIfMissing { get; }
-        public HttpMethod Method => HttpMethods.Patch;
+        public CommandType Type { get; } = CommandType.PATCH;
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(Key)] = Key,
                 [nameof(Etag)] = Etag,
                 [nameof(Patch)] = Patch.ToJson(conventions, context),
-                [nameof(Method)] = Method.Method
+                [nameof(Type)] = Type.ToString()
             };
 
             if (PatchIfMissing != null)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -7,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Util;
@@ -77,10 +79,35 @@ namespace Raven.Server.Web
             return gZipStream;
         }
 
+        protected Stream GetBodyStream(MultipartSection section)
+        {
+            var bodyStream = section.Body;
+
+            if (IsGzipRequest(section.Headers) == false)
+                return bodyStream;
+
+            var gZipStream = new GZipStream(bodyStream, CompressionMode.Decompress);
+            HttpContext.Response.RegisterForDispose(gZipStream);
+            return gZipStream;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool IsGzipRequest()
         {
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var val in HttpContext.Request.Headers["Content-Encoding"])
+            {
+                if (val == "gzip")
+                    return true;
+            }
+            return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsGzipRequest(Dictionary<string, StringValues> headers)
+        {
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var val in headers["Content-Encoding"])
             {
                 if (val == "gzip")
                     return true;
