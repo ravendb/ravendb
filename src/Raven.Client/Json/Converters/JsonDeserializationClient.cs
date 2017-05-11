@@ -108,6 +108,6 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, GetPeriodicBackupStatusOperationResult> GetPeriodicBackupStatusOperationResult = GenerateJsonDeserializationRoutine<GetPeriodicBackupStatusOperationResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureVersioningOperationResult> ConfigureVersioningOperationResult = GenerateJsonDeserializationRoutine<ConfigureVersioningOperationResult>();
-        internal static readonly Func<BlittableJsonReaderObject, SubscriptionState> SubscriptionRaftState = GenerateJsonDeserializationRoutine<SubscriptionState>();
+        internal static readonly Func<BlittableJsonReaderObject, SubscriptionState> SubscriptionState = GenerateJsonDeserializationRoutine<SubscriptionState>();
     }
 }

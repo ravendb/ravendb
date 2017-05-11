@@ -24,7 +24,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
         }
 
-        public override string GetItemId() => SubscriptionRaftState.GenerateSubscriptionItemName(DatabaseName, SubscriptionId);
+        public override string GetItemId() => SubscriptionState.GenerateSubscriptionItemName(DatabaseName, SubscriptionId);
         public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             if (existingValue == null)
@@ -34,7 +34,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (record.Topology.WhoseTaskIsIt(this) != NodeTag)
                 throw new InvalidOperationException($"Can't update subscription with id {SubscriptionId} by node {NodeTag}, because it's not it's task to update this subscription");
 
-            var subscripiton = new SubscriptionRaftState();
+            var subscripiton = new SubscriptionState();
             subscripiton.FillFromBlittableJson(existingValue);
             if (subscripiton.LastEtagReachedInServer == null)
                 subscripiton.LastEtagReachedInServer = new Dictionary<Guid, long>();

@@ -491,7 +491,6 @@ namespace Raven.Client.Documents.Subscriptions
 
             if (_logger.IsInfoEnabled)
             {
-                // todo: make writing of change vector more efficient, maybe move ChangeVectorExtensions from server to client..
                 _logger.Info($"Got {id} (etag: [{string.Join(",", lastReceivedChangeVector.Select(x => $"{x.DbId.ToString()}:{x.Etag}"))}] on subscription {_options.SubscriptionId}, size {curDoc.Size}");
             }
 
