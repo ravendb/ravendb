@@ -67,19 +67,16 @@ namespace FastTests.Client.Attachments
                             Assert.Equal(3, attachment.GetNumber(nameof(AttachmentResult.Size)));
                         }
                     }
-                }
 
-                AttachmentsCrud.AssertAttachmentCount(store, 3, 3);
+                    AttachmentsCrud.AssertAttachmentCount(store, 3, 3);
 
-                using (var session = store.OpenSession())
-                {
                     var readBuffer = new byte[8];
                     for (var i = 0; i < names.Length; i++)
                     {
                         var name = names[i];
                         using (var attachmentStream = new MemoryStream(readBuffer))
                         {
-                            var attachment = session.Advanced.GetAttachment("users/1", name, (result, stream) => stream.CopyTo(attachmentStream));
+                            var attachment = session.Advanced.GetAttachment(user, name, (result, stream) => stream.CopyTo(attachmentStream));
                             Assert.Equal(2 + 2 * i, attachment.Etag);
                             Assert.Equal(name, attachment.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
@@ -130,14 +127,15 @@ namespace FastTests.Client.Attachments
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User {Name = "Fitzchak"}, "users/1");
+                    var user = new User {Name = "Fitzchak"};
+                    session.Store(user, "users/1");
                     
                     using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
-                        session.Advanced.StoreAttachment("users/1", names[0], profileStream, "image/png");
+                        session.Advanced.StoreAttachment(user, names[0], profileStream, "image/png");
                     using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
-                        session.Advanced.StoreAttachment("users/1", names[1], backgroundStream, "ImGgE/jPeG");
+                        session.Advanced.StoreAttachment(user, names[1], backgroundStream, "ImGgE/jPeG");
                     using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
-                        session.Advanced.StoreAttachment("users/1", names[2], fileStream, null);
+                        session.Advanced.StoreAttachment(user, names[2], fileStream, null);
 
                     session.SaveChanges();
                 }
