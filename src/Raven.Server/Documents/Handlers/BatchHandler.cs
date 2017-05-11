@@ -29,7 +29,8 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (var mergedCmd = new MergedBatchCommand{Database = Database})
             {
-                if (HttpContext.Request.ContentType != null) // multipart/mixed
+                if (HttpContext.Request.ContentType != null && 
+                    HttpContext.Request.ContentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase))
                 {
                     var boundary = MultipartRequestHelper.GetBoundary(
                         MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
