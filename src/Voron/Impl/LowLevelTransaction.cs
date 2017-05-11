@@ -174,9 +174,11 @@ namespace Voron.Impl
             
             foreach (var scratchAndDataPagerState in previous._pagerStates)
             {
+                // in order to avoid "dragging" pager state ref on non active scratch - we will not copy disposed scratches from previous async tx. RavenDB-6766
                 if (scratchAndDataPagerState.DiscardOnTxCopy)
                     continue;
 
+                // copy the "current pager" which is the last pager used, and by that do not "drag" old non used pager state refs to the next async commit (i.e. older views of data file). RavenDB-6949
                 var currentPager = scratchAndDataPagerState.CurrentPager;
                 if (pagers.Add(currentPager) == false)
                     continue;
