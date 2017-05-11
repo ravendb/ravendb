@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// It downloads a list of all existing subscriptions in a database.
         /// </summary>
         /// <returns>Existing subscriptions' configurations.</returns>
-        Task<List<SubscriptionRaftState>> GetSubscriptionsAsync(int start, int take, string database = null);
+        Task<List<SubscriptionState>> GetSubscriptionsAsync(int start, int take, string database = null);
 
         /// <summary>
         /// It deletes a subscription.

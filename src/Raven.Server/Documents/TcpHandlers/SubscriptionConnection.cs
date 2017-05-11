@@ -338,19 +338,54 @@ namespace Raven.Server.Documents.TcpHandlers
             using (RegisterForNotificationOnNewDocuments(subscription.Criteria))
             {
                 var replyFromClientTask = GetReplyFromClientAsync();
-                var reachecChangeVectorGreaterThanTheOneInSubscription = false;
-                var startEtag = GetStartEtagForSubscription(docsContext, subscription, ref reachecChangeVectorGreaterThanTheOneInSubscription);
+                var reachedChangeVectorGreaterThanTheOneInSubscription = false;
+                var startEtag = GetStartEtagForSubscription(docsContext, subscription, ref reachedChangeVectorGreaterThanTheOneInSubscription);
 
                 ChangeVectorEntry[] lastChangeVector = null;
 
                 var patch = SetupFilterScript(subscription.Criteria);
-                // todo: see how we save the progress in scanning big gaps
+                
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
                     bool anyDocumentsSentInCurrentIteration = false;
                     using (docsContext.OpenReadTransaction())
                     {
-                        //todo: here find first document etag that conflicts or greater than subscription's change vector, also, do it with heartbeats
+                        var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
+
+                        // First, skip all documents with etag smaller than subscription's
+                        var etagsAndChangeVectors = TcpConnection.DocumentDatabase.DocumentsStorage.GetChangeVectorsFrom(docsContext,
+                            subscription.Criteria.Collection,
+                            startEtag + 1,
+                            0,
+                            _options.MaxDocsPerBatch).GetEnumerator();
+
+                        while (true)
+                        {
+                            if (etagsAndChangeVectors.MoveNext() == false)
+                                break;
+
+                            var (changeVector,curEtag) = etagsAndChangeVectors.Current;
+                            var conflictStatus = ConflictsStorage.GetConflictStatus(
+                                remote: changeVector,
+                                local: subscription.ChangeVector);
+
+                            if (conflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged)
+                            {
+                                startEtag = curEtag;
+                            }
+                            else
+                            {
+                                break;
+                            }
+
+                            // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
+                            if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
+                            {
+                                await SendHeartBeat();
+                                sendingCurrentBatchStopwatch.Reset();
+                            }
+                        }
+                        
                         var documents = TcpConnection.DocumentDatabase.DocumentsStorage.GetDocumentsFrom(
                             docsContext,
                             subscription.Criteria.Collection,
@@ -360,8 +395,6 @@ namespace Raven.Server.Documents.TcpHandlers
                         _buffer.SetLength(0);
 
                         var docsToFlush = 0;
-
-                        var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
 
                         JsonOperationContext context;
                         using (TcpConnection.ContextPool.AllocateOperationContext(out context))
@@ -373,7 +406,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 {
 
                                     BlittableJsonReaderObject transformResult;
-                                    if (ShouldSendDocument(subscription, patch, docsContext, doc, ref reachecChangeVectorGreaterThanTheOneInSubscription, out transformResult) ==
+                                    if (ShouldSendDocument(subscription, patch, docsContext, doc, ref reachedChangeVectorGreaterThanTheOneInSubscription, out transformResult) ==
                                         false)
                                     {
                                         // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
@@ -385,7 +418,6 @@ namespace Raven.Server.Documents.TcpHandlers
                                         continue;
                                     }
                                     
-                                    // todo: maybe call something with less allocations..
                                     lastChangeVector = ChangeVectorUtils.MergeVectors(doc.ChangeVector, subscription.ChangeVector);
                                     anyDocumentsSentInCurrentIteration = true;
                                     startEtag = doc.Etag;
