@@ -27,16 +27,5 @@ namespace Raven.Client.Util
         }
 
         public static DateTime UtcNow => Instance.GetUtcNow();
-
-        public static void Wait(int durationMs)
-        {
-            var waitCalled = Instance.WaitCalled;
-            if (waitCalled != null)
-            {
-                waitCalled(durationMs);
-                return;
-            }
-            Thread.Sleep(durationMs);
-        }
     }
 }

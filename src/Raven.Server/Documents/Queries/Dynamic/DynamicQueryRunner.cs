@@ -11,6 +11,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
@@ -279,7 +280,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     // we'll give it a few seconds to drain any pending queries,
                     // and because it make it easier to demonstrate how we auto
                     // clear the old auto indexes.
-                    await Task.Delay(TimeSpan.FromSeconds(15));
+
+                    await TimeoutManager.WaitFor(15000).ConfigureAwait(false);
 
                     foreach (var supercededIndex in map.SupercededIndexes)
                     {

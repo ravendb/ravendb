@@ -8,8 +8,10 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Raven.Server.Config.Settings;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintance;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -119,7 +121,10 @@ namespace Tests.Infrastructure
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : _count;
             var rachis = new RachisConsensus<CountingStateMachine>(seed);
             var storageEnvironment = new StorageEnvironment(server);
-            rachis.Initialize(storageEnvironment);
+            rachis.Initialize(storageEnvironment,new ClusterConfiguration
+            {
+                ElectionTimeout = new TimeSetting(300,TimeUnit.Milliseconds)
+            });
             rachis.OnDispose += (sender, args) =>
             {
                 storageEnvironment.Dispose();

@@ -13,7 +13,7 @@ namespace Raven.Server.ServerWide.Maintance
         Unloaded,
         Shutdown,
     }
-    
+
     public class DatabaseStatusReport : IDynamicJson
     {
         public string Name;
@@ -21,8 +21,14 @@ namespace Raven.Server.ServerWide.Maintance
 
         public ChangeVectorEntry[] LastDocumentChangeVector;
 
-        // <index name,etag diff>
-        public Dictionary<string,long> LastIndexedDocumentEtag = new Dictionary<string, long>();
+        public Dictionary<string, ObservedIndexStatus> LastIndexStats = new Dictionary<string, ObservedIndexStatus>();
+
+        public class ObservedIndexStatus
+        {
+            public bool IsSideBySide;
+            public long LastIndexedEtag;
+            public bool IsStale;
+        }
 
         public long LastEtag;
         public long LastTombstoneEtag;
@@ -33,7 +39,7 @@ namespace Raven.Server.ServerWide.Maintance
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
+            var dynamicJsonValue = new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
                 [nameof(NodeName)] = NodeName,
@@ -42,9 +48,22 @@ namespace Raven.Server.ServerWide.Maintance
                 [nameof(LastTombstoneEtag)] = LastTombstoneEtag,
                 [nameof(NumberOfConflicts)] = NumberOfConflicts,
                 [nameof(LastDocumentChangeVector)] = LastDocumentChangeVector?.ToJson(),
-                [nameof(LastIndexedDocumentEtag)] = DynamicJsonValue.Convert(LastIndexedDocumentEtag),
-                [nameof(FailureToLoad)] = FailureToLoad,              
+                [nameof(FailureToLoad)] = FailureToLoad,
             };
+            var indexStats = new DynamicJsonValue();
+
+            foreach (var stat in LastIndexStats)
+            {
+                indexStats[stat.Key] = new DynamicJsonValue
+                {
+                    [nameof(stat.Value.LastIndexedEtag)] = stat.Value.LastIndexedEtag,
+                    [nameof(stat.Value.IsSideBySide)] = stat.Value.IsSideBySide,
+                    [nameof(stat.Value.IsStale)] = stat.Value.IsStale
+                };
+            }
+
+            dynamicJsonValue[nameof(LastIndexStats)] = indexStats;
+            return dynamicJsonValue;
         }
     }
 
@@ -59,8 +78,8 @@ namespace Raven.Server.ServerWide.Maintance
             Error,
             Ok
         }
-    
-        public readonly Dictionary<string,DatabaseStatusReport> LastReport;
+
+        public readonly Dictionary<string, DatabaseStatusReport> LastReport;
 
         public readonly ReportStatus LastReportStatus;
 

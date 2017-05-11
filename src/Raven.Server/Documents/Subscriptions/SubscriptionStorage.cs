@@ -330,22 +330,22 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 var databaseRecord = _serverStore.Cluster.ReadDatabase(context, _db.Name);
                 
-                foreach (var subscripitonStateKVP in _subscriptionStates)
+                foreach (var subscripitonStateKvp in _subscriptionStates)
                 {
-                    var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionRaftState.GenerateSubscriptionItemName(_db.Name, subscripitonStateKVP.Key));
+                    var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionRaftState.GenerateSubscriptionItemName(_db.Name, subscripitonStateKvp.Key));
                     if (subscriptionBlittable== null)
                     {
-                        DropSubscriptionConnection(subscripitonStateKVP.Key, "Deleted");
+                        DropSubscriptionConnection(subscripitonStateKvp.Key, "Deleted");
                         continue;
                     }
                     var subscriptionRaftState = JsonDeserializationClient.SubscriptionRaftState(subscriptionBlittable);
                     
 
-                    if (databaseRecord.Topology.IsItMyTask(subscriptionRaftState, _serverStore.NodeTag) == false)
+                    if (databaseRecord.Topology.WhoseTaskIsIt(subscriptionRaftState) != _serverStore.NodeTag)
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Disconnected subscripiton with id {subscripitonStateKVP.Key}, because it was is no longer managed by this nod ({_serverStore.NodeTag})");
-                        DropSubscriptionConnection(subscripitonStateKVP.Key, "Moved to another server");
+                            _logger.Info($"Disconnected subscripiton with id {subscripitonStateKvp.Key}, because it was is no longer managed by this node ({_serverStore.NodeTag})");
+                        DropSubscriptionConnection(subscripitonStateKvp.Key, "Moved to another server");
                     }
                 }
             }

@@ -32,7 +32,7 @@ namespace Raven.Server.Config
 
         public ReplicationConfiguration Replication { get; }
 
-        public ClusterMaintainceConfiguration ClusterMaintaince { get; }
+        public ClusterConfiguration Cluster { get; }
 
         public StorageConfiguration Storage { get; }
 
@@ -85,7 +85,7 @@ namespace Raven.Server.Config
             Core = new CoreConfiguration();
 
             Replication = new ReplicationConfiguration();
-            ClusterMaintaince = new ClusterMaintainceConfiguration();
+            Cluster = new ClusterConfiguration();
             Etl = new EtlConfiguration();
             Storage = new StorageConfiguration();
             Encryption = new EncryptionConfiguration();
@@ -146,7 +146,7 @@ namespace Raven.Server.Config
         {
             Core.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Replication.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            ClusterMaintaince.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Cluster.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Etl.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Queries.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Patching.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);

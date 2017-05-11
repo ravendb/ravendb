@@ -95,6 +95,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
+        // add database to already existing database group
         [RavenAction("/admin/databases/add-node", "POST", "/admin/databases/add-node?name={databaseName:string}&node={nodeName:string|optional}")]
         public async Task AddDatabaseNode()
         {
@@ -119,13 +120,17 @@ namespace Raven.Server.Web.System
                     if (databaseRecord.Topology.RelevantFor(node))
                         throw new InvalidOperationException($"Can't add node {node} to {name} topology because it is already part of it");
 
-                    AddNode(clusterTopology, databaseRecord.Topology, name, node);
+                    databaseRecord.Topology.Promotables.Add(new DatabaseTopologyNode
+                    {
+                        Database = name,
+                        NodeTag = node,
+                        Url = clusterTopology.GetUrlFromTag(node)
+                    });
                 }
 
                 //The case were we don't care where the database will be added to
                 else
-                {                    
-                    
+                {                                        
                     var allNodes = clusterTopology.Members.Keys
                         .Concat(clusterTopology.Promotables.Keys)
                         .Concat(clusterTopology.Watchers.Keys)
@@ -133,7 +138,13 @@ namespace Raven.Server.Web.System
                     allNodes.RemoveAll(n => databaseRecord.Topology.AllNodes.Contains(n));
                     var rand = new Random().Next();
                     var newNode = allNodes[rand % allNodes.Count];
-                    AddNode(clusterTopology, databaseRecord.Topology, name, newNode);
+
+                    databaseRecord.Topology.Promotables.Add(new DatabaseTopologyNode
+                    {
+                        Database = name,
+                        NodeTag = newNode,
+                        Url = clusterTopology.GetUrlFromTag(newNode)
+                    });                   
                 }
 
                 var topologyJson = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
@@ -156,29 +167,7 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-
-        private static void AddNode(ClusterTopology clusterTopology, DatabaseTopology topology, string name, string node)
-        {
-            if (topology.AllNodes.Count() == 0)
-            {
-                topology.Members.Add(new DatabaseTopologyNode
-                {
-                    Database = name,
-                    NodeTag = node,
-                    Url = clusterTopology.GetUrlFromTag(node)
-                });
-            }
-            else
-            {
-                topology.Promotables.Add(new DatabaseTopologyNode
-                {
-                    Database = name,
-                    NodeTag = node,
-                    Url = clusterTopology.GetUrlFromTag(node)
-                });
-            }
-        }
-
+        
         [RavenAction("/admin/databases", "PUT", "/admin/databases/{databaseName:string}")]
         public async Task Put()
         {

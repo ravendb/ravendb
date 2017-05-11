@@ -25,6 +25,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         ErrorSavingReduceOutputDocuments,
         CatastrophicDatabaseFailure,
         NonDurableFileSystem,
-        RecoveryError
+        RecoveryError,
+
+        ClusterTopologyWarning
     }
 }
