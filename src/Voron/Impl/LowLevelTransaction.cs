@@ -170,11 +170,32 @@ namespace Voron.Impl
                 journalFile.AddRef();
             }
 
-            foreach (var scratchPagerState in previous._pagerStates)
+            // here we copy (and add ref) the _current_ pager (which is the last pager pointed by the memory mapped file), and by that avoiding dragging references to not used data and scratch files
+
+            var pages = previous.GetTransactionPages();
+
+            var pagerStatesOfActivelyUsedScratch = new HashSet<PagerState>();
+            foreach (var page in pages)
             {
-                scratchPagerState.AddRef();
-                _pagerStates.Add(scratchPagerState);
+                var item = previous.Environment.ScratchBufferPool.GetScratchBufferFile(page.ScratchFileNumber);
+
+                ScratchBufferFile bufferFile = item.File;
+                if (bufferFile.HasActivelyUsedBytes(previous.Id))
+                    pagerStatesOfActivelyUsedScratch.Add(bufferFile.PagerState);
+
             }
+
+            foreach (var scratchAndDataPagerState in previous._pagerStates)
+            {
+                var currentState = scratchAndDataPagerState.CurrentPagerState;
+                if (pagerStatesOfActivelyUsedScratch.Contains(scratchAndDataPagerState) ||
+                    previous.DataPager.PagerState == scratchAndDataPagerState)
+                {
+                    currentState.AddRef();
+                    _pagerStates.Add(currentState);
+                }               
+            }
+
 
             EnsureNoDuplicateTransactionId(_id);
 
