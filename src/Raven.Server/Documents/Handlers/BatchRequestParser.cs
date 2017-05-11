@@ -450,7 +450,7 @@ namespace Raven.Server.Documents.Handlers
 
                 case 5:
                     if (*(int*)state.StringBuffer != 1668571472 ||
-                       (state.StringBuffer[4]) != (byte)'h')
+                        state.StringBuffer[4] != (byte)'h')
                         return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.Patch;
 
@@ -462,7 +462,9 @@ namespace Raven.Server.Documents.Handlers
                     return CommandPropertyName.PatchIfMissing;
 
                 case 11:
-                    if (*(long*)state.StringBuffer == 7594869363257730379)
+                    if (*(long*)state.StringBuffer == 7594869363257730379 &&
+                        *(short*)(state.StringBuffer + sizeof(long)) == 25976 &&
+                        state.StringBuffer[sizeof(long) + sizeof(short)] == (byte)'d')
                         return CommandPropertyName.KeyPrefixed;
                     if (*(long*)state.StringBuffer == 6085610378508529475 &&
                         *(short*)(state.StringBuffer + sizeof(long)) == 28793 &&
