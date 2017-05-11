@@ -20,6 +20,23 @@ namespace Raven.Client.Documents.Commands.Batches
             Stream = stream;
             ContentType = contentType;
             Etag = etag;
+
+            if (Stream.CanSeek == false)
+                ThrowNotSeekableStream();
+            if (Stream.Position != 0)
+                ThrowPositionNotZero(Stream.Position);
+        }
+
+        private void ThrowPositionNotZero(long streamPosition)
+        {
+            throw new InvalidOperationException($"Cannot put an attachment with a stream that have position which isn't zero but {streamPosition}.");
+        }
+
+        private void ThrowNotSeekableStream()
+        {
+            throw new InvalidOperationException(
+                "Cannot put an attachment with a not seekable stream. " +
+                "We require a seekable stream because we might failover to a differnt node if the current one is unavilalbe during the operation.");
         }
 
         public string Key { get; }
