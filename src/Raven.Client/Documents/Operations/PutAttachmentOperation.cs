@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Operations
         private readonly string _contentType;
         private readonly long? _etag;
 
-        public PutAttachmentOperation(string documentId, string name, Stream stream, string contentType, long? etag = null)
+        public PutAttachmentOperation(string documentId, string name, Stream stream, string contentType = null, long? etag = null)
         {
             _documentId = documentId;
             _name = name;

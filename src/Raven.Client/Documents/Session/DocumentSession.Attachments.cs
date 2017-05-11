@@ -25,6 +25,15 @@ namespace Raven.Client.Documents.Session
             return DocumentStore.Operations.Send(operation);
         }
 
+        public AttachmentResult GetAttachment(object entity, string name, Action<AttachmentResult, Stream> stream)
+        {
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                ThrowEntityNotInSession(entity);
+
+            var operation = new GetAttachmentOperation(document.Id, name, stream, AttachmentType.Document, null);
+            return DocumentStore.Operations.Send(operation);
+        }
+
         public AttachmentResult GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector, Action<AttachmentResult, Stream> stream)
         {
             var operation = new GetAttachmentOperation(documentId, name, stream, AttachmentType.Revision, changeVector);
@@ -54,10 +63,15 @@ namespace Raven.Client.Documents.Session
         public void StoreAttachment(object entity, string name, Stream stream, string contentType = null)
         {
             if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
-                throw new ArgumentException(entity + " is not associated with the session, cannot add attachment to it. " +
-                                            "Use documentId instead or track the entity in the session.", nameof(entity));
+                ThrowEntityNotInSession(entity);
 
             StoreAttachment(document.Id, name, stream, contentType);
+        }
+
+        private void ThrowEntityNotInSession(object entity)
+        {
+            throw new ArgumentException(entity + " is not associated with the session, cannot add attachment to it. " +
+                                        "Use documentId instead or track the entity in the session.", nameof(entity));
         }
     }
 }
