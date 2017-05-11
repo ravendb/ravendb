@@ -54,7 +54,8 @@ namespace Raven.Client.Documents.Session
         public void StoreAttachment(object entity, string name, Stream stream, string contentType = null)
         {
             if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
-                throw new ArgumentException("Entity is not tracked in the seesion. Use documentId instead or track the entity in the session.", nameof(entity));
+                throw new ArgumentException(entity + " is not associated with the session, cannot add attachment to it. " +
+                                            "Use documentId instead or track the entity in the session.", nameof(entity));
 
             StoreAttachment(document.Id, name, stream, contentType);
         }

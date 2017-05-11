@@ -116,14 +116,26 @@ namespace Raven.Client.Documents
         public List<ReplicationNode> GetDestinations(string nodeTag, string databaseName)
         {
             var list = new List<ReplicationNode>();
-            list.AddRange(Members.Where(m => m.NodeTag != nodeTag));
-            list.AddRange(Promotables.Where(p => IsItMyTask(p, nodeTag)));
-            list.AddRange(Watchers.Where(w => IsItMyTask(w, nodeTag)));
-            list.Sort();
+            foreach (var member in Members)
+            {
+                if (member.NodeTag == nodeTag) //skip me
+                    continue;
+                list.Add(member);
+            }
+            foreach (var promotable in Promotables)
+            {
+                if (WhoseTaskIsIt(promotable) == nodeTag)
+                    list.Add(promotable);
+            }
+            foreach (var watcher in Watchers)
+            {
+                if (WhoseTaskIsIt(watcher) == nodeTag)
+                    list.Add(watcher);
+            }
             return list;
         }
 
-        public static (List<ReplicationNode> nodesToAdd, List<ReplicationNode> nodesToRemove) FindConnectionChanges(List<ReplicationNode> oldDestinations, List<ReplicationNode> newDestinations)
+        public static (List<ReplicationNode> addDestinations, List<ReplicationNode> removeDestinations) FindConnectionChanges(List<ReplicationNode> oldDestinations, List<ReplicationNode> newDestinations)
         {
             var addDestinations = new List<ReplicationNode>();
             var removeDestinations = new List<ReplicationNode>();
@@ -195,10 +207,6 @@ namespace Raven.Client.Documents
                 {
                     yield return promotable.NodeTag;
                 }
-                foreach (var watcher in Watchers)
-                {
-                    yield return watcher.NodeTag;
-                }
             }
         }
 
@@ -211,10 +219,6 @@ namespace Raven.Client.Documents
             foreach (var promotable in Promotables)
             {
                 yield return promotable;
-            }
-            foreach (var watcher in Watchers)
-            {
-                yield return watcher;
             }
         }
 
@@ -232,19 +236,33 @@ namespace Raven.Client.Documents
         {
             Members.RemoveAll(m => m.NodeTag == delDbFromNode);
             Promotables.RemoveAll(p=> p.NodeTag == delDbFromNode);
-            Watchers.RemoveAll(w=> w.NodeTag == delDbFromNode);
         }
 
-        public bool IsItMyTask(IDatabaseTask task, string nodeTag)
+        public string WhoseTaskIsIt(IDatabaseTask task)
         {
-            var myPosition = Members.FindIndex(s => s.NodeTag == nodeTag);
-            if (myPosition == -1) //not a member
-            {
-                return false;
-            }
+            bool needCopy = true;
 
-            //TODO : ask Oren here about suspentions.. (review comments in github)
-            return Hashing.JumpConsistentHash.Calculate(task.GetTaskKey(), Members.Count) == myPosition;
+            var topology = Members;
+            var key = task.GetTaskKey();
+            while (true)
+            {
+                var index = (int)Hashing.JumpConsistentHash.Calculate(key, topology.Count);
+                var entry = topology[index];
+                if (entry.Disabled == false)
+                    return entry.NodeTag;
+
+                if (needCopy)
+                {
+                    needCopy = false; // copy so we can modify the list safely
+                    topology = new List<DatabaseTopologyNode>(Members);
+                }
+
+                topology.RemoveAt(index);
+
+                // rehash so it will likely go to a different member in the cluster
+                key = Hashing.Mix(key);
+            }
         }
+
     }
 }

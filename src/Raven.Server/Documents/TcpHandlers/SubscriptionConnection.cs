@@ -22,6 +22,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.Extensions;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -466,7 +467,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             while (true)
                             {
                                 var result = await Task.WhenAny(replyFromClientTask,
-                                    Task.Delay(TimeSpan.FromSeconds(5), CancellationTokenSource.Token));
+                                    TimeoutManager.WaitFor(5000, CancellationTokenSource.Token)).ConfigureAwait(false);
                                 CancellationTokenSource.Token.ThrowIfCancellationRequested();
                                 if (result == replyFromClientTask)
                                 {
@@ -629,7 +630,8 @@ namespace Raven.Server.Documents.TcpHandlers
             do
             {
                 var hasMoreDocsTask = _waitForMoreDocuments.WaitAsync();
-                var resultingTask = await Task.WhenAny(hasMoreDocsTask, pendingReply, Task.Delay(3000));
+                var resultingTask = await Task.WhenAny(hasMoreDocsTask, pendingReply, TimeoutManager.WaitFor(3000)).ConfigureAwait(false);
+
                 if (CancellationTokenSource.IsCancellationRequested)
                     return false;
                 if (resultingTask == pendingReply)

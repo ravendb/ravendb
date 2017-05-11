@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Handlers
                                 commandData.Key = null;
                                 break;
                             case JsonParserToken.String:
-                                commandData.Key = GetDocumentKey(state);
+                                commandData.Key = GetStringPropertyValue(state);
                                 break;
                             default:
                                 ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -226,7 +226,7 @@ namespace Raven.Server.Documents.Handlers
                                 commandData.Name = null;
                                 break;
                             case JsonParserToken.String:
-                                commandData.Name = GetDocumentKey(state);
+                                commandData.Name = GetStringPropertyValue(state);
                                 break;
                             default:
                                 ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -242,7 +242,7 @@ namespace Raven.Server.Documents.Handlers
                                 commandData.ContentType = string.Empty;
                                 break;
                             case JsonParserToken.String:
-                                commandData.ContentType = GetDocumentKey(state);
+                                commandData.ContentType = GetStringPropertyValue(state);
                                 break;
                             default:
                                 ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -396,7 +396,7 @@ namespace Raven.Server.Documents.Handlers
             return reader;
         }
 
-        private static unsafe string GetDocumentKey(JsonParserState state)
+        private static unsafe string GetStringPropertyValue(JsonParserState state)
         {
             return Encoding.UTF8.GetString(state.StringBuffer, state.StringSize);
         }
@@ -450,7 +450,7 @@ namespace Raven.Server.Documents.Handlers
 
                 case 5:
                     if (*(int*)state.StringBuffer != 1668571472 ||
-                       (state.StringBuffer[4]) != (byte)'h')
+                        state.StringBuffer[4] != (byte)'h')
                         return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.Patch;
 
@@ -462,7 +462,9 @@ namespace Raven.Server.Documents.Handlers
                     return CommandPropertyName.PatchIfMissing;
 
                 case 11:
-                    if (*(long*)state.StringBuffer == 7594869363257730379)
+                    if (*(long*)state.StringBuffer == 7594869363257730379 &&
+                        *(short*)(state.StringBuffer + sizeof(long)) == 25976 &&
+                        state.StringBuffer[sizeof(long) + sizeof(short)] == (byte)'d')
                         return CommandPropertyName.KeyPrefixed;
                     if (*(long*)state.StringBuffer == 6085610378508529475 &&
                         *(short*)(state.StringBuffer + sizeof(long)) == 28793 &&

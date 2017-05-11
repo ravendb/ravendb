@@ -215,6 +215,38 @@ namespace FastTests
             throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);
         }
 
+
+        protected async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal)
+        {
+            int timeout = 15000;
+            if (Debugger.IsAttached)
+                timeout *= 100;
+            var sw = Stopwatch.StartNew();
+            do
+            {
+                try
+                {
+                    var currentVal = await act();
+                    if (expectedVal.Equals(currentVal))
+                    {
+                        return currentVal;
+                    }
+                    if (sw.ElapsedMilliseconds > timeout)
+                    {
+                        return currentVal;
+                    }
+                }
+                catch
+                {
+                    if (sw.ElapsedMilliseconds <= timeout)
+                    {
+                        throw;
+                    }
+                }
+                await Task.Delay(100);
+            } while (true);
+        }
+
         protected T WaitForValue<T>(Func<T> act, T expectedVal)
         {
             int timeout = 15000;

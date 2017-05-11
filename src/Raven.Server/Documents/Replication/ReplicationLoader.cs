@@ -398,16 +398,16 @@ namespace Raven.Server.Documents.Replication
 
             var newDestinations = newRecord.Topology.GetDestinations(_server.NodeTag, Database.Name);
             var connectionChanged = DatabaseTopology.FindConnectionChanges(_destinations, newDestinations);
-            _destinations = newDestinations;
 
-            if (connectionChanged.nodesToRemove.Count > 0)
+            if (connectionChanged.removeDestinations.Count > 0)
             {
-                DropOutgoingConnections(connectionChanged.nodesToRemove);
+                DropOutgoingConnections(connectionChanged.removeDestinations);
             }
-            if (connectionChanged.nodesToAdd.Count > 0)
+            if (connectionChanged.addDestinations.Count > 0)
             {
-                StartOutgoingConnections(connectionChanged.nodesToAdd);
+                StartOutgoingConnections(connectionChanged.addDestinations);
             }
+            _destinations = newDestinations;
         }
 
         private void StartOutgoingConnections(IReadOnlyCollection<ReplicationNode> connectionsToAdd)
@@ -742,7 +742,8 @@ namespace Raven.Server.Documents.Replication
                 if (remaining < TimeSpan.Zero)
                     return ReplicatedPast(lastEtag);
 
-                var timeout = Task.Delay(remaining);
+                var timeout = TimeoutManager.WaitFor((int)remaining.TotalMilliseconds);
+
                 try
                 {
                     if (await Task.WhenAny(waitForNextReplicationAsync, timeout) == timeout)

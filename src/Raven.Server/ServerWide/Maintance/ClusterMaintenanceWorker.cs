@@ -3,16 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Maintance
 {
-    public class ClusterMaintenanceSlave : IDisposable
+    public class ClusterMaintenanceWorker : IDisposable
     {
         private readonly TcpConnectionOptions _tcp;
         private readonly ServerStore _server;
@@ -23,16 +25,16 @@ namespace Raven.Server.ServerWide.Maintance
 
         public readonly long CurrentTerm;
 
-        public readonly long NodeSamplePeriod;
+        public readonly TimeSpan WorkerSamplePeriod;
 
-        public ClusterMaintenanceSlave(TcpConnectionOptions tcp, CancellationToken externalToken, ServerStore serverStore,long term)
+        public ClusterMaintenanceWorker(TcpConnectionOptions tcp, CancellationToken externalToken, ServerStore serverStore, long term)
         {
             _tcp = tcp;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
             _token = _cts.Token;
             _server = serverStore;
-            NodeSamplePeriod = (long)_server.Configuration.ClusterMaintaince.NodeSamplePeriod.AsTimeSpan.TotalMilliseconds;
-            _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceSlave>($"Logger on {serverStore.NodeTag}");
+            WorkerSamplePeriod = _server.Configuration.Cluster.WorkerSamplePeriod.AsTimeSpan;
+            _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceWorker>($"Logger on {serverStore.NodeTag}");
             CurrentTerm = term;
         }
 
@@ -51,11 +53,17 @@ namespace Raven.Server.ServerWide.Maintance
                     using (ctx.OpenReadTransaction())
                     {
                         var dbs = CollectDatabaseInformation(ctx);
+                        var djv = new DynamicJsonValue();
+                        foreach (var tuple in dbs)
+                        {
+                            djv[tuple.name] = tuple.report;
+                        }
                         using (var writer = new BlittableJsonTextWriter(ctx, _tcp.Stream))
                         {
-                            ctx.Write(writer, DynamicJsonValue.Convert(dbs.ToDictionary(k => k.Item1, v => v.Item2)));
+                            ctx.Write(writer, djv);
                         }
                     }
+                    await TimeoutManager.WaitFor((int)WorkerSamplePeriod.TotalMilliseconds, _token).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -65,14 +73,11 @@ namespace Raven.Server.ServerWide.Maintance
                     }
                     return;
                 }
-                finally
-                {
-                    await Task.Delay(TimeSpan.FromMilliseconds(NodeSamplePeriod), _token);
-                }
+
             }
         }
 
-        private IEnumerable<(string,DatabaseStatusReport)> CollectDatabaseInformation(TransactionOperationContext ctx)
+        private IEnumerable<(string name, DatabaseStatusReport report)> CollectDatabaseInformation(TransactionOperationContext ctx)
         {
             foreach (var dbName in _server.Cluster.GetDatabaseNames(ctx))
             {
@@ -89,7 +94,7 @@ namespace Raven.Server.ServerWide.Maintance
                         Status = DatabaseStatus.Unloaded
                     };
                     yield return (dbName, report);
-                       
+
                     continue;
                 }
 
@@ -130,12 +135,20 @@ namespace Raven.Server.ServerWide.Maintance
                     report.LastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(tx.InnerTransaction);
                     report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
                     report.LastDocumentChangeVector = documentsStorage.GetDatabaseChangeVector(context);
-                }
-                if (indexStorage != null)
-                {
-                    foreach (var index in indexStorage.GetIndexes())
+
+                    if (indexStorage != null)
                     {
-                        report.LastIndexedDocumentEtag.Add(index.Name, report.LastEtag - index.Etag);
+                        foreach (var index in indexStorage.GetIndexes())
+                        {
+                            var stats = index.GetIndexStats(context);
+
+                            report.LastIndexStats.Add(index.Name, new DatabaseStatusReport.ObservedIndexStatus
+                            {
+                                LastIndexedEtag = stats.lastProcessedEtag,
+                                IsSideBySide = false, // TODO: fix this so it get whatever this has side by side or not
+                                IsStale = stats.isStale
+                            });
+                        }
                     }
                 }
                 yield return (dbName, report);
@@ -146,13 +159,20 @@ namespace Raven.Server.ServerWide.Maintance
         {
             _cts.Cancel();
             _tcp.Dispose();
-            if (_collectingTask.Wait(TimeSpan.FromSeconds(30)) == false)
+            try
             {
-                throw new ObjectDisposedException($"Collecting report task on {_server.NodeTag} still running and can't be closed");
+                if (_collectingTask.Wait(TimeSpan.FromSeconds(30)) == false)
+                {
+                    _collectingTask.IgnoreUnobservedExceptions();
+
+                    throw new ObjectDisposedException($"Collecting report task on {_server.NodeTag} still running and can't be closed");
+                }
             }
-            _cts.Dispose();
+            finally
+            {
+                _cts.Dispose();
+            }
         }
 
-        //TODO: consider creating finalizer to absolutely make sure we dispose the socket
     }
 }

@@ -117,11 +117,7 @@ namespace Tests.Infrastructure
             foreach (var store in stores)
                 tasks.Add(Task.Run(() => WaitForDocument(store, docId, predicate, (int)timeout.TotalMilliseconds)));
 
-            var timeoutTask = Task.Delay(timeout);
-            await Task.WhenAny(Task.WhenAll(tasks), timeoutTask);
-
-            if (timeoutTask.IsCompleted)
-                throw new TimeoutException();
+            await Task.WhenAll(tasks);
 
             return tasks.All(x => x.Result);
         }
@@ -166,6 +162,7 @@ namespace Tests.Infrastructure
                         // expected that we might get conflict, ignore and wait
                     }
                 }
+                Task.Delay(100);
             }
             using (var session = store.OpenSession())
             {

@@ -5,11 +5,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Server.Documents;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Maintance
 {
@@ -17,32 +19,32 @@ namespace Raven.Server.ServerWide.Maintance
     {
         private readonly Task _observe;
         private readonly CancellationTokenSource _cts;
-        private readonly ClusterMaintenanceMaster _maintenance;
+        private readonly ClusterMaintenanceSupervisor _maintenance;
         private readonly string _nodeTag;
         private readonly RachisConsensus<ClusterStateMachine> _engine;
         private readonly TransactionContextPool _contextPool;
         private readonly Logger _logger;
 
-        public readonly long MaxIndexEtagInterval;
-        public readonly long LeaderSamplePeriod;
-        
+        public readonly TimeSpan SupervisorSamplePeriod;
+        private readonly ServerStore _server;
+
         public ClusterObserver(
-            ClusterMaintenanceMaster maintenance,
             ServerStore server,
+            ClusterMaintenanceSupervisor maintenance,
             RachisConsensus<ClusterStateMachine> engine,
             TransactionContextPool contextPool,
             CancellationToken token)
         {
             _maintenance = maintenance;
             _nodeTag = server.NodeTag;
+            _server = server;
             _engine = engine;
             _contextPool = contextPool;
             _logger = LoggingSource.Instance.GetLogger<ClusterObserver>(_nodeTag);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
 
-            var config = server.Configuration.ClusterMaintaince;
-            LeaderSamplePeriod = (long)config.LeaderSamplePeriod.AsTimeSpan.TotalMilliseconds;
-            MaxIndexEtagInterval = config.MaxIndexEtagInterval;
+            var config = server.Configuration.Cluster;
+            SupervisorSamplePeriod = config.SupervisorSamplePeriod.AsTimeSpan;
 
             _observe = Run(_cts.Token);
         }
@@ -55,8 +57,9 @@ namespace Raven.Server.ServerWide.Maintance
                 try
                 {
                     var newStats = _maintenance.GetStats();
-                    var delay = Task.Delay(TimeSpan.FromMilliseconds(LeaderSamplePeriod), token);
-                    await OnNewStatsArrival(newStats, prevStats);
+
+                    var delay = TimeoutManager.WaitFor((int)SupervisorSamplePeriod.TotalMilliseconds, token);
+                    await AnalyzeLatestStats(newStats, prevStats);
                     prevStats = newStats;
                     await delay;
                 }
@@ -64,17 +67,17 @@ namespace Raven.Server.ServerWide.Maintance
                 {
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info($"Closing observer on {_nodeTag}, caused by an interrupt.",e);
+                        _logger.Info($"Closing observer on {_nodeTag}, caused by an interrupt.", e);
                     }
                     return;
                 }
             }
         }
 
-        public async Task OnNewStatsArrival(
-            Dictionary<string, ClusterNodeStatusReport> newStats, 
+        public async Task AnalyzeLatestStats(
+            Dictionary<string, ClusterNodeStatusReport> newStats,
             Dictionary<string, ClusterNodeStatusReport> prevStats)
-        {          
+        {
             foreach (var database in GetDatabases())
             {
                 var (topology, etag) = GetTopology(database);
@@ -82,7 +85,7 @@ namespace Raven.Server.ServerWide.Maintance
                 if (UpdateDatabaseTopology(database, topology, newStats, prevStats))
                 {
                     await UpdateTopology(database, topology, etag);
-                }                   
+                }
             }
         }
 
@@ -98,7 +101,7 @@ namespace Raven.Server.ServerWide.Maintance
             }
         }
 
-        private bool UpdateDatabaseTopology(string dbName, DatabaseTopology topology, 
+        private bool UpdateDatabaseTopology(string dbName, DatabaseTopology topology,
             Dictionary<string, ClusterNodeStatusReport> currentClusterStats,
             Dictionary<string, ClusterNodeStatusReport> previousClusterStats)
         {
@@ -108,7 +111,7 @@ namespace Raven.Server.ServerWide.Maintance
                 foreach (var member in topology.Members)
                 {
                     if (currentClusterStats.TryGetValue(member.NodeTag, out var nodeStats) &&
-                        nodeStats.LastReportStatus == ClusterNodeStatusReport.ReportStatus.Ok && 
+                        nodeStats.LastReportStatus == ClusterNodeStatusReport.ReportStatus.Ok &&
                         nodeStats.LastReport.TryGetValue(dbName, out var dbStats) &&
                         dbStats.Status == DatabaseStatus.Loaded)
                     {
@@ -118,13 +121,22 @@ namespace Raven.Server.ServerWide.Maintance
 
                 if (hasLivingNode == false)
                 {
+                    var alertMsg = $"It appears that all nodes of the {dbName} database are dead, and we can't demote the last member-node left.";
+                    var alert = AlertRaised.Create(
+                        "No living nodes in the database topology",
+                        alertMsg,
+                        AlertType.ClusterTopologyWarning,
+                        NotificationSeverity.Warning
+                       );
+
+                    _server.NotificationCenter.Add(alert);
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info($"It appears that all nodes of the {dbName} database are dead, and we can't demote the last member-node left.");
+                        _logger.Info(alertMsg);
                     }
                     return false;
                 }
-                   
+
                 foreach (var member in topology.Members)
                 {
                     if (currentClusterStats.TryGetValue(member.NodeTag, out var nodeStats) == false ||
@@ -134,9 +146,9 @@ namespace Raven.Server.ServerWide.Maintance
                     {
                         topology.Members.Remove(member);
                         topology.Promotables.Add(member);
-                        if (_logger.IsInfoEnabled)
+                        if (_logger.IsOperationsEnabled)
                         {
-                            _logger.Info($"We demote the database {dbName} on {member.NodeTag}");
+                            _logger.Operations($"We demote the database {dbName} on {member.NodeTag}");
                         }
                         return true;
                     }
@@ -149,9 +161,9 @@ namespace Raven.Server.ServerWide.Maintance
                         {
                             topology.Members.Remove(member);
                             topology.Promotables.Add(member);
-                            if (_logger.IsInfoEnabled)
+                            if (_logger.IsOperationsEnabled)
                             {
-                                _logger.Info($"We demote the database {dbName} on {member.NodeTag}, because it is too long in Loading state.");
+                                _logger.Operations($"We demote the database {dbName} on {member.NodeTag}, because it is too long in Loading state.");
                             }
                             return true;
                         }
@@ -164,52 +176,78 @@ namespace Raven.Server.ServerWide.Maintance
 
             foreach (var promotable in topology.Promotables)
             {
-                var index = (int)Hashing.JumpConsistentHash.Calculate(promotable.GetTaskKey(), topology.Members.Count);
-                var mentor = topology.Members[index];
-                if(previousClusterStats.TryGetValue(mentor.NodeTag, out var mentorPrevClusterStats) == false ||
+                var mentorNode = topology.WhoseTaskIsIt(promotable);
+
+                if (previousClusterStats.TryGetValue(mentorNode, out var mentorPrevClusterStats) == false ||
                     mentorPrevClusterStats.LastReport.TryGetValue(dbName, out var mentorPrevDbStats) == false)
                     continue;
 
-                if(currentClusterStats.TryGetValue(promotable.NodeTag, out var promotableClusterStats) == false ||
+                if (currentClusterStats.TryGetValue(promotable.NodeTag, out var promotableClusterStats) == false ||
                    promotableClusterStats.LastReport.TryGetValue(dbName, out var promotableDbStats) == false)
                     continue;
 
-                var mentorIndexes = mentorPrevDbStats.LastIndexedDocumentEtag.Select(i => i.Key);
-                var indexesCatchedUp = CheckIndexProgress(mentorIndexes, promotableDbStats.LastIndexedDocumentEtag);
-
                 var status = ConflictsStorage.GetConflictStatus(mentorPrevDbStats.LastDocumentChangeVector, promotableDbStats.LastDocumentChangeVector);
-                if (status == ConflictsStorage.ConflictStatus.AlreadyMerged && indexesCatchedUp)
+                if (status == ConflictsStorage.ConflictStatus.AlreadyMerged)
                 {
-                    topology.Promotables.Remove(promotable);
-                    topology.Members.Add(promotable);
-                    if (_logger.IsInfoEnabled)
+                    if (previousClusterStats.TryGetValue(promotable.NodeTag, out var promotablePrevClusterStats) == false ||
+                        promotablePrevClusterStats.LastReport.TryGetValue(dbName, out var promotablePrevDbStats) == false)
+                        continue;
+
+                    var indexesCatchedUp = CheckIndexProgress(promotablePrevDbStats.LastEtag, promotablePrevDbStats.LastIndexStats, promotableDbStats.LastIndexStats);
+                    if (indexesCatchedUp)
                     {
-                        _logger.Info($"We promte the database {dbName} on {promotable.NodeTag}");
+                        topology.Promotables.Remove(promotable);
+                        topology.Members.Add(promotable);
+                        if (_logger.IsOperationsEnabled)
+                        {
+                            _logger.Operations($"We promte the database {dbName} on {promotable.NodeTag} to be a full member");
+                        }
+                        return true;
                     }
-                    return true;
-                }               
+                }
             }
             return false;
         }
-        
 
-        private bool CheckIndexProgress(IEnumerable<string> indexNames, Dictionary<string, long> databaseChangeIndexes)
+
+        private bool CheckIndexProgress(
+            long lastPrevEtag,
+            Dictionary<string, DatabaseStatusReport.ObservedIndexStatus> previous,
+            Dictionary<string, DatabaseStatusReport.ObservedIndexStatus> current)
         {
-            foreach (var index in indexNames)
+            /*
+            Here we are being a bit tricky. A database node is consider ready for promotion when
+            it's replication is one cycle behind its mentor, but there are still indexes to consider.
+
+            If we just replicate a whole bunch of stuff and indexes are catching up, we want to only
+            promote when the indexes actually caught up. We do that by also requiring that all indexes
+            will be either fully caught up (non stale) or that they are at most a single cycle behind.
+
+            This is check by looking at the global etag from the previous round, and comparing it to the 
+            last etag that each index indexed in the current round. Note that techincally, we need to compare
+            on a per collection basis, but we can avoid it by noting that if the collection's last etag is
+            not beyond the previous max etag, then the index will therefor not be non stale.
+
+
+             */
+
+
+            foreach (var currentIndexStatus in current)
             {
-                if (databaseChangeIndexes.TryGetValue(index, out long diffEtag) == false)
-                {
+                if(currentIndexStatus.Value.IsStale == false)
+                    continue;
+
+                if (previous.TryGetValue(currentIndexStatus.Key, out var prevIndexStatus) == false)
                     return false;
-                }
-                if (diffEtag > MaxIndexEtagInterval)
-                {
+
+                if (lastPrevEtag > currentIndexStatus.Value.LastIndexedEtag)
                     return false;
-                }
+
             }
             return true;
         }
 
-        private Task<long> UpdateTopology(string databaseName,DatabaseTopology topology, long etag)
+        private Task<long> UpdateTopology(string databaseName, DatabaseTopology topology, long etag)
         {
             var cmd = new UpdateTopologyCommand(databaseName)
             {
@@ -218,6 +256,10 @@ namespace Raven.Server.ServerWide.Maintance
             };
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
+                if (_engine.LeaderTag != _server.NodeTag)
+                {
+                    throw new NotLeadingException("This node is no longer the leader, so we abort updating the database topology");
+                }
                 return _engine.PutAsync(ctx.ReadObject(cmd.ToJson(), "update-topology"));
             }
         }
@@ -235,11 +277,17 @@ namespace Raven.Server.ServerWide.Maintance
         public void Dispose()
         {
             _cts.Cancel();
-            if (_observe.Wait(TimeSpan.FromSeconds(30)) == false)
+            try
             {
-                throw new ObjectDisposedException($"Cluster observer on node {_nodeTag} still running and can't be closed");
+                if (_observe.Wait(TimeSpan.FromSeconds(30)) == false)
+                {
+                    throw new ObjectDisposedException($"Cluster observer on node {_nodeTag} still running and can't be closed");
+                }
             }
-            _cts.Dispose();
+            finally
+            {
+                _cts.Dispose();
+            }
         }
     }
 }

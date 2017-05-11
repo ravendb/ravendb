@@ -86,7 +86,7 @@ namespace FastTests.Server.Documents.Queries
                 using (var session = store.OpenSession())
                 {
                     var sp = Stopwatch.StartNew();
-                    Assert.Throws<TimeoutException>(() =>
+                    Assert.Throws<TaskCanceledException>(() =>
                         session.Query<Address>()
                         .Customize(x => x.WaitForNonStaleResultsAsOfNow(TimeSpan.FromMilliseconds(1)))
                         .OrderBy(x => x.City)

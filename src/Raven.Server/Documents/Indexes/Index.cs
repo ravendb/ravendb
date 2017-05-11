@@ -571,6 +571,32 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public virtual (bool isStale, long lastProcessedEtag) GetIndexStats(DocumentsOperationContext databaseContext)
+        {
+            Debug.Assert(databaseContext.Transaction != null);
+
+            if (_isCompactionInProgress)
+                return (true, -1);
+
+            TransactionOperationContext indexContext;
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (indexContext.OpenReadTransaction())
+            {
+                var isStale = IsStale(databaseContext, indexContext);
+
+                if (isStale == false)
+                    return (false, -1);
+
+                long lastEtag = 0;
+                foreach (var collection in Collections)
+                {
+                    lastEtag  = Math.Max(lastEtag , _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection));
+                }
+
+                return (true, lastEtag);
+            }
+        }
+
         protected virtual bool IsStale(DocumentsOperationContext databaseContext,
             TransactionOperationContext indexContext, long? cutoff = null)
         {
