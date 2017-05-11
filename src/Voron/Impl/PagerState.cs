@@ -45,6 +45,8 @@ namespace Voron.Impl
 
         public AllocationInfo[] AllocationInfos;
 
+        public bool DiscardOnTxCopy;
+
         public byte* MapBase { get; set; }
 
         public bool Released;
@@ -140,6 +142,6 @@ namespace Voron.Impl
             _pager.ProtectPageRange(MapBase, (ulong)size);
         }
 
-        public PagerState CurrentPagerState => _pager.PagerState;
+        public AbstractPager CurrentPager => _pager;
     }
 }
