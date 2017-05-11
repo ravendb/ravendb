@@ -196,6 +196,8 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ChangeVectorEntry[] BuildChangeVectorAndResolveConflicts(DocumentsOperationContext context, string key, Slice lowerKey, long newEtag, ChangeVectorEntry[] changeVector, long? expectedEtag, DocumentFlags flags, TableValueReader oldValue)
         {
+            var fromReplication = (flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication;
+
             if (_documentsStorage.ConflictsStorage.ConflictsCount != 0)
             {
                 // Since this document resolve the conflict we dont need to alter the change vector.
@@ -205,7 +207,7 @@ namespace Raven.Server.Documents
                     _documentsStorage.ConflictsStorage.ThrowConcurrencyExceptionOnConflict(expectedEtag, currentMaxConflictEtag);
                 }
 
-                if ((flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication)
+                if (fromReplication)
                 {
                     _documentsStorage.ConflictsStorage.DeleteConflictsFor(context, key);
                 }
@@ -215,12 +217,19 @@ namespace Raven.Server.Documents
                 }
             }
 
-            if (changeVector == null)
-            {
-                var oldChangeVector = oldValue.Pointer != null ? DocumentsStorage.GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)DocumentsStorage.DocumentsTable.ChangeVector) : null;
-                changeVector = SetDocumentChangeVectorForLocalChange(context, lowerKey, oldChangeVector, newEtag);
-            }
+            if (changeVector != null)
+               return changeVector;
 
+            ChangeVectorEntry[] oldChangeVector;
+            if (fromReplication == false)
+            {
+                oldChangeVector = _documentsStorage.GetDatabaseChangeVector(context);
+            }
+            else
+            {
+                oldChangeVector = oldValue.Pointer != null ? DocumentsStorage.GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)DocumentsStorage.DocumentsTable.ChangeVector) : null;
+            }
+            changeVector = SetDocumentChangeVectorForLocalChange(context, lowerKey, oldChangeVector, newEtag);
             return changeVector;
         }
 
