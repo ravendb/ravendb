@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
@@ -12,6 +13,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public ChangeVectorEntry[] ChangeVector;
         public long SubscriptionId;
         public string NodeTag;
+        public Guid DbId;
+        public long LastEtagInDbId;
 
         // for serializtion
         private AcknowledgeSubscriptionBatchCommand() : base(null){}
@@ -30,14 +33,17 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (record.Topology.WhoseTaskIsIt(this) != NodeTag)
                 throw new InvalidOperationException($"Can't update subscription with id {SubscriptionId} by node {NodeTag}, because it's not it's task to update this subscription");
 
-            // todo: implement change vector comparison here, need to move some extention methods from server to client first
-            existingValue.Modifications = new DynamicJsonValue
-            {
-                [nameof(SubscriptionRaftState.ChangeVector)] = ChangeVector.ToJson(),
-                [nameof(SubscriptionRaftState.TimeOfLastClientActivity)] = DateTime.UtcNow
-            };
+            var subscripiton = new SubscriptionRaftState();
+            subscripiton.FillFromBlittableJson(existingValue);
+            if (subscripiton.LastEtagReachedInServer == null)
+                subscripiton.LastEtagReachedInServer = new Dictionary<Guid, long>();
+            subscripiton.LastEtagReachedInServer[DbId] = this.LastEtagInDbId;
+            subscripiton.ChangeVector = ChangeVector;
+            subscripiton.TimeOfLastClientActivity = DateTime.UtcNow;
 
-            return context.ReadObject(existingValue, GetItemId());
+            // todo: implement change vector comparison here, need to move some extention methods from server to client first
+            
+            return context.ReadObject(subscripiton.ToJson(), GetItemId());
         }
 
         public override void FillJson(DynamicJsonValue json)

@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionState;
         }
 
-        public async Task AcknowledgeBatchProcessed(long id, ChangeVectorEntry[] changeVector)
+        public async Task AcknowledgeBatchProcessed(long id, long lastEtag, ChangeVectorEntry[] changeVector)
         {
             var changeVectorForEtag = changeVector;                       
 
@@ -90,7 +90,9 @@ namespace Raven.Server.Documents.Subscriptions
             {                
                 ChangeVector = changeVectorForEtag,
                 NodeTag = _serverStore.NodeTag,
-                SubscriptionId = id
+                SubscriptionId = id,
+                LastEtagInDbId = lastEtag,
+                DbId = _db.DbId
             };
 
             var etag = await _serverStore.SendToLeaderAsync(command.ToJson());
@@ -98,13 +100,12 @@ namespace Raven.Server.Documents.Subscriptions
             //await _db.WaitForIndexNotification(etag);            
         }
 
-        public (SubscriptionCriteria criteria, ChangeVectorEntry[] startChangeVector) GetCriteriaAndChangeVector(long id, DocumentsOperationContext context)
+        public SubscriptionRaftState GetSubscriptionRaftState(long id)
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
             {
-                var subscription = GetSubscriptionFromServerStore(serverStoreContext, id);
-                return (subscription.Criteria, subscription.ChangeVector);
+                return GetSubscriptionFromServerStore(serverStoreContext, id);
             }            
         }
 
@@ -215,7 +216,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public unsafe SubscriptionGeneralDataAndStats GetSubscription(TransactionOperationContext context, long id, bool history)
+        public SubscriptionGeneralDataAndStats GetSubscription(TransactionOperationContext context, long id, bool history)
         {
             var subscription = GetSubscriptionFromServerStore(context, id);
 
@@ -224,7 +225,7 @@ namespace Raven.Server.Documents.Subscriptions
             return subscription;
         }
 
-        private SubscriptionGeneralDataAndStats GetSubscriptionFromServerStore(TransactionOperationContext context, long id)
+        public SubscriptionGeneralDataAndStats GetSubscriptionFromServerStore(TransactionOperationContext context, long id)
         {
             var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionRaftState.GenerateSubscriptionItemName(_db.Name,id));
 
