@@ -72,6 +72,7 @@ class virtualGrid<T> {
             init: (fetcher, columnsProvider) => this.init(fetcher, columnsProvider),
             reset: (hard: boolean = true) => this.resetItems(hard),
             selection: this.selection,
+            findItem: (predicate) => this.findItem(predicate),
             getSelectedItems: () => this.getSelectedItems(),
             setSelectedItems: (selection: Array<T>) => this.setSelectedItems(selection),
             dirtyResults: this.dirtyResults,
@@ -637,6 +638,10 @@ class virtualGrid<T> {
                 totalCount: totalCount
             });
         }
+    }
+
+    private findItem(predicate: (item: T, idx: number) => boolean): T {
+        return this.items.find(predicate);
     }
 
     private getSelectedItems(): T[] {
