@@ -736,7 +736,9 @@ more responsive application.
         {
             foreach (var deletedEntity in DeletedEntities)
             {
-                if (!DocumentsByEntity.TryGetValue(deletedEntity, out DocumentInfo documentInfo)) continue;
+                if (DocumentsByEntity.TryGetValue(deletedEntity, out DocumentInfo documentInfo) == false)
+                    continue;
+
                 if (changes != null)
                 {
                     var docChanges = new List<DocumentsChanges>();
@@ -752,6 +754,12 @@ more responsive application.
                 }
                 else
                 {
+                    foreach (var resultCommand in result.DeferedCommands)
+                    {
+                        if (resultCommand.Key == documentInfo.Id)
+                            ThrowInvalidDeletedDocumentWithDefferredCommand(resultCommand);
+                    }
+
                     long? etag = null;
                     if (DocumentsById.TryGetValue(documentInfo.Id, out documentInfo))
                     {
@@ -814,6 +822,12 @@ more responsive application.
 
                 result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, etag, document));
             }
+        }
+
+        private static void ThrowInvalidDeletedDocumentWithDefferredCommand(ICommandData resultCommand)
+        {
+            throw new InvalidOperationException(
+                $"Cannot perfrom save because document {resultCommand.Key} has been deleted by the session and is also taking part in deferred {resultCommand.Type} command");
         }
 
         private static void ThrowInvalidModifiedDocumentWithDefferredCommand(ICommandData resultCommand)

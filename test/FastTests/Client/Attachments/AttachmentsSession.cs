@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
@@ -146,6 +147,52 @@ namespace FastTests.Client.Attachments
         [Fact(Skip = "TODO")]
         public void TwoAttachmentsWithTheSameName()
         {
+        }
+
+        [Fact]
+        public void PutDocumentAndAttachmentAndDeleteShouldThrow()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var user = new User { Name = "Fitzchak" };
+                    session.Store(user, "users/1");
+
+                    session.Advanced.StoreAttachment(user, "profile.png", profileStream, "image/png");
+
+                    session.Delete(user);
+
+                    var exception = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
+                    Assert.Equal("Cannot perfrom save because document users/1 has been deleted by the session and is also taking part in deferred AttachmentPUT command", exception.Message);
+                }
+            }
+        }
+
+        [Fact]
+        public void PutAttachmentAndDeleteShouldThrow()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User {Name = "Fitzchak"};
+                    session.Store(user, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var user = session.Load<User>("users/1");
+                    session.Advanced.StoreAttachment(user, "profile.png", profileStream, "image/png");
+                    session.Delete(user);
+
+                    var exception = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
+                    Assert.Equal("Cannot perfrom save because document users/1 has been deleted by the session and is also taking part in deferred AttachmentPUT command", exception.Message);
+                }
+            }
         }
     }
 }
