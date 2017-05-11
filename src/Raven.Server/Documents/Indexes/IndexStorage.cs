@@ -48,6 +48,7 @@ namespace Raven.Server.Documents.Indexes
             if (referencedCollections != null)
                 _referencedCollections = referencedCollections
                     .SelectMany(x => x.Value)
+                    .Distinct()
                     .ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase);
         }
 

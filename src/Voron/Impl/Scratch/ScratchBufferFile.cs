@@ -301,6 +301,7 @@ namespace Voron.Impl.Scratch
 
         public void Dispose()
         {
+            _scratchPager.PagerState.DiscardOnTxCopy = true;
             _scratchPager.Dispose();
         }
 

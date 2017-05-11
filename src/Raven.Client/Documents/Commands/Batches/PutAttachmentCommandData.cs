@@ -29,7 +29,8 @@ namespace Raven.Client.Documents.Commands.Batches
 
         private void ThrowPositionNotZero(long streamPosition)
         {
-            throw new InvalidOperationException($"Cannot put an attachment with a stream that have position which isn't zero but {streamPosition}.");
+            throw new InvalidOperationException($"Cannot put an attachment with a stream that have position which isn't zero (The position is: {streamPosition}) " +
+                                                "since this is most of the time not indended and it is a commont mistake.");
         }
 
         private void ThrowNotSeekableStream()

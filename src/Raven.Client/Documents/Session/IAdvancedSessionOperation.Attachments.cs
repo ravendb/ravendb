@@ -22,6 +22,11 @@ namespace Raven.Client.Documents.Session
         AttachmentResult GetAttachment(string documentId, string name, Action<AttachmentResult, Stream> stream);
 
         /// <summary>
+        /// Returns the attachment by the document id and attachment name.
+        /// </summary>
+        AttachmentResult GetAttachment(object entity, string name, Action<AttachmentResult, Stream> stream);
+
+        /// <summary>
         /// Returns the revision attachment by the document id and attachment name.
         /// </summary>
         AttachmentResult GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector, Action<AttachmentResult, Stream> stream);
