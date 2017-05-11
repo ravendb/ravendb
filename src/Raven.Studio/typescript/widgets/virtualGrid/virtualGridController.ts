@@ -11,6 +11,8 @@ interface virtualGridController<T> {
 
     reset(hard?: boolean): void;
 
+    findItem(predicate: (item: T, idx: number) => boolean): T;
+
     selection: KnockoutObservable<virtualGridSelection<T>>;
 
     getSelectedItems(): T[];

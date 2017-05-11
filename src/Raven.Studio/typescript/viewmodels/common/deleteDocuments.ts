@@ -6,27 +6,25 @@ import messagePublisher = require("common/messagePublisher");
 
 class deleteDocuments extends dialogViewModelBase {
 
-    private documents = ko.observableArray<documentBase>();
+    private documentIds = ko.observableArray<string>();
     private deletionStarted = false;
     deletionTask = $.Deferred<void>();
 
-    constructor(documents: Array<documentBase>, private db: database) {
+    constructor(documentIds: Array<string>, private db: database) {
         super(null);
 
-        if (documents.length === 0) {
-            throw new Error("Must have at least one document to delete.");
+        if (documentIds.length === 0) {
+            throw new Error("Must have at least one document id to delete.");
         }
 
-        this.documents(documents);
+        this.documentIds(documentIds);
     }
 
     deleteDocs() {
-        const deletedDocIds = this.documents().map(i => i.getId());
+        const docCount = this.documentIds().length;
+        const docsDescription = docCount === 1 ? this.documentIds()[0] : docCount + " docs";
 
-        const docCount = deletedDocIds.length;
-        const docsDescription = docCount === 1 ? this.documents()[0].getId() : docCount + " docs";
-
-        new deleteDocumentsCommand(deletedDocIds, this.db)
+        new deleteDocumentsCommand(this.documentIds(), this.db)
             .execute()
             .done(() => {
                 messagePublisher.reportSuccess("Deleted " + docsDescription);
