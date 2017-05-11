@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using FastTests.Client.Attachments;
@@ -23,18 +24,28 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
             
-            LoggingSource.Instance.SetupLogMode(LogMode.Information, Path.GetTempPath());
-            LoggingSource.Instance.EnableConsoleLogging();
+            //LoggingSource.Instance.SetupLogMode(LogMode.Information, Path.GetTempPath());
+            //LoggingSource.Instance.EnableConsoleLogging();
 
-            LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
+            //LoggingSource.Instance.SetupLogMode(LogMode.Information, "logs");
 
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine("              "+ i);
-                using (var a = new RachisTests.DatabaseCluster.ClusterDatabaseMaintance())
+
+                var list = new List<Task>();
+                for (int j = 0; j < 5; j++)
                 {
-                    a.PromoteOnCatchingUp().Wait();
+                    list.Add(Task.Run(async () =>
+                    {
+                        using (var a = new FastTests.Server.Documents.Transformers.BasicTransformers())
+                        {
+                            await a.WillLoadAsFaulty();
+                        }
+                    }));
                 }
+
+                Task.WaitAll(list.ToArray());
             }
         }
     }
