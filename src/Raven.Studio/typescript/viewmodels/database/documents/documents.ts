@@ -244,7 +244,7 @@ class documents extends viewModelBase {
         }
 
         if (selection.mode === "inclusive") {
-            const deleteDocsDialog = new deleteDocuments(selection.included, this.activeDatabase());
+            const deleteDocsDialog = new deleteDocuments(selection.included.map(x => x.getId()), this.activeDatabase());
 
             app.showBootstrapDialog(deleteDocsDialog)
                 .done((deleting: boolean) => {
