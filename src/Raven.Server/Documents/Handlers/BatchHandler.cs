@@ -26,43 +26,9 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/bulk_docs", "POST")]
         public async Task BulkDocs()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            using (var mergedCmd = new MergedBatchCommand{Database = Database})
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var mergedCmd = await CreateBatchCommand(context))
             {
-                if (HttpContext.Request.ContentType != null && 
-                    HttpContext.Request.ContentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase))
-                {
-                    var boundary = MultipartRequestHelper.GetBoundary(
-                        MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
-                        MultipartRequestHelper.MultipartBoundaryLengthLimit);
-                    var reader = new MultipartReader(boundary, RequestBodyStream());
-                    for (int i = 0; i < int.MaxValue; i++)
-                    {
-                        var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
-                        if (section == null)
-                            break;
-
-                        var bodyStream = GetBodyStream(section);
-                        if (i == 0)
-                        {
-                            mergedCmd.ParsedCommands = await BatchRequestParser.ParseAsync(ctx, bodyStream, Database.Patcher);
-                            continue;
-                        }
-
-                        if (mergedCmd.AttachmentStreams == null)
-                            mergedCmd.AttachmentStreams = new Queue<MergedBatchCommand.AttachmentStream>();
-
-                        var attachmentStream = new MergedBatchCommand.AttachmentStream();
-                        attachmentStream.FileDispose = Database.DocumentsStorage.AttachmentsStorage.GetTempFile(out attachmentStream.File);
-                        attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(ctx, bodyStream, attachmentStream.File, Database.DatabaseShutdown);
-                        mergedCmd.AttachmentStreams.Enqueue(attachmentStream);
-                    }
-                }
-                else
-                {
-                    mergedCmd.ParsedCommands = await BatchRequestParser.ParseAsync(ctx, RequestBodyStream(), Database.Patcher);
-                }
-
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
                 if (waitForIndexesTimeout != null)
                     mergedCmd.ModifiedCollections = new HashSet<string>();
@@ -91,14 +57,55 @@ namespace Raven.Server.Documents.Handlers
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    ctx.Write(writer, new DynamicJsonValue
+                    context.Write(writer, new DynamicJsonValue
                     {
                         ["Results"] = mergedCmd.Reply
                     });
                 }
             }
+        }
+
+        private async Task<MergedBatchCommand> CreateBatchCommand(DocumentsOperationContext context)
+        {
+            var command = new MergedBatchCommand {Database = Database};
+
+            if (HttpContext.Request.ContentType != null &&
+                HttpContext.Request.ContentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase))
+            {
+                var boundary = MultipartRequestHelper.GetBoundary(
+                    MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
+                    MultipartRequestHelper.MultipartBoundaryLengthLimit);
+                var reader = new MultipartReader(boundary, RequestBodyStream());
+                for (int i = 0; i < int.MaxValue; i++)
+                {
+                    var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
+                    if (section == null)
+                        break;
+
+                    var bodyStream = GetBodyStream(section);
+                    if (i == 0)
+                    {
+                        command.ParsedCommands = await BatchRequestParser.ParseAsync(context, bodyStream, Database.Patcher);
+                        continue;
+                    }
+
+                    if (command.AttachmentStreams == null)
+                        command.AttachmentStreams = new Queue<MergedBatchCommand.AttachmentStream>();
+
+                    var attachmentStream = new MergedBatchCommand.AttachmentStream();
+                    attachmentStream.FileDispose = Database.DocumentsStorage.AttachmentsStorage.GetTempFile(out attachmentStream.File);
+                    attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, bodyStream, attachmentStream.File, Database.DatabaseShutdown);
+                    command.AttachmentStreams.Enqueue(attachmentStream);
+                }
+            }
+            else
+            {
+                command.ParsedCommands = await BatchRequestParser.ParseAsync(context, RequestBodyStream(), Database.Patcher);
+            }
+
+            return command;
         }
 
         private async Task WaitForReplicationAsync(TimeSpan waitForReplicasTimeout, MergedBatchCommand mergedCmd)
