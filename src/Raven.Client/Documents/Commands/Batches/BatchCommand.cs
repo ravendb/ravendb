@@ -72,11 +72,12 @@ namespace Raven.Client.Documents.Commands.Batches
 
             if (_attachmentStreams != null && _attachmentStreams.Count > 0)
             {
-                var multipartContent = new MultipartContent();
-                multipartContent.Add(request.Content);
+                var multipartContent = new MultipartContent {request.Content};
                 foreach (var stream in _attachmentStreams)
                 {
-                    multipartContent.Add(new GzipStreamContent(stream, "AttachmentStream"));
+                    var streamContent = new StreamContent(stream);
+                    streamContent.Headers.TryAddWithoutValidation("Command-Type", "AttachmentStream");
+                    multipartContent.Add(streamContent);
                 }
                 request.Content = multipartContent;
             }
