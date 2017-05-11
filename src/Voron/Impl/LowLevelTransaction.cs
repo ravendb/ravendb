@@ -63,9 +63,9 @@ namespace Voron.Impl
             public TableValueBuilder TableValueBuilder = new TableValueBuilder();
 
             public int ScratchPagesTablePoolIndex = 0;
-            public FastDictionary<long, PageFromScratchBuffer, NumericEqualityStructComparer> ScratchPagesTablePool1 = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityStructComparer>(new NumericEqualityStructComparer());
-            public FastDictionary<long, PageFromScratchBuffer, NumericEqualityStructComparer> ScratchPagesTablePool2 = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityStructComparer>(new NumericEqualityStructComparer());
-            public FastDictionary<long, long, NumericEqualityStructComparer> DirtyOverflowPagesPool = new FastDictionary<long, long, NumericEqualityStructComparer>(new NumericEqualityStructComparer());
+            public FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> ScratchPagesTablePool1 = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer>(new NumericEqualityComparer());
+            public FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> ScratchPagesTablePool2 = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer>(new NumericEqualityComparer());
+            public FastDictionary<long, long, NumericEqualityComparer> DirtyOverflowPagesPool = new FastDictionary<long, long, NumericEqualityComparer>(new NumericEqualityComparer());
             public HashSet<long> DirtyPagesPool = new HashSet<long>(NumericEqualityComparer.Instance);
 
             public void Reset()
@@ -80,9 +80,9 @@ namespace Voron.Impl
 
         // BEGIN: Structures that are safe to pool.
         private readonly HashSet<long> _dirtyPages;
-        private readonly FastDictionary<long, long, NumericEqualityStructComparer> _dirtyOverflowPages;
+        private readonly FastDictionary<long, long, NumericEqualityComparer> _dirtyOverflowPages;
         private readonly Stack<long> _pagesToFreeOnCommit;
-        private readonly FastDictionary<long, PageFromScratchBuffer, NumericEqualityStructComparer> _scratchPagesTable;
+        private readonly FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> _scratchPagesTable;
         private readonly HashSet<PagerState> _pagerStates;
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
         // END: Structures that are safe to pool.

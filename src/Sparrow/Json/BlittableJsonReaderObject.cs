@@ -25,7 +25,7 @@ namespace Sparrow.Json
         public DynamicJsonValue Modifications;
 
         private FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> _objectsPathCache;
-        private FastDictionary<int, object, NumericEqualityStructComparer> _objectsPathCacheByIndex;
+        private FastDictionary<int, object, NumericEqualityComparer> _objectsPathCacheByIndex;
 
         public override string ToString()
         {
@@ -190,7 +190,8 @@ namespace Sparrow.Json
             }
 
             // sort according to offsets
-            Array.Sort(offsets, propertyNames, NumericDescendingComparer.Instance);
+            Sorter<int, string, NumericDescendingComparer> sorter;
+            sorter.Sort(offsets, propertyNames);
 
             return propertyNames;
         }
@@ -450,7 +451,7 @@ namespace Sparrow.Json
             if (_objectsPathCache == null)
             {
                 _objectsPathCache = new FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer>(default(StringSegmentEqualityStructComparer));
-                _objectsPathCacheByIndex = new FastDictionary<int, object, NumericEqualityStructComparer>(default(NumericEqualityStructComparer));
+                _objectsPathCacheByIndex = new FastDictionary<int, object, NumericEqualityComparer>(default(NumericEqualityComparer));
             }
             _objectsPathCache[name] = result;
             _objectsPathCacheByIndex[index] = result;
@@ -617,7 +618,9 @@ namespace Sparrow.Json
                 buffers.Offsets[i] = ReadNumber(propertyIntPtr, _currentOffsetSize);
                 buffers.Properties[i] = i;
             }
-            Array.Sort(buffers.Offsets, buffers.Properties, 0, _propCount, NumericDescendingComparer.Instance);
+
+            Sorter<int, int, NumericDescendingComparer> sorter;
+            sorter.Sort(buffers.Offsets, buffers.Properties, 0, _propCount);
             return _propCount;
         }
 
@@ -633,7 +636,9 @@ namespace Sparrow.Json
                 offsets[i] = ReadNumber(propertyIntPtr, _currentOffsetSize);
                 props[i] = i;
             }
-            Array.Sort(offsets, props, NumericDescendingComparer.Instance);
+
+            Sorter<int, int, NumericDescendingComparer> sorter;
+            sorter.Sort(offsets, props);
             return props;
         }
 

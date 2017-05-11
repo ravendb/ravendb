@@ -63,9 +63,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected readonly ConversionScope Scope = new ConversionScope();
 
-        private readonly FastDictionary<int, CachedFieldItem<Field>, NumericEqualityStructComparer> _fieldsCache = new FastDictionary<int, CachedFieldItem<Field>, NumericEqualityStructComparer>(default(NumericEqualityStructComparer));
+        private readonly FastDictionary<int, CachedFieldItem<Field>, NumericEqualityComparer> _fieldsCache = new FastDictionary<int, CachedFieldItem<Field>, NumericEqualityComparer>(default(NumericEqualityComparer));
 
-        private readonly FastDictionary<int, CachedFieldItem<NumericField>, NumericEqualityStructComparer> _numericFieldsCache = new FastDictionary<int, CachedFieldItem<NumericField>, NumericEqualityStructComparer>(default(NumericEqualityStructComparer));
+        private readonly FastDictionary<int, CachedFieldItem<NumericField>, NumericEqualityComparer> _numericFieldsCache = new FastDictionary<int, CachedFieldItem<NumericField>, NumericEqualityComparer>(default(NumericEqualityComparer));
 
         public readonly LuceneDocument Document = new LuceneDocument();
 
