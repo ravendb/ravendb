@@ -100,20 +100,13 @@ namespace Raven.Server.Documents.Handlers
         }
         private Task GetConflictsForDocument(string docId)
         {
-            DocumentsOperationContext context;
             long maxEtag = 0;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
                 var array = new DynamicJsonArray();
                 var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
-
-                if (conflicts.Count == 0)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.CompletedTask;
-                }
 
                 foreach (var conflict in conflicts)
                 {
