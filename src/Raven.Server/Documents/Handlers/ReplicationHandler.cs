@@ -109,12 +109,6 @@ namespace Raven.Server.Documents.Handlers
                 var array = new DynamicJsonArray();
                 var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
 
-                if (conflicts.Count == 0)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.CompletedTask;
-                }
-
                 foreach (var conflict in conflicts)
                 {
                     if (maxEtag < conflict.Etag)
