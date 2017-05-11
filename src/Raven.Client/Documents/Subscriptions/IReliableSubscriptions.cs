@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// It downloads a list of all existing subscriptions in a database.
         /// </summary>
         /// <returns>Existing subscriptions' configurations.</returns>
-        List<SubscriptionRaftState> GetSubscriptions(int start, int take, string database = null);
+        List<SubscriptionState> GetSubscriptions(int start, int take, string database = null);
 
         /// <summary>
         /// It deletes a subscription.

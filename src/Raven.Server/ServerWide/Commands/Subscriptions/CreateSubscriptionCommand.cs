@@ -26,14 +26,14 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public override string GetItemId()
         {
             if (_subscriptionId.HasValue)
-                return SubscriptionRaftState.GenerateSubscriptionItemName(DatabaseName, _subscriptionId.Value);
+                return SubscriptionState.GenerateSubscriptionItemName(DatabaseName, _subscriptionId.Value);
             return $"noValue";
         }
 
         public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             _subscriptionId = index;
-            var rafValue = new SubscriptionRaftState()
+            var rafValue = new SubscriptionState()
             {
                 Criteria = Criteria,
                 ChangeVector = InitialChangeVector,
