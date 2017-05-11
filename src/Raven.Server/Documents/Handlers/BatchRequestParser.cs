@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Handlers
                                 commandData.Key = null;
                                 break;
                             case JsonParserToken.String:
-                                commandData.Key = GetDocumentKey(state);
+                                commandData.Key = GetStringPropertyValue(state);
                                 break;
                             default:
                                 ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -226,7 +226,7 @@ namespace Raven.Server.Documents.Handlers
                                 commandData.Name = null;
                                 break;
                             case JsonParserToken.String:
-                                commandData.Name = GetDocumentKey(state);
+                                commandData.Name = GetStringPropertyValue(state);
                                 break;
                             default:
                                 ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -242,7 +242,7 @@ namespace Raven.Server.Documents.Handlers
                                 commandData.ContentType = string.Empty;
                                 break;
                             case JsonParserToken.String:
-                                commandData.ContentType = GetDocumentKey(state);
+                                commandData.ContentType = GetStringPropertyValue(state);
                                 break;
                             default:
                                 ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -396,7 +396,7 @@ namespace Raven.Server.Documents.Handlers
             return reader;
         }
 
-        private static unsafe string GetDocumentKey(JsonParserState state)
+        private static unsafe string GetStringPropertyValue(JsonParserState state)
         {
             return Encoding.UTF8.GetString(state.StringBuffer, state.StringSize);
         }
