@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Handlers
 
                 context.Write(writer, new DynamicJsonValue
                 {
-                    [nameof(Database.DocumentsStorage.ConflictsStorage.ConflictsCount)] = Database.DocumentsStorage.ConflictsStorage.ConflictsCount,
+                    ["TotalResults"] = Database.DocumentsStorage.ConflictsStorage.GetCountOfDocumentsConflicts(context),
                     [nameof(GetConflictsResult.Results)] = array
                 });
 
@@ -100,14 +100,14 @@ namespace Raven.Server.Documents.Handlers
         }
         private Task GetConflictsForDocument(string docId)
         {
-            DocumentsOperationContext context;
             long maxEtag = 0;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
                 var array = new DynamicJsonArray();
                 var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
+
                 foreach (var conflict in conflicts)
                 {
                     if (maxEtag < conflict.Etag)
@@ -426,8 +426,8 @@ namespace Raven.Server.Documents.Handlers
 
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["Document"] = resovled.Document,
-                    ["Metadata"] = resovled.Metadata
+                    [nameof(ConflictResolverAdvisor.MergeResult.Document)] = resovled.Document,
+                    [nameof(ConflictResolverAdvisor.MergeResult.Metadata)] = resovled.Metadata
                 });
 
                 return Task.CompletedTask;

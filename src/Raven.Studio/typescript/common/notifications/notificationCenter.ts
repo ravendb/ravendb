@@ -2,6 +2,7 @@
 import database = require("models/resources/database");
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 import alert = require("common/notifications/models/alert");
 import performanceHint = require("common/notifications/models/performanceHint");
 import recentError = require("common/notifications/models/recentError");
@@ -281,15 +282,20 @@ class notificationCenter {
     }
 
     killOperation(operationToKill: operation): void {
-        const notificationId = operationToKill.id;
+        viewHelpers.confirmationMessage("Are you sure?", "Do you want to abort current operation?", ["No", "Yes"], true)
+            .done((result: confirmDialogResult) => {
+                if (result.can) {
+                    const notificationId = operationToKill.id;
 
-        this.spinners.kill.push(notificationId);
+                    this.spinners.kill.push(notificationId);
 
-        new killOperationCommand(operationToKill.database, operationToKill.operationId())
-            .execute()
-            .fail(() => {
-                // we don't call remove in always since killOperationCommand only delivers kill signal and doesn't wait for actual kill
-                this.spinners.kill.remove(notificationId);
+                    new killOperationCommand(operationToKill.database, operationToKill.operationId())
+                        .execute()
+                        .fail(() => {
+                            // we don't call remove in always since killOperationCommand only delivers kill signal and doesn't wait for actual kill
+                            this.spinners.kill.remove(notificationId);
+                        });
+                }
             });
     }
 

@@ -337,18 +337,18 @@ a {
 }
 
 .padding {
-    padding: (@grid-gutter-width / 2) (@grid-gutter-width / 4 * 3);
+    padding: (@grid-gutter-width / 2);
 
     &.padding-xs {
         padding: 1px (@grid-gutter-width / 4) !important;
     }
 
     &.padding-sm {
-        padding: (@grid-gutter-width / 4) (@grid-gutter-width / 8 * 3);
+        padding: (@grid-gutter-width / 4);
     }
 
     &.padding-lg {
-        padding: (@grid-gutter-width / 4 * 3) @grid-gutter-width;
+        padding: (@grid-gutter-width / 4 * 3);
     }
 }
 
@@ -806,8 +806,8 @@ input[type=file] + .form-control {
     &.spinner-xs:before {
         top: 1px;
         position: relative;
-        width: 10px;
-        height: 10px;
+        width: 12px;
+        height: 12px;
         border: 2px solid rgba(255, 255, 255, 0.2);
         border-top-color: inherit;
     }
@@ -1281,27 +1281,27 @@ pre {
 
     &.active {
         &.state-primary {
-            box-shadow: 0 0 0 2px @brand-primary-dark inset;
+            box-shadow: 0 0 0 1px @brand-primary-dark inset;
         }
 
         &.state-success {
-            box-shadow: 0 0 0 2px @brand-success-dark inset;
+            box-shadow: 0 0 0 1px @brand-success-dark inset;
         }
 
         &.state-info {
-            box-shadow: 0 0 0 2px @brand-info-dark inset;
+            box-shadow: 0 0 0 1px @brand-info-dark inset;
         }
 
         &.state-warning {
-            box-shadow: 0 0 0 2px @brand-warning-dark inset;
+            box-shadow: 0 0 0 1px @brand-warning-dark inset;
         }
 
         &.state-danger {
-            box-shadow: 0 0 0 2px @brand-danger-dark inset;
+            box-shadow: 0 0 0 1px @brand-danger-dark inset;
         }
 
         &.state-offline {
-            box-shadow: 0 0 0 2px @gray inset;
+            box-shadow: 0 0 0 1px @gray inset;
         }
     }
 }
@@ -1546,3 +1546,4 @@ pre {
 @import "pages/stats.less";
 @import "pages/versioning.less";
 @import "pages/etl.less";
+@import "pages/conflicts.less";

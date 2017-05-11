@@ -17,6 +17,7 @@ abstract class abstractNotification {
 
     displayDate: KnockoutComputed<moment.Moment>;
 
+    headerClass: KnockoutComputed<string>;
     cssClass: KnockoutComputed<string>;
 
     constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.Notification) {
@@ -24,18 +25,35 @@ abstract class abstractNotification {
         this.id = dto.Id;
         this.type = dto.Type;
 
+        this.headerClass = ko.pureComputed(() => {
+            const severity = this.severity();
+
+            switch (severity) {
+                case "Error":
+                    return "text-danger";
+                case "Warning":
+                    return "text-warning";
+                case "Success":
+                    return "text-success";
+                case "Info":
+                    return "text-info";
+                default:
+                    return "";
+            }
+        });
+
         this.cssClass = ko.pureComputed(() => {
             const severity = this.severity();
 
             switch (severity) {
                 case "Error":
-                    return "panel-danger";
+                    return "notification-danger";
                 case "Warning":
-                    return "panel-warning";
+                    return "notification-warning";
                 case "Success":
-                    return "panel-success";
+                    return "notification-success";
                 case "Info":
-                    return "panel-info";
+                    return "notification-info";
                 default:
                     return "";
             }

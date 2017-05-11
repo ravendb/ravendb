@@ -10,31 +10,30 @@
 </div>
 
 <script type="text/html" id="OperationChanged-template">
-    <div data-bind="attr: { class: 'panel ' + cssClass() }">
-        <div class="panel-body">
+    <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
+        <div class="padding">
             <div data-bind="if: isCompleted()">
+                <button class="close" data-bind="click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
+                    <i class="icon-cancel"></i>
+                </button>
                 <h3 data-bind="text: title"></h3>
                 <div class="time" data-bind="text: displayDate().format('LLL')"></div>
                 <p data-bind="text: message"></p>
                 <p data-bind="visible: isCanceled" class="text-warning">The operation was cancelled.</p>
 
-                <div class="text-right">
+                <div class="flex-horizontal">
                     <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                             class="btn btn-sm">
                         <i class="icon-details"></i>
                         <span>Details</span>
-                    </button>
-                    <button class="btn btn-sm" data-bind="click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
-                        <i class="icon-cancel"></i>
-                        <span>Dismiss</span>
-                    </button>
+                    </button>                    
                 </div>
             </div>
 
             <div data-bind="if: !isCompleted()">
                 <h3>
-                    <span class="global-spinner spinner-xs"></span>
                     <span data-bind="text: title"></span>
+                    <span class="global-spinner spinner-xs"></span>
                 </h3>
                 <div class="time" data-bind="text: displayDate().format('LLL')"></div>
                 <p data-bind="text: message"></p>
@@ -46,12 +45,13 @@
                     </div>
                 </div>
 
-                <div class="text-right">
+                <div class="flex-horizontal">
                     <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                             class="btn btn-sm">
                         <i class="icon-details"></i>
                         <span>Details</span>
                     </button>
+                    <div class="flex-separator"></div>
                     <button class="btn btn-sm btn-danger" data-bind="click: _.partial($parent.killOperation, $data), visible: killable(), enable: !_.includes($parent.spinners.kill(), id), css: { 'btn-spinner': _.includes($parent.spinners.kill(), id) }">
                         <i class="icon-cancel"></i>
                         <span>Abort</span>
@@ -62,59 +62,58 @@
     </div>
 </script>
 <script type="text/html" id="AlertRaised-template">
-    <div data-bind="attr: { class: 'panel ' + cssClass() }">
-        <div class="panel-body">
+    <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
+        <div class="padding">
+            <button class="close" data-bind="click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
+                <i class="icon-cancel"></i>
+            </button>
             <h3 class="text-warning" data-bind="text: title"></h3>
             <div class="time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: message"></p>
-            <div class="text-right">
+            <div class="flex-horizontal">
                 <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                         class="btn btn-sm">
                     <i class="icon-details"></i>
                     <span>Details</span>
                 </button>
-
+                <div class="flex-separator"></div>
                 <div class="dropdown" data-bind="visible: canBePostponed">
-                    <button class="btn btn-sm dropdown-toggle" data-toggle="dropdown" data-bind="enable: !_.includes($parent.spinners.postpone(), id), css: { 'btn-spinner': _.includes($parent.spinners.postpone(), id) }">
-                        <span>Postpone</span>
+                    <button class="btn btn-sm btn-info dropdown-toggle" data-toggle="dropdown" data-bind="enable: !_.includes($parent.spinners.postpone(), id), css: { 'btn-spinner': _.includes($parent.spinners.postpone(), id) }">
+                        <i class="icon-clock"></i><span>Postpone</span>
                         <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu" data-bind="foreach: $parent.constructor.postponeOptions">
                         <li><a href="#" data-bind="text: label, click: _.partial($parents[1].postpone, $parent, value)"></a></li>
                     </ul>
                 </div>
-
-                <button class="btn btn-sm" data-bind="click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
-                    <i class="icon-cancel"></i>
-                    <span>Dismiss</span>
-                </button>
             </div>
         </div>
     </div>
 </script>
 <script type="text/html" id="RecentError-template">
-    <div data-bind="attr: { class: 'panel ' + cssClass() }">
-        <div class="panel-body">
+    <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
+        <div class="padding">
+            <button class="close" data-bind="click: _.partial($parent.dismiss, $data)">
+                <i class="icon-cancel"></i>
+            </button>
             <h3 class="text-warning" data-bind="text: title"></h3>
             <div class="time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: message"></p>
-            <div class="text-right">
+            <div class="flex-horizontal">
                 <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                         class="btn btn-sm">
                     Details
-                </button>
-
-                <button class="btn btn-sm" data-bind="click: _.partial($parent.dismiss, $data)">
-                    <i class="icon-cancel"></i>
-                    <span>Dismiss</span>
                 </button>
             </div>
         </div>
     </div>
 </script>
 <script type="text/html" id="PerformanceHint-template">
-    <div data-bind="attr: { class: 'panel ' + cssClass() }">
-        <div class="panel-body">
+    <div data-bind="attr: { class: 'notification-item ' + cssClass() }">
+        <div class="padding">
+            <button class="close" data-bind="click: _.partial($parent.dismiss, $data)">
+                <i class="icon-cancel"></i>
+            </button>
             <h3 class="text-warning" data-bind="text: title"></h3>
             <div class="time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: message"></p>
@@ -126,15 +125,10 @@
                 </label>
             </div>
 
-            <div class="text-right">
+            <div class="flex-horizontal">
                 <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                         class="btn btn-sm">
                     Details
-                </button>
-
-                <button class="btn btn-sm" data-bind="click: _.partial($parent.dismiss, $data)">
-                    <i class="icon-cancel"></i>
-                    <span>Dismiss</span>
                 </button>
             </div>
         </div>

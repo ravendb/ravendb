@@ -12,6 +12,7 @@ import getSettingsMenuItem = require("common/shell/menu/items/settings");
 import getTasksMenuItem = require("common/shell/menu/items/tasks");
 import getTransformersMenuItems = require("common/shell/menu/items/transformers");
 import getIndexesMenuItem = require("common/shell/menu/items/indexes");
+import getReplicationMenuItem = require("common/shell/menu/items/replication");
 import getDocumentsMenuItem = require("common/shell/menu/items/documents");
 
 export = generateMenuItems;
@@ -37,7 +38,7 @@ function aboutItem() {
 }
 
 function generateNoActiveDatabaseMenuItems() {
-    let appUrls = appUrl.forCurrentDatabase();
+    const appUrls = appUrl.forCurrentDatabase();
     return [
         new separatorMenuItem('Server'),
         getDatabasesMenuItem(appUrls),
@@ -48,12 +49,13 @@ function generateNoActiveDatabaseMenuItems() {
 }
 
 function generateActiveDatabaseMenuItems() {
-    let appUrls = appUrl.forCurrentDatabase();
-    let transformersItems = getTransformersMenuItems(appUrls);
+    const appUrls = appUrl.forCurrentDatabase();
+    const transformersItems = getTransformersMenuItems(appUrls);
     return [
         getDocumentsMenuItem(appUrls),
         getIndexesMenuItem(appUrls),
         ...transformersItems,
+        getReplicationMenuItem(appUrls),
         getTasksMenuItem(appUrls),
         getSettingsMenuItem(appUrls),
         getStatsMenuItem(appUrls),

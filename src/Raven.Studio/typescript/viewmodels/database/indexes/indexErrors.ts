@@ -62,7 +62,7 @@ class indexErrors extends viewModelBase {
         this.gridController().reset(false);
     }
 
-    private fetchIndexErrors(start: number, skip: number): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
+    private fetchIndexErrors(start: number, take: number): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
         if (this.allIndexErrors === null) {
             return this.fetchRemoteIndexesError().then(list => {
                 this.allIndexErrors = list;

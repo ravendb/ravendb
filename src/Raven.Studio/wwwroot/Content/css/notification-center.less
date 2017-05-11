@@ -21,11 +21,24 @@
     -o-transition: transform @menu-transition-ease;
     transition: transform @menu-transition-ease;
 
-    .panel {
+    .notification-item {
         margin-bottom: @grid-gutter-width / 8;
         background-color: @panel-bg;
 
-        &.panel-success {
+        .close {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 6px;
+            font-size: 14px;
+            color: @gray-light;
+
+            &:hover {
+                color: @gray-lighter;
+            }
+        }
+
+        &.notification-success {
             box-shadow: 6px 0 0 0 @brand-success-dark inset;
 
             h3 {
@@ -33,7 +46,7 @@
             }
         }
 
-        &.panel-info {
+        &.notification-info {
             box-shadow: 6px 0 0 0 @brand-info-dark inset;
 
             h3 {
@@ -41,7 +54,7 @@
             }
         }
 
-        &.panel-warning {
+        &.notification-warning {
             box-shadow: 6px 0 0 0 @brand-warning-dark inset;
 
             h3 {
@@ -49,7 +62,7 @@
             }
         }
 
-        &.panel-danger {
+        &.notification-danger {
             box-shadow: 6px 0 0 0 @brand-danger-dark inset;
 
             h3 {
@@ -57,7 +70,7 @@
             }
         }
 
-        .panel-body {
+        .padding {
             position: relative;
 
             .dismiss-notification {
@@ -87,7 +100,7 @@
 
             p {
                 line-height: 1.35;
-                font-size: 15px;
+                font-size: 14px;
                 color: @gray-lighter;
             }
 

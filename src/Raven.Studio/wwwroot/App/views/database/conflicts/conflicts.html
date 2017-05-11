@@ -1,35 +1,39 @@
-<div class="conflicts-page">
-    <div class="row">
-        <div class="btn-toolbar">
-            <div class="btn-group">
-                <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" data-trigger="hover" data-placement="bottom" data-bind="enable: hasAnyConflict()">
-                    Resolve all conflicts <span class="caret"></span>
-                </button>
-                <ul class="dropdown-menu" role="menu">
-                    <li><a href="#" data-bind="click: resolveToLocal">Resolve to local <span data-bind="visible: serverConflictResolution() === 'ResolveToLocal'">(default)</span></a></li>
-                    <li><a href="#" data-bind="click: resolveToNewestRemote">Resolve to newest remote <span data-bind="visible: serverConflictResolution() === 'ResolveToRemote'">(default)</span></a></li>
-                    <li><a href="#" data-bind="click: resolveToLatest">Resolve to latest <span data-bind="visible: serverConflictResolution() === 'ResolveToLatest'">(default)</span></a></li>
-                </ul>
-            </div>
+<div class="conflicts-page flex-horizontal flex-stretch-items absolute-fill content-margin">
+    <div class="flex-vertical">
+        <div class="conflicts-list-container flex-vertical flex-grow" style="position:relative;">
+            <virtual-grid class="resizable virtual-grid" params="controller: gridController, emptyTemplate: 'no-conflicts-found-template'"></virtual-grid>
         </div>
     </div>
-    <div class="row">
-        <div class="col-md-12">
-            <div id="conflictsGrid" data-bind="widget: {
-                kind: 'virtualTable', itemsSource: currentConflictsPagedItems,
-                selectedIndices: selectedDocumentIndices, gridSelector: '#conflictsGrid',
-                showCheckboxes: false, useContextMenu: false,
-                customColumns: currentColumns,
-                noResultsMessage: 'No conflicts found'
-            }"></div>
+    <div class="flex-vertical flex-grow" data-bind="visible: hasDetailsLoaded">
+        
+        <h2 data-bind="text: 'Resolving conflict for: ' + documentId()"></h2>
+
+        <div class="conflicted-files flex-stretch-items flex-horizontal" data-bind="foreach: conflictItems">
+            <div class="file">
+                <pre data-bind="visible: !deletedMarker()"><code data-bind="html: formattedValue"></code></pre>
+                <pre data-bind="visible: deletedMarker()"><code>Document was removed.</code></pre>
+            </div>
+        </div>
+        
+        <div class="margin-bottom">
+            <button class="btn btn-primary" data-bind="click: saveDocument"><i class="icon-save"></i> <span>Save</span></button>
+            <button type="button" data-bind="click: deleteDocument" class="btn btn-danger">
+                <i class="icon-trash"></i>
+                <span>Delete</span>
+            </button>
+        </div>
+
+        <div class="result-file flex-grow">
+            <pre id="docEditor" class="form-control absolute-fill"
+                 data-bind="aceEditor: { code: suggestedResolution, fontSize:'16px', lang: 'ace/mode/json' }, attr: { disabled: isBusy }, validationElement: suggestedResolution"></pre>
+        </div>
+            
+        <div data-bind="validationElement: suggestedResolution">
+            <div class="help-block" data-bind="validationMessage: suggestedResolution"></div>
         </div>
     </div>
 </div>
 
-<script type="text/html" id="versions-template">
-    <span data-bind="foreach: { data: $data, as: 'version' }">
-        <a href="#" data-bind="attr: { href: $root.getUrlForConflict(version), title: 'Document Id: ' + version.id + ' Server Id: ' + $root.getServerUrlForVersion(version) }">
-            <span data-bind="text: ($index() + 1) + $root.getTextForVersion(version)"></span>
-        </a>
-    </span>
+<script type="text/html" id="no-conflicts-found-template">
+    No conflicts found.
 </script>

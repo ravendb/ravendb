@@ -3,7 +3,7 @@
         <div class="modal-header">
             <div class="flex-horizontal">
                 <div class="flex-grow">
-                    <h3 class="modal-title" id="myModalLabel" data-bind="text: op.title"></h3>
+                    <h3 class="modal-title" id="myModalLabel" data-bind="text: op.title, attr:{ class: 'modal-title ' + op.headerClass() }"></h3>
                 </div>
                 <div class="flex-grow text-right">
                     <span class="text-muted">Time elapsed:</span> <span data-bind="text: op.duration"></span>
@@ -17,11 +17,25 @@
         </div>
         <div class="modal-body">
             <div data-bind="with: progress">
-                <div>Processed: <span data-bind="text: Processed.toLocaleString()"></span> / <span data-bind="text: Total.toLocaleString()"></span></div>
-                <div data-bind="visible: Message">
-                    <div data-bind="text: Message"></div>
+                <div class="modal-details">
+                    <div class="details-item">
+                        <div class="row">
+                            <div class="col-sm-6 text-right">
+                                Processed:
+                            </div>
+                            <div class="col-sm-6 details-value">
+                                <span data-bind="text: Processed.toLocaleString()"></span> / <span data-bind="text: Total.toLocaleString()"></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" data-bind="style: {'width': Processed/Total*100 + '%'}">
+                    </div>
+                </div>
+                <div data-bind="visible: Message">
+                    <h3 class="text-center" data-bind="text: Message"></h3>
+                </div>
             </div>
             <div data-bind="with: result">
                 <span data-bind="text: Message"></span>
@@ -29,7 +43,7 @@
             <div data-bind="if: operationFailed">
                 <h3 class="text-danger">Operation failed</h3>
                 <pre class="margin-top error-messages"><code data-bind="foreach: errorMessages"><span data-bind="text: $data"></span>
-</code></pre>    
+</code></pre>
             </div>
         </div>
         <div class="modal-footer">

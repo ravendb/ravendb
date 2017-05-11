@@ -3,7 +3,7 @@
         <div class="modal-header">
             <div class="flex-horizontal">
                 <div class="flex-grow">
-                    <h3 class="modal-title" id="myModalLabel" data-bind="text: hint.title"></h3>
+                    <h3 class="modal-title" id="myModalLabel" data-bind="text: hint.title, attr:{ class: 'modal-title ' + hint.headerClass() }"></h3>
                 </div>
                 <div>
                     <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
@@ -13,8 +13,8 @@
             </div>
         </div>
         <div class="modal-body">
-            <div data-bind="text: hint.message"></div>
-            
+            <h3 data-bind="text: hint.message"></h3>
+
             <div style="position: relative; height: 300px">
                 <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController"></virtual-grid>
             </div>

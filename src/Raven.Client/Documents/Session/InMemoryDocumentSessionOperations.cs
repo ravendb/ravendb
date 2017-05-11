@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Dynamic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -708,45 +707,13 @@ more responsive application.
         {
             var result = new SaveChangesData
             {
-                Entities = new List<object>(),
-                Commands = new List<ICommandData>(),
-                DeferredCommandsCount = _deferedCommands.Count,
+                DeferedCommands = new List<ICommandData>(_deferedCommands),
                 Options = _saveChangesOptions
             };
+            _deferedCommands.Clear();
 
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
-
-            if (result.DeferredCommandsCount == 0)
-            {
-                result.Commands.AddRange(_deferedCommands);
-            }
-            else
-            {
-                foreach (var deferedCommand in _deferedCommands)
-                {
-                    foreach (var command in result.Commands)
-                    {
-                        if (deferedCommand.Type == CommandType.AttachmentPUT)
-                        {
-                            if (command is PutAttachmentCommandData putAttachmentCommand &&
-                                ((PutAttachmentCommandData)command).Name == putAttachmentCommand.Name &&
-                                deferedCommand.Key == command.Key)
-                            {
-                                // TODO: Throw here and test.
-                            }
-                            continue;
-                        }
-
-                        if ((command.Type != CommandType.PATCH || deferedCommand.Type != CommandType.PATCH) &&
-                            deferedCommand.Key == command.Key)
-                            ThrowInvalidModifiedDocumentWithDefferredCommand(deferedCommand);
-                    }
-
-                    result.Commands.Add(deferedCommand);
-                }
-            }
-            _deferedCommands.Clear();
 
             return result;
         }
@@ -804,7 +771,7 @@ more responsive application.
                     etag = UseOptimisticConcurrency ? etag : null;
                     var beforeDeleteEventArgs = new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity);
                     OnBeforeDelete?.Invoke(this, beforeDeleteEventArgs);
-                    result.Commands.Add(new DeleteCommandData(documentInfo.Id, etag));
+                    result.SessionCommands.Add(new DeleteCommandData(documentInfo.Id, etag));
                 }
             }
             DeletedEntities.Clear();
@@ -818,6 +785,13 @@ more responsive application.
                 var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
                 if (entity.Value.IgnoreChanges || EntityChanged(document, entity.Value, null) == false)
                     continue;
+
+                foreach (var resultCommand in result.DeferedCommands)
+                {
+                    if (resultCommand.Type != CommandType.AttachmentPUT &&
+                        resultCommand.Key == entity.Value.Id)
+                        ThrowInvalidModifiedDocumentWithDefferredCommand(resultCommand);
+                }
 
                 var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
                 OnBeforeStore?.Invoke(this, beforeStoreEventArgs);
@@ -838,7 +812,7 @@ more responsive application.
                     ? (long?)(entity.Value.ETag ?? 0)
                     : null;
 
-                result.Commands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, etag, document));
+                result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, etag, document));
             }
         }
 
@@ -1253,28 +1227,10 @@ more responsive application.
         /// </summary>
         public class SaveChangesData
         {
-            public SaveChangesData()
-            {
-                Commands = new List<ICommandData>();
-                Entities = new List<object>();
-            }
-
-            /// <summary>
-            /// Gets or sets the commands.
-            /// </summary>
-            /// <value>The commands.</value>
-            public List<ICommandData> Commands { get; set; }
-
-            public BatchOptions Options { get; set; }
-
-            public int DeferredCommandsCount { get; set; }
-
-            /// <summary>
-            /// Gets or sets the entities.
-            /// </summary>
-            /// <value>The entities.</value>
-            public List<object> Entities { get; set; }
-
+            public List<ICommandData> DeferedCommands;
+            public readonly List<ICommandData> SessionCommands = new List<ICommandData>();
+            public readonly List<object> Entities = new List<object>();
+            public BatchOptions Options;
         }
 
         public void OnAfterStoreInvoke(AfterStoreEventArgs afterStoreEventArgs)

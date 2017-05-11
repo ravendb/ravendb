@@ -1,0 +1,40 @@
+﻿.conflicts-page {
+    .conflicts-list-container {
+        width: 400px;
+        position: relative;
+    }
+
+    .conflicted-files {
+        margin-bottom: @grid-gutter-width/4;
+        flex-basis: 40%;
+        height: 40%;
+        flex-shrink: 1;
+        .message {
+            display: flex;
+            justify-content:center;
+            align-items: center;
+        }
+
+        & > div {
+            flex-grow: 1;
+            background-color: @gray-darker;
+            flex-shrink: 0;
+            .scroll;
+            width: 10%;
+
+            & + div {
+                margin-left: @grid-gutter-width/4;
+            }
+
+            pre {
+                min-height: 100%;
+            }
+        }
+    }
+
+
+    .result-file {
+        flex-grow: 1;
+        background-color: @gray-darker;
+    }
+}
