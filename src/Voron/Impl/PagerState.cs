@@ -139,5 +139,7 @@ namespace Voron.Impl
 
             _pager.ProtectPageRange(MapBase, (ulong)size);
         }
+
+        public PagerState CurrentPagerState => _pager.PagerState;
     }
 }
