@@ -174,7 +174,7 @@ namespace Voron.Impl
             
             foreach (var scratchAndDataPagerState in previous._pagerStates)
             {
-                if (scratchAndDataPagerState.DisposeFilesOnDispose)
+                if (scratchAndDataPagerState.DiscardOnTxCopy)
                     continue;
 
                 var currentPager = scratchAndDataPagerState.CurrentPager;
