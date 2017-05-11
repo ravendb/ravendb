@@ -1059,10 +1059,14 @@ namespace Voron.Impl
             if (state == _lastState || state == null)
                 return;
 
-            _lastState = state;
             if (_pagerStates.Add(state) == false)
+            {
+                _lastState = state;
                 return;
-            state.AddRef();
+            }
+
+            state = state.CurrentPager.GetPagerStateAndAddRefAtomically(); // state might hold released pagerState, and we want to add ref to the current (i.e. data file was re-allocated and a new state is now available). RavenDB-6950
+            _lastState = state;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -6,6 +6,7 @@ using FastTests.Server.Documents.Queries;
 using FastTests.Server.Replication;
 using SlowTests.Client.Attachments;
 using SlowTests.Core.Session;
+using SlowTests.SlowTests.Issues;
 
 namespace Tryouts
 {
@@ -13,49 +14,13 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            Console.WriteLine(Process.GetCurrentProcess().Id);
-            Console.WriteLine();
-
-            for (int i = 0; i < 128; i++)
+            for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new AttachmentsBigFiles())
+                using (var a = new RavenDB_1280_ReOpen())
                 {
-                    // a.SupportHugeAttachment_MaxLong(int.MaxValue);
+                    a.Can_Index_With_Missing_LoadDocument_References();
                 }
-            }
-            if (DateTime.Now > DateTime.MaxValue)
-            {
-                return;
-            }
-
-            using (var a = new AttachmentsSession())
-            {
-                a.PutAttachmentAndDeleteShouldThrow();
-            }
-            using (var a = new CRUD())
-            {
-                a.CRUD_Operations_with_what_changed();
-            }
-            using (var a = new AttachmentsReplication())
-            {
-                a.PutSameAttachmentsDifferentContentTypeShouldConflict().Wait();
-            }
-            using (var a = new ReplicationOfConflicts())
-            {
-                a.ReplicateTombstoneConflict().Wait();
-            }
-            using (var a = new AttachmentsSession())
-            {
-                a.PutAttachments();
-            }
-            using (var a = new FirstClassPatch())
-            {
-                a.CanPatchAndModify();
-            }
-            using (var a = new Advanced())
-            {
-                a.CanUseDefer();
             }
         }
     }
