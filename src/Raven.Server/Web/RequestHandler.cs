@@ -106,8 +106,10 @@ namespace Raven.Server.Web
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsGzipRequest(Dictionary<string, StringValues> headers)
         {
+            if (headers.TryGetValue("Content-Encoding", out StringValues values) == false)
+                return false;
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var val in headers["Content-Encoding"])
+            foreach (var val in values)
             {
                 if (val == "gzip")
                     return true;
