@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private static readonly byte[] Heartbeat = Encoding.UTF8.GetBytes("\r\n");
 
-        private SubscriptionState _state;
+        private SubscriptionConnectionState _connectionState;
         private bool _isDisposed;
 
         public long SubscriptionId => _options.SubscriptionId;
@@ -127,14 +127,14 @@ namespace Raven.Server.Documents.TcpHandlers
                 });
                 return false;
             }
-            _state = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
+            _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
             uint timeout = 16;
 
             while (true)
             {
                 try
                 {
-                    DisposeOnDisconnect = await _state.RegisterSubscriptionConnection(this, timeout);
+                    DisposeOnDisconnect = await _connectionState.RegisterSubscriptionConnection(this, timeout);
 
                     await WriteJsonAsync(new DynamicJsonValue
                     {
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     if (timeout == 0 && _logger.IsInfoEnabled)
                     {
                         _logger.Info(
-                            $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} starts to wait until previous connection from {_state.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
+                            $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} starts to wait until previous connection from {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
                     }
                     timeout = Math.Max(250, _options.TimeToWaitBeforeConnectionRetryMilliseconds/2);
                     await SendHeartBeat();
@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     if (timeout == 0 && _logger.IsInfoEnabled)
                     {
                         _logger.Info(
-                            $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} with connection strategy {Strategy} was rejected because previous connection from {_state.Connection.TcpConnection.TcpClient.Client.RemoteEndPoint} has stronger connection strategy ({_state.Connection.Strategy})");
+                            $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} with connection strategy {Strategy} was rejected because previous connection from {_connectionState.Connection.TcpConnection.TcpClient.Client.RemoteEndPoint} has stronger connection strategy ({_connectionState.Connection.Strategy})");
                     }
 
                     await WriteJsonAsync(new DynamicJsonValue
@@ -331,7 +331,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 _logger.Info(
                     $"Starting proccessing documents for subscription {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
             }
-            var subscription = TcpConnection.DocumentDatabase.SubscriptionStorage.GetSubscriptionRaftState(_options.SubscriptionId);
+            var subscription = TcpConnection.DocumentDatabase.SubscriptionStorage.GetSubscriptionFromServerStore(_options.SubscriptionId);
 
             using (DisposeOnDisconnect)
             using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docsContext))
@@ -513,7 +513,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private long GetStartEtagForSubscription(DocumentsOperationContext docsContext, SubscriptionRaftState subscription, ref bool reachecChangeVectorGreaterThanTheOneInSubscription)
+        private long GetStartEtagForSubscription(DocumentsOperationContext docsContext, SubscriptionState subscription, ref bool reachecChangeVectorGreaterThanTheOneInSubscription)
         {
             using (docsContext.OpenReadTransaction())
             {
@@ -536,7 +536,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private long GetStartEtagByChangeVector(SubscriptionRaftState subscription)
+        private long GetStartEtagByChangeVector(SubscriptionState subscription)
         {
             long startEtag = 0;
             var dbId = TcpConnection.DocumentDatabase.DbId;
@@ -599,7 +599,7 @@ namespace Raven.Server.Documents.TcpHandlers
             return false;
         }
 
-        private bool ShouldSendDocument(SubscriptionRaftState subscriptionRaftState, SubscriptionPatchDocument patch, DocumentsOperationContext dbContext,
+        private bool ShouldSendDocument(SubscriptionState subscriptionState, SubscriptionPatchDocument patch, DocumentsOperationContext dbContext,
             Document doc, ref bool reachecChangeVectorGreaterThanTheOneInSubscription, out BlittableJsonReaderObject transformResult)
         {
             transformResult = null;
@@ -608,7 +608,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 var conflictStatus = ConflictsStorage.GetConflictStatus(
                     remote: doc.ChangeVector,
-                    local: subscriptionRaftState.ChangeVector);
+                    local: subscriptionState.ChangeVector);
 
                 if (conflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged)
                     return false;

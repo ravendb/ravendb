@@ -85,7 +85,7 @@ namespace Raven.Client.Documents.Subscriptions
             return subscription;
         }
 
-        public async Task<List<SubscriptionRaftState>> GetSubscriptionsAsync(int start, int take, string database = null)
+        public async Task<List<SubscriptionState>> GetSubscriptionsAsync(int start, int take, string database = null)
         {
             JsonOperationContext jsonOperationContext;
             var requestExecuter = _store.GetRequestExecuter(database ?? _store.DefaultDatabase);

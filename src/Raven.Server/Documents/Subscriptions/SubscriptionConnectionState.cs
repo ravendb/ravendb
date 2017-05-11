@@ -10,12 +10,12 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class SubscriptionState:IDisposable
+    public class SubscriptionConnectionState:IDisposable
     {
         private readonly SubscriptionStorage _storage;
         internal readonly AsyncManualResetEvent ConnectionInUse = new AsyncManualResetEvent();
 
-        public SubscriptionState(SubscriptionStorage storage)
+        public SubscriptionConnectionState(SubscriptionStorage storage)
         {
             _storage = storage;
             ConnectionInUse.Set();
