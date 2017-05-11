@@ -351,6 +351,14 @@ namespace Raven.Server.Documents.Subscriptions
                 }
             }
         }
+
+        public Task GetSusbscriptionConnectionInUseAwaiter(long subscriptionId)
+        {
+            if (_subscriptionStates.TryGetValue(subscriptionId, out SubscriptionState state) == false)
+                return Task.CompletedTask;
+
+            return state.ConnectionInUse.WaitAsync();
+        }
     }
 }
  
