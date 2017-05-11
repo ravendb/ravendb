@@ -258,7 +258,7 @@ namespace Voron.Impl.Scratch
             _scratchBuffers.Clear();
         }
 
-        public class ScratchBufferItem
+        private class ScratchBufferItem
         {
             public readonly int Number;
             public readonly ScratchBufferFile File;
@@ -309,7 +309,7 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ScratchBufferItem GetScratchBufferFile(int scratchNumber)
+        private ScratchBufferItem GetScratchBufferFile(int scratchNumber)
         {
             var currentScratchFile = _current;
             if (scratchNumber == currentScratchFile.Number)
