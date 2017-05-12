@@ -234,8 +234,8 @@ namespace Voron.Impl
             _freeSpaceHandling = freeSpaceHandling;
             _allocator = context ?? new ByteStringContext(LowMemoryFlag.None);
             _disposeAllocator = context == null;
-            _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);           
-            
+            _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
+
             PersistentContext = transactionPersistentContext;
             Flags = flags;
 
@@ -382,7 +382,7 @@ namespace Voron.Impl
 
             // Check if we can hit the second level locality cache.            
             if (_dirtyPages.Contains(num))
-                return currentPage;                
+                return currentPage;
 
             // No cache hits.
             int pageSize;
@@ -617,7 +617,7 @@ namespace Voron.Impl
                     pageFromScratchBuffer.PositionInScratchBuffer,
                     numberOfPages);
             }
-            
+
             var newPagePointer = _env.ScratchBufferPool.AcquirePagePointerForNewPage(this, pageFromScratchBuffer.ScratchFileNumber,
                 pageFromScratchBuffer.PositionInScratchBuffer, numberOfPages);
 
@@ -697,6 +697,8 @@ namespace Voron.Impl
             page.OverflowSize = newSize;
             var lowerNumberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(newSize);
 
+            Debug.Assert(lowerNumberOfPages != 0);
+
             if (prevNumberOfPages == lowerNumberOfPages)
                 return;
 
@@ -704,6 +706,9 @@ namespace Voron.Impl
             {
                 FreePage(page.PageNumber + i);
             }
+
+            if (lowerNumberOfPages > 1)
+                _dirtyOverflowPages[pageNumber + 1] = lowerNumberOfPages - 1; // change the range of the overflow page
         }
 
         [Conditional("DEBUG")]
@@ -968,7 +973,7 @@ namespace Voron.Impl
             {
                 ValidateAllPages();
 
-                Allocator.Release(ref _txHeaderMemory);                
+                Allocator.Release(ref _txHeaderMemory);
 
                 Committed = true;
                 _env.TransactionAfterCommit(this);
@@ -1055,7 +1060,7 @@ namespace Voron.Impl
         internal ImmutableAppendOnlyList<JournalFile> JournalFiles;
         internal bool AlreadyAllowedDisposeWithLazyTransactionRunning;
         public DateTime TxStartTime;
-        
+
         public void EnsurePagerStateReference(PagerState state)
         {
             if (state == _lastState || state == null)
