@@ -140,10 +140,10 @@ interface databaseCreatedEventArgs {
     name: string;
 }
 
-interface availableBundle {
-    displayName: string;
+interface availableConfigurationSection {
     name: string;
-    hasAdvancedConfiguration: boolean;
+    alwaysEnabled: boolean;
+    enabled: KnockoutObservable<boolean>;
     validationGroup?: KnockoutValidationGroup;
 }
 
