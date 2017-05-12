@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using AsyncFriendlyStackTrace;
@@ -73,6 +75,8 @@ namespace Raven.Server
             "/debug/server-id"
         };
 
+        private const string UnsafePageHtmlResource = "Raven.Server.Web.Assets.Unsafe.html";
+
         private Task UnsafeRequestHandler(HttpContext context)
         {
             if (RoutesAllowedInUnsafeMode.Contains(context.Request.Path.Value))
@@ -81,6 +85,19 @@ namespace Raven.Server
             }
 
             context.Response.StatusCode = (int) HttpStatusCode.ServiceUnavailable;
+
+            if (IsHtmlAcceptable(context))
+            {
+                context.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
+
+                using (var reader = new StreamReader(
+                    Assembly.GetEntryAssembly().GetManifestResourceStream(UnsafePageHtmlResource)))
+                {
+                    var html = reader.ReadToEnd();
+                    return context.Response.WriteAsync(html);
+                }
+            }
+
             context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             JsonOperationContext ctx;
             using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
@@ -88,14 +105,14 @@ namespace Raven.Server
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Message");
-                writer.WriteString(String.Join(" ",UnsafeWarning));
+                writer.WriteString(String.Join(" ", UnsafeWarning));
                 writer.WriteComma();
                 writer.WritePropertyName("MessageAsArray");
                 writer.WriteStartArray();
                 var first = true;
                 foreach (var val in UnsafeWarning)
                 {
-                    if(first == false)
+                    if (first == false)
                         writer.WriteComma();
                     first = false;
                     writer.WriteString(val);
@@ -103,15 +120,32 @@ namespace Raven.Server
                 writer.WriteEndArray();
                 writer.WriteEndObject();
             }
+
             return Task.CompletedTask;
         }
 
+        private static bool IsHtmlAcceptable(HttpContext context)
+        {
+            bool result = false;
+            var acceptHeaders = context.Request.Headers["Accept"].ToArray();
+            foreach (var acceptHeader in acceptHeaders)
+            {
+                if (acceptHeader != null
+                    && (acceptHeader.Contains("text/html") 
+                        || acceptHeader.Contains("text/*")))
+                {
+                    result = true;
+                }
+            }
+
+            return result;
+        }
+
         private static readonly string[] UnsafeWarning = {
-            "The server is running in a potentially unsafe mode.",
-            "This means that Raven/AnonymousUserAccessMode is set to Admin and expose to the world.",
-            "Prevent unsafe access to the server by setting Raven/AnonymousUserAccessMode to None.",
-            "If you intended to give everybody admin access to the server then set Raven/AllowAnonymousUserToAccessTheServer to true.",
-            "In order to gain access to the server please run in on localhost."
+            "Running in a potentially unsafe mode.",
+            "Server is exposed to the world and the security option Raven/AnonymousUserAccessMode is set to Admin.",
+            "Please find the RavenDB settings file settings.json in the server directory and set this option to None to prevent unauthorized access. In order to gain administrative access to the server please access it through localhost.",
+            "If you intended to grant administrative access to the server for anonymous users set Raven/AllowAnonymousUserToAccessTheServer security option to true."
         };
 
         private async Task RequestHandler(HttpContext context)

@@ -112,8 +112,8 @@ function CreatePackageServerLayout ( $projectDir, $serverOutDir, $packageDir, $s
 
     $settingsFileName = If ($spec.IsUnix) { "settings_posix.json" } Else { "settings_windows.json" }
     $settingsFilePath = [io.path]::combine($projectDir, 'src', 'Raven.Server', $settingsFileName)
-
-    Copy-Item "$settingsFilePath" $serverOutDir
+    $settingsTargetPath = [io.path]::combine($serverOutDir, "settings.json")
+    Copy-Item "$settingsFilePath" $settingsTargetPath
 
     Copy-Item "$serverOutDir" -Recurse -Destination "$packageDir"
 }
