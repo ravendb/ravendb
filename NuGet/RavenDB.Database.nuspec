@@ -16,7 +16,7 @@ Note: If you encounter issue to install this package, please consult the followi
 		<tags>nosql ravendb raven document database</tags>
 		<dependencies>
 			<group>
-				<dependency id="Microsoft.CompilerServices.AsyncTargetingPack" version=""/>
+				<dependency id="Microsoft.CompilerServices.AsyncTargetingPack" version="1.0.0"/>
 				<dependency id="System.Spatial" version="5.2"/>
 				<dependency id="WindowsAzure.Storage" version="2.0"/>
 				<dependency id="Microsoft.Data.Edm" version="5.2" />
