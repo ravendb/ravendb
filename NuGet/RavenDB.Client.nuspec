@@ -14,7 +14,7 @@
 		<tags>nosql ravendb raven document database client</tags>
 		<dependencies>
 			<group>
-				<dependency id="Microsoft.CompilerServices.AsyncTargetingPack" version=""/>
+				<dependency id="Microsoft.CompilerServices.AsyncTargetingPack" version="1.0.0"/>
 			</group>
 			<group targetFramework="net45">
 			</group>
