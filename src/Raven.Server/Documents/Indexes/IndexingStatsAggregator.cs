@@ -112,6 +112,11 @@ namespace Raven.Server.Documents.Indexes
             _stats.AddWriteError(iwe);
         }
 
+        public void AddUnexpectedError(Exception e)
+        {
+            _stats.AddUnexpectedError(e);
+        }
+
         public void AddCriticalError(Exception e)
         {
             _stats.AddCriticalError(e);

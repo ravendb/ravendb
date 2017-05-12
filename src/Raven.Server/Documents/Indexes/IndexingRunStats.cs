@@ -59,6 +59,11 @@ namespace Raven.Server.Documents.Indexes
             AddError(null, $"Could not create analyzer: {exception.Message}", "Analyzer");
         }
 
+        public void AddUnexpectedError(Exception exception)
+        {
+            AddError(null, $"Unexpected exception occured: {exception}", "Critical");
+        }
+
         public void AddCriticalError(Exception exception)
         {
             AddError(null, $"Critical exception occured: {exception}", "Critical");

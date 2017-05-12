@@ -71,13 +71,13 @@ namespace Raven.Server.Documents.Indexes
     {
         private long _writeErrors;
 
-        private long _criticalErrors;
+        private long _unexpectedErrors;
 
         private long _analyzerErrors;
 
         private const long WriteErrorsLimit = 10;
 
-        private const long CriticalErrorsLimit = 3;
+        private const long UnexpectedErrorsLimit = 3;
 
         private const long AnalyzerErrorLimit = 0;
 
@@ -725,8 +725,8 @@ namespace Raven.Server.Documents.Indexes
                                     if (didWork)
                                         ResetErrors();
 
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Finished indexing for '{Name} ({Etag})'.'");
+                                    if (_logger.IsInfoEnabled)
+                                        _logger.Info($"Finished indexing for '{Name} ({Etag})'.'");
                                     _hadRealIndexingWorkToDo |= didWork;
 
                                     if (_logger.IsInfoEnabled)
@@ -772,6 +772,10 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     HandleAnalyzerErrors(scope, iae);
                                 }
+                                catch (CriticalIndexingException cie)
+                                {
+                                    HandleCriticalErrors(scope, cie);
+                                }
                                 catch (OperationCanceledException)
                                 {
                                     scope.RecordMapCompletedReason("Operation canceled.");
@@ -782,7 +786,7 @@ namespace Raven.Server.Documents.Indexes
                                     if (_logger.IsOperationsEnabled)
                                         _logger.Operations($"Critical exception occurred for '{Name} ({Etag})'.", e);
 
-                                    HandleCriticalErrors(scope, e);
+                                    HandleUnexpectedErrors(scope, e);
                                 }
 
                                 try
@@ -929,7 +933,7 @@ namespace Raven.Server.Documents.Indexes
         internal void ResetErrors()
         {
             Interlocked.Exchange(ref _writeErrors, 0);
-            Interlocked.Exchange(ref _criticalErrors, 0);
+            Interlocked.Exchange(ref _unexpectedErrors, 0);
             Interlocked.Exchange(ref _analyzerErrors, 0);
         }
 
@@ -947,17 +951,27 @@ namespace Raven.Server.Documents.Indexes
             SetState(IndexState.Error);
         }
 
-        internal void HandleCriticalErrors(IndexingStatsScope stats, Exception e)
+        internal void HandleUnexpectedErrors(IndexingStatsScope stats, Exception e)
         {
-            stats.AddCriticalError(e);
+            stats.AddUnexpectedError(e);
 
-            var criticalErrors = Interlocked.Increment(ref _criticalErrors);
+            var unexpectedErrors = Interlocked.Increment(ref _unexpectedErrors);
 
-            if (State == IndexState.Error || criticalErrors < CriticalErrorsLimit)
+            if (State == IndexState.Error || unexpectedErrors < UnexpectedErrorsLimit)
                 return;
 
             // TODO we should create notification here?
-            _errorStateReason = $"State was changed due to excessive number of critical errors ({criticalErrors}).";
+            _errorStateReason = $"State was changed due to excessive number of unexpected errors ({unexpectedErrors}).";
+            SetState(IndexState.Error);
+        }
+
+        internal void HandleCriticalErrors(IndexingStatsScope stats, CriticalIndexingException e)
+        {
+            if (State == IndexState.Error)
+                return;
+
+            // TODO we should create notification here?
+            _errorStateReason = "State was changed due to a critical error.";
             SetState(IndexState.Error);
         }
 
