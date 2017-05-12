@@ -118,7 +118,7 @@
 
             <div data-bind="foreach: $root.clusterNodes">
                 <div class="checkbox">
-                    <input class="styled" type="checkbox" data-bind="attr: { id: 'cluster_node_' + $index() }, checked: $parent.nodes, checkedValue: tag">
+                    <input class="styled" type="checkbox" data-bind="attr: { id: 'cluster_node_' + $index() }, checked: $parent.nodes, checkedValue: $data">
                     <label data-bind="attr: { for: 'cluster_node_' + $index() }, text: tag() + ' (' + serverUrl() + ')'"></label>
                 </div>
             </div>

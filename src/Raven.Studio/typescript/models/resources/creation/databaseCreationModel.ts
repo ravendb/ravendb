@@ -1,6 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
 import configuration = require("configuration");
+import clusterNode = require("models/database/cluster/clusterNode");
 
 class databaseCreationModel {
 
@@ -27,7 +28,7 @@ class databaseCreationModel {
     replication = {
         replicationFactor: ko.observable<number>(1),
         manualMode: ko.observable<boolean>(false),
-        nodes: ko.observableArray<string>([])
+        nodes: ko.observableArray<clusterNode>([])
     }
 
     replicationValidationGroup = ko.validatedObservable({
@@ -173,6 +174,20 @@ class databaseCreationModel {
         });
     }
 
+    private topologyToDto(): Raven.Client.Documents.DatabaseTopology {
+        if (this.replication.manualMode()) {
+            const nodes = this.replication.nodes();
+            return {
+                Members: nodes.map(node => ({
+                    Database: this.name(),
+                    NodeTag: node.tag(),
+                    Url: node.serverUrl()
+                }))
+            } as Raven.Client.Documents.DatabaseTopology;
+        }
+        return undefined;
+    }
+
     toDto(): Raven.Client.Documents.DatabaseRecord {
         const settings: dictionary<string> = {};
         const securedSettings: dictionary<string> = {};
@@ -198,7 +213,8 @@ class databaseCreationModel {
             Settings: settings,
             SecuredSettings: securedSettings,
             Disabled: false,
-            Encrypted: this.getEncryptionConfigSection().enabled()
+            Encrypted: this.getEncryptionConfigSection().enabled(),
+            Topology: this.topologyToDto()
         } as Raven.Client.Documents.DatabaseRecord;
     }
 
