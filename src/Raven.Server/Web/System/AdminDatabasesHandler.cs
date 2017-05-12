@@ -195,7 +195,6 @@ namespace Raven.Server.Web.System
                 {
                     throw new BadRequestException("Database document validation failed.", e);
                 }
-                var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required: false) ?? 0);
 
                 DatabaseTopology topology;
                 if (document.Topology?.Members?.Count > 0)
@@ -205,6 +204,7 @@ namespace Raven.Server.Web.System
                 }
                 else
                 {
+                    var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required: false) ?? 0);
                     topology = AssignNodesToDatabase(context, factor, name, json);
                 }
 
