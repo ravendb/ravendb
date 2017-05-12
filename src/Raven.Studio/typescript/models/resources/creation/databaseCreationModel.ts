@@ -4,49 +4,88 @@ import configuration = require("configuration");
 
 class databaseCreationModel {
 
+    readonly configurationSections: Array<availableConfigurationSection> = [
+        {
+            name: "Replication",
+            alwaysEnabled: true,
+            enabled: ko.observable<boolean>(true)
+        },
+        {
+            name: "Path",
+            alwaysEnabled: true,
+            enabled: ko.observable<boolean>(true)
+        },
+        {
+            name: "Encryption",
+            alwaysEnabled: false,
+            enabled: ko.observable<boolean>(false)
+        }
+    ];
+
     name = ko.observable<string>("");
-    replicationFactor = ko.observable<number>(1);
 
-    indexesPath = ko.observable<string>();
-    incrementalBackup = ko.observable<boolean>();
-
-    incrementalBackupSettings = {
-        alertTimeout: ko.observable<number>(24),
-        alertRecurringTimeout: ko.observable<number>(7)
+    replication = {
+        replicationFactor: ko.observable<number>(1),
+        manualMode: ko.observable<boolean>(false),
+        nodes: ko.observableArray<string>([])
     }
-
-    alertTimeoutOptions = [4, 8, 12, 24, 48, 72];
-    alertRecurringTimeoutOptions = [1, 2, 4, 7, 14];
-
-    dataPath = ko.observable<string>();
-    journalsPath = ko.observable<string>();
-    tempPath = ko.observable<string>();
-
-    selectedBundles = ko.observableArray<string>([]);
-
-    encryption = {
-        key: ko.observable<string>()
-    }
-
-    advancedValidationGroup = ko.validatedObservable({
-        dataPath: this.dataPath,
-        journalsPath: this.journalsPath,
-        tempPath: this.tempPath,
-        indexesPath: this.indexesPath
-    });
-
-    encryptionValidationGroup = ko.validatedObservable({
-        key: this.encryption.key
-    });
 
     replicationValidationGroup = ko.validatedObservable({
-        //TODO empty for now
+        replicationFactor: this.replication.replicationFactor
+    });
+
+    path = {
+        indexesPath: ko.observable<string>(),
+        dataPath: ko.observable<string>(),
+        journalsPath: ko.observable<string>(),
+        tempPath: ko.observable<string>()
+    }
+
+    pathValidationGroup = ko.validatedObservable({
+        dataPath: this.path.dataPath,
+        journalsPath: this.path.journalsPath,
+        tempPath: this.path.tempPath,
+        indexesPath: this.path.indexesPath
+    });
+
+    encryption = {
+        key: ko.observable<string>(),
+        confirmation: ko.observable<boolean>(false)
+    }
+   
+    encryptionValidationGroup = ko.validatedObservable({
+        key: this.encryption.key,
+        confirmation: this.encryption.confirmation
     });
 
     globalValidationGroup = ko.validatedObservable({
-        name: this.name,
-        replicationFactor: this.replicationFactor
+        name: this.name
     });
+
+    constructor() {
+        const encryptionConfig = this.getEncryptionConfigSection();
+        encryptionConfig.validationGroup = this.encryptionValidationGroup;
+
+        const replicationConfig = this.configurationSections.find(x => x.name === "Replication");
+        replicationConfig.validationGroup = this.replicationValidationGroup;
+
+        const pathConfig = this.configurationSections.find(x => x.name === "Path");
+        pathConfig.validationGroup = this.pathValidationGroup;
+
+        encryptionConfig.enabled.subscribe(enabled => {
+            if (enabled) {
+                this.replication.manualMode(true);
+            }
+        });
+
+        this.replication.nodes.subscribe(nodes => {
+            this.replication.replicationFactor(nodes.length);
+        });
+    }
+
+    getEncryptionConfigSection() {
+        return this.configurationSections.find(x => x.name === "Encryption");
+    }
 
     protected setupPathValidation(observable: KnockoutObservable<string>, name: string) {
         const maxLength = 248;
@@ -76,11 +115,11 @@ class databaseCreationModel {
         const rg1 = /^[^\\/:\*\?"<>\|]*$/; // forbidden characters \ / : * ? " < > |
         const rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
 
-        this.setupPathValidation(this.dataPath, "Data");
-        this.setupPathValidation(this.tempPath, "Temp");
-        this.setupPathValidation(this.journalsPath, "Journals");
+        this.setupPathValidation(this.path.dataPath, "Data");
+        this.setupPathValidation(this.path.tempPath, "Temp");
+        this.setupPathValidation(this.path.journalsPath, "Journals");
 
-        this.replicationFactor.extend({
+        this.replication.replicationFactor.extend({
             required: true,
             validation: [
                 {
@@ -117,11 +156,20 @@ class databaseCreationModel {
                 }]
         });
 
-        this.setupPathValidation(this.indexesPath, "Indexes");
+        this.setupPathValidation(this.path.indexesPath, "Indexes");
 
         this.encryption.key.extend({
             required: true,
             base64: true //TODO: any other validaton ?
+        });
+
+        this.encryption.confirmation.extend({
+            validation: [
+                {
+                    validator: (v: boolean) => v,
+                    message: "Please confirm you saved encryption key"
+                }
+            ]
         });
     }
 
@@ -129,56 +177,31 @@ class databaseCreationModel {
         const settings: dictionary<string> = {};
         const securedSettings: dictionary<string> = {};
 
-        if (this.incrementalBackup()) {
-            settings[configuration.storage.allowIncrementalBackups] = "true";
+        if (this.path.tempPath() && this.path.tempPath().trim()) {
+            settings[configuration.storage.tempPath] = this.path.tempPath();
         }
 
-        if (this.tempPath() && this.tempPath().trim()) {
-            settings[configuration.storage.tempPath] = this.tempPath();
+        if (this.path.dataPath() && this.path.dataPath().trim) {
+            settings[configuration.core.dataDirectory] = this.path.dataPath();
         }
 
-        if (this.dataPath() && this.dataPath().trim) {
-            settings[configuration.core.dataDirectory] = this.dataPath();
+        if (this.path.indexesPath() && this.path.indexesPath().trim()) {
+            settings[configuration.indexing.storagePath] = this.path.indexesPath();
         }
 
-        if (this.indexesPath() && this.indexesPath().trim()) {
-            settings[configuration.indexing.storagePath] = this.indexesPath();
+        if (this.path.journalsPath() && this.path.journalsPath().trim()) {
+            settings[configuration.storage.journalsStoragePath] = this.path.journalsPath();
         }
-
-        if (this.journalsPath() && this.journalsPath().trim()) {
-            settings[configuration.storage.journalsStoragePath] = this.journalsPath();
-        }
-
-        /*TODO: return alertTimeout as null if left with default values (24/7)
-                if (alertTimeout !== "") {
-                    settings["Raven/IncrementalBackup/AlertTimeoutHours"] = alertTimeout;
-                }
-                if (alertRecurringTimeout !== "") {
-                    settings["Raven/IncrementalBackup/RecurringAlertTimeoutDays"] = alertRecurringTimeout;
-                }
-        */
 
         return {
             DatabaseName: this.name(),
             Settings: settings,
             SecuredSettings: securedSettings,
             Disabled: false,
-            Encrypted: this.encryptionWasEnabled
+            Encrypted: this.getEncryptionConfigSection().enabled()
         } as Raven.Client.Documents.DatabaseRecord;
     }
 
-    private get encryptionWasEnabled() {
-        return _.includes(this.selectedBundles(), "Encryption");
-    }
-
-    setAlertTimeout(value: number) {
-        this.incrementalBackupSettings.alertTimeout(value);
-    }
-
-    setRecurringAlertTimeout(value: number) {
-        this.incrementalBackupSettings.alertRecurringTimeout(value);
-    }
-    
 }
 
 export = databaseCreationModel;

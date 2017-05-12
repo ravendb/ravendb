@@ -14,35 +14,20 @@ import eventsCollector = require("common/eventsCollector");
 
 class createDatabase extends dialogViewModelBase {
 
-    readonly databaseBundles: Array<availableBundle> = [
-        {
-            displayName: "Replication",
-            name: "Replication",
-            hasAdvancedConfiguration: true
-        },
-        {
-            displayName: "Encryption",
-            name: "Encryption",
-            hasAdvancedConfiguration: true
-        }
-    ];
+    static readonly defaultSection = "Replication";
 
     spinners = {
         create: ko.observable<boolean>(false)
     }
 
-    bundlesEnabled = {
-        encryption: this.isBundleActiveComputed("Encryption"),
-        replication: this.isBundleActiveComputed("Replication")
-    }
-
     databaseModel = new databaseCreationModel();
     clusterNodes = [] as clusterNode[];
 
-    protected advancedBundleConfigurationVisible = ko.observable<string>();
-    advancedConfigurationVisible = ko.observable<boolean>(false);
-    showWideDialog: KnockoutComputed<boolean>;
+    protected currentAdvancedSection = ko.observable<string>(createDatabase.defaultSection);
+
     showReplicationFactorWarning: KnockoutComputed<boolean>;
+
+    enforceManualNodeSelection: KnockoutComputed<boolean>;
 
     indexesPathPlaceholder: KnockoutComputed<string>;
 
@@ -51,8 +36,15 @@ class createDatabase extends dialogViewModelBase {
     }
 
     advancedVisibility = {
-        encryption: ko.pureComputed(() => this.advancedBundleConfigurationVisible() === "Encryption"),
-        replication: ko.pureComputed(() => this.advancedBundleConfigurationVisible() === "Replication")
+        encryption: ko.pureComputed(() => this.currentAdvancedSection() === "Encryption"),
+        replication: ko.pureComputed(() => this.currentAdvancedSection() === "Replication"),
+        path: ko.pureComputed(() => this.currentAdvancedSection() === "Path")
+    }
+
+    constructor() {
+        super();
+
+        this.bindToCurrentInstance("showAdvancedConfigurationFor");
     }
 
     activate() {
@@ -69,7 +61,11 @@ class createDatabase extends dialogViewModelBase {
 
         const getEncryptionKeyTask = this.generateEncryptionKey();
 
-        return $.when<any>(getTopologyTask, getEncryptionKeyTask);
+        return $.when<any>(getTopologyTask, getEncryptionKeyTask)
+            .done(() => {
+                // setup validation after we fetch and populate form with data
+                this.databaseModel.setupValidation((name: string) => !this.getDatabaseByName(name), this.clusterNodes.length);
+            });
     }
 
     private onTopologyLoaded(topology: clusterTopology) {
@@ -77,106 +73,74 @@ class createDatabase extends dialogViewModelBase {
     }
 
     protected initObservables() {
-        this.showWideDialog = ko.pureComputed(() => {
-            const hasAdvancedOpened = this.advancedConfigurationVisible();
-            const hasAdvancedBundleOpened = !!this.advancedBundleConfigurationVisible();
-
-            return hasAdvancedBundleOpened || hasAdvancedOpened;
-        });
-
-        this.databaseModel.selectedBundles.subscribe((changes: Array<KnockoutArrayChange<string>>) => {
-            // hide advanced if respononding bundle was unchecked
-            if (!this.advancedBundleConfigurationVisible()) {
-                return;
-            }
-            changes.forEach(change => {
-                if (change.status === "deleted" && change.value === this.advancedBundleConfigurationVisible()) {
-                    this.advancedBundleConfigurationVisible(null);
+        // hide advanced if respononding bundle was unchecked
+        this.databaseModel.configurationSections.forEach(section => {
+            section.enabled.subscribe(enabled => {
+                if (!enabled && this.currentAdvancedSection() === section.name) {
+                    this.currentAdvancedSection(createDatabase.defaultSection);
+                }
+                if (enabled) {
+                    this.currentAdvancedSection(section.name);
                 }
             });
-        }, null, "arrayChange");
-
-        this.databaseModel.setupValidation((name: string) => !this.getDatabaseByName(name), this.clusterNodes.length);
+        });
 
         this.indexesPathPlaceholder = ko.pureComputed(() => {
             const name = this.databaseModel.name();
             return `~/${name || "{Database Name}"}/Indexes/`;
         });
 
-        this.databaseBundles.forEach(bundle => {
-            if (!bundle.hasOwnProperty('validationGroup')) {
-                bundle.validationGroup = undefined;
+        this.databaseModel.configurationSections.forEach(section => {
+            if (!section.hasOwnProperty('validationGroup')) {
+                section.validationGroup = undefined;
             }
         });
 
-        const encryptionConfig = this.databaseBundles.find(x => x.name === "Encryption");
-        encryptionConfig.validationGroup = this.databaseModel.encryptionValidationGroup;
-
-        const replicationConfig = this.databaseBundles.find(x => x.name === "Replication");
-        replicationConfig.validationGroup = this.databaseModel.replicationValidationGroup;
-
         this.showReplicationFactorWarning = ko.pureComputed(() => {
-            const factor = this.databaseModel.replicationFactor();
+            const factor = this.databaseModel.replication.replicationFactor();
             return factor === 1;
+        });
+
+        this.enforceManualNodeSelection = ko.pureComputed(() => {
+            return this.databaseModel.getEncryptionConfigSection().enabled();
         });
     }
 
-    getAvailableBundles() {
-        //TODO: concat with custom bundles 
-        return this.databaseBundles;
+    getAvailableSections() {
+        return this.databaseModel.configurationSections;
     }
 
     createDatabase() {
         eventsCollector.default.reportEvent('database', 'create');
 
         const globalValid = this.isValid(this.databaseModel.globalValidationGroup);
-        const advancedValid = this.isValid(this.databaseModel.advancedValidationGroup);
-        const encryptionValid = !this.bundlesEnabled.encryption() || this.isValid(this.databaseModel.encryptionValidationGroup);
-        const replicationValid = !this.bundlesEnabled.replication() || this.isValid(this.databaseModel.replicationValidationGroup);
 
-        const allValid = globalValid && advancedValid && encryptionValid && replicationValid;
+        const sectionsValidityList = this.databaseModel.configurationSections.map(section => {
+            if (section.enabled()) {
+                return this.isValid(section.validationGroup);
+            } else {
+                return true;
+            }
+        });
+
+        const allValid = globalValid && _.every(sectionsValidityList, x => !!x);
 
         if (allValid) {
             this.createDatabaseInternal();
         } else {
-
-            if (!replicationValid) {
-                if (!this.advancedVisibility.replication()) {
-                    this.showAdvancedConfigurationFor("Replication");
-                }
-            } else if (!encryptionValid) {
-                if (!this.advancedVisibility.encryption()) {
-                    this.showAdvancedConfigurationFor("Encryption");
-                }
-            } else {
-                if (!this.advancedConfigurationVisible()) {
-                    this.showAdvancedConfiguration();
-                }
-            }
+            const firstInvalidSection = sectionsValidityList.indexOf(false);
+            const sectionToShow = this.databaseModel.configurationSections[firstInvalidSection].name;
+            this.showAdvancedConfigurationFor(sectionToShow);
         }
     }
 
-    showAdvancedConfiguration() {
-        if (this.advancedConfigurationVisible()) {
-            this.advancedConfigurationVisible(false);
-            return;
-        }
+    showAdvancedConfigurationFor(sectionName: string) {
+        this.currentAdvancedSection(sectionName);
 
-        this.advancedBundleConfigurationVisible(null);
-        this.advancedConfigurationVisible(true);
-    }
-
-    showAdvancedConfigurationFor(bundleName: string) {
-        if (this.advancedBundleConfigurationVisible() === bundleName) {
-            this.advancedBundleConfigurationVisible(null);
-            return;
+        const sectionConfiguration = this.databaseModel.configurationSections.find(x => x.name === sectionName);
+        if (!sectionConfiguration.enabled()) {
+            sectionConfiguration.enabled(true);
         }
-
-        if (!_.includes(this.databaseModel.selectedBundles(), bundleName)) {
-            this.databaseModel.selectedBundles.push(bundleName);
-        }
-        this.advancedConfigurationVisible(false);
-        this.advancedBundleConfigurationVisible(bundleName);
     }
 
     protected generateEncryptionKey(): JQueryPromise<string> {
@@ -187,16 +151,11 @@ class createDatabase extends dialogViewModelBase {
             });
     }
 
-    isBundleActive(name: string): boolean {
-        //TODO: implement me!
-        return true;
-    }
-
     private createDatabaseInternal(): JQueryPromise<void> {
         this.spinners.create(true);
 
         const databaseDocument = this.databaseModel.toDto();
-        const replicationFactor = this.databaseModel.replicationFactor();
+        const replicationFactor = this.databaseModel.replication.replicationFactor();
 
         databasesManager.default.activateAfterCreation(databaseDocument.DatabaseName);
 
@@ -213,16 +172,13 @@ class createDatabase extends dialogViewModelBase {
     }
 
     private configureEncryptionIfNeeded(databaseName: string, encryptionKey: string): JQueryPromise<void> {
-        if (this.bundlesEnabled.encryption()) {
+        const encryptionSection = this.databaseModel.configurationSections.find(x => x.name === "Encryption");
+        if (encryptionSection.enabled()) {
             return new putSecretCommand(databaseName, encryptionKey, false)
                 .execute();
         } else {
             return $.Deferred<void>().resolve();
         }
-    }
-
-    private isBundleActiveComputed(bundleName: string) {
-        return ko.pureComputed(() => _.includes(this.databaseModel.selectedBundles(), bundleName));
     }
 
 }
