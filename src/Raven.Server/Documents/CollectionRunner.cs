@@ -117,7 +117,7 @@ namespace Raven.Server.Documents
 
         protected virtual IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize)
         {
-            return Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, batchSize);
+            return Database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag, 0, batchSize);
         }
 
         protected virtual long GetTotalCountForCollection(DocumentsOperationContext context, string collectionName)
