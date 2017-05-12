@@ -446,6 +446,7 @@ namespace Sparrow.Json
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddToCache(StringSegment name, object result, int index)
         {
             if (_objectsPathCache == null)

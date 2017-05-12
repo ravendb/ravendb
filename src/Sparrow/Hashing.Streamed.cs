@@ -194,6 +194,7 @@ namespace Sparrow
             {
                 public const int Alignment = 32;
 
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 public static XXHash64Context BeginProcessInline(ulong seed = 0)
                 {
                     var context = new XXHash64Context
@@ -209,6 +210,7 @@ namespace Sparrow
                     return context;
                 }
 
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 public static XXHash64Context ProcessInline(XXHash64Context context, byte* buffer, int size)
                 {
                     if (context.LeftoverCount != 0)
@@ -263,6 +265,7 @@ namespace Sparrow
                     return context;
                 }
 
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 public static ulong EndProcessInline(XXHash64Context context)
                 {
                     ulong h64;
@@ -400,6 +403,7 @@ namespace Sparrow
             {
                 public const int Alignment = 32;
 
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 public static Metro128Context BeginProcessInline(uint seed = 0)
                 {
                     var context = new Metro128Context
@@ -415,6 +419,7 @@ namespace Sparrow
                     return context;
                 }
 
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 public static Metro128Context ProcessInline(Metro128Context context, byte* buffer, int length)
                 {
                     if (context.LeftoverCount != 0)
@@ -465,6 +470,7 @@ namespace Sparrow
                     return context;
                 }
 
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 public static Metro128Hash EndProcessInline(Metro128Context context)
                 {
                     ulong v0 = context.Current.V0;

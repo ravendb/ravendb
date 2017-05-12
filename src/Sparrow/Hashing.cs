@@ -320,6 +320,7 @@ namespace Sparrow
             //A Fast, Minimal Memory, Consistent Hash Algorithm
             //by John Lamping, Eric Veach
             //relevant article: https://arxiv.org/abs/1406.2294
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static long Calculate(ulong key, int numBuckets)
             {
                 long b = 1L;
