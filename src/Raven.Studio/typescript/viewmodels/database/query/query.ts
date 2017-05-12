@@ -56,7 +56,7 @@ class query extends viewModelBase {
     static readonly ContainerSelector = "#queryContainer";
     static readonly $body = $("body");
 
-    static readonly SearchTypes: stringSearchType[] = ["Starts With", "Ends With", "Contains", "Exact"];
+    static readonly SearchTypes: stringSearchType[] = ["Exact", "Starts With", "Ends With", "Contains"];
     static readonly RangeSearchTypes: rangeSearchType[] = ["Numeric Double", "Numeric Long", "Alphabetical", "Datetime"];
     static readonly SortTypes: querySortType[] = ["Ascending", "Descending", "Range Ascending", "Range Descending"];
 
@@ -473,7 +473,7 @@ class query extends viewModelBase {
         this.filterSettings.searchField(undefined);
         this.filterSettings.type("string");
         this.filterSettings.value(undefined);
-        this.filterSettings.searchType("Starts With");
+        this.filterSettings.searchType("Exact");
         this.filterSettings.rangeFrom(undefined);
         this.filterSettings.rangeTo(undefined);
         this.filterSettings.rangeDateFrom(undefined);
