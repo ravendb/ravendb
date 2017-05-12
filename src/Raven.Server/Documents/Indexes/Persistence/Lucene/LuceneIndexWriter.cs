@@ -57,7 +57,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void Commit(IState state)
         {
-            indexWriter.Commit(state);
+            try
+            {
+                indexWriter.Commit(state);
+            }
+            catch (SystemException e)
+            {
+                if (e.Message.StartsWith("this writer hit an OutOfMemoryError"))
+                    RecreateIndexWriter(state);
+
+                throw new OutOfMemoryException("Index writer hit OOM during commit", e);
+            }
+
             RecreateIndexWriter(state);
         }
 
