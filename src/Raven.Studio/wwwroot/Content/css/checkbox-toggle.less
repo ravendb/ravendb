@@ -231,11 +231,9 @@
             top: 3px;
             margin-left: -23px;
             border: 1px solid @gray;
-            background-color:transparent;
+            background-color: transparent;
             cursor: pointer;
             .transition(~"border 0.15s ease-in-out, color 0.15s ease-in-out, background-color 0.15s ease-in-out");
-
-
         }
 
         &::after {
@@ -263,8 +261,8 @@
         }
 
         &:checked + label::before {
-            border-color:@gray;
-            background-color:@gray;
+            border-color: @gray;
+            background-color: @gray;
         }
 
 
@@ -293,26 +291,29 @@
             }
         }
     }
+
     &.checkbox-table-selector {
         min-height: 0;
-        padding:0;
-        margin:0;
+        padding: 0;
+        margin: 0;
 
         input {
             cursor: pointer;
             margin-left: 0;
         }
+
         label {
-            padding-left:0;
-            position:absolute;
-            left:0;
+            padding-left: 0;
+            position: absolute;
+            left: 0;
 
             &:after {
                 margin-left: 0;
             }
+
             &:before {
-                margin-top: 5px; 
-                margin-left: 0;                
+                margin-top: 5px;
+                margin-left: 0;
             }
         }
 
@@ -330,6 +331,14 @@
         margin-top: 0;
         margin-right: 10px;
         padding-top: 0;
+    }
+
+    &.hide-check {
+        label {
+            &::before, &::after {
+                content: none !important;
+            }
+        }
     }
 }
 
