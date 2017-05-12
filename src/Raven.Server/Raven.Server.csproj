@@ -24,6 +24,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+    <EmbeddedResource Include="Web\Assets\Unsafe.html" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\Imports\metrics.net\Src\Metrics\**\*.cs" />

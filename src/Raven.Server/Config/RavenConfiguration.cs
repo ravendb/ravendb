@@ -120,6 +120,7 @@ namespace Raven.Server.Config
                 platformPostfix = "posix";
 
             _configBuilder.AddJsonFile($"settings_{platformPostfix}.json", optional: true);
+            _configBuilder.AddJsonFile($"settings.json", optional: true);
         }
 
         private void AddEnvironmentVariables()

@@ -1,0 +1,154 @@
+﻿<!doctype html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1 user-scalable=no">
+    <title>Potentialy unsafe configuration</title>
+    <style type="text/css">
+        html {
+            width: 100%;
+            height: 100%;
+        }
+        body {
+            padding: 0;
+            margin: 0;
+            background-color: #272b32;
+            color: #98a7b7;
+            font-family: "Helvetica Neue", 'Roboto', Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            line-height: 19px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        h2 {
+            font-weight: 300;
+            line-height: 24px;
+        }
+        .fill-primary {
+            fill: #cb1c5a;
+        }
+        .text-file {
+            font-family: Consolas, "Andale Mono", "Lucida Console", "Lucida Sans Typewriter", Monaco, "Courier New", monospace;
+            color: #e3e7eb;
+        }
+
+        @media (max-width: 769px) {
+            .long-word {
+                word-break: break-all;
+            }
+        }
+        .text-primary {
+            color: #cb1c5a;
+        }
+        .text-success {
+            color: #5d933b;
+        }
+        .text-warning {
+            color: #dd992c;
+        }
+        .warning {
+            fill: #dd992c;
+        }
+        .logo {
+            max-width: 70%;
+            width: 160px;
+            margin: auto;
+        }
+        .title {
+            display: flex;
+            align-items: center;
+        }
+        .title h2 {
+            flex-grow: 1;
+        }
+        .warning-icon {
+            width: 40px;
+            margin: auto;
+            margin-right: 15px;
+        }
+        .center {
+            max-width: 540px;
+            background-color: #2c343c;
+            padding: 30px;
+        }
+        strong {
+            color: #e3e7eb;
+        }
+    </style>
+</head>
+
+<body>
+<div class="center">
+    <div class="logo">
+        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+             viewBox="0 0 199.8 43.1" style="enable-background:new 0 0 199.8 43.1;" xml:space="preserve">
+            <g id="raven_logo">
+                <rect x="51.2" y="7.1" class="fill-primary" width="2.2" height="2.3"/>
+                <rect x="51.6" y="11.1" class="fill-primary" width="2.1" height="2.2"/>
+                <rect x="58.8" y="12.2" class="fill-primary" width="2.3" height="2.5"/>
+                <rect x="35" y="8.2" class="fill-primary" width="1.6" height="1.7"/>
+                <rect x="40.1" y="8.1" class="fill-primary" width="1.7" height="1.9"/>
+                <polygon class="fill-primary" points="57.9,9.6 60.2,9.6 60.2,6.8 57.6,6.8 57.6,8 55.6,8 55.6,10.4 57.9,10.4 		"/>
+                <rect x="32.6" y="4.2" class="fill-primary" width="1.3" height="1.4"/>
+                <rect x="61.8" y="16.3" class="fill-primary" width="2.2" height="2.3"/>
+                <rect x="55" y="15" class="fill-primary" width="1.9" height="2"/>
+                <rect x="47.7" y="6" class="fill-primary" width="1.8" height="1.9"/>
+                <rect x="46" y="9.4" class="fill-primary" width="2" height="2.1"/>
+                <rect x="64.2" y="13.1" class="fill-primary" width="1.3" height="1.4"/>
+                <rect x="41.9" y="11.6" class="fill-primary" width="1.3" height="1.3"/>
+                <polygon class="fill-primary" points="55.5,5.3 55.5,4 54.5,4 54.5,2.7 53,2.7 53,4.3 54.3,4.3 54.3,5.3 		"/>
+                <rect x="43.9" y="5.7" class="fill-primary" width="1.3" height="1.3"/>
+                <rect x="26.2" y="2" class="fill-primary" width="1.3" height="1.3"/>
+                <rect x="48.6" y="14.1" class="fill-primary" width="1.3" height="1.3"/>
+                <rect x="38.8" y="2.6" class="fill-primary" width="1.4" height="1.5"/>
+                <rect x="46.7" y="1.8" class="fill-primary" width="1.3" height="1.3"/>
+                <path class="fill-primary" d="M60.4,4.6v0.8h1.7v2.6h2.1v1.3h-2.4V12h2.5v-1.8H65v0.9h1.5V14h1.1v2.6h-0.7v0.9h-0.6c1.5,4.7,2.1,10,2.1,10
+            C69.5,25,75.5,2.1,51.9,0.2c3.2,1.6,5.6,3.4,6.8,4.5H60.4z"/>
+                <path class="fill-primary" d="M40.9,19.6l-7.7,15.2h-2.3v5.3l-0.7,2L22.6,33c2.1-0.6,3.7-1.5,4.9-2.6c1.1-1.1,1.7-2.5,1.7-4
+            c0-0.7-0.2-1.5-0.7-2.4c-0.4-0.8-1.1-1.6-1.9-2.3c-0.9-0.7-1.9-1.3-3.2-1.8c-1.3-0.5-2.7-0.7-4.3-0.7H1.8v9H0v5.4h1.8v9.5H9v-9.5
+            h6l7.7,9.5h14.2l1.8-3h11.8l1.1,3h7.6L48,19.6H40.9z M21.1,27.3c-0.2,0.3-0.5,0.5-0.8,0.8c-0.3,0.2-0.7,0.4-1.2,0.5
+            c-0.4,0.1-0.9,0.2-1.3,0.2H9v-4.8h8.9c0.4,0,0.9,0.1,1.3,0.2c0.4,0.1,0.8,0.3,1.2,0.5c0.3,0.2,0.6,0.5,0.8,0.7
+            c0.2,0.3,0.3,0.6,0.3,0.9C21.4,26.7,21.3,27,21.1,27.3z M40.9,34.9l3.6-7.5l3.6,7.5H40.9z"/>
+                <polygon class="fill-primary" points="131.6,24.9 133.3,24.9 133.3,34.5 117.8,19.6 110.9,19.6 110.9,43.1 117.8,43.1 117.8,28.2 
+            133.3,43.1 140.2,43.1 140.2,19.6 131.6,19.6 		"/>
+                <path class="fill-primary" d="M165.8,23.1c-1.2-1.1-2.7-1.9-4.4-2.5c-1.7-0.6-3.6-0.9-5.6-0.9h-14v5.3h1.7v18.2h11.7c2,0,3.9-0.3,5.7-0.9
+            c1.8-0.6,3.3-1.4,4.6-2.5c1.3-1.1,2.3-2.3,3.1-3.7c0.8-1.4,1.1-2.9,1.1-4.6c0-1.6-0.3-3.1-1-4.5C168,25.4,167,24.1,165.8,23.1z
+             M163.2,34.2c-0.5,0.9-1.1,1.6-1.9,2.3c-0.8,0.6-1.7,1.1-2.8,1.5c-1.1,0.4-2.2,0.5-3.3,0.5h-5.4V24.4h5.4c1.1,0.1,2.3,0.4,3.3,0.9
+            c1.1,0.4,2,1,2.8,1.6c0.8,0.6,1.4,1.3,1.9,2.1c0.5,0.8,0.7,1.6,0.7,2.4C163.9,32.4,163.7,33.3,163.2,34.2z"/>
+                <path class="fill-primary" d="M199.6,34.2c-0.2-0.7-0.5-1.3-0.8-1.7c-0.3-0.5-0.7-0.9-1.1-1.2c-0.4-0.3-0.9-0.5-1.3-0.6
+            c0.3-0.1,0.6-0.3,1-0.6c0.4-0.3,0.7-0.6,1-0.9c0.3-0.4,0.6-0.8,0.8-1.3c0.3-0.9,0.5-2.9-0.1-4.2c-0.4-0.9-0.7-1.3-1.5-1.9
+            c-0.8-0.6-1.8-1.1-3.1-1.5c-1.3-0.4-2.8-0.6-4.5-0.6h-16.9v8.8h-1.7v5.3h1.7v9.4h17.5c1.4,0,2.6-0.2,3.8-0.5
+            c1.2-0.3,2.1-0.8,3-1.4c0.8-0.6,1.6-1.2,2-2.1C199.8,37.9,200,35.8,199.6,34.2z M180.5,24.3h8.3c0.4,0,0.8,0.1,1.3,0.2
+            c0.4,0.1,0.8,0.3,1.1,0.5c0.3,0.2,0.6,0.4,0.8,0.7c0.2,0.3,0.3,0.5,0.3,0.8c0,0.3-0.1,0.6-0.3,0.8c-0.2,0.3-0.5,0.5-0.8,0.7
+            c-0.3,0.2-0.7,0.4-1.1,0.5c-0.4,0.1-0.8,0.2-1.3,0.2h-8.3V24.3z M193.1,36.8c-0.2,0.3-0.5,0.5-0.8,0.8c-0.4,0.2-0.8,0.4-1.3,0.5
+            c-0.5,0.1-1,0.2-1.6,0.2h-9.5v-4.7h9.5c1.1,0,2.1,0.2,2.9,0.7c0.8,0.5,1.1,1,1.1,1.7C193.4,36.3,193.3,36.6,193.1,36.8z"/>
+                <path class="fill-primary" d="M81.9,23.2v5.2h-1.8v5.3h1.8v9.5h26.5v-4.7H89v-4.8h14.6v-5.3H89v-4.1h19.4v-4.8H87
+            C84.3,20.7,81.9,23.2,81.9,23.2z"/>
+                <path class="fill-primary" d="M58.6,19.3h-7.2l12.5,23.8h4.8c0,0,6.7-12.5,9-16.7c-5.5,5.6-11.4,7.1-11.4,7.1L58.6,19.3z"/>
+                <path class="fill-primary" d="M68.5,5.6l1.4-0.1L69,6.3c0.3,0.3,0.5,0.7,0.7,1.1L72.1,7l-1.7,1.8c4.1,13.9-3,22.5-3,22.5
+            c5.8-2,13.6-10.7,19.8-13.9c6-3.1,11.5-0.1,11.1-1.2c-0.8-2.5-6.3-5.4-6.3-5.4C89.7,8.1,87,7.4,85.3,7c-3.1-0.6-6.3,0-7.9,0.5
+            C71.9,0.2,59.6,0,59.6,0C63.7,1.3,66.6,3.3,68.5,5.6z M86.9,10.1c0.7,0,2,0.5,3,1.4c0,0-0.6,0.1-1.4,0.1c-0.6,0-1.3-0.2-1.8-0.8
+            C86.2,10.3,86.3,10.1,86.9,10.1z"/>
+            </g>
+        </svg>
+    </div>
+    <div class="title">
+        <div class="warning-icon">
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+                 viewBox="0 0 28 24.3" style="enable-background:new 0 0 28 24.3;" xml:space="preserve">
+                <g>
+                    <path class="warning" d="M14.1,0l14,24.3H0L14.1,0z M12.7,15.3h2.6v-5.2h-2.6V15.3z M15.3,17.9h-2.6v2.6h2.6V17.9z"/>
+                </g>
+            </svg>
+        </div>
+        <h2 class="text-warning">Running in a potentially unsafe mode </h2>
+    </div>
+    <p>Server is exposed to the world and the security option <span class="text-file long-word">Raven/AnonymousUserAccessMode</span> is set to <strong class="text-file text-warning">Admin</strong>. </p>
+    <p>Please find the RavenDB settings file <strong class="text-file long-word">settings.json</strong> in the server directory and set this option to <strong class="text-success text-file">None</strong> to prevent unauthorized access. In order to gain administrative access to the server please access it through <strong class="text-file">localhost</strong>.</p>
+    <p>If you intended to grant administrative access to the server for anonymous users set <span class="text-file long-word">Raven/AllowAnonymousUserToAccessTheServer</span> security option to <strong class="text-warning text-file">true</strong>. </p>
+</div>
+</body>
+</html>
