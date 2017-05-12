@@ -64,9 +64,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             catch (SystemException e)
             {
                 if (e.Message.StartsWith("this writer hit an OutOfMemoryError"))
+                {
                     RecreateIndexWriter(state);
+                    throw new OutOfMemoryException("Index writer hit OOM during commit", e);
+                }
 
-                throw new OutOfMemoryException("Index writer hit OOM during commit", e);
+                throw;
             }
 
             RecreateIndexWriter(state);
