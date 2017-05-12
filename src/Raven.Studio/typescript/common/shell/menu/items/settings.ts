@@ -22,6 +22,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-plus',
             dynamicHash: appUrls.quotas
         }),*/
+        /* TODO: move to tasks menu
         new leafMenuItem({
             route: 'databases/settings/replication',
             moduleId: 'viewmodels/database/settings/replications',
@@ -29,7 +30,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-replication',
             dynamicHash: appUrls.replications
-        }),
+        }),*/
         /* TODO
         new leafMenuItem({
             route: 'databases/settings/etl',
@@ -72,6 +73,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-versioning',
             dynamicHash: appUrls.versioning
         }),
+        /* TODO: move to tasks in menu
         new leafMenuItem({
             route: 'databases/settings/periodicExport',
             moduleId: 'viewmodels/database/settings/periodicExport',
@@ -79,7 +81,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-periodic-export',
             dynamicHash: appUrls.periodicExport
-        }),
+        }),*/
         new leafMenuItem({
             route: 'databases/settings/customFunctionsEditor',
             moduleId: 'viewmodels/database/settings/customFunctionsEditor',
