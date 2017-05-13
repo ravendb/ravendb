@@ -98,7 +98,8 @@ namespace Raven.Server.Documents
             PatchRequest patch,
             PatchRequest patchIfMissing,
             bool skipPatchIfEtagMismatch,
-            bool debugMode)
+            bool debugMode,
+            bool isTest = false)
         {
             if (id == null)
                 throw new ArgumentNullException(nameof(id));
@@ -113,7 +114,7 @@ namespace Raven.Server.Documents
 
             var run = CreateScriptRun(patch, scope, id); 
 
-            var command = new PatchDocumentCommand(id, etag, skipPatchIfEtagMismatch, debugMode, scope, run, Database, Logger);
+            var command = new PatchDocumentCommand(id, etag, skipPatchIfEtagMismatch, debugMode, scope, run, Database, Logger, isTest, patch.IsPuttingDocuments || patchIfMissing?.IsPuttingDocuments == true);
 
             if (patchIfMissing != null)
             {
