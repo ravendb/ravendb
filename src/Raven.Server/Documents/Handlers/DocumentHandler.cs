@@ -439,7 +439,7 @@ namespace Raven.Server.Documents.Handlers
                 BlittableJsonReaderObject origin = null;
                 try
                 {
-                    var command = Database.Patcher.GetPatchDocumentCommand(id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode);
+                    var command = Database.Patcher.GetPatchDocumentCommand(id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode, isTest);
 
                     if (isTest == false)
                         await Database.TxMerger.Enqueue(command);
