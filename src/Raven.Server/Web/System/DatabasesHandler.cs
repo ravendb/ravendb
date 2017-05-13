@@ -66,8 +66,7 @@ namespace Raven.Server.Web.System
         public Task GetTopology()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            // TODO: need to figure out who am I and then return this URL for me
-            // var url = GetStringQueryString("url", false);
+            var url = GetStringQueryString("url", false);
             
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -94,44 +93,30 @@ namespace Raven.Server.Web.System
                     var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbBlit);
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        GenerateTopology(context, writer, dbRecord, clusterTopology, etag);
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            [nameof(Topology.Nodes)] = new DynamicJsonArray(
+                                dbRecord.Topology.Members.Select(x => new DynamicJsonValue
+                                {
+                                    [nameof(ServerNode.Url)] = (Server.ServerStore.NodeTag == x.NodeTag ? url : null) ??  clusterTopology.GetUrlFromTag(x.NodeTag),
+                                    [nameof(ServerNode.ClusterTag)] = x.NodeTag,
+                                    [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
+                                })
+                            ),
+                            [nameof(Topology.ReadBehavior)] =
+                            ReadBehavior.CurrentNodeWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
+                            [nameof(Topology.WriteBehavior)] = WriteBehavior.LeaderOnly.ToString(),
+                            [nameof(Topology.SLA)] = new DynamicJsonValue
+                            {
+                                [nameof(TopologySla.RequestTimeThresholdInMilliseconds)] = 100,
+                            },
+                            [nameof(Topology.Etag)] = etag,
+                        });
                     }
                 }
             }
 
             return Task.CompletedTask;
-        }
-
-        private DynamicJsonValue GetServerNodeFromClusterTag(string tag, ClusterTopology clusterTopology, DatabaseRecord dbRecord)
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(ServerNode.Url)] = clusterTopology.GetUrlFromTag(tag),
-                [nameof(ServerNode.ClusterTag)] = tag,
-                [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
-            };
-        }
-
-        private void GenerateTopology(JsonOperationContext context,
-            BlittableJsonTextWriter writer,
-            DatabaseRecord dbRecord,
-            ClusterTopology clusterTopology,
-            long etag)
-        {
-            context.Write(writer, new DynamicJsonValue
-            {
-                [nameof(Topology.Nodes)] = new DynamicJsonArray(
-                    dbRecord.Topology.Members.Select(x => GetServerNodeFromClusterTag(x.NodeTag, clusterTopology, dbRecord))
-                    ),
-                [nameof(Topology.ReadBehavior)] =
-                    ReadBehavior.CurrentNodeWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
-                [nameof(Topology.WriteBehavior)] = WriteBehavior.LeaderOnly.ToString(),
-                [nameof(Topology.SLA)] = new DynamicJsonValue
-                {
-                    [nameof(TopologySla.RequestTimeThresholdInMilliseconds)] = 100,
-                },
-                [nameof(Topology.Etag)] = etag,
-            });
         }
 
         private Task DbInfo(string dbName)
