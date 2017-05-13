@@ -98,7 +98,7 @@ namespace Raven.Server.Web.System
                             [nameof(Topology.Nodes)] = new DynamicJsonArray(
                                 dbRecord.Topology.Members.Select(x => new DynamicJsonValue
                                 {
-                                    [nameof(ServerNode.Url)] = (Server.ServerStore.NodeTag == x.NodeTag ? url : null) ??  clusterTopology.GetUrlFromTag(x.NodeTag),
+                                    [nameof(ServerNode.Url)] = GetUrl(x, url, clusterTopology),
                                     [nameof(ServerNode.ClusterTag)] = x.NodeTag,
                                     [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
                                 })
@@ -117,6 +117,25 @@ namespace Raven.Server.Web.System
             }
 
             return Task.CompletedTask;
+        }
+
+        private string GetUrl(DatabaseTopologyNode x, string clientUrl, ClusterTopology clusterTopology)
+        {
+            var url = (Server.ServerStore.NodeTag == x.NodeTag ? clientUrl : null) ??  clusterTopology.GetUrlFromTag(x.NodeTag);
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                switch (uri.Host)
+                {
+                    case "::":
+                    case "::0":
+                    case "0.0.0.0":
+                        return new UriBuilder(uri)
+                        {
+                            Host = Environment.MachineName
+                        }.Uri.ToString();
+                }
+            }
+            return url;
         }
 
         private Task DbInfo(string dbName)
