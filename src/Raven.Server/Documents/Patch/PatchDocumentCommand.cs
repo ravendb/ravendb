@@ -20,11 +20,13 @@ namespace Raven.Server.Documents.Patch
 
         private readonly DocumentDatabase _database;
         private readonly Logger _logger;
+        private readonly bool _isTest;
+        private readonly bool _scriptIsPuttingDocument;
 
         private DocumentPatcherBase.SingleScriptRun _run;
 
         public PatchDocumentCommand(string id, long? expectedEtag, bool skipPatchIfEtagMismatch, bool debugMode, PatcherOperationScope scope,
-            DocumentPatcherBase.SingleScriptRun run, DocumentDatabase database, Logger logger)
+            DocumentPatcherBase.SingleScriptRun run, DocumentDatabase database, Logger logger, bool isTest, bool scriptIsPuttingDocument)
         {
             _scope = scope;
             _run = run;
@@ -34,6 +36,8 @@ namespace Raven.Server.Documents.Patch
             _debugMode = debugMode;
             _database = database;
             _logger = logger;
+            _isTest = isTest;
+            _scriptIsPuttingDocument = scriptIsPuttingDocument;
         }
 
         public PatchResult PatchResult { get; private set; }
@@ -134,23 +138,27 @@ namespace Raven.Server.Documents.Patch
                 return 1;
             }
 
-            var putResult = new DocumentsStorage.PutOperationResults();
+            DocumentsStorage.PutOperationResults? putResult = null;
 
             if (originalDocument == null)
             {
-                putResult = _database.DocumentsStorage.Put(context, _id, null, modifiedDocument);
+                if (_isTest == false || _scriptIsPuttingDocument)
+                    putResult = _database.DocumentsStorage.Put(context, _id, null, modifiedDocument);
+
                 result.Status = PatchStatus.Created;
             }
             else if (DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDocument, true) == DocumentCompareResult.NotEqual) // http://issues.hibernatingrhinos.com/issue/RavenDB-6408
             {
-                putResult = _database.DocumentsStorage.Put(context, originalDocument.Key, originalDocument.Etag, modifiedDocument);
+                if (_isTest == false || _scriptIsPuttingDocument)
+                    putResult = _database.DocumentsStorage.Put(context, originalDocument.Key, originalDocument.Etag, modifiedDocument);
+
                 result.Status = PatchStatus.Patched;
             }
 
-            if (putResult.Etag != 0)
+            if (putResult != null)
             {
-                result.Etag = putResult.Etag;
-                result.Collection = putResult.Collection.Name;
+                result.Etag = putResult.Value.Etag;
+                result.Collection = putResult.Value.Collection.Name;
             }
 
             PatchResult = result;
