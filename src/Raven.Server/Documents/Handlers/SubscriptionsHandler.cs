@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    DocumentConventions documentConventions = new DocumentConventions();
+                    DocumentConventions documentConventions = DocumentConventions.Default;
 
                     writer.WriteStartObject();
                     var subscriptionsAsBlittable = subscriptions.Select(x => EntityToBlittable.ConvertEntityToBlittable(x, documentConventions, context));
