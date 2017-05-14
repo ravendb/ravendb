@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Json.Converters;
 using Raven.Server.Rachis;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -46,9 +47,10 @@ namespace Raven.Server.Documents.Subscriptions
 
         public void Dispose()
         {
+            var aggregator = new ExceptionAggregator(_logger, "Error disposing subscripiton");
             foreach (var state in _subscriptionStates.Values)
             {
-                state.Dispose();
+                aggregator.Execute(state.Dispose);                
             }            
         }
 
