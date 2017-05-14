@@ -333,7 +333,7 @@ namespace Raven.Server.Documents.Subscriptions
                 
                 foreach (var subscripitonStateKvp in _subscriptionStates)
                 {
-                    var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemName(_db.Name, subscripitonStateKVP.Key));
+                    var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemName(_db.Name, subscripitonStateKvp.Key));
                     if (subscriptionBlittable== null)
                     {
                         DropSubscriptionConnection(subscripitonStateKvp.Key, "Deleted");
