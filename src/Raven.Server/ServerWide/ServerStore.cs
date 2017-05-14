@@ -29,6 +29,7 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
 {
@@ -787,7 +788,17 @@ namespace Raven.Server.ServerWide
                         Logger.Info("Tried to send message to leader, retrying", ex);
                 }
 
-                await logChange;
+                while (true)
+                {
+                    var result = await Task.WhenAny(logChange,
+                        TimeoutManager.WaitFor(5000, ServerShutdown)).ConfigureAwait(false);
+
+                    if (result == logChange)
+                        break;
+
+                    if (ServerShutdown.IsCancellationRequested)
+                        break;
+                }
             }
         }
 
