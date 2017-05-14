@@ -7,7 +7,7 @@ namespace FastTests.Client.Attachments
     public class BigDummyStream : Stream
     {
         private byte _counter;
-        private long _size;
+        private readonly long _size;
 
         public BigDummyStream(long size)
         {
@@ -18,11 +18,13 @@ namespace FastTests.Client.Attachments
         {
             for (int i = offset; i < count; i++)
             {
-                if (_size-- <= 0)
+                if (Position++ >= _size)
+                {
+                    Position--;
                     return i - offset;
+                }
 
                 buffer[i] = _counter++;
-                Position++;
             }
             return count;
         }
@@ -31,11 +33,13 @@ namespace FastTests.Client.Attachments
         {
             for (int i = offset; i < count; i++)
             {
-                if (_size-- <= 0)
+                if (Position++ >= _size)
+                {
+                    Position--;
                     return;
+                }
 
                 Assert.Equal(buffer[i], _counter++);
-                Position++;
             }
         }
 

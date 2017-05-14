@@ -123,8 +123,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/attachments", "PUT")]
         public async Task Put()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
                 var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
