@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         [ThreadStatic]
-        public static bool IsIncomingReplicationThread;
+        public static bool IsIncomingReplication;
 
         private readonly AsyncManualResetEvent _replicationFromAnotherSource = new AsyncManualResetEvent();
 
@@ -112,7 +112,6 @@ namespace Raven.Server.Documents.Replication
 
         private void ReceiveReplicationBatches()
         {
-            IsIncomingReplicationThread = true;
             try
             {
                 using (_connectionOptions.ConnectionProcessingInProgress("Replication"))
@@ -771,147 +770,156 @@ namespace Raven.Server.Documents.Replication
 
             public override int Execute(DocumentsOperationContext context)
             {
-                var operationsCount = 0;
-
-                var database = _incoming._database;
-
-                var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
-                foreach (var changeVectorEntry in database.DocumentsStorage.GetDatabaseChangeVector(context))
+                try
                 {
-                    maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
-                }
+                    IsIncomingReplication = true;
 
-                foreach (var item in _incoming._replicatedItems)
-                {
-                    context.TransactionMarkerOffset = item.TransactionMarker;
+                    var operationsCount = 0;
 
-                    ++operationsCount;
-                    using (item)
+                    var database = _incoming._database;
+
+                    var maxReceivedChangeVectorByDatabase = new Dictionary<Guid, long>();
+                    foreach (var changeVectorEntry in database.DocumentsStorage.GetDatabaseChangeVector(context))
                     {
-                        Debug.Assert(item.Flags.HasFlag(DocumentFlags.Artificial) == false);
+                        maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
+                    }
 
-                        if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
+                    foreach (var item in _incoming._replicatedItems)
+                    {
+                        context.TransactionMarkerOffset = item.TransactionMarker;
+
+                        ++operationsCount;
+                        using (item)
                         {
-                            if (_incoming._log.IsInfoEnabled)
-                                _incoming._log.Info($"Got incoming attachment, doing PUT on attachment = {item.Name}, with key = {item.Key}");
+                            Debug.Assert(item.Flags.HasFlag(DocumentFlags.Artificial) == false);
 
-                            database.DocumentsStorage.AttachmentsStorage.PutDirect(context, item.Key, item.Name,
-                                item.ContentType, item.Base64Hash);
-
-                            if (_incoming._replicatedAttachmentStreams.TryGetValue(item.Base64Hash, out ReplicationAttachmentStream attachmentStream))
+                            if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                             {
-                                using (attachmentStream)
+                                if (_incoming._log.IsInfoEnabled)
+                                    _incoming._log.Info($"Got incoming attachment, doing PUT on attachment = {item.Name}, with key = {item.Key}");
+
+                                database.DocumentsStorage.AttachmentsStorage.PutDirect(context, item.Key, item.Name,
+                                    item.ContentType, item.Base64Hash);
+
+                                if (_incoming._replicatedAttachmentStreams.TryGetValue(item.Base64Hash, out ReplicationAttachmentStream attachmentStream))
                                 {
-                                    if (_incoming._log.IsInfoEnabled)
-                                        _incoming._log.Info($"Got incoming attachment stream, doing PUT on attachment stream = {attachmentStream.Base64Hash}");
-
-                                    database.DocumentsStorage.AttachmentsStorage.
-                                        PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash, attachmentStream.File);
-                                }
-                                _incoming._replicatedAttachmentStreams.Remove(item.Base64Hash);
-                            }
-                        }
-                        else if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
-                        {
-                            if (_incoming._log.IsInfoEnabled)
-                                _incoming._log.Info($"Got incoming attachment tombstone, doing DELETE on attachment {item.Key}");
-
-                            database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null);
-                        }
-                        else
-                        {
-                            BlittableJsonReaderObject document = null;
-                            try
-                            {
-                                ReadChangeVector(item.ChangeVectorCount, item.Position, _buffer, maxReceivedChangeVectorByDatabase);
-                                if (item.DocumentSize >= 0) //no need to load document data for tombstones
-                                                            // document size == -1 --> doc is a tombstone
-                                {
-                                    if (item.Position + item.DocumentSize > _totalSize)
-                                        throw new ArgumentOutOfRangeException($"Reading past the size of buffer! TotalSize {_totalSize} " +
-                                                                              $"but position is {item.Position} & size is {item.DocumentSize}!");
-
-                                    //if something throws at this point, this means something is really wrong and we should stop receiving documents.
-                                    //the other side will receive negative ack and will retry sending again.
-                                    document = new BlittableJsonReaderObject(
-                                        _buffer + item.Position + (item.ChangeVectorCount * sizeof(ChangeVectorEntry)),
-                                        item.DocumentSize, context);
-                                    document.BlittableValidation();
-                                }
-
-                                if ((item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision)
-                                {
-                                    if (database.BundleLoader.VersioningStorage == null)
+                                    using (attachmentStream)
                                     {
-                                        if (_incoming._log.IsOperationsEnabled)
-                                            _incoming._log.Operations("Versioing storage is disabled but the node got a versioned document from replication.");
+                                        if (_incoming._log.IsInfoEnabled)
+                                            _incoming._log.Info($"Got incoming attachment stream, doing PUT on attachment stream = {attachmentStream.Base64Hash}");
+
+                                        database.DocumentsStorage.AttachmentsStorage.
+                                            PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash, attachmentStream.File);
+                                    }
+                                    _incoming._replicatedAttachmentStreams.Remove(item.Base64Hash);
+                                }
+                            }
+                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
+                            {
+                                if (_incoming._log.IsInfoEnabled)
+                                    _incoming._log.Info($"Got incoming attachment tombstone, doing DELETE on attachment {item.Key}");
+
+                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null);
+                            }
+                            else
+                            {
+                                BlittableJsonReaderObject document = null;
+                                try
+                                {
+                                    ReadChangeVector(item.ChangeVectorCount, item.Position, _buffer, maxReceivedChangeVectorByDatabase);
+                                    if (item.DocumentSize >= 0) //no need to load document data for tombstones
+                                        // document size == -1 --> doc is a tombstone
+                                    {
+                                        if (item.Position + item.DocumentSize > _totalSize)
+                                            throw new ArgumentOutOfRangeException($"Reading past the size of buffer! TotalSize {_totalSize} " +
+                                                                                  $"but position is {item.Position} & size is {item.DocumentSize}!");
+
+                                        //if something throws at this point, this means something is really wrong and we should stop receiving documents.
+                                        //the other side will receive negative ack and will retry sending again.
+                                        document = new BlittableJsonReaderObject(
+                                            _buffer + item.Position + (item.ChangeVectorCount * sizeof(ChangeVectorEntry)),
+                                            item.DocumentSize, context);
+                                        document.BlittableValidation();
+                                    }
+
+                                    if ((item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision)
+                                    {
+                                        if (database.BundleLoader.VersioningStorage == null)
+                                        {
+                                            if (_incoming._log.IsOperationsEnabled)
+                                                _incoming._log.Operations("Versioing storage is disabled but the node got a versioned document from replication.");
+                                            continue;
+                                        }
+                                        database.BundleLoader.VersioningStorage.Put(context, item.Id, document, item.Flags,
+                                            NonPersistentDocumentFlags.FromReplication, _changeVector, item.LastModifiedTicks);
                                         continue;
                                     }
-                                    database.BundleLoader.VersioningStorage.Put(context, item.Id, document, item.Flags, 
-                                        NonPersistentDocumentFlags.FromReplication, _changeVector, item.LastModifiedTicks);
-                                    continue;
-                                }
 
-                                ChangeVectorEntry[] conflictingVector;
-                                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, _changeVector, out conflictingVector);
+                                    ChangeVectorEntry[] conflictingVector;
+                                    var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, _changeVector, out conflictingVector);
 
-                                switch (conflictStatus)
-                                {
-                                    case ConflictsStorage.ConflictStatus.Update:
-                                        if (document != null)
-                                        {
-                                            if (_incoming._log.IsInfoEnabled)
-                                                _incoming._log.Info(
-                                                    $"Conflict check resolved to Update operation, doing PUT on doc = {item.Id}, with change vector = {_changeVector.Format()}");
-                                            database.DocumentsStorage.Put(context, item.Id, null, document, item.LastModifiedTicks, _changeVector,
-                                                item.Flags, NonPersistentDocumentFlags.FromReplication);
-                                        }
-                                        else
-                                        {
-                                            if (_incoming._log.IsInfoEnabled)
-                                                _incoming._log.Info(
-                                                    $"Conflict check resolved to Update operation, writing tombstone for doc = {item.Id}, with change vector = {_changeVector.Format()}");
-                                            using (DocumentKeyWorker.GetSliceFromKey(context, item.Id, out Slice keySlice))
+                                    switch (conflictStatus)
+                                    {
+                                        case ConflictsStorage.ConflictStatus.Update:
+                                            if (document != null)
                                             {
-                                                database.DocumentsStorage.Delete(
-                                                    context, keySlice, item.Id, null,
-                                                    item.LastModifiedTicks,
-                                                    _changeVector,
-                                                    context.GetLazyString(item.Collection));
+                                                if (_incoming._log.IsInfoEnabled)
+                                                    _incoming._log.Info(
+                                                        $"Conflict check resolved to Update operation, doing PUT on doc = {item.Id}, with change vector = {_changeVector.Format()}");
+                                                database.DocumentsStorage.Put(context, item.Id, null, document, item.LastModifiedTicks, _changeVector,
+                                                    item.Flags, NonPersistentDocumentFlags.FromReplication);
                                             }
-                                        }
-                                        break;
-                                    case ConflictsStorage.ConflictStatus.Conflict:
-                                        if (_incoming._log.IsInfoEnabled)
-                                            _incoming._log.Info(
-                                                $"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {_changeVector.Format()}");
-                                        _incoming._conflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks, document, _changeVector, conflictingVector);
-                                        break;
-                                    case ConflictsStorage.ConflictStatus.AlreadyMerged:
-                                        if (_incoming._log.IsInfoEnabled)
-                                            _incoming._log.Info(
-                                                $"Conflict check resolved to AlreadyMerged operation, nothing to do for doc = {item.Id}, with change vector = {_changeVector.Format()}");
-                                        //nothing to do
-                                        break;
-                                    default:
-                                        throw new ArgumentOutOfRangeException(nameof(conflictStatus),
-                                            "Invalid ConflictStatus: " + conflictStatus);
+                                            else
+                                            {
+                                                if (_incoming._log.IsInfoEnabled)
+                                                    _incoming._log.Info(
+                                                        $"Conflict check resolved to Update operation, writing tombstone for doc = {item.Id}, with change vector = {_changeVector.Format()}");
+                                                using (DocumentKeyWorker.GetSliceFromKey(context, item.Id, out Slice keySlice))
+                                                {
+                                                    database.DocumentsStorage.Delete(
+                                                        context, keySlice, item.Id, null,
+                                                        item.LastModifiedTicks,
+                                                        _changeVector,
+                                                        context.GetLazyString(item.Collection));
+                                                }
+                                            }
+                                            break;
+                                        case ConflictsStorage.ConflictStatus.Conflict:
+                                            if (_incoming._log.IsInfoEnabled)
+                                                _incoming._log.Info(
+                                                    $"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {_changeVector.Format()}");
+                                            _incoming._conflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks, document, _changeVector, conflictingVector);
+                                            break;
+                                        case ConflictsStorage.ConflictStatus.AlreadyMerged:
+                                            if (_incoming._log.IsInfoEnabled)
+                                                _incoming._log.Info(
+                                                    $"Conflict check resolved to AlreadyMerged operation, nothing to do for doc = {item.Id}, with change vector = {_changeVector.Format()}");
+                                            //nothing to do
+                                            break;
+                                        default:
+                                            throw new ArgumentOutOfRangeException(nameof(conflictStatus),
+                                                "Invalid ConflictStatus: " + conflictStatus);
+                                    }
                                 }
-                            }
-                            finally
-                            {
-                                document?.Dispose();
+                                finally
+                                {
+                                    document?.Dispose();
+                                }
                             }
                         }
                     }
+
+                    Debug.Assert(_incoming._replicatedAttachmentStreams.Count == 0, "We should handle all attachment streams during WriteAttachment.");
+
+                    database.DocumentsStorage.SetDatabaseChangeVector(context, maxReceivedChangeVectorByDatabase);
+                    database.DocumentsStorage.SetLastReplicateEtagFrom(context, _incoming.ConnectionInfo.SourceDatabaseId, _lastEtag);
+
+                    return operationsCount;
                 }
-
-                Debug.Assert(_incoming._replicatedAttachmentStreams.Count == 0, "We should handle all attachment streams during WriteAttachment.");
-
-                database.DocumentsStorage.SetDatabaseChangeVector(context, maxReceivedChangeVectorByDatabase);
-                database.DocumentsStorage.SetLastReplicateEtagFrom(context, _incoming.ConnectionInfo.SourceDatabaseId, _lastEtag);
-
-                return operationsCount;
+                finally
+                {
+                    IsIncomingReplication = false;
+                }
             }
 
             private void ReadChangeVector(int changeVectorCount, int position,

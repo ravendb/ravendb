@@ -101,6 +101,7 @@ namespace Raven.Server.ServerWide.Maintance
             }
         }
 
+        private bool _hasLivingNodesFlag = false;
         private bool UpdateDatabaseTopology(string dbName, DatabaseTopology topology,
             Dictionary<string, ClusterNodeStatusReport> currentClusterStats,
             Dictionary<string, ClusterNodeStatusReport> previousClusterStats)
@@ -116,23 +117,27 @@ namespace Raven.Server.ServerWide.Maintance
                         dbStats.Status == DatabaseStatus.Loaded)
                     {
                         hasLivingNode = true;
+                        _hasLivingNodesFlag = true;
                     }
                 }
 
                 if (hasLivingNode == false)
                 {
                     var alertMsg = $"It appears that all nodes of the {dbName} database are dead, and we can't demote the last member-node left.";
-                    var alert = AlertRaised.Create(
-                        "No living nodes in the database topology",
-                        alertMsg,
-                        AlertType.ClusterTopologyWarning,
-                        NotificationSeverity.Warning
-                       );
-
-                    _server.NotificationCenter.Add(alert);
-                    if (_logger.IsInfoEnabled)
+                    if (_hasLivingNodesFlag)
                     {
-                        _logger.Info(alertMsg);
+                        var alert = AlertRaised.Create(
+                            "No living nodes in the database topology",
+                            alertMsg,
+                            AlertType.ClusterTopologyWarning,
+                            NotificationSeverity.Warning
+                        );
+                        _server.NotificationCenter.Add(alert);
+                    }
+                    _hasLivingNodesFlag = false;
+                    if (_logger.IsOperationsEnabled)
+                    {
+                        _logger.Operations(alertMsg);
                     }
                     return false;
                 }
