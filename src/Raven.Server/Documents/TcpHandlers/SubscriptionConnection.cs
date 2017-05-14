@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private SubscriptionConnectionState _connectionState;
         private bool _isDisposed;
 
-        public long SubscriptionId => _options.SubscriptionId;
+        public string SubscriptionId => _options.SubscriptionId;
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
         ServerStore _serverStore;
 
@@ -552,7 +552,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 long startEtag = 0;
 
-                subscription.LastEtagReachedInServer.TryGetValue(TcpConnection.DocumentDatabase.DbId, out startEtag);
+                subscription.LastEtagReachedPedNode?.TryGetValue(TcpConnection.DocumentDatabase.DbId, out startEtag);
 
                 if (subscription.ChangeVector == null || subscription.ChangeVector.Length == 0)
                     return startEtag;

@@ -22,14 +22,22 @@ namespace Raven.Client.Documents.Subscriptions
 
         public SubscriptionCriteria Criteria { get; set; } 
         public ChangeVectorEntry[] ChangeVector { get; set; }
-        public long SubscriptionId { get; set; }
+        public string SubscriptionId { get; set; }
         public DateTime TimeOfLastClientActivity { get; set; }
-        public Dictionary<Guid,long> LastEtagReachedInServer { get; set; }
+        public Dictionary<Guid,long> LastEtagReachedPedNode { get; set; }
+        private ulong? taskKey;
 
         public ulong GetTaskKey()
         {
-            return (ulong)SubscriptionId;
+            if (taskKey.HasValue == false)
+            {
+                var lastSlashIndex = SubscriptionId.LastIndexOf("/");
+                taskKey = ulong.Parse(SubscriptionId.Substring(lastSlashIndex + 1));
+                return taskKey.Value;
+            }
+            return taskKey.Value;
         }
+    
 
         public DynamicJsonValue ToJson()
         {
@@ -51,7 +59,7 @@ namespace Raven.Client.Documents.Subscriptions
             if (json == null)
                 return;
 
-            long subscriptionId;
+            string subscriptionId;
             if (json.TryGet(nameof(SubscriptionId), out subscriptionId))
                 SubscriptionId = subscriptionId;
 

@@ -10,7 +10,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
     public class DeleteSubscriptionCommand:UpdateValueForDatabaseCommand
     {
-        public long SubscriptionId;
+        public string SubscriptionId;
 
         // for serialization
         private DeleteSubscriptionCommand():base(null){}
@@ -19,7 +19,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
         }
 
-        public override string GetItemId() => SubscriptionState.GenerateSubscriptionItemName(DatabaseName, SubscriptionId);
+        public override string GetItemId() => SubscriptionId;
         public override BlittableJsonReaderObject GetUpdatedValue(long idnex, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             if (existingValue == null)

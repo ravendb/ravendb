@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Subscriptions
             _store = store;
         }
 
-        public Task<long> CreateAsync<T>(SubscriptionCreationParams<T> subscriptionCreationParams, string database = null)
+        public Task<string> CreateAsync<T>(SubscriptionCreationParams<T> subscriptionCreationParams, string database = null)
         {
             if (subscriptionCreationParams == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Subscriptions
             return CreateAsync(subscriptionCreationDto, database);
         }
 
-        public async Task<long> CreateAsync(SubscriptionCreationParams subscriptionCreationParams, string database = null)
+        public async Task<string> CreateAsync(SubscriptionCreationParams subscriptionCreationParams, string database = null)
         {
             if (subscriptionCreationParams == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Subscriptions
             };
             await requestExecuter.ExecuteAsync(command, jsonOperationContext);
 
-            return command.Result.Id;
+            return SubscriptionState.GenerateSubscriptionItemName(database ?? _store.DefaultDatabase,command.Result.Id);
         }
 
         public Subscription<dynamic> Open(SubscriptionConnectionOptions options, string database = null)
@@ -97,7 +97,7 @@ namespace Raven.Client.Documents.Subscriptions
             return command.Result.ToList();
         }
 
-        public async Task DeleteAsync(long id, string database = null)
+        public async Task DeleteAsync(string id, string database = null)
         {
             JsonOperationContext jsonOperationContext;
             var requestExecuter = _store.GetRequestExecuter(database ?? _store.DefaultDatabase);
