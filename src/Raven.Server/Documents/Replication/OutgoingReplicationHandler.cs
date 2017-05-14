@@ -83,7 +83,6 @@ namespace Raven.Server.Documents.Replication
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             
             _database.Changes.OnDocumentChange += OnDocumentChange;
-            _database.Changes.OnTransformerChange += OnTransformerChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
 
@@ -561,22 +560,6 @@ namespace Raven.Server.Documents.Replication
             _waitForChanges.Set();
         }
       
-
-        private void OnTransformerChange(TransformerChange change)
-        {
-            if (change.Type != TransformerChangeTypes.TransformerAdded &&
-                change.Type != TransformerChangeTypes.TransformerRemoved)
-                return;
-
-            if (_log.IsInfoEnabled)
-                _log.Info(
-                    $"Received transformer {change.Type} event, transformer name = {change.Name}, etag = {change.Etag}");
-
-            if (IncomingReplicationHandler.IsIncomingReplicationThread)
-                return;
-            _waitForChanges.Set();
-        }
-
         private int _disposed;
         public void Dispose()
         {
@@ -587,7 +570,6 @@ namespace Raven.Server.Documents.Replication
                 _log.Info($"Disposing OutgoingReplicationHandler ({FromToString})");
 
             _database.Changes.OnDocumentChange -= OnDocumentChange;
-            _database.Changes.OnTransformerChange -= OnTransformerChange;
 
             _cts.Cancel();
 
