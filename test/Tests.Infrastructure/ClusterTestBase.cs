@@ -98,6 +98,35 @@ namespace Tests.Infrastructure
             }
         }
 
+        protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<IDocumentStore, T> func, T excpected)
+        {
+            var stores = GetDocumentStores(topology);
+            var tasks = new List<Task<T>>();
+            foreach (var store in stores)
+            {
+                var task = WaitForValueAsync(() => func(store), excpected);
+                tasks.Add(task);
+            }
+
+            var res = await Task.WhenAll(tasks);
+            var hasExpectedVals = res.Where(t => t?.Equals(excpected) ?? false);
+           
+            if(hasExpectedVals.Count() == stores.Count)
+                return excpected;
+
+            var others = res.Except(hasExpectedVals).GroupBy(x=>1).Select(g=>new
+            {
+                Count = g.Count(),
+                g.Key
+            });
+            var otherValues = "";
+            foreach (var other in others)
+            {
+                otherValues += $"{other.Key} appears {other.Count} times, ";
+            }
+            throw new Exception($"Not all node in the group have the expected value of {excpected}. {otherValues}");
+        }
+
         protected async Task<bool> WaitForDocumentInClusterAsync<T>(DatabaseTopology topology, string docId, Func<T, bool> predicate, TimeSpan timeout)
         {
             var stores = GetDocumentStores(topology);

@@ -37,7 +37,7 @@ namespace Raven.Server.Documents
 
         public void AddAfterCommitNotification(DocumentChange change)
         {
-            change.TriggeredByReplicationThread = IncomingReplicationHandler.IsIncomingReplicationThread;
+            change.TriggeredByReplicationThread = IncomingReplicationHandler.IsIncomingReplication;
 
             if (change.IsSystemDocument)
             {

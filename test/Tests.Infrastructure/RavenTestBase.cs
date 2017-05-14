@@ -247,6 +247,37 @@ namespace FastTests
             } while (true);
         }
 
+        protected async Task<T> WaitForValueAsync<T>(Func<T> act, T expectedVal)
+        {
+            int timeout = 5000 * (Debugger.IsAttached ? 100 : 1);
+            
+            var sw = Stopwatch.StartNew();
+            do
+            {
+                try
+                {
+                    var currentVal = act();
+                    if (expectedVal.Equals(currentVal))
+                    {
+                        return currentVal;
+                    }
+                    if (sw.ElapsedMilliseconds > timeout)
+                    {
+                        return currentVal;
+                    }
+                }
+                catch
+                {
+                    if (sw.ElapsedMilliseconds > timeout)
+                    {
+                        throw;
+                    }
+                }
+                await Task.Delay(100);
+            } while (true);
+        }
+
+
         protected T WaitForValue<T>(Func<T> act, T expectedVal)
         {
             int timeout = 15000;
@@ -269,11 +300,12 @@ namespace FastTests
                 }
                 catch
                 {
-                    if (sw.ElapsedMilliseconds <= timeout)
+                    if (sw.ElapsedMilliseconds > timeout)
                     {
                         throw;
                     }
                 }
+
                 Thread.Sleep(16);
             } while (true);
         }

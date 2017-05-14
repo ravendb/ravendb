@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests.Client.Attachments;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Xunit;
@@ -37,7 +38,7 @@ namespace RachisTests.DatabaseCluster
                 }
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name  = "Karmel"},"users/1");
+                    await session.StoreAsync(new User {Name = "Karmel"}, "users/1");
                     await session.SaveChangesAsync();
                 }
                 Assert.True(await WaitForDocumentInClusterAsync<User>(
@@ -48,6 +49,47 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
+        [Fact]
+        public async Task DoNotReplicateBack()
+        {
+            var clusterSize = 5;
+            var databaseName = "ReplicationTestDB";
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            using (var store = new DocumentStore()
+            {
+                Url = leader.WebUrls[0],
+                DefaultDatabase = databaseName
+            }.Initialize())
+            {
+                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                var topology = databaseResult.Topology;
+                Assert.Equal(clusterSize, topology.AllReplicationNodes().Count());
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "Karmel"}, "users/1");
+                    await session.SaveChangesAsync();
+                }
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    databaseResult.Topology,
+                    "users/1",
+                    u => u.Name.Equals("Karmel"),
+                    TimeSpan.FromSeconds(clusterSize + 5)));
+
+                topology.RemoveFromTopology(leader.ServerStore.NodeTag);
+
+                await Assert.ThrowsAsync<Exception>(async () =>
+                {
+                    await WaitForValueOnGroupAsync(topology, (s) =>
+                    {
+                        var replicationPerformance = s.Admin.Send(new GetReplicationPerformanceStatisticsOperation());
+                        return replicationPerformance.Outgoing.Any(o=>o.Performance.Any(p=> p.SendLastEtag > 0));
+                    }, true);
+                });
+
+            }
+        }
 
         [Fact]
         public async Task AddGlobalChangeVectorToNewDocument()
@@ -103,7 +145,5 @@ namespace RachisTests.DatabaseCluster
                     Assert.Equal(2, session.Advanced.GetChangeVectorFor(user).Length);
                 }
             }
-        }
-
-    }
+        }    }
 }
