@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public void AssertSubscriptionIdExists(long id, TimeSpan timeout)
         {
-            Task.WaitAny(_db.WaitForIndexNotification(id), Task.Delay(timeout));
+            _db.WaitForIndexNotification(id);
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
