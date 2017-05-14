@@ -633,7 +633,6 @@ namespace Raven.Server.ServerWide
                 BlittableJsonReaderObject doc;
                 long etag;
                 size = GetDataAndEtagTupleFromReader(context, reader, out doc, out etag);
-                Debug.Assert(size == sizeof(long));
 
                 yield return (etag, doc);
             }
@@ -647,6 +646,7 @@ namespace Raven.Server.ServerWide
             doc = new BlittableJsonReaderObject(ptr, size, context);
 
             etag = Bits.SwapBytes(*(long*)reader.Read(3, out size));
+            Debug.Assert(size == sizeof(long));
             return size;
         }
 
