@@ -550,7 +550,9 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             using (docsContext.OpenReadTransaction())
             {
-                var startEtag = GetStartEtagByChangeVector(subscription);
+                long startEtag = 0;
+
+                subscription.LastEtagReachedInServer.TryGetValue(TcpConnection.DocumentDatabase.DbId, out startEtag);
 
                 if (subscription.ChangeVector == null || subscription.ChangeVector.Length == 0)
                     return startEtag;
@@ -567,21 +569,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 return startEtag;
             }
-        }
-
-        private long GetStartEtagByChangeVector(SubscriptionState subscription)
-        {
-            long startEtag = 0;
-            var dbId = TcpConnection.DocumentDatabase.DbId;
-
-            // first, try get the latest etag we reached so far
-            if (subscription.LastEtagReachedInServer == null || 
-                subscription.LastEtagReachedInServer.TryGetValue(dbId, out startEtag) == false)
-            {
-                startEtag = 0;
-            }
-            
-            return startEtag;
         }
 
         private async Task SendHeartBeat()
