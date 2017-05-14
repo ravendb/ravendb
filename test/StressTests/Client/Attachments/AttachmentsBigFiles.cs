@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Raven.Client.Documents.Operations;
 using Xunit;
 
-namespace SlowTests.Client.Attachments
+namespace StressTests.Client.Attachments
 {
     public class AttachmentsBigFiles : RavenTestBase
     {
@@ -45,9 +45,10 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Theory(Skip = "TODO: Huge file")]
-        [InlineData(int.MaxValue, "todoB3EIIB2gNVjsXTCD1aXlTgzuEz50")]
-        public void SupportHugeAttachment_MaxLong(long size, string hash)
+        [Theory]
+        [InlineData(10, "JSQotERdt/PFZDB+eYlyf4cZVDLsYG33")]
+        [InlineData(int.MaxValue, "gxtSDE78gM6tU9lmqq2GIRgYOXiy6BKh")]
+        public void SupportHugeAttachment(long size, string hash)
         {
             using (var store = GetDocumentStore())
             {
@@ -55,7 +56,6 @@ namespace SlowTests.Client.Attachments
                 {
                     session.Store(new User {Name = "Fitzchak"}, "users/1");
                     session.SaveChanges();
-
                 }
 
                 using (var bigStream = new BigDummyStream(size))
