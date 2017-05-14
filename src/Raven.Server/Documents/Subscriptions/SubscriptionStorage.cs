@@ -71,9 +71,8 @@ namespace Raven.Server.Documents.Subscriptions
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"New Subscription With ID {etag} was created");
-
-            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, etag);
-            //await _db.WaitForIndexNotification(etag);
+            
+            await _db.WaitForIndexNotification(etag);
             return etag;
         }
 
@@ -98,8 +97,7 @@ namespace Raven.Server.Documents.Subscriptions
             };
 
             var etag = await _serverStore.SendToLeaderAsync(command.ToJson());
-            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, etag);
-            //await _db.WaitForIndexNotification(etag);            
+            await _db.WaitForIndexNotification(etag);            
         }
 
         public SubscriptionState GetSubscriptionFromServerStore(long id)
@@ -113,7 +111,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public void AssertSubscriptionIdExists(long id, TimeSpan timeout)
         {
-            Task.WaitAny(_serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id), Task.Delay(timeout));
+            Task.WaitAny(_db.WaitForIndexNotification(id), Task.Delay(timeout));
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
@@ -135,8 +133,8 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 _logger.Info($"Subscription with id {id} was deleted");
             }
-            //await _db.WaitForIndexNotification(etag);           
-            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, etag);
+            await _db.WaitForIndexNotification(etag);
+            
         }
 
         public bool DropSubscriptionConnection(long subscriptionId, string reason)
@@ -164,33 +162,6 @@ namespace Raven.Server.Documents.Subscriptions
                 yield return subscriptionGeneralData;
             }
         }     
-
-        private DynamicJsonValue GetSubscriptionConnectionStats(SubscriptionConnectionStats stats)
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(SubscriptionConnectionStats.ConnectedAt)] = stats.ConnectedAt,
-                [nameof(SubscriptionConnectionStats.LastMessageSentAt)] = stats.LastMessageSentAt,
-                [nameof(SubscriptionConnectionStats.LastAckReceivedAt)] = stats.LastAckReceivedAt,
-
-
-                [nameof(SubscriptionConnectionStats.DocsRate)] = stats.DocsRate.CreateMeterData(),
-                [nameof(SubscriptionConnectionStats.BytesRate)] = stats.BytesRate.CreateMeterData(),
-                [nameof(SubscriptionConnectionStats.AckRate)] = stats.AckRate.CreateMeterData()
-            };
-        }
-
-        private DynamicJsonValue GetSubscriptionConnectionOptions(SubscriptionConnectionOptions options)
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(SubscriptionConnectionOptions.SubscriptionId)] = options.SubscriptionId,
-                [nameof(SubscriptionConnectionOptions.TimeToWaitBeforeConnectionRetryMilliseconds)] = options.TimeToWaitBeforeConnectionRetryMilliseconds,
-                [nameof(SubscriptionConnectionOptions.IgnoreSubscriberErrors)] = options.IgnoreSubscriberErrors,
-                [nameof(SubscriptionConnectionOptions.Strategy)] = options.Strategy,
-                [nameof(SubscriptionConnectionOptions.MaxDocsPerBatch)] = options.MaxDocsPerBatch
-            };
-        }
 
         public IEnumerable<SubscriptionGeneralDataAndStats> GetAllRunningSubscriptions(TransactionOperationContext context, bool history, int start, int take)
         {
