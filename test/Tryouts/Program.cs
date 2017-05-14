@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using FastTests.Client.Attachments;
 using FastTests.Client;
 using FastTests.Server.Documents.Queries;
@@ -23,16 +24,59 @@ namespace Tryouts
 
             store.Initialize();
 
+            //using (var session = store.OpenSession())
+            //{
+            //    var task = new ToDoTask
+            //    {
+            //        DueDate = DateTime.Today.AddDays(1),
+            //        Task = "Buy milk"
+            //    };
+            //    session.Store(task);
+            //    session.SaveChanges();
+            //}
+
+            //using (var session = store.OpenSession())
+            //{
+            //    var task = session.Load<ToDoTask>("ToDoTasks/1");
+            //    task.Completed = true;
+            //    session.SaveChanges();
+            //}
+
+            //using (var session = store.OpenSession())
+            //{
+            //    for (int i = 0; i < 5; i++)
+            //    {
+            //        session.Store(new ToDoTask
+            //        {
+            //            DueDate = DateTime.Today.AddDays(i),
+            //            Task = "Take the dog for a walk"
+            //        });
+            //    }
+
+            //    session.SaveChanges();
+            //}
+
+
             using (var session = store.OpenSession())
             {
-                var task = new ToDoTask
+                var tasksPerDay =
+                    from t in session.Query<ToDoTask>()
+                    where t.Completed == false
+                    group t by new { t.DueDate, t.Completed }
+                    into g
+                    select new
+                    {
+                        g.Key.DueDate,
+                        g.Key.Completed,
+                        TasksPerDate = g.Count()
+                    };
+
+                foreach (var taskSummary in tasksPerDay)
                 {
-                    DueDate = DateTime.Today.AddDays(1),
-                    Task = "Buy milk"
-                };
-                session.Store(task);
-                session.SaveChanges();
+                    Console.WriteLine($"{taskSummary.DueDate} - {taskSummary.TasksPerDate}");
+                }
             }
+
         }
     }
 

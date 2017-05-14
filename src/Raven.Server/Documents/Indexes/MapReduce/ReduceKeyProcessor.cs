@@ -135,10 +135,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 return;
             }
 
-            if (value is long)
+            if (value is long l)
             {
-                var l = (long)value;
-
                 switch (_mode)
                 {
                     case Mode.SingleValue:
@@ -155,10 +153,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 return;
             }
 
-            if (value is decimal)
+            if (value is decimal d)
             {
-                var d = (decimal)value;
-
                 switch (_mode)
                 {
                     case Mode.SingleValue:
@@ -172,31 +168,42 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 return;
             }
 
-            if (value is int)
+            if (value is int num)
             {
-                var i = (int)value;
-
                 switch (_mode)
                 {
                     case Mode.SingleValue:
-                        _singleValueHash = (ulong)i;
+                        _singleValueHash = (ulong)num;
                         break;
                     case Mode.MultipleValues:
-                        CopyToBuffer((byte*)&i, sizeof(int));
+                        CopyToBuffer((byte*)&num, sizeof(int));
                         break;
                 }
 
                 return;
             }
 
-            if (value is double)
+            if (value is bool b)
             {
-                var d = (double)value;
-
                 switch (_mode)
                 {
                     case Mode.SingleValue:
-                        _singleValueHash = (ulong)d;
+                        _singleValueHash = b ? 0 : 1UL;
+                        break;
+                    case Mode.MultipleValues:
+                        CopyToBuffer((byte*)&b, sizeof(bool));
+                        break;
+                }
+
+                return;
+            }
+
+            if (value is double dbl)
+            {
+                switch (_mode)
+                {
+                    case Mode.SingleValue:
+                        _singleValueHash = (ulong)dbl;
                         break;
                     case Mode.MultipleValues:
                         CopyToBuffer((byte*)&d, sizeof(double));
