@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicExport;
 using Raven.Server.Json;
@@ -29,11 +30,6 @@ namespace Raven.Server.Documents.Handlers
 
                 var stats = new DatabaseStatistics();
                 stats.LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
-
-                if (stats.LastDocEtag != null)
-                {
-                    stats.LastChangeVector = Database.DocumentsStorage.GetDocumentsFrom(context, stats.LastDocEtag.Value).FirstOrDefault()?.ChangeVector;
-                }
                 
                 stats.CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
                 stats.CountOfRevisionDocuments = Database.BundleLoader.VersioningStorage?.GetNumberOfRevisionDocuments(context);
@@ -42,7 +38,15 @@ namespace Raven.Server.Documents.Handlers
                 stats.CountOfUniqueAttachments = attachments.StreamsCount;
                 stats.CountOfIndexes = indexes.Count;
                 stats.CountOfTransformers = transformersCount;
-                stats.DatabaseChangeVector = Database.DocumentsStorage.GetDatabaseChangeVector(context);
+                var statsDatabaseChangeVector = Database.DocumentsStorage.GetDatabaseChangeVector(context).ToDictionary(x=>x.DbId, x=>x);
+
+                statsDatabaseChangeVector[Database.DbId] = new ChangeVectorEntry()
+                {
+                    DbId = Database.DbId,
+                    Etag = stats.LastDocEtag.Value
+                };
+
+                stats.DatabaseChangeVector = statsDatabaseChangeVector.Values.ToArray();
                 stats.DatabaseId = Database.DocumentsStorage.Environment.DbId;
                 stats.Is64Bit = IntPtr.Size == sizeof(long);
                 stats.Pager = Database.DocumentsStorage.Environment.Options.DataPager.GetType().ToString();
