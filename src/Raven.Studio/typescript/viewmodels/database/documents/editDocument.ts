@@ -417,17 +417,23 @@ class editDocument extends viewModelBase {
         // 2. Remove the '@change-vector' & '@flags' from metadata view for the clone 
         const docDto = this.document().toDto(true);
         const metaDto = docDto["@metadata"];
+        let docId = "";
+
         if (metaDto) {
             documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave, true);
             const docText = this.stringify(docDto);
             this.documentText(docText);
+
+            // Make the initial suggested document Id contain collection name
+            docId = metaDto["@collection"] + "/";
         }
 
         // 3. Clear data..
         this.document().__metadata.attachments([]); 
         this.connectedDocuments.gridController().reset(true);
         this.metadata().etag(null);
-        this.userSpecifiedId("");
+
+        this.userSpecifiedId(docId);
     }
 
     saveDocument() {       
