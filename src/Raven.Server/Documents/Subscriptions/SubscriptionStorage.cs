@@ -155,9 +155,11 @@ namespace Raven.Server.Documents.Subscriptions
 
         public IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions(TransactionOperationContext serverStoreContext, bool history, int start, int take)
         {
-            foreach (var subscriptionGeneralData in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
-                SubscriptionState.GenerateSubscriptionPrefix(_db.Name)).Select(x=> new SubscriptionGeneralDataAndStats(JsonDeserializationClient.SubscriptionState(x.Item2))))
+            foreach (var subscriptionStateBlittable in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
+                SubscriptionState.GenerateSubscriptionPrefix(_db.Name)))
             {
+                var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionStateBlittable.Item2);
+                var subscriptionGeneralData = new SubscriptionGeneralDataAndStats(subscriptionState);
                 GetSubscriptionInternal(subscriptionGeneralData, history);
                 yield return subscriptionGeneralData;
             }
