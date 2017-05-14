@@ -27,14 +27,25 @@ namespace Raven.Server.Documents.Handlers
         public async Task BulkDocs()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var mergedCmd = await CreateBatchCommand(context))
+            using (var command = new MergedBatchCommand { Database = Database })
             {
+                var contentType = HttpContext.Request.ContentType;
+                if (contentType == null ||
+                    contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
+                {
+                    command.ParsedCommands = await BatchRequestParser.ParseAsync(context, RequestBodyStream(), Database.Patcher);
+                }
+                else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase))
+                {
+                    await ParseMultipart(context, command);
+                }
+
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
                 if (waitForIndexesTimeout != null)
-                    mergedCmd.ModifiedCollections = new HashSet<string>();
+                    command.ModifiedCollections = new HashSet<string>();
                 try
                 {
-                    await Database.TxMerger.Enqueue(mergedCmd);
+                    await Database.TxMerger.Enqueue(command);
                 }
                 catch (ConcurrencyException)
                 {
@@ -45,14 +56,14 @@ namespace Raven.Server.Documents.Handlers
                 var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
                 if (waitForReplicasTimeout != null)
                 {
-                    await WaitForReplicationAsync(waitForReplicasTimeout.Value, mergedCmd);
+                    await WaitForReplicationAsync(waitForReplicasTimeout.Value, command);
                 }
 
                 if (waitForIndexesTimeout != null)
                 {
                     await
-                        WaitForIndexesAsync(waitForIndexesTimeout.Value, mergedCmd.LastEtag,
-                            mergedCmd.ModifiedCollections);
+                        WaitForIndexesAsync(waitForIndexesTimeout.Value, command.LastEtag,
+                            command.ModifiedCollections);
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -61,51 +72,39 @@ namespace Raven.Server.Documents.Handlers
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        ["Results"] = mergedCmd.Reply
+                        ["Results"] = command.Reply
                     });
                 }
             }
         }
 
-        private async Task<MergedBatchCommand> CreateBatchCommand(DocumentsOperationContext context)
+        private async Task ParseMultipart(DocumentsOperationContext context, MergedBatchCommand command)
         {
-            var command = new MergedBatchCommand {Database = Database};
-
-            if (HttpContext.Request.ContentType != null &&
-                HttpContext.Request.ContentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase))
+            var boundary = MultipartRequestHelper.GetBoundary(
+                MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
+                MultipartRequestHelper.MultipartBoundaryLengthLimit);
+            var reader = new MultipartReader(boundary, RequestBodyStream());
+            for (int i = 0; i < int.MaxValue; i++)
             {
-                var boundary = MultipartRequestHelper.GetBoundary(
-                    MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
-                    MultipartRequestHelper.MultipartBoundaryLengthLimit);
-                var reader = new MultipartReader(boundary, RequestBodyStream());
-                for (int i = 0; i < int.MaxValue; i++)
+                var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
+                if (section == null)
+                    break;
+
+                var bodyStream = GetBodyStream(section);
+                if (i == 0)
                 {
-                    var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
-                    if (section == null)
-                        break;
-
-                    var bodyStream = GetBodyStream(section);
-                    if (i == 0)
-                    {
-                        command.ParsedCommands = await BatchRequestParser.ParseAsync(context, bodyStream, Database.Patcher);
-                        continue;
-                    }
-
-                    if (command.AttachmentStreams == null)
-                        command.AttachmentStreams = new Queue<MergedBatchCommand.AttachmentStream>();
-
-                    var attachmentStream = new MergedBatchCommand.AttachmentStream();
-                    attachmentStream.FileDispose = Database.DocumentsStorage.AttachmentsStorage.GetTempFile(out attachmentStream.File);
-                    attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, bodyStream, attachmentStream.File, Database.DatabaseShutdown);
-                    command.AttachmentStreams.Enqueue(attachmentStream);
+                    command.ParsedCommands = await BatchRequestParser.ParseAsync(context, bodyStream, Database.Patcher);
+                    continue;
                 }
-            }
-            else
-            {
-                command.ParsedCommands = await BatchRequestParser.ParseAsync(context, RequestBodyStream(), Database.Patcher);
-            }
 
-            return command;
+                if (command.AttachmentStreams == null)
+                    command.AttachmentStreams = new Queue<MergedBatchCommand.AttachmentStream>();
+
+                var attachmentStream = new MergedBatchCommand.AttachmentStream();
+                attachmentStream.FileDispose = Database.DocumentsStorage.AttachmentsStorage.GetTempFile(out attachmentStream.File);
+                attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, bodyStream, attachmentStream.File, Database.DatabaseShutdown);
+                command.AttachmentStreams.Enqueue(attachmentStream);
+            }
         }
 
         private async Task WaitForReplicationAsync(TimeSpan waitForReplicasTimeout, MergedBatchCommand mergedCmd)
