@@ -12,10 +12,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
     public class AcknowledgeSubscriptionBatchCommand: UpdateValueForDatabaseCommand, IDatabaseTask
     {
         public ChangeVectorEntry[] ChangeVector;
-        public long SubscriptionId;
+        public string SubscriptionId;
         public string NodeTag;
         public Guid DbId;
-        public long LastEtagInDbId;
+        public long LastDocumentEtagAckedInNode;
 
         // for serializtion
         private AcknowledgeSubscriptionBatchCommand() : base(null){}
@@ -24,7 +24,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
         }
 
-        public override string GetItemId() => SubscriptionState.GenerateSubscriptionItemName(DatabaseName, SubscriptionId);
+        public override string GetItemId() => SubscriptionId;
         public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
             if (existingValue == null)
@@ -36,9 +36,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             var subscripiton = new SubscriptionState();
             subscripiton.FillFromBlittableJson(existingValue);
-            if (subscripiton.LastEtagReachedInServer == null)
-                subscripiton.LastEtagReachedInServer = new Dictionary<Guid, long>();
-            subscripiton.LastEtagReachedInServer[DbId] = this.LastEtagInDbId;
+            if (subscripiton.LastEtagReachedPedNode == null)
+                subscripiton.LastEtagReachedPedNode = new Dictionary<Guid, long>();
+            subscripiton.LastEtagReachedPedNode[DbId] = this.LastDocumentEtagAckedInNode;
             subscripiton.ChangeVector = ChangeVector;
             subscripiton.TimeOfLastClientActivity = DateTime.UtcNow;
 
@@ -54,9 +54,17 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(NodeTag)] = NodeTag;
         }
 
+        private ulong? taskKey;
+
         public ulong GetTaskKey()
         {
-            return (ulong)SubscriptionId;
+            if (taskKey.HasValue == false)
+            {
+                var lastSlashIndex = SubscriptionId.LastIndexOf("/");
+                taskKey = ulong.Parse(SubscriptionId.Substring(lastSlashIndex + 1));
+                return taskKey.Value;
+            }
+            return taskKey.Value;
         }
     }
 }

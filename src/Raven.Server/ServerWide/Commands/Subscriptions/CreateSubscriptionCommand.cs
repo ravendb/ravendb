@@ -37,7 +37,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             {
                 Criteria = Criteria,
                 ChangeVector = InitialChangeVector,
-                SubscriptionId = index
+                SubscriptionId = SubscriptionState.GenerateSubscriptionItemName(record.DatabaseName, index)
             };
 
             return context.ReadObject(rafValue.ToJson(), GetItemId());

@@ -57,9 +57,9 @@ namespace Raven.Client.Documents.Subscriptions
             // for deserialization
         }
 
-        public SubscriptionConnectionOptions(long subscriptionId)
+        public SubscriptionConnectionOptions(string subscriptionId)
         {
-            if (subscriptionId <= 0)
+            if (string.IsNullOrWhiteSpace(subscriptionId))
                 throw new ArgumentOutOfRangeException(nameof(subscriptionId));
 
             SubscriptionId = subscriptionId;
@@ -68,7 +68,7 @@ namespace Raven.Client.Documents.Subscriptions
             TimeToWaitBeforeConnectionRetryMilliseconds = 5000;
         }
 
-        public long SubscriptionId { get; private set; }
+        public string SubscriptionId { get; private set; }
         public uint TimeToWaitBeforeConnectionRetryMilliseconds { get; set; }
         public bool IgnoreSubscriberErrors { get; set; }
         public SubscriptionOpeningStrategy Strategy { get; set; }

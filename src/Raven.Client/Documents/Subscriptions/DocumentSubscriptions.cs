@@ -18,12 +18,12 @@ namespace Raven.Client.Documents.Subscriptions
             _innerAsync = new AsyncDocumentSubscriptions(documentStore);
         }
 
-        public long Create(SubscriptionCreationOptions criteria, string database = null)
+        public string Create(SubscriptionCreationOptions criteria, string database = null)
         {
             return AsyncHelpers.RunSync(() => _innerAsync.CreateAsync(criteria, database));
         }
 
-        public long Create<T>(SubscriptionCreationOptions<T> criteria, string database = null)
+        public string Create<T>(SubscriptionCreationOptions<T> criteria, string database = null)
         {
             return AsyncHelpers.RunSync(() => _innerAsync.CreateAsync(criteria, database));
         }
@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Subscriptions
             return AsyncHelpers.RunSync(() => _innerAsync.GetSubscriptionsAsync(start, take, database));
         }
 
-        public void Delete(long id, string database = null)
+        public void Delete(string id, string database = null)
         {
             AsyncHelpers.RunSync(() => _innerAsync.DeleteAsync(id, database));
         }
