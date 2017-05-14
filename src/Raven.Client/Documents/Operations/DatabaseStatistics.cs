@@ -76,8 +76,6 @@ namespace Raven.Client.Documents.Operations
         public string Pager { get; set; }
 
         public DateTime? LastIndexingTime { get; set; }
-
-        public ChangeVectorEntry[] LastChangeVector { get; set; }
     }
 
     public class IndexInformation
