@@ -59,7 +59,7 @@ namespace Raven.Server.Routing
                         new DynamicJsonValue
                         {
                             ["Type"] = "Error",
-                            ["Message"] = $"There is no handler for path: {method} {path}{context.Request.QueryString}"
+                            ["Error"] = $"There is no handler for path: {method} {path}{context.Request.QueryString}"
                         });
                 }
                 return null;

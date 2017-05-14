@@ -119,9 +119,9 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        private string GetUrl(DatabaseTopologyNode x, string clientUrl, ClusterTopology clusterTopology)
+        private string GetUrl(DatabaseTopologyNode node, string clientUrl, ClusterTopology clusterTopology)
         {
-            var url = (Server.ServerStore.NodeTag == x.NodeTag ? clientUrl : null) ??  clusterTopology.GetUrlFromTag(x.NodeTag);
+            var url = (Server.ServerStore.NodeTag == node.NodeTag ? clientUrl : null) ??  clusterTopology.GetUrlFromTag(node.NodeTag);
             if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
             {
                 switch (uri.Host)
@@ -129,13 +129,14 @@ namespace Raven.Server.Web.System
                     case "::":
                     case "::0":
                     case "0.0.0.0":
-                        return new UriBuilder(uri)
+                        url = new UriBuilder(uri)
                         {
                             Host = Environment.MachineName
                         }.Uri.ToString();
+                        break;
                 }
             }
-            return url;
+            return url.TrimEnd('/');
         }
 
         private Task DbInfo(string dbName)
