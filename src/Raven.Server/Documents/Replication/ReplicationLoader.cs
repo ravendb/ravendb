@@ -362,9 +362,10 @@ namespace Raven.Server.Documents.Replication
         {
             var newRecord = LoadDatabaseRecord();
             HandleConflictResolverChange(newRecord);
-            lock (_locker)
+            HandleTopologyChange(newRecord, out var instancesToDispose); // this function is done under lock
+            foreach (var instance in instancesToDispose)
             {
-                HandleTopologyChange(newRecord);
+                instance?.Dispose();
             }
         }
 
@@ -386,28 +387,32 @@ namespace Raven.Server.Documents.Replication
                 ConflictResolver.RunConflictResolversOnce();
             }
         }
-
-        private void HandleTopologyChange(DatabaseRecord newRecord)
+        
+        private void HandleTopologyChange(DatabaseRecord newRecord, out List<OutgoingReplicationHandler> instancesToDispose)
         {
-            if (newRecord == null)
+            lock (_locker)
             {
-                DropOutgoingConnections(Destinations);
-                _destinations = null;
-                return;
-            }
+                instancesToDispose = new List<OutgoingReplicationHandler>();
+                if (newRecord == null)
+                {
+                    DropOutgoingConnections(Destinations, ref instancesToDispose);
+                    _destinations = null;
+                    return;
+                }
 
-            var newDestinations = newRecord.Topology.GetDestinations(_server.NodeTag, Database.Name);
-            var connectionChanged = DatabaseTopology.FindConnectionChanges(_destinations, newDestinations);
+                var newDestinations = newRecord.Topology.GetDestinations(_server.NodeTag, Database.Name);
+                var connectionChanged = DatabaseTopology.FindConnectionChanges(_destinations, newDestinations);
 
-            if (connectionChanged.removeDestinations.Count > 0)
-            {
-                DropOutgoingConnections(connectionChanged.removeDestinations);
+                if (connectionChanged.removeDestinations.Count > 0)
+                {
+                    DropOutgoingConnections(connectionChanged.removeDestinations, ref instancesToDispose);
+                }
+                if (connectionChanged.addDestinations.Count > 0)
+                {
+                    StartOutgoingConnections(connectionChanged.addDestinations);
+                }
+                _destinations = newDestinations;
             }
-            if (connectionChanged.addDestinations.Count > 0)
-            {
-                StartOutgoingConnections(connectionChanged.addDestinations);
-            }
-            _destinations = newDestinations;
         }
 
         private void StartOutgoingConnections(IReadOnlyCollection<ReplicationNode> connectionsToAdd)
@@ -433,7 +438,7 @@ namespace Raven.Server.Documents.Replication
                 _log.Info("Finished initialization of outgoing replications..");
         }
 
-        private void DropOutgoingConnections(ICollection<ReplicationNode> connectionsToRemove)
+        private  void DropOutgoingConnections(ICollection<ReplicationNode> connectionsToRemove, ref List<OutgoingReplicationHandler> instancesToDispose)
         {
             var outgoingChanged = _outgoing.Where(o => connectionsToRemove.Contains(o.Destination)).ToList();
             if (outgoingChanged.Count == 0)
@@ -449,7 +454,7 @@ namespace Raven.Server.Documents.Replication
 
                 instance.Failed -= OnOutgoingSendingFailed;
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
-                instance.Dispose();
+                instancesToDispose.Add(instance);
                 _outgoing.TryRemove(instance);
                 _lastSendEtagPerDestination.TryRemove(instance.Destination, out LastEtagPerDestination etag);
                 _outgoingFailureInfo.TryRemove(instance.Destination, out ConnectionShutdownInfo info);
