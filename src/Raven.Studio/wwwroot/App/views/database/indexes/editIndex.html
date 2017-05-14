@@ -1,5 +1,5 @@
-<div data-bind="if:  !isAutoIndex()" class="content-margin">
-    <div class="flex-window stretch edit-index">
+<div data-bind="if:  !isAutoIndex(), css: { 'content-margin': !isAutoIndex() }">
+    <div class="flex-window edit-index">
         <div class="flex-window-head">
             <div class="toolbar">
                 <div class="row">
@@ -191,7 +191,7 @@
 </div>
 
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ START AUTO INDEX ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
-<div data-bind="if: isAutoIndex">
+<div data-bind="if: isAutoIndex, css: { 'content-margin': isAutoIndex }">
     <div class="flex-window edit-index">
         <div class="flex-window-head">
             <div class="toolbar">
