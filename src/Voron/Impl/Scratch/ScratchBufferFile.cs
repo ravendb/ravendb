@@ -344,7 +344,7 @@ namespace Voron.Impl.Scratch
 
             var shrinked = new PageFromScratchBuffer(Number, value.PositionInScratchBuffer, value.Size, newNumberOfPages);
 
-            _allocatedPages.Add(value.PositionInScratchBuffer, shrinked);
+            _allocatedPages.Add(shrinked.PositionInScratchBuffer, shrinked);
 
             return shrinked;
         }
