@@ -17,6 +17,12 @@ namespace Raven.Client.Documents.Session
     public partial interface IAdvancedSessionOperation
     {
         /// <summary>
+        ///     Check if document exists
+        /// </summary>
+        /// <param name="id">Document id</param>
+        bool Exists(string id);
+
+        /// <summary>
         ///     Loads multiple entities that contain common prefix.
         /// </summary>
         /// <param name="keyPrefix">prefix for which documents should be returned e.g. "products/"</param>

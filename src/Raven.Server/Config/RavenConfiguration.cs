@@ -153,7 +153,6 @@ namespace Raven.Server.Config
             Patching.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             DebugLog.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             BulkInsert.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Server.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Memory.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Storage.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Encryption.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);

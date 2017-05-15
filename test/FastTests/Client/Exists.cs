@@ -19,10 +19,10 @@ namespace FastTests.Client
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.True(session.Exists("users/1"));
-                    Assert.False(session.Exists("users/10"));
+                    Assert.True(session.Advanced.Exists("users/1"));
+                    Assert.False(session.Advanced.Exists("users/10"));
                     session.Load<User>("users/2");
-                    Assert.True(session.Exists("users/2"));
+                    Assert.True(session.Advanced.Exists("users/2"));
                 }
             }
         }

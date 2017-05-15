@@ -1,14 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
-using FastTests.Client.Attachments;
-using FastTests.Client;
-using FastTests.Server.Documents.Queries;
-using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using SlowTests.Client.Attachments;
-using SlowTests.Core.Session;
-using SlowTests.SlowTests.Issues;
 
 namespace Tryouts
 {
@@ -61,13 +53,11 @@ namespace Tryouts
             {
                 var tasksPerDay =
                     from t in session.Query<ToDoTask>()
-                    where t.Completed == false
-                    group t by new { t.DueDate, t.Completed }
+                    group t by t.DueDate
                     into g
                     select new
                     {
-                        g.Key.DueDate,
-                        g.Key.Completed,
+                        DueDate = g.Key,
                         TasksPerDate = g.Count()
                     };
 
