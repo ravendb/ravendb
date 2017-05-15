@@ -130,11 +130,9 @@ namespace Raven.Client.Documents.Operations
                 if (stream == null)
                     return;
 
-                IEnumerable<string> contentTypeVale;
-                var contentType = response.Content.Headers.TryGetValues("Content-Type", out contentTypeVale) ? contentTypeVale.First() : null;
+                var contentType = response.Content.Headers.TryGetValues("Content-Type", out IEnumerable<string> contentTypeVale) ? contentTypeVale.First() : null;
                 var etag = response.GetRequiredEtagHeader();
-                IEnumerable<string> hashVal;
-                var hash = response.Headers.TryGetValues("Content-Hash", out hashVal) ? hashVal.First() : null;
+                var hash = response.Headers.TryGetValues("Content-Hash", out IEnumerable<string> hashVal) ? hashVal.First() : null;
                 var size = stream.Length;
           
                 Result = new AttachmentResult
