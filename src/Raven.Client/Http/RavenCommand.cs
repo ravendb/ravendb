@@ -36,7 +36,7 @@ namespace Raven.Client.Http
         {
             // We must use HttpCompletionOption.ResponseHeadersRead otherwise the client will buffer the response
             // and we'll get OutOfMemoryException in huge responses (> 2GB).
-            return client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
+            return client.SendAsync(request, token);
         }
 
         public virtual void SetResponse(BlittableJsonReaderArray response, bool fromCache)
@@ -63,7 +63,7 @@ namespace Raven.Client.Http
 
         public bool IsFailedWithNode(ServerNode node)
         {
-			return FailedNodes != null && FailedNodes.ContainsKey(node);        }
+            return FailedNodes != null && FailedNodes.ContainsKey(node);        }
 
         public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
