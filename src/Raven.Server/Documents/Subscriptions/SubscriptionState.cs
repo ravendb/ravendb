@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Subscriptions
         // remember to catch ArgumentOutOfRangeException for timeout problems
         public async Task<IDisposable> RegisterSubscriptionConnection(
             SubscriptionConnection incomingConnection,
-            int timeToWait)
+            uint timeToWait)
         {
             try
             {

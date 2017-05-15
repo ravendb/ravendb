@@ -154,7 +154,7 @@ namespace Raven.Server.ServerWide.Maintance
                         if (needToWait)
                         {
                             needToWait = false; // avoid tight loop if there was timeout / error
-                            await TimeoutManager.WaitFor((int)onErrorDelayTime.TotalMilliseconds, _token).ConfigureAwait(false);
+                            await TimeoutManager.WaitFor((uint)onErrorDelayTime.TotalMilliseconds, _token).ConfigureAwait(false);
                         }
                         using (var connection = await ConnectToClientNodeAsync(_tcpConnection))
                         {
@@ -163,7 +163,7 @@ namespace Raven.Server.ServerWide.Maintance
                                 using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
                                 {                                    
                                     var readResponseTask = context.ReadForMemoryAsync(connection, _readStatusUpdateDebugString, _token);
-                                    var timeout = TimeoutManager.WaitFor((int)recieveFromWorkerTimeout.TotalMilliseconds, _token);
+                                    var timeout = TimeoutManager.WaitFor((uint)recieveFromWorkerTimeout.TotalMilliseconds, _token);
 
                                     if (await Task.WhenAny(readResponseTask, timeout) == timeout)
                                     {

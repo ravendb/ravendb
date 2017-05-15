@@ -14,8 +14,8 @@ namespace Sparrow.Utils
 {
     public static class TimeoutManager
     {
-        private static readonly ConcurrentDictionary<int, TimerTaskHolder> Values 
-            = new ConcurrentDictionary<int, TimerTaskHolder>(NumericEqualityComparer.Instance);
+        private static readonly ConcurrentDictionary<uint, TimerTaskHolder> Values 
+            = new ConcurrentDictionary<uint, TimerTaskHolder>(NumericEqualityComparer.Instance);
 
         private class TimerTaskHolder  : IDisposable
         {
@@ -45,9 +45,13 @@ namespace Sparrow.Utils
                 }
             }
 
-            public TimerTaskHolder(int timeout)
+            public TimerTaskHolder(uint timeout)
             {
-                _timer = new Timer(TimerCallback, null, timeout, timeout);
+                var period = TimeSpan.FromMilliseconds(timeout);
+                // TODO: Use the ctor which take uint once it is available.
+                // https://github.com/dotnet/coreclr/blob/master/src/mscorlib/src/System/Threading/Timer.cs#L710
+                // https://github.com/dotnet/coreclr/blob/c55f023f542e63e93a300752432de7bcc4104b3b/src/mscorlib/src/System/Threading/Timer.cs#L710
+                _timer = new Timer(TimerCallback, null, period, period);
             }
 
             public void Dispose()
@@ -56,7 +60,7 @@ namespace Sparrow.Utils
             }
         }
 
-        public static async Task WaitFor(int duration)
+        public static async Task WaitFor(uint duration)
         {
             var mod = duration % 50;
             if (mod != 0)
@@ -82,7 +86,7 @@ namespace Sparrow.Utils
 
         }
 
-        private static TimerTaskHolder GetHolderForDuration(int duration)
+        private static TimerTaskHolder GetHolderForDuration(uint duration)
         {
             if (Values.TryGetValue(duration, out var value) == false)
             {
@@ -91,7 +95,7 @@ namespace Sparrow.Utils
             return value;
         }
 
-        public static async Task WaitFor(int duration, CancellationToken token)
+        public static async Task WaitFor(uint duration, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
             // ReSharper disable once MethodSupportsCancellation

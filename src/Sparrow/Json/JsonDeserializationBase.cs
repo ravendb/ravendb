@@ -84,6 +84,7 @@ namespace Sparrow.Json
                 type == typeof(bool) ||
                 type == typeof(long) ||
                 type == typeof(int) ||
+                type == typeof(uint) ||
                 type == typeof(double) ||
                 type.GetTypeInfo().IsEnum ||
                 type == typeof(Guid) ||
