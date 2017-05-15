@@ -1,5 +1,45 @@
-﻿#destinationModal {
-    .raven-replication, .sql-etl, .raven-etl {
+﻿@external-replication-color: @brand-primary;
+@external-replication-color-dark: @brand-primary-dark;
+@external-replication-color-light: @brand-primary-light;
+
+@sql-etl-color: @brand-info;
+@sql-etl-color-dark: @brand-info-dark;
+@sql-etl-color-light: @brand-info-light;
+
+@ravendb-etl-color: @brand-warning;
+@ravendb-etl-color-dark: @brand-warning-dark;
+@ravendb-etl-color-light: @brand-warning-light;
+
+@backup-color: #a010b8;
+@backup-color-dark: darken(@backup-color,10%);
+@backup-color-light: @backup-color;
+
+@subscription-color: @brand-success;
+@subscription-color-dark: @brand-success-dark;
+@subscription-color-light: @brand-success-light;
+
+.bigbtn-variant(@color, @color-dark) {
+    background-color: fadeout(@color-dark,80%);
+    color: @color;
+
+    &:hover {
+        background-color: fadeout(@color-dark,0%);
+        color: @gray-lighter;
+    }
+}
+
+.name-variant (@color, @color-light) {
+    .destination-name {
+        color: @color;
+
+        &:hover {
+            color: @color-light;
+        }
+    }
+}
+
+#destinationModal {
+    .external-replication, .sql-etl, .ravendb-etl, .periodic-backup, .subscription {
         display: block;
         padding: 10px;
         transition: background-color .2s ease, color .1s;
@@ -9,34 +49,24 @@
         }
     }
 
-    .raven-replication {
-        background-color: fadeout(@brand-primary-dark,80%);
-        color: @brand-primary;
-
-        &:hover {
-            background-color: fadeout(@brand-primary-dark,0%);
-            color: @gray-lighter;
-        }
+    .external-replication {
+        .bigbtn-variant (@external-replication-color, @external-replication-color-dark);
     }
 
     .sql-etl {
-        background-color: fadeout(@brand-info-dark,80%);
-        color: @brand-info;
-
-        &:hover {
-            background-color: fadeout(@brand-info-dark,0%);
-            color: @gray-lighter;
-        }
+        .bigbtn-variant (@sql-etl-color, @sql-etl-color-dark);
     }
 
-    .raven-etl {
-        background-color: fadeout(@brand-warning-dark,80%);
-        color: @brand-warning;
+    .ravendb-etl {
+        .bigbtn-variant (@ravendb-etl-color, @ravendb-etl-color-dark);
+    }
 
-        &:hover {
-            background-color: fadeout(@brand-warning-dark,0%);
-            color: @gray-lighter;
-        }
+    .periodic-backup {
+        .bigbtn-variant (@backup-color, @backup-color-dark);
+    }
+
+    .subscription {
+        .bigbtn-variant (@subscription-color, @subscription-color-dark);
     }
 }
 
@@ -83,6 +113,47 @@
 }
 
 .destinations {
+    .legend {
+        background-color: @gray-darker;
+        font-size: 12px;
+        .padding;
+
+        h5 {
+            margin-top: 0;
+        }
+
+        .here {
+            color: #FFF;
+        }
+
+        .db-group-node {
+            color: cyan;
+        }
+
+        .external-replication {
+            color: @external-replication-color;
+        }
+
+        .sql-etl {
+            color: @sql-etl-color;
+        }
+
+        .subscriptions {
+            color: @subscription-color;
+        }
+
+        .db-group-node {
+        }
+
+        .ravendb-etl {
+            color: @ravendb-etl-color;
+        }
+
+        .periodic-backup {
+            color: @backup-color;
+        }
+    }
+
     .settings-menu {
         width: 300px !important;
     }
@@ -95,31 +166,23 @@
         }
 
         &.sql-etl {
-            .destination-name a {
-                color: @brand-info;
-
-                &:hover {
-                    color: @brand-info-light;
-                }
-            }
+            .name-variant (@brand-info, @brand-info-light);
         }
 
-        &.raven-etl {
-            .destination-name a {
-                color: @brand-warning;
+        &.ravendb-etl {
+            .name-variant (@brand-warning, @brand-warning-light);
+        }
 
-                &:hover {
-                    color: @brand-warning-light;
-                }
-            }
+        &.periodic-backup {
+            .name-variant (@backup-color, @backup-color-light);
+        }
+
+        &.subscription {
+            .name-variant (@subscription-color, @subscription-color-light);
         }
 
         .info-container {
             flex-grow: 1;
-        }
-
-        .properties-container {
-            width: 100%;
         }
 
         .actions-container {
@@ -139,23 +202,10 @@
                 flex-direction: column;
             }
         }
-
-        .properties-container {
-            flex-grow: 1;
-            justify-content: flex-end;
-
-            .properties-item {
-                margin-right: 0 !important;
-
-                @media (min-width: @screen-sm) {
-                    width: 100%;
-                }
-            }
-        }
     }
 
     .destination-name {
-        font-size: 118%;
+        font-size: 18px;
         margin-bottom: 0;
         font-weight: normal;
         overflow: hidden;
@@ -164,20 +214,36 @@
         flex-grow: 1;
     }
 
+    h3 {
+        margin: 0;
+    }
+
     .info-container {
+        align-items: flex-start;
+
+        & > div {
+            margin-right: @grid-gutter-width/2
+        }
+
+        .status .btn-group {
+            margin-top: -6px;
+        }
+
+        h5 {
+            margin-top: 0;
+        }
+
         .location {
             line-height: 18px;
-            margin-left: 30px;
-            font-size: 13px;
+            margin-left: @grid-gutter-width/2;
+            //font-size: 13px;
         }
 
         .destination-name {
-            top: -3px;
+            i {
+                top: 0;
+            }
             position: relative;
-        }
-
-        h3 {
-            margin-top: 0px;
         }
     }
 

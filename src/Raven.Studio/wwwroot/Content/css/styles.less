@@ -87,16 +87,16 @@ h6 {
 }
 
 .hr-title {
-    padding: 2px;
+    display: flex;
+    align-items: center;
 
     h1, h2, h3, h4, h5 {
-        margin: 6px;
-        float: left;
-        color: @brand-info;
+        margin: 0 6px 1px 0;
+        text-transform: uppercase;
     }
 
     hr {
-        border-color: @brand-info;
+        flex-grow: 1;
     }
 }
 
