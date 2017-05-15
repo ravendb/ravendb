@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Commands.Batches
         {
             throw new InvalidOperationException(
                 "Cannot put an attachment with a not seekable stream. " +
-                "We require a seekable stream because we might failover to a differnt node if the current one is unavilalbe during the operation.");
+                "We require a seekable stream because we might failover to a different node if the current one is unavailable during the operation.");
         }
 
         public string Key { get; }
