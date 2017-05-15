@@ -1,3 +1,6 @@
+/// QRCode
+declare var QRCode: any;
+
 /// Sortable
 declare var Sortable: any;
 

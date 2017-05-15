@@ -53,7 +53,7 @@ class databases extends viewModelBase {
 
         this.selectionState = ko.pureComputed<checkbox>(() => {
             const databases = this.databases().sortedDatabases().filter(x => !x.filteredOut());
-            var selectedCount = this.selectedDatabases().length;
+            const selectedCount = this.selectedDatabases().length;
             if (databases.length && selectedCount === databases.length)
                 return checkbox.Checked;
             if (selectedCount > 0)
