@@ -919,24 +919,10 @@ namespace Voron
                 spinner.SpinOnce();
             }
 
-            var dataLength = Constants.Storage.PageSize - (PageHeader.ChecksumOffset + sizeof(ulong));
-            if ((current->Flags & PageFlags.Overflow) == PageFlags.Overflow)
-            {
-                if (pageNumber + _dataPager.GetNumberOfOverflowPages(current->OverflowSize) > _dataPager.NumberOfAllocatedPages)
-                    ThrowInvalidOverflowSize(pageNumber, current);
-
-                dataLength = current->OverflowSize - (PageHeader.ChecksumOffset + sizeof(ulong));
-            }
-
             // No need to call EnsureMapped here. ValidatePageChecksum is only called for pages in the datafile, 
             // which we already got using AcquirePagePointerWithOverflowHandling()
 
-            var ctx = Hashing.Streamed.XXHash64.BeginProcess((ulong)pageNumber);
-
-            Hashing.Streamed.XXHash64.Process(ctx, (byte*)current, PageHeader.ChecksumOffset);
-            Hashing.Streamed.XXHash64.Process(ctx, (byte*)current + PageHeader.ChecksumOffset + sizeof(ulong), dataLength);
-
-            ulong checksum = Hashing.Streamed.XXHash64.EndProcess(ctx);
+            ulong checksum = CalculatePageChecksum((byte*)current, current->PageNumber, current->Flags, current->OverflowSize);
 
             if (checksum == current->Checksum)
                 return;
