@@ -39,6 +39,8 @@ namespace Raven.Server.Documents.Handlers
                 {
                     await ParseMultipart(context, command);
                 }
+                else
+                    ThrowNotSupportedType(contentType);
 
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
                 if (waitForIndexesTimeout != null)
@@ -76,6 +78,11 @@ namespace Raven.Server.Documents.Handlers
                     });
                 }
             }
+        }
+
+        private void ThrowNotSupportedType(string contentType)
+        {
+            throw new InvalidOperationException($"The requested Content type '{contentType}' is not supported. Use 'application/json' or 'multipart/mixed'.");
         }
 
         private async Task ParseMultipart(DocumentsOperationContext context, MergedBatchCommand command)
