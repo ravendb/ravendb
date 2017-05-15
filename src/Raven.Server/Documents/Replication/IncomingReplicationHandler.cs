@@ -810,8 +810,9 @@ namespace Raven.Server.Documents.Replication
 
                                         database.DocumentsStorage.AttachmentsStorage.
                                             PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash, attachmentStream.File);
+
+                                        _incoming._replicatedAttachmentStreams.Remove(item.Base64Hash);
                                     }
-                                    _incoming._replicatedAttachmentStreams.Remove(item.Base64Hash);
                                 }
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
