@@ -1,19 +1,15 @@
-﻿using FastTests;
-using FastTests.Client.Attachments;
-using Microsoft.AspNetCore.Http.Features;
-using Raven.Client.Documents.Operations;
+﻿using Raven.Client.Documents.Operations;
 using Xunit;
 
-namespace StressTests.Client.Attachments
+namespace FastTests.Client.Attachments
 {
     public class AttachmentsBigFiles : RavenTestBase
     {
         // TODO: This should be a failing test, but it passing.
-        [Fact]
-        public void AttachmentBiggerThan128Mb_WhichIsMaxMultipartBodyLengthLimit()
+        [Theory]
+        [InlineData(10, "JSQotERdt/PFZDB+eYlyf4cZVDLsYG33")]
+        public void AttachmentBiggerThan128Mb_WhichIsMaxMultipartBodyLengthLimit(long size, string hash)
         {
-            var size = FormOptions.DefaultMultipartBodyLengthLimit * 2;
-
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
@@ -36,7 +32,7 @@ namespace StressTests.Client.Attachments
                         var attachment = session.Advanced.GetAttachment(user, "256mb-file", (result, stream) => stream.CopyTo(bigStream));
                         Assert.Equal(2, attachment.Etag);
                         Assert.Equal("256mb-file", attachment.Name);
-                        Assert.Equal("G/VBSDnFqmLKAphJbokRdiXpfeRMcTwz", attachment.Hash);
+                        Assert.Equal(hash, attachment.Hash);
                         Assert.Equal(size, bigStream.Position);
                         Assert.Equal(size, attachment.Size);
                         Assert.Equal("", attachment.ContentType);
@@ -47,7 +43,6 @@ namespace StressTests.Client.Attachments
 
         [Theory]
         [InlineData(10, "JSQotERdt/PFZDB+eYlyf4cZVDLsYG33")]
-        [InlineData(int.MaxValue, "gxtSDE78gM6tU9lmqq2GIRgYOXiy6BKh")]
         public void SupportHugeAttachment(long size, string hash)
         {
             using (var store = GetDocumentStore())

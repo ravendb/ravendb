@@ -106,7 +106,8 @@ namespace Raven.Client.Documents.BulkInsert
                 url = $"{node.Url}/databases/{node.Database}/bulk_insert?id={_id}";
                 return new HttpRequestMessage
                 {
-                    Method = HttpMethod.Post
+                    Method = HttpMethod.Post,
+                    Content = _stream,
                 };
             }
 
@@ -114,7 +115,7 @@ namespace Raven.Client.Documents.BulkInsert
             {
                 try
                 {
-                    return await client.PostAsync(request.RequestUri, _stream, token).ConfigureAwait(false);
+                    return await base.SendAsync(client, request, token).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {

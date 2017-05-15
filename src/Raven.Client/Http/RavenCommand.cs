@@ -34,7 +34,9 @@ namespace Raven.Client.Http
 
         public virtual Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationToken token)
         {
-            return client.SendAsync(request, token);
+            // We must use HttpCompletionOption.ResponseHeadersRead otherwise the client will buffer the response
+            // and we'll get OutOfMemoryException in huge responses (> 2GB).
+            return client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
         }
 
         public virtual void SetResponse(BlittableJsonReaderArray response, bool fromCache)
