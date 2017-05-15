@@ -48,6 +48,17 @@ namespace Tryouts
             //    session.SaveChanges();
             //}
 
+            using (var session = store.OpenSession())
+            {
+                var person = new Person
+                {
+                    Name = "Oscar Arava"
+                };
+                session.Store(person);
+                Console.WriteLine(person.Id);
+                session.SaveChanges();
+            }
+
 
             using (var session = store.OpenSession())
             {
@@ -70,7 +81,11 @@ namespace Tryouts
         }
     }
 
-
+    public class Person
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+    }
 
     public class ToDoTask
     {
@@ -78,5 +93,6 @@ namespace Tryouts
         public string Task { get; set; }
         public bool Completed { get; set; }
         public DateTime DueDate { get; set; }
+        public string AssignedTo { get; set; }
     }
 }
