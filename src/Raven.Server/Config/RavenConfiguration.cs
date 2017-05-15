@@ -145,7 +145,7 @@ namespace Raven.Server.Config
 
         public RavenConfiguration Initialize()
         {
-            Server.Initialize(Settings, ServerWideSettings, ResourceType.Server, string.Empty);
+            Server.Initialize(Settings, ServerWideSettings, ResourceType.Server, ResourceName);
             Core.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Replication.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Cluster.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);

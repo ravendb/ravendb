@@ -27,12 +27,12 @@ namespace Tryouts
             //    session.SaveChanges();
             //}
 
-            //using (var session = store.OpenSession())
-            //{
-            //    var task = session.Load<ToDoTask>("ToDoTasks/1");
-            //    task.Completed = true;
-            //    session.SaveChanges();
-            //}
+            using (var session = store.OpenSession())
+            {
+                var task = session.Load<ToDoTask>("ToDoTasks/2");
+                task.AssignedTo = "people/1";
+                session.SaveChanges();
+            }
 
             //using (var session = store.OpenSession())
             //{
@@ -48,16 +48,16 @@ namespace Tryouts
             //    session.SaveChanges();
             //}
 
-            using (var session = store.OpenSession())
-            {
-                var person = new Person
-                {
-                    Name = "Oscar Arava"
-                };
-                session.Store(person);
-                Console.WriteLine(person.Id);
-                session.SaveChanges();
-            }
+            //using (var session = store.OpenSession())
+            //{
+            //    var person = new Person
+            //    {
+            //        Name = "Oscar Arava"
+            //    };
+            //    session.Store(person);
+            //    Console.WriteLine(person.Id);
+            //    session.SaveChanges();
+            //}
 
 
             using (var session = store.OpenSession())
