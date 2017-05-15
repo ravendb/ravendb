@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace Sparrow
 {
-    public class NumericEqualityComparer : IEqualityComparer<long>, IEqualityComparer<int>, IEqualityComparer<ulong>
+    public class NumericEqualityComparer : IEqualityComparer<long>, IEqualityComparer<int>, IEqualityComparer<ulong>, IEqualityComparer<uint>
     {
         public static readonly NumericEqualityComparer Instance = new NumericEqualityComparer();
 
@@ -40,6 +40,18 @@ namespace Sparrow
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(ulong obj)
+        {
+            return Hashing.Combine((int)(obj >> 32), (int)obj);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(uint x, uint y)
+        {
+            return x == y;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(uint obj)
         {
             return Hashing.Combine((int)(obj >> 32), (int)obj);
         }

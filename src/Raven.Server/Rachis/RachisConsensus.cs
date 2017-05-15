@@ -1290,7 +1290,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public async Task WaitForTimeout(long knownLeaderTime, int timeoutMillseconds)
+        public async Task WaitForTimeout(long knownLeaderTime, uint timeoutMillseconds)
         {
             Interlocked.Increment(ref _hasTimers);
             try
@@ -1310,7 +1310,7 @@ namespace Raven.Server.Rachis
                     if (await task == false)
                         return;
 
-                    var remaining = timeoutMillseconds - (int)timePassed;
+                    var remaining = timeoutMillseconds - (uint)timePassed;
 
                     task = _leadershipTimeChanged.WaitAsync(remaining);
                 }
@@ -1320,7 +1320,7 @@ namespace Raven.Server.Rachis
                 Interlocked.Decrement(ref _hasTimers);
             }
         }
-        public Task WaitForTimeout(int timeoutMillseconds)
+        public Task WaitForTimeout(uint timeoutMillseconds)
         {
             return WaitForTimeout(_leaderTime, timeoutMillseconds);
         }

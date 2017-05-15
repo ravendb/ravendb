@@ -63,7 +63,7 @@ namespace Raven.Server.ServerWide.Maintance
                             ctx.Write(writer, djv);
                         }
                     }
-                    await TimeoutManager.WaitFor((int)WorkerSamplePeriod.TotalMilliseconds, _token).ConfigureAwait(false);
+                    await TimeoutManager.WaitFor((uint)WorkerSamplePeriod.TotalMilliseconds, _token).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
