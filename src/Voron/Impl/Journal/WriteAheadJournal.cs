@@ -1276,7 +1276,7 @@ namespace Voron.Impl.Journal
                 // When encryption is off, we do validation by checksum
                 if (_env.Options.EncryptionEnabled == false)
                 {
-                    pageHeader->Checksum = _env.CalculatePageChecksum(scratchPage, pageHeader->PageNumber, pageHeader->Flags, pageHeader->OverflowSize);
+                    pageHeader->Checksum = StorageEnvironment.CalculatePageChecksum(scratchPage, pageHeader->PageNumber, pageHeader->Flags, pageHeader->OverflowSize);
                 }
 
                 pagesInfo[pageSequencialNumber].PageNumber = pageHeader->PageNumber;
