@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
+#if VALIDATE
+using Sparrow.Platform;
+#endif
 
 namespace Sparrow.Json
 {
