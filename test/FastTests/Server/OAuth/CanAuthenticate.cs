@@ -58,7 +58,7 @@ namespace FastTests.Server.OAuth
         }
 
         [Fact]
-        public void CanNotGetDocWithInalidToken()
+        public void CanNotGetDocWithInvalidToken()
         {
             DoNotReuseServer();
 

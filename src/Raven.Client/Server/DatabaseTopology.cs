@@ -98,6 +98,14 @@ namespace Raven.Client.Documents
 
     public class DatabaseWatcher : ReplicationNode, IDatabaseTask
     {
+        public string ApiKey;
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(ApiKey)] = ApiKey;
+            return json;
+        }
     }
     
     public class DatabaseTopology
@@ -109,8 +117,7 @@ namespace Raven.Client.Documents
         public bool RelevantFor(string nodeTag)
         {
             return Members.Exists(m => m.NodeTag == nodeTag) ||
-                   Promotables.Exists(p => p.NodeTag == nodeTag) ||
-                   Watchers.Exists(w => w.NodeTag == nodeTag);
+                   Promotables.Exists(p => p.NodeTag == nodeTag);
         }
 
         public List<ReplicationNode> GetDestinations(string nodeTag, string databaseName)

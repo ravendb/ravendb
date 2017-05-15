@@ -110,12 +110,17 @@ namespace Raven.Server.Documents.Replication
             _sendingThread.Start();
         }
 
+        private string GetApiKey()
+        {
+            var watcher = Destination as DatabaseWatcher;
+            return watcher == null ? _parent.GetClusterApiKey() : watcher.ApiKey;
+        } 
+
         private void ReplicateToDestination()
         {
             try
             {
-                // TODO: use api key of the cluster
-                var connectionInfo = ReplicationUtils.GetTcpInfo(MultiDatabase.GetRootDatabaseUrl(Destination.Url), Destination.NodeTag, null);
+                var connectionInfo = ReplicationUtils.GetTcpInfo(MultiDatabase.GetRootDatabaseUrl(Destination.Url), Destination.NodeTag, GetApiKey());
 
                 if (_log.IsInfoEnabled)
                     _log.Info($"Will replicate to {Destination.NodeTag} @ {Destination.Url} via {connectionInfo.Url}");
@@ -280,14 +285,13 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
-                // TODO: use api key of the cluster
-                var token = AsyncHelpers.RunSync(() => _authenticator.GetAuthenticationTokenAsync(null, Destination.Url, documentsContext));
-                //send initial connection information
+                 //send initial connection information               
+                var token = AsyncHelpers.RunSync(() => _authenticator.GetAuthenticationTokenAsync(GetApiKey(), Destination.Url, documentsContext));
+
                 documentsContext.Write(writer, new DynamicJsonValue
                 {
-                    [nameof(TcpConnectionHeaderMessage.DatabaseName)] =Destination.Database,// _parent.Database.Name,
-                    [nameof(TcpConnectionHeaderMessage.Operation)] =
-                    TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
+                    [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database,// _parent.Database.Name,
+                    [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
                     [nameof(TcpConnectionHeaderMessage.AuthorizationToken)] = token,
                     [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
                 });
