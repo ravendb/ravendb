@@ -936,13 +936,7 @@ namespace Voron
                 $"Invalid checksum for page {pageNumber}, data file {_options.DataPager} might be corrupted, expected hash to be {current->Checksum} but was {checksum}");
         }
 
-        private unsafe void ThrowInvalidOverflowSize(long pageNumber, PageHeader* current)
-        {
-            throw new InvalidDataException(
-                $"Invalid overflow size for page {pageNumber}, current offset is {pageNumber * Constants.Storage.PageSize} and overflow size is {current->OverflowSize}. Page length is beyond the file length {_dataPager.TotalAllocationSize}");
-        }
-
-        public unsafe ulong CalculatePageChecksum(byte* ptr, long pageNumber, PageFlags flags, int overflowSize)
+        public static unsafe ulong CalculatePageChecksum(byte* ptr, long pageNumber, PageFlags flags, int overflowSize)
         {
             var dataLength = Constants.Storage.PageSize - (PageHeader.ChecksumOffset + sizeof(ulong));
             if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
