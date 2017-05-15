@@ -60,16 +60,6 @@ namespace SlowTests.Server.Rachis
                 catch
                 {
 
-                }
-            }
-            if(numberOfInstances != replicationFactor)
-                throw new InvalidOperationException("Couldn't create the db on all nodes, just on " + numberOfInstances + " out of " + replicationFactor);
-            return Tuple.Create(databaseResult.ETag.Value,
-                Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToList());
-            
-            
-        }
-
         [Fact]
         public async Task BasicTransformerCreation()
         {

@@ -114,7 +114,17 @@ namespace Raven.Server.Documents.Subscriptions
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
             {
-                GetSubscriptionFromServerStore(serverStoreContext, id);
+                var subscription = GetSubscriptionFromServerStore(serverStoreContext, id);
+
+                var dbRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name, out long etag);
+                var whoseTaskIsIt = dbRecord.Topology.WhoseTaskIsIt(subscription);
+                if (whoseTaskIsIt != _serverStore.NodeTag)
+                {
+                    throw new SubscriptionDoesNotBelongToNodeException($"Subscripition with id {id} can't be proccessed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}")
+                    {
+                        AppropriateNode = whoseTaskIsIt
+                    };
+                }
             }
         }
 

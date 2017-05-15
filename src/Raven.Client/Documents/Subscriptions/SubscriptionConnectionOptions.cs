@@ -41,7 +41,8 @@ namespace Raven.Client.Documents.Subscriptions
             Accepted,
             InUse,
             Closed,
-            NotFound
+            NotFound,
+            Redirect
         }
 
         public MessageType Type { get; set; }

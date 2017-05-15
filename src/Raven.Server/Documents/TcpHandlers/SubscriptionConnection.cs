@@ -114,6 +114,24 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdExists(SubscriptionId, TimeSpan.FromSeconds(15));
             }
+            catch (SubscriptionDoesNotBelongToNodeException e)
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info("Subscription does not belong to current node", e);
+                }
+                await WriteJsonAsync(new DynamicJsonValue
+                {
+                    ["Type"] = "CoonectionStatus",
+                    ["Status"] = "Redirect",
+                    ["Data"] = new DynamicJsonValue()
+                    {
+                        ["CurrentTag"] = _serverStore.NodeTag,
+                        ["RedirectedTag"] = e.AppropriateNode
+                    }
+                });
+                return false;
+            }
             catch (SubscriptionDoesNotExistException e)
             {
                 if (_logger.IsInfoEnabled)
@@ -124,10 +142,11 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     ["Type"] = "ConnectionStatus",
                     ["Status"] = "NotFound",
-                    ["FreeText"] = e.ToString()
+                    ["Exception"] = e.ToString()
                 });
                 return false;
             }
+            
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
             uint timeout = 16;
 

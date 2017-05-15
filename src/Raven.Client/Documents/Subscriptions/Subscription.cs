@@ -19,6 +19,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
@@ -236,6 +237,8 @@ namespace Raven.Client.Documents.Subscriptions
             return tcs.Task;
         }
 
+        private ServerNode _redirectNode;
+
         private async Task<Stream> ConnectToServer()
         {
             var command = new GetTcpInfoCommand("Subscription/"+_dbName);
@@ -245,8 +248,16 @@ namespace Raven.Client.Documents.Subscriptions
 
             using (requestExecutor.ContextPool.AllocateOperationContext(out context))
             {
-                await requestExecutor.ExecuteAsync(command, context).ConfigureAwait(false);
-                var apiToken = await requestExecutor.GetAuthenticationToken(context, command.RequestedNode).ConfigureAwait(false);
+                if (_redirectNode != null)
+                {
+                    await requestExecuter.ExecuteAsync(_redirectNode,context, command).ConfigureAwait(false);
+                }
+                else
+                {
+                    await requestExecuter.ExecuteAsync(command, context).ConfigureAwait(false);
+                }
+                
+                var apiToken = await requestExecuter.GetAuthenticationToken(context, command.RequestedNode).ConfigureAwait(false);
                 var uri = new Uri(command.Result.Url);
 
                 await _tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
@@ -308,6 +319,12 @@ namespace Raven.Client.Documents.Subscriptions
                 case SubscriptionConnectionServerMessage.ConnectionStatus.NotFound:
                     throw new SubscriptionDoesNotExistException(
                         $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it does not exist");
+                    case SubscriptionConnectionServerMessage.ConnectionStatus.Redirect:
+                        throw new SubscriptionDoesNotBelongToNodeException(
+                            $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {connectionStatus.Exception}")
+                        {
+                            AppropriateNode = connectionStatus.Data["RedirectedTag"].ToString()
+                        };
                 default:
                     throw new ArgumentException(
                         $"Subscription {_options.SubscriptionId} could not be opened, reason: {connectionStatus.Status}");
@@ -648,6 +665,24 @@ namespace Raven.Client.Documents.Subscriptions
                 await DisposeAsync().ConfigureAwait(false);
 
                 return true;
+            }
+
+            // ReSharper disable once InvertIf
+            if (ex is SubscriptionDoesNotBelongToNodeException)
+            {
+                var subscriptionDoesNotbelong = ex as SubscriptionDoesNotBelongToNodeException;
+                var requestExecuter = _store.GetRequestExecuter(_dbName ?? _store.DefaultDatabase);
+                var nodeToRedirectTo = requestExecuter.TopologyNodes.FirstOrDefault(x => x.ClusterTag == subscriptionDoesNotbelong.AppropriateNode);
+                if (nodeToRedirectTo == null)
+                {
+                    await requestExecuter.UpdateTopologyAsync();
+                    nodeToRedirectTo = requestExecuter.TopologyNodes.FirstOrDefault(x => x.ClusterTag == subscriptionDoesNotbelong.AppropriateNode);
+
+                    if (nodeToRedirectTo == null)
+                        return true;
+                }
+
+                _redirectNode = nodeToRedirectTo;
             }
 
             return false;
