@@ -365,7 +365,17 @@ namespace Raven.Server.Documents.Replication
             HandleTopologyChange(newRecord, out var instancesToDispose); // this function is done under lock
             foreach (var instance in instancesToDispose)
             {
-                instance?.Dispose();
+                try
+                {
+                    instance?.Dispose();
+                }
+                catch(Exception e)
+                {
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info($"Failed to dispose outgoing replication to {instance?.DestinationFormatted}",e);
+                    }        
+                }
             }
         }
 
@@ -582,6 +592,15 @@ namespace Raven.Server.Documents.Replication
                 TaskExecuter.Complete(result);
             }
 
+        }
+
+        public string GetClusterApiKey()
+        {
+            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                return _server.GetClusterTopology(ctx).ApiKey;
+            }         
         }
 
         private void OnIncomingReceiveSucceeded(IncomingReplicationHandler instance)

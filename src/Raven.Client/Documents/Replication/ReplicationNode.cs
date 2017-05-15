@@ -154,7 +154,7 @@ namespace Raven.Client.Documents.Replication
             return string.IsNullOrEmpty(s) ? 0 : Hashing.XXHash64.Calculate(s, Encoding.UTF8);
         }
 
-        public DynamicJsonValue ToJson()
+        public virtual DynamicJsonValue ToJson()
         {
             var json = new DynamicJsonValue
             {
