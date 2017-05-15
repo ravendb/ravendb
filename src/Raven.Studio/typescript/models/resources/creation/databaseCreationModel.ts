@@ -26,7 +26,7 @@ class databaseCreationModel {
     name = ko.observable<string>("");
 
     replication = {
-        replicationFactor: ko.observable<number>(1),
+        replicationFactor: ko.observable<number>(2),
         manualMode: ko.observable<boolean>(false),
         nodes: ko.observableArray<clusterNode>([])
     }

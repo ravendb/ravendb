@@ -1,10 +1,10 @@
 ﻿import messagePublisher = require("common/messagePublisher");
 
 class copyToClipboard {
-    static copy(toCopy: string, successMessage?: string) {
+    static copy(toCopy: string, successMessage?: string, container = document.body) {
         const dummy = document.createElement("input");
         // Add it to the document
-        document.body.appendChild(dummy);
+        container.appendChild(dummy);
         try {
             dummy.value = toCopy;
             // Select it
@@ -21,7 +21,7 @@ class copyToClipboard {
             messagePublisher.reportWarning("Unable to copy to clipboard", err);
         } finally {
             // Remove it as its not needed anymore
-            document.body.removeChild(dummy);
+            container.removeChild(dummy);
         }
     }
 }

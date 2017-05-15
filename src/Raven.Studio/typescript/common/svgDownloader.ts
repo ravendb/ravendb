@@ -64,8 +64,8 @@ class svgDownloader {
         if (navigator && navigator.msSaveBlob) {
             navigator.msSaveBlob(blob, filename);
         } else {
-            var blobUrl = URL.createObjectURL(blob);
-            var a = document.createElement('a');
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
             a.id = "downloadSvg";
             (<any>a).download = filename;
             a.href = blobUrl;

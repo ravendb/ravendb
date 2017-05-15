@@ -91,16 +91,19 @@
     <h3>Replication configuration</h3>
     <div data-bind="with: databaseModel.replication">
         <div class="form-group row" data-bind="validationElement: replicationFactor">
-            <div class="col-md-4">
+            <div class="col-md-12">
                 <label class="control-label">Replication factor</label>
             </div>
             <div class="col-md-8">
-                <input type="number" data-bind="numericInput: replicationFactor, disable: $root.enforceManualNodeSelection" class="form-control">
+                <input type="number" data-bind="numericInput: replicationFactor, disable: $root.disableReplicationFactorInput" class="form-control">
             </div>
         </div>
 
         <p class="bg-warning padding padding-xs" data-bind="visible: $root.showReplicationFactorWarning">With replication factor set to 1 data won't be replicated.</p>
-        
+
+        <p data-bind="visible: !manualMode()">Replication nodes will be selected randomly among cluster's nodes.</p>
+        <p data-bind="visible: manualMode">Please select replication nodes from the list below.</p>
+
         <div class="row">
             <div class="col-sm-12">
                 <div class="checkbox">
@@ -110,11 +113,19 @@
             </div>
         </div>
         
-        <p data-bind="visible: !manualMode()">Replication nodes will be selected randomly among cluster's nodes.</p>
-        <p data-bind="visible: manualMode">Please select replication nodes from the list below.</p>
+       
         
         <div data-bind="visible: manualMode()">
             <h4>Replication nodes</h4>
+
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="checkbox">
+                        <input type="checkbox" id="toggle_all_in_cluster" class="styled" data-bind="checkboxTriple: $root.selectionState, event: { change: $root.toggleSelectAll }">
+                        <label for="toggle_all_in_cluster">All</label>
+                    </div>
+                </div>
+            </div>
 
             <div data-bind="foreach: $root.clusterNodes">
                 <div class="checkbox">
@@ -123,8 +134,6 @@
                 </div>
             </div>
         </div>
-        
-
     </div>
 </script>
 
@@ -147,7 +156,27 @@
                 </span>
             </div>
         </div>
-        
+    </div>
+    
+    <div class="row">
+        <div class="col-sm-12">
+            QR Code:
+            
+            <div id="encryption_qrcode"></div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-sm-12">
+            
+            <button type="button" class="btn btn-default" data-bind="click: copyEncryptionKeyToClipboard"><i class="icon-copy"></i> <span>Copy to clipboard</span></button>
+            
+            <button type="button" class="btn btn-default" data-bind="click: downloadEncryptionKey"><i class="icon-arrow-down"></i> <span>Download encryption key</span></button>
+            <button type="button" class="btn btn-default" data-bind="click: printEncryptionKey"><span>Print encryption key</span></button>
+        </div>
+    </div>
+
+    <div class="row">
         <div class="col-sm-12">
             <div class="checkbox" data-bind="validationOptions: { insertMessages: false }">
                 <input class="styled" type="checkbox" id="saved_key_confirm" data-bind="checked: databaseModel.encryption.confirmation">
@@ -158,13 +187,12 @@
                 <div class="help-block" data-bind="validationMessage: databaseModel.encryption.confirmation"></div>
             </div>
         </div>
-
+    </div>
+    <div class="row">
         <div class="col-sm-12">
             <p class="bg-info padding padding-sm small">
                 <i class="icon-warning"></i> Save this key in a safe place. If you lose this key you could lose access to your data.
             </p>
         </div>
-        
-        
     </div>
 </script>

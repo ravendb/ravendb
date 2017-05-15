@@ -70,7 +70,8 @@ var paths = {
         "jwerty/jwerty.js",
         "jquery-fullscreen/jquery.fullscreen.js",
         "spin.js/spin.js",
-        "google-analytics/index.js"
+        "google-analytics/index.js",
+        "qrcode.js/qrcode.js"
     ]
 };
 

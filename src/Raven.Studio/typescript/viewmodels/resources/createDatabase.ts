@@ -8,9 +8,11 @@ import generateSecretCommand = require("commands/database/secrets/generateSecret
 import putSecretCommand = require("commands/database/secrets/putSecretCommand");
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import clusterNode = require("models/database/cluster/clusterNode");
+import copyToClipboard = require("common/copyToClipboard");
 
 import databaseCreationModel = require("models/resources/creation/databaseCreationModel");
 import eventsCollector = require("common/eventsCollector");
+import fileDownloader = require("common/fileDownloader");
 
 class createDatabase extends dialogViewModelBase {
 
@@ -26,10 +28,10 @@ class createDatabase extends dialogViewModelBase {
     protected currentAdvancedSection = ko.observable<string>(createDatabase.defaultSection);
 
     showReplicationFactorWarning: KnockoutComputed<boolean>;
-
     enforceManualNodeSelection: KnockoutComputed<boolean>;
-
+    disableReplicationFactorInput: KnockoutComputed<boolean>;
     indexesPathPlaceholder: KnockoutComputed<string>;
+    selectionState: KnockoutComputed<checkbox>;
 
     getDatabaseByName(name: string): database {
         return databasesManager.default.getDatabaseByName(name);
@@ -41,10 +43,13 @@ class createDatabase extends dialogViewModelBase {
         path: ko.pureComputed(() => this.currentAdvancedSection() === "Path")
     }
 
+    // currently displayed QR Code
+    private qrCode: any; 
+
     constructor() {
         super();
 
-        this.bindToCurrentInstance("showAdvancedConfigurationFor");
+        this.bindToCurrentInstance("showAdvancedConfigurationFor", "toggleSelectAll", "copyEncryptionKeyToClipboard");
     }
 
     activate() {
@@ -68,8 +73,17 @@ class createDatabase extends dialogViewModelBase {
             });
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+
+        this.syncQrCode();
+        this.databaseModel.encryption.key.subscribe(() => this.syncQrCode());
+    }
+
     private onTopologyLoaded(topology: clusterTopology) {
         this.clusterNodes = topology.nodes();
+        const defaultReplicationFactor = this.clusterNodes.length > 1 ? 2 : 1;
+        this.databaseModel.replication.replicationFactor(defaultReplicationFactor);
     }
 
     protected initObservables() {
@@ -103,6 +117,21 @@ class createDatabase extends dialogViewModelBase {
 
         this.enforceManualNodeSelection = ko.pureComputed(() => {
             return this.databaseModel.getEncryptionConfigSection().enabled();
+        });
+
+        this.disableReplicationFactorInput = ko.pureComputed(() => {
+            return this.databaseModel.replication.manualMode();
+        });
+
+        this.selectionState = ko.pureComputed<checkbox>(() => {
+            const clusterNodes = this.clusterNodes;
+            const selectedCount = this.databaseModel.replication.nodes().length;
+            
+            if (clusterNodes.length && selectedCount === clusterNodes.length)
+                return checkbox.Checked;
+            if (selectedCount > 0)
+                return checkbox.SomeChecked;
+            return checkbox.UnChecked;
         });
     }
 
@@ -178,6 +207,86 @@ class createDatabase extends dialogViewModelBase {
                 .execute();
         } else {
             return $.Deferred<void>().resolve();
+        }
+    }
+
+    private syncQrCode() {
+        const key = this.databaseModel.encryption.key();
+        const qrContainer = document.getElementById("encryption_qrcode");
+
+        const isKeyValid = this.databaseModel.encryption.key.isValid();
+
+        if (isKeyValid) {
+            if (!this.qrCode) {
+                this.qrCode = new QRCode(qrContainer, {
+                    text: key,
+                    width: 256,
+                    height: 256,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.Q
+                });
+            } else {
+                this.qrCode.clear();
+                this.qrCode.makeCode(key);
+            }
+        } else {
+            if (this.qrCode) {
+                this.qrCode.clear();
+            }
+        }
+    }
+
+    toggleSelectAll() {
+        const replicationConfig = this.databaseModel.replication;
+        const selectedCount = replicationConfig.nodes().length;
+
+        if (selectedCount > 0) {
+            replicationConfig.nodes([]);
+        } else {
+            replicationConfig.nodes(this.clusterNodes.slice());
+        }
+    }
+
+    copyEncryptionKeyToClipboard() {
+        const key = this.databaseModel.encryption.key();
+        const container = document.getElementById("newDatabase");
+        copyToClipboard.copy(key, "Encryption key was copied to clipboard", container);
+    }
+
+    downloadEncryptionKey() {
+        //TODO: work on text
+
+
+        const encryptionKey = this.databaseModel.encryption.key();
+        const text = `Your encryption key: ${encryptionKey}`;
+        fileDownloader.downloadAsTxt(text, "key.txt");
+    }
+
+    printEncryptionKey() {
+        const printWindow = window.open();
+
+        const encryptionKey = this.databaseModel.encryption.key();
+        const text = `Your encryption key: ${encryptionKey}`;
+
+        const qrCodeHtml = document.getElementById("encryption_qrcode").innerHTML;
+
+        //TODO: work on wording here
+
+        let html = "<html>";
+        html += text;
+        html += "<br />";
+        html += qrCodeHtml;
+        html += "</html>";
+
+        try {
+            printWindow.document.write(html);
+            printWindow.document.close();
+
+            printWindow.focus();
+            printWindow.print();
+        } finally {
+            printWindow.close();
         }
     }
 

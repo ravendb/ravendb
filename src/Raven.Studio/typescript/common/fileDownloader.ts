@@ -21,6 +21,13 @@ class fileDownloader {
         }
     }
 
+    static downloadAsTxt(buffer: string, filename: string, domCacheElementName: string = "link") {
+        domCacheElementName = _.snakeCase(domCacheElementName);
+        fileDownloader.cleanup(domCacheElementName);
+        const blob = new Blob([buffer], { type: 'text/plain' });
+        fileDownloader.createLinkAndStartDownload(blob, filename, domCacheElementName);
+    }
+
     static downloadAsJson(object: any, filename: string, domCacheElementName: string = "link", replacer: (key: string, value: any) => any = null) {
         domCacheElementName = _.snakeCase(domCacheElementName);
         fileDownloader.cleanup(domCacheElementName);
