@@ -9,11 +9,12 @@ namespace StressTests.Client.Attachments
     {
         [Theory]
         [InlineData(FormOptions.DefaultMultipartBodyLengthLimit * 2, "G/VBSDnFqmLKAphJbokRdiXpfeRMcTwz")] // 256 MB
-        public void AttachmentBiggerThan128Mb_WhichIsMaxMultipartBodyLengthLimit(long size, string hash)
+        [InlineData(2.5 * 1024 * 1024 * 1024, "gxtSDE78gM6tU9lmqq2GIRgYOXiy6BKh")] // 2.5 GB
+        public void BatchRequestWithLongMultiPartSections(long size, string hash)
         {
             using (var stress = new AttachmentsBigFiles())
             {
-                stress.AttachmentBiggerThan128Mb_WhichIsMaxMultipartBodyLengthLimit(size, hash);
+                stress.BatchRequestWithLongMultiPartSections(size, hash);
             }
         }
 

@@ -5,10 +5,9 @@ namespace FastTests.Client.Attachments
 {
     public class AttachmentsBigFiles : RavenTestBase
     {
-        // TODO: This should be a failing test, but it passing.
         [Theory]
         [InlineData(10, "JSQotERdt/PFZDB+eYlyf4cZVDLsYG33")]
-        public void AttachmentBiggerThan128Mb_WhichIsMaxMultipartBodyLengthLimit(long size, string hash)
+        public void BatchRequestWithLongMultiPartSections(long size, string hash)
         {
             using (var store = GetDocumentStore())
             {
@@ -18,7 +17,7 @@ namespace FastTests.Client.Attachments
                     var user = new User {Name = "Fitzchak"};
                     session.Store(user, "users/1");
 
-                    session.Advanced.StoreAttachment(user, "256mb-file", stream);
+                    session.Advanced.StoreAttachment(user, "big-file", stream);
 
                     session.SaveChanges();
                 }
@@ -29,9 +28,9 @@ namespace FastTests.Client.Attachments
 
                     using (var bigStream = new BigDummyStream(size))
                     {
-                        var attachment = session.Advanced.GetAttachment(user, "256mb-file", (result, stream) => stream.CopyTo(bigStream));
+                        var attachment = session.Advanced.GetAttachment(user, "big-file", (result, stream) => stream.CopyTo(bigStream));
                         Assert.Equal(2, attachment.Etag);
-                        Assert.Equal("256mb-file", attachment.Name);
+                        Assert.Equal("big-file", attachment.Name);
                         Assert.Equal(hash, attachment.Hash);
                         Assert.Equal(size, bigStream.Position);
                         Assert.Equal(size, attachment.Size);
