@@ -40,10 +40,10 @@ namespace Raven.Server.ServerWide.Maintance
 
         public void Start()
         {
-            _collectingTask = CollectReport();
+            _collectingTask = CollectDatabasesStatusReport();
         }
 
-        public async Task CollectReport()
+        public async Task CollectDatabasesStatusReport()
         {
             while (_token.IsCancellationRequested == false)
             {

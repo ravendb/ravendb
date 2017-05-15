@@ -1040,9 +1040,9 @@ namespace FastTests.Client.Attachments
 
                     using (var a2 = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
                     {
-                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a2, "a1/png"));
+                        await store2.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a2, "a1/png"));
                     }
-                    store2.Operations.Send(new DeleteAttachmentOperation("users/1", "a1"));
+                    await store2.Operations.SendAsync(new DeleteAttachmentOperation("users/1", "a1"));
 
                     await session.StoreAsync(new User {Name = "Marker 2"}, "marker 2");
                     await session.SaveChangesAsync();
