@@ -708,7 +708,18 @@ namespace Voron.Impl
             }
 
             if (lowerNumberOfPages > 1)
-                _dirtyOverflowPages[pageNumber + 1] = lowerNumberOfPages - 1; // change the range of the overflow page
+            {
+                // if we aren't freeing pages of the overflow from the beginning we need to manually change the range
+                _dirtyOverflowPages[pageNumber + 1] = lowerNumberOfPages - 1; 
+            }
+
+            // need to set the proper number of pages in the scratch page
+
+            var shrinked = _env.ScratchBufferPool.ShrinkOverflowPage(value, lowerNumberOfPages);
+
+            _scratchPagesTable[pageNumber] = shrinked;
+            _transactionPages.Remove(value);
+            _transactionPages.Add(shrinked);
         }
 
         [Conditional("DEBUG")]

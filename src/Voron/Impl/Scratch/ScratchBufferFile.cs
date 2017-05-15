@@ -7,6 +7,7 @@
 using Sparrow;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow.Platform.Win32;
@@ -331,6 +332,26 @@ namespace Voron.Impl.Scratch
         public void EnsureMapped(LowLevelTransaction tx, long p, int numberOfPages)
         {
             _scratchPager.EnsureMapped(tx, p, numberOfPages);
+        }
+
+        public PageFromScratchBuffer ShrinkOverflowPage(PageFromScratchBuffer value, int newNumberOfPages)
+        {
+            if (_allocatedPages.Remove(value.PositionInScratchBuffer) == false)
+                InvalidAttemptToShrinkPageThatWasntAllocated(value);
+
+            Debug.Assert(value.NumberOfPages > 1);
+            Debug.Assert(value.NumberOfPages > newNumberOfPages);
+
+            var shrinked = new PageFromScratchBuffer(Number, value.PositionInScratchBuffer, value.Size, newNumberOfPages);
+
+            _allocatedPages.Add(value.PositionInScratchBuffer, shrinked);
+
+            return shrinked;
+        }
+
+        private static void InvalidAttemptToShrinkPageThatWasntAllocated(PageFromScratchBuffer value)
+        {
+            throw new InvalidOperationException($"Attempt to shrink a page that wasn't currently allocated: {value.PositionInScratchBuffer}");
         }
     }
 }
