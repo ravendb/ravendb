@@ -37,7 +37,7 @@ namespace Sparrow.Utils
                         if (tcs != null)
                             return tcs.Task;
 
-                        tcs = new TaskCompletionSource<object>();
+                        tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                         if (Interlocked.CompareExchange(ref _nextTimeout, tcs, null) == null)
                             return tcs.Task;
                     }
@@ -57,36 +57,33 @@ namespace Sparrow.Utils
 
         public static Task WaitFor(int duration)
         {
-            return Task.Delay(duration);
+            var mod = duration % 50;
+            if (mod != 0)
+                duration += 50 - mod;
 
-            //var mod = duration % 50;
-            //if (mod != 0)
-            //    duration += 50 - mod;
+            if (Values.TryGetValue(duration, out var value))
+                return value.NextTask;
 
-            //if (Values.TryGetValue(duration, out var value))
-            //    return value.NextTask;
-
-            //value = Values.GetOrAdd(duration, d => new TimerTaskHolder(d));
-            //return value.NextTask;
+            value = Values.GetOrAdd(duration, d => new TimerTaskHolder(d));
+            return value.NextTask;
         }
 
-        public static  Task WaitFor(int duration, CancellationToken token)
+        public static async Task WaitFor(int duration, CancellationToken token)
         {
-            return Task.Delay(duration, token);
-            //token.ThrowIfCancellationRequested();
-            //// ReSharper disable once MethodSupportsCancellation
-            //var task = WaitFor(duration);
-            //if (token == CancellationToken.None || token.CanBeCanceled == false)
-            //{
-            //    await task;
-            //    return;
-            //}
+            token.ThrowIfCancellationRequested();
+            // ReSharper disable once MethodSupportsCancellation
+            var task = WaitFor(duration);
+            if (token == CancellationToken.None || token.CanBeCanceled == false)
+            {
+                await task;
+                return;
+            }
 
-            //var onCancel = new TaskCompletionSource<object>();
-            //using (token.Register(tcs => onCancel.TrySetCanceled(), onCancel))
-            //{
-            //    await Task.WhenAny(task, onCancel.Task);
-            //}
+            var onCancel = new TaskCompletionSource<object>();
+            using (token.Register(tcs => onCancel.TrySetCanceled(), onCancel))
+            {
+                await Task.WhenAny(task, onCancel.Task);
+            }
         }
     }
 }
