@@ -12,7 +12,7 @@
                             <h3>NAME</h3>
                             <input type="text" id="resourceName" data-bind="textInput: databaseModel.name" autofocus class="form-control">
                         </div>
-                        
+
                         <div class="settings-group" data-bind="foreach: getAvailableSections()">
                             <div class="checkbox settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === name, 'hide-check': alwaysEnabled }">
                                 <input class="styled" type="checkbox" data-bind="checked: enabled, attr: { id: 'section_' + $index() }">
@@ -90,37 +90,36 @@
 <script type="text/html" id="create-db-replication">
     <h3>Replication configuration</h3>
     <div data-bind="with: databaseModel.replication">
-        <div class="form-group row" data-bind="validationElement: replicationFactor">
-            <div class="col-md-12">
-                <label class="control-label">Replication factor</label>
+        <div style="min-height:150px;">
+            <div class="form-group row" data-bind="validationElement: replicationFactor">
+                <div class="col-md-12">
+                    <label class="control-label">Replication factor</label>
+                </div>
+                <div class="col-md-8">
+                    <input type="number" data-bind="numericInput: replicationFactor, disable: $root.disableReplicationFactorInput" class="form-control">
+                </div>
             </div>
-            <div class="col-md-8">
-                <input type="number" data-bind="numericInput: replicationFactor, disable: $root.disableReplicationFactorInput" class="form-control">
-            </div>
+
+            <p class="bg-warning padding padding-xs" data-bind="visible: $root.showReplicationFactorWarning">With replication factor set to 1 data won't be replicated.</p>
         </div>
 
-        <p class="bg-warning padding padding-xs" data-bind="visible: $root.showReplicationFactorWarning">With replication factor set to 1 data won't be replicated.</p>
 
         <p data-bind="visible: !manualMode()">Replication nodes will be selected randomly among cluster's nodes.</p>
         <p data-bind="visible: manualMode">Please select replication nodes from the list below.</p>
 
-        <div class="row">
-            <div class="col-sm-12">
-                <div class="checkbox">
-                    <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode, disable: $root.enforceManualNodeSelection">
-                    <label for="manual_mode">Set replication nodes manually.</label>
-                </div>
-            </div>
+        <div class="checkbox checkbox-inline">
+            <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode, disable: $root.enforceManualNodeSelection">
+            <label for="manual_mode">Set replication nodes manually.</label>
         </div>
-        
-       
-        
+
+
+
         <div data-bind="visible: manualMode()">
             <h4>Replication nodes</h4>
 
             <div class="row">
                 <div class="col-sm-12">
-                    <div class="checkbox">
+                    <div class="checkbox checkbox-inline">
                         <input type="checkbox" id="toggle_all_in_cluster" class="styled" data-bind="checkboxTriple: $root.selectionState, event: { change: $root.toggleSelectAll }">
                         <label for="toggle_all_in_cluster">All</label>
                     </div>
@@ -139,42 +138,36 @@
 
 <script type="text/html" id="create-db-encryption">
     <h3>Encryption configuration</h3>
-    <div class="form-group row" data-bind="validationElement: databaseModel.encryption.key">
-        <div class="col-md-6">
-            <label class="control-label">
-                Key <small class="text-muted">(Base64 Encoding)</small>
-            </label>
-        </div>
-        <div class="col-md-6">
-            <div class="input-group">
-                <input type="text" class="form-control" placeholder="Key" autocomplete="off"
-                       data-bind="textInput: databaseModel.encryption.key">
-                <span class="input-group-btn">
-                    <button class="btn btn-default" type="button" data-bind="click: generateEncryptionKey">
-                        <i class="icon-reset"></i>
-                    </button>
-                </span>
-            </div>
+    <div class="margin-bottom" data-bind="validationElement: databaseModel.encryption.key">
+        <label class="control-label">
+            Key <small class="text-muted">(Base64 Encoding)</small>
+        </label>
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="Key" autocomplete="off"
+                   data-bind="textInput: databaseModel.encryption.key">
+            <span class="input-group-btn">
+                <button class="btn btn-default" type="button" data-bind="click: generateEncryptionKey">
+                    <i class="icon-reset"></i>
+                </button>
+            </span>
         </div>
     </div>
-    
-    <div class="row">
-        <div class="col-sm-12">
-            QR Code:
-            
-            <div id="encryption_qrcode"></div>
+
+
+    <p>QR Code:</p>
+    <div class="text-center">
+        <div id="encryption_qrcode">
+
         </div>
     </div>
-    
-    <div class="row">
-        <div class="col-sm-12">
-            
-            <button type="button" class="btn btn-default" data-bind="click: copyEncryptionKeyToClipboard"><i class="icon-copy"></i> <span>Copy to clipboard</span></button>
-            
-            <button type="button" class="btn btn-default" data-bind="click: downloadEncryptionKey"><i class="icon-arrow-down"></i> <span>Download encryption key</span></button>
-            <button type="button" class="btn btn-default" data-bind="click: printEncryptionKey"><span>Print encryption key</span></button>
-        </div>
+
+
+    <div class="text-center">
+        <button type="button" class="btn btn-default btn-sm" data-bind="click: copyEncryptionKeyToClipboard"><i class="icon-copy"></i> <span>Copy to clipboard</span></button>
+        <button type="button" class="btn btn-default btn-sm" data-bind="click: downloadEncryptionKey"><i class="icon-export"></i> <span>Download encryption key</span></button>
+        <button type="button" class="btn btn-default btn-sm" data-bind="click: printEncryptionKey"><i class="icon-print"></i><span>Print encryption key</span></button>
     </div>
+
 
     <div class="row">
         <div class="col-sm-12">
@@ -182,7 +175,7 @@
                 <input class="styled" type="checkbox" id="saved_key_confirm" data-bind="checked: databaseModel.encryption.confirmation">
                 <label for="saved_key_confirm">I saved the encryption key.</label>
             </div>
-            
+
             <div data-bind="validationElement: databaseModel.encryption.confirmation">
                 <div class="help-block" data-bind="validationMessage: databaseModel.encryption.confirmation"></div>
             </div>
