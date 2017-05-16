@@ -24,8 +24,7 @@ namespace Raven.Server.Utils
 
             var meminfo = Sparrow.LowMemory.MemoryInformation.GetMemoryInfo();
 
-            var containerStr = meminfo.RunningInContainer ? ", Running in Container" : "";
-            ConsoleWriteLineWithColor(ConsoleColor.Yellow, " Build {0}, Version {1}, SemVer {2}, Commit {3}\r\n PID {4}, {5} bits, {6} Cores, PhysMem {7}, AvailMem {8}" + containerStr,
+            ConsoleWriteLineWithColor(ConsoleColor.Yellow, " Build {0}, Version {1}, SemVer {2}, Commit {3}\r\n PID {4}, {5} bits, {6} Cores, PhysMem {7}, AvailMem {8}",
                 ServerVersion.Build, ServerVersion.Version, ServerVersion.FullVersion ,ServerVersion.CommitHash, Process.GetCurrentProcess().Id,
                 IntPtr.Size * 8, ProcessorInfo.ProcessorCount, meminfo.TotalPhysicalMemory, meminfo.AvailableMemory, meminfo.RunningInContainer);
             ConsoleWriteLineWithColor(ConsoleColor.DarkCyan, " Source Code (git repo): https://github.com/ravendb/ravendb");

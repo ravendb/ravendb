@@ -22,6 +22,8 @@ namespace Sparrow
 
                 // get from cgroup (which is good for both container and non-container systems). use Environment.ProcessorCount only in case of failure to get from cgroup
                 // need to support both cpuset.cpus, and cfs_quota (always only one is available, and we check them both at any case and taking the lowest)
+                // https://docs.docker.com/engine/admin/resource_constraints/#configure-the-default-cfs-scheduler
+
                 var coresList = SysUtils.ReadAndParseRangesFromFile("/sys/fs/cgroup/cpuset/cpuset.cpus");
                 var quota = SysUtils.ReadULongFromFile("/sys/fs/cgroup/cpu/cpu.cfs_quota_us");
                 var environmentProcessorCount = Environment.ProcessorCount;
