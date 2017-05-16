@@ -36,7 +36,7 @@ namespace Raven.Client.Http
         {
             // We must use HttpCompletionOption.ResponseHeadersRead otherwise the client will buffer the response
             // and we'll get OutOfMemoryException in huge responses (> 2GB).
-            return client.SendAsync(request, token);
+            return client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
         }
 
         public virtual void SetResponse(BlittableJsonReaderArray response, bool fromCache)
@@ -68,40 +68,46 @@ namespace Raven.Client.Http
         public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
             using (response)
-            using (var stream = await response.Content.ReadAsStreamAsync())
             {
-                if (ResponseType == RavenCommandResponseType.Object)
-                {
-                    if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
-                        return;
+                if (ResponseType == RavenCommandResponseType.Empty)
+                    return;
 
-                    // we intentionally don't dispose the reader here, we'll be using it
-                    // in the command, any associated memory will be released on context reset
-                    var json = await context.ReadForMemoryAsync(stream, "response/object");
-                    if (cache != null) //precaution
+                using (var stream = await response.Content.ReadAsStreamAsync())
+                {
+                    if (ResponseType == RavenCommandResponseType.Object)
                     {
-                        CacheResponse(cache, url, response, json);
-                    }
-                    SetResponse(json, fromCache: false);
-                    return;
-                }
+                        var contentLength = response.Content.Headers.ContentLength;
+                        if (contentLength.HasValue && contentLength == 0)
+                            return;
 
-                if (ResponseType == RavenCommandResponseType.Array)
-                {
-                    if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
+                        // we intentionally don't dispose the reader here, we'll be using it
+                        // in the command, any associated memory will be released on context reset
+                        var json = await context.ReadForMemoryAsync(stream, "response/object");
+                        if (cache != null) //precaution
+                        {
+                            CacheResponse(cache, url, response, json);
+                        }
+                        SetResponse(json, fromCache: false);
                         return;
+                    }
 
-                    var array = await context.ParseArrayToMemoryAsync(stream, "response/array", BlittableJsonDocumentBuilder.UsageMode.None);
-                    // TODO: Either cache also arrays or the better way is to remove all array respones by converting them to objects.
-                    SetResponse(array.Item1, fromCache: false);
-                    return;
+                    if (ResponseType == RavenCommandResponseType.Array)
+                    {
+                        if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
+                            return;
+
+                        var array = await context.ParseArrayToMemoryAsync(stream, "response/array", BlittableJsonDocumentBuilder.UsageMode.None);
+                        // TODO: Either cache also arrays or the better way is to remove all array respones by converting them to objects.
+                        SetResponse(array.Item1, fromCache: false);
+                        return;
+                    }
+
+
+                    // We do not cache the stream response.
+                    var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response);
+
+                    SetResponseUncached(response, uncompressedStream);
                 }
-
-            
-                // We do not cache the stream response.
-                var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response);
-              
-                SetResponseUncached(response, uncompressedStream);
             }
         }
 
@@ -138,6 +144,7 @@ namespace Raven.Client.Http
 
     public enum RavenCommandResponseType
     {
+        Empty,
         Object,
         Array,
         Stream
