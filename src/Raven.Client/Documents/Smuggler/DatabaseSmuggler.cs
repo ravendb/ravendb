@@ -182,6 +182,11 @@ namespace Raven.Client.Documents.Smuggler
             private readonly DatabaseSmugglerOptions _options;
             private readonly Stream _stream;
 
+            public ImportCommand()
+            {
+                ResponseType = RavenCommandResponseType.Empty;
+            }
+
             public ImportCommand(DatabaseSmugglerOptions options, Stream stream)
             {
                 if (options == null)
@@ -204,10 +209,6 @@ namespace Raven.Client.Documents.Smuggler
                     Method = HttpMethod.Post,
                     Content = new StreamContent(_stream)
                 };
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
             }
         }
     }

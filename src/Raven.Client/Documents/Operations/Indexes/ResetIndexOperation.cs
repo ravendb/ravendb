@@ -34,6 +34,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                     throw new ArgumentNullException(nameof(indexName));
 
                 _indexName = indexName;
+                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -44,10 +45,6 @@ namespace Raven.Client.Documents.Operations.Indexes
                 {
                     Method = HttpMethods.Reset
                 };
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
             }
 
             public override bool IsReadRequest => false;

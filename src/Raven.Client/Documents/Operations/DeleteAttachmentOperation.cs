@@ -41,6 +41,7 @@ namespace Raven.Client.Documents.Operations
                 _documentId = documentId;
                 _name = name;
                 _etag = etag;
+                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -52,10 +53,6 @@ namespace Raven.Client.Documents.Operations
                 };
                 AddEtagIfNotNull(_etag, request);
                 return request;
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
             }
 
             public override bool IsReadRequest => false;
