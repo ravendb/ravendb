@@ -9,6 +9,7 @@ using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Voron;
@@ -695,22 +696,28 @@ namespace Raven.Server.Documents
             }
         }
 
-        public ReleaseTempFile GetTempFile(out FileStream file, string prefix = null)
+        public ReleaseTempFile GetTempFile(out Stream file, string prefix = null)
         {
             var name = $"attachment.{Guid.NewGuid():N}.put";
             if (prefix != null)
                 name = prefix + name;
             var tempPath = Path.Combine(_documentsStorage.Environment.Options.DataPager.Options.TempPath, name);
-            file = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan);
+
+            if (_documentDatabase.DocumentsStorage.Environment.Options.EncryptionEnabled)
+                file = new TempCryptoStream(tempPath);
+            else
+                file = new FileStream(tempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan);
+
+            
             return new ReleaseTempFile(tempPath, file);
         }
 
         public struct ReleaseTempFile : IDisposable
         {
             private readonly string _tempFile;
-            private readonly FileStream _file;
+            private readonly Stream _file;
 
-            public ReleaseTempFile(string tempFile, FileStream file)
+            public ReleaseTempFile(string tempFile, Stream file)
             {
                 _tempFile = tempFile;
                 _file = file;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Lucene.Net.Store;
+using Raven.Server.ServerWide;
 using Voron.Impl;
 using Voron;
 
@@ -12,17 +13,21 @@ namespace Raven.Server.Indexing
 
         private readonly string _name;
         private readonly Transaction _tx;
-        private readonly FileStream _file;
+        private readonly Stream _file;
 
-        public VoronIndexOutput(string tempPath, string name, Transaction tx)
+        public VoronIndexOutput(StorageEnvironmentOptions options, string name, Transaction tx)
         {
             _name = name;
             _tx = tx;
-            var fileTempPath = Path.Combine(tempPath, name + "_" + Guid.NewGuid());
+            var fileTempPath = Path.Combine(options.TempPath, name + "_" + Guid.NewGuid());
             //TODO: Pass this flag
             //const FileOptions FILE_ATTRIBUTE_TEMPORARY = (FileOptions)256;
-            _file = new FileStream(fileTempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite,
-                4096, FileOptions.DeleteOnClose);
+
+            if (options.EncryptionEnabled)
+                _file = new TempCryptoStream(fileTempPath);
+            else
+                _file = new FileStream(fileTempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 
+                    4096, FileOptions.DeleteOnClose);
         }
 
         public override void FlushBuffer(byte[] b, int offset, int len)

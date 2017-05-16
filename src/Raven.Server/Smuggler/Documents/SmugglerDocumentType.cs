@@ -26,7 +26,7 @@ namespace Raven.Server.Smuggler.Documents
             public Slice Base64Hash;
             public ByteStringContext<ByteStringMemoryCache>.ExternalScope Base64HashDispose;
 
-            public FileStream File;
+            public Stream File;
             public AttachmentsStorage.ReleaseTempFile FileDispose;
 
             public BlittableJsonReaderObject Data;

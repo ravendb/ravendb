@@ -20,6 +20,12 @@ namespace Sparrow.Platform.Posix
         public static extern int crypto_kx_keypair(byte* pk, byte* sk);
 
         [DllImport(LIB_SODIUM)]
+        public static extern int crypto_stream_xchacha20_keybytes();
+
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_stream_xchacha20_noncebytes();
+
+        [DllImport(LIB_SODIUM)]
         public static extern int crypto_kdf_keybytes();
 
         [DllImport(LIB_SODIUM)]
@@ -42,6 +48,14 @@ namespace Sparrow.Platform.Posix
             byte* ctx,
             byte* key);
 
+        [DllImport(LIB_SODIUM)]
+        public static extern int crypto_stream_xchacha20_xor_ic(
+            byte* c,
+            byte* m,
+            ulong mlen,
+            byte* n,
+            ulong ic,
+            byte* k);
 
         [DllImport(LIB_SODIUM)]
         public static extern int crypto_aead_chacha20poly1305_encrypt_detached(

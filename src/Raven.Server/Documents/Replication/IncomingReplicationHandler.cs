@@ -309,7 +309,7 @@ namespace Raven.Server.Documents.Replication
             OnDocumentsReceived(this);
         }
 
-        private void ReadExactly(long size, FileStream file)
+        private void ReadExactly(long size, Stream file)
         {
             while (size > 0)
             {
@@ -562,7 +562,7 @@ namespace Raven.Server.Documents.Replication
             public Slice Base64Hash;
             public ByteStringContext.InternalScope Base64HashDispose;
 
-            public FileStream File;
+            public Stream File;
             public AttachmentsStorage.ReleaseTempFile FileDispose;
 
             public void Dispose()

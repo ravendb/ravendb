@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Handlers
                 var contentType = GetStringQueryString("contentType", false) ?? "";
 
                 AttachmentResult result;
-                using (Database.DocumentsStorage.AttachmentsStorage.GetTempFile(out FileStream file))
+                using (Database.DocumentsStorage.AttachmentsStorage.GetTempFile(out Stream file))
                 {
                     var hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, RequestBodyStream(), file, Database.DatabaseShutdown);
                     var etag = GetLongFromHeaders("If-Match");

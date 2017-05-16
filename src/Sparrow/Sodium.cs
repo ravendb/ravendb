@@ -52,6 +52,18 @@ namespace Sparrow
             return Platform.Win32.WinSodium.crypto_kdf_derive_from_key(subkey, subkeylen, subkeyid, ctx, key);
         }
 
+        public static int crypto_stream_xchacha20_xor_ic(
+            byte* c,
+            byte* m,
+            ulong mlen,
+            byte* n,
+            ulong ic,
+            byte* k)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.crypto_stream_xchacha20_xor_ic(c, m, mlen, n, ic, k);
+            return Platform.Win32.WinSodium.crypto_stream_xchacha20_xor_ic(c, m, mlen, n, ic, k);
+        }
 
         public static int crypto_aead_chacha20poly1305_encrypt_detached(
             byte* c,
@@ -135,6 +147,20 @@ namespace Sparrow
             return Platform.Win32.WinSodium.crypto_box_seal_open(m, c, clen, pk, sk);
         }
 
+        public static int crypto_stream_xchacha20_keybytes()
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_stream_xchacha20_keybytes()
+                : Platform.Win32.WinSodium.crypto_stream_xchacha20_keybytes();
+        }
+
+        public static int crypto_stream_xchacha20_noncebytes()
+        {
+            return Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_stream_xchacha20_noncebytes()
+                : Platform.Win32.WinSodium.crypto_stream_xchacha20_noncebytes();
+        }
+        
         public static int crypto_box_sealbytes()
         {
             return Platform.PlatformDetails.RunningOnPosix

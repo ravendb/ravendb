@@ -10,7 +10,7 @@ namespace Raven.Server.Documents
 {
     public static class AttachmentsStorageHelper
     {
-        public static async Task<string> CopyStreamToFileAndCalculateHash(DocumentsOperationContext context, Stream requestStream, FileStream file, CancellationToken cancellationToken)
+        public static async Task<string> CopyStreamToFileAndCalculateHash(DocumentsOperationContext context, Stream requestStream, Stream file, CancellationToken cancellationToken)
         {
             using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
             {
