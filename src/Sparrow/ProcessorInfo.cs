@@ -17,113 +17,34 @@ namespace Sparrow
         {
             get
             {
-                if (PlatformDetails.RunningOnPosix)
+                if (PlatformDetails.RunningOnPosix == false)
+                    return Environment.ProcessorCount;
+
+                // get from cgroup (which is good for both container and non-container systems). use Environment.ProcessorCount only in case of failure to get from cgroup
+                // need to support both cpuset.cpus, and cfs_quota (always only one is available, and we check them both at any case and taking the lowest)
+                var coresList = SysUtils.ReadAndParseRangesFromFile("/sys/fs/cgroup/cpuset/cpuset.cpus");
+                var quota = SysUtils.ReadULongFromFile("/sys/fs/cgroup/cpu/cpu.cfs_quota_us");
+                var environmentProcessorCount = Environment.ProcessorCount;
+                decimal coresViaCpus = environmentProcessorCount;
+                decimal coresViaCpuset = environmentProcessorCount;
+                if (quota <= long.MaxValue - 4 * 1024) // actuall != -1
                 {
-                    // get from cgroup (which is good for both container and non-container systems). use Environment.ProcessorCount only in case of failure to get from cgroup
-                    var cores = ReadAndParseRangesFromFile("/sys/fs/cgroup/cpuset/cpuset.cpus");
-                    return cores?.Count ?? Environment.ProcessorCount;
+                    ulong period = SysUtils.ReadULongFromFile("/sys/fs/cgroup/cpu/cpu.cfs_period_us"); // 100,000 is 100% per cpu
+                    if (period != 0)
+                        // ReSharper disable once PossibleLossOfFraction
+                        coresViaCpus = Math.Round((decimal)(quota / period), 3, MidpointRounding.AwayFromZero);
                 }
+                if (coresList != null && coresList.Count > 0 && coresList.Count < environmentProcessorCount)
+                    coresViaCpuset = coresList.Count;
 
-                return Environment.ProcessorCount;
-            }
-        }
 
-        private static unsafe List<int> ReadAndParseRangesFromFile(string filename)
-        {
-            var fd = Syscall.open(filename, OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
-            if (fd < 0)
-            {
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Cannot open '{filename}'. Will not respect container's number of cores if running under one.");
-                return null;
+                    _logger.Info($"ProccessorCount is the lowest between : Environment.ProcessorCount={Environment.ProcessorCount}, coresViaCpus={coresViaCpus}, coresViaCpuset={coresViaCpuset}");
+
+                var numberOfCores = Math.Min(environmentProcessorCount, Math.Min(coresViaCpuset, coresViaCpus));
+                // we are going to round down numberOfCores found, although container might server i.e. "2.5" cores
+                return (int)numberOfCores;
             }
-
-            List<int> coresList;
-            UIntPtr readSize = (UIntPtr)1024;
-            IntPtr pBuf = Marshal.AllocHGlobal((int)readSize);
-            try
-            {
-                Memory.Set((byte*)pBuf, 0, 1024);
-                var cgroupRead = Syscall.read(fd, pBuf.ToPointer(), (ulong)readSize);
-                if (cgroupRead > 1000 || cgroupRead == 0) // check we are not garbadged
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info(
-                            $"Got invalid number of characters ({cgroupRead}) from filename. Will not respect container's number of cores if running under one.");
-                    Syscall.close(fd);
-                    return null;
-                }
-
-                Syscall.close(fd);
-
-                string str = null;
-                try
-                {
-                    str = Encoding.ASCII.GetString((byte*)pBuf.ToPointer(), (int)cgroupRead);
-                    coresList = ParseRangesFromString(str);
-                }
-                catch (Exception ex)
-                {
-
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"couldn't convert string '{str}' to long. Will not respect container's number of cores if running under one.", ex);
-                    return null;
-                }
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(pBuf);
-            }
-            return coresList;
-        }
-
-        private static List<int> ParseRangesFromString(string str)
-        {
-            var result = new List<int>();
-            foreach (var corerange in str.Split(','))
-            {                
-                var lowhigh = corerange.Split('-');
-                if (lowhigh.Length > 2)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"strange range in '{str}' => '{lowhigh.Length}. Will not respect container's number of cores if running under one.");
-                    return null;
-                }
-                else if (lowhigh.Length == 2)
-                {
-                    int [] lowhighInt = new int[2];
-                    try
-                    {
-                        lowhighInt[0] = Convert.ToInt32(lowhigh[0]);
-                        lowhighInt[1] = Convert.ToInt32(lowhigh[1]);
-                    }
-                    catch (Exception ex)
-                    {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"cannot convert range to int in '{str}' => '{lowhigh[0]} - {lowhigh[1]}'. Will not respect container's number of cores if running under one.", ex);
-                        return null;
-                    }
-                    for (int i = lowhighInt[1]; i < lowhighInt[1]; i++)
-                    {
-                        result.Add(i);
-                    }
-                }
-                else
-                {
-                    try
-                    {
-                        var core = Convert.ToInt32(lowhigh[0]);
-                        result.Add(core);
-                    }
-                    catch (Exception ex)
-                    {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"cannot convert core number to int in '{str}' => '{lowhigh[0]}'. Will not respect container's number of cores if running under one.", ex);
-                        return null;
-                    }
-                }
-            }
-            return result;
         }
     }
 }

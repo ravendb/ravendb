@@ -64,11 +64,11 @@ namespace Sparrow.LowMemory
                 if (PlatformDetails.RunningOnPosix)
                 {
                     // get container usage (cgroup) and machine usage (sysinfo) and respect the lower
-                    var cgroupLimit = ReadULongFromFile("/sys/fs/cgroup/memory/memory.limit_in_bytes");
+                    var cgroupLimit = SysUtils.ReadULongFromFile("/sys/fs/cgroup/memory/memory.limit_in_bytes");
                     ulong cgroupAvailable = ulong.MaxValue;
-                    if (cgroupLimit != ulong.MaxValue && cgroupLimit < long.MaxValue-(4*1024)) // max limit reported on non container system is usually long.MaxValue - 4K
+                    if (cgroupLimit < long.MaxValue-4*1024) // max limit reported on non container system is usually long.MaxValue - 4K, or ulong.MaxValue in case of a failure
                     {
-                        var cgroupUsage = ReadULongFromFile("/sys/fs/cgroup/memory/memory.usage_in_bytes");
+                        var cgroupUsage = SysUtils.ReadULongFromFile("/sys/fs/cgroup/memory/memory.usage_in_bytes");
                         cgroupAvailable = cgroupLimit - cgroupUsage;
                     }
 
@@ -125,48 +125,6 @@ namespace Sparrow.LowMemory
                 _failedToGetAvailablePhysicalMemory = true;
                 return FailedResult;
             }
-        }
-
-        private static unsafe ulong ReadULongFromFile(string filename)
-        {
-            var fd = Syscall.open(filename, OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
-            if (fd < 0)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Cannot open '{filename}'. Will not respect container's memory limit if running under one.");
-                return ulong.MaxValue;
-            }
-
-            ulong cgroup;
-            UIntPtr readSize = (UIntPtr)32;
-            IntPtr pBuf = Marshal.AllocHGlobal((int)readSize);
-            Memory.Set((byte*)pBuf, 0, 32);
-            var cgroupRead = Syscall.read(fd, pBuf.ToPointer(), (ulong)readSize);
-            if (cgroupRead > 30 || cgroupRead == 0) // check we are not garbadged
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Got invalid number of characters ({cgroupRead}) from filename. Will not respect container's memory limit if running under one.");
-                Syscall.close(fd);
-                return ulong.MaxValue;
-            }
-
-            Syscall.close(fd);
-
-            string str = null;
-            try
-            {
-                str = Encoding.ASCII.GetString((byte*)pBuf.ToPointer(), (int)cgroupRead);
-                cgroup = Convert.ToUInt64(str);
-            }
-            catch (Exception ex)
-            {
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"couldn't convert string '{str}' to long. Will not respect container's memory limit if running under one.", ex);
-                cgroup = ulong.MaxValue;
-            }
-            Marshal.FreeHGlobal(pBuf);
-            return cgroup;
         }
     }
 
