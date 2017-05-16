@@ -53,7 +53,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(uint obj)
         {
-            return Hashing.Mix(obj);
+            return (int)Hashing.Mix(obj);
         }
     }
 
