@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
             this.termVector = termVector;
             this.multipleItemsSameField = multipleItemsSameField;
         }
-
+        
         public bool IsSame(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
         {
             // We are thinking it is possible to have collisions. This may not be true ever!
@@ -49,14 +49,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
             if (this.multipleItemsSameField.Length != multipleItemsSameField.Length)
                 return false;
 
-            int count = this.multipleItemsSameField.Length;
-            for (int i = 0; i < count; i++)
+            // PERF: In this case we dont cache the length to allow the JIT to figure out it can evict the bound checks.
+            bool result = true;
+            for (int i = 0; i < this.multipleItemsSameField.Length; i++)
             {
                 if (this.multipleItemsSameField[i] != multipleItemsSameField[i])
-                    return false;
+                {
+                    result = false;
+                    break;
+                }
             }
 
-            return true;
+            return result;
         }
 
         public bool IsSame(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, List<int> multipleItemsSameField)
@@ -69,13 +73,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
                 return false;
 
             int count = this.multipleItemsSameField.Length;
+            bool result = true;
             for (int i = 0; i < count; i++)
             {
                 if (this.multipleItemsSameField[i] != multipleItemsSameField[i])
-                    return false;
+                {
+                    result = false;
+                    break;
+                }
             }
 
-            return true;
+            return result;
         }
 
         public static int GetHashCode(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
@@ -16,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
         public BlittableObjectReader()
         {
             _ms = new MemoryStream();
-            _reader = new StreamReader(_ms, Encoding.UTF8, true, 1024, leaveOpen: true);
+            _reader = new StreamReader(_ms, Encodings.Utf8, true, 1024, leaveOpen: true);
         }
 
         public TextReader GetTextReaderFor(BlittableJsonReaderObject value)

@@ -12,6 +12,12 @@ namespace Voron
             Pointer = pointer;
         }
 
+        public bool IsValid
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return Pointer != null; }
+        }
+
         public byte* DataPointer
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

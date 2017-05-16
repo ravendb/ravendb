@@ -10,7 +10,7 @@ using Voron.Impl;
 
 namespace Voron.Platform.Posix
 {
-    public unsafe class PosixMemoryMapPager : PosixAbstractPager
+    public sealed unsafe class PosixMemoryMapPager : PosixAbstractPager
     {
         private readonly StorageEnvironmentOptions _options;
         private int _fd;

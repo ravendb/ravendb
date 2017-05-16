@@ -204,7 +204,7 @@ namespace Voron
 
         public override string ToString()
         {
-            return this.Content.ToString(Encoding.UTF8);
+            return this.Content.ToString(Encodings.Utf8);
         }
     }
 

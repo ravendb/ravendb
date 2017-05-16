@@ -295,6 +295,16 @@ namespace Sparrow
             return new string((char*)_pointer->Ptr, 0, _pointer->Length);
         }
 
+        public string ToString(UTF8Encoding encoding)
+        {
+            if (!HasValue)
+                return string.Empty;
+
+            EnsureIsNotBadPointer();
+
+            return encoding.GetString(_pointer->Ptr, _pointer->Length);
+        }
+
         public string ToString(Encoding encoding)
         {
             if (!HasValue)
@@ -573,8 +583,6 @@ namespace Sparrow
         private readonly FastStack<IntPtr> _externalStringPool;
         private SegmentInformation _externalCurrent;
 
-        private static readonly UTF8Encoding Encoding = new UTF8Encoding();
-
         public ByteStringContext(LowMemoryFlag lowMemoryFlag, int allocationBlockSize = ByteStringContext.DefaultAllocationBlockSizeInBytes)
         {
             if (allocationBlockSize < ByteStringContext.MinBlockSizeInBytes)
@@ -823,7 +831,7 @@ namespace Sparrow
             if (str.IsMutable == false)
                 throw new InvalidOperationException("Cannot mutate an immutable ByteString");
 
-            var charCount = Encoding.GetCharCount(str._pointer->Ptr, str.Length);
+            var charCount = Encodings.Utf8.GetCharCount(str._pointer->Ptr, str.Length);
             if (ToLowerTempBuffer == null || ToLowerTempBuffer.Length < charCount)
             {
                 ToLowerTempBuffer = new char[Bits.NextPowerOf2(charCount)];
@@ -831,12 +839,12 @@ namespace Sparrow
 
             fixed (char* pChars = ToLowerTempBuffer)
             {
-                charCount = Encoding.GetChars(str._pointer->Ptr, str.Length, pChars, ToLowerTempBuffer.Length);
+                charCount = Encodings.Utf8.GetChars(str._pointer->Ptr, str.Length, pChars, ToLowerTempBuffer.Length);
                 for (int i = 0; i < charCount; i++)
                 {
                     ToLowerTempBuffer[i] = char.ToLowerInvariant(ToLowerTempBuffer[i]);
                 }
-                var byteCount = Encoding.GetByteCount(pChars, charCount);
+                var byteCount = Encodings.Utf8.GetByteCount(pChars, charCount);
                 if (// we can't mutate external memory!
                     str.IsExternal ||
                     // calling to lower has increased the size, and we can't fit in the space
@@ -845,7 +853,7 @@ namespace Sparrow
                 {
                     Allocate(byteCount, out str);
                 }
-                str._pointer->Length = Encoding.GetBytes(pChars, charCount, str._pointer->Ptr, str._pointer->Size);
+                str._pointer->Length = Encodings.Utf8.GetBytes(pChars, charCount, str._pointer->Ptr, str._pointer->Size);
             }
         }
 
@@ -1051,11 +1059,11 @@ namespace Sparrow
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            var byteCount = Encoding.GetByteCount(value);
+            var byteCount = Encodings.Utf8.GetByteCount(value);
             str = AllocateInternal(byteCount, type);
             fixed (char* ptr = value)
             {
-                int length = Encoding.GetBytes(ptr, value.Length, str.Ptr, byteCount);
+                int length = Encodings.Utf8.GetBytes(ptr, value.Length, str.Ptr, byteCount);
 
                 // We can do this because it is internal. See if it makes sense to actually give this ability. 
                 str._pointer->Length = length;
@@ -1074,7 +1082,7 @@ namespace Sparrow
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            var byteCount = Encoding.GetByteCount(value);
+            var byteCount = Encodings.Utf8.GetByteCount(value);
 
             str = AllocateInternal(byteCount, type);
             fixed (char* ptr = value)

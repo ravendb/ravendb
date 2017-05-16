@@ -148,8 +148,6 @@ namespace Sparrow.Json.Parsing
 
     public unsafe class ObjectJsonParser : IJsonParser
     {
-        private static readonly UTF8Encoding Utf8Encoding = new UTF8Encoding();
-
         private readonly JsonParserState _state;
         private readonly JsonOperationContext _ctx;
         private readonly FastStack<object> _elements = new FastStack<object>();
@@ -515,7 +513,7 @@ namespace Sparrow.Json.Parsing
         {
             // max possible size - we avoid using GetByteCount because profiling showed it to take 2% of runtime
             // the buffer might be a bit longer, but we'll reuse it, and it is better than the computing cost
-            int byteCount = Utf8Encoding.GetMaxByteCount(str.Length);
+            int byteCount = Encodings.Utf8.GetMaxByteCount(str.Length);
             int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str);
 
             // If we do not have a buffer or the buffer is too small, return the memory and get more.
@@ -531,7 +529,7 @@ namespace Sparrow.Json.Parsing
 
             fixed (char* pChars = str)
             {
-                _state.StringSize = Utf8Encoding.GetBytes(pChars, str.Length, _state.StringBuffer, byteCount);
+                _state.StringSize = Encodings.Utf8.GetBytes(pChars, str.Length, _state.StringBuffer, byteCount);
                 _state.CompressedSize = null; // don't even try
                 _state.FindEscapePositionsIn(_state.StringBuffer, _state.StringSize, escapePositionsSize);
 

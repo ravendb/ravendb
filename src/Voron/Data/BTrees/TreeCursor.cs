@@ -11,9 +11,9 @@ namespace Voron.Data.BTrees
     {
         public FastStack<TreePage> Pages = new FastStack<TreePage>();
 
-        private static readonly ObjectPool<FastDictionary<long, TreePage, NumericEqualityStructComparer>> _pagesByNumPool = new ObjectPool<FastDictionary<long, TreePage, NumericEqualityStructComparer>>(() => new FastDictionary<long, TreePage, NumericEqualityStructComparer>(50, default(NumericEqualityStructComparer)));
+        private static readonly ObjectPool<FastDictionary<long, TreePage, NumericEqualityComparer>> _pagesByNumPool = new ObjectPool<FastDictionary<long, TreePage, NumericEqualityComparer>>(() => new FastDictionary<long, TreePage, NumericEqualityComparer>(50, default(NumericEqualityComparer)));
 
-        private readonly FastDictionary<long, TreePage, NumericEqualityStructComparer> _pagesByNum;
+        private readonly FastDictionary<long, TreePage, NumericEqualityComparer> _pagesByNum;
 
         private bool _anyOverrides;
 

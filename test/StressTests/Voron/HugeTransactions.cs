@@ -11,6 +11,7 @@ using Sparrow.Compression;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Global;
+using Voron.Impl;
 using Voron.Impl.Paging;
 using Xunit;
 

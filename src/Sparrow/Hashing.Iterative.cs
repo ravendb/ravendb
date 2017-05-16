@@ -15,7 +15,7 @@ namespace Sparrow
         {
             public class XXHash32Block
             {
-                private readonly static XXHash32Values[] Empty = new XXHash32Values[0];
+                private static readonly XXHash32Values[] Empty = new XXHash32Values[0];
 
                 public readonly uint Seed;
                 public readonly XXHash32Values[] Values;                
@@ -39,7 +39,7 @@ namespace Sparrow
                 }
             }
 
-            public unsafe static class XXHash32
+            public static unsafe class XXHash32
             {
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 public static unsafe uint CalculateInline(byte* buffer, int len, XXHash32Block context, int startFrom = int.MaxValue)

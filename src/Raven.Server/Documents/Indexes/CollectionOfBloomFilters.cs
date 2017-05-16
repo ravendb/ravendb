@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Indexes
             private readonly ulong _m;
             private readonly int _ptrSize;
             private readonly uint _partitionCount;
-            private readonly FastDictionary<ulong, Partition, NumericEqualityStructComparer> _partitions = new FastDictionary<ulong, Partition, NumericEqualityStructComparer>(default(NumericEqualityStructComparer));
+            private readonly FastDictionary<ulong, Partition, NumericEqualityComparer> _partitions = new FastDictionary<ulong, Partition, NumericEqualityComparer>(default(NumericEqualityComparer));
             private readonly ByteStringContext _allocator;
             private readonly long _initialCount;
 

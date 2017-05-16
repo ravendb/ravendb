@@ -10,6 +10,7 @@ using Raven.Server.Json;
 using System.IO;
 using Lucene.Net.Store;
 using Raven.Client;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -225,7 +226,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (fieldType.IsJson == false)
                 return stringValue;
 
-            var bytes = JsonOperationContext.Encoding.GetBytes(stringValue);
+            var bytes = Encodings.Utf8.GetBytes(stringValue);
             var ms = new MemoryStream(bytes);
             return _context.ReadForMemory(ms, field.Name);
         }

@@ -483,7 +483,7 @@ namespace Raven.Server.Documents
 
             Memory.Copy(keyMem.Ptr, lowerKey, lowerKeySize);
             var pos = lowerKeySize;
-            keyMem.Ptr[pos++] = SpecialChars.RecordSeperator;
+            keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
 
             switch (type)
             {
@@ -496,7 +496,7 @@ namespace Raven.Server.Documents
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
-            keyMem.Ptr[pos++] = SpecialChars.RecordSeperator;
+            keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
 
             if (type != AttachmentType.Document)
             {
@@ -505,20 +505,20 @@ namespace Raven.Server.Documents
                     Memory.Copy(keyMem.Ptr + pos, (byte*)pChangeVector, changeVectorSize);
                 }
                 pos += changeVectorSize;
-                keyMem.Ptr[pos++] = SpecialChars.RecordSeperator;
+                keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
             }
 
             if (keyType != KeyType.Prefix)
             {
                 Memory.Copy(keyMem.Ptr + pos, lowerName, lowerNameSize);
                 pos += lowerNameSize;
-                keyMem.Ptr[pos++] = SpecialChars.RecordSeperator;
+                keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
 
                 if (keyType == KeyType.Key)
                 {
                     base64Hash.CopyTo(keyMem.Ptr + pos);
                     pos += base64Hash.Size;
-                    keyMem.Ptr[pos++] = SpecialChars.RecordSeperator;
+                    keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
 
                     Memory.Copy(keyMem.Ptr + pos, lowerContentTypePtr, lowerContentTypeSize);
                 }

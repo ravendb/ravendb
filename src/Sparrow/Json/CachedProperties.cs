@@ -20,10 +20,35 @@ namespace Sparrow.Json
     /// This is done so we'll not write properties that don't belong to that document, but to 
     /// previous documents handled in the same batch
     /// </summary>
-    public class CachedProperties : IComparer<BlittableJsonDocumentBuilder.PropertyTag>
+    public class CachedProperties
     {
         private readonly JsonOperationContext _context;
         private int _propertyNameCounter;
+
+        private Sorter<BlittableJsonDocumentBuilder.PropertyTag, PropertySorter> _sorter;
+
+
+        private struct PropertySorter : IComparer<BlittableJsonDocumentBuilder.PropertyTag>
+        {
+            private readonly CachedProperties properties;
+
+            public PropertySorter(CachedProperties props)
+            {
+                this.properties = props;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(BlittableJsonDocumentBuilder.PropertyTag x, BlittableJsonDocumentBuilder.PropertyTag y)
+            {
+                var compare = x.Property.GlobalSortOrder - y.Property.GlobalSortOrder;
+                if (compare == 0)
+                {
+                    properties._hasDuplicates = true;
+                    return y.Position - x.Position;
+                }
+                return compare;
+            }
+        }
 
         public sealed class PropertyName : IComparable<PropertyName>
         {
@@ -101,6 +126,7 @@ namespace Sparrow.Json
         public CachedProperties(JsonOperationContext context)
         {
             _context = context;
+            _sorter = new Sorter<BlittableJsonDocumentBuilder.PropertyTag, PropertySorter>(new PropertySorter(this));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -263,7 +289,8 @@ namespace Sparrow.Json
             }
 
             _cachedSorts[index].FinalCount = properties.Count;
-            properties.Sort(this);
+
+            properties.Sort(ref _sorter);
 
             // The item comparison method has a side effect, which can modify the _hasDuplicates field.
             // This can either be true or false at any given time. 
@@ -319,16 +346,7 @@ namespace Sparrow.Json
 
         private bool _hasDuplicates;
 
-        int IComparer<BlittableJsonDocumentBuilder.PropertyTag>.Compare(BlittableJsonDocumentBuilder.PropertyTag x, BlittableJsonDocumentBuilder.PropertyTag y)
-        {
-            var compare = x.Property.GlobalSortOrder - y.Property.GlobalSortOrder;
-            if (compare == 0)
-            {
-                _hasDuplicates = true;
-                return y.Position - x.Position;
-            }
-            return compare;
-        }
+
 
         public LazyStringValue GetProperty(int index)
         {

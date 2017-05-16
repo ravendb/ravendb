@@ -29,7 +29,7 @@ namespace Voron.Impl.Paging
         public long TotalLoadedSize;
     }
 
-    public unsafe class MappedAddresses
+    public class MappedAddresses
     {
         public string File;
         public IntPtr Address;
@@ -45,7 +45,7 @@ namespace Voron.Impl.Paging
         public long StartPage;
     }
 
-    public unsafe class Windows32BitsMemoryMapPager : AbstractPager
+    public sealed unsafe class Windows32BitsMemoryMapPager : AbstractPager
     {
         private readonly Win32NativeFileAttributes _fileAttributes;
         private readonly ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>> _globalMapping = new ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>>(NumericEqualityComparer.Instance);
@@ -193,7 +193,7 @@ namespace Voron.Impl.Paging
                 int numberOfPages = 1;
                 if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
                 {
-                    numberOfPages = this.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+                    numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
                 }
 
                 if (numberOfPages + distanceFromStart > NumberOfPagesInAllocationGranularity)

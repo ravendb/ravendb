@@ -153,8 +153,8 @@ namespace Sparrow.Binary
             int pos = MultiplyDeBruijnBitPosition[(uint)(v * 0x07C4ACDDU) >> 27];
             if (n > (v & ~(v >> 1)))
                 return pos + 1;
-            else
-                return pos;
+
+            return pos;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -170,8 +170,34 @@ namespace Sparrow.Binary
             int pos = MultiplyDeBruijnBitPosition[(uint)(v * 0x07C4ACDDU) >> 27];
             if (n > (v & ~(v >> 1)))
                 return pos + 1;
-            else
-                return pos;
+
+            return pos;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int FloorLog2(uint n)
+        {
+            uint v = n;
+            v |= v >> 1; // first round down to one less than a power of 2 
+            v |= v >> 2;
+            v |= v >> 4;
+            v |= v >> 8;
+            v |= v >> 16;
+
+            return MultiplyDeBruijnBitPosition[(uint)(v * 0x07C4ACDDU) >> 27];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int FloorLog2(int n)
+        {
+            int v = n;
+            v |= v >> 1; // first round down to one less than a power of 2 
+            v |= v >> 2;
+            v |= v >> 4;
+            v |= v >> 8;
+            v |= v >> 16;
+
+            return MultiplyDeBruijnBitPosition[(uint)(v * 0x07C4ACDDU) >> 27];
         }
 
         private static readonly int[] nextPowerOf2Table =

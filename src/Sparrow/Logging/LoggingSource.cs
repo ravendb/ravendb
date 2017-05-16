@@ -36,8 +36,7 @@ namespace Sparrow.Logging
         public static LoggingSource Instance = new LoggingSource(Path.GetTempPath(), LogMode.None);
 
 
-        private static byte[] _headerRow =
-            Encoding.UTF8.GetBytes("Time,\tThread,\tLevel,\tSource,\tLogger,\tMessage,\tException");
+        private static byte[] _headerRow = Encodings.Utf8.GetBytes("Time,\tThread,\tLevel,\tSource,\tLogger,\tMessage,\tException");
 
         public class WebSocketContext
         {
@@ -68,7 +67,7 @@ namespace Sparrow.Logging
 
             var arraySegment = new ArraySegment<byte>(new byte[512]);
             var buffer = new StringBuilder();
-            var charBuffer = new char[Encoding.UTF8.GetMaxCharCount(arraySegment.Count)];
+            var charBuffer = new char[Encodings.Utf8.GetMaxCharCount(arraySegment.Count)];
             while (token.IsCancellationRequested == false)
             {
                 buffer.Length = 0;
@@ -80,18 +79,18 @@ namespace Sparrow.Logging
                     {
                         return;
                     }
-                    var chars = Encoding.UTF8.GetChars(arraySegment.Array, 0, result.Count, charBuffer, 0);
+                    var chars = Encodings.Utf8.GetChars(arraySegment.Array, 0, result.Count, charBuffer, 0);
                     buffer.Append(charBuffer, 0, chars);
                 } while (!result.EndOfMessage);
 
                 var commandResult = context.Filter.ParseInput(buffer.ToString());
-                var maxBytes = Encoding.UTF8.GetMaxByteCount(commandResult.Length);
+                var maxBytes = Encodings.Utf8.GetMaxByteCount(commandResult.Length);
                 // We take the easy way of just allocating a large buffer rather than encoding
                 // in a loop since large replies here are very rare.
                 if (maxBytes > arraySegment.Count)
                     arraySegment = new ArraySegment<byte>(new byte[Bits.NextPowerOf2(maxBytes)]);
 
-                var numberOfBytes = Encoding.UTF8.GetBytes(commandResult, 0,
+                var numberOfBytes = Encodings.Utf8.GetBytes(commandResult, 0,
                     commandResult.Length,
                     arraySegment.Array,
                     0);

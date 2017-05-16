@@ -24,7 +24,7 @@ using Voron.Util;
 
 namespace Voron.Impl
 {
-    public unsafe class LowLevelTransaction : IPagerLevelTransactionState
+    public sealed unsafe class LowLevelTransaction : IPagerLevelTransactionState
     {
         public readonly AbstractPager DataPager;
         private readonly StorageEnvironment _env;
@@ -63,9 +63,9 @@ namespace Voron.Impl
             public TableValueBuilder TableValueBuilder = new TableValueBuilder();
 
             public int ScratchPagesTablePoolIndex = 0;
-            public FastDictionary<long, PageFromScratchBuffer, NumericEqualityStructComparer> ScratchPagesTablePool1 = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityStructComparer>(new NumericEqualityStructComparer());
-            public FastDictionary<long, PageFromScratchBuffer, NumericEqualityStructComparer> ScratchPagesTablePool2 = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityStructComparer>(new NumericEqualityStructComparer());
-            public FastDictionary<long, long, NumericEqualityStructComparer> DirtyOverflowPagesPool = new FastDictionary<long, long, NumericEqualityStructComparer>(new NumericEqualityStructComparer());
+            public FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> ScratchPagesTablePool1 = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer>(new NumericEqualityComparer());
+            public FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> ScratchPagesTablePool2 = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer>(new NumericEqualityComparer());
+            public FastDictionary<long, long, NumericEqualityComparer> DirtyOverflowPagesPool = new FastDictionary<long, long, NumericEqualityComparer>(new NumericEqualityComparer());
             public HashSet<long> DirtyPagesPool = new HashSet<long>(NumericEqualityComparer.Instance);
 
             public void Reset()
@@ -80,9 +80,9 @@ namespace Voron.Impl
 
         // BEGIN: Structures that are safe to pool.
         private readonly HashSet<long> _dirtyPages;
-        private readonly FastDictionary<long, long, NumericEqualityStructComparer> _dirtyOverflowPages;
+        private readonly FastDictionary<long, long, NumericEqualityComparer> _dirtyOverflowPages;
         private readonly Stack<long> _pagesToFreeOnCommit;
-        private readonly FastDictionary<long, PageFromScratchBuffer, NumericEqualityStructComparer> _scratchPagesTable;
+        private readonly FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> _scratchPagesTable;
         private readonly HashSet<PagerState> _pagerStates;
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
         // END: Structures that are safe to pool.
@@ -432,6 +432,19 @@ namespace Voron.Impl
             return GetPageInternal(pageNumber);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Page GetPage(long pageNumber, PagerRef pagerRef)
+        {
+            if (_disposed)
+                ThrowObjectDisposed();
+
+            // PERF: ReadOnly pages will not have a PagerRef, so we can still use the cache. 
+            if (_pageLocator.TryGetReadOnlyPage(pageNumber, out Page result))
+                return result;
+
+            return GetPageInternal(pageNumber, pagerRef);
+        }
+
         private Page GetPageInternal(long pageNumber)
         {
             // Check if we can hit the lowest level locality cache.
@@ -464,15 +477,13 @@ namespace Voron.Impl
                 if (pageFromJournal != null)
                 {
                     p = pageFromJournal.Value;
-                    Debug.Assert(p.PageNumber == pageNumber,
-                        string.Format("Requested ReadOnly page #{0}. Got #{1} from journal", pageNumber, p.PageNumber));
+                    Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from journal", pageNumber, p.PageNumber));
                 }
                 else
                 {
-                    p = DataPager.ReadPage(this, pageNumber);
+                    p = new Page(DataPager.AcquirePagePointerWithOverflowHandling(this, pageNumber));
 
-                    Debug.Assert(p.PageNumber == pageNumber,
-                        string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
+                    Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
 
                     // When encryption is off, we do validation by checksum
                     if (_env.Options.EncryptionEnabled == false)
@@ -486,7 +497,7 @@ namespace Voron.Impl
             return p;
         }
 
-        public Page GetPage(long pageNumber, PagerRef pagerRef)
+        public Page GetPageInternal(long pageNumber, PagerRef pagerRef)
         {
             // Check if we can hit the lowest level locality cache.
             Page p;
@@ -518,20 +529,18 @@ namespace Voron.Impl
                 if (pageFromJournal != null)
                 {
                     p = pageFromJournal.Value;
-                    Debug.Assert(p.PageNumber == pageNumber,
-                        string.Format("Requested ReadOnly page #{0}. Got #{1} from journal", pageNumber, p.PageNumber));
+                    Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from journal", pageNumber, p.PageNumber));
                 }
                 else
                 {
-                    p = DataPager.ReadPage(this, pageNumber);
+                    p = new Page(DataPager.AcquirePagePointerWithOverflowHandling(this, pageNumber));
                     if (pagerRef != null)
                     {
                         pagerRef.Pager = DataPager;
                         pagerRef.PagerPageNumber = pageNumber;
                     }
 
-                    Debug.Assert(p.PageNumber == pageNumber,
-                        string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
+                    Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
 
                     // When encryption is off, we do validation by checksum
                     if (_env.Options.EncryptionEnabled == false)
@@ -570,7 +579,7 @@ namespace Voron.Impl
 
             Debug.Assert(overflowSize >= 0);
 
-            numberOfPages = DataPager.GetNumberOfOverflowPages(overflowSize);
+            numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(overflowSize);
 
             var overflowPage = AllocatePage(numberOfPages, pageNumber, previousPage, zeroPage);
             overflowPage.Flags = PageFlags.Overflow;
