@@ -63,49 +63,8 @@ namespace Sparrow.LowMemory
                 if (PlatformDetails.RunningOnPosix)
                 {
                     // get container usage (cgroup) and machine usage (sysinfo) and respect the lower
-                    ulong cgroupLimit = ulong.MaxValue;
-                    ulong cgroupUsage = ulong.MaxValue;
-
-                    var fdLimit = Syscall.open("/sys/fs/cgroup/memory/memory.limit_in_bytes", OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
-                    var fdUsage = Syscall.open("/sys/fs/cgroup/memory/memory.usage_in_bytes", OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
-
-                    if (fdLimit > 0)
-                    {
-                        UIntPtr readSize = (UIntPtr)sizeof(ulong);
-                        IntPtr pBuf = Marshal.AllocHGlobal((int)readSize);
-                        var cgroupLimitRead = Syscall.read(fdLimit, pBuf.ToPointer(), (ulong)readSize);
-                        if (cgroupLimitRead != 0)
-                        {
-                            Console.WriteLine($"ADIADI :: Strange : cgroupLimitRead = {sizeof(ulong)}");
-                        }
-                        Syscall.close(fdLimit);
-                        cgroupLimit = (ulong)pBuf;
-                        Marshal.FreeHGlobal(pBuf);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"ADIADI :: Cannot open fdLimit");
-                    }
-
-
-                    if (fdUsage > 0)
-                    {
-                        UIntPtr readSize = (UIntPtr)sizeof(ulong);
-                        IntPtr pBuf = Marshal.AllocHGlobal((int)readSize);
-                        var cgroupUsageRead = Syscall.read(fdUsage, pBuf.ToPointer(), (ulong)readSize);
-                        if (cgroupUsageRead != 0)
-                        {
-                            Console.WriteLine($"ADIADI :: Strange : cgroupUsageRead = {sizeof(ulong)}");
-                        }
-                        Syscall.close(fdUsage);
-                        cgroupUsage = (ulong)pBuf;
-                        Marshal.FreeHGlobal(pBuf);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"ADIADI :: Cannot open fdUsage");
-                    }
-
+                    var cgroupLimit = ReadULongFromFile("/sys/fs/cgroup/memory/memory.limit_in_bytes");
+                    var cgroupUsage = ReadULongFromFile("/sys/fs/cgroup/memory/memory.usage_in_bytes");
 
                     sysinfo_t info = new sysinfo_t();
                     if (Syscall.sysinfo(ref info) != 0)
@@ -119,7 +78,7 @@ namespace Sparrow.LowMemory
                     Console.WriteLine("Available Memory ( sys  )= " + (long)info.AvailableRam);
                     Console.WriteLine("Available Memory (cgroup)= " + (long)cgroupUsage);
                     Console.WriteLine("Physical  Memory ( sys  )= " + (long)info.TotalRam);
-                    Console.WriteLine("Available Memory (cgroup)= " + (long)cgroupLimit);
+                    Console.WriteLine("Physical  Memory (cgroup)= " + (long)cgroupLimit);
 
 
                     return new MemoryInfoResult
@@ -156,6 +115,45 @@ namespace Sparrow.LowMemory
                 _failedToGetAvailablePhysicalMemory = true;
                 return FailedResult;
             }
+        }
+
+        private static unsafe ulong ReadULongFromFile(string filename)
+        {
+            var fd = Syscall.open(filename, OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
+            if (fd < 0)
+            {
+                Console.WriteLine($"ADIADI :: Cannot open {filename}");
+                return ulong.MaxValue;
+            }
+
+            ulong cgroup;
+            UIntPtr readSize = (UIntPtr)32;
+            IntPtr pBuf = Marshal.AllocHGlobal((int)readSize);
+            Memory.Set((byte*)pBuf, 0, 32);
+            var cgroupRead = Syscall.read(fd, pBuf.ToPointer(), (ulong)readSize);
+            if (cgroupRead > 20 || cgroupRead == 0) // check we are not garbadged
+            {
+                Console.WriteLine($"ADIADI :: STRANGE  **** cgroupRead = {cgroupRead}");
+                Syscall.close(fd);
+                return ulong.MaxValue;
+            }
+
+            Console.WriteLine($"ADIADI :: cgroupRead = {cgroupRead}");
+
+            Syscall.close(fd);
+
+            var str = new string((char*)pBuf);
+            try
+            {
+                cgroup = Convert.ToUInt64(str);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ADIADI :: couldn't convert string '{str}' to long");
+                cgroup = ulong.MaxValue;
+            }
+            Marshal.FreeHGlobal(pBuf);
+            return cgroup;
         }
     }
 
