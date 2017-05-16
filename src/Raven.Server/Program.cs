@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.Loader;
@@ -9,6 +10,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
@@ -229,6 +231,13 @@ namespace Raven.Server
                         LowMemoryNotification.Instance.SimulateLowMemoryNotification();
                         break;
 
+                    case "info":
+                        var meminfo = MemoryInformation.GetMemoryInfo();
+                        Console.WriteLine("Build {0}, Version {1}, SemVer {2}, Commit {3}\r\n PID {4}, {5} bits, {6} Cores, PhysMem {7}, AvailMem {8}",
+                            ServerVersion.Build, ServerVersion.Version, ServerVersion.FullVersion, ServerVersion.CommitHash, Process.GetCurrentProcess().Id,
+                            IntPtr.Size * 8, ProcessorInfo.ProcessorCount, meminfo.TotalPhysicalMemory, meminfo.AvailableMemory, meminfo.RunningInContainer);
+                        break;
+
                     case "help":
                     case "–help":
                     case "-help":
@@ -269,6 +278,9 @@ namespace Raven.Server
 
             description = "collect gc max generation";
             Console.WriteLine($"    gc2 {description,36}");
+
+            description = "print info (core count, memory, pid, etc)";
+            Console.WriteLine($"    info {description,51}");
 
             description = "reset the server";
             Console.WriteLine($"    reset {description,25}");
