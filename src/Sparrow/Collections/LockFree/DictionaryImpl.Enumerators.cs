@@ -21,7 +21,7 @@ namespace Sparrow.Collections.LockFree
             return new SnapshotKV(this);
         }
 
-        internal override IDictionaryEnumerator GetdIDictEnumerator()
+        internal override IDictionaryEnumerator GetDictionayEnumerator()
         {
             return new SnapshotIDict(this);
         }

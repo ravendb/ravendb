@@ -39,6 +39,6 @@ namespace Sparrow.Collections.LockFree
         internal abstract TValue GetOrAdd(TKey key, Func<TKey, TValue> valueFactory);
 
         internal abstract IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator();
-        internal abstract IDictionaryEnumerator GetdIDictEnumerator();
+        internal abstract IDictionaryEnumerator GetDictionayEnumerator();
     }
 }
