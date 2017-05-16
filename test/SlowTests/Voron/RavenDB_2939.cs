@@ -17,12 +17,7 @@ namespace SlowTests.Voron
 {
     public class RavenDB_2939 : StorageTest
     {
-        private IncrementalBackupTestUtils IncrementalBackupTestUtils = new IncrementalBackupTestUtils();
-
-        public RavenDB_2939()
-        {
-            IncrementalBackupTestUtils.Clean();
-        }
+        private readonly IncrementalBackupTestUtils _incrementalBackupTestUtils = new IncrementalBackupTestUtils();
 
         protected override void Configure(StorageEnvironmentOptions options)
         {
@@ -57,7 +52,7 @@ namespace SlowTests.Voron
 
             Env.Options.IncrementalBackupEnabled = true;
 
-            var exception = Assert.Throws<InvalidOperationException>(() => BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0)));
+            var exception = Assert.Throws<InvalidOperationException>(() => BackupMethods.Incremental.ToFile(Env, _incrementalBackupTestUtils.IncrementalBackupFile(0)));
 
             Assert.Equal("The first incremental backup creation failed because the first journal file " + StorageEnvironmentOptions.JournalName(0) + " was not found. Did you turn on the incremental backup feature after initializing the storage? In order to create backups incrementally the storage must be created with IncrementalBackupEnabled option set to 'true'.", exception.Message);
         }
@@ -65,7 +60,7 @@ namespace SlowTests.Voron
         public override void Dispose()
         {
             base.Dispose();
-            IncrementalBackupTestUtils.Clean();
+            _incrementalBackupTestUtils.Dispose();
         }
 
 

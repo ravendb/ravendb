@@ -9,7 +9,6 @@ using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Global;
 using Sparrow;
-using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Xunit;
 
@@ -19,17 +18,30 @@ namespace SlowTests.Voron
     {
         private StorageEnvironment _storageEnvironment;
         protected StorageEnvironmentOptions _options;
-        protected readonly string DataDir = GenerateDataDir();
+        protected readonly string DataDir = GenerateTempDirectoryWithoutCollisions();
 
         private ByteStringContext _allocator = new ByteStringContext(LowMemoryFlag.None);
 
-        public static string GenerateDataDir()
+        public static string GenerateTempDirectoryWithoutCollisions()
         {
-            var tempFileName = Path.GetTempFileName();
-            File.Delete(tempFileName);
-            tempFileName += "_dir";//avoid another concurrent call to GetTempFileName also creating it
-            Directory.CreateDirectory(tempFileName);
-            return tempFileName;
+            var tempPath = Path.GetTempPath();
+            int attempt = 0;
+            while (true)
+            {
+                string fileName = "RavenDB." + Path.GetRandomFileName();
+                fileName = Path.Combine(tempPath, fileName);
+
+                try
+                {
+                    Directory.CreateDirectory(fileName);
+                    return fileName;
+                }
+                catch (IOException ex)
+                {
+                    if (++attempt == 10)
+                        throw new IOException("Cannot create a unique temporary directory name.", ex);
+                }
+            }
         }
 
         public StorageEnvironment Env
