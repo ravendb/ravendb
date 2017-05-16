@@ -86,6 +86,16 @@ namespace Sparrow.LowMemory
                     Console.WriteLine("Physical  Memory ( sys  )= " + (long)info.TotalRam);
                     Console.WriteLine("Physical  Memory (cgroup)= " + (long)cgroupLimit);
 
+                    if (cgroupLimit < info.TotalRam) // ulong comparison
+                    {
+                        Console.WriteLine("cgroup override");
+                        Console.Out.Flush();
+                        return new MemoryInfoResult
+                        {
+                            AvailableMemory = new Size((long)cgroupAvailable, SizeUnit.Bytes),
+                            TotalPhysicalMemory = new Size((long)cgroupLimit, SizeUnit.Bytes),
+                        };
+                    }
 
                     return new MemoryInfoResult
                     {
@@ -128,7 +138,8 @@ namespace Sparrow.LowMemory
             var fd = Syscall.open(filename, OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
             if (fd < 0)
             {
-                Console.WriteLine($"ADIADI :: Cannot open {filename}");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Cannot open '{filename}'. Will not respect container's memory limit if running under one.");
                 return ulong.MaxValue;
             }
 
@@ -139,7 +150,8 @@ namespace Sparrow.LowMemory
             var cgroupRead = Syscall.read(fd, pBuf.ToPointer(), (ulong)readSize);
             if (cgroupRead > 30 || cgroupRead == 0) // check we are not garbadged
             {
-                Console.WriteLine($"ADIADI :: STRANGE  **** cgroupRead = {cgroupRead}");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Got invalid number of characters ({cgroupRead}) from filename. Will not respect container's memory limit if running under one.");
                 Syscall.close(fd);
                 return ulong.MaxValue;
             }
@@ -156,7 +168,9 @@ namespace Sparrow.LowMemory
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"ADIADI :: couldn't convert string '{str}' to long. Ex: {ex}");
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"couldn't convert string '{str}' to long. Will not respect container's memory limit if running under one.", ex);
                 cgroup = ulong.MaxValue;
             }
             Marshal.FreeHGlobal(pBuf);
