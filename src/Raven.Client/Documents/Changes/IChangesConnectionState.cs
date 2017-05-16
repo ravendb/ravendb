@@ -1,12 +1,9 @@
 using System;
-using System.Threading.Tasks;
 
-namespace Raven.Client.Changes
+namespace Raven.Client.Documents.Changes
 {
     internal interface IChangesConnectionState
     {
-        Task Task { get; }
-
         void Inc();
 
         void Dec();

@@ -296,25 +296,7 @@ namespace Raven.Client.Documents
 
         protected virtual IDatabaseChanges CreateDatabaseChanges(string database)
         {
-            throw new NotImplementedException();
-            /* if (string.IsNullOrEmpty(Url))
-                 throw new InvalidOperationException("Changes API requires usage of server/client");
-
-             database = database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
-
-             var dbUrl = MultiDatabase.GetRootDatabaseUrl(Url);
-             if (string.IsNullOrEmpty(database) == false)
-                 dbUrl = dbUrl + "/databases/" + database;
-
-             using (NoSynchronizationContext.Scope())
-             {
-                 return new RemoteDatabaseChanges(dbUrl,
-                     ApiKey,
-                     Credentials,
-                     Conventions,
-                     () => databaseChanges.Remove(database),
-                     (key, etag, conflictIds, metadata) => ((AsyncServerClient) AsyncDatabaseCommands).TryResolveConflictByUsingRegisteredListenersAsync(key, etag, conflictIds, metadata));
-             }*/
+            return new DatabaseChanges(GetRequestExecuter(database), TODO, database, () => _databaseChanges.Remove(database));
         }
 
         /// <summary>

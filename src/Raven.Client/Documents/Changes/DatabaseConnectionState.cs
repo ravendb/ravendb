@@ -1,23 +1,14 @@
 using System;
 using System.Threading.Tasks;
-using Raven.Client.Changes;
 using Raven.Client.Documents.Operations;
 
 namespace Raven.Client.Documents.Changes
 {
     internal class DatabaseConnectionState : ConnectionStateBase
     {
-        private readonly Func<DatabaseConnectionState, Task> _ensureConnection;
-
-        public DatabaseConnectionState(Func<Task> disconnectAction, Func<DatabaseConnectionState, Task> ensureConnection, Task task)
-            : base(disconnectAction, task)
+        public DatabaseConnectionState(Func<Task> onConnect, Action onDisconnect)
+            : base(onConnect, onDisconnect)
         {
-            _ensureConnection = ensureConnection;
-        }
-
-        protected override Task EnsureConnection()
-        {
-            return _ensureConnection(this);
         }
 
         public event Action<DocumentChange> OnDocumentChangeNotification = delegate { };
