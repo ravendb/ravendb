@@ -109,8 +109,11 @@ namespace Raven.Server.Documents.Subscriptions
             }            
         }
 
-        public void AssertSubscriptionIdExists(string id, TimeSpan timeout)
+        public async Task AssertSubscriptionIdExists(string id, TimeSpan timeout)
         {
+            var index = long.Parse(id.Substring(id.LastIndexOf("/") + 1));
+            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
+
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
             {
@@ -153,6 +156,23 @@ namespace Raven.Server.Documents.Subscriptions
 
             subscriptionConnectionState.Connection.ConnectionException = new SubscriptionClosedException(reason);
             subscriptionConnectionState.RegisterRejectedConnection(subscriptionConnectionState.Connection, new SubscriptionClosedException(reason));
+            subscriptionConnectionState.Connection.CancellationTokenSource.Cancel();
+
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Subscription with id {subscriptionId} connection was dropped. Reason: {reason}");
+
+            return true;
+        }
+
+
+        public bool RedirectSubscriptionConnection(string subscriptionId, string reason)
+        {
+            SubscriptionConnectionState subscriptionConnectionState;
+            if (_subscriptionStates.TryGetValue(subscriptionId, out subscriptionConnectionState) == false)
+                return false;
+
+            subscriptionConnectionState.Connection.ConnectionException = new SubscriptionDoesNotBelongToNodeException(reason);
+            subscriptionConnectionState.RegisterRejectedConnection(subscriptionConnectionState.Connection, new SubscriptionDoesNotBelongToNodeException(reason));
             subscriptionConnectionState.Connection.CancellationTokenSource.Cancel();
 
             if (_logger.IsInfoEnabled)
@@ -307,7 +327,7 @@ namespace Raven.Server.Documents.Subscriptions
             }                        
         }
 
-        public void HandleDatabaseRecordChange()
+        public void HandleDatabaseValueChange()
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -329,7 +349,7 @@ namespace Raven.Server.Documents.Subscriptions
                     {
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Disconnected subscripiton with id {subscripitonStateKvp.Key}, because it was is no longer managed by this node ({_serverStore.NodeTag})");
-                        DropSubscriptionConnection(subscripitonStateKvp.Key, "Moved to another server");
+                        RedirectSubscriptionConnection(subscripitonStateKvp.Key, "Subscription operation was stopped, because it's now under different server's responsibility");
                     }
                 }
             }

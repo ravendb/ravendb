@@ -120,6 +120,8 @@ namespace Raven.Client.Documents.Subscriptions
             SubscriptionLifetimeTask = _taskCompletionSource.Task;
         }
 
+        public string SubscriptionId = _options.SubscriptionId;
+
         ~Subscription()
         {
             if (_disposed) return;
@@ -239,6 +241,8 @@ namespace Raven.Client.Documents.Subscriptions
 
         private ServerNode _redirectNode;
 
+        public string CurrentNodeTag => _redirectNode.ClusterTag;
+
         private async Task<Stream> ConnectToServer()
         {
             var command = new GetTcpInfoCommand("Subscription/"+_dbName);
@@ -254,6 +258,7 @@ namespace Raven.Client.Documents.Subscriptions
                 }
                 else
                 {
+                    _redirectNode = requestExecuter.TopologyNodes[requestExecuter.CurrentNodeIndex];
                     await requestExecuter.ExecuteAsync(command, context).ConfigureAwait(false);
                 }
                 
@@ -321,7 +326,7 @@ namespace Raven.Client.Documents.Subscriptions
                         $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it does not exist");
                     case SubscriptionConnectionServerMessage.ConnectionStatus.Redirect:
                         throw new SubscriptionDoesNotBelongToNodeException(
-                            $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {connectionStatus.Exception}")
+                            $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {connectionStatus.Data["RedirectedTag"].ToString()}")
                         {
                             AppropriateNode = connectionStatus.Data["RedirectedTag"].ToString()
                         };
@@ -609,25 +614,37 @@ namespace Raven.Client.Documents.Subscriptions
                 }
                 catch (Exception ex)
                 {
-                    if (_processingCts.Token.IsCancellationRequested)
+                    try
                     {
-                        SubscriptionConnectionInterrupted(ex, true);
-                        return;
-                    }
-                    firstConnectionCompleted.TrySetException(ex);
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info(
-                            $"Subscription #{_options.SubscriptionId}. Pulling task threw the following exception", ex);
-                    }
-                    if (await TryHandleRejectedConnectionOrDispose(ex, false).ConfigureAwait(false))
-                    {
+                        if (_proccessingCts.Token.IsCancellationRequested)
+                        {
+                            SubscriptionConnectionInterrupted(ex, true);
+                            firstConnectionCompleted.TrySetResult(false);
+                            return;
+                        }
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Subscription #{_options.SubscriptionId}");
+                        {
+                            _logger.Info(
+                                $"Subscription #{_options.SubscriptionId}. Pulling task threw the following exception", ex);
+                        }
+                        if (await TryHandleRejectedConnectionOrDispose(ex, false).ConfigureAwait(false))
+                        {
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Connection to subscription #{_options.SubscriptionId} have been shut down because of an error",ex);
+                        
+                            firstConnectionCompleted.TrySetException(ex);
+                            return;
+                        }
+
+                        await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetryMilliseconds).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        firstConnectionCompleted.TrySetResult(false);
+                        firstConnectionCompleted.TrySetException(new AggregateException(ex, e));
+                        await DisposeAsync().ConfigureAwait(false);
                         return;
                     }
-
-                    await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetryMilliseconds).ConfigureAwait(false);
 
                 }
             }
@@ -679,10 +696,16 @@ namespace Raven.Client.Documents.Subscriptions
                     nodeToRedirectTo = requestExecuter.TopologyNodes.FirstOrDefault(x => x.ClusterTag == subscriptionDoesNotbelong.AppropriateNode);
 
                     if (nodeToRedirectTo == null)
+                    {
+                        SubscriptionConnectionInterrupted(new AggregateException(ex, 
+                            new InvalidOperationException($"Could not redirect to {nodeToRedirectTo}, because it was not found in local topology, even after retrying")), false);
                         return true;
+                    }
+                        
                 }
 
                 _redirectNode = nodeToRedirectTo;
+                SubscriptionConnectionInterrupted(ex, true);
             }
 
             return false;
