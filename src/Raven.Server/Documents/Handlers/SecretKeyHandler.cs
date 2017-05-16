@@ -2,6 +2,9 @@
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions;
+using Raven.Client.Http;
+using Raven.Client.Server.Commands;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -50,7 +53,6 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.Write(base64);
                     Sodium.ZeroMemory((byte*)pBase64, base64.Length * sizeof(char));
-
                 }
             }
             return Task.CompletedTask;
@@ -85,10 +87,84 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
             }
+            
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/secrets/distribute", "POST", "/admin/secrets/distribute?name={name:string}&node={node:string|multiple}")]
+        public unsafe Task DistributeKeyInCluster()
+        {
+            var name = GetStringQueryString("name");
+            var nodes = GetStringValuesQueryString("node", required: true);
+
+            using (var reader = new StreamReader(HttpContext.Request.Body))
+            {
+                var base64 = reader.ReadToEnd();
+
+                fixed (char* pBase64 = base64)
+                {
+                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    {
+                        var clusterTopology = ServerStore.GetClusterTopology(ctx);
+
+                        foreach (var node in nodes)
+                        {
+                            if (string.IsNullOrEmpty(node))
+                                continue;
+                            
+                            var url = clusterTopology.GetUrlFromTag(node);
+                            if (url == null)
+                                throw new InvalidOperationException($"Node {node} is not a part of the cluster, cannot send secret key.");
+
+                            if (string.Equals(node, ServerStore.NodeTag))
+                            {
+                                var key = Convert.FromBase64String(base64);
+
+                                if (key.Length != 256 / 8)
+                                    throw new InvalidOperationException($"The size of the key must be 256 bits, but was {key.Length * 8} bits.");
+                                
+                                StoreKeyLocally(name, key, ctx);
+                                
+                            }
+                            else
+                            {
+                                SendKeyToNode(name, base64, ctx, clusterTopology, node, url);
+                            }
+                        }
+                        Sodium.ZeroMemory((byte*)pBase64, base64.Length * sizeof(char));
+                    }
+                }
+            }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
             return Task.CompletedTask;
+        }
+
+        private static void SendKeyToNode(string name, string base64, TransactionOperationContext ctx, Rachis.ClusterTopology clusterTopology, string node, string url)
+        {
+            using (var shortLived = RequestExecutor.CreateForSingleNode(url, name, clusterTopology.ApiKey))
+            {
+                var command = new PutSecretKeyCommand(name, base64);
+                shortLived.Execute(command, ctx);
+
+                if (command.StatusCode != HttpStatusCode.Created)
+                    throw new InvalidOperationException($"Failed to store secret key for {name} in Node {node}");
+            }
+        }
+
+        private unsafe void StoreKeyLocally(string name, byte[] key, TransactionOperationContext ctx)
+        {
+            fixed (byte* pKey = key)
+            using (var tx = ctx.OpenWriteTransaction())
+            {
+                Server.ServerStore.PutSecretKey(ctx, name, key, false);
+                Sodium.ZeroMemory(pKey, key.Length);
+
+                tx.Commit();
+            }
         }
     }
 }
