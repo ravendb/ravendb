@@ -17,10 +17,12 @@ import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import messagePublisher = require("common/messagePublisher");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class databases extends viewModelBase {
 
     databases = ko.observable<databasesInfo>();
+    clusterManager = clusterTopologyManager.default;
 
     filters = {
         searchText: ko.observable<string>()
@@ -76,7 +78,8 @@ class databases extends viewModelBase {
         this.addNotification(this.changesContext.serverNotifications().watchAllDatabaseChanges((e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => this.fetchDatabase(e)));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchDatabases()));
 
-        return this.fetchDatabases();
+        return $.when<any>(this.fetchDatabases(), clusterTopologyManager.default.forceRefresh()); //TODO: remove me - temporary refresh cluster topology each time we enter this view 
+        //TODO: revert me: return this.fetchDatabases();
     }
 
     attached() {
@@ -381,6 +384,24 @@ class databases extends viewModelBase {
 
     createNewDatabase() {
         this.newDatabase();
+    }
+
+    createIsLocalDatabaseObservable(dbName: string) {
+        return ko.pureComputed(() => {
+            const nodeTag = this.clusterManager.nodeTag();
+            const dbInfo = this.databases().getByName(dbName);
+
+            const nodeTags = new Set<string>();
+            const clusterNodes = dbInfo.nodes();
+
+            // using foreach to register knockout dependencies
+            clusterNodes.forEach(n => {
+                if (n.type() === "Member" || n.type() === "Promotable") {
+                    nodeTags.add(n.tag());
+                }
+            });
+            return nodeTags.has(nodeTag);
+        });
     }
 
     /* TODO: cluster related work

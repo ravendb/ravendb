@@ -7,6 +7,7 @@ import menu = require("common/shell/menu");
 import generateMenuItems = require("common/shell/menu/generateMenuItems");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import databaseSwitcher = require("common/shell/databaseSwitcher");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import searchBox = require("common/shell/searchBox");
 import database = require("models/resources/database");
 import license = require("models/auth/license");
@@ -152,7 +153,9 @@ class shell extends viewModelBase {
         this.fetchClientBuildVersion();
         this.fetchServerBuildVersion();
 
-        return license.fetchLicenseStatus();
+        const licenseTask = license.fetchLicenseStatus();
+        const topologyTask = clusterTopologyManager.default.init();
+        return $.when<any>(license.fetchLicenseStatus(), topologyTask);
     }
 
     private setupRouting() {

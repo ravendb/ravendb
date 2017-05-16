@@ -25,10 +25,14 @@ import removeNodeFromClusterCommand = require("commands/database/cluster/removeN
 
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import clusterNode = require("models/database/cluster/clusterNode");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+
+
+//TODO: use live topology instead of fetching and refreshing it
 
 class cluster extends viewModelBase {
 
-    topology = ko.observable<clusterTopology>();
+    topology = clusterTopologyManager.default.topology;
 
     constructor() {
         super();
@@ -44,24 +48,8 @@ class cluster extends viewModelBase {
         }
     }
 
-    activate(args: any) {
-        super.activate(args);
-
-        return this.fetchTopology();
-    }
-
-    fetchTopology() {
-        return new getClusterTopologyCommand(window.location.host)
-            .execute()
-            .done(topology => {
-                this.topology(topology);
-            });
-        //TODO: handle failure
-    }
-
-    refresh() {
-
-        this.fetchTopology();
+    refresh() { //TODO: we will have update updates using web socket
+        clusterTopologyManager.default.forceRefresh();
     }
 
     deleteNode(node: clusterNode) {

@@ -10,7 +10,7 @@
 <div class="databases flex-vertical absolute-fill content-margin" data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length, css: { 'databases_compact': compactView() }">
     <div class="flex-header">
     <div class="databasesToolbar">
-        <div class="form-inline">            
+        <div class="form-inline">
             <div class="checkbox checkbox-primary checkbox-inline align-checkboxes">
                 <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }">
                 <label></label>
@@ -65,6 +65,20 @@
     </div>
 
     <div class="flex-grow scroll">
+        
+        <div>Node : <span data-bind="text: $root.clusterManager.nodeTag"></span></div>
+        
+        <div data-bind="foreach: databases().sortedDatabases">
+            <div style="border: solid 1px red;">
+                <div data-bind="text: name"></div>
+                <div>Local: <span data-bind="text: $root.createIsLocalDatabaseObservable(name)"></span></div>
+                
+                <ul data-bind="foreach: nodes">
+                    <li data-bind="text: tag() + ' ' + type() "></li>
+                </ul>
+            </div>
+        </div>
+
     <div data-bind="foreach: databases().sortedDatabases">
         <div class="panel database-item" data-bind="scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(), attr: { class: 'panel database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') }">
             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
