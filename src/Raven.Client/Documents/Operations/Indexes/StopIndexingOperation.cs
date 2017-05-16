@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new StopIndexingCommand();
         }
 
-        private class StopIndexingCommand : RavenCommand<object>
+        private class StopIndexingCommand : RavenCommand
         {
             public StopIndexingCommand()
             {

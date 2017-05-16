@@ -13,7 +13,7 @@ namespace Tests.Infrastructure
             return new CreateSampleDataCommand();
         }
 
-        private class CreateSampleDataCommand : RavenCommand<object>
+        private class CreateSampleDataCommand : RavenCommand
         {
             public CreateSampleDataCommand()
             {

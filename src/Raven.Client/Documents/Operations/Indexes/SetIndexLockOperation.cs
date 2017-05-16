@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new SetIndexLockCommand(_indexName, _mode);
         }
 
-        private class SetIndexLockCommand : RavenCommand<object>
+        private class SetIndexLockCommand : RavenCommand
         {
             private readonly string _indexName;
             private readonly IndexLockMode _mode;

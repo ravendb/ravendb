@@ -130,7 +130,7 @@ namespace Raven.Client.Documents.Smuggler
             }
         }
 
-        private class ExportCommand : RavenCommand<object>
+        private class ExportCommand : RavenCommand
         {
             private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject _options;
@@ -176,7 +176,7 @@ namespace Raven.Client.Documents.Smuggler
             }
         }
 
-        private class ImportCommand : RavenCommand<object>
+        private class ImportCommand : RavenCommand
         {
             private readonly DatabaseSmugglerOptions _options;
             private readonly Stream _stream;

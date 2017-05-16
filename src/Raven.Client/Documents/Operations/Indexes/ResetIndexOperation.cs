@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new ResetIndexCommand(_indexName);
         }
 
-        private class ResetIndexCommand : RavenCommand<object>
+        private class ResetIndexCommand : RavenCommand
         {
             private readonly string _indexName;
 

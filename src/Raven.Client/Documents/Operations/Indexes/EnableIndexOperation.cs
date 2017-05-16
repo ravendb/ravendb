@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new EnableIndexCommand(_indexName);
         }
 
-        private class EnableIndexCommand : RavenCommand<object>
+        private class EnableIndexCommand : RavenCommand
         {
             private readonly string _indexName;
 

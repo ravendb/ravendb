@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new SetIndexPriorityCommand(_indexName, _priority);
         }
 
-        private class SetIndexPriorityCommand : RavenCommand<object>
+        private class SetIndexPriorityCommand : RavenCommand
         {
             private readonly string _indexName;
             private readonly IndexPriority _priority;
