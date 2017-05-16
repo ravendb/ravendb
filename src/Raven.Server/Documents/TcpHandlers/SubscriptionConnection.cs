@@ -112,25 +112,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             try
             {
-                TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdExists(SubscriptionId, TimeSpan.FromSeconds(15));
-            }
-            catch (SubscriptionDoesNotBelongToNodeException e)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info("Subscription does not belong to current node", e);
-                }
-                await WriteJsonAsync(new DynamicJsonValue
-                {
-                    ["Type"] = "CoonectionStatus",
-                    ["Status"] = "Redirect",
-                    ["Data"] = new DynamicJsonValue()
-                    {
-                        ["CurrentTag"] = _serverStore.NodeTag,
-                        ["RedirectedTag"] = e.AppropriateNode
-                    }
-                });
-                return false;
+                await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdExists(SubscriptionId, TimeSpan.FromSeconds(15));
             }
             catch (SubscriptionDoesNotExistException e)
             {
@@ -232,6 +214,24 @@ namespace Raven.Server.Documents.TcpHandlers
                         if (await connection.InitAsync() == false)
                             return;
                         await connection.ProcessSubscriptionAysnc();
+                    }
+                    catch (SubscriptionDoesNotBelongToNodeException e)
+                    {
+                        if (connection._logger.IsInfoEnabled)
+                        {
+                            connection._logger.Info("Subscription does not belong to current node", e);
+                        }
+                        await connection.WriteJsonAsync(new DynamicJsonValue
+                        {
+                            ["Type"] = "CoonectionStatus",
+                            ["Status"] = "Redirect",
+                            ["Data"] = new DynamicJsonValue()
+                            {
+                                ["CurrentTag"] = serverStore.NodeTag,
+                                ["RedirectedTag"] = e.AppropriateNode
+                            }
+                        });
+                        return;
                     }
                     catch (Exception e)
                     {
