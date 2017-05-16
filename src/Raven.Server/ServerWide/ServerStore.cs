@@ -101,6 +101,7 @@ namespace Raven.Server.ServerWide
         public string LeaderTag => _engine.LeaderTag;
 
         public string NodeTag => _engine.Tag;
+        public RachisConsensus.State CurrentState => _engine.CurrentState;
 
         public bool Disposed => _disposed;
 
