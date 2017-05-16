@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using System.Text;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
@@ -131,7 +132,7 @@ namespace Sparrow.LowMemory
             IntPtr pBuf = Marshal.AllocHGlobal((int)readSize);
             Memory.Set((byte*)pBuf, 0, 32);
             var cgroupRead = Syscall.read(fd, pBuf.ToPointer(), (ulong)readSize);
-            if (cgroupRead > 20 || cgroupRead == 0) // check we are not garbadged
+            if (cgroupRead > 30 || cgroupRead == 0) // check we are not garbadged
             {
                 Console.WriteLine($"ADIADI :: STRANGE  **** cgroupRead = {cgroupRead}");
                 Syscall.close(fd);
@@ -142,14 +143,15 @@ namespace Sparrow.LowMemory
 
             Syscall.close(fd);
 
-            var str = new string((char*)pBuf);
+            string str = null;
             try
             {
+                str = Encoding.ASCII.GetString((byte*)pBuf.ToPointer(), (int)cgroupRead);
                 cgroup = Convert.ToUInt64(str);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"ADIADI :: couldn't convert string '{str}' to long");
+                Console.WriteLine($"ADIADI :: couldn't convert string '{str}' to long. Ex: {ex}");
                 cgroup = ulong.MaxValue;
             }
             Marshal.FreeHGlobal(pBuf);
