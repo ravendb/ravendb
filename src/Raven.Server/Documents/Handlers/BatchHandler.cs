@@ -408,7 +408,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 public string Hash;
 
-                public FileStream File;
+                public Stream File;
                 public AttachmentsStorage.ReleaseTempFile FileDispose;
 
                 public void Dispose()

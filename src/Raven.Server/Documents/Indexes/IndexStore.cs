@@ -72,10 +72,11 @@ namespace Raven.Server.Documents.Indexes
             TransactionOperationContext context;
             using (_serverStore.ContextPool.AllocateOperationContext(out context))
             {
+                long etag;
                 DatabaseRecord record;
                 using (context.OpenReadTransaction())
                 {
-                    record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name);
+                    record = _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name, out etag);
                     if (record == null)
                         return;
                 }
@@ -83,7 +84,7 @@ namespace Raven.Server.Documents.Indexes
                 lock (_locker)
                 {
                     HandleDeletes(record);
-                    HandleChangesForStaticIndexes(record);
+                    HandleChangesForStaticIndexes(record, etag);
                     HandleChangesForAutoIndexes(record);
                 }
             }
@@ -212,7 +213,7 @@ namespace Raven.Server.Documents.Indexes
             throw new NotSupportedException("Cannot create auto-index from " + definition.Type);
         }
 
-        private void HandleChangesForStaticIndexes(DatabaseRecord record)
+        private void HandleChangesForStaticIndexes(DatabaseRecord record, long etag)
         {
             foreach (var kvp in record.Indexes)
             {
@@ -227,6 +228,10 @@ namespace Raven.Server.Documents.Indexes
                 {
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not update static index {name}", exception);
+
+                    var configuration = new FaultyInMemoryIndexConfiguration(_documentDatabase.Configuration.Indexing.StoragePath, _documentDatabase.Configuration);
+                    var fakeIndex = new FaultyInMemoryIndex(exception, etag, name, configuration);
+                    _indexes.Add(fakeIndex);
                 }
             }
         }
@@ -262,7 +267,7 @@ namespace Raven.Server.Documents.Indexes
                 if (replacementIndex != null)
                     DeleteIndexInternal(replacementIndex);
 
-                if (currentDifferences!= IndexDefinitionCompareDifferences.None)
+                if (currentDifferences != IndexDefinitionCompareDifferences.None)
                     UpdateIndex(definition, currentIndex, currentDifferences);
                 return;
             }
