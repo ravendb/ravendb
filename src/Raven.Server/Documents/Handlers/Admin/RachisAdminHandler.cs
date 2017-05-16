@@ -71,14 +71,14 @@ namespace Raven.Server.Documents.Handlers.Admin
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 
                 var blit = EntityToBlittable.ConvertEntityToBlittable(topology, DocumentConventions.Default, context);
-                var result = topology.TryGetNodeTagByUrl(ServerStore.LeaderTag);
                 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
                         ["Topology"] = blit,
-                        ["Leader"] = result.hasUrl ? result.nodeTag : "No leader",
+                        ["Leader"] = ServerStore.LeaderTag,
+                        ["CurrentState"] = ServerStore.CurrentState,
                         ["NodeTag"] = ServerStore.NodeTag
                     });
                     writer.Flush();

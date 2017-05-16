@@ -1251,9 +1251,9 @@ namespace Raven.Server.Rachis
                 switch (CurrentState)
                 {
                     case State.Passive:
-                        return string.Empty;
+                        return null;
                     case State.Candidate:
-                        return "<me, I hope?>";
+                        return null;
                     case State.Follower:
                         return _leaderTag;
                     case State.LeaderElect:
