@@ -4,6 +4,7 @@ import database = require("models/resources/database");
 import databasesManager = require("common/shell/databasesManager");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import generalUtils = require("common/generalUtils");
+import clusterNode = require("models/database/cluster/clusterNode");
 
 class databaseInfo {
 
@@ -45,6 +46,8 @@ class databaseInfo {
     indexingPaused = ko.observable<boolean>();
     documentsCount = ko.observable<number>();
     indexesCount = ko.observable<number>();
+
+    nodes = ko.observableArray<clusterNode>([]);
 
     constructor(dto: Raven.Client.Server.Operations.DatabaseInfo) {
         this.initializeObservables();
@@ -193,6 +196,18 @@ class databaseInfo {
         this.indexingPaused(dto.IndexingStatus === "Paused");
         this.documentsCount(dto.DocumentsCount);
         this.indexesCount(dto.IndexesCount);
+
+        const topologyDto = dto.NodesTopology;
+        const members = this.mapNodes("Member", topologyDto.Members);
+        const promotables = this.mapNodes("Promotable", topologyDto.Promotables);
+        const watchers = this.mapNodes("Watcher", topologyDto.Watchers);
+
+        this.nodes(_.concat<clusterNode>(members, promotables, watchers));
+        //TODO: consider in place update? of nodes?
+    }
+
+    private mapNodes(type: clusterNodeType, nodes: Array<Raven.Client.Server.Operations.NodeId>): Array<clusterNode> {
+        return _.map(nodes, v => clusterNode.for(v.NodeTag, v.NodeUrl, type));
     }
 }
 
