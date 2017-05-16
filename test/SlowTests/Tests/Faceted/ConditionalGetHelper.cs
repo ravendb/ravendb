@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -95,15 +96,13 @@ namespace SlowTests.Tests.Faceted
                 };
             }
 
-            public override Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+            public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
             {
                 Result = new StatusCodeAndEtag
                 {
                     StatusCode = response.StatusCode,
                     Etag = response.GetEtagHeader()
                 };
-
-                return Task.CompletedTask;
             }
         }
     }

@@ -102,6 +102,7 @@ namespace Raven.Server.Documents.Handlers
                         HttpContext.Response.Headers.Remove("Content-Type");
                 }
                 HttpContext.Response.Headers["Content-Hash"] = attachment.Base64Hash.ToString();
+                HttpContext.Response.Headers["Content-Size"] = attachment.Stream.Length.ToString();
                 HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.Etag}\"";
 
                 JsonOperationContext.ManagedPinnedBuffer buffer;

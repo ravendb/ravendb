@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Operations
                 _type = type;
                 _changeVector = changeVector;
 
-                ResponseType = RavenCommandResponseType.Stream;
+                ResponseType = RavenCommandResponseType.Raw;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -120,12 +120,7 @@ namespace Raven.Client.Documents.Operations
                 return request;
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
-                ThrowInvalidResponse();
-            }
-
-            public override void SetResponseUncached(HttpResponseMessage response, Stream stream)
+            public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
             {
                 if (stream == null)
                     return;
@@ -133,8 +128,10 @@ namespace Raven.Client.Documents.Operations
                 var contentType = response.Content.Headers.TryGetValues("Content-Type", out IEnumerable<string> contentTypeVale) ? contentTypeVale.First() : null;
                 var etag = response.GetRequiredEtagHeader();
                 var hash = response.Headers.TryGetValues("Content-Hash", out IEnumerable<string> hashVal) ? hashVal.First() : null;
-                var size = stream.Length;
-          
+                long size = 0;
+                if (response.Headers.TryGetValues("Content-Size", out IEnumerable<string> sizeVal))
+                    long.TryParse(sizeVal.First(), out size);
+
                 Result = new AttachmentResult
                 {
                     ContentType = contentType,

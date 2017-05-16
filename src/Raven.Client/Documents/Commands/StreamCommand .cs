@@ -19,6 +19,7 @@ namespace Raven.Client.Documents.Commands
 
             _url = url;
             UsedTransformer = usedTransformer;
+            ResponseType = RavenCommandResponseType.Raw;
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -27,15 +28,8 @@ namespace Raven.Client.Documents.Commands
             {
                 Method = HttpMethod.Get,
             };
-
             url = $"{node.Url}/databases/{node.Database}/{_url}";
-
             return request;
-        }
-
-        public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-        {
-            throw new NotSupportedException();
         }
 
         public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)

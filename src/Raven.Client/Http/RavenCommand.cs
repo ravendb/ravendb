@@ -33,7 +33,9 @@ namespace Raven.Client.Http
 
         public virtual void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
-            if (ResponseType == RavenCommandResponseType.Empty)
+            if (ResponseType == RavenCommandResponseType.Empty || 
+                ResponseType == RavenCommandResponseType.Raw ||  
+                ResponseType == RavenCommandResponseType.Array)
                 ThrowInvalidResponse();
 
             throw new InvalidOperationException($"'{GetType()}' command must override the SetResponse method which expects response with the following type: {ResponseType}.");
@@ -51,9 +53,9 @@ namespace Raven.Client.Http
             throw new NotSupportedException($"When {nameof(ResponseType)} is set to Array then please override this method to handle the response.");
         }
 
-        public virtual void SetResponseUncached(HttpResponseMessage response, Stream stream)
+        public virtual void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
         {
-            throw new NotSupportedException($"When {nameof(ResponseType)} is set to Stream then please override this method to handle the response.");
+            throw new NotSupportedException($"When {nameof(ResponseType)} is set to Raw then please override this method to handle the response.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -100,7 +102,8 @@ namespace Raven.Client.Http
 
                     if (ResponseType == RavenCommandResponseType.Array)
                     {
-                        if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
+                        var contentLength = response.Content.Headers.ContentLength;
+                        if (contentLength.HasValue && contentLength == 0)
                             return;
 
                         var array = await context.ParseArrayToMemoryAsync(stream, "response/array", BlittableJsonDocumentBuilder.UsageMode.None);
@@ -113,7 +116,7 @@ namespace Raven.Client.Http
                     // We do not cache the stream response.
                     var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response);
 
-                    SetResponseUncached(response, uncompressedStream);
+                    SetResponseRaw(response, uncompressedStream, context);
                 }
             }
         }
@@ -137,7 +140,7 @@ namespace Raven.Client.Http
 #if DEBUG
             if (IsReadRequest)
             {
-                if (ResponseType != RavenCommandResponseType.Stream)
+                if (ResponseType != RavenCommandResponseType.Raw)
                     throw new InvalidOperationException("No need to add the etag for Get requests as the request executer will add it.");
 
                 throw new InvalidOperationException("Stream responses are not cached so not etag should be used.");
@@ -154,6 +157,6 @@ namespace Raven.Client.Http
         Empty,
         Object,
         Array,
-        Stream
+        Raw
     }
 }
