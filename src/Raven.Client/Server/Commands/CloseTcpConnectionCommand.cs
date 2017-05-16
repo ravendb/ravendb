@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Commands
 {
-    public class CloseTcpConnectionCommand : RavenCommand<object>
+    public class CloseTcpConnectionCommand : RavenCommand
     {
         private readonly long _id;
 

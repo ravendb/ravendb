@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class DeleteDocumentCommand : RavenCommand<object>
+    public class DeleteDocumentCommand : RavenCommand
     {
         private readonly string _id;
         private readonly long? _etag;

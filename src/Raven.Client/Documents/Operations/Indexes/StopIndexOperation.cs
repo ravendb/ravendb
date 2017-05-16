@@ -23,14 +23,9 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new StopIndexCommand(_indexName);
         }
 
-        private class StopIndexCommand : RavenCommand<object>
+        private class StopIndexCommand : RavenCommand
         {
             private readonly string _indexName;
-
-            public StopIndexCommand()
-            {
-                ResponseType = RavenCommandResponseType.Empty;
-            }
 
             public StopIndexCommand(string indexName)
             {
@@ -38,6 +33,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                     throw new ArgumentNullException(nameof(indexName));
 
                 _indexName = indexName;
+                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

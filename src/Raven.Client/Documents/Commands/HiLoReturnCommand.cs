@@ -1,11 +1,9 @@
 ﻿using System.Net.Http;
-using Raven.Client.Documents.Identity;
 using Raven.Client.Http;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class HiLoReturnCommand : RavenCommand<object>
+    public class HiLoReturnCommand : RavenCommand
     {
         public string Tag;
         public long Last;

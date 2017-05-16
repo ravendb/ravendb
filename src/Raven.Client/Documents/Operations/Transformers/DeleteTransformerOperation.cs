@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Operations.Transformers
             return new DeleteTransformerCommand(_transformerName);
         }
 
-        private class DeleteTransformerCommand : RavenCommand<object>
+        private class DeleteTransformerCommand : RavenCommand
         {
             private readonly string _transformerName;
 

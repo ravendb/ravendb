@@ -23,7 +23,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
             return new DeleteApiKeyCommand(_name);
         }
 
-        private class DeleteApiKeyCommand : RavenCommand<object>
+        private class DeleteApiKeyCommand : RavenCommand
         {
             private readonly string _name;
 

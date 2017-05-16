@@ -6,13 +6,16 @@ using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Http
 {
+    public abstract class RavenCommand : RavenCommand<object>
+    {
+    }
+
     public abstract class RavenCommand<TResult>
     {
         public CancellationToken CancellationToken = CancellationToken.None;
@@ -33,8 +36,8 @@ namespace Raven.Client.Http
 
         public virtual void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
-            if (ResponseType == RavenCommandResponseType.Empty || 
-                ResponseType == RavenCommandResponseType.Raw ||  
+            if (ResponseType == RavenCommandResponseType.Empty ||
+                ResponseType == RavenCommandResponseType.Raw ||
                 ResponseType == RavenCommandResponseType.Array)
                 ThrowInvalidResponse();
 

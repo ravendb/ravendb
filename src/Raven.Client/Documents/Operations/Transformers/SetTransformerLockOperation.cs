@@ -26,15 +26,10 @@ namespace Raven.Client.Documents.Operations.Transformers
             return new SetTransformerLockCommand(_transformerName, _mode);
         }
 
-        private class SetTransformerLockCommand : RavenCommand<object>
+        private class SetTransformerLockCommand : RavenCommand
         {
             private readonly string _transformerName;
             private readonly TransformerLockMode _mode;
-
-            public SetTransformerLockCommand()
-            {
-                ResponseType = RavenCommandResponseType.Empty;
-            }
 
             public SetTransformerLockCommand(string transformerName, TransformerLockMode mode)
             {
@@ -43,6 +38,7 @@ namespace Raven.Client.Documents.Operations.Transformers
 
                 _transformerName = transformerName;
                 _mode = mode;
+                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

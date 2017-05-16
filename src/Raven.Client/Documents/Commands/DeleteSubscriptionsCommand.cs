@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class DeleteSubscriptionCommand : RavenCommand<object>
+    public class DeleteSubscriptionCommand : RavenCommand
     {
         private readonly long _id;
 
