@@ -120,7 +120,7 @@ namespace Raven.Client.Documents.Subscriptions
             SubscriptionLifetimeTask = _taskCompletionSource.Task;
         }
 
-        public string SubscriptionId = _options.SubscriptionId;
+        public string SubscriptionId => _options.SubscriptionId;
 
         ~Subscription()
         {

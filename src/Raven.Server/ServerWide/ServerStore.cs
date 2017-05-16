@@ -770,6 +770,8 @@ namespace Raven.Server.ServerWide
         {
             while (true)
             {
+                ServerShutdown.ThrowIfCancellationRequested();
+
                 var logChange = _engine.WaitForHeartbeat();
 
                 if (_engine.CurrentState == RachisConsensus.State.Leader)
@@ -786,8 +788,13 @@ namespace Raven.Server.ServerWide
                 {
                     if (Logger.IsInfoEnabled)
                         Logger.Info("Tried to send message to leader, retrying", ex);
+
+                    if (_engine.LeaderTag != engineLeaderTag)
+                        continue;
+
                 }
 
+                ServerShutdown.ThrowIfCancellationRequested();
                 while (true)
                 {
                     var result = await Task.WhenAny(logChange,
@@ -796,10 +803,10 @@ namespace Raven.Server.ServerWide
                     if (result == logChange)
                         break;
 
-                    if (ServerShutdown.IsCancellationRequested)
-                        break;
+                    ServerShutdown.ThrowIfCancellationRequested();
                 }
             }
+            
         }
 
         private async Task<long> SendToNodeAsync(TransactionOperationContext context, string engineLeaderTag, BlittableJsonReaderObject cmd)
