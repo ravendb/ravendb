@@ -290,6 +290,7 @@ namespace Voron.Impl.Scratch
             return bufferFile.ReadPage(tx, p, pagerState, pagerRef);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PageFromScratchBuffer ShrinkOverflowPage(PageFromScratchBuffer value, int newNumberOfPages)
         {
             var item = GetScratchBufferFile(value.ScratchFileNumber);
