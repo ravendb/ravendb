@@ -217,18 +217,18 @@
             <a href="#">Dashboard</a>
         </div>-->
         <div class="footer-item">
-            <a data-bind="attr: { href: $parent.urlForDocuments() }" title="Documents"><i class="icon-documents"></i> <span data-bind="text: countOfDocuments"></span></a>
+            <a data-bind="attr: { href: $parent.urlForDocuments() }" title="Documents"><i class="icon-documents"></i> <span data-bind="text: countOfDocuments().toLocaleString()"></span></a>
         </div>
         <div class="footer-item">
             <a title="Indexes" data-bind="attr: { href: $parent.urlForIndexes() }">
                 <i class="icon-index"></i>
-                <span data-bind="text: countOfIndexes"></span>
-                <span class="separator">|</span><span title="Stale indexes" data-bind="text: countOfStaleIndexes, css: {'text-warning': countOfStaleIndexes}"></span>
+                <span data-bind="text: countOfIndexes().toLocaleString()"></span>
+                <span class="separator">|</span><span title="Stale indexes" data-bind="text: countOfStaleIndexes().toLocaleString(), css: {'text-warning': countOfStaleIndexes}"></span>
             </a>
         </div>
         <div class="footer-item" data-bind="visible: countOfIndexingErrors">
             <a title="Indexing errors" class="text-danger" data-bind="attr: { href: $parent.urlForIndexingErrors() }">
-                <i class="icon-index-errors"></i> <span data-bind="text: countOfIndexingErrors"></span>
+                <i class="icon-index-errors"></i> <span data-bind="text: countOfIndexingErrors().toLocaleString()"></span>
             </a>
         </div>
     </div>
