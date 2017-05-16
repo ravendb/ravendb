@@ -134,24 +134,34 @@ namespace Voron.Impl.Paging
 
         protected abstract string GetSourceName();
 
-        public virtual byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private byte* AcquirePagePointerInternal(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState)
         {
             if (Disposed)
-                ThrowAlreadyDisposedException();
+                goto AlreadyDisposed;
 
             if (pageNumber > NumberOfAllocatedPages || pageNumber < 0)
-                ThrowOnInvalidPageNumber(pageNumber);
+                goto InvalidPageNumber;
 
             var state = pagerState ?? _pagerState;
 
             tx?.EnsurePagerStateReference(state);
 
             return state.MapBase + pageNumber * Constants.Storage.PageSize;
+
+            AlreadyDisposed: ThrowAlreadyDisposedException();
+            InvalidPageNumber: ThrowOnInvalidPageNumber(pageNumber);
+            return null; // Will never happen. 
+        }
+
+        public virtual byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
+        {
+            return AcquirePagePointerInternal(tx, pageNumber, pagerState);
         }
 
         public virtual byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null)
         {
-            return AcquirePagePointer(tx, pageNumber, pagerState);
+            return AcquirePagePointerInternal(tx, pageNumber, pagerState);
         }
 
         public virtual void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, long pageNumber)
@@ -319,7 +329,7 @@ namespace Voron.Impl.Paging
             int numberOfPages = 1;
             if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
             {
-                numberOfPages = this.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+                numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
             }
             const int adjustPageSize = (Constants.Storage.PageSize)/(4*Constants.Size.Kilobyte);
             destwI4KbBatchWrites.Write(pageHeader->PageNumber * (long)adjustPageSize, numberOfPages * adjustPageSize, src);

@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Versioning
                 {
                     tbv.Add(changeVectorPtr, chagneVectorSize);
                     tbv.Add(lowerKey);
-                    tbv.Add(SpecialChars.RecordSeperator);
+                    tbv.Add(SpecialChars.RecordSeparator);
                     tbv.Add(Bits.SwapBytes(newEtag));
                     tbv.Add(keyPtr);
                     tbv.Add(data.BasePointer, data.Size);
@@ -320,7 +320,7 @@ namespace Raven.Server.Documents.Versioning
             var scope = context.Allocator.Allocate(lowerKeySize + 1, out keyMem);
 
             Memory.Copy(keyMem.Ptr, lowerKey, lowerKeySize);
-            keyMem.Ptr[lowerKeySize] = SpecialChars.RecordSeperator;
+            keyMem.Ptr[lowerKeySize] = SpecialChars.RecordSeparator;
 
             prefixSlice = new Slice(SliceOptions.Key, keyMem);
             return scope;
@@ -333,7 +333,7 @@ namespace Raven.Server.Documents.Versioning
             var scope = context.Allocator.Allocate(lowerKey.Size + 1 + sizeof(long), out keyMem);
 
             Memory.Copy(keyMem.Ptr, lowerKey.Content.Ptr, lowerKey.Size);
-            keyMem.Ptr[lowerKey.Size] = SpecialChars.RecordSeperator;
+            keyMem.Ptr[lowerKey.Size] = SpecialChars.RecordSeparator;
 
             var maxValue = Bits.SwapBytes(long.MaxValue);
             Memory.Copy(keyMem.Ptr + lowerKey.Size + 1, (byte*)&maxValue, sizeof(long));

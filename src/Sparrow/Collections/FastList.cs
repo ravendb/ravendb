@@ -376,6 +376,13 @@ namespace Sparrow.Collections
         }
 
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Sort<TSorter>(ref Sorter<T, TSorter> sorter) where TSorter : struct, IComparer<T>
+        {
+            sorter.Sort(_items, 0, (int)_size);
+        }
+
+
         public struct ResetBehavior : IResetSupport<FastList<T>>
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

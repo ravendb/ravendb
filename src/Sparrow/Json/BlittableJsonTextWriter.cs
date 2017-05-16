@@ -44,7 +44,7 @@ namespace Sparrow.Json
 
         public override string ToString()
         {
-            return Encoding.UTF8.GetString(_pinnedBuffer.Buffer.Array, _pinnedBuffer.Buffer.Offset, _pos);
+            return Encodings.Utf8.GetString(_pinnedBuffer.Buffer.Array, _pinnedBuffer.Buffer.Offset, _pos);
         }
 
         public void WriteObjectOrdered(BlittableJsonReaderObject obj)

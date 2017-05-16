@@ -2,6 +2,6 @@
 {
     public static class SpecialChars
     {
-        public const byte RecordSeperator = 30;
+        public const byte RecordSeparator = 30;
     }
 }

@@ -325,7 +325,7 @@ namespace Voron.Debugging
 
                 if (page.IsOverflow)
                 {
-                    var numberOfPages = tree.Llt.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
+                    var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
 
                     densities.Add(((double)(page.OverflowSize + Constants.Tree.PageHeaderSize)) / (numberOfPages * Constants.Storage.PageSize));
 

@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace Sparrow
 {
-    public class NumericEqualityComparer : IEqualityComparer<long>, IEqualityComparer<int>, IEqualityComparer<ulong>, IEqualityComparer<uint>
+    public struct NumericEqualityComparer : IEqualityComparer<long>, IEqualityComparer<int>, IEqualityComparer<ulong>, IEqualityComparer<uint>
     {
         public static readonly NumericEqualityComparer Instance = new NumericEqualityComparer();
 
@@ -53,50 +53,28 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(uint obj)
         {
-            return Hashing.Combine((int)(obj >> 32), (int)obj);
+            return (int)obj;
         }
     }
 
-    public struct NumericEqualityStructComparer : IEqualityComparer<long>, IEqualityComparer<int>, IEqualityComparer<ulong>
+    public struct NumericComparer : IComparer<long>, IComparer<int>
     {
+        public static readonly NumericComparer Instance = new NumericComparer();
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Equals(long x, long y)
+        public int Compare(long x, long y)
         {
-            return x == y;
+            return Math.Sign(x - y);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetHashCode(long obj)
+        public int Compare(int x, int y)
         {
-            return Hashing.Mix(obj);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Equals(int x, int y)
-        {
-            return x == y;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetHashCode(int obj)
-        {
-            return obj;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Equals(ulong x, ulong y)
-        {
-            return x == y;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetHashCode(ulong obj)
-        {
-            return (int) Hashing.Mix(obj);
+            return x - y;
         }
     }
 
-    public class NumericDescendingComparer : IComparer<long>, IComparer<int>
+    public struct NumericDescendingComparer : IComparer<long>, IComparer<int>
     {
         public static readonly NumericDescendingComparer Instance = new NumericDescendingComparer();
 

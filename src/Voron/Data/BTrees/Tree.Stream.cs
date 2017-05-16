@@ -310,7 +310,7 @@ namespace Voron.Data.BTrees
                 {
                     var chunkDetails = ((ChunkDetails*)it.CreateReaderForCurrent().Base);
                     var pageNumber = chunkDetails->PageNumber;
-                    var numberOfPages = llt.DataPager.GetNumberOfOverflowPages(chunkDetails->ChunkSize);
+                    var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(chunkDetails->ChunkSize);
                     for (int i = 0; i < numberOfPages; i++)
                     {
                         llt.FreePage(pageNumber + i);
@@ -334,7 +334,7 @@ namespace Voron.Data.BTrees
             Slice result;
             using (Slice.From(_tx.Allocator, StreamInfo.GetTagPtr(info), info->TagSize, out result))
             {
-                return result.ToString().Replace((char)SpecialChars.RecordSeperator, '|');
+                return result.ToString().Replace((char)SpecialChars.RecordSeparator, '|');
             }
         }
 

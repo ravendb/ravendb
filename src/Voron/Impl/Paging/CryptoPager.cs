@@ -24,7 +24,7 @@ namespace Voron.Impl.Paging
         public NativeMemory.ThreadStats AllocatingThread;
     }
 
-    public unsafe class CryptoPager : AbstractPager
+    public sealed unsafe class CryptoPager : AbstractPager
     {
         public AbstractPager Inner { get; }
         private readonly EncryptionBuffersPool _encryptionBuffersPool;

@@ -44,11 +44,11 @@ namespace Sparrow.Json
 
             try
             {
-                var charCount = JsonOperationContext.Encoding.GetCharCount(tempBuffer, self.UncompressedSize);
+                var charCount = Encodings.Utf8.GetCharCount(tempBuffer, self.UncompressedSize);
                 var str = new string(' ', charCount);
                 fixed (char* pStr = str)
                 {
-                    JsonOperationContext.Encoding.GetChars(tempBuffer, self.UncompressedSize, pStr, charCount);
+                    Encodings.Utf8.GetChars(tempBuffer, self.UncompressedSize, pStr, charCount);
                     self.String = str;
                     return str;
                 }

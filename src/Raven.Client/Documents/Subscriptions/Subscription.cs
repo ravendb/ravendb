@@ -24,6 +24,7 @@ using Raven.Client.Json.Converters;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Tcp;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
@@ -257,14 +258,14 @@ namespace Raven.Client.Documents.Subscriptions
                 _stream = _tcpClient.GetStream();
                 _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, command.Result).ConfigureAwait(false);
 
-                var header = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
+                var header = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
                 {
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
                     DatabaseName = _dbName ?? _store.DefaultDatabase,
                     AuthorizationToken = apiToken
                 }));
 
-                var options = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(_options));
+                var options = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(_options));
 
                 await _stream.WriteAsync(header, 0, header.Length).ConfigureAwait(false);
                 await _stream.FlushAsync().ConfigureAwait(false);
@@ -566,7 +567,7 @@ namespace Raven.Client.Documents.Subscriptions
         {
             BeforeAcknowledgment();
 
-            var ack = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new SubscriptionConnectionClientMessage
+            var ack = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(new SubscriptionConnectionClientMessage
             {
                 ChangeVector = lastReceivedChangeVector,
                 Type = SubscriptionConnectionClientMessage.MessageType.Acknowledge

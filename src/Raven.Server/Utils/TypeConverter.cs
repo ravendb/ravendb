@@ -201,13 +201,12 @@ namespace Raven.Server.Utils
             {
                 DateTime dt;
                 DateTimeOffset dto;
-                switch (LazyStringParser.TryParseDateTime(lazyString.Buffer, lazyString.Size, out dt, out dto))
-                {
-                    case LazyStringParser.Result.DateTime:
-                        return dt;
-                    case LazyStringParser.Result.DateTimeOffset:
-                        return dto;
-                }
+
+                var result = LazyStringParser.TryParseDateTime(lazyString.Buffer, lazyString.Size, out dt, out dto);
+                if (result == LazyStringParser.Result.DateTime)
+                    return dt;
+                if (result == LazyStringParser.Result.DateTimeOffset)
+                    return dto;
 
                 TimeSpan ts;
                 if (LazyStringParser.TryParseTimeSpan(lazyString.Buffer, lazyString.Size, out ts))

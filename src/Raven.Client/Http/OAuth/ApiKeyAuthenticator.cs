@@ -91,7 +91,7 @@ namespace Raven.Client.Http.OAuth
                                 throw new AuthenticationException(
                                     @"Unable to authenticate api key (message corrupted or not intended for this recipient");
 
-                            return Encoding.UTF8.GetString(cryptTokenBytes, 0, cryptTokenBytes.Length - Sodium.crypto_box_macbytes());
+                            return Encodings.Utf8.GetString(cryptTokenBytes, 0, cryptTokenBytes.Length - Sodium.crypto_box_macbytes());
                         }
                     }
                 }
@@ -118,7 +118,7 @@ namespace Raven.Client.Http.OAuth
 
             var nonce = new byte[Sodium.crypto_box_noncebytes()];
             var hashLen = Sodium.crypto_generichash_bytes_max();
-            var apiSecretBytes = Encoding.UTF8.GetBytes(apiSecret);
+            var apiSecretBytes = Encodings.Utf8.GetBytes(apiSecret);
             var buffer = new byte[hashLen + Sodium.crypto_box_macbytes()];
 
             fixed (byte* server_pk = serverPk)

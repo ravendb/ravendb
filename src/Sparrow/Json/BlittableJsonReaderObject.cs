@@ -25,7 +25,7 @@ namespace Sparrow.Json
         public DynamicJsonValue Modifications;
 
         private FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> _objectsPathCache;
-        private FastDictionary<int, object, NumericEqualityStructComparer> _objectsPathCacheByIndex;
+        private FastDictionary<int, object, NumericEqualityComparer> _objectsPathCacheByIndex;
 
         public override string ToString()
         {
@@ -190,7 +190,8 @@ namespace Sparrow.Json
             }
 
             // sort according to offsets
-            Array.Sort(offsets, propertyNames, NumericDescendingComparer.Instance);
+            Sorter<int, string, NumericDescendingComparer> sorter;
+            sorter.Sort(offsets, propertyNames);
 
             return propertyNames;
         }
@@ -445,12 +446,13 @@ namespace Sparrow.Json
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddToCache(StringSegment name, object result, int index)
         {
             if (_objectsPathCache == null)
             {
                 _objectsPathCache = new FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer>(default(StringSegmentEqualityStructComparer));
-                _objectsPathCacheByIndex = new FastDictionary<int, object, NumericEqualityStructComparer>(default(NumericEqualityStructComparer));
+                _objectsPathCacheByIndex = new FastDictionary<int, object, NumericEqualityComparer>(default(NumericEqualityComparer));
             }
             _objectsPathCache[name] = result;
             _objectsPathCacheByIndex[index] = result;
@@ -520,25 +522,29 @@ namespace Sparrow.Json
             return GetPropertyIndex(new StringSegment(name));
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetPropertyIndex(StringSegment name)
         {
             if (_propCount == 0)
-                return -1;
+                goto NotFound;
 
             int min = 0, max = _propCount - 1;
             var comparer = _context.GetLazyStringForFieldWithCaching(name);
 
+            long currentOffsetSize = _currentOffsetSize;
+            long currentPropertyIdSize = _currentPropertyIdSize;
+            long metadataSize = currentOffsetSize + currentPropertyIdSize + sizeof(byte);
+            byte* metadataPtr = _metadataPtr;
+
             int mid = comparer.LastFoundAt ?? (min + max) / 2;
             if (mid > max)
                 mid = max;
+
             do
-            {
-                var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
-                var propertyIntPtr = (long)_metadataPtr + (mid) * metadataSize;
+            {               
+                var propertyIntPtr = metadataPtr + (mid) * metadataSize;
 
-                var propertyId = ReadNumber((byte*)propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
-
+                var propertyId = ReadNumber(propertyIntPtr + currentOffsetSize, currentPropertyIdSize);
 
                 var cmpResult = ComparePropertyName(propertyId, comparer);
                 if (cmpResult == 0)
@@ -557,7 +563,8 @@ namespace Sparrow.Json
                 mid = (min + max) / 2;
 
             } while (min <= max);
-            return -1;
+
+            NotFound: return -1;
         }
 
         /// <summary>
@@ -567,7 +574,7 @@ namespace Sparrow.Json
         /// <param name="comparer">Comparer of a specific string value</param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe int ComparePropertyName(int propertyId, LazyStringValue comparer)
+        private int ComparePropertyName(int propertyId, LazyStringValue comparer)
         {
             // Get the offset of the property name from the _proprNames position
             var propertyNameOffsetPtr = _propNames + 1 + propertyId * _propNamesDataOffsetSize;
@@ -612,7 +619,9 @@ namespace Sparrow.Json
                 buffers.Offsets[i] = ReadNumber(propertyIntPtr, _currentOffsetSize);
                 buffers.Properties[i] = i;
             }
-            Array.Sort(buffers.Offsets, buffers.Properties, 0, _propCount, NumericDescendingComparer.Instance);
+
+            Sorter<int, int, NumericDescendingComparer> sorter;
+            sorter.Sort(buffers.Offsets, buffers.Properties, 0, _propCount);
             return _propCount;
         }
 
@@ -628,7 +637,9 @@ namespace Sparrow.Json
                 offsets[i] = ReadNumber(propertyIntPtr, _currentOffsetSize);
                 props[i] = i;
             }
-            Array.Sort(offsets, props, NumericDescendingComparer.Instance);
+
+            Sorter<int, int, NumericDescendingComparer> sorter;
+            sorter.Sort(offsets, props);
             return props;
         }
 

@@ -164,7 +164,7 @@ namespace Sparrow.Json
                     return count;
                 }
             }
-            public string DebugInfo => Encoding.UTF8.GetString(Address, Used);
+            public string DebugInfo => Encodings.Utf8.GetString(Address, Used);
         }
 
         private Segment _current;

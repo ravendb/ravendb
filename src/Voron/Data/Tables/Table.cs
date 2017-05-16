@@ -195,8 +195,8 @@ namespace Voron.Data.Tables
             {
                 var pageNumber = id / Constants.Storage.PageSize;
                 var page = _tx.LowLevelTransaction.GetPage(pageNumber);
-                var existingNumberOfPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
-                var newNumberOfPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(size);
+                var existingNumberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+                var newNumberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(size);
 
                 if (existingNumberOfPages == newNumberOfPages)
                 {
@@ -257,7 +257,7 @@ namespace Voron.Data.Tables
             if (largeValue)
             {
                 var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
-                var numberOfPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
+                var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
                 _overflowPageCount -= numberOfPages;
 
                 for (int i = 0; i < numberOfPages; i++)
@@ -375,7 +375,7 @@ namespace Voron.Data.Tables
             }
             else
             {
-                var numberOfOverflowPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(size);
+                var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(size);
                 var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
                 _overflowPageCount += numberOfOverflowPages;
 
@@ -479,7 +479,7 @@ namespace Voron.Data.Tables
             }
             else
             {
-                var numberOfOverflowPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(size);
+                var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(size);
                 var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
                 _overflowPageCount += numberOfOverflowPages;
 

@@ -5,6 +5,7 @@ using BenchmarkDotNet.Analysers;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
@@ -29,10 +30,13 @@ namespace Micro.Benchmark.Benchmarks.PageLocator
                         Jit = Jit.RyuJit
                     },
                     // TODO: Next line is just for testing. Fine tune parameters.
-                    //Mode = Mode.SingleRun,
-                    //LaunchCount = 1,
-                    //WarmupCount = 2,
-                    //TargetCount = 40,
+                    //Run =
+                    //{
+                    //    RunStrategy = RunStrategy.Monitoring,
+                    //    LaunchCount = 1,
+                    //    WarmupCount = 2,
+                    //    TargetCount = 40
+                    //}
                 });
 
                 // Exporters for data
