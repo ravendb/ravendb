@@ -62,6 +62,51 @@ namespace Sparrow.LowMemory
             {
                 if (PlatformDetails.RunningOnPosix)
                 {
+                    // get container usage (cgroup) and machine usage (sysinfo) and respect the lower
+                    ulong cgroupLimit = ulong.MaxValue;
+                    ulong cgroupUsage = ulong.MaxValue;
+
+                    var fdLimit = Syscall.open("/sys/fs/cgroup/memory/memory.limit_in_bytes", OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
+                    var fdUsage = Syscall.open("/sys/fs/cgroup/memory/memory.usage_in_bytes", OpenFlags.O_RDONLY, FilePermissions.S_IRUSR);
+
+                    if (fdLimit > 0)
+                    {
+                        UIntPtr readSize = (UIntPtr)sizeof(ulong);
+                        IntPtr pBuf = Marshal.AllocHGlobal((int)readSize);
+                        var cgroupLimitRead = Syscall.read(fdLimit, pBuf.ToPointer(), (ulong)readSize);
+                        if (cgroupLimitRead != 0)
+                        {
+                            Console.WriteLine($"ADIADI :: Strange : cgroupLimitRead = {sizeof(ulong)}");
+                        }
+                        Syscall.close(fdLimit);
+                        cgroupLimit = (ulong)pBuf;
+                        Marshal.FreeHGlobal(pBuf);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"ADIADI :: Cannot open fdLimit");
+                    }
+
+
+                    if (fdUsage > 0)
+                    {
+                        UIntPtr readSize = (UIntPtr)sizeof(ulong);
+                        IntPtr pBuf = Marshal.AllocHGlobal((int)readSize);
+                        var cgroupUsageRead = Syscall.read(fdUsage, pBuf.ToPointer(), (ulong)readSize);
+                        if (cgroupUsageRead != 0)
+                        {
+                            Console.WriteLine($"ADIADI :: Strange : cgroupUsageRead = {sizeof(ulong)}");
+                        }
+                        Syscall.close(fdUsage);
+                        cgroupUsage = (ulong)pBuf;
+                        Marshal.FreeHGlobal(pBuf);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"ADIADI :: Cannot open fdUsage");
+                    }
+
+
                     sysinfo_t info = new sysinfo_t();
                     if (Syscall.sysinfo(ref info) != 0)
                     {
@@ -69,6 +114,13 @@ namespace Sparrow.LowMemory
                             _logger.Info("Failure when trying to read memory info from posix, error code was: " + Marshal.GetLastWin32Error());
                         return FailedResult;
                     }
+
+
+                    Console.WriteLine("Available Memory ( sys  )= " + (long)info.AvailableRam);
+                    Console.WriteLine("Available Memory (cgroup)= " + (long)cgroupUsage);
+                    Console.WriteLine("Physical  Memory ( sys  )= " + (long)info.TotalRam);
+                    Console.WriteLine("Available Memory (cgroup)= " + (long)cgroupLimit);
+
 
                     return new MemoryInfoResult
                     {
