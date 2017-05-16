@@ -52,7 +52,7 @@ namespace RachisTests
                 reachedMaxDocCountMre.Reset();
 
 
-                await KillServerWhereSubscriptionWorks(leader, defaultDatabase, subscription.SubscriptionId);
+                await KillServerWhereSubscriptionWorks( defaultDatabase, subscription.SubscriptionId);
 
                 await GenerateDocuments(store);
 
@@ -64,7 +64,7 @@ namespace RachisTests
                 usersCount.Clear();
                 reachedMaxDocCountMre.Reset();
 
-                await KillServerWhereSubscriptionWorks(leader, defaultDatabase, subscription.SubscriptionId);
+                await KillServerWhereSubscriptionWorks( defaultDatabase, subscription.SubscriptionId);
 
                 await GenerateDocuments(store);
 
@@ -114,14 +114,15 @@ namespace RachisTests
             return subscription;
         }
 
-        private async Task KillServerWhereSubscriptionWorks(RavenServer leader, string defaultDatabase, string subscriptionId)
+        private async Task KillServerWhereSubscriptionWorks(string defaultDatabase, string subscriptionId)
         {
             string tag = null;
-            using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            var someServer = Servers.First(x => x.Disposed == false);
+            using (someServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var databaseRecord = leader.ServerStore.Cluster.ReadDatabase(context, defaultDatabase);
-                var db = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(defaultDatabase).ConfigureAwait(false);
+                var databaseRecord = someServer.ServerStore.Cluster.ReadDatabase(context, defaultDatabase);
+                var db = await someServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(defaultDatabase).ConfigureAwait(false);
                 var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionId);
                 tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState);
             }
