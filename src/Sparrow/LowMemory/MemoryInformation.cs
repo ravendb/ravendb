@@ -66,7 +66,7 @@ namespace Sparrow.LowMemory
                     // get container usage (cgroup) and machine usage (sysinfo) and respect the lower
                     var cgroupLimit = ReadULongFromFile("/sys/fs/cgroup/memory/memory.limit_in_bytes");
                     ulong cgroupAvailable = ulong.MaxValue;
-                    if (cgroupLimit != ulong.MaxValue)
+                    if (cgroupLimit != ulong.MaxValue && cgroupLimit < long.MaxValue-(4*1024)) // max limit reported on non container system is usually long.MaxValue - 4K
                     {
                         var cgroupUsage = ReadULongFromFile("/sys/fs/cgroup/memory/memory.usage_in_bytes");
                         cgroupAvailable = cgroupLimit - cgroupUsage;
