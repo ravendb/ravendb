@@ -176,7 +176,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Name"));
             Assert.True(definition.ContainsField("Address.Country"));
-            Assert.Equal("Auto/Users/ByAddress_CountryAndNameSortByAddress_Country", definition.Name);
+            Assert.Equal("Auto/Users/ByAddress_CountryAndName", definition.Name);
             var nameField = definition.GetField("Name");
             Assert.Null(nameField.Sort);
             var ageField = definition.GetField("Address.Country");

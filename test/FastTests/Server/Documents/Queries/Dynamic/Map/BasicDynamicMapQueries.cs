@@ -178,7 +178,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     var indexes = store.Admin.Send(new GetIndexesOperation(0, 10)).OrderBy(x => x.Etag).ToList();
 
                     Assert.Equal(1, indexes.Count);
-                    Assert.Equal("Auto/Orders/ByShipTo_CountrySortByShipTo_Country", indexes[0].Name);
+                    Assert.Equal("Auto/Orders/ByShipTo_Country", indexes[0].Name);
                 }
             }
         }
@@ -282,8 +282,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
                     var indexes = store.Admin.Send(new GetIndexesOperation(0, 10)).OrderBy(x => x.Etag).ToList();
 
-                    Assert.Equal("Auto/Users/ByNameSortByName", indexes[0].Name);
-                    Assert.Equal("Auto/Users/ByAgeAndNameSortByAgeName", indexes[1].Name);
+                    Assert.Equal("Auto/Users/ByName", indexes[0].Name);
+                    Assert.Equal("Auto/Users/ByAgeAndNameSortByAge", indexes[1].Name);
                 }
             }
         }
