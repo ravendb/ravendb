@@ -65,7 +65,12 @@ namespace Sparrow.LowMemory
                 {
                     // get container usage (cgroup) and machine usage (sysinfo) and respect the lower
                     var cgroupLimit = ReadULongFromFile("/sys/fs/cgroup/memory/memory.limit_in_bytes");
-                    var cgroupUsage = ReadULongFromFile("/sys/fs/cgroup/memory/memory.usage_in_bytes");
+                    ulong cgroupAvailable = ulong.MaxValue;
+                    if (cgroupLimit != ulong.MaxValue)
+                    {
+                        var cgroupUsage = ReadULongFromFile("/sys/fs/cgroup/memory/memory.usage_in_bytes");
+                        cgroupAvailable = cgroupLimit - cgroupUsage;
+                    }
 
                     sysinfo_t info = new sysinfo_t();
                     if (Syscall.sysinfo(ref info) != 0)
@@ -77,7 +82,7 @@ namespace Sparrow.LowMemory
 
 
                     Console.WriteLine("Available Memory ( sys  )= " + (long)info.AvailableRam);
-                    Console.WriteLine("Available Memory (cgroup)= " + (long)cgroupUsage);
+                    Console.WriteLine("Available Memory (cgroup)= " + (long)cgroupAvailable);
                     Console.WriteLine("Physical  Memory ( sys  )= " + (long)info.TotalRam);
                     Console.WriteLine("Physical  Memory (cgroup)= " + (long)cgroupLimit);
 
