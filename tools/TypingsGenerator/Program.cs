@@ -64,6 +64,7 @@ namespace TypingsGenerator
             scripter
                 .WithTypeMapping(TsPrimitive.String, typeof(Guid))
                 .WithTypeMapping(TsPrimitive.String, typeof(TimeSpan))
+                .WithTypeMapping(TsPrimitive.Number, typeof(UInt32))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(HashSet<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(List<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IEnumerable<>))
@@ -89,7 +90,13 @@ namespace TypingsGenerator
         {
             var ignoredTypes = new HashSet<Type>
             {
-                typeof(IEquatable<>)
+                typeof(IEquatable<>),
+                typeof(IComparable<>),
+                typeof(IComparable),
+                typeof(IConvertible),
+                typeof(IDisposable),
+                typeof(IFormattable),
+                typeof(Exception)
             };
 
             scripter.UsingTypeFilter(type => ignoredTypes.Contains(type) == false);
