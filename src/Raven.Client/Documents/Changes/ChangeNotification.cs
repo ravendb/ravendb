@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
-using Newtonsoft.Json;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Changes
 {
@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Changes
     {
         private string _key;
 
-        [JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public Func<object, string> MaterializeKey;
 
         public object MaterializeKeyState;
@@ -71,6 +71,25 @@ namespace Raven.Client.Documents.Changes
         public override string ToString()
         {
             return string.Format("{0} on {1}", Type, Key);
+        }
+
+        internal static DocumentChange FromJson(BlittableJsonReaderObject value)
+        {
+            value.TryGet(nameof(CollectionName), out string collectionName);
+            value.TryGet(nameof(Etag), out long etag);
+            value.TryGet(nameof(TypeName), out string typeName);
+            value.TryGet(nameof(Key), out string key);
+            value.TryGet(nameof(Type), out string type);
+
+            return new DocumentChange
+            {
+                CollectionName = collectionName,
+                Etag = etag,
+                IsSystemDocument = false,
+                Key = key,
+                TypeName = typeName,
+                Type = (DocumentChangeTypes)Enum.Parse(typeof(DocumentChangeTypes), type, ignoreCase: true)
+            };
         }
     }
 

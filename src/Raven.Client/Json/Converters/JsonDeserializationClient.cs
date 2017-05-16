@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Exceptions;

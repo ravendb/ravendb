@@ -17,9 +17,9 @@ namespace FastTests.Server.Documents.Notifications
             {
                 var list = new BlockingCollection<DocumentChange>();
                 var taskObservable = store.Changes();
-                await taskObservable.ConnectionTask;
+                //await taskObservable.Task;
                 var observableWithTask = taskObservable.ForDocument("users/1");
-                await observableWithTask.Task;
+                //await observableWithTask.Task;
                 observableWithTask.Subscribe(list.Add);
 
                 using (var session = store.OpenAsyncSession())
@@ -44,9 +44,9 @@ namespace FastTests.Server.Documents.Notifications
             {
                 var list = new BlockingCollection<DocumentChange>();
                 var taskObservable = store.Changes();
-                await taskObservable.ConnectionTask;
+                //await taskObservable.Task;
                 var observableWithTask = taskObservable.ForAllDocuments();
-                await observableWithTask.Task;
+                //await observableWithTask.Task;
                 observableWithTask.Subscribe(list.Add);
 
                 const int docsCount = 10000;
@@ -77,9 +77,9 @@ namespace FastTests.Server.Documents.Notifications
             {
                 var list = new BlockingCollection<DocumentChange>();
                 var taskObservable = store.Changes();
-                await taskObservable.ConnectionTask;
+                //await taskObservable.Task;
                 var observableWithTask = taskObservable.ForDocument("users/1");
-                await observableWithTask.Task;
+                //await observableWithTask.Task;
                 observableWithTask
                     .Where(x => x.Type == DocumentChangeTypes.Delete)
                     .Subscribe(list.Add);
@@ -112,9 +112,9 @@ namespace FastTests.Server.Documents.Notifications
             {
                 var list = new BlockingCollection<DocumentChange>();
                 var taskObservable = store.Changes();
-                await taskObservable.ConnectionTask;
+                //await taskObservable.Task;
                 var observableWithTask = taskObservable.ForDocument("users/1");
-                await observableWithTask.Task;
+                //await observableWithTask.Task;
                 observableWithTask.Subscribe(list.Add);
 
                 using (var session = store.OpenAsyncSession())
@@ -127,7 +127,7 @@ namespace FastTests.Server.Documents.Notifications
                 Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(2)));
 
                 observableWithTask = taskObservable.ForDocument("users/2");
-                await observableWithTask.Task;
+                //await observableWithTask.Task;
                 observableWithTask.Subscribe(list.Add);
 
                 using (var session = store.OpenAsyncSession())
@@ -149,7 +149,7 @@ namespace FastTests.Server.Documents.Notifications
 
                 var exception = await Assert.ThrowsAsync<AggregateException>(async () =>
                 {
-                    await taskObservable.ConnectionTask;
+                    //await taskObservable.Task;
                 });
 
                 // ensure the db still works

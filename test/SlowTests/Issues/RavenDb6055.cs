@@ -37,8 +37,7 @@ namespace SlowTests.Issues
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                using ((await (await store.Changes().ConnectionTask)
-                        .ForAllIndexes().Task)
+                using (store.Changes().ForAllIndexes()
                     .Subscribe(new SetTaskOnIndexDelete(tcs)))
                 {
                     using (var session = store.OpenAsyncSession())
