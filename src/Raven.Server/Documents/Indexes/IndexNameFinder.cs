@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Sparrow;
 
 namespace Raven.Server.Documents.Indexes
@@ -40,7 +41,10 @@ namespace Raven.Server.Documents.Indexes
             
             var combinedFields = string.Join("And", fields.Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).OrderBy(x => x));
 
-            var sortOptions = fields.Where(x => x.Sort != null).Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).ToArray();
+            var sortOptions = fields.Where(x => x.Sort != null && x.Sort.Value != SortOptions.String && x.Sort.Value != SortOptions.None)
+                .Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name))
+                .ToArray();
+
             if (sortOptions.Length > 0)
             {
                 combinedFields = $"{combinedFields}SortBy{string.Join(string.Empty, sortOptions.OrderBy(x => x))}";
