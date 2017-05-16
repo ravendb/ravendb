@@ -30,7 +30,14 @@ namespace Raven.Client.Http
         public TimeSpan? Timeout { get; protected set; }
 
         public abstract HttpRequestMessage CreateRequest(ServerNode node, out string url);
-        public abstract void SetResponse(BlittableJsonReaderObject response, bool fromCache);
+
+        public virtual void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+        {
+            if (ResponseType == RavenCommandResponseType.Empty)
+                ThrowInvalidResponse();
+
+            throw new InvalidOperationException($"'{GetType()}' command must override the SetResponse method which expects response with the following type: {ResponseType}.");
+        }
 
         public virtual Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationToken token)
         {

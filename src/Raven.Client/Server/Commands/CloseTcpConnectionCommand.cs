@@ -11,6 +11,7 @@ namespace Raven.Client.Server.Commands
         public CloseTcpConnectionCommand(long id)
         {
             _id = id;
+            ResponseType = RavenCommandResponseType.Empty;
         }
 
         public override bool IsReadRequest => false;
@@ -23,10 +24,6 @@ namespace Raven.Client.Server.Commands
             {
                 Method = HttpMethod.Delete
             };
-        }
-
-        public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-        {
         }
     }
 }

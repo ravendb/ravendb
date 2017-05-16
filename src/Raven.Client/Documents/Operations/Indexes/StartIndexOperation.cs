@@ -27,6 +27,11 @@ namespace Raven.Client.Documents.Operations.Indexes
         {
             private readonly string _indexName;
 
+            public StartIndexCommand()
+            {
+                ResponseType = RavenCommandResponseType.Empty;
+            }
+
             public StartIndexCommand(string indexName)
             {
                 if (indexName == null)
@@ -43,10 +48,6 @@ namespace Raven.Client.Documents.Operations.Indexes
                 {
                     Method = HttpMethod.Post
                 };
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
             }
 
             public override bool IsReadRequest => false;

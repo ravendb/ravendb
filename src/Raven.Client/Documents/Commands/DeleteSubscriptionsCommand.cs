@@ -25,11 +25,6 @@ namespace Raven.Client.Documents.Commands
             return request;
         }
 
-        public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-        {
-            ThrowInvalidResponse();
-        }
-
         public override bool IsReadRequest => false;
     }
 }

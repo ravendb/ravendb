@@ -30,6 +30,11 @@ namespace Raven.Client.Server.Operations.ApiKeys
             private readonly string _name;
             private readonly BlittableJsonReaderObject _apiKey;
 
+            public PutApiKeyCommand()
+            {
+                ResponseType = RavenCommandResponseType.Empty;
+            }
+
             public PutApiKeyCommand(DocumentConventions conventions, JsonOperationContext context, string name, ApiKeyDefinition apiKey)
             {
                 if (conventions == null)
@@ -58,10 +63,6 @@ namespace Raven.Client.Server.Operations.ApiKeys
                 };
 
                 return request;
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
             }
         }
     }

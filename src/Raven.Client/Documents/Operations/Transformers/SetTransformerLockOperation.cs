@@ -31,6 +31,11 @@ namespace Raven.Client.Documents.Operations.Transformers
             private readonly string _transformerName;
             private readonly TransformerLockMode _mode;
 
+            public SetTransformerLockCommand()
+            {
+                ResponseType = RavenCommandResponseType.Empty;
+            }
+
             public SetTransformerLockCommand(string transformerName, TransformerLockMode mode)
             {
                 if (transformerName == null)
@@ -48,10 +53,6 @@ namespace Raven.Client.Documents.Operations.Transformers
                 {
                     Method = HttpMethod.Post
                 };
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
             }
 
             public override bool IsReadRequest => false;
