@@ -81,26 +81,20 @@ namespace Sparrow.LowMemory
                     }
 
 
-                    Console.WriteLine("Available Memory ( sys  )= " + (long)info.AvailableRam);
-                    Console.WriteLine("Available Memory (cgroup)= " + (long)cgroupAvailable);
-                    Console.WriteLine("Physical  Memory ( sys  )= " + (long)info.TotalRam);
-                    Console.WriteLine("Physical  Memory (cgroup)= " + (long)cgroupLimit);
-
                     if (cgroupLimit < info.TotalRam) // ulong comparison
                     {
-                        Console.WriteLine("cgroup override");
-                        Console.Out.Flush();
                         return new MemoryInfoResult
                         {
                             AvailableMemory = new Size((long)cgroupAvailable, SizeUnit.Bytes),
                             TotalPhysicalMemory = new Size((long)cgroupLimit, SizeUnit.Bytes),
+                            RunningInContainer = true
                         };
                     }
 
                     return new MemoryInfoResult
                     {
                         AvailableMemory = new Size((long)info.AvailableRam, SizeUnit.Bytes),
-                        TotalPhysicalMemory = new Size((long)info.TotalRam, SizeUnit.Bytes),
+                        TotalPhysicalMemory = new Size((long)info.TotalRam, SizeUnit.Bytes)
                     };
                 }
 
@@ -156,8 +150,6 @@ namespace Sparrow.LowMemory
                 return ulong.MaxValue;
             }
 
-            Console.WriteLine($"ADIADI :: cgroupRead = {cgroupRead}");
-
             Syscall.close(fd);
 
             string str = null;
@@ -182,5 +174,6 @@ namespace Sparrow.LowMemory
     {
         public Size TotalPhysicalMemory;
         public Size AvailableMemory;
+        public bool RunningInContainer;
     }
 }
