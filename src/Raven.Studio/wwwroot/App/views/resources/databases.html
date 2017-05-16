@@ -9,27 +9,32 @@
 </div>
 <div class="databases flex-vertical absolute-fill content-margin" data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length, css: { 'databases_compact': compactView() }">
     <div class="flex-header">
-    <div class="databasesToolbar">
-        <div class="form-inline">
+        <div class="databasesToolbar flex-horizontal">
             <div class="checkbox checkbox-primary checkbox-inline align-checkboxes">
                 <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }">
                 <label></label>
             </div>
             <div class="input-group">
-                <input type="text" class="form-control" placeholder="Filter" accesskey="/" title="Filter databases (Alt+/)" data-bind="textInput: filters.searchText">    
+                <input type="text" class="form-control" placeholder="Filter" accesskey="/" title="Filter databases (Alt+/)" data-bind="textInput: filters.searchText">
+            </div>
+            <div class="toggle toggle-primary">
+                <input id="compactViewInput" name="compactView" class="styled" type="checkbox" />
+                <label for="compactViewInput">
+                    Show only local (Node A)
+                </label>
             </div>
             <div class="databasesToolbar-actions">
                 <button class="btn btn-primary" data-bind="click: newDatabase">
                     <i class="icon-plus"></i>
                     <span>New database</span>
                 </button>
-                
+
                 <div class="btn-group-label" data-bind="css: { active: selectedDatabases().length }" data-label="Selection" role="group">
                     <button class="btn btn-danger" data-bind="visible: isGlobalAdmin(), enable: selectedDatabases().length, click: deleteSelectedDatabases">
                         <i class="icon-trash"></i>
                         <span>Delete</span>
                     </button>
-                    
+
                     <div class="btn-group">
                         <button type="button" class="btn btn-default dropdown-toggle" title="Change the options of selected databases"
                                 data-bind="enable: selectedDatabases().length && !spinners.globalToggleDisable(), css: { 'btn-spinner': spinners.globalToggleDisable() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -54,47 +59,39 @@
                     </div>
                 </div>
             </div>
+            <div class="flex-separator"></div>
             <div class="toggle toggle-primary databasesToolbar-toggleCompactView pull-right">
                 <input id="compactViewInput" name="compactView" class="styled" type="checkbox" data-bind="checked: $root.compactView" />
                 <label for="compactViewInput">
                     Compact View
                 </label>
             </div>
-    </div> 
-    </div>
+        </div>
     </div>
 
     <div class="flex-grow scroll">
-        
-        <div>Node : <span data-bind="text: $root.clusterManager.nodeTag"></span></div>
-        
         <div data-bind="foreach: databases().sortedDatabases">
-            <div style="border: solid 1px red;">
-                <div data-bind="text: name"></div>
-                <div>Local: <span data-bind="text: $root.createIsLocalDatabaseObservable(name)"></span></div>
-                
-                <ul data-bind="foreach: nodes">
-                    <li data-bind="text: tag() + ' ' + type() "></li>
-                </ul>
-            </div>
-        </div>
-
-    <div data-bind="foreach: databases().sortedDatabases">
-        <div class="panel database-item" data-bind="scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(), attr: { class: 'panel database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') }">
-            <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-            <div class="padding padding-sm database-info">
-                
-                    <div class="info-container">
-                        <div class="checkbox">
-                            <input type="checkbox" class="styled" data-bind="checked: $root.selectedDatabases, checkedValue: name">
-                            <label></label>
+            <div class="panel database-item" data-bind="scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(), attr: { class: 'panel database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') }">
+                <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
+                <div class="padding padding-sm database-info">
+                    <div class="flex-grow">
+                        <div class="info-container">
+                            <div class="checkbox">
+                                <input type="checkbox" class="styled" data-bind="checked: $root.selectedDatabases, checkedValue: name">
+                                <label></label>
+                            </div>
+                            <h3 class="database-name">
+                                <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase()"><i class="icon-database"></i><span data-bind="text: name"></span></span>
+                                <a data-bind="attr: { title: name, href: $root.allDocumentsUrl($data) }, visible: canNavigateToDatabase()" href="#"><i class="icon-database"></i><span data-bind="text: name"></span></a>
+                            </h3>
                         </div>
-                        <h3 class="database-name">                            
-                            <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase()"><i class="icon-database"></i><span data-bind="text: name"></span></span>
-                            <a data-bind="attr: { title: name, href: $root.allDocumentsUrl($data) }, visible: canNavigateToDatabase()" href="#"><i class="icon-database"></i><span data-bind="text: name"></span></a>
-                        </h3>
+                        <div class="dbgroup-node-type flex-horizontal">
+                            <div><i class="icon-member"></i> <span>Node A</span></div>
+                            <div><i class="icon-promotable"></i> <span>Node B</span></div>
+                            <div><i class="icon-watcher"></i> <span>Node C</span></div>
+                        </div>
                     </div>
-                    <div class="vertical-divider properties-container" 
+                    <div class="vertical-divider properties-container"
                          data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }">
                     </div>
                     <div class="actions-container">
@@ -103,11 +100,14 @@
                         </span>
 
                         <div class="actions">
-                            <div class="btn-toolbar pull-right-sm" role="toolbar">                                
+                            <div class="btn-toolbar pull-right-sm" role="toolbar">
+                                <button class="btn btn-default">
+                                    <i class="icon-topology"></i> <span>Manage group</span>
+                                </button>
                                 <div class="btn-group">
                                     <button class="btn btn-default"
-                                            data-bind="click: $root.toggleDatabase, 
-                                                       css: { 'btn-spinner': inProgressAction }, 
+                                            data-bind="click: $root.toggleDatabase,
+                                                       css: { 'btn-spinner': inProgressAction },
                                                        disable: isBeingDeleted() || inProgressAction()">
                                         <span data-bind="visible: inProgressAction(), text: inProgressAction()"></span>
 
@@ -117,7 +117,7 @@
                                         <i class="icon-lock" data-bind="visible: !inProgressAction() && !disabled()"></i>
                                         <span data-bind="visible: !inProgressAction() && !disabled()">Disable</span>
                                     </button>
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"  
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                                             data-bind="disable: isBeingDeleted() || inProgressAction()">
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
@@ -154,14 +154,14 @@
                                 <button class="btn btn-success" data-bind="click: $root.activateDatabase">
                                     <i class="icon-refresh"></i>
                                 </button>
-                                <button class="btn btn-danger" data-bind="click: $root.deleteDatabase, disable: isBeingDeleted"> 
+                                <button class="btn btn-danger" data-bind="click: $root.deleteDatabase, disable: isBeingDeleted">
                                     <i class="icon-trash"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
+                </div>
             </div>
-        </div>
         </div>
     </div>
 </div>
@@ -206,17 +206,17 @@
 
     <div class="properties-item" data-bind="visible: indexingErrors()">
         <div class="properties-value value-only">
-            <a class="set-size text-danger" title="Indexing errors. Click to view details" data-bind="attr: { href: $root.indexErrorsUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() }">             
+            <a class="set-size text-danger" title="Indexing errors. Click to view details" data-bind="attr: { href: $root.indexErrorsUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() }">
                 <i class="icon-exclamation"></i>
                 <span data-bind="text: indexingErrors().toLocaleString()"></span>
-                <span class="hidden-compact" data-bind="text: $root.pluralize(indexingErrors().toLocaleString(), 'indexing error', 'indexing errors', true)"></span>                
+                <span class="hidden-compact" data-bind="text: $root.pluralize(indexingErrors().toLocaleString(), 'indexing error', 'indexing errors', true)"></span>
             </a>
         </div>
     </div>
 
-    <div class="properties-item" data-bind="visible: alerts()">  
+    <div class="properties-item" data-bind="visible: alerts()">
         <div class="properties-value value-only">
-            <div class="set-size text-warning" title="Alerts" data-bind="css: { 'link-disabled': !canNavigateToDatabase() }">            
+            <div class="set-size text-warning" title="Alerts" data-bind="css: { 'link-disabled': !canNavigateToDatabase() }">
                 <i class="icon-warning"></i>
                 <span data-bind="text: alerts().toLocaleString()"></span>
                 <span class="hidden-compact" data-bind="text: $root.pluralize(alerts().toLocaleString(), 'alert', 'alerts', true)"></span>
@@ -224,7 +224,7 @@
         </div>
     </div>
 
-    <div class="properties-item" data-bind="visible: backupEnabled()">  
+    <div class="properties-item" data-bind="visible: backupEnabled()">
         <div data-bind="attr: { class: 'properties-value value-only ' + backupStatus() }">
             <a class="set-size text-disabled" title="Backup. Click to set periodic export" data-bind="attr: { href: $root.periodicExportUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() }">
                 <i class="icon-backup"></i>
@@ -245,7 +245,7 @@
         </div>
     </div>
 
-    <div class="properties-item" data-bind="visible: indexingPaused() && !indexingDisabled()"> 
+    <div class="properties-item" data-bind="visible: indexingPaused() && !indexingDisabled()">
         <div class="properties-value value-only">
             <a class="set-size text-warning" title="Indexing is paused. Click to view indexes list" data-bind="attr: { href: $root.indexesUrl($data) }">
                 <i class="icon-pause"></i>
@@ -271,5 +271,5 @@
             </div>
         </div>
     </div>
-    
+
 </script>
