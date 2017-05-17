@@ -6,22 +6,16 @@ namespace Raven.Client.Documents.Changes
 {
     internal class DatabaseConnectionState : ConnectionStateBase
     {
-        public DatabaseConnectionState(Func<Task> onConnect, Action onDisconnect)
+        public DatabaseConnectionState(Func<Task> onConnect, Func<Task> onDisconnect)
             : base(onConnect, onDisconnect)
         {
         }
 
-        public event Action<DocumentChange> OnDocumentChangeNotification = delegate { };
-
-        public event Action<BulkInsertChange> OnBulkInsertChangeNotification = delegate { };
+        public event Action<DocumentChange> OnDocumentChangeNotification;
 
         public event Action<IndexChange> OnIndexChangeNotification;
 
         public event Action<TransformerChange> OnTransformerChangeNotification;
-
-        public event Action<ReplicationConflictChange> OnReplicationConflictNotification;
-
-        public event Action<DataSubscriptionChange> OnDataSubscriptionNotification;
 
         public event Action<OperationStatusChange> OnOperationStatusChangeNotification;
 
@@ -38,23 +32,6 @@ namespace Raven.Client.Documents.Changes
         public void Send(TransformerChange transformerChange)
         {
             OnTransformerChangeNotification?.Invoke(transformerChange);
-        }
-
-        public void Send(ReplicationConflictChange replicationConflictChange)
-        {
-            OnReplicationConflictNotification?.Invoke(replicationConflictChange);
-        }
-
-        public void Send(BulkInsertChange bulkInsertChange)
-        {
-            OnBulkInsertChangeNotification?.Invoke(bulkInsertChange);
-
-            Send((DocumentChange)bulkInsertChange);
-        }
-
-        public void Send(DataSubscriptionChange dataSubscriptionChange)
-        {
-            OnDataSubscriptionNotification?.Invoke(dataSubscriptionChange);
         }
 
         public void Send(OperationStatusChange operationStatusChange)

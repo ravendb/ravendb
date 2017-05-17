@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions.Changes;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow.Json;
@@ -47,7 +48,7 @@ namespace Raven.Client.Documents.Changes
 
             _onDispose = onDispose;
 
-            _task = StartProcessing();
+            _task = DoWork();
         }
 
         public bool Connected { get; private set; }
@@ -97,12 +98,30 @@ namespace Raven.Client.Documents.Changes
 
         public IObservable<OperationStatusChange> ForOperationId(long operationId)
         {
-            throw new NotImplementedException();
+            var counter = GetOrAddConnectionState("operations/" + operationId, "watch-operation", "unwatch-operation", null);
+
+            var taskedObservable = new ChangesObservable<OperationStatusChange, DatabaseConnectionState>(
+                counter,
+                notification => true);
+
+            counter.OnOperationStatusChangeNotification += taskedObservable.Send;
+            counter.OnError += taskedObservable.Error;
+
+            return taskedObservable;
         }
 
         public IObservable<OperationStatusChange> ForAllOperations()
         {
-            throw new NotImplementedException();
+            var counter = GetOrAddConnectionState("all-operations", "watch-operations", "unwatch-operations", null);
+
+            var taskedObservable = new ChangesObservable<OperationStatusChange, DatabaseConnectionState>(
+                counter,
+                notification => true);
+
+            counter.OnOperationStatusChangeNotification += taskedObservable.Send;
+            counter.OnError += taskedObservable.Error;
+
+            return taskedObservable;
         }
 
         public IObservable<IndexChange> ForAllIndexes()
@@ -202,6 +221,8 @@ namespace Raven.Client.Documents.Changes
             return ForDocumentsOfType(typeName);
         }
 
+        public event Action<Exception> OnError;
+
         public void Dispose()
         {
             _cts.Cancel();
@@ -218,9 +239,9 @@ namespace Raven.Client.Documents.Changes
         {
             var counter = _counters.GetOrAdd(name, s =>
             {
-                void OnDisconnect()
+                async Task OnDisconnect()
                 {
-                    Send(unwatchCommand, value);
+                    await Send(unwatchCommand, value).ConfigureAwait(false);
                     _counters.Remove(s);
                 }
 
@@ -237,7 +258,7 @@ namespace Raven.Client.Documents.Changes
 
         private async Task Send(string command, string value)
         {
-            _semaphore.Wait(_cts.Token);
+            await _semaphore.WaitAsync(_cts.Token).ConfigureAwait(false);
 
             try
             {
@@ -269,17 +290,21 @@ namespace Raven.Client.Documents.Changes
             }
         }
 
-        private async Task StartProcessing()
+        private async Task DoWork()
         {
             while (_cts.IsCancellationRequested == false)
             {
                 try
                 {
-                    await _client.ConnectAsync(_url, _cts.Token).ConfigureAwait(false);
-                    Connected = true;
-                    ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+                    if (Connected == false)
+                    {
+                        await _client.ConnectAsync(_url, _cts.Token).ConfigureAwait(false);
+                        Connected = true;
+                        ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 
-                    await Subscribe().ConfigureAwait(false);
+                        await Subscribe().ConfigureAwait(false);
+                    }
+
                     await ProcessChanges().ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
@@ -287,6 +312,11 @@ namespace Raven.Client.Documents.Changes
                     Connected = false;
                     ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
                     return;
+                }
+                catch (ChangeProcessingException e)
+                {
+                    NotifyAboutError(e);
+                    continue;
                 }
                 catch (Exception e)
                 {
@@ -298,7 +328,7 @@ namespace Raven.Client.Documents.Changes
 
                 try
                 {
-                    await TimeoutManager.WaitFor(15000, _cts.Token).ConfigureAwait(false);
+                    await TimeoutManager.WaitFor(TimeSpan.FromSeconds(15), _cts.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -318,18 +348,28 @@ namespace Raven.Client.Documents.Changes
                     if (json == null)
                         continue;
 
-                    string type;
-                    if (json.TryGet("Type", out type) == false)
-                        continue;
-
-                    BlittableJsonReaderObject value;
-                    json.TryGet("Value", out value);
-
-                    switch (type)
+                    try
                     {
-                        default:
-                            NotifySubscribers(type, value, _counters.ValuesSnapshot);
-                            break;
+                        string type;
+                        if (json.TryGet("Type", out type) == false)
+                            continue;
+
+                        switch (type)
+                        {
+                            case "Error":
+                                json.TryGet("Exception", out string exceptionAsString);
+                                NotifyAboutError(new Exception(exceptionAsString));
+                                break;
+                            default:
+                                BlittableJsonReaderObject value;
+                                json.TryGet("Value", out value);
+                                NotifySubscribers(type, value, _counters.ValuesSnapshot);
+                                break;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        throw new ChangeProcessingException(e);
                     }
                 }
             }
@@ -344,6 +384,27 @@ namespace Raven.Client.Documents.Changes
                     foreach (var state in states)
                     {
                         state.Send(documentChange);
+                    }
+                    break;
+                case nameof(IndexChange):
+                    var indexChange = IndexChange.FromJson(value);
+                    foreach (var state in states)
+                    {
+                        state.Send(indexChange);
+                    }
+                    break;
+                case nameof(TransformerChange):
+                    var transformerChange = TransformerChange.FromJson(value);
+                    foreach (var state in states)
+                    {
+                        state.Send(transformerChange);
+                    }
+                    break;
+                case nameof(OperationStatusChange):
+                    var operationStatusChange = OperationStatusChange.FromJson(value);
+                    foreach (var state in states)
+                    {
+                        state.Send(operationStatusChange);
                     }
                     break;
                 default:
@@ -361,6 +422,8 @@ namespace Raven.Client.Documents.Changes
 
         private void NotifyAboutError(Exception e)
         {
+            OnError?.Invoke(e);
+
             foreach (var state in _counters.ValuesSnapshot)
             {
                 state.Error(e);

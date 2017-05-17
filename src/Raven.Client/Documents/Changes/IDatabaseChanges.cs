@@ -71,5 +71,7 @@ namespace Raven.Client.Documents.Changes
         /// Subscribe to changes for all documents that belong to specified type (Raven-Clr-Type).
         /// </summary>
         IObservable<DocumentChange> ForDocumentsOfType<TEntity>();
+
+        event Action<Exception> OnError;
     }
 }
