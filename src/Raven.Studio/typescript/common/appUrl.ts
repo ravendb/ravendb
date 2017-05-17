@@ -711,6 +711,10 @@ class appUrl {
         });
     }
 
+    static toExternalUrl(serverUrl: string, localLink: string) {
+        return serverUrl + "/studio/index.html" + localLink;
+    }
+
     static urlEncodeArgs(args: any): string {
         const propNameAndValues: Array<string> = [];
         for (let prop of Object.keys(args)) {
