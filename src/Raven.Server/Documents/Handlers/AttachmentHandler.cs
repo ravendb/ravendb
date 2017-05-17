@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Handlers
                     if (HttpContext.Response.Headers.ContainsKey("Content-Type"))
                         HttpContext.Response.Headers.Remove("Content-Type");
                 }
-                HttpContext.Response.Headers["Content-Hash"] = attachment.Base64Hash.ToString();
+                HttpContext.Response.Headers["Attachment-Hash"] = attachment.Base64Hash.ToString();
                 HttpContext.Response.Headers["Attachment-Size"] = attachment.Stream.Length.ToString();
                 HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.Etag}\"";
 
