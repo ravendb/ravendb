@@ -45,7 +45,7 @@ namespace StressTests
                 Console.WriteLine($"Avarage={_reportedAvarageQueryTime}ms Max={_reportedMaxQueryTime}");
                 Console.WriteLine("real query times (time on the client)");
                 Console.WriteLine($"Avarage={_avarageQueryTime}ms Max={_maxQueryTime}");
-                Console.WriteLine($"Got {_totalNegativeDurations} negative query duration out of {_totalQueryCount} total queries!");
+                Console.WriteLine($"Results came from cache {_totalQueryUsedCachedResults} times out of {_totalQueryCount} total queries.");
             }
         }
 
@@ -81,10 +81,10 @@ namespace StressTests
                                 _maxQueryTime = realQueryTime;
                             }
                             //Not sure if reported result is worth anything...
-                            onePart = (double)1 / (_totalQueryCount - _totalNegativeDurations + 1);
+                            onePart = (double)1 / (_totalQueryCount - _totalQueryUsedCachedResults + 1);
                             if (queryStat.DurationMilliseconds > 0)
                             {
-                                _reportedAvarageQueryTime = onePart * (_totalQueryCount - _totalNegativeDurations) * _reportedAvarageQueryTime + queryStat.DurationMilliseconds * onePart;
+                                _reportedAvarageQueryTime = onePart * (_totalQueryCount - _totalQueryUsedCachedResults) * _reportedAvarageQueryTime + queryStat.DurationMilliseconds * onePart;
                                 if (_reportedMaxQueryTime < queryStat.DurationMilliseconds)
                                 {
                                     _reportedMaxQueryTime = queryStat.DurationMilliseconds;
@@ -92,7 +92,7 @@ namespace StressTests
                             }
                             else
                             {
-                                _totalNegativeDurations++;
+                                _totalQueryUsedCachedResults++;
                             }
 
                             _totalQueryCount++;
@@ -111,7 +111,7 @@ namespace StressTests
         private static long _maxQueryTime;
         private static double _reportedAvarageQueryTime;
         private static long _reportedMaxQueryTime;
-        private static int _totalNegativeDurations;
+        private static int _totalQueryUsedCachedResults;
 
         private static void CreateLoadOnAllDatabases(int numberOfDatabases, IDocumentStore store, TimeSpan timeToSpin, int minTimeBetweenIntervals, Product sampleProduct)
         {
