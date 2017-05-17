@@ -31,6 +31,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Smuggler.Documents.Handlers
 {
@@ -181,7 +182,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         private async Task BulkImport(BlockingCollection<Func<Task<Stream>>> files, string directory)
         {
             var results = new ConcurrentQueue<SmugglerResult>();
-            var tasks = new Task[Math.Max(1, Environment.ProcessorCount / 2)];
+            var tasks = new Task[Math.Max(1, ProcessorInfo.ProcessorCount / 2)];
 
             var finalResult = new SmugglerResult();
 

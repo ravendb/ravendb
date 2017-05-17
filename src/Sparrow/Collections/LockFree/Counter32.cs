@@ -8,13 +8,14 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Sparrow.Utils;
 
 namespace Sparrow.Collections.LockFree
 {
     [StructLayout(LayoutKind.Sequential)]
     internal sealed class Counter32
     {
-        private static readonly int MAX_CELL_COUNT = Environment.ProcessorCount * 2;
+        private static readonly int MAX_CELL_COUNT = ProcessorInfo.ProcessorCount * 2;
         private const int MAX_DRIFT = 1;
 
         private class Cell
