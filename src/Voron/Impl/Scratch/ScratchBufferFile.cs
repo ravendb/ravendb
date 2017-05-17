@@ -267,17 +267,6 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState, LowLevelTransaction.PagerRef pagerRef)
-        {
-            if (pagerRef != null)
-            {
-                pagerRef.Pager = _scratchPager;
-                pagerRef.PagerPageNumber = p;
-            }
-            return new Page(_scratchPager.AcquirePagePointerWithOverflowHandling(tx, p, pagerState));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState = null)
         {
             return new Page(_scratchPager.AcquirePagePointerWithOverflowHandling(tx, p, pagerState));

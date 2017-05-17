@@ -414,12 +414,6 @@ namespace Voron.Impl
         private PagerStateCacheItem _lastScratchFileUsed = new PagerStateCacheItem(InvalidScratchFile, null);
         private bool _disposed;
 
-        public sealed class PagerRef
-        {
-            public AbstractPager Pager;
-            public long PagerPageNumber;
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Page GetPage(long pageNumber)
         {
@@ -430,19 +424,6 @@ namespace Voron.Impl
                 return result;
 
             return GetPageInternal(pageNumber);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Page GetPage(long pageNumber, PagerRef pagerRef)
-        {
-            if (_disposed)
-                ThrowObjectDisposed();
-
-            // PERF: ReadOnly pages will not have a PagerRef, so we can still use the cache. 
-            if (_pageLocator.TryGetReadOnlyPage(pageNumber, out Page result))
-                return result;
-
-            return GetPageInternal(pageNumber, pagerRef);
         }
 
         private Page GetPageInternal(long pageNumber)
@@ -473,7 +454,7 @@ namespace Voron.Impl
             }
             else
             {
-                var pageFromJournal = _journal.ReadPage(this, pageNumber, _scratchPagerStates, null);
+                var pageFromJournal = _journal.ReadPage(this, pageNumber, _scratchPagerStates);
                 if (pageFromJournal != null)
                 {
                     p = pageFromJournal.Value;
@@ -494,62 +475,6 @@ namespace Voron.Impl
             TrackReadOnlyPage(p);
 
             _pageLocator.SetReadable(p.PageNumber, p);
-            return p;
-        }
-
-        public Page GetPageInternal(long pageNumber, PagerRef pagerRef)
-        {
-            // Check if we can hit the lowest level locality cache.
-            Page p;
-            PageFromScratchBuffer value;
-            if (_scratchPagesTable != null && _scratchPagesTable.TryGetValue(pageNumber, out value)) // Scratch Pages Table will be null in read transactions
-            {
-                Debug.Assert(value != null);
-                PagerState state = null;
-                if (_scratchPagerStates != null)
-                {
-                    var lastUsed = _lastScratchFileUsed;
-                    if (lastUsed.FileNumber == value.ScratchFileNumber)
-                    {
-                        state = lastUsed.State;
-                    }
-                    else
-                    {
-                        state = _scratchPagerStates[value.ScratchFileNumber];
-                        _lastScratchFileUsed = new PagerStateCacheItem(value.ScratchFileNumber, state);
-                    }
-                }
-
-                p = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer, state, pagerRef);
-                Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from scratch", pageNumber, p.PageNumber));
-            }
-            else
-            {
-                var pageFromJournal = _journal.ReadPage(this, pageNumber, _scratchPagerStates, pagerRef);
-                if (pageFromJournal != null)
-                {
-                    p = pageFromJournal.Value;
-                    Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from journal", pageNumber, p.PageNumber));
-                }
-                else
-                {
-                    p = new Page(DataPager.AcquirePagePointerWithOverflowHandling(this, pageNumber));
-                    if (pagerRef != null)
-                    {
-                        pagerRef.Pager = DataPager;
-                        pagerRef.PagerPageNumber = pageNumber;
-                    }
-
-                    Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
-
-                    // When encryption is off, we do validation by checksum
-                    if (_env.Options.EncryptionEnabled == false)
-                        _env.ValidatePageChecksum(pageNumber, (PageHeader*)p.Pointer);
-                }
-            }
-
-            TrackReadOnlyPage(p);
-
             return p;
         }
 

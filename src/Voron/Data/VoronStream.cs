@@ -16,7 +16,6 @@ namespace Voron.Data
         private readonly int[] _positions;
         private int _index;
         private LowLevelTransaction _llt;
-        private readonly LowLevelTransaction.PagerRef _pagerRef;
         
         public override bool CanRead => true;
         public override bool CanSeek => true;
@@ -36,7 +35,6 @@ namespace Voron.Data
             _positions = new int[_chunksDetails.Length];
             _index = 0;
             _llt = llt;
-            _pagerRef = new LowLevelTransaction.PagerRef();
             _lastPage = default(Page);
 
             foreach (var cd in _chunksDetails)
@@ -117,7 +115,7 @@ namespace Voron.Data
 
             if (!_lastPage.IsValid || _lastPage.PageNumber != chunk.PageNumber)
             {
-                _lastPage = _llt.GetPage(chunk.PageNumber, _pagerRef);
+                _lastPage = _llt.GetPage(chunk.PageNumber);
             }
 
             return _lastPage.DataPointer[_positions[_index]++];
@@ -148,7 +146,7 @@ namespace Voron.Data
             ref Tree.ChunkDetails chunk = ref _chunksDetails[_index];
             if (!_lastPage.IsValid || _lastPage.PageNumber != chunk.PageNumber)
             {
-                _lastPage = _llt.GetPage(chunk.PageNumber, _pagerRef);
+                _lastPage = _llt.GetPage(chunk.PageNumber);
             }
 
             fixed (byte* dst = buffer)

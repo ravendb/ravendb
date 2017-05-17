@@ -269,7 +269,7 @@ namespace Voron.Impl.Journal
         }
 
 
-        public Page? ReadPage(LowLevelTransaction tx, long pageNumber, Dictionary<int, PagerState> scratchPagerStates, LowLevelTransaction.PagerRef pagerRef)
+        public Page? ReadPage(LowLevelTransaction tx, long pageNumber, Dictionary<int, PagerState> scratchPagerStates)
         {
             // read transactions have to read from journal snapshots
             if (tx.Flags == TransactionFlags.Read)
@@ -280,7 +280,7 @@ namespace Voron.Impl.Journal
                     PagePosition value;
                     if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
                     {
-                        var page = _env.ScratchBufferPool.ReadPage(tx, value.ScratchNumber, value.ScratchPos, scratchPagerStates[value.ScratchNumber], pagerRef);
+                        var page = _env.ScratchBufferPool.ReadPage(tx, value.ScratchNumber, value.ScratchPos, scratchPagerStates[value.ScratchNumber]);
 
                         Debug.Assert(page.PageNumber == pageNumber);
 
@@ -298,7 +298,7 @@ namespace Voron.Impl.Journal
                 PagePosition value;
                 if (files[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
                 {
-                    var page = _env.ScratchBufferPool.ReadPage(tx, value.ScratchNumber, value.ScratchPos, null, pagerRef);
+                    var page = _env.ScratchBufferPool.ReadPage(tx, value.ScratchNumber, value.ScratchPos, null);
 
                     Debug.Assert(page.PageNumber == pageNumber);
 
