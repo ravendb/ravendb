@@ -296,6 +296,12 @@ namespace Raven.Server.Documents
             ChangeVectorUtils.WriteChangeVectorTo(context, changeVector, tree);
         }
 
+        public void SetDatabaseChangeVector(DocumentsOperationContext context, ChangeVectorEntry[] changeVector)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(ChangeVectorSlice);
+            ChangeVectorUtils.WriteChangeVectorTo(context, changeVector, tree);
+        }
+
         public static long ReadLastDocumentEtag(Transaction tx)
         {
             return ReadLastEtagFrom(tx, AllDocsEtagsSlice);
