@@ -26,6 +26,10 @@
   <ItemGroup>
     <Content Include="wwwroot\App\views\database\settings\customFunctionsEditor.html" />
     <Content Include="wwwroot\App\views\resources\manageDatabaseGroup.html">
+    <Content Include="wwwroot\App\views\database\tasks\createOngoingTask.html">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="wwwroot\App\views\database\tasks\ongoingTasks.html">
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
     <Content Include="wwwroot\Content\css\feedback.less" />
@@ -33,6 +37,7 @@
     <Content Include="wwwroot\Content\css\pages\conflicts.less" />
     <Content Include="wwwroot\Content\css\pages\etl.less" />
     <Content Include="wwwroot\Content\css\pages\stats.less" />
+    <Content Include="wwwroot\Content\css\pages\styles.less" />
     <Content Include="wwwroot\Content\css\pages\versioning.less" />
     <Content Include="wwwroot\Content\css\upcoming.less" />
     <Content Include="wwwroot\Content\img\beta-license.png" />
