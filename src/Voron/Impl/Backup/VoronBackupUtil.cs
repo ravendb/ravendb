@@ -17,6 +17,10 @@ namespace Voron.Impl.Backup
                 if (!storageEnvironmentOptions.ReadHeader(headerFileName, header))
                     continue;
 
+                var hash = HeaderAccessor.CalculateFileHeaderHash(header);
+                if (header->Hash != hash)
+                    throw new InvalidDataException($"Invalid hash for FileHeader with TransactionId {header->TransactionId}, possible corruption. Expected hash to be {header->Hash} but was {hash}");
+
                 var headerPart = package.CreateEntry(Path.Combine(basePath,headerFileName), compression);
                 Debug.Assert(headerPart != null);
 
