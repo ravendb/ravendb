@@ -268,17 +268,28 @@ namespace Raven.Server.Documents.TcpHandlers
                         if (connection.ConnectionException != null)
                         {
                             try
-                            {
-                                var status = "None";
+                            {                                
                                 if (connection.ConnectionException is SubscriptionClosedException)
-                                    status = "Closed";
-
-                                await connection.WriteJsonAsync(new DynamicJsonValue
                                 {
-                                    ["Type"] = "Error",
-                                    ["Status"] = status,
-                                    ["Exception"] = connection.ConnectionException.ToString()
-                                });
+                                    await connection.WriteJsonAsync(new DynamicJsonValue
+                                    {
+                                        ["Type"] = "CoonectionStatus",
+                                        ["Status"] = "Closed",
+                                        ["Exception"] = connection.ConnectionException.ToString()
+                                    });
+                                }
+                                else
+                                {
+                                    await connection.WriteJsonAsync(new DynamicJsonValue
+                                    {
+                                        ["Type"] = "Error",
+                                        ["Status"] = "None",
+                                        ["Exception"] = connection.ConnectionException.ToString()
+                                    });
+                                }
+                                    
+
+                                
                             }
                             catch
                             {
