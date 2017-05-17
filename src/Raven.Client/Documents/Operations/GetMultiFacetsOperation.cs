@@ -49,6 +49,7 @@ namespace Raven.Client.Documents.Operations
                 }
 
                 _command = new MultiGetCommand(context, cache, commands);
+                ResponseType = RavenCommandResponseType.Raw;
             }
 
             public override bool IsReadRequest => true;
@@ -60,6 +61,8 @@ namespace Raven.Client.Documents.Operations
 
             public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
             {
+                _command.SetResponseRaw(response, stream, context);
+
                 Result = new FacetedQueryResult[_command.Result.Count];
                 for (var i = 0; i < _command.Result.Count; i++)
                 {
