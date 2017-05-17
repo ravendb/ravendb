@@ -12,7 +12,7 @@ class disableDatabaseToggleCommand extends commandBase {
         return this.disable ? "disable" : "enable";
     }
 
-    execute(): JQueryPromise<Array<disableDatabaseResult>> {
+    execute(): JQueryPromise<statusDto<disableDatabaseResult>> {
         const args = {
             name: this.dbs.map(x => x.name)
         };

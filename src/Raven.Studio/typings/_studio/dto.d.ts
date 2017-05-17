@@ -23,6 +23,10 @@ interface resultsDto<T> {
     Results: T[];
 }
 
+interface statusDto<T> {
+    Status: T[];
+}
+
 interface resultsWithTotalCountDto<T> extends resultsDto<T> {
     TotalResults: number;
 }

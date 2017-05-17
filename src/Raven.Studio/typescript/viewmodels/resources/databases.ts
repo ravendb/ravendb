@@ -291,7 +291,7 @@ class databases extends viewModelBase {
                     new disableDatabaseToggleCommand(selectedDatabases, !enableAll)
                         .execute()
                         .done(disableResult => {
-                            disableResult.forEach(x => this.onDatabaseDisabled(x));
+                            disableResult.Status.forEach(x => this.onDatabaseDisabled(x));
                         })
                         .always(() => this.spinners.globalToggleDisable(false));
                 }
@@ -314,7 +314,7 @@ class databases extends viewModelBase {
                 new disableDatabaseToggleCommand([rs], disable)
                     .execute()
                     .done(disableResult => {
-                        disableResult.forEach(x => this.onDatabaseDisabled(x));
+                        disableResult.Status.forEach(x => this.onDatabaseDisabled(x));
                     })
                     .always(() => rsInfo.inProgressAction(null));
             }
