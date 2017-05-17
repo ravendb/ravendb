@@ -456,15 +456,25 @@ namespace Raven.Client.Documents.Subscriptions
                         AfterBatch(incomingBatch.Count);
                         incomingBatch.Clear();
                         break;
-                    case SubscriptionConnectionServerMessage.MessageType.Error:
-                        switch (receivedMessage.Status)
+                    case SubscriptionConnectionServerMessage.MessageType.CoonectionStatus:
+
+                        if (receivedMessage.Status == SubscriptionConnectionServerMessage.ConnectionStatus.Redirect)
                         {
-                            case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
-                                throw new SubscriptionClosedException(receivedMessage.Exception ?? string.Empty);
-                            default:
-                                throw new Exception(
-                                    $"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
+                            throw new SubscriptionDoesNotBelongToNodeException(
+                                $"Subscription With Id {_options.SubscriptionId} cannot be proccessed by current node, it will be redirected to {receivedMessage.Data["RedirectedTag"].ToString()}")
+                            {
+                                AppropriateNode = receivedMessage.Data["RedirectedTag"].ToString()
+                            };
                         }
+                        else if (receivedMessage.Status == SubscriptionConnectionServerMessage.ConnectionStatus.Closed)
+                        {
+                            throw new SubscriptionClosedException(receivedMessage.Exception ?? string.Empty);
+                        }
+                        throw new Exception( $"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
+                        break;                    
+                    case SubscriptionConnectionServerMessage.MessageType.Error:
+                        throw new Exception(
+                                    $"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
 
                     default:
                         throw new ArgumentException(
