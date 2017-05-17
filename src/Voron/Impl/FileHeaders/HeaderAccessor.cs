@@ -81,6 +81,10 @@ namespace Voron.Impl.FileHeaders
                 var hash = CalculateFileHeaderHash(f1);
                 if (f1->Hash != hash)
                     throw new InvalidDataException($"Invalid hash for FileHeader with TransactionId {f1->TransactionId}, possible corruption. Expected hash to be {f1->Hash} but was {hash}");
+
+                hash = CalculateFileHeaderHash(f2);
+                if (f2->Hash != hash)
+                    throw new InvalidDataException($"Invalid hash for FileHeader with TransactionId {f2->TransactionId}, possible corruption. Expected hash to be {f2->Hash} but was {hash}");
                 
                 if (f1->Version != Constants.CurrentVersion)
                     throw new InvalidDataException($"The db file is for version {f1->Version}, which is not compatible with the current version {Constants.CurrentVersion}");
