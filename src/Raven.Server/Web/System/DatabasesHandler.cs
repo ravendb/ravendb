@@ -41,20 +41,19 @@ namespace Raven.Server.Web.System
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName(nameof(DatabasesInfo.Databases));
 
                     var items = ServerStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, GetStart(), GetPageSize());
-                    writer.WriteArray(context, items, (w, c, dbDoc) =>
-                                                        {
-                                                            var databaseName = dbDoc.Item1.Substring(Constants.Documents.Prefix.Length);
-                                                            if (namesOnly)
-                                                            {
-                                                                w.WriteString(databaseName);
-                                                                return;
-                                                            }
+                    writer.WriteArray(context, nameof(DatabasesInfo.Databases), items, (w, c, dbDoc) =>
+                    {
+                        var databaseName = dbDoc.Item1.Substring(Constants.Documents.Prefix.Length);
+                        if (namesOnly)
+                        {
+                            w.WriteString(databaseName);
+                            return;
+                        }
 
-                                                            WriteDatabaseInfo(databaseName, dbDoc.Item2, context, w);
-                                                        });
+                        WriteDatabaseInfo(databaseName, dbDoc.Item2, context, w);
+                    });
                     writer.WriteEndObject();
                 }
             }

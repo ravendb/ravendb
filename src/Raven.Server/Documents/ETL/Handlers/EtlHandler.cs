@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.ETL.Handlers
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WriteArray(context, etlStats, (w, c, stats) =>
+                    writer.WriteArray(context, "Results", etlStats, (w, c, stats) =>
                     {
                         w.WriteObject(context.ReadObject(stats.ToJson(), "etl/stats"));
                     });
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.ETL.Handlers
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WriteArray(context, debugStats, (w, c, stats) =>
+                    writer.WriteArray(context, "Results", debugStats, (w, c, stats) =>
                     {
                         w.WriteObject(context.ReadObject(stats, "etl/debug/stats"));
                     });
@@ -71,11 +71,11 @@ namespace Raven.Server.Documents.ETL.Handlers
                 })
                 .ToArray();
 
-            JsonOperationContext context;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteArray(context, stats, (w, c, stat) =>
+                writer.WriteStartObject();
+                writer.WriteArray(context, "Results", stats, (w, c, stat) =>
                 {
                     w.WriteStartObject();
 
@@ -83,8 +83,7 @@ namespace Raven.Server.Documents.ETL.Handlers
                     w.WriteString(stat.ProcessName);
                     w.WriteComma();
 
-                    w.WritePropertyName(nameof(stat.Performance));
-                    w.WriteArray(c, stat.Performance, (wp, cp, performance) =>
+                    w.WriteArray(c, nameof(stat.Performance), stat.Performance, (wp, cp, performance) =>
                     {
                         var statsDjv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(performance);
                         wp.WriteObject(context.ReadObject(statsDjv, "etl/performance"));
@@ -92,6 +91,7 @@ namespace Raven.Server.Documents.ETL.Handlers
 
                     w.WriteEndObject();
                 });
+                writer.WriteEndObject();
             }
 
             return Task.CompletedTask;

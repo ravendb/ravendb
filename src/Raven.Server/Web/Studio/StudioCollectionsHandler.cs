@@ -119,7 +119,7 @@ namespace Raven.Server.Web.Studio
 
                     writer.WriteComma();
 
-                    writer.WriteArray(availableColumns, "AvailableColumns");
+                    writer.WriteArray("AvailableColumns", availableColumns);
 
                     writer.WriteEndObject();
                 }

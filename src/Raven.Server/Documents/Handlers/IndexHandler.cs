@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
 
-                    writer.WriteArray(context, createdIndexes, (w, c, index) =>
+                    writer.WriteArray(context, "Results", createdIndexes, (w, c, index) =>
                     {
                         w.WriteStartObject();
                         w.WritePropertyName(nameof(PutIndexResult.IndexId));
@@ -281,7 +281,7 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteStartObject();
 
-                writer.WriteArray(context, indexDefinitions, (w, c, indexDefinition) =>
+                writer.WriteArray(context, "Results", indexDefinitions, (w, c, indexDefinition) =>
                 {
                     if (namesOnly)
                     {
@@ -331,7 +331,7 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteStartObject();
 
-                writer.WriteArray(context, indexStats, (w, c, stats) =>
+                writer.WriteArray(context, "Results", indexStats, (w, c, stats) =>
                 {
                     w.WriteIndexStats(context, stats);
                 });
@@ -522,14 +522,14 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteArray(context, indexes, (w, c, index) =>
+                writer.WriteStartObject();
+                writer.WriteArray(context, "Results", indexes, (w, c, index) =>
                 {
                     w.WriteStartObject();
                     w.WritePropertyName("Name");
                     w.WriteString(index.Name);
                     w.WriteComma();
-                    w.WritePropertyName("Errors");
-                    w.WriteArray(c, index.GetErrors(), (ew, ec, error) =>
+                    w.WriteArray(c, "Errors", index.GetErrors(), (ew, ec, error) =>
                     {
                         ew.WriteStartObject();
                         ew.WritePropertyName(nameof(error.Timestamp));
@@ -550,6 +550,7 @@ namespace Raven.Server.Documents.Handlers
                     });
                     w.WriteEndObject();
                 });
+                writer.WriteEndObject();
             }
             return Task.CompletedTask;
         }
@@ -649,8 +650,7 @@ namespace Raven.Server.Documents.Handlers
                 })
                 .ToArray();
 
-            JsonOperationContext context;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WritePerformanceStats(context, stats);

@@ -230,7 +230,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WriteArray(context, explanations, (w, c, explanation) =>
+                writer.WriteArray(context, "Results", explanations, (w, c, explanation) =>
                 {
                     w.WriteExplanation(context, explanation);
                 });

@@ -103,7 +103,7 @@ namespace Raven.Server.Web.Authentication
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))                
                     {
                         writer.WriteStartObject();
-                        writer.WriteArray(context, apiKeys, (w, c, apiKey) =>
+                        writer.WriteArray(context, "Results", apiKeys, (w, c, apiKey) =>
                         {
                             var username = apiKey.Item1.Substring(Constants.ApiKeys.Prefix.Length);
 
