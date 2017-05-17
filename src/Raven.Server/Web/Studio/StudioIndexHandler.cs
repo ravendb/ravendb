@@ -41,7 +41,7 @@ namespace Raven.Server.Web.Studio
                         using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                         {
                             writer.WriteStartObject();
-                            writer.WriteArray(context, outputFields, (w, c, field) =>
+                            writer.WriteArray(context, "Results", outputFields, (w, c, field) =>
                             {
                                 w.WriteString(field);
                             });

@@ -53,7 +53,7 @@ namespace Raven.Server.Json
         public static void WritePerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<IndexPerformanceStats> stats)
         {
             writer.WriteStartObject();
-            writer.WriteArray(context, stats, (w, c, stat) =>
+            writer.WriteArray(context, "Results", stats, (w, c, stat) =>
             {
                 w.WriteStartObject();
 
@@ -65,8 +65,7 @@ namespace Raven.Server.Json
                 w.WriteInteger(stat.Etag);
                 w.WriteComma();
 
-                w.WritePropertyName(nameof(stat.Performance));
-                w.WriteArray(c, stat.Performance, (wp, cp, performance) => { wp.WriteIndexingPerformanceStats(context, performance); });
+                w.WriteArray(c, nameof(stat.Performance), stat.Performance, (wp, cp, performance) => { wp.WriteIndexingPerformanceStats(context, performance); });
 
                 w.WriteEndObject();
             });
@@ -1407,8 +1406,8 @@ namespace Raven.Server.Json
             }
         }
 
-        public static void WriteArray<T>(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<T> items, 
-            Action<BlittableJsonTextWriter, JsonOperationContext, T> onWrite, string name = "Results")
+        public static void WriteArray<T>(this BlittableJsonTextWriter writer, JsonOperationContext context, string name, IEnumerable<T> items, 
+            Action<BlittableJsonTextWriter, JsonOperationContext, T> onWrite)
         {
             writer.WritePropertyName(name);
 
@@ -1427,7 +1426,7 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
-        public static void WriteArray(this BlittableJsonTextWriter writer, IEnumerable<LazyStringValue> items, string name)
+        public static void WriteArray(this BlittableJsonTextWriter writer, string name, IEnumerable<LazyStringValue> items)
         {
             writer.WritePropertyName(name);
 

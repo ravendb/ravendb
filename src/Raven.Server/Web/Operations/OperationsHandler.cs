@@ -68,7 +68,7 @@ namespace Raven.Server.Web.Operations
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WriteArray(context, operations, (w, c, operation) =>
+                    writer.WriteArray(context, "Results", operations, (w, c, operation) =>
                     {
                         c.Write(w, operation.ToJson());
                     });

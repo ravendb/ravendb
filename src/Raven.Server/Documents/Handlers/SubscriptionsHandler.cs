@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
 
                     var subscriptionsAsBlittable = subscriptions.Select(x => EntityToBlittable.ConvertEntityToBlittable(x, documentConventions, context));
-                    writer.WriteArray(context, subscriptionsAsBlittable, (w, c, subscription) =>
+                    writer.WriteArray(context, "Results", subscriptionsAsBlittable, (w, c, subscription) =>
                     {
                         c.Write(w, subscription);
                     });
