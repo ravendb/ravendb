@@ -7,7 +7,8 @@ param(
     [switch]$AllowAnonymousUserToAccessTheServer,
     [switch]$RemoveOnExit,
     [switch]$DryRun,
-    [switch]$DontScanVmSubnet)
+    [switch]$DontScanVmSubnet,
+    [string]$Memory)
 
 $ErrorActionPreference = "Stop";
 
@@ -116,6 +117,11 @@ if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
     $dockerArgs += "-v"
     $dockerArgs += "$($ConfigPath):/opt/raven-settings.json"
     write-host "Reading configuration from $ConfigPath"
+}
+
+if ([string]::IsNullOrEmpty($Memory) -eq $False) {
+    $dockerArgs += "--memory=" + $Memory
+    write-host "Memory limited to " + $memory
 }
 
 $dockerArgs += '-p'

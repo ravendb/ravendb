@@ -1,10 +1,10 @@
 using System;
 using System.IO;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.ServerWide;
@@ -12,6 +12,7 @@ using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Utils;
 
 namespace Raven.Server
 {
@@ -218,6 +219,13 @@ namespace Raven.Server
 
                         break;
 
+                    case "info":
+                        var meminfo = MemoryInformation.GetMemoryInfo();
+                        Console.WriteLine(" Build {0}, Version {1}, SemVer {2}, Commit {3}\r\n PID {4}, {5} bits, {6} Cores\r\n {7} Physical Memory, {8} Available Memory",
+                            ServerVersion.Build, ServerVersion.Version, ServerVersion.FullVersion, ServerVersion.CommitHash, Process.GetCurrentProcess().Id,
+                            IntPtr.Size * 8, ProcessorInfo.ProcessorCount, meminfo.TotalPhysicalMemory, meminfo.AvailableMemory);
+                        break;
+
                     case "gc2":
                         GC.Collect(GC.MaxGeneration);
                         GC.WaitForPendingFinalizers();
@@ -266,6 +274,9 @@ namespace Raven.Server
 
             description = "dump statistical information";
             Console.WriteLine($"    stats {description,37}");
+
+            description = "print info (core count, memory, pid, etc)";
+            Console.WriteLine($"    info {description,51}");
 
             description = "collect gc max generation";
             Console.WriteLine($"    gc2 {description,36}");
