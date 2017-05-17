@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Queries.Facets
     public class FacetQuery : IndexQueryBase
     {
         private IReadOnlyList<Facet> _facets;
-        private DynamicJsonArray _facetsAsDynamicJsonArray;
+        private DynamicJsonValue _facetsAsDynamicJson;
 
         /// <summary>
         /// Index name to run facet query on.
@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Queries.Facets
             set
             {
                 _facets = value;
-                _facetsAsDynamicJsonArray = null;
+                _facetsAsDynamicJson = null;
             }
         }
 
@@ -51,15 +51,15 @@ namespace Raven.Client.Documents.Queries.Facets
             if (Facets == null || Facets.Count == 0)
                 return HttpMethod.Get;
 
-            if (_facetsAsDynamicJsonArray == null)
-                _facetsAsDynamicJsonArray = SerializeFacetsToDynamicJsonArray(Facets);
+            if (_facetsAsDynamicJson == null)
+                _facetsAsDynamicJson = SerializeFacetsToDynamicJson(Facets);
 
             return HttpMethod.Post;
         }
 
-        public DynamicJsonArray GetFacetsAsJson()
+        public DynamicJsonValue GetFacetsAsJson()
         {
-            return _facetsAsDynamicJsonArray ?? (_facetsAsDynamicJsonArray = SerializeFacetsToDynamicJsonArray(Facets));
+            return _facetsAsDynamicJson ?? (_facetsAsDynamicJson = SerializeFacetsToDynamicJson(Facets));
         }
 
         public string GetQueryString(HttpMethod method)
@@ -172,14 +172,16 @@ namespace Raven.Client.Documents.Queries.Facets
             return result;
         }
 
-        private static DynamicJsonArray SerializeFacetsToDynamicJsonArray(IEnumerable<Facet> facets)
+        private static DynamicJsonValue SerializeFacetsToDynamicJson(IEnumerable<Facet> facets)
         {
             var array = new DynamicJsonArray();
-
             foreach (var facet in facets)
                 array.Add(facet.ToJson());
 
-            return array;
+            return new DynamicJsonValue
+            {
+                ["Facets"] = array
+            };
         }
     }
 }
