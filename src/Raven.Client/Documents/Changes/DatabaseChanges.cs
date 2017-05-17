@@ -10,6 +10,7 @@ using Raven.Client.Exceptions.Changes;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Changes
@@ -344,32 +345,57 @@ namespace Raven.Client.Documents.Changes
             {
                 while (_cts.IsCancellationRequested == false)
                 {
-                    var json = await context.ReadFromWebSocket(_client, "changes/receive", _cts.Token);
-                    if (json == null)
-                        continue;
+                    var state = new JsonParserState();
 
-                    try
+                    JsonOperationContext.ManagedPinnedBuffer buffer;
+                    using (var stream = new WebSocketStream(_client, _cts.Token))
+                    using (context.GetManagedBuffer(out buffer))
+                    using (var parser = new UnmanagedJsonParser(context, state, "changes/receive"))
+                    using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "readArray/singleResult", parser, state))
                     {
-                        string type;
-                        if (json.TryGet("Type", out type) == false)
+                        if (await UnmanagedJsonParserHelper.ReadAsync(stream, parser, state, buffer).ConfigureAwait(false) == false)
                             continue;
 
-                        switch (type)
+                        if (state.CurrentTokenType != JsonParserToken.StartArray)
+                            continue;
+
+                        while (true)
                         {
-                            case "Error":
-                                json.TryGet("Exception", out string exceptionAsString);
-                                NotifyAboutError(new Exception(exceptionAsString));
+                            if (await UnmanagedJsonParserHelper.ReadAsync(stream, parser, state, buffer).ConfigureAwait(false) == false)
+                                continue;
+
+                            if (state.CurrentTokenType == JsonParserToken.EndArray)
                                 break;
-                            default:
-                                BlittableJsonReaderObject value;
-                                json.TryGet("Value", out value);
-                                NotifySubscribers(type, value, _counters.ValuesSnapshot);
-                                break;
+
+                            builder.Renew("changes/receive", BlittableJsonDocumentBuilder.UsageMode.None);
+
+                            await UnmanagedJsonParserHelper.ReadObjectAsync(builder, stream, parser, buffer).ConfigureAwait(false);
+
+                            var json = builder.CreateReader();
+
+                            try
+                            {
+                                if (json.TryGet("Type", out string type) == false)
+                                    continue;
+
+                                switch (type)
+                                {
+                                    case "Error":
+                                        json.TryGet("Exception", out string exceptionAsString);
+                                        NotifyAboutError(new Exception(exceptionAsString));
+                                        break;
+                                    default:
+                                        BlittableJsonReaderObject value;
+                                        json.TryGet("Value", out value);
+                                        NotifySubscribers(type, value, _counters.ValuesSnapshot);
+                                        break;
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                throw new ChangeProcessingException(e);
+                            }
                         }
-                    }
-                    catch (Exception e)
-                    {
-                        throw new ChangeProcessingException(e);
                     }
                 }
             }

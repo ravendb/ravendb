@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
+using Raven.Server.Json;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -357,29 +358,33 @@ namespace Raven.Server.Documents
                         using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
                             sp.Restart();
+
+                            var first = true;
+                            writer.WriteStartArray();
+
                             do
                             {
                                 var value = await GetNextMessage(throttleConnection);
                                 if (value == null || _disposeToken.IsCancellationRequested)
                                     break;
 
+                                if (first == false)
+                                    writer.WriteComma();
+
+                                first = false;
                                 context.Write(writer, value);
-                                writer.WriteNewLine();
+
+                                writer.Flush();
+
                                 if (ms.Length > 16 * 1024)
                                     break;
                             } while (_sendQueue.Count > 0 && sp.Elapsed < TimeSpan.FromSeconds(5));
+
+                            writer.WriteEndArray();
                         }
 
                         if (_disposeToken.IsCancellationRequested)
                             break;
-
-                        if (ms.Length == 0)
-                        {
-                            // ensure that we send _something_ over the network, to keep the 
-                            // connection alive
-                            ms.WriteByte((byte)'\r');
-                            ms.WriteByte((byte)'\n');
-                        }
 
                         ArraySegment<byte> bytes;
                         ms.TryGetBuffer(out bytes);

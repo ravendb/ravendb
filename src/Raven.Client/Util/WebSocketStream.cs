@@ -3,12 +3,11 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Util;
 using Sparrow.Collections;
 
-namespace Raven.Server.Json
+namespace Raven.Client.Util
 {
-    public class WebsocketStream : Stream
+    internal class WebSocketStream : Stream
     {
         private readonly WebSocket _webSocket;
         private readonly CancellationToken _cancellationToken;
@@ -24,7 +23,7 @@ namespace Raven.Server.Json
         /// Initialize the stream. Assumes the websocket is initialized and connected
         /// </summary>
         /// <remarks>This is not a thread-safe implementation</remarks>
-        public WebsocketStream(WebSocket webSocket, CancellationToken cancellationToken)
+        public WebSocketStream(WebSocket webSocket, CancellationToken cancellationToken)
         {
             _isDisposed = false;
             if (webSocket == null)
@@ -107,7 +106,7 @@ namespace Raven.Server.Json
             int read = 0;
             while (read < count)
             {
-                var bufferSegment = new ArraySegment<byte>(buffer, read, count - read);
+                var bufferSegment = new ArraySegment<byte>(buffer, offset + read, count - read);
                 var result = await _webSocket.ReceiveAsync(bufferSegment, cancellationToken).ConfigureAwait(false);
                 read += result.Count;
 
