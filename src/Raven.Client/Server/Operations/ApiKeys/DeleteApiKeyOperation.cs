@@ -23,7 +23,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
             return new DeleteApiKeyCommand(_name);
         }
 
-        private class DeleteApiKeyCommand : RavenCommand<object>
+        private class DeleteApiKeyCommand : RavenCommand
         {
             private readonly string _name;
 
@@ -33,6 +33,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
                     throw new ArgumentNullException(nameof(name));
 
                 _name = name;
+                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override bool IsReadRequest => false;
@@ -47,10 +48,6 @@ namespace Raven.Client.Server.Operations.ApiKeys
                 };
 
                 return request;
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
             }
         }
     }

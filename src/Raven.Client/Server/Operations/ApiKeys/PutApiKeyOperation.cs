@@ -24,7 +24,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
             return new PutApiKeyCommand(conventions, context, _name, _apiKey);
         }
 
-        private class PutApiKeyCommand : RavenCommand<object>
+        private class PutApiKeyCommand : RavenCommand
         {
             private readonly JsonOperationContext _context;
             private readonly string _name;
@@ -40,6 +40,8 @@ namespace Raven.Client.Server.Operations.ApiKeys
                 _context = context ?? throw new ArgumentNullException(nameof(context));
                 _name = name ?? throw new ArgumentNullException(nameof(name));
                 _apiKey = EntityToBlittable.ConvertEntityToBlittable(apiKey, conventions, context);
+
+                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override bool IsReadRequest => false;
@@ -58,10 +60,6 @@ namespace Raven.Client.Server.Operations.ApiKeys
                 };
 
                 return request;
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
             }
         }
     }

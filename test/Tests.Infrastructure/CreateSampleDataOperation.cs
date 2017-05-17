@@ -13,8 +13,13 @@ namespace Tests.Infrastructure
             return new CreateSampleDataCommand();
         }
 
-        private class CreateSampleDataCommand : RavenCommand<object>
+        private class CreateSampleDataCommand : RavenCommand
         {
+            public CreateSampleDataCommand()
+            {
+                ResponseType = RavenCommandResponseType.Empty;
+            }
+
             public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -26,10 +31,6 @@ namespace Tests.Infrastructure
                 {
                     Method = HttpMethod.Post
                 };
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
             }
         }
     }

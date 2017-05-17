@@ -12,8 +12,13 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new StartIndexingCommand();
         }
 
-        private class StartIndexingCommand : RavenCommand<object>
+        private class StartIndexingCommand : RavenCommand
         {
+            public StartIndexingCommand()
+            {
+                ResponseType = RavenCommandResponseType.Empty;
+            }
+
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/admin/indexes/start";
@@ -22,10 +27,6 @@ namespace Raven.Client.Documents.Operations.Indexes
                 {
                     Method = HttpMethod.Post
                 };
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
             }
 
             public override bool IsReadRequest => false;

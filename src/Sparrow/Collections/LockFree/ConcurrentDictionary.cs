@@ -641,7 +641,7 @@ namespace Sparrow.Collections.LockFree
 
         IDictionaryEnumerator IDictionary.GetEnumerator()
         {
-            return _table.GetdIDictEnumerator();
+            return _table.GetDictionayEnumerator();
         }
 
         public ReadOnlyCollection<TKey> Keys

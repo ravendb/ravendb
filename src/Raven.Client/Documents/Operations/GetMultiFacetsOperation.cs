@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Conventions;
@@ -58,21 +58,14 @@ namespace Raven.Client.Documents.Operations
                 return _command.CreateRequest(node, out url);
             }
 
-            public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+            public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
             {
-                await _command.ProcessResponse(context, cache, response, url).ConfigureAwait(false);
-
                 Result = new FacetedQueryResult[_command.Result.Count];
                 for (var i = 0; i < _command.Result.Count; i++)
                 {
                     var result = _command.Result[i];
                     Result[i] = JsonDeserializationClient.FacetedQueryResult((BlittableJsonReaderObject)result.Result);
                 }
-            }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
-                ThrowInvalidResponse();
             }
         }
     }

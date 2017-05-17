@@ -337,7 +337,7 @@ namespace Raven.Client.Http
 
         private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, string url, out long cachedEtag, out BlittableJsonReaderObject cachedValue)
         {
-            if (command.IsReadRequest && command.ResponseType != RavenCommandResponseType.Stream)
+            if (command.IsReadRequest && command.ResponseType != RavenCommandResponseType.Raw)
             {
                 if (request.Method != HttpMethod.Get)
                     url = request.Method + "-" + url;
@@ -370,12 +370,14 @@ namespace Raven.Client.Http
             switch (response.StatusCode)
             {
                 case HttpStatusCode.NotFound:
-                    if (command.ResponseType == RavenCommandResponseType.Object)
+                    if (command.ResponseType == RavenCommandResponseType.Empty)
+                        return true;
+                    else if (command.ResponseType == RavenCommandResponseType.Object)
                         command.SetResponse((BlittableJsonReaderObject)null, fromCache: false);
                     else if (command.ResponseType == RavenCommandResponseType.Array)
                         command.SetResponse((BlittableJsonReaderArray)null, fromCache: false);
                     else
-                        command.SetResponseUncached(response, null);
+                        command.SetResponseRaw(response, null, context);
                     return true;
                 case HttpStatusCode.Unauthorized:
                 case HttpStatusCode.PreconditionFailed:

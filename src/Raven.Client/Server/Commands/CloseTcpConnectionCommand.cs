@@ -4,13 +4,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Commands
 {
-    public class CloseTcpConnectionCommand : RavenCommand<object>
+    public class CloseTcpConnectionCommand : RavenCommand
     {
         private readonly long _id;
 
         public CloseTcpConnectionCommand(long id)
         {
             _id = id;
+            ResponseType = RavenCommandResponseType.Empty;
         }
 
         public override bool IsReadRequest => false;
@@ -23,10 +24,6 @@ namespace Raven.Client.Server.Commands
             {
                 Method = HttpMethod.Delete
             };
-        }
-
-        public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-        {
         }
     }
 }
