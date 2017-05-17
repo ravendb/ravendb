@@ -10,6 +10,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
     var importDatabaseUrl = ko.pureComputed(() => appUrl.forImportDatabase(activeDatabase()));
     var exportDatabaseUrl = ko.pureComputed(() => appUrl.forExportDatabase(activeDatabase()));
     var sampleDataUrl = ko.pureComputed(() => appUrl.forSampleData(activeDatabase()));
+    var ongoingTasksUrl = ko.pureComputed(() => appUrl.forOngoingTasks(activeDatabase()));
     var csvImportUrl = ko.pureComputed(() => appUrl.forCsvImport(activeDatabase()));
 
     var submenu: leafMenuItem[] = [
@@ -39,6 +40,14 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-create-sample-data',
             dynamicHash: sampleDataUrl
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/ongoingTasks',
+            moduleId: 'viewmodels/database/tasks/ongoingTasks',
+            title: 'Manage Ongoing Tasks',
+            nav: true,
+            css: 'icon-plus', // Todo: Need icon from Rafal ..
+            dynamicHash: ongoingTasksUrl
         }),
         /* TODO:
         new leafMenuItem({
