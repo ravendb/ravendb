@@ -26,5 +26,33 @@ namespace Sparrow.Platform.Posix
                 return long.MaxValue;
             }
         }
+
+        public static int ReadNumberOfCoresFromCgroupFile(string filename)
+        {
+            // on error or if not applicable - return Environment.ProcessorCount
+            try
+            {
+                var txt = File.ReadAllText(filename);
+                // cpuset.cpus output format is a ranges of used core numbers comma seperated list. 
+                // i.e. : 3,5-7,9 (which are 3,5,6,7,9 and the result should be 5 cores)
+                // it is guarenteed to get the cores numbers and ranges from lower to upper
+                var coresCount = 0;
+                foreach (var coreRange in txt.Split(','))
+                {
+                    var cores = coreRange.Split('-');
+                    if (cores.Length == 1)
+                        coresCount++;
+                    else
+                        coresCount += Convert.ToInt32(cores[1]) - Convert.ToInt32(cores[0]) + 1;  // "5-7" == 3
+                }
+                return coresCount;
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Unable to read and parse '{filename}', will not resepect container's number of cores", e);
+                return Environment.ProcessorCount;
+            }
+        }
     }
 }
