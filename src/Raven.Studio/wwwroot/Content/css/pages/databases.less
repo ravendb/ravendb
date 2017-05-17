@@ -1,5 +1,4 @@
 .databases {
-
     .databasesToolbar-toggleCompactView {
         display: inline-block;
         margin-left: 10px;
@@ -19,7 +18,8 @@
     }
 
     .align-checkboxes {
-        margin-left: 22px;
+        margin-left: 38px;
+        margin-right: 0;
         position: relative;
         top: -2px;
     }
@@ -49,10 +49,12 @@
         position: relative;
 
         @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
-
-            .info-container {
+            .info-grow {
                 order: 1;
                 flex-grow: 1;
+            }
+
+            .info-container {
             }
 
             .properties-container {
@@ -68,6 +70,10 @@
         &:hover {
             background-color: lighten(@gray-darker, 3%);
             transition: background-color 0.15s ease;
+        }
+
+        .dbgroup-node-type {
+            margin-left: 36px;
         }
 
         .database-info {
