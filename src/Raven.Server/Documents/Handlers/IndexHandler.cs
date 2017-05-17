@@ -199,8 +199,7 @@ namespace Raven.Server.Documents.Handlers
 
                     var docId = GetStringQueryString("docId", required: false);
 
-                    IEnumerable<ReduceTree> trees;
-                    using (index.GetReduceTree(docId, out trees))
+                    using (index.GetReduceTree(docId, out IEnumerable<ReduceTree> trees))
                     {
                         writer.WriteReduceTrees(trees);
                     }
@@ -223,20 +222,9 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var fields = index.GetEntriesFields();
 
-                    var first = true;
-                    writer.WriteStartArray();
-
-                    foreach (var field in fields)
-                    {
-                        if (first == false)
-                            writer.WriteComma();
-
-                        first = false;
-
-                        writer.WriteString(field);
-                    }
-
-                    writer.WriteEndArray();
+                    writer.WriteStartObject();
+                    writer.WriteArray("Results", fields);
+                    writer.WriteEndObject();
 
                     return Task.CompletedTask;
                 }

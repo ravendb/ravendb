@@ -70,10 +70,12 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/changes/debug", "GET", "/databases/{databaseName:string}/changes/debug")]
         public Task GetConnectionsDebugInfo()
         {
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Connections");
+
                 writer.WriteStartArray();
                 var first = true;
                 foreach (var connection in Database.Changes.Connections)
@@ -84,6 +86,8 @@ namespace Raven.Server.Documents.Handlers
                     context.Write(writer, connection.Value.GetDebugInfo());
                 }
                 writer.WriteEndArray();
+
+                writer.WriteEndObject();
             }
             return Task.CompletedTask;
         }

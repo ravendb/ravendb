@@ -349,19 +349,7 @@ namespace Raven.Server.Json
             writer.WriteInteger(queryResult.ResultEtag);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(queryResult.Terms));
-            var first = true;
-            writer.WriteStartArray();
-            foreach (var term in queryResult.Terms)
-            {
-                if (first == false)
-                    writer.WriteComma();
-
-                first = false;
-
-                writer.WriteString(term);
-            }
-            writer.WriteEndArray();
+            writer.WriteArray(nameof(queryResult.Terms), queryResult.Terms);
 
             writer.WriteEndObject();
         }
@@ -1296,6 +1284,9 @@ namespace Raven.Server.Json
 
         public static void WriteReduceTrees(this BlittableJsonTextWriter writer, IEnumerable<ReduceTree> trees)
         {
+            writer.WriteStartObject();
+            writer.WritePropertyName("Results");
+
             writer.WriteStartArray();
 
             var first = true;
@@ -1336,6 +1327,8 @@ namespace Raven.Server.Json
             }
 
             writer.WriteEndArray();
+
+            writer.WriteEndObject();
         }
 
         public static void WriteTreePagesRecursively(this BlittableJsonTextWriter writer, IEnumerable<ReduceTreePage> pages)
