@@ -18,9 +18,9 @@
                 <input type="text" class="form-control" placeholder="Filter" accesskey="/" title="Filter databases (Alt+/)" data-bind="textInput: filters.searchText">
             </div>
             <div class="toggle toggle-primary">
-                <input id="compactViewInput" name="compactView" class="styled" type="checkbox" />
-                <label for="compactViewInput">
-                    Show only local (Node A)
+                <input id="localOnlyInput" name="localDbOnly" class="styled" type="checkbox" data-bind="checked: filters.localOnly" />
+                <label for="localOnlyInput">
+                    Show only local (Node <span data-bind="text: clusterManager.nodeTag"></span>)
                 </label>
             </div>
             <div class="databasesToolbar-actions">
@@ -81,14 +81,16 @@
                                 <label></label>
                             </div>
                             <h3 class="database-name">
-                                <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase()"><i class="icon-database"></i><span data-bind="text: name"></span></span>
-                                <a data-bind="attr: { title: name, href: $root.allDocumentsUrl($data) }, visible: canNavigateToDatabase()" href="#"><i class="icon-database"></i><span data-bind="text: name"></span></a>
+                                <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase()">
+                                    <i data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }"></i><span data-bind="text: name"></span>
+                                </span>
+                                <a data-bind="attr: { title: name, href: $root.createAllDocumentsUrlObservable($data), target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' }, visible: canNavigateToDatabase()" href="#">
+                                    <i data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }"></i><span data-bind="text: name"></span>
+                                </a>
                             </h3>
                         </div>
-                        <div class="dbgroup-node-type flex-horizontal">
-                            <div><i class="icon-member"></i> <span>Node A</span></div>
-                            <div><i class="icon-promotable"></i> <span>Node B</span></div>
-                            <div><i class="icon-watcher"></i> <span>Node C</span></div>
+                        <div class="dbgroup-node-type flex-horizontal" data-bind="foreach: nodes">
+                            <div><i data-bind="attr: { class: cssIcon }"></i> <span data-bind="text: 'Node ' + tag()"></span></div>
                         </div>
                     </div>
                     <div class="vertical-divider properties-container"
@@ -101,9 +103,14 @@
 
                         <div class="actions">
                             <div class="btn-toolbar pull-right-sm" role="toolbar">
-                                <button class="btn btn-default">
+                                <a class="btn btn-default" href="#">
+                                    <!-- TODO:
+                                        
+                                        connect me 
+
+                                        -->
                                     <i class="icon-topology"></i> <span>Manage group</span>
-                                </button>
+                                </a>
                                 <div class="btn-group">
                                     <button class="btn btn-default"
                                             data-bind="click: $root.toggleDatabase,
@@ -186,7 +193,8 @@
 
     <div class="properties-item" data-bind="visible: $data.qualifier === 'db', if: $data.qualifier === 'db'">
         <div class="properties-value value-only">
-            <a class="set-size text-disabled" title="Number of documents. Click to view documents list" data-bind="attr: { href: $root.allDocumentsUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() }">
+            <a class="set-size text-disabled" title="Number of documents. Click to view documents list" 
+               data-bind="attr: { href: $root.createAllDocumentsUrlObservable($data), target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' }, css: { 'link-disabled': !canNavigateToDatabase() }">
                 <i class="icon-document-group"></i>
                 <span data-bind="text: documentsCount().toLocaleString()"></span>
                 <span class="hidden-compact" data-bind="text: $root.pluralize(documentsCount().toLocaleString(), 'document', 'documents', true)"></span>

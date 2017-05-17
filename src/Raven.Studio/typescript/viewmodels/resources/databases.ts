@@ -25,7 +25,8 @@ class databases extends viewModelBase {
     clusterManager = clusterTopologyManager.default;
 
     filters = {
-        searchText: ko.observable<string>()
+        searchText: ko.observable<string>(),
+        localOnly: ko.observable<string>()
     }
 
     selectionState: KnockoutComputed<checkbox>;
@@ -52,6 +53,7 @@ class databases extends viewModelBase {
         const filters = this.filters;
 
         filters.searchText.throttle(200).subscribe(() => this.filterDatabases());
+        filters.localOnly.subscribe(() => this.filterDatabases());
 
         this.selectionState = ko.pureComputed<checkbox>(() => {
             const databases = this.databases().sortedDatabases().filter(x => !x.filteredOut());
@@ -124,12 +126,19 @@ class databases extends viewModelBase {
         const filters = this.filters;
         let searchText = filters.searchText();
         const hasSearchText = !!searchText;
+        const localOnly = filters.localOnly();
+        const nodeTag = this.clusterManager.nodeTag();
 
         if (hasSearchText) {
             searchText = searchText.toLowerCase();
         }
 
-        const matchesFilters = (rs: databaseInfo) => !hasSearchText || rs.name.toLowerCase().indexOf(searchText) >= 0;
+        const matchesFilters = (rs: databaseInfo) => {
+            const matchesText = !hasSearchText || rs.name.toLowerCase().indexOf(searchText) >= 0;
+            const matchesLocal = !localOnly || _.some(rs.nodes(), x => x.tag() === nodeTag && (x.type() === "Member" || x.type() === "Promotable"));
+
+            return matchesText && matchesLocal;
+        };
 
         const databases = this.databases();
         databases.sortedDatabases().forEach(db => {
@@ -142,9 +151,20 @@ class databases extends viewModelBase {
         });
     }
 
-    allDocumentsUrl(dbInfo: databaseInfo): string {
-        const db = dbInfo.asDatabase();
-        return appUrl.forDocuments(null, db);
+    createAllDocumentsUrlObservable(dbInfo: databaseInfo): KnockoutComputed<string> {
+        const isLocalObservable = this.createIsLocalDatabaseObservable(dbInfo.name);
+        return ko.pureComputed(() => {
+            const db = dbInfo.asDatabase();
+            const isLocal = isLocalObservable();
+            if (isLocal) {
+                return appUrl.forDocuments(null, db);
+            } else {
+                // we have to redirect to different node, let's find first member where selected database exists
+                const firstMember = dbInfo.nodes().find(x => x.type() === "Member");
+                const url = firstMember.serverUrl();
+                return appUrl.toExternalUrl(url, appUrl.forDocuments(null, db));
+            }
+        });
     }
 
     indexErrorsUrl(dbInfo: databaseInfo): string {
