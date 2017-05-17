@@ -11,7 +11,6 @@ namespace Raven.Client.Documents.Commands
         public DeleteSubscriptionCommand(long id)
         {
             _id = id;
-            ResponseType = RavenCommandResponseType.Empty;
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

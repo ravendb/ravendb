@@ -34,7 +34,6 @@ namespace Raven.Client.Documents.Operations.Transformers
                     throw new ArgumentNullException(nameof(transformerName));
 
                 _transformerName = transformerName;
-                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

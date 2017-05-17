@@ -33,7 +33,6 @@ namespace Raven.Client.Documents.Operations.Indexes
                     throw new ArgumentNullException(nameof(indexName));
 
                 _indexName = indexName;
-                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

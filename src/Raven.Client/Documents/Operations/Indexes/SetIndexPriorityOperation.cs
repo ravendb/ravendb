@@ -38,7 +38,6 @@ namespace Raven.Client.Documents.Operations.Indexes
 
                 _indexName = indexName;
                 _priority = priority;
-                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

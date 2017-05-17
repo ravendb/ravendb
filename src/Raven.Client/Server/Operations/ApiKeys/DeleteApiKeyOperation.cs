@@ -33,7 +33,6 @@ namespace Raven.Client.Server.Operations.ApiKeys
                     throw new ArgumentNullException(nameof(name));
 
                 _name = name;
-                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override bool IsReadRequest => false;
