@@ -146,6 +146,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private volatile bool _priorityChanged;
         private volatile bool _hadRealIndexingWorkToDo;
+        private Func<bool> _indexValidationStalenessCheck = () => true;
 
         private readonly WarnIndexOutputsPerDocument _indexOutputsPerDocumentWarning = new WarnIndexOutputsPerDocument
         {
@@ -379,6 +380,19 @@ namespace Raven.Server.Documents.Indexes
                     DocumentDatabase.DocumentTombstoneCleaner.Subscribe(this);
 
                     DocumentDatabase.Changes.OnIndexChange += HandleIndexChange;
+
+                    _indexValidationStalenessCheck = () =>
+                    {
+                        if (_cts.IsCancellationRequested)
+                            return true;
+
+                        DocumentsOperationContext documentsContext;
+                        using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+                        using (documentsContext.OpenReadTransaction())
+                        {
+                            return IsStale(documentsContext);
+                        }
+                    };
 
                     InitializeInternal();
 
@@ -1013,10 +1027,10 @@ namespace Raven.Server.Documents.Indexes
                 State = IndexState.Error; // just in case it didn't took from the SetState call
             }
         }
-
+        
         private void HandleIndexFailureInformation(IndexFailureInformation failureInformation)
         {
-            if (failureInformation.IsInvalidIndex == false)
+            if (failureInformation.IsInvalidIndex(_indexValidationStalenessCheck) == false)
                 return;
 
             var message = failureInformation.GetErrorMessage();
