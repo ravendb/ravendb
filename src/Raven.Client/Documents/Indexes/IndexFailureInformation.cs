@@ -15,7 +15,9 @@ namespace Raven.Client.Documents.Indexes
     {
         private const float FailureThreshold = 0.15f;
 
-        private const int NumberOfAttemptsToCheckFailureRate = 100;
+        internal const int SufficientNumberOfAttemptsToCheckFailureRate = 100;
+
+        internal const int MinimalNumberOfAttemptsToCheckFailureRate = (int)(SufficientNumberOfAttemptsToCheckFailureRate / (FailureThreshold * 100));
 
         /// <summary>
         /// Indicates whether this is invalid index.
@@ -37,10 +39,21 @@ namespace Raven.Client.Documents.Indexes
             if (reduceErrors != null)
                 errors += reduceErrors.Value;
 
-            if (attempts < NumberOfAttemptsToCheckFailureRate && isStale()) // we don't have enough attempts to make a useful determination and an index didn't complete the work yet
+            if (attempts > SufficientNumberOfAttemptsToCheckFailureRate)
+                return (errors / (float)attempts) > FailureThreshold;
+
+            // we don't have enough attempts to make a good determination
+
+            if (isStale()) // an index hasn't complete yet, let it index more docs
                 return false;
 
-            return (errors / (float)attempts) > FailureThreshold;
+            if (attempts >= MinimalNumberOfAttemptsToCheckFailureRate) // enough to calculate
+                return (errors / (float)attempts) > FailureThreshold;
+            
+            if (attempts == errors) // no results and just errors
+                return true;
+
+            return false;
         }
 
         /// <summary>
