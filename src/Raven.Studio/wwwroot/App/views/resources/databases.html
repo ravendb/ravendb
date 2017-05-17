@@ -24,10 +24,19 @@
                 </label>
             </div>
             <div class="databasesToolbar-actions">
-                <button class="btn btn-primary" data-bind="click: newDatabase">
-                    <i class="icon-plus"></i>
-                    <span>New database</span>
-                </button>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary" data-bind="click: newDatabase">
+                        <i class="icon-plus"></i>
+                        <span>New database</span>
+                    </button>
+                    <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a href="#"><i class="icon-backup"></i> <span>New database from backup</span></a></li>
+                    </ul>
+                </div>
 
                 <div class="btn-group-label" data-bind="css: { active: selectedDatabases().length }" data-label="Selection" role="group">
                     <button class="btn btn-danger" data-bind="visible: isGlobalAdmin(), enable: selectedDatabases().length, click: deleteSelectedDatabases">
@@ -75,7 +84,7 @@
             <div class="panel database-item" data-bind="scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(), attr: { class: 'panel database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') }">
                 <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                 <div class="padding padding-sm database-info">
-                    <div class="flex-grow">
+                    <div class="info-grow">
                         <div class="info-container">
                             <div class="checkbox">
                                 <input type="checkbox" class="styled" data-bind="checked: $root.selectedDatabases, checkedValue: name">
