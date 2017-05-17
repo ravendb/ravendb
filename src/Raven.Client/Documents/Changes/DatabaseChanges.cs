@@ -99,7 +99,7 @@ namespace Raven.Client.Documents.Changes
 
         public IObservable<OperationStatusChange> ForOperationId(long operationId)
         {
-            var counter = GetOrAddConnectionState("operations/" + operationId, "watch-operation", "unwatch-operation", null);
+            var counter = GetOrAddConnectionState("operations/" + operationId, "watch-operation", "unwatch-operation", operationId.ToString());
 
             var taskedObservable = new ChangesObservable<OperationStatusChange, DatabaseConnectionState>(
                 counter,
@@ -427,7 +427,7 @@ namespace Raven.Client.Documents.Changes
                     }
                     break;
                 case nameof(OperationStatusChange):
-                    var operationStatusChange = OperationStatusChange.FromJson(value);
+                    var operationStatusChange = OperationStatusChange.FromJson(value, _conventions);
                     foreach (var state in states)
                     {
                         state.Send(operationStatusChange);
