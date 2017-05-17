@@ -10,6 +10,7 @@ using Voron.Platform.Posix;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Platform;
+using Sparrow.Utils;
 
 namespace FastTests
 {
@@ -17,7 +18,7 @@ namespace FastTests
     {
         public static ParallelOptions DefaultParallelOptions = new ParallelOptions
         {
-            MaxDegreeOfParallelism = Environment.ProcessorCount * 2
+            MaxDegreeOfParallelism = ProcessorInfo.ProcessorCount * 2
         };
 
         private static int _pathCount;

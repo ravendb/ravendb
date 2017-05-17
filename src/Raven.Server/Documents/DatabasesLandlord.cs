@@ -28,6 +28,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents
 {
@@ -210,7 +211,7 @@ namespace Raven.Server.Documents
                     // we limit the number of resources we dispose concurrently to avoid
                     // putting too much pressure on the I/O system if a disposing db need
                     // to flush data to disk
-                    MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2)
+                    MaxDegreeOfParallelism = Math.Max(1, ProcessorInfo.ProcessorCount / 2)
                 }, dbTask =>
                 {
                     if (dbTask.IsCompleted == false)
