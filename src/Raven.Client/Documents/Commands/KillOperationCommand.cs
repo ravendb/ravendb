@@ -14,6 +14,7 @@ namespace Raven.Client.Documents.Commands
         public KillOperationCommand(long id)
         {
             _id = id;
+            ResponseType = RavenCommandResponseType.Empty;
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -31,7 +32,7 @@ namespace Raven.Client.Documents.Commands
             Result = true;
         }
 
-        public override bool IsReadRequest => true;
+        public override bool IsReadRequest => false;
     
     }
 }
