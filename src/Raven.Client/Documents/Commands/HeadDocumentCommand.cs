@@ -1,7 +1,8 @@
 ﻿using System;
-using System.IO;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Sparrow.Json;
@@ -17,7 +18,6 @@ namespace Raven.Client.Documents.Commands
         {
             _id = id ?? throw new ArgumentNullException(nameof(id));
             _etag = etag;
-            ResponseType = RavenCommandResponseType.Raw;
         }
 
         public override bool IsReadRequest => false;
@@ -37,14 +37,32 @@ namespace Raven.Client.Documents.Commands
             return request;
         }
 
-        public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
+        public override Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
             if (response.StatusCode == HttpStatusCode.NotModified)
+            {
                 Result = _etag;
-            else if (response.StatusCode == HttpStatusCode.NotFound)
+                return Task.CompletedTask;
+            }
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
                 Result = null;
-            else
-                Result = response.GetEtagHeader();
+                return Task.CompletedTask;
+            }
+
+            Result = response.GetEtagHeader();
+            return Task.CompletedTask;
+        }
+
+        public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+        {
+            Debug.Assert(fromCache == false);
+
+            if (response != null)
+                ThrowInvalidResponse();
+
+            Result = null;
         }
     }
 }
