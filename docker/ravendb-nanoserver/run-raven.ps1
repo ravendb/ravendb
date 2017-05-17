@@ -5,7 +5,8 @@ cd c:/ravendb/Server
 if ([string]::IsNullOrEmpty($env:CustomConfigFilename) -eq $False) {
     ./Raven.Server.exe `
         /Raven/RunAsService=true `
-        /Raven/ServerUrl/Tcp=38888 `
+        /Raven/ServerUrl=http://0.0.0.0:8080 `
+        /Raven/ServerUrl/Tcp=tcp://0.0.0.0:38888 `
         /Raven/Config="$CUSTOM_SETTINGS_PATH" `
         /Raven/DataDir=$($env:DataDir) `
         --print-id
@@ -13,7 +14,8 @@ if ([string]::IsNullOrEmpty($env:CustomConfigFilename) -eq $False) {
 else {
     ./Raven.Server.exe `
         /Raven/RunAsService=true `
-        /Raven/ServerUrl/Tcp=38888 `
+        /Raven/ServerUrl=http://0.0.0.0:8080 `
+        /Raven/ServerUrl/Tcp=tcp://0.0.0.0:38888 `
         /Raven/AllowAnonymousUserToAccessTheServer=$($env:AllowAnonymousUserToAccessTheServer) `
         /Raven/DataDir=$($env:DataDir) `
         --print-id
