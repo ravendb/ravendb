@@ -151,14 +151,20 @@ namespace Raven.Server.Web
 
         protected long? GetLongFromHeaders(string name)
         {
-            var etags = HttpContext.Request.Headers[name];
-            if (etags.Count == 0)
+            var headers = HttpContext.Request.Headers[name];
+            if (headers.Count == 0)
                 return null;
 
-            if (etags[0][0] == '\"')
-                return long.Parse(etags[0].Substring(1, etags[0].Length - 2));
+            string raw = headers[0][0] == '\"'
+                ? headers[0].Substring(1, headers[0].Length - 2)
+                : headers[0];
 
-            return long.Parse(etags[0]);
+            var success = long.TryParse(raw, out var result);
+
+            if (success)
+                return result;
+
+            return null;
         }
 
         protected void ThrowInvalidInteger(string name, string etag)
