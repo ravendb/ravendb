@@ -62,6 +62,9 @@ namespace Sparrow.Utils
 
         public static async Task WaitFor(uint duration)
         {
+            if (duration == 0)
+                return;
+
             var mod = duration % 50;
             if (mod != 0)
                 duration += 50 - mod;
@@ -97,6 +100,9 @@ namespace Sparrow.Utils
 
         public static async Task WaitFor(uint duration, CancellationToken token)
         {
+            if (duration == 0)
+                return;
+
             token.ThrowIfCancellationRequested();
             // ReSharper disable once MethodSupportsCancellation
             var task = WaitFor(duration);

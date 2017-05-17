@@ -13,32 +13,14 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-
-            for (int i = 0; i < 128; i++)
+            for (int i = 0; i < 199; i++)
             {
                 Console.WriteLine(i);
-
-                using (var a = new FastTests.Server.Replication.ReplicationCleanTombstones())
-                {
-                    a.CleanTombstones().Wait();
-                }
-
-                using (var a = new IndexesFromClient())
-                {
-                    a.CanStopAndStart().Wait();
-                }
-
-                using (var a = new WaitingForNonStaleResults())
+                using (var a = new FastTests.Server.Documents.Queries.WaitingForNonStaleResults())
                 {
                     a.Throws_if_exceeds_timeout();
                 }
-
-                using (var a = new SubscriptionOperationsSignaling())
-                {
-                    a.SubscriptionInterruptionEventIsFiredWhenSubscriptionIsDeleted();
-                }
             }
-
             /*using (var a = new AttachmentsSession())
             {
                 a.PutAttachmentAndDeleteShouldThrow();

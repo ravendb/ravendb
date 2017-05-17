@@ -96,7 +96,7 @@ namespace FastTests.Server.Documents.Queries
                     var timeout = 1000;
                     if (Debugger.IsAttached)
                         timeout *= 25;
-                    Assert.True(sp.ElapsedMilliseconds < timeout);
+                    Assert.True(sp.ElapsedMilliseconds < timeout, sp.Elapsed.ToString());
                 }
             }
         }
