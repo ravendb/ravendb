@@ -7,6 +7,8 @@ namespace Sparrow.Platform.Posix
     public static class CgroupUtils
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger(nameof(CgroupUtils), "Raven/Server");
+        private static bool IsOldLimitAlert { get; set; }
+        private static bool IsOldCoresAlert { get; set; }
 
         public static long ReadNumberFromCgroupFile(string filename)
         {
@@ -21,8 +23,11 @@ namespace Sparrow.Platform.Posix
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Unable to read and parse '{filename}', will not resepect container's limit", e);
+                if (IsOldLimitAlert == false && Logger.IsOperationsEnabled)
+                {
+                    IsOldLimitAlert = true;
+                    Logger.Operations("Unable to read and parse '{filename}', will not resepect container's limit", e);
+                }
                 return long.MaxValue;
             }
         }
@@ -49,8 +54,11 @@ namespace Sparrow.Platform.Posix
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Unable to read and parse '{filename}', will not resepect container's number of cores", e);
+                if (IsOldCoresAlert == false && Logger.IsOperationsEnabled)
+                {
+                    IsOldCoresAlert = true;
+                    Logger.Operations("Unable to read and parse '{filename}', will not resepect container's number of cores", e);
+                }
                 return Environment.ProcessorCount;
             }
         }
