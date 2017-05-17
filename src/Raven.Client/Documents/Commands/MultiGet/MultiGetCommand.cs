@@ -2,7 +2,6 @@
 using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -39,12 +38,8 @@ namespace Raven.Client.Documents.Commands.MultiGet
             var commands = new List<DynamicJsonValue>();
             foreach (var command in _commands)
             {
-                string requestUrl;
-                var cacheKey = GetCacheKey(command, out requestUrl);
-
-                long cachedEtag;
-                BlittableJsonReaderObject cachedResponse;
-                using (_cache.Get(_context, cacheKey, out cachedEtag, out cachedResponse))
+                var cacheKey = GetCacheKey(command, out string requestUrl);
+                using (_cache.Get(_context, cacheKey, out long cachedEtag, out BlittableJsonReaderObject cachedResponse))
                 {
                     var headers = new DynamicJsonValue();
                     if (cachedEtag != 0)
