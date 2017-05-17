@@ -190,7 +190,6 @@ namespace Raven.Client.Documents.Smuggler
 
                 _options = options;
                 _stream = stream;
-                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override bool IsReadRequest => false;

@@ -41,7 +41,6 @@ namespace Raven.Client.Documents.Operations
                 _documentId = documentId;
                 _name = name;
                 _etag = etag;
-                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

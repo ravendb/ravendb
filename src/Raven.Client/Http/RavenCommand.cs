@@ -14,6 +14,10 @@ namespace Raven.Client.Http
 {
     public abstract class RavenCommand : RavenCommand<object>
     {
+        protected RavenCommand()
+        {
+            ResponseType = RavenCommandResponseType.Empty;
+        }
     }
 
     public abstract class RavenCommand<TResult>

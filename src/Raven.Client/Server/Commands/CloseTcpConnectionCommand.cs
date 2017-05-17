@@ -1,6 +1,5 @@
 ﻿using System.Net.Http;
 using Raven.Client.Http;
-using Sparrow.Json;
 
 namespace Raven.Client.Server.Commands
 {
@@ -11,7 +10,6 @@ namespace Raven.Client.Server.Commands
         public CloseTcpConnectionCommand(long id)
         {
             _id = id;
-            ResponseType = RavenCommandResponseType.Empty;
         }
 
         public override bool IsReadRequest => false;

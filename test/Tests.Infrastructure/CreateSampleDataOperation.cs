@@ -15,11 +15,6 @@ namespace Tests.Infrastructure
 
         private class CreateSampleDataCommand : RavenCommand
         {
-            public CreateSampleDataCommand()
-            {
-                ResponseType = RavenCommandResponseType.Empty;
-            }
-
             public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
