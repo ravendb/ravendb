@@ -106,16 +106,9 @@ namespace Raven.Client.Documents.Commands
                 {
                     using (var writer = new BlittableJsonTextWriter(context, stream))
                     {
-                            writer.WriteStartArray();
-                            bool first = true;
-                            foreach (var id in uniqueIds)
-                            {
-                                if(!first)
-                                    writer.WriteComma();
-                                first = false;
-                                writer.WriteString(id);
-                            }
-                            writer.WriteEndArray();
+                        writer.WriteStartObject();
+                        writer.WriteArray("Ids", uniqueIds);
+                        writer.WriteEndObject();
                     }
                 });
             }

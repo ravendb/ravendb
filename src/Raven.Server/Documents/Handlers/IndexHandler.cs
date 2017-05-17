@@ -32,18 +32,18 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var createdIndexes = new List<KeyValuePair<string, long>>();
-                var tuple = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "Indexes", BlittableJsonDocumentBuilder.UsageMode.None);
-                using (tuple.Item2)
-                {
-                    foreach (var indexToAdd in tuple.Item1)
-                    {
-                        var indexDefinition = JsonDeserializationServer.IndexDefinition((BlittableJsonReaderObject)indexToAdd);
+                var input = await context.ReadForMemoryAsync(RequestBodyStream(), "Indexes");
+                if (input.TryGet("Indexes", out BlittableJsonReaderArray indexes) == false)
+                    ThrowRequiredPropertyNameInRequset("Indexes");
 
-                        if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
-                            throw new ArgumentException("Index must have a 'Maps' fields");
-                        var etag = await Database.IndexStore.CreateIndex(indexDefinition);
-                        createdIndexes.Add(new KeyValuePair<string, long>(indexDefinition.Name, etag));
-                    }
+                foreach (var indexToAdd in indexes)
+                {
+                    var indexDefinition = JsonDeserializationServer.IndexDefinition((BlittableJsonReaderObject)indexToAdd);
+
+                    if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
+                        throw new ArgumentException("Index must have a 'Maps' fields");
+                    var etag = await Database.IndexStore.CreateIndex(indexDefinition);
+                    createdIndexes.Add(new KeyValuePair<string, long>(indexDefinition.Name, etag));
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;

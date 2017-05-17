@@ -60,17 +60,9 @@ namespace Raven.Client.Documents.Operations.Indexes
                     {
                         using (var writer = new BlittableJsonTextWriter(_context, stream))
                         {
-                            writer.WriteStartArray();
-                            var first = true;
-                            foreach (var index in _indexToAdd)
-                            {
-                                if (first == false)
-                                    writer.WriteComma();
-                                first = false;
-
-                                writer.WriteObject(index);
-                            }
-                            writer.WriteEndArray();
+                            writer.WriteStartObject();
+                            writer.WriteArray("Indexes", _indexToAdd);
+                            writer.WriteEndObject();
                         }
                     })
                 };

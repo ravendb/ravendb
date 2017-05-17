@@ -90,23 +90,20 @@ namespace Raven.Server.Documents.Handlers
         {
             var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var parseArrayResults = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "docs", BlittableJsonDocumentBuilder.UsageMode.None);
+                var docs = await context.ReadForMemoryAsync(RequestBodyStream(), "docs");
+                if (docs.TryGet("Ids", out BlittableJsonReaderArray array) == false)
+                    ThrowRequiredPropertyNameInRequset("Ids");
 
-                var array = parseArrayResults.Item1;
-                using (parseArrayResults.Item2)
+                var ids = new string[array.Length];
+                for (int i = 0; i < array.Length; i++)
                 {
-                    var ids = new string[array.Length];
-                    for (int i = 0; i < array.Length; i++)
-                    {
-                        ids[i] = array.GetStringByIndex(i);
-                    }
-
-                    context.OpenReadTransaction();
-                    GetDocumentsById(context, new StringValues(ids), null, metadataOnly);
+                    ids[i] = array.GetStringByIndex(i);
                 }
+
+                context.OpenReadTransaction();
+                GetDocumentsById(context, new StringValues(ids), null, metadataOnly);
             }
         }
 

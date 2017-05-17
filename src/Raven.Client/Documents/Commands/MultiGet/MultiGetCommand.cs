@@ -62,16 +62,9 @@ namespace Raven.Client.Documents.Commands.MultiGet
             {
                 using (var writer = new BlittableJsonTextWriter(_context, stream))
                 {
-                    writer.WriteStartArray();
-                    var first = true;
-                    foreach (var command in commands)
-                    {
-                        if (first == false)
-                            writer.WriteComma();
-                        first = false;
-                        _context.Write(writer, command);
-                    }
-                    writer.WriteEndArray();
+                    writer.WriteStartObject();
+                    writer.WriteArray("Requests", commands, _context);
+                    writer.WriteEndObject();
                 }
             });
 

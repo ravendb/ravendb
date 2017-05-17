@@ -101,12 +101,10 @@ namespace Raven.Server.Documents.Handlers
                 KeyValuePair<List<Facet>, long> facets;
                 if (HttpContext.Request.Method == HttpMethod.Post.Method)
                 {
-                    var jsonParseResult = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "facets", BlittableJsonDocumentBuilder.UsageMode.None);
-                    using (jsonParseResult.Item2)
-                    {
-                        facets = FacetedQueryParser.ParseFromJson(jsonParseResult.Item1);
-                    }
-
+                    var input = await context.ReadForMemoryAsync(RequestBodyStream(), "facets");
+                    if (input.TryGet("Facets", out BlittableJsonReaderArray array) == false)
+                        ThrowRequiredPropertyNameInRequset("Facets");
+                    facets = FacetedQueryParser.ParseFromJson(array);
                 }
                 else if (HttpContext.Request.Method == HttpMethod.Get.Method)
                 {
