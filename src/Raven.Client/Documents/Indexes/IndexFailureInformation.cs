@@ -101,7 +101,7 @@ namespace Raven.Client.Documents.Indexes
                 if (ReduceErrors.HasValue)
                     errors += ReduceErrors.Value;
 
-                return errors / (float)errors;
+                return errors / (float)attempts;
             }
         }
 

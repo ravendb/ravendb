@@ -22,7 +22,12 @@ namespace SlowTests.Issues
                 {
                     for (int i = 0; i < 10; i++)
                     {
-                        session.Store(new User());
+                        var entity = new User();
+
+                        if (i == 0)
+                            entity.Age = 1;
+
+                        session.Store(entity);
                     }
 
                     session.SaveChanges();
@@ -34,7 +39,7 @@ namespace SlowTests.Issues
                 {
                     var ex = Assert.Throws<RavenException>(() =>session.Query<User, Failing_index>().ToList());
                     
-                    Assert.Contains("Index \'Failing/index (3)\' is marked as errored. Index Failing/index (3) is invalid, out of 10 map attempts, 10 has failed. Error rate of 100% exceeds allowed 15% error rate", ex.Message);
+                    Assert.Contains("Index \'Failing/index (3)\' is marked as errored. Index Failing/index (3) is invalid, out of 10 map attempts, 9 has failed. Error rate of 90% exceeds allowed 15% error rate", ex.Message);
                 }
 
                 var indexStats = store.Admin.Send(new GetIndexStatisticsOperation(failingIndex.IndexName));
@@ -49,7 +54,7 @@ namespace SlowTests.Issues
             public Failing_index()
             {
                 Map = users => from u in users
-                    select new { a = 10 / (u.Age - u.Age) };
+                    select new { a = 10 / u.Age };
             }
         }
     }
