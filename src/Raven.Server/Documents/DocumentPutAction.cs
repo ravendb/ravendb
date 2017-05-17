@@ -161,9 +161,9 @@ namespace Raven.Server.Documents
                 _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context, lowerKey, document);
             }
 
+            _documentDatabase.DocumentsStorage.SetDatabaseChangeVector(context,changeVector);
             _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
             _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Size);
-
 
             context.Transaction.AddAfterCommitNotification(new DocumentChange
             {
