@@ -3,6 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Exceptions;
+using Raven.Client.Documents.Linq;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -180,6 +182,45 @@ namespace FastTests.Server.Replication
                 await SetupReplicationAsync(store2, store1);
 
                 Assert.Equal(2, WaitUntilHasConflict(store1, "foo/bar").Results.Length);
+            }
+        }
+
+        [Fact]
+        public async Task ResolveHiLoConflict()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"});
+                    session.SaveChanges();
+                }
+                using (var session = store2.OpenSession())
+                {
+                    session.Store(new User {Name = "Oren"});
+                    session.SaveChanges();
+                }
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+
+                Assert.Equal(2,WaitUntilHasConflict(store1, "users/1").Results.Length);
+                Assert.Equal(2,WaitUntilHasConflict(store2, "users/1").Results.Length);
+
+                var db = await GetDocumentDatabaseInstanceFor(store1);
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                {
+                    long etag = -1;
+                    using (ctx.OpenReadTransaction())
+                    {
+                        etag = db.DocumentsStorage.GetLastDocumentEtag(ctx, "@system");
+                    }
+                    await Task.Delay(200); // twice the minial heartbeat
+                    using (ctx.OpenReadTransaction())
+                    {
+                        Assert.Equal(etag, db.DocumentsStorage.GetLastDocumentEtag(ctx, "@system"));
+                    }
+                }
             }
         }
     }
