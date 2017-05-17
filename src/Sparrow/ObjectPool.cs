@@ -13,6 +13,7 @@
 
 using System.Diagnostics.Contracts;
 using System.Reflection;
+using Sparrow.Utils;
 
 namespace Sparrow
 {
@@ -137,7 +138,7 @@ namespace Sparrow
 #endif
 
         public ObjectPool(Factory factory)
-            : this(factory, Environment.ProcessorCount * 2)
+            : this(factory, ProcessorInfo.ProcessorCount * 2)
         { }
 
         public ObjectPool(Factory factory, int size)

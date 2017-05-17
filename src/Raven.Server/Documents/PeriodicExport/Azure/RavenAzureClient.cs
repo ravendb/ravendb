@@ -21,6 +21,7 @@ using System.Xml;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client.Util;
 using Raven.Server.Exceptions.PeriodicExport;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.PeriodicExport.Azure
 {
@@ -115,7 +116,7 @@ namespace Raven.Server.Documents.PeriodicExport.Azure
             if (stream.Length > TotalBlocksSizeLimitInBytes)
                 throw new InvalidOperationException($"Can't upload more than 195GB to Azure, current upload size: {stream.Length/1024/1024/1024}GB");
 
-            var threads = Environment.ProcessorCount/2 + 1;
+            var threads = ProcessorInfo.ProcessorCount/2 + 1;
             //max size of in memory queue is: 100MB
             var queue = new BlockingCollection<ByteArrayWithBlockId>(Math.Min(25, threads*2));
             //List of block ids; the blocks will be committed in the order in this list
