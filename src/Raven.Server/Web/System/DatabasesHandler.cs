@@ -270,21 +270,19 @@ namespace Raven.Server.Web.System
             context.Write(writer, doc);
         }
         
-        private BackupInfo GetBackupInfo(DocumentDatabase db)
+        private static BackupInfo GetBackupInfo(DocumentDatabase db)
         {
-            var periodicExportRunner = db?.BundleLoader.PeriodicExportRunner;
+            var periodicExportRunner = db?.BundleLoader.PeriodicBackupRunner;
 
             if (periodicExportRunner == null)
-            {
                 return null;
-            }
 
-            return new BackupInfo()
+            return new BackupInfo
             {
                 IncrementalBackupInterval = periodicExportRunner.IncrementalInterval,
                 FullBackupInterval = periodicExportRunner.FullExportInterval,
-                LastIncrementalBackup = periodicExportRunner.ExportTime,
-                LastFullBackup = periodicExportRunner.FullExportTime
+                LastIncrementalBackup = DateTime.Now, //TODO: periodicExportRunner.ExportTime,
+                LastFullBackup = DateTime.Now //TODO: periodicExportRunner.FullExportTime
             };
         }
 

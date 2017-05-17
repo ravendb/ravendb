@@ -10,9 +10,9 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Util;
-using Raven.Server.Exceptions.PeriodicExport;
+using Raven.Server.Exceptions.PeriodicBackup;
 
-namespace Raven.Server.Documents.PeriodicExport.Aws
+namespace Raven.Server.Documents.PeriodicBackup.Aws
 {
     public class RavenAwsGlacierClient : RavenAwsClient
     {

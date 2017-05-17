@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Raven.Client;
-using Raven.Client.Documents.Changes;
 using Raven.Client.Server.Operations;
 using Raven.Server.Documents.Expiration;
-using Raven.Server.Documents.PeriodicExport;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -22,7 +20,7 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _database;
         public VersioningStorage VersioningStorage;
         public ExpiredDocumentsCleaner ExpiredDocumentsCleaner;
-        public PeriodicExportRunner PeriodicExportRunner;
+        public PeriodicBackupRunner PeriodicBackupRunner;
 
         public BundleLoader(DocumentDatabase database, ServerStore serverStore)
         {
@@ -48,9 +46,10 @@ namespace Raven.Server.Documents
                     var dbRecord = _serverStore.Cluster.ReadDatabase(context, _database.Name);
                     if (dbRecord == null)
                         return;
+
                     VersioningStorage = VersioningStorage.LoadConfigurations(_database, dbRecord, VersioningStorage);
                     ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(_database, dbRecord, ExpiredDocumentsCleaner);
-                    PeriodicExportRunner = PeriodicExportRunner.LoadConfigurations(_database, dbRecord, PeriodicExportRunner);
+                    PeriodicBackupRunner.UpdateConfigurations(dbRecord);
                 }
             }
         }
@@ -60,7 +59,7 @@ namespace Raven.Server.Documents
         /// </summary>
         public void InitializeBundles()
         {
-
+            PeriodicBackupRunner = new PeriodicBackupRunner(_database, _serverStore);
             HandleDatabaseRecordChange();
         }
 
@@ -71,8 +70,8 @@ namespace Raven.Server.Documents
                 res.Add(BundleTypeToName[ExpiredDocumentsCleaner.GetType()]);
             if (VersioningStorage != null)
                 res.Add(BundleTypeToName[VersioningStorage.GetType()]);
-            if (PeriodicExportRunner != null)
-                res.Add(BundleTypeToName[PeriodicExportRunner.GetType()]);
+            if (PeriodicBackupRunner != null)
+                res.Add(BundleTypeToName[PeriodicBackupRunner.GetType()]);
             return res;
         }
 
@@ -80,7 +79,7 @@ namespace Raven.Server.Documents
         {
             {typeof(VersioningStorage), "Versioning"},
             {typeof(ExpiredDocumentsCleaner), "Expiration"},
-            {typeof(PeriodicExportRunner), "PeriodicExport"}
+            {typeof(PeriodicBackupRunner), "PeriodicBackup"}
         };
 
 
@@ -94,25 +93,25 @@ namespace Raven.Server.Documents
             });
             exceptionAggregator.Execute(() =>
             {
-                PeriodicExportRunner?.Dispose();
-                PeriodicExportRunner = null;
+                PeriodicBackupRunner?.Dispose();
+                PeriodicBackupRunner = null;
             });
             exceptionAggregator.ThrowIfNeeded();
         }
 
         public DynamicJsonValue GetBackupInfo()
         {
-            if (PeriodicExportRunner == null)
+            if (PeriodicBackupRunner == null)
             {
                 return null;
             }
 
             return new DynamicJsonValue
             {
-                [nameof(BackupInfo.IncrementalBackupInterval)] = PeriodicExportRunner.IncrementalInterval,
-                [nameof(BackupInfo.FullBackupInterval)] = PeriodicExportRunner.FullExportInterval,
-                [nameof(BackupInfo.LastIncrementalBackup)] = PeriodicExportRunner.ExportTime,
-                [nameof(BackupInfo.LastFullBackup)] = PeriodicExportRunner.FullExportTime
+                [nameof(BackupInfo.IncrementalBackupInterval)] = PeriodicBackupRunner.IncrementalInterval,
+                [nameof(BackupInfo.FullBackupInterval)] = PeriodicBackupRunner.FullExportInterval,
+                [nameof(BackupInfo.LastIncrementalBackup)] = DateTime.Now,//TODO: PeriodicBackupRunner.ExportTime,
+                [nameof(BackupInfo.LastFullBackup)] = DateTime.Now//TODO: PeriodicBackupRunner.FullExportTime
             };
         }
     }

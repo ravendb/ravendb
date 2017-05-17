@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Server.Operations;
-using Raven.Client.Server.PeriodicExport;
+using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;

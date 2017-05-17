@@ -5,7 +5,7 @@ using System.Net.Http;
 using System.Text;
 using Raven.Client.Http;
 
-namespace Raven.Server.Exceptions.PeriodicExport
+namespace Raven.Server.Exceptions.PeriodicBackup
 {
     public class StorageException : Exception
     {

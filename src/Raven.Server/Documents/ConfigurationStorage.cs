@@ -2,7 +2,7 @@
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
-using Raven.Server.Documents.PeriodicExport;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;

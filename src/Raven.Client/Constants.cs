@@ -241,12 +241,14 @@ namespace Raven.Client
                 public const string RavenEtlDocument = "Raven/ETL";
             }
 
-            public class PeriodicExport
+            public class PeriodicBackup
             {
 
-                public const string IncrementalExportExtension = ".ravendb-incremental-export";
+                public const string IncrementalBackupExtension = ".ravendb-incremental-backup";
 
-                public const string FullExportExtension = ".ravendb-full-export";
+                public const string FullBackupExtension = ".ravendb-full-backup";
+
+                public const string SnapshotExtension = ".ravendb-full-backup";
             }
 
             public class Expiration

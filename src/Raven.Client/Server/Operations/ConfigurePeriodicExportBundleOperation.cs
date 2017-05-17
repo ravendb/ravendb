@@ -1,18 +1,23 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Text;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server.PeriodicExport;
+using Raven.Client.Server.Expiration;
+using Raven.Client.Server.PeriodicBackup;
 using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
     public class ConfigurePeriodicBackupOperation : IServerOperation<ConfigurePeriodicBackupOperationResult>
     {
-        private readonly PeriodicBackupConfiguration _configuration;
-        private readonly string _databaseName;
+        private PeriodicBackupConfiguration _configuration;
+        private string _databaseName;
 
         public ConfigurePeriodicBackupOperation(PeriodicBackupConfiguration configuration, string databaseName)
         {
@@ -27,9 +32,9 @@ namespace Raven.Client.Server.Operations
 
     public class ConfigurePeriodicBackupCommand : RavenCommand<ConfigurePeriodicBackupOperationResult>
     {
-        private readonly PeriodicBackupConfiguration _configuration;
+        private PeriodicBackupConfiguration _configuration;
         private readonly string _databaseName;
-        private readonly JsonOperationContext _context;
+        private JsonOperationContext _context;
 
         public ConfigurePeriodicBackupCommand(PeriodicBackupConfiguration configuration, string databaseName, JsonOperationContext context)
         {

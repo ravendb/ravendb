@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Server.Documents.PeriodicExport.Azure;
+using Raven.Server.Documents.PeriodicBackup.Azure;
 using Xunit;
 
 namespace SlowTests.Issues

@@ -544,9 +544,9 @@ namespace Raven.Server.ServerWide
         {
             using (var putCmd = context.ReadObject(new DynamicJsonValue
             {
-                ["Type"] = nameof(EditPeriodicBackupCommand),
-                [nameof(EditExpirationCommand.DatabaseName)] = name,
-                [nameof(EditExpirationCommand.Configuration)] = configurationJson,
+                ["Type"] = nameof(UpdatePeriodicBackupCommand),
+                [nameof(UpdatePeriodicBackupCommand.DatabaseName)] = name,
+                [nameof(UpdatePeriodicBackupCommand.Configuration)] = configurationJson,
             }, "periodic-export-cmd"))
             {
                 return await SendToLeaderAsync(putCmd);

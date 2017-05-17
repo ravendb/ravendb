@@ -14,7 +14,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
-using Raven.Client.Server.PeriodicExport;
+using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Versioning;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.ETL;
@@ -183,8 +183,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(EtlProcessStatistics));
             scripter.AddType(typeof(SimulateSqlEtl));
 
-            // periodic export
-            scripter.AddType(typeof(PeriodicBackupConfiguration));
+            // backup
+            //TODO: scripter.AddType(typeof(PeriodicBackupConfiguration));
 
             // storage report
             scripter.AddType(typeof(StorageReport));

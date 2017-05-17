@@ -5,11 +5,10 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Server.Operations;
-using Raven.Client.Server.PeriodicExport;
-using Raven.Server.Documents.PeriodicExport;
+using Raven.Client.Server.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -24,7 +23,6 @@ namespace SlowTests.Server.Documents.PeriodicExport
             _exportPath = NewDataPath(suffix: "ExportFolder");
         }
 
-
         [Fact, Trait("Category", "Smuggler")]
         public async Task CanExportToDirectory_MultipleExports_with_long_interval()
         {
@@ -35,23 +33,25 @@ namespace SlowTests.Server.Documents.PeriodicExport
                     await session.StoreAsync(new User { Name = "oren" });
                     var config = new PeriodicBackupConfiguration
                     {
-                        Active = true,
-                        LocalFolderName = _exportPath,
-                        IntervalMilliseconds = 25
+                        LocalSettings = new LocalSettings
+                        {
+                            FolderPath = _exportPath
+                        },
+                        //TODO: IncrementalIntervalInMilliseconds = 25
                     };
                     await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));                    
                     await session.SaveChangesAsync();
                 }
 
-                var periodicExportRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicExportRunner;
+                var periodicExportRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicBackupRunner;
 
                 //get by reflection the maxTimerTimeoutInMilliseconds field
                 //this field is the maximum interval acceptable in .Net's threading timer
                 //if the requested export interval is bigger than this maximum interval, 
                 //a timer with maximum interval will be used several times until the interval cumulatively
                 //will be equal to requested interval
-                typeof(PeriodicExportRunner)
-                    .GetField(nameof(PeriodicExportRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
+                typeof(PeriodicBackupRunner)
+                    .GetField(nameof(PeriodicBackupRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
                     .SetValue(periodicExportRunner, TimeSpan.FromMilliseconds(5));
 
                 var operation = new GetPeriodicBackupStatusOperation();
@@ -61,10 +61,10 @@ namespace SlowTests.Server.Documents.PeriodicExport
                     var result = store.Admin.Server.Send(operation);
                     if (result.Status == null)
                         return false;
-                    return result.Status.LastDocsEtag > 0;
+                    return result.Status.LastEtag > 0;
                 }, TimeSpan.FromSeconds(10));
 
-                var etagForExports = store.Admin.Server.Send(operation).Status.LastDocsEtag;
+                var etagForExports = store.Admin.Server.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" });
@@ -73,7 +73,7 @@ namespace SlowTests.Server.Documents.PeriodicExport
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastDocsEtag;
+                    var newLastEtag = store.Admin.Server.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForExports;
                 }, 10000);
             }
@@ -102,24 +102,26 @@ namespace SlowTests.Server.Documents.PeriodicExport
                     await session.StoreAsync(new User { Name = "oren" });
                     var config = new PeriodicBackupConfiguration
                     {
-                        Active = true,
-                        LocalFolderName = _exportPath,
-                        IntervalMilliseconds = 25
+                        LocalSettings = new LocalSettings
+                        {
+                            FolderPath = _exportPath
+                        },
+                        //TODO: IncrementalIntervalInMilliseconds = 25
                     };
                     var operation = new ConfigurePeriodicBackupOperation(config, store.Database);
                     await store.Admin.Server.SendAsync(operation);
                     await session.SaveChangesAsync();
                 }
 
-                var periodicExportRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicExportRunner;
+                var periodicExportRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicBackupRunner;
 
                 //get by reflection the maxTimerTimeoutInMilliseconds field
                 //this field is the maximum interval acceptable in .Net's threading timer
                 //if the requested export interval is bigger than this maximum interval, 
                 //a timer with maximum interval will be used several times until the interval cumulatively
                 //will be equal to requested interval
-                typeof(PeriodicExportRunner)
-                    .GetField(nameof(PeriodicExportRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
+                typeof(PeriodicBackupRunner)
+                    .GetField(nameof(PeriodicBackupRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
                     .SetValue(periodicExportRunner, TimeSpan.FromMilliseconds(5));
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation();
                 SpinWait.SpinUntil(() => store.Admin.Server.Send(getPeriodicBackupStatus).Status != null, 10000);
@@ -148,9 +150,11 @@ namespace SlowTests.Server.Documents.PeriodicExport
                     await session.StoreAsync(new User { Name = "oren" });
                     var config = new PeriodicBackupConfiguration
                     {
-                        Active = true,
-                        LocalFolderName = _exportPath,
-                        IntervalMilliseconds = 25
+                        LocalSettings = new LocalSettings
+                        {
+                            FolderPath = _exportPath
+                        },
+                        //TODO: IncrementalIntervalInMilliseconds = 25
                     };
                     var operation = new ConfigurePeriodicBackupOperation(config, store.Database);
                     await store.Admin.Server.SendAsync(operation);
@@ -163,12 +167,12 @@ namespace SlowTests.Server.Documents.PeriodicExport
                     var result = store.Admin.Server.Send(getPeriodicBackupStatus);
                     if (result.Status == null)
                         return false;                        
-                    return result.Status.LastDocsEtag > 0;
+                    return result.Status.LastEtag > 0;
                 }, TimeSpan.FromSeconds(10));
 
 
                 var res = await store.Admin.Server.SendAsync(getPeriodicBackupStatus);
-                var etagForExports = res.Status.LastDocsEtag;
+                var etagForExports = res.Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" });
@@ -178,7 +182,7 @@ namespace SlowTests.Server.Documents.PeriodicExport
                 SpinWait.SpinUntil(() =>
                 {
                     res = store.Admin.Server.Send(getPeriodicBackupStatus);
-                    return res.Status.LastDocsEtag != etagForExports;
+                    return res.Status.LastEtag != etagForExports;
                 }, 10000);
 
             }

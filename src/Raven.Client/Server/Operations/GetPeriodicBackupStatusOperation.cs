@@ -2,7 +2,7 @@
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server.PeriodicExport;
+using Raven.Client.Server.PeriodicBackup;
 using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
@@ -41,6 +41,6 @@ namespace Raven.Client.Server.Operations
 
     public class GetPeriodicBackupStatusOperationResult
     {
-        public PeriodicExportStatus Status;
+        public PeriodicBackupStatus Status;
     }
 }

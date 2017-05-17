@@ -98,6 +98,18 @@ namespace Raven.Server.Smuggler.Documents.Data
                 return json;
             }
         }
+
+        public long GetLastEtag()
+        {
+            var lastEtag = Documents.LastEtag;
+            if (RevisionDocuments.LastEtag > lastEtag)
+                lastEtag = RevisionDocuments.LastEtag;
+
+            //TODO: take into account the last tombstones etag
+            //TODO: take into account the last conflicts etag
+
+            return lastEtag;
+        }
     }
 
     public abstract class SmugglerProgressBase

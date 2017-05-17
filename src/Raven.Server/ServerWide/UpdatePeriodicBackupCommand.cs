@@ -1,32 +1,30 @@
 ﻿using Raven.Client.Documents;
-using Raven.Client.Server;
-using Raven.Client.Server.PeriodicExport;
+using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide
 {
-    public class EditPeriodicBackupCommand : UpdateDatabaseCommand
+    public class UpdatePeriodicBackupCommand : UpdateDatabaseCommand
     {
         public PeriodicBackupConfiguration Configuration;
-        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
+
+        public UpdatePeriodicBackupCommand() : base(null)
         {
-            databaseRecord.PeriodicBackup = Configuration;
+            // for deserialization
         }
 
-        public EditPeriodicBackupCommand() : base(null)
-        {
-        }
-
-        public EditPeriodicBackupCommand(PeriodicBackupConfiguration configuration, string databaseName) : base(databaseName)
+        public UpdatePeriodicBackupCommand(PeriodicBackupConfiguration configuration, string databaseName) 
+            : base(databaseName)
         {
             Configuration = configuration;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.PeriodicBackup = Configuration;
+            Configuration.TaskId = etag;
+            record.AddPeriodicBackupConfiguration(Configuration);
         }
 
         public override void FillJson(DynamicJsonValue json)

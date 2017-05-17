@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 
-namespace Raven.Server.Documents.PeriodicExport
+namespace Raven.Server.Documents.PeriodicBackup
 {
     public abstract class RavenStorageClient : IDisposable
     {

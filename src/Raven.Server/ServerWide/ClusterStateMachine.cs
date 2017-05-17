@@ -98,7 +98,8 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteTransformerCommand):
                 case nameof(RenameTransformerCommand):
                 case nameof(EditVersioningCommand):
-                case nameof(EditPeriodicBackupCommand):
+                case nameof(UpdatePeriodicBackupCommand):
+                case nameof(DeletePeriodicBackupCommand):
                 case nameof(EditExpirationCommand):
                 case nameof(ModifyDatabaseWatchersCommand):
                 case nameof(ModifyConflictSolverCommand):
@@ -116,6 +117,8 @@ namespace Raven.Server.ServerWide
                 case nameof(AddDatabaseCommand):
                     AddDatabase(context, cmd, index, leader);
                     break;
+
+                //case nameof(AddBackup)
             }
         }
 
@@ -174,7 +177,7 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, itemKey, out Slice valueName))
                 using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    if (existingValue==null)
+                    if (existingValue == null)
                         existingValue = context.ReadObject(djv, updateCommand.GetItemId());
 
                     using (var rec = context.ReadObject(existingValue, "inner-val"))
@@ -486,13 +489,11 @@ namespace Raven.Server.ServerWide
                     
                     var updatedDatabaseBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
                     UpdateDatabaseRecord(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
-                    
                 }
             }
             finally
             {
                 NotifyDatabaseChanged(context, databaseName, index);
-
             }
         }
 

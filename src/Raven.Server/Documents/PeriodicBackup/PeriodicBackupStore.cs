@@ -1,10 +1,10 @@
-﻿using Raven.Client.Server.PeriodicExport;
+﻿using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Voron;
 
-namespace Raven.Server.Documents.PeriodicExport
+namespace Raven.Server.Documents.PeriodicBackup
 {
     public unsafe class PeriodicBackupStore
     {
@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.PeriodicExport
 
         static PeriodicBackupStore()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "PeriodicExportStatus", ByteStringType.Immutable, out PeriodicExportStatusSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "PeriodicBackupStatus", ByteStringType.Immutable, out PeriodicExportStatusSlice);
         }
 
         public BlittableJsonReaderObject GetDatabasePeriodicBackupStatus(DocumentsOperationContext context)
@@ -25,9 +25,9 @@ namespace Raven.Server.Documents.PeriodicExport
             return new BlittableJsonReaderObject(result.Reader.Base, result.Reader.Length, context);
         }
 
-        public void SetDatabasePeriodicBackupStatus(DocumentsOperationContext context, PeriodicExportStatus periodicExportStatus)
+        public void SetDatabasePeriodicBackupStatus(DocumentsOperationContext context, PeriodicBackupStatus periodicBackupStatus)
         {
-            var jsonVal = periodicExportStatus.ToJson();
+            var jsonVal = periodicBackupStatus.ToJson();
             var tree = context.Transaction.InnerTransaction.CreateTree(PeriodicExportStatusSlice);
             using (var json = context.ReadObject(jsonVal, "backup status"))
             using (tree.DirectAdd(PeriodicExportStatusSlice, json.Size, out byte* dest))

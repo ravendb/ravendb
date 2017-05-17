@@ -9,13 +9,11 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Raven.Server.Documents.PeriodicExport;
 using Xunit;
 using System.Linq;
-using Raven.Client;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Server.Operations;
-using Raven.Client.Server.PeriodicExport;
+using Raven.Client.Server.PeriodicBackup;
 using Raven.Tests.Core.Utils.Entities;
 
 namespace FastTests.Server.Documents.PeriodicExport
@@ -36,14 +34,17 @@ namespace FastTests.Server.Documents.PeriodicExport
             {
                 var config = new PeriodicBackupConfiguration
                 {
-                    Active = true,
-                    LocalFolderName = _exportPath,
-                    FullExportIntervalMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds,
-                    IntervalMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = _exportPath
+                    },
+                    //TODO: FullBackupFrequency = 
+                    //FullBackupIntervalInMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds,
+                    //IncrementalIntervalInMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds
                 };
                 await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));
 
-                var periodicExportRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicExportRunner;
+                var periodicExportRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicBackupRunner;
                 Assert.Equal(50, periodicExportRunner.IncrementalInterval.TotalDays);
                 Assert.Equal(50, periodicExportRunner.FullExportInterval.TotalDays);
             }
@@ -59,9 +60,12 @@ namespace FastTests.Server.Documents.PeriodicExport
                     await session.StoreAsync(new User { Name = "oren" });
                     var config = new PeriodicBackupConfiguration
                     {
-                        Active = true,
-                        LocalFolderName = _exportPath,
-                        IntervalMilliseconds = 25
+                        LocalSettings = new LocalSettings
+                        {
+                            FolderPath = _exportPath
+                        },
+                        //TODO: FullBackupFrequency = 
+                        //IncrementalIntervalInMilliseconds = 25
                     };
                     await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));
                     await session.SaveChangesAsync();
