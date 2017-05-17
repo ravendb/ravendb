@@ -5,7 +5,7 @@ import d3 = require("d3");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
 
-class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.Client.Documents.Indexes.IndexPerformanceStats[]> {
+class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<resultsDto<Raven.Client.Documents.Indexes.IndexPerformanceStats>> {
 
     private readonly onData: (data: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) => void;
 
@@ -54,13 +54,13 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<Raven.
         this.loading(false);
     }
 
-    protected onMessage(e: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) {
+    protected onMessage(e: resultsDto<Raven.Client.Documents.Indexes.IndexPerformanceStats>) {
         this.loading(false);
 
         if (this.updatesPaused) {
-            this.pendingDataToApply.push(...e);
+            this.pendingDataToApply.push(...e.Results);
         } else {
-            this.mergeIncomingData(e);
+            this.mergeIncomingData(e.Results);
             this.onData(this.mergedData);
         }
     }
