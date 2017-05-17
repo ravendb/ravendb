@@ -3,6 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System;
+
 namespace Raven.Client.Documents.Indexes
 {
     /// <summary>
@@ -12,26 +15,31 @@ namespace Raven.Client.Documents.Indexes
     {
         private const float FailureThreshold = 0.15f;
 
+        private const int NumberOfAttemptsToCheckFailureRate = 100;
+
         /// <summary>
         /// Indicates whether this is invalid index.
         /// </summary>
         /// <value><c>true</c> if this is invalid index; otherwise, <c>false</c>.</value>
-        public bool IsInvalidIndex => CheckIndexInvalid(MapAttempts, MapErrors, ReduceAttempts, ReduceErrors);
+        public bool IsInvalidIndex(Func<bool> isStale)
+        {
+            return CheckIndexInvalid(MapAttempts, MapErrors, ReduceAttempts, ReduceErrors, isStale);
+        }
 
-        public static bool CheckIndexInvalid(long attempts, long errors, long? reduceAttempts, long? reduceErrors)
+        public static bool CheckIndexInvalid(long attempts, long errors, long? reduceAttempts, long? reduceErrors, Func<bool> isStale)
         {
             if ((attempts == 0 || errors == 0) && (reduceAttempts == null || reduceAttempts == 0))
                 return false;
+
             if (reduceAttempts != null)
-            {
-                // we don't have enough attempts to make a useful determination
-                if (attempts + reduceAttempts < 100)
-                    return false;
-                return (errors + (reduceErrors ?? 0)) / (float)(attempts + (long)reduceAttempts) > FailureThreshold;
-            }
-            // we don't have enough attempts to make a useful determination
-            if (attempts < 100)
+                attempts += reduceAttempts.Value;
+
+            if (reduceErrors != null)
+                errors += reduceErrors.Value;
+
+            if (attempts < NumberOfAttemptsToCheckFailureRate && isStale()) // we don't have enough attempts to make a useful determination and an index didn't complete the work yet
                 return false;
+
             return (errors / (float)attempts) > FailureThreshold;
         }
 
