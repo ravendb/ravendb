@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -62,17 +63,29 @@ namespace Raven.Server.Documents.Handlers
 
             int index = -1;
             var state = new JsonParserState();
-            JsonOperationContext.ManagedPinnedBuffer buffer;
-            using (ctx.GetManagedBuffer(out buffer))
+            using (ctx.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
             using (var parser = new UnmanagedJsonParser(ctx, state, "bulk_docs"))
             {
                 while (parser.Read() == false)
                     await RefillParserBuffer(stream, buffer, parser);
 
+                if (state.CurrentTokenType != JsonParserToken.StartObject)
+                    ThrowUnexpectedToken(JsonParserToken.StartObject, state);
+                
+                while (parser.Read() == false)
+                    await RefillParserBuffer(stream, buffer, parser);
+
+                if (state.CurrentTokenType != JsonParserToken.String)
+                    ThrowUnexpectedToken(JsonParserToken.String, state);
+
+                if (GetLongFromStringBuffer(state) != 8314892176759549763) // Commands
+                    ThrowUnexpectedToken(JsonParserToken.String, state);
+
+                while (parser.Read() == false)
+                    await RefillParserBuffer(stream, buffer, parser);
+
                 if (state.CurrentTokenType != JsonParserToken.StartArray)
-                {
                     ThrowUnexpectedToken(JsonParserToken.StartArray, state);
-                }
 
                 while (true)
                 {
@@ -102,6 +115,11 @@ namespace Raven.Server.Documents.Handlers
             return new ArraySegment<CommandData>(cmds, 0, index + 1);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe long GetLongFromStringBuffer(JsonParserState state)
+        {
+            return *(long*)state.StringBuffer;
+        }
 
         public class ReadMany : IDisposable
         {

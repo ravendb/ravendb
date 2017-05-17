@@ -11,11 +11,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/documents/huge", "GET")]
         public Task HugeDocuments()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Results");
+
                 writer.WriteStartArray();
 
                 var isFirst = true;
@@ -46,6 +48,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
 
                 writer.WriteEndArray();
+
+                writer.WriteEndObject();
             }
 
             return Task.CompletedTask;
