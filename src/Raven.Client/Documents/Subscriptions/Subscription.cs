@@ -42,6 +42,8 @@ namespace Raven.Client.Documents.Subscriptions
 
     public delegate void SubscriptionConnectionInterrupted(Exception ex, bool willReconnect);
 
+    public delegate void ConnectionEstablised();
+
     public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class
     {
         private readonly Logger _logger;
@@ -99,6 +101,8 @@ namespace Raven.Client.Documents.Subscriptions
         /// Called when subscription connection is interrupted. The error passed will describe the reason for the interruption. 
         /// </summary>
         public event SubscriptionConnectionInterrupted SubscriptionConnectionInterrupted = delegate { };
+
+        public event ConnectionEstablised ConnectionEstablished = delegate { };
 
 
 
@@ -361,6 +365,8 @@ namespace Raven.Client.Documents.Subscriptions
 
                             AssertConnectionState(connectionStatus);
                         }
+
+                        ConnectionEstablished();
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                         Task.Run(() => successfullyConnected.TrySetResult(null));
