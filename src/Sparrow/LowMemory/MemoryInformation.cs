@@ -9,7 +9,7 @@ namespace Sparrow.LowMemory
 {
     public static class MemoryInformation
     {
-        private static Logger _logger = LoggingSource.Instance.GetLogger<MemoryInfoResult>("Raven/Server");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MemoryInfoResult>("Raven/Server");
 
         private static int _memoryLimit;
         private static bool _failedToGetAvailablePhysicalMemory;
@@ -53,8 +53,8 @@ namespace Sparrow.LowMemory
         {
             if (_failedToGetAvailablePhysicalMemory)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Because of a previous error in getting available memory, we are now lying and saying we have 256MB free");
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Because of a previous error in getting available memory, we are now lying and saying we have 256MB free");
                 return FailedResult;
             }
 
@@ -62,22 +62,38 @@ namespace Sparrow.LowMemory
             {
                 if (PlatformDetails.RunningOnPosix)
                 {
+                    // read both cgroup and sysinfo memory stats, and use the lowest if applicable
+                    long cgroupMemoryLimit = CgroupUtils.ReadNumberFromCgroupFile("/sys/fs/cgroup/memory/memory.limit_in_bytes");
+                    long cgroupMemoryUsage = CgroupUtils.ReadNumberFromCgroupFile("/sys/fs/cgroup/memory/memory.usage_in_bytes");
+
                     sysinfo_t info = new sysinfo_t();
                     if (Syscall.sysinfo(ref info) != 0)
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info("Failure when trying to read memory info from posix, error code was: " + Marshal.GetLastWin32Error());
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Failure when trying to read memory info from posix, error code was: " + Marshal.GetLastWin32Error());
                         return FailedResult;
+                    }
+
+                    Size availableRam, totalPhysicalMemory;
+                    if (cgroupMemoryLimit < (long)info.TotalRam)
+                    {
+                        availableRam = new Size(cgroupMemoryLimit - cgroupMemoryUsage, SizeUnit.Bytes);
+                        totalPhysicalMemory = new Size(cgroupMemoryLimit, SizeUnit.Bytes);
+                    }
+                    else
+                    {
+                        availableRam = new Size((long)info.AvailableRam, SizeUnit.Bytes);
+                        totalPhysicalMemory = new Size((long)info.TotalRam, SizeUnit.Bytes);
                     }
 
                     return new MemoryInfoResult
                     {
-                        AvailableMemory = new Size((long)info.AvailableRam, SizeUnit.Bytes),
-                        TotalPhysicalMemory = new Size((long)info.TotalRam, SizeUnit.Bytes),
+                        AvailableMemory = availableRam,
+                        TotalPhysicalMemory = totalPhysicalMemory
                     };
                 }
 
-              
+
 
                 var memoryStatus = new MemoryStatusEx
                 {
@@ -86,8 +102,8 @@ namespace Sparrow.LowMemory
                 var result = GlobalMemoryStatusEx(&memoryStatus);
                 if (result == false)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Failure when trying to read memory info from Windows, error code is: " + Marshal.GetLastWin32Error());
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Failure when trying to read memory info from Windows, error code is: " + Marshal.GetLastWin32Error());
                     return FailedResult;
                 }
 
@@ -99,8 +115,8 @@ namespace Sparrow.LowMemory
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Error while trying to get available memory, will stop trying and report that there is 256MB free only from now on", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Error while trying to get available memory, will stop trying and report that there is 256MB free only from now on", e);
                 _failedToGetAvailablePhysicalMemory = true;
                 return FailedResult;
             }
