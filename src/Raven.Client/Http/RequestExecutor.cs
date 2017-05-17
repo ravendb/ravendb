@@ -290,7 +290,16 @@ namespace Raven.Client.Http
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
                         {
                             cts.CancelAfter(command.Timeout.Value);
-                            response = await command.SendAsync(client, request, cts.Token).ConfigureAwait(false);
+                            try
+                            {
+                                response = await command.SendAsync(client, request, cts.Token).ConfigureAwait(false);
+                            }
+                            catch (OperationCanceledException e)
+                            {
+                                if(cts.IsCancellationRequested && token.IsCancellationRequested == false) // only when we timed out
+                                    throw new TimeoutException($"The request for {request.RequestUri} failed with timeout after {command.Timeout}", e);
+                                throw;
+                            }
                         }
                     }
                     else

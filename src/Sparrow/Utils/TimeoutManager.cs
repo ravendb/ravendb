@@ -5,10 +5,10 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Sparrow.Collections.LockFree;
 
 namespace Sparrow.Utils
 {
