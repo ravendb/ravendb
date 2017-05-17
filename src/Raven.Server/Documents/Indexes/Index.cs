@@ -524,6 +524,8 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
 
+                _indexValidationStalenessCheck = null;
+
                 var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");
 
                 exceptionAggregator.Execute(() =>
