@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 writer.WriteStartObject();
-                writer.WriteResults(context, transformerDefinitions, (w, c, definition) =>
+                writer.WriteArray(context, transformerDefinitions, (w, c, definition) =>
                 {
                     if (namesOnly)
                     {

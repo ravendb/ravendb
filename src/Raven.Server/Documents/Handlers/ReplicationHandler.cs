@@ -356,14 +356,13 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/debug/incoming-rejection-info", "GET")]
         public Task GetReplicationIncomingRejectionInfo()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var data = new DynamicJsonArray();
+                var stats = new DynamicJsonArray();
                 foreach (var statItem in Database.ReplicationLoader.IncomingRejectionStats)
                 {
-                    data.Add(new DynamicJsonValue
+                    stats.Add(new DynamicJsonValue
                     {
                         ["Key"] = new DynamicJsonValue
                         {
@@ -380,7 +379,10 @@ namespace Raven.Server.Documents.Handlers
                     });
                 }
 
-                context.Write(writer, data);
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Stats"] = stats
+                });
             }
 
             return Task.CompletedTask;

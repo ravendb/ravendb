@@ -16,7 +16,6 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -34,11 +33,9 @@ namespace Raven.Server.Documents.Handlers
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
-            DocumentsOperationContext context;
-
             using (TrackRequestTime())
             using (var token = CreateTimeLimitedOperationToken())
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var debug = GetStringQueryString("debug", required: false);
                 if (string.IsNullOrWhiteSpace(debug) == false)
@@ -232,10 +229,12 @@ namespace Raven.Server.Documents.Handlers
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
+                writer.WriteStartObject();
                 writer.WriteArray(context, explanations, (w, c, explanation) =>
                 {
                     w.WriteExplanation(context, explanation);
                 });
+                writer.WriteEndObject();
             }
         }
 

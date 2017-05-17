@@ -411,45 +411,43 @@ namespace FastTests.Server.Replication
 
         private class GetConncectionFailuresCommand : RavenCommand<Dictionary<string, string[]>>
         {
-
             public override bool IsReadRequest => true;
+
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/replication/debug/incoming-rejection-info";
 
-                ResponseType = RavenCommandResponseType.Array;
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Get
                 };
             }
-            public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
-            {
-                List<string> list = new List<string>();
-                Dictionary<string, string[]> result = new Dictionary<string, string[]>();
-                foreach (BlittableJsonReaderObject responseItem in response.Items)
-                {
-                    BlittableJsonReaderObject obj;
-                    responseItem.TryGet("Key", out obj);
-                    string name;
-                    obj.TryGet("SourceDatabaseName", out name);
 
-                    BlittableJsonReaderArray arr;
-                    responseItem.TryGet("Value", out arr);
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null ||
+                    response.TryGet("Stats", out BlittableJsonReaderArray stats) == false)
+                {
+                    ThrowInvalidResponse();
+                    return; // never hit
+                }
+
+                var list = new List<string>();
+                var result = new Dictionary<string, string[]>();
+                foreach (BlittableJsonReaderObject stat in stats)
+                {
+                    stat.TryGet("Key", out BlittableJsonReaderObject obj);
+                    obj.TryGet("SourceDatabaseName", out string name);
+                    stat.TryGet("Value", out BlittableJsonReaderArray arr);
                     list.Clear();
                     foreach (BlittableJsonReaderObject arrItem in arr)
                     {
-                        string reason;
-                        arrItem.TryGet("Reason", out reason);
+                        arrItem.TryGet("Reason", out string reason);
                         list.Add(reason);
                     }
                     result.Add(name, list.ToArray());
                 }
                 Result = result;
-            }
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
-                throw new NotImplementedException();
             }
         }
 

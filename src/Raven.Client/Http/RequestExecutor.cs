@@ -383,8 +383,6 @@ namespace Raven.Client.Http
                         return true;
                     else if (command.ResponseType == RavenCommandResponseType.Object)
                         command.SetResponse((BlittableJsonReaderObject)null, fromCache: false);
-                    else if (command.ResponseType == RavenCommandResponseType.Array)
-                        command.SetResponse((BlittableJsonReaderArray)null, fromCache: false);
                     else
                         command.SetResponseRaw(response, null, context);
                     return true;

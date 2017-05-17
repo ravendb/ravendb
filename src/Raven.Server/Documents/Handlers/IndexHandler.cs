@@ -19,7 +19,6 @@ using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -30,8 +29,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes", "PUT")]
         public async Task Put()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var createdIndexes = new List<KeyValuePair<string, long>>();
                 var tuple = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "Indexes", BlittableJsonDocumentBuilder.UsageMode.None);
@@ -54,7 +52,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
 
-                    writer.WriteResults(context, createdIndexes, (w, c, index) =>
+                    writer.WriteArray(context, createdIndexes, (w, c, index) =>
                     {
                         w.WriteStartObject();
                         w.WritePropertyName(nameof(PutIndexResult.IndexId));
@@ -283,7 +281,7 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteStartObject();
 
-                writer.WriteResults(context, indexDefinitions, (w, c, indexDefinition) =>
+                writer.WriteArray(context, indexDefinitions, (w, c, indexDefinition) =>
                 {
                     if (namesOnly)
                     {
@@ -333,7 +331,7 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteStartObject();
 
-                writer.WriteResults(context, indexStats, (w, c, stats) =>
+                writer.WriteArray(context, indexStats, (w, c, stats) =>
                 {
                     w.WriteIndexStats(context, stats);
                 });
@@ -520,9 +518,8 @@ namespace Raven.Server.Documents.Handlers
                     indexes.Add(index);
                 }
             }
-            
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteArray(context, indexes, (w, c, index) =>
@@ -544,7 +541,7 @@ namespace Raven.Server.Documents.Handlers
                         ew.WriteComma();
 
                         ew.WritePropertyName(nameof(error.Action));
-                        ew.WriteString(error.Action); 
+                        ew.WriteString(error.Action);
                         ew.WriteComma();
 
                         ew.WritePropertyName(nameof(error.Error));
@@ -704,16 +701,13 @@ namespace Raven.Server.Documents.Handlers
 
             ms.SetLength(0);
 
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ms))
             {
                 writer.WritePerformanceStats(context, tuple.Item2);
             }
 
-            ArraySegment<byte> bytes;
-            ms.TryGetBuffer(out bytes);
-
+            ms.TryGetBuffer(out ArraySegment<byte> bytes);
             await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
 
             return true;

@@ -17,19 +17,16 @@ namespace Raven.Server.Documents.ETL.Handlers
         public Task GetStats()
         {
             var etlStats = GetProcessesToReportOn().Select(x => x.Statistics).ToArray();
-            
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-
-                    writer.WriteResults(context, etlStats, (w, c, stats) =>
+                    writer.WriteArray(context, etlStats, (w, c, stats) =>
                     {
                         w.WriteObject(context.ReadObject(stats.ToJson(), "etl/stats"));
                     });
-
                     writer.WriteEndObject();
                 }
             }
@@ -48,18 +45,15 @@ namespace Raven.Server.Documents.ETL.Handlers
                     [nameof(etl.Metrics)] = etl.Metrics.ToJson(),
                 }).ToArray();
 
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-
-                    writer.WriteResults(context, debugStats, (w, c, stats) =>
+                    writer.WriteArray(context, debugStats, (w, c, stats) =>
                     {
                         w.WriteObject(context.ReadObject(stats, "etl/debug/stats"));
                     });
-
                     writer.WriteEndObject();
                 }
             }

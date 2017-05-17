@@ -52,6 +52,7 @@ namespace Raven.Server.Json
 
         public static void WritePerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<IndexPerformanceStats> stats)
         {
+            writer.WriteStartObject();
             writer.WriteArray(context, stats, (w, c, stat) =>
             {
                 w.WriteStartObject();
@@ -69,6 +70,7 @@ namespace Raven.Server.Json
 
                 w.WriteEndObject();
             });
+            writer.WriteEndObject();
         }
 
         public static void WriteChangeVectorEntry(this BlittableJsonTextWriter writer, ChangeVectorEntry entry)
@@ -1405,14 +1407,11 @@ namespace Raven.Server.Json
             }
         }
 
-        public static void WriteResults<T>(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<T> items, Action<BlittableJsonTextWriter, JsonOperationContext, T> onWrite)
+        public static void WriteArray<T>(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<T> items, 
+            Action<BlittableJsonTextWriter, JsonOperationContext, T> onWrite, string name = "Results")
         {
-            writer.WritePropertyName("Results");
-            writer.WriteArray(context, items, onWrite);
-        }
+            writer.WritePropertyName(name);
 
-        public static void WriteArray<T>(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<T> items, Action<BlittableJsonTextWriter, JsonOperationContext, T> onWrite)
-        {
             writer.WriteStartArray();
             var first = true;
             foreach (var item in items)
@@ -1428,8 +1427,10 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
-        public static void WriteArray(this BlittableJsonTextWriter writer, IEnumerable<LazyStringValue> items)
+        public static void WriteArray(this BlittableJsonTextWriter writer, IEnumerable<LazyStringValue> items, string name)
         {
+            writer.WritePropertyName(name);
+
             writer.WriteStartArray();
             var first = true;
             foreach (var item in items)
@@ -1442,6 +1443,5 @@ namespace Raven.Server.Json
             }
             writer.WriteEndArray();
         }
-
     }
 }
