@@ -80,7 +80,7 @@ namespace FastTests
                 }
 
                 var doc = MultiDatabase.CreateDatabaseDocument(name);
-                doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "10";
+                doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "100";
                 doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();
                 doc.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = path;
                 doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] =
@@ -249,7 +249,7 @@ namespace FastTests
 
         protected async Task<T> WaitForValueAsync<T>(Func<T> act, T expectedVal)
         {
-            int timeout = 5000 * (Debugger.IsAttached ? 100 : 1);
+            int timeout = 5000;// * (Debugger.IsAttached ? 100 : 1);
             
             var sw = Stopwatch.StartNew();
             do
