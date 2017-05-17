@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using System.Text;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
@@ -62,6 +63,15 @@ namespace Sparrow.LowMemory
             {
                 if (PlatformDetails.RunningOnPosix)
                 {
+                    // get container usage (cgroup) and machine usage (sysinfo) and respect the lower
+                    var cgroupLimit = SysUtils.ReadULongFromFile("/sys/fs/cgroup/memory/memory.limit_in_bytes");
+                    ulong cgroupAvailable = ulong.MaxValue;
+                    if (cgroupLimit < long.MaxValue-4*1024) // max limit reported on non container system is usually long.MaxValue - 4K, or ulong.MaxValue in case of a failure
+                    {
+                        var cgroupUsage = SysUtils.ReadULongFromFile("/sys/fs/cgroup/memory/memory.usage_in_bytes");
+                        cgroupAvailable = cgroupLimit - cgroupUsage;
+                    }
+
                     sysinfo_t info = new sysinfo_t();
                     if (Syscall.sysinfo(ref info) != 0)
                     {
@@ -70,10 +80,21 @@ namespace Sparrow.LowMemory
                         return FailedResult;
                     }
 
+
+                    if (cgroupLimit < info.TotalRam) // ulong comparison
+                    {
+                        return new MemoryInfoResult
+                        {
+                            AvailableMemory = new Size((long)cgroupAvailable, SizeUnit.Bytes),
+                            TotalPhysicalMemory = new Size((long)cgroupLimit, SizeUnit.Bytes),
+                            RunningInContainer = true
+                        };
+                    }
+
                     return new MemoryInfoResult
                     {
                         AvailableMemory = new Size((long)info.AvailableRam, SizeUnit.Bytes),
-                        TotalPhysicalMemory = new Size((long)info.TotalRam, SizeUnit.Bytes),
+                        TotalPhysicalMemory = new Size((long)info.TotalRam, SizeUnit.Bytes)
                     };
                 }
 
@@ -111,5 +132,6 @@ namespace Sparrow.LowMemory
     {
         public Size TotalPhysicalMemory;
         public Size AvailableMemory;
+        public bool RunningInContainer;
     }
 }

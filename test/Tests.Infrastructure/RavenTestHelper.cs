@@ -17,7 +17,7 @@ namespace FastTests
     {
         public static ParallelOptions DefaultParallelOptions = new ParallelOptions
         {
-            MaxDegreeOfParallelism = Environment.ProcessorCount * 2
+            MaxDegreeOfParallelism = ProcessorInfo.ProcessorCount * 2
         };
 
         private static int _pathCount;
