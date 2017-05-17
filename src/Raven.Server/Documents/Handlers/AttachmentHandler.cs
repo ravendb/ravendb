@@ -14,10 +14,8 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
-using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
 using Voron.Exceptions;
 
@@ -102,7 +100,7 @@ namespace Raven.Server.Documents.Handlers
                         HttpContext.Response.Headers.Remove("Content-Type");
                 }
                 HttpContext.Response.Headers["Content-Hash"] = attachment.Base64Hash.ToString();
-                HttpContext.Response.Headers["Content-Size"] = attachment.Stream.Length.ToString();
+                HttpContext.Response.Headers["Attachment-Size"] = attachment.Stream.Length.ToString();
                 HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.Etag}\"";
 
                 JsonOperationContext.ManagedPinnedBuffer buffer;

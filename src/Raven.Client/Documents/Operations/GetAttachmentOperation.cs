@@ -129,7 +129,7 @@ namespace Raven.Client.Documents.Operations
                 var etag = response.GetRequiredEtagHeader();
                 var hash = response.Headers.TryGetValues("Content-Hash", out IEnumerable<string> hashVal) ? hashVal.First() : null;
                 long size = 0;
-                if (response.Headers.TryGetValues("Content-Size", out IEnumerable<string> sizeVal))
+                if (response.Headers.TryGetValues("Attachment-Size", out IEnumerable<string> sizeVal))
                     long.TryParse(sizeVal.First(), out size);
 
                 Result = new AttachmentResult
