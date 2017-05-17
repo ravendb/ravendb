@@ -296,7 +296,7 @@ namespace Raven.Client.Documents
 
         protected virtual IDatabaseChanges CreateDatabaseChanges(string database)
         {
-            return new DatabaseChanges(GetRequestExecuter(database), TODO, database, () => _databaseChanges.Remove(database));
+            return new DatabaseChanges(GetRequestExecuter(database), Conventions, database, () => _databaseChanges.Remove(database));
         }
 
         /// <summary>

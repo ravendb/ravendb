@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
@@ -10,7 +11,7 @@ namespace FastTests.Server.Documents.Notifications
 {
     public class ChangesTests : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-6285")]
+        [Fact]
         public async Task CanGetNotificationAboutDocumentPut()
         {
             using (var store = GetDocumentStore())
@@ -37,7 +38,7 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
-        [Fact(Skip = "RavenDB-6285")]
+        [Fact]
         public async Task CanGetAllNotificationAboutDocument_ALotOfDocuments()
         {
             using (var store = GetDocumentStore())
@@ -70,7 +71,7 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
-        [Fact(Skip = "RavenDB-6285")]
+        [Fact]
         public async Task CanGetNotificationAboutDocumentDelete()
         {
             using (var store = GetDocumentStore())
@@ -105,7 +106,7 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
-        [Fact(Skip = "RavenDB-6285")]
+        [Fact]
         public async Task CanCreateMultipleNotificationsOnSingleConnection()
         {
             using (var store = GetDocumentStore())
@@ -140,17 +141,17 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
-        [Fact(Skip = "RavenDB-6285")]
+        [Fact]
         public async Task NotificationOnWrongDatabase_ShouldNotCrashServer()
         {
             using (var store = GetDocumentStore())
             {
-                var taskObservable = store.Changes("does-not-exists");
+                var mre = new ManualResetEventSlim();
 
-                var exception = await Assert.ThrowsAsync<AggregateException>(async () =>
-                {
-                    //await taskObservable.Task;
-                });
+                var taskObservable = store.Changes("does-not-exists");
+                taskObservable.OnError += e => mre.Set();
+
+                Assert.True(mre.Wait(5000));
 
                 // ensure the db still works
                 store.Admin.Send(new GetStatisticsOperation());

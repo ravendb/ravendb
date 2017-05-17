@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Documents.Changes;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
@@ -13,9 +14,14 @@ namespace Raven.Client.Documents.Operations
         {
             return new DynamicJsonValue
             {
-                ["OperationId"] = OperationId,
-                ["State"] = State.ToJson()
+                [nameof(OperationId)] = OperationId,
+                [nameof(State)] = State.ToJson()
             };
+        }
+
+        internal static OperationStatusChange FromJson(BlittableJsonReaderObject value)
+        {
+            throw new System.NotImplementedException();
         }
     }
 }

@@ -74,7 +74,4 @@
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
     <PackageReference Include="System.Threading.Timer" Version="4.3.0" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Changes\" />
-  </ItemGroup>
 </Project>

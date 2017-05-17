@@ -1,16 +1,17 @@
 using System;
 using System.Threading.Tasks;
+using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Changes
 {
     internal abstract class ConnectionStateBase : IChangesConnectionState
     {
         public event Action<Exception> OnError;
-        private readonly Action _onDisconnect;
+        private readonly Func<Task> _onDisconnect;
         private readonly Func<Task> _onConnect;
         private int _value;
 
-        protected ConnectionStateBase(Func<Task> onConnect, Action onDisconnect)
+        protected ConnectionStateBase(Func<Task> onConnect, Func<Task> onDisconnect)
         {
             _onConnect = onConnect;
             _onDisconnect = onDisconnect;
@@ -36,7 +37,7 @@ namespace Raven.Client.Documents.Changes
             lock (this)
             {
                 if (--_value == 0)
-                    _onDisconnect();
+                    AsyncHelpers.RunSync(() => _onDisconnect());
             }
         }
 
