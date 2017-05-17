@@ -9,11 +9,6 @@ namespace Raven.Client.Documents.Commands
         public long Last;
         public long End;
 
-        public HiLoReturnCommand()
-        {
-            ResponseType = RavenCommandResponseType.Empty;
-        }
-
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             var path = $"hilo/return?tag={Tag}&end={End}&last={Last}";

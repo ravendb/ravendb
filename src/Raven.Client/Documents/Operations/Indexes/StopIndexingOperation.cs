@@ -14,11 +14,6 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         private class StopIndexingCommand : RavenCommand
         {
-            public StopIndexingCommand()
-            {
-                ResponseType = RavenCommandResponseType.Empty;
-            }
-
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/admin/indexes/stop";

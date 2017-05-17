@@ -40,8 +40,6 @@ namespace Raven.Client.Server.Operations.ApiKeys
                 _context = context ?? throw new ArgumentNullException(nameof(context));
                 _name = name ?? throw new ArgumentNullException(nameof(name));
                 _apiKey = EntityToBlittable.ConvertEntityToBlittable(apiKey, conventions, context);
-
-                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override bool IsReadRequest => false;
