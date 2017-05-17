@@ -4,11 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Threading.Tasks;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
@@ -20,6 +15,11 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Client.Util;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace Raven.Client.Documents
 {
@@ -103,18 +103,9 @@ namespace Raven.Client.Documents
                 observeChangesAndEvictItemsFromCacheForDatabase.Value.Dispose();
 
             var tasks = new List<Task>();
-            foreach (var databaseChange in _databaseChanges)
+            foreach (var changes in _databaseChanges)
             {
-                //var remoteDatabaseChanges = databaseChange.Value as RemoteDatabaseChanges;
-                //TODO iftah
-                /*if (remoteDatabaseChanges != null)
-                {
-                    tasks.Add(remoteDatabaseChanges.DisposeAsync());
-                }
-                else
-                {
-                    using (databaseChange.Value as IDisposable) { }
-                }*/
+                using (changes.Value) { }
             }
 
             // try to wait until all the async disposables are completed
