@@ -26,7 +26,6 @@ namespace Tests.Infrastructure
             {
                 url = $"{node.Url}/databases/{node.Database}/studio/sample-data";
 
-                ResponseType = RavenCommandResponseType.Object;
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post

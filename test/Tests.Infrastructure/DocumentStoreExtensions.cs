@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Server.Kestrel.Internal.Networking;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
@@ -15,6 +16,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.ServerWide.Maintance;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -276,7 +278,7 @@ namespace FastTests
                 {
                     var payloadJson = EntityToBlittable.ConvertEntityToBlittable(payload, session.Advanced.DocumentStore.Conventions, session.Advanced.Context);
 
-                    var command = new JsonCommandWithPayload<TResult>(url, Context, HttpMethod.Delete, payloadJson);
+                    var command = new JsonCommandWithPayload<TResult>(url, Context, HttpMethod.Delete, payloadJson, RavenCommandResponseType.Object);
 
                     await RequestExecutor.ExecuteAsync(command, Context);
 
@@ -292,7 +294,7 @@ namespace FastTests
                     if (payload != null)
                         payloadJson = EntityToBlittable.ConvertEntityToBlittable(payload, session.Advanced.DocumentStore.Conventions, session.Advanced.Context);
 
-                    var command = new JsonCommandWithPayload<BlittableJsonReaderObject>(url, Context, method, payloadJson);
+                    var command = new JsonCommandWithPayload<BlittableJsonReaderObject>(url, Context, method, payloadJson, RavenCommandResponseType.Empty);
 
                     await RequestExecutor.ExecuteAsync(command, Context);
                 }
@@ -355,7 +357,7 @@ namespace FastTests
                 private readonly JsonOperationContext _context;
                 private readonly BlittableJsonReaderObject _payload;
 
-                public JsonCommandWithPayload(string url, JsonOperationContext context, HttpMethod method, BlittableJsonReaderObject payload)
+                public JsonCommandWithPayload(string url, JsonOperationContext context, HttpMethod method, BlittableJsonReaderObject payload, RavenCommandResponseType response)
                 {
                     if (url == null)
                         throw new ArgumentNullException(nameof(url));
@@ -367,9 +369,7 @@ namespace FastTests
                     _context = context;
                     _method = method;
                     _payload = payload;
-
-                    if (typeof(TResult) == typeof(BlittableJsonReaderArray))
-                        ResponseType = RavenCommandResponseType.Array;
+                    ResponseType = response;
                 }
 
                 public override bool IsReadRequest => false;

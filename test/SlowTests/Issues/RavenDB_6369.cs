@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                     var command = new TestQueryCommand(store.Conventions, context, new Users_ByName().IndexName, new IndexQuery() { WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(100), WaitForNonStaleResults = true });
 
                     var sw = Stopwatch.StartNew();
-                    Assert.Throws<TaskCanceledException>(() => requestExecuter.Execute(command, context));
+                    Assert.Throws<TimeoutException>(() => requestExecuter.Execute(command, context));
                     sw.Stop();
 
                     // Assert.True(sw.Elapsed < TimeSpan.FromSeconds(1), sw.Elapsed.ToString()); this can take longer when running tests in parallel but is not needed to assert if the request was cancelled or not
