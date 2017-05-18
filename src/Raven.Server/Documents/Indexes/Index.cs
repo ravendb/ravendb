@@ -1178,6 +1178,9 @@ namespace Raven.Server.Documents.Indexes
             if (_isCompactionInProgress)
                 return 0;
 
+            if (Type == IndexType.Faulty)
+                return 0;
+
             return _indexStorage.ReadErrorsCount();
         }
 
