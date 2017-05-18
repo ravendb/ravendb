@@ -278,6 +278,24 @@ namespace Raven.Server.Documents.TcpHandlers
                                         ["Exception"] = connection.ConnectionException.ToString()
                                     });
                                 }
+                                else if (connection.ConnectionException is SubscriptionDoesNotBelongToNodeException )
+                                {
+                                    var subscriptionDoesNotBelonException = connection.ConnectionException as SubscriptionDoesNotBelongToNodeException;
+                                    if (connection._logger.IsInfoEnabled)
+                                    {
+                                        connection._logger.Info("Subscription does not belong to current node", connection.ConnectionException);
+                                    }
+                                    await connection.WriteJsonAsync(new DynamicJsonValue
+                                    {
+                                        ["Type"] = "CoonectionStatus",
+                                        ["Status"] = "Redirect",
+                                        ["Data"] = new DynamicJsonValue()
+                                        {
+                                            ["CurrentTag"] = serverStore.NodeTag,
+                                            ["RedirectedTag"] = subscriptionDoesNotBelonException.AppropriateNode
+                                        }
+                                    });
+                                }
                                 else
                                 {
                                     await connection.WriteJsonAsync(new DynamicJsonValue
