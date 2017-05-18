@@ -7,10 +7,9 @@ namespace Sparrow
     {
         private static int crypto_kdf_keybytes()
         {
-            return
-                Platform.PlatformDetails.RunningOnPosix
+            return (int)(Platform.PlatformDetails.RunningOnPosix
                     ? Platform.Posix.PosixSodium.crypto_kdf_keybytes()
-                    : Platform.Win32.WinSodium.crypto_kdf_keybytes();
+                    : Platform.Win32.WinSodium.crypto_kdf_keybytes());
         }
 
         public static int crypto_kx_keypair(byte* pk, byte* sk)
@@ -21,7 +20,7 @@ namespace Sparrow
 
         }
 
-        public static void randombytes_buf(byte* buffer, int size)
+        public static void randombytes_buf(byte* buffer, UIntPtr size)
         {
             if (Platform.PlatformDetails.RunningOnPosix)
                 Platform.Posix.PosixSodium.randombytes_buf(buffer, size);
@@ -42,8 +41,8 @@ namespace Sparrow
 
         public static int crypto_kdf_derive_from_key(
             byte* subkey,
-            int subkeylen,
-            long subkeyid,
+            UIntPtr subkeylen,
+            ulong subkeyid,
             byte* ctx,
             byte* key)
         {
@@ -149,58 +148,58 @@ namespace Sparrow
 
         public static int crypto_stream_xchacha20_keybytes()
         {
-            return Platform.PlatformDetails.RunningOnPosix
+            return (int)(Platform.PlatformDetails.RunningOnPosix
                 ? Platform.Posix.PosixSodium.crypto_stream_xchacha20_keybytes()
-                : Platform.Win32.WinSodium.crypto_stream_xchacha20_keybytes();
+                : Platform.Win32.WinSodium.crypto_stream_xchacha20_keybytes());
         }
 
         public static int crypto_stream_xchacha20_noncebytes()
         {
-            return Platform.PlatformDetails.RunningOnPosix
+            return (int)(Platform.PlatformDetails.RunningOnPosix
                 ? Platform.Posix.PosixSodium.crypto_stream_xchacha20_noncebytes()
-                : Platform.Win32.WinSodium.crypto_stream_xchacha20_noncebytes();
+                : Platform.Win32.WinSodium.crypto_stream_xchacha20_noncebytes());
         }
         
         public static int crypto_box_sealbytes()
         {
-            return Platform.PlatformDetails.RunningOnPosix
+            return (int)(Platform.PlatformDetails.RunningOnPosix
                 ? Platform.Posix.PosixSodium.crypto_box_sealbytes()
-                : Platform.Win32.WinSodium.crypto_box_sealbytes();
+                : Platform.Win32.WinSodium.crypto_box_sealbytes());
         }
 
         public static int crypto_box_secretkeybytes()
         {
-            return Platform.PlatformDetails.RunningOnPosix
+            return (int)(Platform.PlatformDetails.RunningOnPosix
                 ? Platform.Posix.PosixSodium.crypto_box_secretkeybytes()
-                : Platform.Win32.WinSodium.crypto_box_secretkeybytes();
+                : Platform.Win32.WinSodium.crypto_box_secretkeybytes());
         }
 
         public static int crypto_kx_publickeybytes()
         {
-            return Platform.PlatformDetails.RunningOnPosix
+            return (int)(Platform.PlatformDetails.RunningOnPosix
                 ? Platform.Posix.PosixSodium.crypto_kx_publickeybytes()
-                : Platform.Win32.WinSodium.crypto_kx_publickeybytes();
+                : Platform.Win32.WinSodium.crypto_kx_publickeybytes());
         }
 
         public static int crypto_kx_secretkeybytes()
         {
-            return Platform.PlatformDetails.RunningOnPosix
+            return (int)(Platform.PlatformDetails.RunningOnPosix
                 ? Platform.Posix.PosixSodium.crypto_kx_secretkeybytes()
-                : Platform.Win32.WinSodium.crypto_kx_secretkeybytes();
+                : Platform.Win32.WinSodium.crypto_kx_secretkeybytes());
         }
 
         public static int crypto_box_publickeybytes()
         {
-            return Platform.PlatformDetails.RunningOnPosix
+            return (int)(Platform.PlatformDetails.RunningOnPosix
                 ? Platform.Posix.PosixSodium.crypto_box_publickeybytes()
-                : Platform.Win32.WinSodium.crypto_box_publickeybytes();
+                : Platform.Win32.WinSodium.crypto_box_publickeybytes());
         }
 
         public static int crypto_generichash_bytes_max()
         {
-            return Platform.PlatformDetails.RunningOnPosix
+            return (int)(Platform.PlatformDetails.RunningOnPosix
                 ? Platform.Posix.PosixSodium.crypto_generichash_bytes_max()
-                : Platform.Win32.WinSodium.crypto_generichash_bytes_max();
+                : Platform.Win32.WinSodium.crypto_generichash_bytes_max());
         }
 
         public static byte[] GenerateMasterKey()
@@ -214,108 +213,15 @@ namespace Sparrow
         }
 
         public static readonly byte[] Context = Encoding.UTF8.GetBytes("Raven DB");
-
-        public static byte[] DeriveKey(byte[] masterKey, long num)
-        {
-            var subKey = new byte[256 / 8];
-
-            fixed (byte* key = masterKey)
-            fixed (byte* sk = subKey)
-            fixed (byte* ctx = Context)
-            {
-                var rc = crypto_kdf_derive_from_key(sk,
-                    subKey.Length,
-                    num,
-                    ctx,
-                    key
-                );
-
-                if (rc != 0)
-                    throw new InvalidOperationException("Could not derive key from " + num + " because " + rc);
-
-                return subKey;
-            }
-        }
-
-        public static byte[] GenerateKey()
-        {
-            return GenerateRandomBuffer(256);
-        }
-
-        public static byte[] GenerateNonce()
-        {
-            return GenerateRandomBuffer(64);
-        }
-
+        
         public static byte[] GenerateRandomBuffer(int numberOfBits)
         {
             var buffer = new byte[numberOfBits / 8];
             fixed (byte* p = buffer)
             {
-                randombytes_buf(p, buffer.Length);
+                randombytes_buf(p, (UIntPtr)buffer.Length);
             }
             return buffer;
-        }
-
-        public static byte[] AeadChacha20Poly1305Encrypt(byte[] key, byte[] nonce, byte[] message, byte[] additionalData, byte[] mac)
-        {
-            ulong macLength = 16;
-            var cipher = new byte[(ulong)message.Length];
-
-            fixed (byte* c = cipher)
-            fixed (byte* k = key)
-            fixed (byte* n = nonce)
-            fixed (byte* m = message)
-            fixed (byte* mc = mac)
-            fixed (byte* ad = additionalData)
-            {
-                var rc = crypto_aead_chacha20poly1305_encrypt_detached(
-                    c,
-                    mc,
-                    &macLength,
-                    m,
-                    (ulong)message.Length,
-                    ad,
-                    (ulong)additionalData.Length,
-                    null,
-                    n,
-                    k
-                );
-                if (rc != 0)
-                    throw new InvalidOperationException("Failed to call crypto_aead_xchacha20poly1305_ietf_encrypt, rc = " + rc);
-
-                return cipher;
-            }
-        }
-
-        public static byte[] AeadChacha20Poly1305Decrypt(byte[] key, byte[] nonce, byte[] cipher, byte[] additionalData, byte[] mac)
-        {
-            var message = new byte[cipher.Length];
-
-            fixed (byte* c = cipher)
-            fixed (byte* k = key)
-            fixed (byte* n = nonce)
-            fixed (byte* m = message)
-            fixed (byte* mc = mac)
-            fixed (byte* ad = additionalData)
-            {
-                var rc = crypto_aead_chacha20poly1305_decrypt_detached(
-                    m,
-                    null,
-                    c,
-                    (ulong)cipher.Length,
-                    mc,
-                    ad,
-                    (ulong)additionalData.Length,
-                    n,
-                    k
-                );
-                if (rc != 0)
-                    throw new InvalidOperationException("Failed to call crypto_aead_xchacha20poly1305_ietf_decrypt, rc = " + rc);
-
-                return message;
-            }
-
         }
 
         public static void crypto_box_keypair(byte* pk, byte* sk)
@@ -328,15 +234,15 @@ namespace Sparrow
             Platform.Win32.WinSodium.crypto_box_keypair(pk, sk);
         }
 
-        public static int crypto_generichash(byte* @out, IntPtr outlen, byte* @in,
-            ulong inlen, byte* key, IntPtr keylen)
+        public static int crypto_generichash(byte* @out, UIntPtr outlen, byte* @in,
+            ulong inlen, byte* key, UIntPtr keylen)
         {
             if (Platform.PlatformDetails.RunningOnPosix)
                 return Platform.Posix.PosixSodium.crypto_generichash(@out, outlen, @in, inlen, key, keylen);
             return Platform.Win32.WinSodium.crypto_generichash(@out, outlen, @in, inlen, key, keylen);
         }
 
-        public static int sodium_memcmp(byte* b, byte* vh, IntPtr verifiedHashLength)
+        public static int sodium_memcmp(byte* b, byte* vh, UIntPtr verifiedHashLength)
         {
             if (Platform.PlatformDetails.RunningOnPosix)
                 return Platform.Posix.PosixSodium.sodium_memcmp(b, vh, verifiedHashLength);
@@ -392,7 +298,7 @@ namespace Sparrow
         public static int crypto_box_easy(
             byte* c,
             byte* m,
-            long mlen,
+            ulong mlen,
             byte* n,
             byte* pk,
             byte* sk)
@@ -406,7 +312,7 @@ namespace Sparrow
         public static int crypto_box_open_easy(
             byte* m,
             byte* c,
-            long clen,
+            ulong clen,
             byte* n,
             byte* pk,
             byte* sk)
@@ -419,9 +325,9 @@ namespace Sparrow
         public static void ZeroMemory(byte* ptr, long size)
         {
             if (Platform.PlatformDetails.RunningOnPosix)
-                Platform.Posix.PosixSodium.sodium_memzero(ptr, (IntPtr)size);
+                Platform.Posix.PosixSodium.sodium_memzero(ptr, (UIntPtr)size);
             else
-                Platform.Win32.WinSodium.sodium_memzero(ptr, (IntPtr)size);
+                Platform.Win32.WinSodium.sodium_memzero(ptr, (UIntPtr)size);
         }
     }
 }

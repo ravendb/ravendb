@@ -373,7 +373,7 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
-                    if (Sodium.crypto_generichash(pHash, (IntPtr)hashLen, pKey, (ulong)key.Length, null, IntPtr.Zero) != 0)
+                    if (Sodium.crypto_generichash(pHash, (UIntPtr)hashLen, pKey, (ulong)key.Length, null, UIntPtr.Zero) != 0)
                         throw new InvalidOperationException("Failed to hash key");
 
                     Sparrow.Memory.Copy(pHash + hashLen, pKey, key.Length);
@@ -424,10 +424,10 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
-                    if (Sodium.crypto_generichash(pHash, (IntPtr)hashLen, pData + hashLen, (ulong)(data.Length - hashLen), null, IntPtr.Zero) != 0)
+                    if (Sodium.crypto_generichash(pHash, (UIntPtr)hashLen, pData + hashLen, (ulong)(data.Length - hashLen), null, UIntPtr.Zero) != 0)
                         throw new InvalidOperationException($"Unable to compute hash for {name}");
 
-                    if (Sodium.sodium_memcmp(pData, pHash, (IntPtr)hashLen) != 0)
+                    if (Sodium.sodium_memcmp(pData, pHash, (UIntPtr)hashLen) != 0)
                         throw new InvalidOperationException($"Unable to validate hash after decryption for {name}, user store changed?");
 
                     var buffer = new byte[data.Length - hashLen];

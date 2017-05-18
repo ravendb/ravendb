@@ -86,7 +86,7 @@ namespace Raven.Client.Http.OAuth
                         fixed (byte* input = cryptTokenBytes)
                         fixed (byte* n = nonceBytes)
                         {
-                            if (Sodium.crypto_box_open_easy(input, input, cryptTokenBytes.Length, n, server_pk, client_sk) != 0)
+                            if (Sodium.crypto_box_open_easy(input, input, (ulong)cryptTokenBytes.Length, n, server_pk, client_sk) != 0)
                                 throw new AuthenticationException(
                                     @"Unable to authenticate api key (message corrupted or not intended for this recipient");
 
@@ -128,16 +128,16 @@ namespace Raven.Client.Http.OAuth
             fixed (byte* bytes = apiSecretBytes)
             {
                 Sodium.crypto_box_keypair(client_pk, client_sk);
-                Sodium.randombytes_buf(n, nonce.Length);
+                Sodium.randombytes_buf(n, (UIntPtr)nonce.Length);
 
 
-                if (Sodium.crypto_generichash(c, (IntPtr)hashLen, bytes, (ulong)apiSecretBytes.Length, client_pk, (IntPtr)publicKey.Length) != 0)
+                if (Sodium.crypto_generichash(c, (UIntPtr)hashLen, bytes, (ulong)apiSecretBytes.Length, client_pk, (UIntPtr)publicKey.Length) != 0)
                     throw new InvalidOperationException("Unable ot generate hash");
 
                 if (Sodium.crypto_box_easy(
                         c,
                         c,
-                        hashLen,
+                        (ulong)hashLen,
                         n,
                         server_pk,
                         client_sk
