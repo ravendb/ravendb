@@ -77,9 +77,6 @@ namespace RachisTests.DatabaseCluster
                     return db.ReplicationLoader?.OutgoingConnections.Count();
                 }, clusterSize - 1);
 
-                WaitForUserToContinueTheTest((DocumentStore)store);
-
-
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User {Name = "Karmel"}, "users/1");

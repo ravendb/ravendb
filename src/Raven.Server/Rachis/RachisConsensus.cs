@@ -581,7 +581,7 @@ namespace Raven.Server.Rachis
                     if (initialMessage.TopologyId != clusterTopology.TopologyId &&
                         string.IsNullOrEmpty(clusterTopology.TopologyId) == false)
                     {
-                        throw new InvalidOperationException(
+                        throw new TopologyMismatchException(
                             $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with topology id {initialMessage.TopologyId} but our topology id is already set ({clusterTopology.TopologyId}). " +
                             $"Rejecting connection from outside our cluster, this is likely an old server trying to connect to us.");
                     }
@@ -1200,7 +1200,7 @@ namespace Raven.Server.Rachis
         {
             var leader = _currentLeader;
             if (leader == null)
-                throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
+                throw new NotLeadingException("There is no leader, cannot accept commands. " + _lastStateChangeReason);
 
             Task task;
             while (leader.TryModifyTopology(nodeTag, nodeUrl, modification, out task, validateNotInTopology) == false)
@@ -1301,6 +1301,15 @@ namespace Raven.Server.Rachis
                 return;
 
             _leadershipTimeChanged.SetInAsyncMannerFireAndForget();
+        }
+    }
+
+    public class TopologyMismatchException : Exception
+    {
+        public TopologyMismatchException() { }
+        public TopologyMismatchException(string message) : base(message) { }
+        public TopologyMismatchException(string message, Exception inner) : base(message, inner)
+        {
         }
     }
 
