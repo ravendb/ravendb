@@ -15,12 +15,14 @@ namespace Sparrow.Utils
 
         private class Runner
         {
+            private const string TasksExecuterThreadName = "RavenDB Tasks Executer";
             private readonly ConcurrentQueue<(WaitCallback,object)> _actions = new ConcurrentQueue<(WaitCallback, object)>();
 
             private readonly ManualResetEvent _event = new ManualResetEvent(false);
 
             private void Run()
             {
+                NativeMemory.EnsureRegistered();
                 while (true)
                 {
                     (WaitCallback callback, object state) result;
@@ -48,7 +50,7 @@ namespace Sparrow.Utils
                 new Thread(Run)
                 {
                     IsBackground = true,
-                    Name = "RavenDB Tasks Executer"
+                    Name = TasksExecuterThreadName
                 }.Start();
             }
         }

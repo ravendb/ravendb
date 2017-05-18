@@ -148,12 +148,15 @@ namespace Raven.Server.Documents.Indexes
         private volatile bool _hadRealIndexingWorkToDo;
         private Func<bool> _indexValidationStalenessCheck = () => true;
 
+        private string IndexingThreadName => "Indexing of " + Name + " of " + _indexStorage.DocumentDatabase.Name;
+
         private readonly WarnIndexOutputsPerDocument _indexOutputsPerDocumentWarning = new WarnIndexOutputsPerDocument
         {
             MaxNumberOutputsPerDocument = int.MinValue,
             Suggestion = "Please verify this index definition and consider a re-design of your entities or index for better indexing performance"
         };
-        
+
+
         protected Index(long etag, IndexType type, IndexDefinitionBase definition)
         {
             if (etag <= 0)
@@ -446,10 +449,10 @@ namespace Raven.Server.Documents.Indexes
                 SetState(IndexState.Normal);
 
                 _cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
-
+                
                 _indexingThread = new Thread(ExecuteIndexing)
                 {
-                    Name = "Indexing of " + Name + " of " + _indexStorage.DocumentDatabase.Name,
+                    Name = IndexingThreadName,
                     IsBackground = true
                 };
 
@@ -696,7 +699,7 @@ namespace Raven.Server.Documents.Indexes
         protected void ExecuteIndexing()
         {
             _priorityChanged = true;
-
+            NativeMemory.EnsureRegistered();
             using (CultureHelper.EnsureInvariantCulture())
             {
                 // if we are starting indexing e.g. manually after failure

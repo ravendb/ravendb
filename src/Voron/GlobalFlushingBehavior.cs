@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Threading;
+using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Impl.Journal;
@@ -11,13 +12,15 @@ namespace Voron
 {
     public class GlobalFlushingBehavior
     {
+        private const string FlushingThreadName = "Voron Global Flushing Thread";
+
         internal static readonly Lazy<GlobalFlushingBehavior> GlobalFlusher = new Lazy<GlobalFlushingBehavior>(() =>
         {
             var flusher = new GlobalFlushingBehavior();
             var thread = new Thread(flusher.VoronEnvironmentFlushing)
             {
                 IsBackground = true,
-                Name = "Voron Global Flushing Thread"
+                Name = FlushingThreadName
             };
             thread.Start();
             return flusher;
@@ -49,6 +52,7 @@ namespace Voron
 
         public void VoronEnvironmentFlushing()
         {
+            NativeMemory.EnsureRegistered();
             // We want this to always run, even if we dispose / create new storage env, this is 
             // static for the life time of the process, and environments will register / unregister from
             // it as needed
