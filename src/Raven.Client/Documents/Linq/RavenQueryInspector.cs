@@ -48,11 +48,7 @@ namespace Raven.Client.Documents.Linq
             InMemoryDocumentSessionOperations session,
             bool isMapReduce)
         {
-            if (provider == null)
-            {
-                throw new ArgumentNullException(nameof(provider));
-            }
-            _provider = provider.For<T>();
+            _provider = provider?.For<T>() ?? throw new ArgumentNullException(nameof(provider));
             _queryStats = queryStats;
             _highlightings = highlightings;
             _indexName = indexName;

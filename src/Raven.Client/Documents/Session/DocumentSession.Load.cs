@@ -12,7 +12,6 @@ using System.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Transformers;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {

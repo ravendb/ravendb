@@ -13,10 +13,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
 
         public GetApiKeyOperation(string name)
         {
-            if (name == null)
-                throw new ArgumentNullException(nameof(name));
-
-            _name = name;
+            _name = name ?? throw new ArgumentNullException(nameof(name));
         }
 
         public RavenCommand<NamedApiKeyDefinition> GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -30,10 +27,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
 
             public GetApiKeyCommand(string name)
             {
-                if (name == null)
-                    throw new ArgumentNullException(nameof(name));
-
-                _name = name;
+                _name = name ?? throw new ArgumentNullException(nameof(name));
             }
 
             public override bool IsReadRequest => false;

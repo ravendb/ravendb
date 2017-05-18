@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Generic;
 using Raven.Client.Documents;
 
 namespace Raven.Client.Server.Operations

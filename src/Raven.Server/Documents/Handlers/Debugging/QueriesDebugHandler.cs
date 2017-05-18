@@ -44,8 +44,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 .GetIndexes()
                 .ToList();
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();

@@ -13,17 +13,14 @@ namespace Raven.Server.Web.Studio
 {
     public class StudioIndexHandler : DatabaseRequestHandler
     {
-
         [RavenAction("/databases/*/studio/index-fields", "POST")]
         public async Task PostIndexFields()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 using (var json = await context.ReadForMemoryAsync(RequestBodyStream(), "map"))
                 {
-                    string map;
-                    if (json.TryGet("Map", out map) == false)
+                    if (json.TryGet("Map", out string map) == false)
                         throw new ArgumentException("'Map' field is mandatory, but wasn't specified");
 
                     var indexDefinition = new IndexDefinition
@@ -43,16 +40,18 @@ namespace Raven.Server.Web.Studio
 
                         using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                         {
-                            writer.WriteArray(context, outputFields, (w, c, field) =>
+                            writer.WriteStartObject();
+                            writer.WriteArray(context, "Results", outputFields, (w, c, field) =>
                             {
                                 w.WriteString(field);
                             });
+                            writer.WriteEndObject();
                         }
                     }
                     catch (IndexCompilationException)
                     {
                         // swallow compilaton exception and return empty array as response
-                        
+
                         using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                         {
                             writer.WriteStartArray();

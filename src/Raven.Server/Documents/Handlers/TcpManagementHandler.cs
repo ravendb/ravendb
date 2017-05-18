@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
 
-                    writer.WriteResults(context, connections, (w, c, connection) =>
+                    writer.WriteArray(context, "Results", connections, (w, c, connection) =>
                     {
                         c.Write(w, connection.GetConnectionStats(context));
                     });

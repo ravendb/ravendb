@@ -55,17 +55,9 @@ namespace Raven.Client.Documents.Commands.Batches
                 {
                     using (var writer = new BlittableJsonTextWriter(_context, stream))
                     {
-                        writer.WriteStartArray();
-                        var first = true;
-                        foreach (var command in _commands)
-                        {
-                            if (first == false)
-                                writer.WriteComma();
-                            first = false;
-
-                            writer.WriteObject(command);
-                        }
-                        writer.WriteEndArray();
+                        writer.WriteStartObject();
+                        writer.WriteArray("Commands", _commands);
+                        writer.WriteEndObject();
                     }
                 })
             };

@@ -18,8 +18,11 @@ class verifyDocumentsIDsCommand extends commandBase {
                 'metadata-only' : true
             }
             const url = endpoints.databases.document.docs + this.urlEncodeArgs(args);
+            const payload = {
+                Ids: this.docIDs
+            };
 
-            this.post(url, JSON.stringify(this.docIDs), this.db)
+            this.post(url, JSON.stringify(payload), this.db)
                 .fail((xhr: JQueryXHR) => {
                     if (xhr.status === 404) {
                         verifyResult.resolve(verifiedIDs);

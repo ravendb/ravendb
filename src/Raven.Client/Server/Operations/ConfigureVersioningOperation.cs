@@ -4,7 +4,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server.Expiration;
 using Raven.Client.Server.Versioning;
 using Sparrow.Json;
 

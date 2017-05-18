@@ -481,10 +481,12 @@ namespace Raven.Server.Web.System
         {
             var names = GetStringValuesQueryString("name");
 
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Status");
+
                 writer.WriteStartArray();
                 var first = true;
                 foreach (var name in names)
@@ -540,6 +542,8 @@ namespace Raven.Server.Web.System
                 }
 
                 writer.WriteEndArray();
+
+                writer.WriteEndObject();
             }
         }
     }

@@ -17,13 +17,8 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         public GetTermsOperation(string indexName, string field, string fromValue, int? pageSize = null)
         {
-            if (indexName == null)
-                throw new ArgumentNullException(nameof(indexName));
-            if (field == null)
-                throw new ArgumentNullException(nameof(field));
-
-            _indexName = indexName;
-            _field = field;
+            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
+            _field = field ?? throw new ArgumentNullException(nameof(field));
             _fromValue = fromValue;
             _pageSize = pageSize;
         }
@@ -42,13 +37,8 @@ namespace Raven.Client.Documents.Operations.Indexes
 
             public GetTermsCommand(string indexName, string field, string fromValue, int? pageSize)
             {
-                if (indexName == null)
-                    throw new ArgumentNullException(nameof(indexName));
-                if (field == null)
-                    throw new ArgumentNullException(nameof(field));
-
-                _indexName = indexName;
-                _field = field;
+                _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
+                _field = field ?? throw new ArgumentNullException(nameof(field));
                 _fromValue = fromValue;
                 _pageSize = pageSize;
             }

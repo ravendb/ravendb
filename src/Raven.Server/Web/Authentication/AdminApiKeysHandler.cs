@@ -5,9 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Server.Operations.ApiKeys;
-using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -103,7 +101,7 @@ namespace Raven.Server.Web.Authentication
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))                
                     {
                         writer.WriteStartObject();
-                        writer.WriteResults(context, apiKeys, (w, c, apiKey) =>
+                        writer.WriteArray(context, "Results", apiKeys, (w, c, apiKey) =>
                         {
                             var username = apiKey.Item1.Substring(Constants.ApiKeys.Prefix.Length);
 
@@ -114,7 +112,6 @@ namespace Raven.Server.Web.Authentication
 
                             c.Write(w, apiKey.Item2);
                         });
-
                         writer.WriteEndObject();
                     }
 

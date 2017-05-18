@@ -13,10 +13,7 @@ namespace Raven.Client.Documents.Operations
 
         public DeleteCollectionOperation(string collectionName)
         {
-            if (collectionName == null)
-                throw new ArgumentNullException(nameof(collectionName));
-
-            _collectionName = collectionName;
+            _collectionName = collectionName ?? throw new ArgumentNullException(nameof(collectionName));
         }
 
         public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
@@ -30,10 +27,7 @@ namespace Raven.Client.Documents.Operations
 
             public DeleteCollectionCommand(string collectionName)
             {
-                if (collectionName == null)
-                    throw new ArgumentNullException(nameof(collectionName));
-
-                _collectionName = collectionName;
+                _collectionName = collectionName ?? throw new ArgumentNullException(nameof(collectionName));
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

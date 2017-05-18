@@ -14,10 +14,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         public GetIndexOperation(string indexName)
         {
-            if (indexName == null)
-                throw new ArgumentNullException(nameof(indexName));
-
-            _indexName = indexName;
+            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
         }
 
         public RavenCommand<IndexDefinition> GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -31,10 +28,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
             public GetIndexCommand(string indexName)
             {
-                if (indexName == null)
-                    throw new ArgumentNullException(nameof(indexName));
-
-                _indexName = indexName;
+                _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

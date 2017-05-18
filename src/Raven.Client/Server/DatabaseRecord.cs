@@ -2,9 +2,6 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Replication;
-using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Server.Expiration;
 using Raven.Client.Server.PeriodicExport;

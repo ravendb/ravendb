@@ -15,10 +15,7 @@ namespace Raven.Client.Documents.Commands
 
         public GetRevisionCommand(string id, int start, int pageSize)
         {
-            if (id == null)
-                throw new ArgumentNullException(nameof(id));
-
-            _id = id;
+            _id = id ?? throw new ArgumentNullException(nameof(id));
             _start = start;
             _pageSize = pageSize;
         }

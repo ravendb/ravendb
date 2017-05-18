@@ -52,7 +52,8 @@ namespace Raven.Server.Json
 
         public static void WritePerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<IndexPerformanceStats> stats)
         {
-            writer.WriteArray(context, stats, (w, c, stat) =>
+            writer.WriteStartObject();
+            writer.WriteArray(context, "Results", stats, (w, c, stat) =>
             {
                 w.WriteStartObject();
 
@@ -64,11 +65,11 @@ namespace Raven.Server.Json
                 w.WriteInteger(stat.Etag);
                 w.WriteComma();
 
-                w.WritePropertyName(nameof(stat.Performance));
-                w.WriteArray(c, stat.Performance, (wp, cp, performance) => { wp.WriteIndexingPerformanceStats(context, performance); });
+                w.WriteArray(c, nameof(stat.Performance), stat.Performance, (wp, cp, performance) => { wp.WriteIndexingPerformanceStats(context, performance); });
 
                 w.WriteEndObject();
             });
+            writer.WriteEndObject();
         }
 
         public static void WriteChangeVectorEntry(this BlittableJsonTextWriter writer, ChangeVectorEntry entry)
@@ -348,19 +349,7 @@ namespace Raven.Server.Json
             writer.WriteInteger(queryResult.ResultEtag);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(queryResult.Terms));
-            var first = true;
-            writer.WriteStartArray();
-            foreach (var term in queryResult.Terms)
-            {
-                if (first == false)
-                    writer.WriteComma();
-
-                first = false;
-
-                writer.WriteString(term);
-            }
-            writer.WriteEndArray();
+            writer.WriteArray(nameof(queryResult.Terms), queryResult.Terms);
 
             writer.WriteEndObject();
         }
@@ -1295,6 +1284,9 @@ namespace Raven.Server.Json
 
         public static void WriteReduceTrees(this BlittableJsonTextWriter writer, IEnumerable<ReduceTree> trees)
         {
+            writer.WriteStartObject();
+            writer.WritePropertyName("Results");
+
             writer.WriteStartArray();
 
             var first = true;
@@ -1335,6 +1327,8 @@ namespace Raven.Server.Json
             }
 
             writer.WriteEndArray();
+
+            writer.WriteEndObject();
         }
 
         public static void WriteTreePagesRecursively(this BlittableJsonTextWriter writer, IEnumerable<ReduceTreePage> pages)
@@ -1404,44 +1398,5 @@ namespace Raven.Server.Json
                 first = false;
             }
         }
-
-        public static void WriteResults<T>(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<T> items, Action<BlittableJsonTextWriter, JsonOperationContext, T> onWrite)
-        {
-            writer.WritePropertyName("Results");
-            writer.WriteArray(context, items, onWrite);
-        }
-
-        public static void WriteArray<T>(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<T> items, Action<BlittableJsonTextWriter, JsonOperationContext, T> onWrite)
-        {
-            writer.WriteStartArray();
-            var first = true;
-            foreach (var item in items)
-            {
-                if (first == false)
-                    writer.WriteComma();
-
-                first = false;
-
-                onWrite(writer, context, item);
-            }
-
-            writer.WriteEndArray();
-        }
-
-        public static void WriteArray(this BlittableJsonTextWriter writer, IEnumerable<LazyStringValue> items)
-        {
-            writer.WriteStartArray();
-            var first = true;
-            foreach (var item in items)
-            {
-                if (first == false)
-                    writer.WriteComma();
-                first = false;
-
-                writer.WriteString(item);
-            }
-            writer.WriteEndArray();
-        }
-
     }
 }

@@ -246,7 +246,12 @@ namespace Raven.Server.Web
 
         private static void ThrowRequiredMember(string name)
         {
-            throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
+            throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified.");
+        }
+
+        public static void ThrowRequiredPropertyNameInRequset(string name)
+        {
+            throw new ArgumentException($"Request should have a property name '{name}' which is mandatory.");
         }
 
         protected StringValues GetStringValuesQueryString(string name, bool required = true)

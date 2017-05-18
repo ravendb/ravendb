@@ -15,10 +15,7 @@ namespace Raven.Client.Server.Operations
 
         public DeleteDatabaseOperation(string name, bool hardDelete,string fromNode = null)
         {
-            if (name == null)
-                throw new ArgumentNullException(nameof(name));
-
-            _name = name;
+            _name = name ?? throw new ArgumentNullException(nameof(name));
             _hardDelete = hardDelete;
             _fromNode = fromNode;
         }
@@ -35,10 +32,7 @@ namespace Raven.Client.Server.Operations
             private readonly string _fromNode;
             public DeleteDatabaseCommand(string name, bool hardDelete,string fromNode)
             {
-                if (name == null)
-                    throw new ArgumentNullException(nameof(name));
-
-                _name = name;
+                _name = name ?? throw new ArgumentNullException(nameof(name));
                 _hardDelete = hardDelete;
                 _fromNode = fromNode;
                 ResponseType = RavenCommandResponseType.Object;

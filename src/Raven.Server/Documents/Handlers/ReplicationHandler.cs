@@ -139,8 +139,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName(nameof(ReplicationPerformance.Incoming));
-                writer.WriteArray(context, Database.ReplicationLoader.IncomingHandlers, (w, c, handler) =>
+                writer.WriteArray(context, nameof(ReplicationPerformance.Incoming), Database.ReplicationLoader.IncomingHandlers, (w, c, handler) =>
                 {
                     w.WriteStartObject();
 
@@ -148,8 +147,7 @@ namespace Raven.Server.Documents.Handlers
                     w.WriteString(handler.SourceFormatted);
                     w.WriteComma();
 
-                    w.WritePropertyName(nameof(ReplicationPerformance.IncomingStats.Performance));
-                    w.WriteArray(c, handler.GetReplicationPerformance(), (innerWriter, innerContext, performance) =>
+                    w.WriteArray(c, nameof(ReplicationPerformance.IncomingStats.Performance), handler.GetReplicationPerformance(), (innerWriter, innerContext, performance) =>
                     {
                         var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(performance);
                         innerWriter.WriteObject(context.ReadObject(djv, "replication/performance"));
@@ -159,8 +157,7 @@ namespace Raven.Server.Documents.Handlers
                 });
                 writer.WriteComma();
 
-                writer.WritePropertyName(nameof(ReplicationPerformance.Outgoing));
-                writer.WriteArray(context, Database.ReplicationLoader.OutgoingHandlers, (w, c, handler) =>
+                writer.WriteArray(context, nameof(ReplicationPerformance.Outgoing), Database.ReplicationLoader.OutgoingHandlers, (w, c, handler) =>
                 {
                     w.WriteStartObject();
 
@@ -168,8 +165,7 @@ namespace Raven.Server.Documents.Handlers
                     w.WriteString(handler.DestinationFormatted);
                     w.WriteComma();
 
-                    w.WritePropertyName(nameof(ReplicationPerformance.OutgoingStats.Performance));
-                    w.WriteArray(c, handler.GetReplicationPerformance(), (innerWriter, innerContext, performance) =>
+                    w.WriteArray(c, nameof(ReplicationPerformance.OutgoingStats.Performance), handler.GetReplicationPerformance(), (innerWriter, innerContext, performance) =>
                     {
                         var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(performance);
                         innerWriter.WriteObject(context.ReadObject(djv, "replication/performance"));
@@ -225,19 +221,16 @@ namespace Raven.Server.Documents.Handlers
 
             ms.SetLength(0);
 
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ms))
             {
-                writer.WriteArray(context, tuple.Item2, (w, c, p) =>
+                writer.WriteArray(context, "Results", tuple.Item2, (w, c, p) =>
                 {
                     p.Write(c, w);
                 });
             }
 
-            ArraySegment<byte> bytes;
-            ms.TryGetBuffer(out bytes);
-
+            ms.TryGetBuffer(out ArraySegment<byte> bytes);
             await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
 
             return true;
@@ -356,14 +349,13 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/debug/incoming-rejection-info", "GET")]
         public Task GetReplicationIncomingRejectionInfo()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var data = new DynamicJsonArray();
+                var stats = new DynamicJsonArray();
                 foreach (var statItem in Database.ReplicationLoader.IncomingRejectionStats)
                 {
-                    data.Add(new DynamicJsonValue
+                    stats.Add(new DynamicJsonValue
                     {
                         ["Key"] = new DynamicJsonValue
                         {
@@ -380,7 +372,10 @@ namespace Raven.Server.Documents.Handlers
                     });
                 }
 
-                context.Write(writer, data);
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Stats"] = stats
+                });
             }
 
             return Task.CompletedTask;

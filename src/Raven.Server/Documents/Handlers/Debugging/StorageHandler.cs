@@ -21,8 +21,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var first = true;
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Results");
+
                     writer.WriteStartArray();
+                    var first = true;
                     foreach (var env in Database.GetAllStoragesEnvironment())
                     {
                         if (first == false)
@@ -48,6 +51,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     }
 
                     writer.WriteEndArray();
+
+                    writer.WriteEndObject();
                 }
             }
 

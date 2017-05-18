@@ -19,7 +19,6 @@ using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -30,22 +29,21 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes", "PUT")]
         public async Task Put()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var createdIndexes = new List<KeyValuePair<string, long>>();
-                var tuple = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "Indexes", BlittableJsonDocumentBuilder.UsageMode.None);
-                using (tuple.Item2)
-                {
-                    foreach (var indexToAdd in tuple.Item1)
-                    {
-                        var indexDefinition = JsonDeserializationServer.IndexDefinition((BlittableJsonReaderObject)indexToAdd);
+                var input = await context.ReadForMemoryAsync(RequestBodyStream(), "Indexes");
+                if (input.TryGet("Indexes", out BlittableJsonReaderArray indexes) == false)
+                    ThrowRequiredPropertyNameInRequset("Indexes");
 
-                        if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
-                            throw new ArgumentException("Index must have a 'Maps' fields");
-                        var etag = await Database.IndexStore.CreateIndex(indexDefinition);
-                        createdIndexes.Add(new KeyValuePair<string, long>(indexDefinition.Name, etag));
-                    }
+                foreach (var indexToAdd in indexes)
+                {
+                    var indexDefinition = JsonDeserializationServer.IndexDefinition((BlittableJsonReaderObject)indexToAdd);
+
+                    if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
+                        throw new ArgumentException("Index must have a 'Maps' fields");
+                    var etag = await Database.IndexStore.CreateIndex(indexDefinition);
+                    createdIndexes.Add(new KeyValuePair<string, long>(indexDefinition.Name, etag));
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -54,7 +52,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
 
-                    writer.WriteResults(context, createdIndexes, (w, c, index) =>
+                    writer.WriteArray(context, "Results", createdIndexes, (w, c, index) =>
                     {
                         w.WriteStartObject();
                         w.WritePropertyName(nameof(PutIndexResult.IndexId));
@@ -201,8 +199,7 @@ namespace Raven.Server.Documents.Handlers
 
                     var docId = GetStringQueryString("docId", required: false);
 
-                    IEnumerable<ReduceTree> trees;
-                    using (index.GetReduceTree(docId, out trees))
+                    using (index.GetReduceTree(docId, out IEnumerable<ReduceTree> trees))
                     {
                         writer.WriteReduceTrees(trees);
                     }
@@ -225,20 +222,9 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var fields = index.GetEntriesFields();
 
-                    var first = true;
-                    writer.WriteStartArray();
-
-                    foreach (var field in fields)
-                    {
-                        if (first == false)
-                            writer.WriteComma();
-
-                        first = false;
-
-                        writer.WriteString(field);
-                    }
-
-                    writer.WriteEndArray();
+                    writer.WriteStartObject();
+                    writer.WriteArray("Results", fields);
+                    writer.WriteEndObject();
 
                     return Task.CompletedTask;
                 }
@@ -283,7 +269,7 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteStartObject();
 
-                writer.WriteResults(context, indexDefinitions, (w, c, indexDefinition) =>
+                writer.WriteArray(context, "Results", indexDefinitions, (w, c, indexDefinition) =>
                 {
                     if (namesOnly)
                     {
@@ -333,7 +319,7 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteStartObject();
 
-                writer.WriteResults(context, indexStats, (w, c, stats) =>
+                writer.WriteArray(context, "Results", indexStats, (w, c, stats) =>
                 {
                     w.WriteIndexStats(context, stats);
                 });
@@ -520,19 +506,18 @@ namespace Raven.Server.Documents.Handlers
                     indexes.Add(index);
                 }
             }
-            
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteArray(context, indexes, (w, c, index) =>
+                writer.WriteStartObject();
+                writer.WriteArray(context, "Results", indexes, (w, c, index) =>
                 {
                     w.WriteStartObject();
                     w.WritePropertyName("Name");
                     w.WriteString(index.Name);
                     w.WriteComma();
-                    w.WritePropertyName("Errors");
-                    w.WriteArray(c, index.GetErrors(), (ew, ec, error) =>
+                    w.WriteArray(c, "Errors", index.GetErrors(), (ew, ec, error) =>
                     {
                         ew.WriteStartObject();
                         ew.WritePropertyName(nameof(error.Timestamp));
@@ -544,7 +529,7 @@ namespace Raven.Server.Documents.Handlers
                         ew.WriteComma();
 
                         ew.WritePropertyName(nameof(error.Action));
-                        ew.WriteString(error.Action); 
+                        ew.WriteString(error.Action);
                         ew.WriteComma();
 
                         ew.WritePropertyName(nameof(error.Error));
@@ -553,6 +538,7 @@ namespace Raven.Server.Documents.Handlers
                     });
                     w.WriteEndObject();
                 });
+                writer.WriteEndObject();
             }
             return Task.CompletedTask;
         }
@@ -652,8 +638,7 @@ namespace Raven.Server.Documents.Handlers
                 })
                 .ToArray();
 
-            JsonOperationContext context;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WritePerformanceStats(context, stats);
@@ -704,16 +689,13 @@ namespace Raven.Server.Documents.Handlers
 
             ms.SetLength(0);
 
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ms))
             {
                 writer.WritePerformanceStats(context, tuple.Item2);
             }
 
-            ArraySegment<byte> bytes;
-            ms.TryGetBuffer(out bytes);
-
+            ms.TryGetBuffer(out ArraySegment<byte> bytes);
             await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
 
             return true;

@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 
 namespace Raven.Client.Util
 {

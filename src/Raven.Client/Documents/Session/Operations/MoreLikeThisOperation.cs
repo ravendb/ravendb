@@ -18,13 +18,8 @@ namespace Raven.Client.Documents.Session.Operations
 
         public MoreLikeThisOperation(InMemoryDocumentSessionOperations session, MoreLikeThisQuery query)
         {
-            if (session == null)
-                throw new ArgumentNullException(nameof(session));
-            if (query == null)
-                throw new ArgumentNullException(nameof(query));
-
-            _session = session;
-            _query = query;
+            _session = session ?? throw new ArgumentNullException(nameof(session));
+            _query = query ?? throw new ArgumentNullException(nameof(query));
 
             if (_query.IndexName == null)
                 throw new ArgumentNullException(nameof(query.IndexName));

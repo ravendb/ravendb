@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -239,7 +238,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         private async Task<Stream> ConnectToServer()
         {
-            var command = new GetTcpInfoCommand();
+            var command = new GetTcpInfoCommand("Subscription/"+_dbName);
 
             JsonOperationContext context;
             var requestExecuter = _store.GetRequestExecuter(_dbName ?? _store.DefaultDatabase);

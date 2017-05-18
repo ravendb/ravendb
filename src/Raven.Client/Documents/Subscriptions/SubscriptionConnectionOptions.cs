@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 

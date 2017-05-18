@@ -17,10 +17,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         public GetIndexPerformanceStatisticsOperation(string[] indexNames)
         {
-            if (indexNames == null)
-                throw new ArgumentNullException(nameof(indexNames));
-
-            _indexNames = indexNames;
+            _indexNames = indexNames ?? throw new ArgumentNullException(nameof(indexNames));
         }
 
         public RavenCommand<IndexPerformanceStats[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -37,7 +34,6 @@ namespace Raven.Client.Documents.Operations.Indexes
             {
                 _conventions = conventions;
                 _indexNames = indexNames;
-                ResponseType = RavenCommandResponseType.Array;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -52,18 +48,17 @@ namespace Raven.Client.Documents.Operations.Indexes
 
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
-                ThrowInvalidResponse();
-            }
-
-            public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
-            {
-                if (response == null)
-                    ThrowInvalidResponse();
-
-                var stats = new IndexPerformanceStats[response.Length];
-                for (var i = 0; i < response.Length; i++)
+                if (response == null ||
+                    response.TryGet("Results", out BlittableJsonReaderArray results) == false)
                 {
-                    stats[i] = (IndexPerformanceStats)_conventions.DeserializeEntityFromBlittable(typeof(IndexPerformanceStats), (BlittableJsonReaderObject)response[i]);
+                    ThrowInvalidResponse();
+                    return; // never hit
+                }
+
+                var stats = new IndexPerformanceStats[results.Length];
+                for (var i = 0; i < results.Length; i++)
+                {
+                    stats[i] = (IndexPerformanceStats)_conventions.DeserializeEntityFromBlittable(typeof(IndexPerformanceStats), (BlittableJsonReaderObject)results[i]);
                 }
 
                 Result = stats;

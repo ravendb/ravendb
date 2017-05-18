@@ -23,21 +23,13 @@ namespace Raven.Client.Documents.Commands
 
         public ExplainQueryCommand(DocumentConventions conventions, JsonOperationContext context, string indexName, IndexQuery indexQuery)
         {
-            if (conventions == null)
-                throw new ArgumentNullException(nameof(conventions));
-            if (context == null)
-                throw new ArgumentNullException(nameof(context));
-            if (indexName == null)
-                throw new ArgumentNullException(nameof(indexName));
             if (indexQuery == null)
                 throw new ArgumentNullException(nameof(indexQuery));
 
-            _conventions = conventions;
-            _context = context;
-            _indexName = indexName;
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
             _indexQuery = indexQuery;
-
-            ResponseType = RavenCommandResponseType.Array;
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -66,17 +58,12 @@ namespace Raven.Client.Documents.Commands
             }
 
             var indexQueryUrl = $"{_indexQuery.GetIndexQueryUrl(_indexName, "queries", includeQuery: method == HttpMethod.Get)}&debug=explain";
-
             url = $"{node.Url}/databases/{node.Database}/" + indexQueryUrl;
+
             return request;
         }
 
         public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-        {
-            ThrowInvalidResponse();
-        }
-
-        public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
         {
             if (response == null)
             {
@@ -84,10 +71,16 @@ namespace Raven.Client.Documents.Commands
                 return;
             }
 
-            var results = new ExplainQueryResult[response.Length];
-            for (var i = 0; i < response.Length; i++)
+            if (response.TryGet("Results", out BlittableJsonReaderArray array) == false)
             {
-                var result = (BlittableJsonReaderObject)response[i];
+                ThrowInvalidResponse();
+                return; // never hit
+            }
+
+            var results = new ExplainQueryResult[array.Length];
+            for (var i = 0; i < array.Length; i++)
+            {
+                var result = (BlittableJsonReaderObject)array[i];
                 results[i] = (ExplainQueryResult)_conventions.DeserializeEntityFromBlittable(typeof(ExplainQueryResult), result);
             }
 

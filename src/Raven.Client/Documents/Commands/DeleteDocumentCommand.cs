@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Http;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
@@ -12,10 +11,7 @@ namespace Raven.Client.Documents.Commands
 
         public DeleteDocumentCommand(string id, long? etag)
         {
-            if (id == null)
-                throw new ArgumentNullException(nameof(id));
-
-            _id = id;
+            _id = id ?? throw new ArgumentNullException(nameof(id));
             _etag = etag;
         }
 

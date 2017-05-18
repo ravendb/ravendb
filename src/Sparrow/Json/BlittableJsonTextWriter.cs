@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Text;
 using Sparrow.Extensions;
 
 namespace Sparrow.Json
@@ -524,7 +522,5 @@ namespace Sparrow.Json
                 Flush();
             }
         }
-
-
     }
 }

@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
 using Sparrow.Json;
@@ -107,10 +106,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         public SubscriptionCriteria(string collection)
         {
-            if (collection == null)
-                throw new ArgumentNullException(nameof(collection));
-
-            Collection = collection;
+            Collection = collection ?? throw new ArgumentNullException(nameof(collection));
         }
 
         public string Collection { get; private set; }

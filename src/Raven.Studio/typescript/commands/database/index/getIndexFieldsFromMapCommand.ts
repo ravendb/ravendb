@@ -8,7 +8,7 @@ class getIndexFieldsFromMapCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<string[]> {
+    execute(): JQueryPromise<resultsDto<string>> {
         const url = endpoints.databases.studioIndex.studioIndexFields;
         const args = {
             Map: this.map

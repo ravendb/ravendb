@@ -13,10 +13,7 @@ namespace Raven.Client.Documents.Commands
 
         public MoreLikeThisCommand(MoreLikeThisQuery query)
         {
-            if (query == null)
-                throw new ArgumentNullException(nameof(query));
-
-            _query = query;
+            _query = query ?? throw new ArgumentNullException(nameof(query));
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

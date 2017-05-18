@@ -28,13 +28,12 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/multi_get", "POST", "/databases/{databaseName:string}/multi_get?parallel=[yes|no] body{ requests:Raven.Abstractions.Data.GetRequest[] }")]
         public async Task PostMultiGet()
         {
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var requestsParseResult = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "multi_get", BlittableJsonDocumentBuilder.UsageMode.None);
-                var requests = requestsParseResult.Item1;
+                var input = await context.ReadForMemoryAsync(RequestBodyStream(), "multi_get");
+                if (input.TryGet("Requests", out BlittableJsonReaderArray requests) == false)
+                    ThrowRequiredPropertyNameInRequset("Requests");
 
-                using (requestsParseResult.Item2)
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
@@ -91,8 +90,7 @@ namespace Raven.Server.Documents.Handlers
                         httpContext.Request.Headers.Clear();
                         httpContext.Response.Headers.Clear();
                         httpContext.Request.QueryString = new QueryString(query);
-                        BlittableJsonReaderObject headers;
-                        if (request.TryGet("Headers", out headers))
+                        if (request.TryGet("Headers", out BlittableJsonReaderObject headers))
                         {
                             foreach (var header in headers.GetPropertyNames())
                             {
@@ -107,8 +105,7 @@ namespace Raven.Server.Documents.Handlers
                             }
                         }
 
-                        object content;
-                        if (method == HttpMethod.Post.Method && request.TryGet("Content", out content))
+                        if (method == HttpMethod.Post.Method && request.TryGet("Content", out object content))
                         {
                             //TODO - remove "if" when deleting the old client and 
                             //change object content to BlittableJsonReaderArray content.
@@ -122,16 +119,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 var requestBody = new MemoryStream();
                                 var contentWriter = new BlittableJsonTextWriter(context, requestBody);
-                                contentWriter.WriteStartArray();
-                                bool first = true;
-                                foreach (var obj in (BlittableJsonReaderArray)content)
-                                {
-                                    if (!(first))
-                                        contentWriter.WriteComma();
-                                    first = false;
-                                    context.Write(contentWriter, (BlittableJsonReaderObject)obj);
-                                }
-                                contentWriter.WriteEndArray();
+                                context.Write(contentWriter, (BlittableJsonReaderObject)content);
                                 contentWriter.Flush();
                                 HttpContext.Response.RegisterForDispose(requestBody);
                                 httpContext.Request.Body = requestBody;

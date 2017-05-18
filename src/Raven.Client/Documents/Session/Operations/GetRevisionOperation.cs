@@ -18,13 +18,8 @@ namespace Raven.Client.Documents.Session.Operations
 
         public GetRevisionOperation(InMemoryDocumentSessionOperations session, string id, int start, int pageSize)
         {
-            if (session == null)
-                throw new ArgumentNullException(nameof(session));
-            if (id == null)
-                throw new ArgumentNullException(nameof(id));
-
-            _session = session;
-            _id = id;
+            _session = session ?? throw new ArgumentNullException(nameof(session));
+            _id = id ?? throw new ArgumentNullException(nameof(id));
             _start = start;
             _pageSize = pageSize;
         }
