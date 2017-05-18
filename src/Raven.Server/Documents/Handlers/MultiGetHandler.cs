@@ -119,16 +119,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 var requestBody = new MemoryStream();
                                 var contentWriter = new BlittableJsonTextWriter(context, requestBody);
-                                contentWriter.WriteStartArray();
-                                bool first = true;
-                                foreach (var obj in (BlittableJsonReaderArray)content)
-                                {
-                                    if (!(first))
-                                        contentWriter.WriteComma();
-                                    first = false;
-                                    context.Write(contentWriter, (BlittableJsonReaderObject)obj);
-                                }
-                                contentWriter.WriteEndArray();
+                                context.Write(contentWriter, (BlittableJsonReaderObject)content);
                                 contentWriter.Flush();
                                 HttpContext.Response.RegisterForDispose(requestBody);
                                 httpContext.Request.Body = requestBody;
