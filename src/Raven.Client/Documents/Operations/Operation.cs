@@ -38,7 +38,10 @@ namespace Raven.Client.Documents.Operations
         {
             try
             {
-                _subscription = _changes().ForOperationId(_id).Subscribe(this);
+                var changes = await _changes().EnsureConnectedNow();
+                _subscription = changes
+                    .ForOperationId(_id)
+                    .Subscribe(this);
                 await FetchOperationStatus().ConfigureAwait(false);
             }
             catch (Exception e)
@@ -85,7 +88,7 @@ namespace Raven.Client.Documents.Operations
                 case OperationStatus.Faulted:
                     _subscription?.Dispose();
                     var exceptionResult = (OperationExceptionResult)change.State.Result;
-                    Debug.Assert(exceptionResult!=null);
+                    Debug.Assert(exceptionResult != null);
                     _result.TrySetException(ExceptionDispatcher.Get(exceptionResult.Message, exceptionResult.Error, exceptionResult.Type, exceptionResult.StatusCode));
                     break;
                 case OperationStatus.Canceled:
