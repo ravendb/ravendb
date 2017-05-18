@@ -60,7 +60,7 @@ namespace SlowTests.Tests.Faceted
                                 }
                         };
 
-            _stronglyTypedFacets = GetFacets();
+            _stronglyTypedFacets = GetFacets().Facets;
         }
 
         [Fact]
