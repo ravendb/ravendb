@@ -152,9 +152,9 @@ namespace Raven.Client.Documents
         DocumentConventions Conventions { get; }
 
         /// <summary>
-        /// Gets the URL.
+        /// Gets the URL's.
         /// </summary>
-        string Url { get; }
+        string[] Urls { get; }
 
         BulkInsertOperation BulkInsert(string database = null);
 

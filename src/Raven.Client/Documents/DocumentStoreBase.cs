@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.BulkInsert;
@@ -24,6 +25,7 @@ namespace Raven.Client.Documents
     {
         protected DocumentStoreBase()
         {
+
             AsyncSubscriptions = new AsyncDocumentSubscriptions(this);
             Subscriptions = new DocumentSubscriptions(this);
         }
@@ -123,24 +125,31 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        /// Gets or sets the URL.
+        /// Gets or sets the URLs.
         /// </summary>
-          private string _url;
+        private string[] _urls = Array.Empty<string>();
 
         /// <summary>
-        /// Gets or sets the URL.
+        /// Gets or sets the Urls
         /// </summary>
-        public string Url
+        public string[] Urls
         {
-            get => _url;
-            set => _url = value.EndsWith("/") ? value.Substring(0, value.Length - 1) : value;
-        }
+            get => _urls;
+            set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(value));
+                for (var i = 0; i < value.Length; i++)
+                {
+                    if(value[i] == null)
+                        throw new ArgumentNullException(nameof(value), "Urls cannot contain null");
 
-        /// <summary>
-        /// Failover servers used by replication informers when cannot fetch the list of replication 
-        /// destinations if a master server is down.
-        /// </summary>
-        public FailoverServers FailoverServers { get; set; }
+                    if(Uri.TryCreate(value[i], UriKind.Absolute, out var _) == false)
+                        throw new ArgumentException(value[i] + " is no a valid url");
+                    value[i] = value[i].TrimEnd('/');
+                }
+                _urls = value;
+            }
+        }
 
         protected bool Initialized;
 
@@ -189,7 +198,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public string ApiKey { get; set; }
 
-        public abstract RequestExecutor GetRequestExecutor(string database = null);
+        public abstract RequestExecutor GetRequestExecutor(string databaseName = null);
 
         public abstract IDisposable SetRequestsTimeout(TimeSpan timeout, string database = null);
 

@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Linq;
 using System.Threading.Tasks;
 
 using FastTests;
@@ -98,7 +99,7 @@ namespace SlowTests.Core.Commands
         {
             using (var store = GetDocumentStore())
             {
-                Assert.Equal(store.Url + "/databases/" + store.Database + "/docs?id=items/1", store.GetRequestExecutor().UrlFor("items/1"));
+                Assert.Equal(store.Urls.First() + "/databases/" + store.Database + "/docs?id=items/1", store.GetRequestExecutor().UrlFor("items/1"));
             }
         }
 

@@ -184,6 +184,18 @@ namespace FastTests
             return url;
         }
 
+        protected static string[] UseFiddler(string[] urls)
+        {
+            if (!Debugger.IsAttached || !Process.GetProcessesByName("fiddler").Any())
+                return urls;
+
+            for (var i = 0; i < urls.Length; i++)
+            {
+                urls[i] = urls[i].Replace("127.0.0.1", "localhost.fiddler");   
+            }
+            return urls;
+        }
+
         protected static void OpenBrowser(string url)
         {
             Console.WriteLine(url);

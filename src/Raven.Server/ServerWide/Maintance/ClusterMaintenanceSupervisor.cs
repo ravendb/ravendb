@@ -40,7 +40,7 @@ namespace Raven.Server.ServerWide.Maintance
 
         public async Task AddToCluster(string clusterTag, string url)
         {
-            var connectionInfo = await ReplicationUtils.GetTcpInfoAsync(MultiDatabase.GetRootDatabaseUrl(url), null, null, "Supervisor");
+            var connectionInfo = await ReplicationUtils.GetTcpInfoAsync(url, null, null, "Supervisor");
 
             var clusterNode = new ClusterNode(clusterTag, connectionInfo, _contextPool, this, _cts.Token);
             _clusterNodes[clusterTag] = clusterNode;

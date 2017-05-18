@@ -167,7 +167,7 @@ namespace Tests.Infrastructure
             {
                 stores.Add(new DocumentStore
                 {
-                    Url = node.Url,
+                    Urls = new [] { node.Url },
                     Database = node.Database
                 });
             }
@@ -235,7 +235,7 @@ namespace Tests.Infrastructure
                 var store = new DocumentStore
                 {
                     Database = node.Database,
-                    Url = url
+                    Urls = new [] { url }
                 };
 
                 _toDispose.Add(store);
@@ -374,7 +374,7 @@ namespace Tests.Infrastructure
             CreateDatabaseResult databaseResult;
             using (var store = new DocumentStore()
             {
-                Url = leasderUrl,
+                Urls = new [] {leasderUrl},
                 Database = databaseName
             }.Initialize())
             {

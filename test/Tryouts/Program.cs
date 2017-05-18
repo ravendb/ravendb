@@ -20,7 +20,7 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
 
-                using (var a = new FastTests.Server.NotificationCenter.NotificationCenterTests())
+                using (var a = new NotificationCenterTests())
                 {
                     try
                     {

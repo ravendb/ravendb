@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers
                 transformerDefinition.Name = name;
 
                 var etag = await Database.TransformerStore.CreateTransformer(transformerDefinition);
-                await Database.WaitForIndexNotification(etag);
+                await Database.RachisLogIndexNotifications.WaitForIndexNotification(etag);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 

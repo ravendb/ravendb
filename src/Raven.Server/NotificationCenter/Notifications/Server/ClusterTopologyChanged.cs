@@ -1,6 +1,4 @@
-﻿using System;
-using Raven.Server.Rachis;
-using Sparrow.Json;
+﻿using Raven.Client.Http;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Server

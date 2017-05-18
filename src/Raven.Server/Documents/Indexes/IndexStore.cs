@@ -402,7 +402,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var (etag,result) = await _serverStore.SendToLeaderAsync(command);
 
-                    await _documentDatabase.WaitForIndexNotification(etag);
+                    await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
 
                     var index = GetIndex(definition.Name); // not all operations are changing Etag, this is why we need to take it directly from the index
                     if (index == null)
@@ -438,7 +438,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var (index, result) = await _serverStore.SendToLeaderAsync(command);
 
-                await _documentDatabase.WaitForIndexNotification(index);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index);
 
                 var instance = GetIndex(definition.Name);
 
@@ -646,7 +646,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var (etag, result) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
 
-                await _documentDatabase.WaitForIndexNotification(etag);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
 
                 return true;
             }
@@ -668,7 +668,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var (resultEtag,result) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
 
-                await _documentDatabase.WaitForIndexNotification(resultEtag);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(resultEtag);
             }
             finally
             {
@@ -1191,7 +1191,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var (etag, result) = await _serverStore.SendToLeaderAsync(command);
 
-                await _documentDatabase.WaitForIndexNotification(etag);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
             }
             finally
             {
@@ -1220,7 +1220,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var (etag, result) = await _serverStore.SendToLeaderAsync(command);
 
-                await _documentDatabase.WaitForIndexNotification(etag);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
             }
             finally
             {

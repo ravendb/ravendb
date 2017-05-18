@@ -114,7 +114,7 @@ namespace FastTests.Server.OAuth
                 Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
                 var client = new HttpClient();
 
-                var baseUrl = $"{store.Url}/databases/{store.Database}";
+                var baseUrl = $"{store.Urls.First()}/databases/{store.Database}";
 
                 var result = await client.GetAsync(baseUrl + "/docs?id=test/1");
                 Assert.Equal(HttpStatusCode.PreconditionFailed, result.StatusCode);
@@ -123,7 +123,7 @@ namespace FastTests.Server.OAuth
                 using (var commands = store.Commands())
                 {
                     var apiKeyAuthenticator = new ApiKeyAuthenticator();
-                    var exception = await Assert.ThrowsAsync<AuthenticationException>(async () => await apiKeyAuthenticator.GetAuthenticationTokenAsync("super/secret", store.Url, commands.Context));
+                    var exception = await Assert.ThrowsAsync<AuthenticationException>(async () => await apiKeyAuthenticator.GetAuthenticationTokenAsync("super/secret", store.Urls.First(), commands.Context));
                     Assert.Contains("Could not find api key: super", exception.Message);
                 }
 
@@ -140,7 +140,7 @@ namespace FastTests.Server.OAuth
                 {
                     Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.None;
                     var apiKeyAuthenticator = new ApiKeyAuthenticator();
-                    token = await apiKeyAuthenticator.GetAuthenticationTokenAsync("super/secret", store.Url, commands.Context);
+                    token = await apiKeyAuthenticator.GetAuthenticationTokenAsync("super/secret", store.Urls.First(), commands.Context);
                     Assert.NotNull(token);
                     Assert.NotEqual(string.Empty, token);
                 }

@@ -26,7 +26,7 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
             using (var store = new DocumentStore()
             {
-                Url = leader.WebUrls[0],
+                Urls = leader.WebUrls,
                 Database = databaseName
             }.Initialize())
             {
@@ -43,7 +43,7 @@ namespace RachisTests.DatabaseCluster
                 }
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Karmel"}, "users/1");
+                    await session.StoreAsync(new User {Name  = "Karmel"},"users/1");
                     await session.SaveChangesAsync();
                 }
                 Assert.True(await WaitForDocumentInClusterAsync<User>(
@@ -64,7 +64,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore()
             {
-                Url = leader.WebUrls[0],
+                Urls = leader.WebUrls,
                 Database = databaseName
             }.Initialize())
             {
@@ -112,7 +112,7 @@ namespace RachisTests.DatabaseCluster
             {
                 using (var store = new DocumentStore()
                 {
-                    Url = watcher.Url,
+                    Urls = new [] {watcher.Url},
                     Database = watcher.Database
                 }.Initialize())
                 {
@@ -129,7 +129,7 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
             using (var store = new DocumentStore()
             {
-                Url = leader.WebUrls[0],
+                Urls = leader.WebUrls,
                 Database = databaseName
             }.Initialize())
             {
@@ -177,7 +177,7 @@ namespace RachisTests.DatabaseCluster
             var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
             using (var store = new DocumentStore()
             {
-                Url = leader.WebUrls[0],
+                Urls = leader.WebUrls,
                 Database = databaseName,
                 
             }.Initialize())
@@ -207,7 +207,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore()
             {
-                Url = Servers[1].WebUrls[0],
+                Urls = Servers[1].WebUrls,
                 Database = databaseName
             }.Initialize())
             {
@@ -254,9 +254,9 @@ namespace RachisTests.DatabaseCluster
                     new DatabaseWatcher
                     {
                         Database = store2.Database,
-                        Url = store2.Url,
+                        Url = store2.Urls.First(),
                         ApiKey = "super/" + api
-                    }
+    }
                 };
                 await UpdateReplicationTopology(store1, watchers);
   
@@ -264,7 +264,7 @@ namespace RachisTests.DatabaseCluster
                 {
                     await session.StoreAsync(new User {Name = "Karmel"}, "users/1");
                     await session.SaveChangesAsync();
-                }
+}
 
                 if (api.Equals(_apiKey.Secret))
                 {

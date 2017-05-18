@@ -21,6 +21,7 @@ using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl;
+using Raven.Client.Http;
 
 namespace Raven.Server.Rachis
 {

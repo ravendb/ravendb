@@ -26,6 +26,13 @@ namespace Raven.Server.Documents
             ContextPool = Database.DocumentsStorage.ContextPool;
             IndexStore = context.Database.IndexStore;
             Logger = LoggingSource.Instance.GetLogger(Database.Name, GetType().FullName);
+
+            if (context.HttpContext.Request.Headers.TryGetValue("Topology-Etag", out var topologyEtag) &&
+                topologyEtag.Count == 1 &&
+                Database.RachisLogIndexNotifications.IsMatch(topologyEtag[0]))
+            {
+                context.HttpContext.Response.Headers["Refresh-Topology"] = "true";
+            }
         }
 
         protected OperationCancelToken CreateTimeLimitedOperationToken()

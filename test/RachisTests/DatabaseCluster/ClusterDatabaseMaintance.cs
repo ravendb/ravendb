@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -21,7 +22,7 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize,true,0);
             using (var store = new DocumentStore()
             {
-                Url = leader.WebUrls[0],
+                Urls = leader.WebUrls,
                 Database = databaseName
             }.Initialize())
             {
@@ -45,7 +46,7 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize,true,0);
             using (var store = new DocumentStore()
             {
-                Url = leader.WebUrls[0],
+                Urls = leader.WebUrls,
                 Database = databaseName
             }.Initialize())
             {
@@ -59,7 +60,7 @@ namespace RachisTests.DatabaseCluster
 
                 using (var dbStore = new DocumentStore
                 {
-                    Url = dbServer.WebUrls[0],
+                    Urls = dbServer.WebUrls,
                     Database = databaseName
                 }.Initialize())
                 {
@@ -91,7 +92,7 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, true, 0);
             using (var store = new DocumentStore()
             {
-                Url = leader.WebUrls[0],
+                Urls = leader.WebUrls,
                 Database = databaseName
             }.Initialize())
             {
@@ -105,7 +106,7 @@ namespace RachisTests.DatabaseCluster
             
             using (var store = new DocumentStore()
             {
-                Url = Servers[1].WebUrls[0],
+                Urls = Servers[1].WebUrls,
                 Database = databaseName
             }.Initialize())
             {

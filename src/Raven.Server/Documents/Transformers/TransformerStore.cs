@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.Transformers
                 {
                     var (index,result) = await _serverStore.SendToLeaderAsync(command);
 
-                    await _documentDatabase.WaitForIndexNotification(index);
+                    await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index);
 
                     var instance = GetTransformer(definition.Name);
                     return instance.Etag;
@@ -265,7 +265,7 @@ namespace Raven.Server.Documents.Transformers
 
                 var (etag, result) = await _serverStore.SendToLeaderAsync(new DeleteTransformerCommand(transformer.Name, _documentDatabase.Name));
 
-                await _documentDatabase.WaitForIndexNotification(etag);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
 
                 return true;
             }
@@ -287,7 +287,7 @@ namespace Raven.Server.Documents.Transformers
 
                 var (etag, result) = await _serverStore.SendToLeaderAsync(new DeleteTransformerCommand(transformer.Name, _documentDatabase.Name));
 
-                await _documentDatabase.WaitForIndexNotification(etag);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
             }
             finally
             {
@@ -326,7 +326,7 @@ namespace Raven.Server.Documents.Transformers
 
                 var (etag, result) = await _serverStore.SendToLeaderAsync(command);
 
-                await _documentDatabase.WaitForIndexNotification(etag);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
             }
             finally
             {
@@ -348,7 +348,7 @@ namespace Raven.Server.Documents.Transformers
 
                 var (etag, result) = await _serverStore.SendToLeaderAsync(command);
 
-                await _documentDatabase.WaitForIndexNotification(etag);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
             }
             finally
             {
