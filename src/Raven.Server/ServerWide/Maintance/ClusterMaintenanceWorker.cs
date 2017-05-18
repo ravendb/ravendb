@@ -84,25 +84,21 @@ namespace Raven.Server.ServerWide.Maintance
                 if (_token.IsCancellationRequested)
                     yield break;
 
-                DatabaseStatusReport report;
                 if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask) == false)
                 {
-                    report = new DatabaseStatusReport
+                    yield return (dbName, new DatabaseStatusReport
                     {
                         Name = dbName,
                         NodeName = _server.NodeTag,
                         Status = DatabaseStatus.Unloaded
-                    };
-                    yield return (dbName, report);
-
+                    });
                     continue;
                 }
 
-                report = new DatabaseStatusReport
+                var report = new DatabaseStatusReport
                 {
                     Name = dbName,
                     NodeName = _server.NodeTag,
-                    Status = DatabaseStatus.Loading
                 };
 
                 if (dbTask.IsCanceled || dbTask.IsFaulted)
@@ -115,18 +111,23 @@ namespace Raven.Server.ServerWide.Maintance
 
                 if (dbTask.IsCompleted == false)
                 {
+                    report.Status = DatabaseStatus.Loading;
                     yield return (dbName, report);
                     continue;
                 }
-
-                report.Status = DatabaseStatus.Loaded;
 
                 var dbInstance = dbTask.Result;
                 var documentsStorage = dbInstance.DocumentsStorage;
                 var indexStorage = dbInstance.IndexStore;
 
-                if (_token.IsCancellationRequested)
-                    yield break;
+                if (dbInstance.DatabaseShutdown.IsCancellationRequested)
+                {
+                    report.Status = DatabaseStatus.Shutdown;
+                    yield return (dbName, report);
+                    continue;
+                }
+
+                report.Status = DatabaseStatus.Loaded;
 
                 using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var tx = context.OpenReadTransaction())
