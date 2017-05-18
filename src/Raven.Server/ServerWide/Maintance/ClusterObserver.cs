@@ -81,7 +81,7 @@ namespace Raven.Server.ServerWide.Maintance
             {
                 var updateCommands = new List<BlittableJsonReaderObject>();
 
-                using (context.OpenWriteTransaction())
+                using (context.OpenReadTransaction())
                 {
                     foreach (var database in _engine.StateMachine.GetDatabaseNames(context))
                     {
