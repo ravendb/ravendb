@@ -56,6 +56,8 @@ namespace Voron.Impl.FileHeaders
                     // new 
                     FillInEmptyHeader(f1);
                     FillInEmptyHeader(f2);
+                    f1->Hash = CalculateFileHeaderHash(f1);
+                    f2->Hash = CalculateFileHeaderHash(f2);
                     _env.Options.WriteHeader(HeaderFileNames[0], f1);
                     _env.Options.WriteHeader(HeaderFileNames[1], f2);
 
@@ -75,7 +77,15 @@ namespace Voron.Impl.FileHeaders
                 {
                     *f2 = *f1;
                 }
+                
+                var hash = CalculateFileHeaderHash(f1);
+                if (f1->Hash != hash)
+                    throw new InvalidDataException($"Invalid hash for FileHeader with TransactionId {f1->TransactionId}, possible corruption. Expected hash to be {f1->Hash} but was {hash}");
 
+                hash = CalculateFileHeaderHash(f2);
+                if (f2->Hash != hash)
+                    throw new InvalidDataException($"Invalid hash for FileHeader with TransactionId {f2->TransactionId}, possible corruption. Expected hash to be {f2->Hash} but was {hash}");
+                
                 if (f1->Version != Constants.CurrentVersion)
                     throw new InvalidDataException($"The db file is for version {f1->Version}, which is not compatible with the current version {Constants.CurrentVersion}");
 
@@ -157,6 +167,7 @@ namespace Voron.Impl.FileHeaders
 
                 var file = HeaderFileNames[_revision & 1];
 
+                _theHeader->Hash = CalculateFileHeaderHash(_theHeader);
                 _env.Options.WriteHeader(file, _theHeader);
 
             }
@@ -182,6 +193,21 @@ namespace Voron.Impl.FileHeaders
             header->IncrementalBackup.LastBackedUpJournalPage = -1;
             header->IncrementalBackup.LastCreatedJournal = -1;
             header->PageSize = _env.Options.PageSize;
+        }
+
+        public static ulong CalculateFileHeaderHash(FileHeader* header)
+        {
+            var ctx = Hashing.Streamed.XXHash64.BeginProcess((ulong)header->TransactionId);
+
+            // First part of header, until the Hash field
+            Hashing.Streamed.XXHash64.Process(ctx, (byte*)header, FileHeader.HashOffset);
+
+            // Second part of header, after the hash field
+            var secondPartOfHeaderLength = sizeof(FileHeader) - (FileHeader.HashOffset + sizeof(ulong));
+            if (secondPartOfHeaderLength > 0)
+                Hashing.Streamed.XXHash64.Process(ctx, (byte*)header + FileHeader.HashOffset + sizeof(ulong), secondPartOfHeaderLength);
+
+            return Hashing.Streamed.XXHash64.EndProcess(ctx);
         }
 
         public void Dispose()

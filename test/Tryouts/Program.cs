@@ -16,9 +16,9 @@ namespace Tryouts
             for (int i = 0; i < 199; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Server.Documents.Queries.WaitingForNonStaleResults())
+                using (var a = new SlowTests.Issues.RavenDB_5919())
                 {
-                    a.Throws_if_exceeds_timeout();
+                    a.ShouldBeAbleToForceReplacement();
                 }
             }
             /*using (var a = new AttachmentsSession())
