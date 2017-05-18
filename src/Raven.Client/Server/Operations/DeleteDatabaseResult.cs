@@ -4,8 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Sparrow.Json;
-
 namespace Raven.Client.Server.Operations
 {
     public class DeleteDatabaseResult

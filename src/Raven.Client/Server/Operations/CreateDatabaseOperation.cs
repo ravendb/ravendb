@@ -39,12 +39,10 @@ namespace Raven.Client.Server.Operations
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
-                if (context == null)
-                    throw new ArgumentNullException(nameof(context));
                 if (databaseRecord == null)
                     throw new ArgumentNullException(nameof(databaseRecord));
 
-                _context = context;
+                _context = context ?? throw new ArgumentNullException(nameof(context));
                 _createDatabaseOperation = createDatabaseOperation;
                 _databaseName = databaseRecord.DatabaseName;
                 _databaseDocument = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, conventions, context);

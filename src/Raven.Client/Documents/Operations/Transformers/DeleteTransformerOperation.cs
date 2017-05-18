@@ -13,10 +13,7 @@ namespace Raven.Client.Documents.Operations.Transformers
 
         public DeleteTransformerOperation(string transformerName)
         {
-            if (transformerName == null)
-                throw new ArgumentNullException(nameof(transformerName));
-
-            _transformerName = transformerName;
+            _transformerName = transformerName ?? throw new ArgumentNullException(nameof(transformerName));
         }
 
         public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -30,10 +27,7 @@ namespace Raven.Client.Documents.Operations.Transformers
 
             public DeleteTransformerCommand(string transformerName)
             {
-                if (transformerName == null)
-                    throw new ArgumentNullException(nameof(transformerName));
-
-                _transformerName = transformerName;
+                _transformerName = transformerName ?? throw new ArgumentNullException(nameof(transformerName));
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

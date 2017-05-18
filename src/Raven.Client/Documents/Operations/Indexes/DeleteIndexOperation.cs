@@ -13,10 +13,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         public DeleteIndexOperation(string indexName)
         {
-            if (indexName == null)
-                throw new ArgumentNullException(nameof(indexName));
-
-            _indexName = indexName;
+            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
         }
 
         public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -30,10 +27,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
             public DeleteIndexCommand(string indexName)
             {
-                if (indexName == null)
-                    throw new ArgumentNullException(nameof(indexName));
-
-                _indexName = indexName;
+                _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

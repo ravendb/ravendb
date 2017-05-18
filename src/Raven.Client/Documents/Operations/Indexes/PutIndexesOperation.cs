@@ -36,12 +36,10 @@ namespace Raven.Client.Documents.Operations.Indexes
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
-                if (context == null)
-                    throw new ArgumentNullException(nameof(context));
                 if (indexesToAdd == null)
                     throw new ArgumentNullException(nameof(indexesToAdd));
 
-                _context = context;
+                _context = context ?? throw new ArgumentNullException(nameof(context));
                 _indexToAdd = new BlittableJsonReaderObject[indexesToAdd.Length];
                 for (var i = 0; i < indexesToAdd.Length; i++)
                 {

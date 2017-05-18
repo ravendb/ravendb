@@ -52,8 +52,6 @@ namespace Raven.Client.Documents.Operations
                     throw new ArgumentNullException(nameof(documentId));
                 if (string.IsNullOrWhiteSpace(name))
                     throw new ArgumentNullException(nameof(name));
-                if (handleStreamResponse == null)
-                    throw new ArgumentNullException(nameof(handleStreamResponse));
 
                 if (type != AttachmentType.Document && changeVector == null)
                     throw new ArgumentNullException(nameof(changeVector), $"Change Vector cannot be null for attachment type {type}");
@@ -61,7 +59,7 @@ namespace Raven.Client.Documents.Operations
                 _context = context;
                 _documentId = documentId;
                 _name = name;
-                _handleStreamResponse = handleStreamResponse;
+                _handleStreamResponse = handleStreamResponse ?? throw new ArgumentNullException(nameof(handleStreamResponse));
                 _type = type;
                 _changeVector = changeVector;
 

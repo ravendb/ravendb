@@ -6,9 +6,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 
 namespace Raven.Client.Documents.Session

@@ -14,10 +14,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         public SetIndexPriorityOperation(string indexName, IndexPriority priority)
         {
-            if (indexName == null)
-                throw new ArgumentNullException(nameof(indexName));
-
-            _indexName = indexName;
+            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
             _priority = priority;
         }
 
@@ -33,10 +30,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
             public SetIndexPriorityCommand(string indexName, IndexPriority priority)
             {
-                if (indexName == null)
-                    throw new ArgumentNullException(nameof(indexName));
-
-                _indexName = indexName;
+                _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
                 _priority = priority;
             }
 

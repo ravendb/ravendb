@@ -15,10 +15,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         public IndexHasChangedOperation(IndexDefinition definition)
         {
-            if (definition == null)
-                throw new ArgumentNullException(nameof(definition));
-
-            _definition = definition;
+            _definition = definition ?? throw new ArgumentNullException(nameof(definition));
         }
 
         public RavenCommand<bool> GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -35,14 +32,12 @@ namespace Raven.Client.Documents.Operations.Indexes
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
-                if (context == null)
-                    throw new ArgumentNullException(nameof(context));
                 if (definition == null)
                     throw new ArgumentNullException(nameof(definition));
                 if (string.IsNullOrWhiteSpace(definition.Name))
                     throw new ArgumentNullException(nameof(definition.Name));
 
-                _context = context;
+                _context = context ?? throw new ArgumentNullException(nameof(context));
                 _definition = EntityToBlittable.ConvertEntityToBlittable(definition, conventions, context);
             }
 

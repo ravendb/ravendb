@@ -21,10 +21,7 @@ namespace Raven.Client.Documents.Operations
 
             public GetReplicationPerformanceStatisticsCommand(DocumentConventions conventions)
             {
-                if (conventions == null)
-                    throw new ArgumentNullException(nameof(conventions));
-
-                _conventions = conventions;
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             }
 
             public override bool IsReadRequest => false;

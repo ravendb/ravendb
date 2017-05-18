@@ -14,10 +14,7 @@ namespace Raven.Client.Documents.Commands
 
         public StreamCommand(string url, bool usedTransformer)
         {
-            if (url == null)
-                throw new ArgumentNullException(nameof(url));
-
-            _url = url;
+            _url = url ?? throw new ArgumentNullException(nameof(url));
             UsedTransformer = usedTransformer;
             ResponseType = RavenCommandResponseType.Raw;
         }

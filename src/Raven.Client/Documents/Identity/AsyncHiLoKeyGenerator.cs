@@ -129,12 +129,7 @@ namespace Raven.Client.Documents.Identity
 
         public async Task ReturnUnusedRangeAsync()
         {
-            var returnCommand = new HiLoReturnCommand()
-            {
-                Tag = _tag,
-                End = Range.Max,
-                Last = Range.Current
-            };
+            var returnCommand = new HiLoReturnCommand(_tag, Range.Current, Range.Max);
 
             var re = _store.GetRequestExecuter(_dbName);
             JsonOperationContext context;

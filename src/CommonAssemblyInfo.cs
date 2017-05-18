@@ -2,7 +2,6 @@
 using System.Reflection;
 using System.Resources;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 [assembly: AssemblyCopyright("© Hibernating Rhinos 2004 - 2016 All rights reserved.")]
 

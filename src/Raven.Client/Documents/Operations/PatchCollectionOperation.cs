@@ -17,13 +17,8 @@ namespace Raven.Client.Documents.Operations
 
         public PatchCollectionOperation(string collectionName, PatchRequest patch)
         {
-            if (collectionName == null)
-                throw new ArgumentNullException(nameof(collectionName));
-            if (patch == null)
-                throw new ArgumentNullException(nameof(patch));
-
-            _collectionName = collectionName;
-            _patch = patch;
+            _collectionName = collectionName ?? throw new ArgumentNullException(nameof(collectionName));
+            _patch = patch ?? throw new ArgumentNullException(nameof(patch));
         }
 
         public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
@@ -41,15 +36,11 @@ namespace Raven.Client.Documents.Operations
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
-                if (context == null)
-                    throw new ArgumentNullException(nameof(context));
-                if (collectionName == null)
-                    throw new ArgumentNullException(nameof(collectionName));
                 if (patch == null)
                     throw new ArgumentNullException(nameof(patch));
 
-                _context = context;
-                _collectionName = collectionName;
+                _context = context ?? throw new ArgumentNullException(nameof(context));
+                _collectionName = collectionName ?? throw new ArgumentNullException(nameof(collectionName));
                 _patch = EntityToBlittable.ConvertEntityToBlittable(patch, conventions, _context);
             }
 
