@@ -149,7 +149,8 @@ namespace Raven.Traffic
 
                     var stream = new MemoryStream();
 
-                    using (_jsonContextPool.AllocateOperationContext(out JsonOperationContext context))
+                    JsonOperationContext context;
+                    using (_jsonContextPool.AllocateOperationContext(out context))
                     using (var writer = new BlittableJsonTextWriter(context, stream))
                     {
                         context.Write(writer, connectMessage);
