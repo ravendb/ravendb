@@ -5,7 +5,7 @@ import databasesManager = require("common/shell/databasesManager");
 import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
-import putSecretCommand = require("commands/database/secrets/putSecretCommand");
+import distributeSecretCommand = require("commands/database/secrets/distributeSecretCommand");
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import clusterNode = require("models/database/cluster/clusterNode");
 import copyToClipboard = require("common/copyToClipboard");
@@ -158,8 +158,10 @@ class createDatabase extends dialogViewModelBase {
             this.createDatabaseInternal();
         } else {
             const firstInvalidSection = sectionsValidityList.indexOf(false);
-            const sectionToShow = this.databaseModel.configurationSections[firstInvalidSection].name;
-            this.showAdvancedConfigurationFor(sectionToShow);
+            if (firstInvalidSection !== -1) {
+                const sectionToShow = this.databaseModel.configurationSections[firstInvalidSection].name;
+                this.showAdvancedConfigurationFor(sectionToShow);
+            }
         }
     }
 
@@ -203,7 +205,8 @@ class createDatabase extends dialogViewModelBase {
     private configureEncryptionIfNeeded(databaseName: string, encryptionKey: string): JQueryPromise<void> {
         const encryptionSection = this.databaseModel.configurationSections.find(x => x.name === "Encryption");
         if (encryptionSection.enabled()) {
-            return new putSecretCommand(databaseName, encryptionKey, false)
+            const nodeTags = this.databaseModel.replication.nodes().map(x => x.tag());
+            return new distributeSecretCommand(databaseName, encryptionKey, nodeTags)
                 .execute();
         } else {
             return $.Deferred<void>().resolve();
