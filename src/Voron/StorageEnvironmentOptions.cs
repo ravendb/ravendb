@@ -497,9 +497,15 @@ namespace Voron
                 {
                     return false;
                 }
-                if (RunningOnPosix)
-                    return PosixHelper.TryReadFileHeader(header, path);
-                return Win32Helper.TryReadFileHeader(header, path);
+
+                var success = RunningOnPosix ? 
+                    PosixHelper.TryReadFileHeader(header, path) : 
+                    Win32Helper.TryReadFileHeader(header, path);
+
+                if (!success)
+                    return false;
+
+                return header->Hash == HeaderAccessor.CalculateFileHeaderHash(header);
             }
 
 
@@ -737,7 +743,8 @@ namespace Voron
                     return false;
                 }
                 *header = *((FileHeader*)ptr);
-                return true;
+
+                return header->Hash == HeaderAccessor.CalculateFileHeaderHash(header);
             }
 
             public override unsafe void WriteHeader(string filename, FileHeader* header)

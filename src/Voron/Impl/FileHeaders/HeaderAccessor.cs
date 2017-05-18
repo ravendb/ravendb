@@ -56,6 +56,8 @@ namespace Voron.Impl.FileHeaders
                     // new 
                     FillInEmptyHeader(f1);
                     FillInEmptyHeader(f2);
+                    f1->Hash = CalculateFileHeaderHash(f1);
+                    f2->Hash = CalculateFileHeaderHash(f2);
                     _env.Options.WriteHeader(HeaderFileNames[0], f1);
                     _env.Options.WriteHeader(HeaderFileNames[1], f2);
 
@@ -66,12 +68,16 @@ namespace Voron.Impl.FileHeaders
                 if (f1->MagicMarker != Constants.MagicMarker && f2->MagicMarker != Constants.MagicMarker)
                     throw new InvalidDataException("None of the header files start with the magic marker, probably not db files opr");
 
+                if (!ValidHash(f1) && !ValidHash(f2))
+                    throw new InvalidDataException("None of the header files have a valid hash, possible corruption.");
+
                 // if one of the files is corrupted, but the other isn't, restore to the valid file
-                if (f1->MagicMarker != Constants.MagicMarker)
+                if (f1->MagicMarker != Constants.MagicMarker || !ValidHash(f1))
                 {
                     *f1 = *f2;
                 }
-                if (f2->MagicMarker != Constants.MagicMarker)
+                
+                if (f2->MagicMarker != Constants.MagicMarker || !ValidHash(f2))
                 {
                     *f2 = *f1;
                 }
@@ -157,6 +163,7 @@ namespace Voron.Impl.FileHeaders
 
                 var file = HeaderFileNames[_revision & 1];
 
+                _theHeader->Hash = CalculateFileHeaderHash(_theHeader);
                 _env.Options.WriteHeader(file, _theHeader);
 
             }
@@ -182,6 +189,26 @@ namespace Voron.Impl.FileHeaders
             header->IncrementalBackup.LastBackedUpJournalPage = -1;
             header->IncrementalBackup.LastCreatedJournal = -1;
             header->PageSize = _env.Options.PageSize;
+        }
+
+        public static ulong CalculateFileHeaderHash(FileHeader* header)
+        {
+            var ctx = Hashing.Streamed.XXHash64.BeginProcess((ulong)header->TransactionId);
+
+            // First part of header, until the Hash field
+            Hashing.Streamed.XXHash64.Process(ctx, (byte*)header, FileHeader.HashOffset);
+
+            // Second part of header, after the hash field
+            var secondPartOfHeaderLength = sizeof(FileHeader) - (FileHeader.HashOffset + sizeof(ulong));
+            if (secondPartOfHeaderLength > 0)
+                Hashing.Streamed.XXHash64.Process(ctx, (byte*)header + FileHeader.HashOffset + sizeof(ulong), secondPartOfHeaderLength);
+
+            return Hashing.Streamed.XXHash64.EndProcess(ctx);
+        }
+
+        public static bool ValidHash(FileHeader* header)
+        {
+            return header->Hash == CalculateFileHeaderHash(header);
         }
 
         public void Dispose()

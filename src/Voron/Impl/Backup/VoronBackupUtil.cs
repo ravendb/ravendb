@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -10,12 +11,15 @@ namespace Voron.Impl.Backup
     {
         internal static void CopyHeaders(CompressionLevel compression, ZipArchive package, DataCopier copier, StorageEnvironmentOptions storageEnvironmentOptions, string basePath)
         {
+            var success = false;
             foreach (var headerFileName in HeaderAccessor.HeaderFileNames)
             {
                 var header = stackalloc FileHeader[1];
 
                 if (!storageEnvironmentOptions.ReadHeader(headerFileName, header))
                     continue;
+
+                success = true;
 
                 var headerPart = package.CreateEntry(Path.Combine(basePath,headerFileName), compression);
                 Debug.Assert(headerPart != null);
@@ -25,6 +29,9 @@ namespace Voron.Impl.Backup
                     copier.ToStream((byte*)header, sizeof(FileHeader), headerStream);
                 }
             }
+
+            if (!success)
+                throw new InvalidDataException("Failed to read both file headers, possible corruption.");
         }
     }
 }
