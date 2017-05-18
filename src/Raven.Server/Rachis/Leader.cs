@@ -530,8 +530,7 @@ namespace Raven.Server.Rachis
         {
             long index;
 
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction())
             {
                 index = _engine.InsertToLeaderLog(context, cmd, RachisEntryFlags.StateMachineCommand);

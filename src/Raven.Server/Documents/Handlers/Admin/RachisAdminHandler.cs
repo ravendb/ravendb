@@ -24,8 +24,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 var command = await context.ReadForMemoryAsync(RequestBodyStream(), "ExternalRachisCommand");
 
-                string type;
-                if(command.TryGet("Type",out type) == false)
+                if (command.TryGet("Type", out string type) == false)
                 {
                     // TODO: maybe add further validation?
                     throw new ArgumentException("Received command must contain a Type field");

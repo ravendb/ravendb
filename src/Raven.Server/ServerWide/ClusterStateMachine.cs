@@ -541,8 +541,7 @@ namespace Raven.Server.ServerWide
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
             var dbKey = "db/";
-            Slice loweredPrefix;
-            using (Slice.From(context.Allocator, dbKey, out loweredPrefix))
+            using (Slice.From(context.Allocator, dbKey, out Slice loweredPrefix))
             {
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
@@ -556,8 +555,7 @@ namespace Raven.Server.ServerWide
 
         private static unsafe string GetCurrentItemKey(TransactionOperationContext context, Table.TableValueHolder result)
         {
-            int size;
-            return Encoding.UTF8.GetString(result.Reader.Read(1, out size), size);
+            return Encoding.UTF8.GetString(result.Reader.Read(1, out int size), size);
         }
 
         private static unsafe Tuple<string, BlittableJsonReaderObject> GetCurrentItem(TransactionOperationContext context, Table.TableValueHolder result)
