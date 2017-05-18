@@ -169,9 +169,9 @@ namespace Raven.Server.Rachis
                                     {
                                         _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending {entries.Count} entries to {_tag}"
 #if DEBUG
-                                            + $" [{string.Join(" ,", entries.Select(x => x.ToString()))}]"
+                                                         + $" [{string.Join(" ,", entries.Select(x => x.ToString()))}]"
 #endif
-                                            );
+                                        );
                                     }
                                     _connection.Send(context, appendEntries, entries);
                                     var aer = _connection.Read<AppendEntriesResponse>(context);
@@ -203,6 +203,16 @@ namespace Raven.Server.Rachis
                                 task.Wait(_engine.ElectionTimeoutMs / 3);
                             }
                         }
+                    }
+                    catch (TopologyMismatchException e)
+                    {
+                        Status = "Failed - " + e.Message;
+                        var removed = _leader.TryModifyTopology(_tag, _url, Leader.TopologyModification.Remove, out var task);
+                        if (removed && _engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"Connection to {_tag} was rejected due to topology id mismatch, so we remove from topology");
+                        }
+                        _leader.WaitForNewEntries().Wait(_engine.ElectionTimeoutMs / 2);
                     }
                     catch (Exception e)
                     {

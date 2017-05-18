@@ -96,6 +96,8 @@ namespace Raven.Server.Documents.Handlers.Admin
             var serverUrl = GetStringQueryString("url");
             ServerStore.EnsureNotPassive();
             await ServerStore.AddNodeToClusterAsync(serverUrl);
+            // wait for the node to become a voting member
+            await ServerStore.WaitForNodeBecomeMember(serverUrl);
         }
 
         [RavenAction("/admin/cluster/remove-node", "DELETE", "/admin/cluster/remove-node?nodeTag={nodeTag:string}")]
