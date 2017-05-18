@@ -18,6 +18,8 @@ namespace Raven.Client.Http
         {
             ResponseType = RavenCommandResponseType.Empty;
         }
+
+        public override bool IsReadRequest { get; } = false;
     }
 
     public abstract class RavenCommand<TResult>

@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class DeleteAttachmentOperation : IOperation<object>
+    public class DeleteAttachmentOperation : IOperation
     {
         private readonly string _documentId;
         private readonly string _name;
@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations
             _etag = etag;
         }
 
-        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new DeleteAttachmentCommand(_documentId, _name, _etag);
         }
@@ -53,8 +53,6 @@ namespace Raven.Client.Documents.Operations
                 AddEtagIfNotNull(_etag, request);
                 return request;
             }
-
-            public override bool IsReadRequest => false;
         }
     }
 }

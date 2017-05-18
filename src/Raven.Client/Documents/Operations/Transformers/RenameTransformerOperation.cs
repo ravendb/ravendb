@@ -42,15 +42,6 @@ namespace Raven.Client.Documents.Operations.Transformers
                     Method = HttpMethod.Post
                 };
             }
-
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-            {
-                if(response.TryGet("Etag", out long etag) == false)
-                    throw new InvalidOperationException("Expected to get Etag from response");
-                Result = etag;
-            }
-
-            public override bool IsReadRequest => false;
         }
     }
 }

@@ -39,8 +39,6 @@ namespace Raven.Client.Documents.Operations.Indexes
                     Method = HttpMethods.Reset
                 };
             }
-
-            public override bool IsReadRequest => false;
         }
     }
 }

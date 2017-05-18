@@ -43,8 +43,6 @@ namespace Raven.Client.Documents.Operations.Indexes
                     Method = HttpMethod.Post
                 };
             }
-
-            public override bool IsReadRequest => false;
         }
     }
 }

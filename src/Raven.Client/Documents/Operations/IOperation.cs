@@ -11,6 +11,6 @@ namespace Raven.Client.Documents.Operations
 
     public interface IOperation
     {
-        RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache);
+        RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context, HttpCache cache);
     }
 }
