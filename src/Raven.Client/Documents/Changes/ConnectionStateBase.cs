@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Changes
             lock (this)
             {
                 if (++_value == 1)
-                    _onConnect();
+                    AsyncHelpers.RunSync(() => _onConnect());
             }
         }
 

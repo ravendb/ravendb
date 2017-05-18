@@ -3,7 +3,7 @@ using Raven.Client.Documents.Operations;
 
 namespace Raven.Client.Documents.Changes
 {
-    public interface IDatabaseChanges : IConnectableChanges
+    public interface IDatabaseChanges : IConnectableChanges<IDatabaseChanges>
     {
         /// <summary>
         /// Subscribe to changes for specified index only.
