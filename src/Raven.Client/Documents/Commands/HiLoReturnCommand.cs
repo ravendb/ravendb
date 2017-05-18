@@ -31,7 +31,5 @@ namespace Raven.Client.Documents.Commands
                 Method = HttpMethod.Put
             };
         }
-
-        public override bool IsReadRequest => false;
     }
 }

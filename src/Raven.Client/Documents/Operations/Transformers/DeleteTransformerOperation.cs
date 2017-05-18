@@ -39,8 +39,6 @@ namespace Raven.Client.Documents.Operations.Transformers
                     Method = HttpMethods.Delete
                 };
             }
-
-            public override bool IsReadRequest => false;
         }
     }
 }

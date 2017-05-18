@@ -19,7 +19,7 @@ namespace Raven.Client.Server.Operations.ApiKeys
             _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
         }
 
-        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new PutApiKeyCommand(conventions, context, _name, _apiKey);
         }
@@ -42,13 +42,11 @@ namespace Raven.Client.Server.Operations.ApiKeys
                 _apiKey = EntityToBlittable.ConvertEntityToBlittable(apiKey, conventions, context);
             }
 
-            public override bool IsReadRequest => false;
-
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/api-keys?name=" + Uri.EscapeDataString(_name);
 
-                var request = new HttpRequestMessage
+                return new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
@@ -56,8 +54,6 @@ namespace Raven.Client.Server.Operations.ApiKeys
                         _context.Write(stream, _apiKey);
                     })
                 };
-
-                return request;
             }
         }
     }

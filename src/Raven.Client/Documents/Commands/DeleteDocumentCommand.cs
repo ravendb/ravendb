@@ -28,7 +28,5 @@ namespace Raven.Client.Documents.Commands
             AddEtagIfNotNull(_etag, request);
             return request;
         }
-
-        public override bool IsReadRequest => false;
     }
 }

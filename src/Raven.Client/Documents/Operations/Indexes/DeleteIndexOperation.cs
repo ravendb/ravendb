@@ -39,8 +39,6 @@ namespace Raven.Client.Documents.Operations.Indexes
                     Method = HttpMethods.Delete
                 };
             }
-
-            public override bool IsReadRequest => false;
         }
     }
 }
