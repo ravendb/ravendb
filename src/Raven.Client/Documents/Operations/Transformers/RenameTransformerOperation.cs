@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Transformers
 {
-    public class RenameTransformerOperation : IAdminOperation<long>
+    public class RenameTransformerOperation : IAdminOperation
     {
         private readonly string _name;
         private readonly string _newName;
@@ -17,12 +17,12 @@ namespace Raven.Client.Documents.Operations.Transformers
             _newName = newName ?? throw new ArgumentNullException(nameof(newName));
         }
 
-        public RavenCommand<long> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new RenameTransformerCommand(_name, _newName);
         }
 
-        private class RenameTransformerCommand : RavenCommand<long>
+        private class RenameTransformerCommand : RavenCommand
         {
             private readonly string _name;
             private readonly string _newName;
@@ -31,8 +31,6 @@ namespace Raven.Client.Documents.Operations.Transformers
             {
                 _name = name ?? throw new ArgumentNullException(nameof(name));
                 _newName = newName ?? throw new ArgumentNullException(nameof(newName));
-
-                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

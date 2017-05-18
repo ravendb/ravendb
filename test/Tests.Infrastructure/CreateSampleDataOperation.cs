@@ -8,7 +8,7 @@ namespace Tests.Infrastructure
 {
     public class CreateSampleDataOperation : IAdminOperation
     {
-        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new CreateSampleDataCommand();
         }

@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Operations.Transformers
             _transformerName = transformerName ?? throw new ArgumentNullException(nameof(transformerName));
         }
 
-        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new DeleteTransformerCommand(_transformerName);
         }

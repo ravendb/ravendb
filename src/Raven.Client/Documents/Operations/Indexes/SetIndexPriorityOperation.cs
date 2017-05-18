@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             _priority = priority;
         }
 
-        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new SetIndexPriorityCommand(_indexName, _priority);
         }
