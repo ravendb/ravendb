@@ -324,7 +324,10 @@ namespace Raven.Client.Http
                 if (response.StatusCode == HttpStatusCode.NotModified)
                 {
                     cachedItem.NotModified();
-                    command.SetResponse(cachedValue, fromCache: true);
+
+                    if (command.ResponseType == RavenCommandResponseType.Object)
+                        command.SetResponse(cachedValue, fromCache: true);
+
                     return;
                 }
                 if (response.IsSuccessStatusCode == false)
@@ -345,7 +348,7 @@ namespace Raven.Client.Http
 
         private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, string url, out long cachedEtag, out BlittableJsonReaderObject cachedValue)
         {
-            if (command.IsReadRequest && command.ResponseType != RavenCommandResponseType.Raw)
+            if (command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
             {
                 if (request.Method != HttpMethod.Get)
                     url = request.Method + "-" + url;
@@ -381,7 +384,7 @@ namespace Raven.Client.Http
                     if (command.ResponseType == RavenCommandResponseType.Empty)
                         return true;
                     else if (command.ResponseType == RavenCommandResponseType.Object)
-                        command.SetResponse((BlittableJsonReaderObject)null, fromCache: false);
+                        command.SetResponse(null, fromCache: false);
                     else
                         command.SetResponseRaw(response, null, context);
                     return true;
