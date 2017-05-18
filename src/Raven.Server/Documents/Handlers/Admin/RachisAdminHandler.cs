@@ -53,6 +53,8 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 
                 var topology = ServerStore.GetClusterTopology(context);
+                var nodeTag = ServerStore.NodeTag;
+
                 if (topology.Members.Count == 0)
                 {
                     var serverUrl = GetStringQueryString("url");
@@ -67,6 +69,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         new Dictionary<string, string>(),
                         "A"
                     );
+                    nodeTag = "A";
                 }
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 
@@ -79,7 +82,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         ["Topology"] = blit,
                         ["Leader"] = ServerStore.LeaderTag,
                         ["CurrentState"] = ServerStore.CurrentState,
-                        ["NodeTag"] = ServerStore.NodeTag
+                        ["NodeTag"] = nodeTag
                     });
                     writer.Flush();
                 }
