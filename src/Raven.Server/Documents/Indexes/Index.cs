@@ -579,6 +579,9 @@ namespace Raven.Server.Documents.Indexes
             if (_isCompactionInProgress)
                 return true;
 
+            if (Type == IndexType.Faulty)
+                return true;
+
             TransactionOperationContext indexContext;
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (indexContext.OpenReadTransaction())
@@ -590,6 +593,9 @@ namespace Raven.Server.Documents.Indexes
         public virtual (bool isStale, long lastProcessedEtag) GetIndexStats(DocumentsOperationContext databaseContext)
         {
             Debug.Assert(databaseContext.Transaction != null);
+
+            if (Type == IndexType.Faulty)
+                return (true, -1);
 
             if (_isCompactionInProgress)
                 return (true, -1);
@@ -616,6 +622,9 @@ namespace Raven.Server.Documents.Indexes
         protected virtual bool IsStale(DocumentsOperationContext databaseContext,
             TransactionOperationContext indexContext, long? cutoff = null)
         {
+            if (Type == IndexType.Faulty)
+                return true;
+
             foreach (var collection in Collections)
             {
                 var lastDocEtag = GetLastDocumentEtagInCollection(databaseContext, collection);
@@ -1177,6 +1186,9 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_isCompactionInProgress)
                 return 0;
+
+            if (Type == IndexType.Faulty)
+                return 1;
 
             return _indexStorage.ReadErrorsCount();
         }

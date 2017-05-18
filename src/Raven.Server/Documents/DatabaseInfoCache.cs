@@ -71,7 +71,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public unsafe bool TryWriteOfflineDatabaseStatustoRequest(TransactionOperationContext ctx, BlittableJsonTextWriter writer, string databaseName, bool disabled, IndexRunningStatus indexingStatus)
+        public unsafe bool TryWriteOfflineDatabaseStatusToRequest(TransactionOperationContext ctx, BlittableJsonTextWriter writer, string databaseName, bool disabled, IndexRunningStatus indexingStatus, NodesTopology topology)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -95,7 +95,8 @@ namespace Raven.Server.Documents
                     databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
                     {
                         [nameof(DatabaseInfo.Disabled)] = disabled,
-                        [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus.ToString()
+                        [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus.ToString(),
+                        [nameof(DatabaseInfo.NodesTopology)] = topology.ToJson()
                     };
 
                     ctx.Write(writer, databaseInfoJson);
