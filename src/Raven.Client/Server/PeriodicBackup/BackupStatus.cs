@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
@@ -6,20 +7,36 @@ namespace Raven.Client.Server.PeriodicBackup
 {
     public abstract class BackupStatus
     {
-        public DateTime LastFullBackup { get; set; }
+        public DateTime? LastFullBackup { get; set; }
 
-        public DateTime LastIncrementalBackup { get; set; }
+        public DateTime? LastIncrementalBackup { get; set; }
 
-        public long DurationInMs { get; set; }
+        public long? FullBackupDurationInMs { get; set; }
 
-        public void Update(bool isFullBackup, long durationInMs)
+        public long? IncrementalBackupDurationInMs { get; set; }
+
+        public Exception Exception { get; set; }
+
+        public IDisposable Update(bool isFullBackup, Reference<Exception> exception)
         {
-            if (isFullBackup)
-                LastFullBackup = SystemTime.UtcNow;
-            else
-                LastIncrementalBackup = SystemTime.UtcNow;
+            var now = SystemTime.UtcNow;
+            var sw = Stopwatch.StartNew();
 
-            DurationInMs = durationInMs;
+            return new DisposableAction(() =>
+            {
+                if (isFullBackup)
+                {
+                    LastFullBackup = now;
+                    FullBackupDurationInMs = sw.ElapsedMilliseconds;
+                }
+                else
+                {
+                    LastIncrementalBackup = now;
+                    IncrementalBackupDurationInMs = sw.ElapsedMilliseconds;
+                }
+
+                Exception = exception.Value;
+            });
         }
 
         public virtual DynamicJsonValue ToJson()
@@ -28,7 +45,9 @@ namespace Raven.Client.Server.PeriodicBackup
             {
                 [nameof(LastFullBackup)] = LastFullBackup,
                 [nameof(LastIncrementalBackup)] = LastIncrementalBackup,
-                [nameof(DurationInMs)] = DurationInMs
+                [nameof(FullBackupDurationInMs)] = FullBackupDurationInMs,
+                [nameof(IncrementalBackupDurationInMs)] = IncrementalBackupDurationInMs,
+                [nameof(Exception)] = Exception
             };
         }
     }

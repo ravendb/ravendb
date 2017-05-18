@@ -279,8 +279,8 @@ namespace Raven.Server.Web.System
 
             return new BackupInfo
             {
-                IncrementalBackupInterval = periodicExportRunner.IncrementalInterval,
-                FullBackupInterval = periodicExportRunner.FullExportInterval,
+                IncrementalBackupInterval = TimeSpan.MinValue, //TODO: periodicExportRunner.IncrementalInterval,
+                FullBackupInterval = TimeSpan.MinValue, //TODO: periodicExportRunner.FullExportInterval,
                 LastIncrementalBackup = DateTime.Now, //TODO: periodicExportRunner.ExportTime,
                 LastFullBackup = DateTime.Now //TODO: periodicExportRunner.FullExportTime
             };

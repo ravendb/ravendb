@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Diagnostics;
 using Raven.Client.Documents;
 
 namespace Raven.Client.Server.PeriodicBackup
@@ -38,6 +39,8 @@ namespace Raven.Client.Server.PeriodicBackup
         public ulong GetTaskKey()
         {
             //TODO: check this
+            Debug.Assert(TaskId != null);
+
             return (ulong)TaskId.Value;
         }
     }
