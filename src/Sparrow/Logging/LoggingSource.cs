@@ -9,11 +9,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Binary;
 using Sparrow.Extensions;
+using Sparrow.Utils;
 
 namespace Sparrow.Logging
 {
     public class LoggingSource
     {
+        private const string LoggingThreadName = "Logging Thread";
         [ThreadStatic] private static string _currentThreadId;
 
         private readonly ManualResetEventSlim _hasEntries = new ManualResetEventSlim(false);
@@ -166,9 +168,9 @@ namespace Sparrow.Logging
             _loggingThread = new Thread(BackgroundLogger)
             {
                 IsBackground = true,
-                Name = "Logging Thread"
+                Name = LoggingThreadName
             };
-            _loggingThread.Start();
+            _loggingThread.Start();            
         }
 
 
@@ -338,6 +340,7 @@ namespace Sparrow.Logging
 
         private void BackgroundLogger()
         {
+            NativeMemory.EnsureRegistered();
             try
             {
                 Interlocked.Increment(ref _generation);

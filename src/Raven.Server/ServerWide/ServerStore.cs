@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
@@ -63,8 +62,7 @@ namespace Raven.Server.ServerWide
 
         public ServerStore(RavenConfiguration configuration, RavenServer ravenServer)
         {
-            if (configuration == null) throw new ArgumentNullException(nameof(configuration));
-            Configuration = configuration;
+            Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _ravenServer = ravenServer;
 
             DatabasesLandlord = new DatabasesLandlord(this);
