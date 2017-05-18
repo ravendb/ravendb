@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.Util;

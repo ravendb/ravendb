@@ -24,18 +24,12 @@ namespace Raven.Client.Documents.Commands
 
         public QueryCommand(DocumentConventions conventions, JsonOperationContext context, string indexName, IndexQuery indexQuery, HashSet<string> includes = null, bool metadataOnly = false, bool indexEntriesOnly = false)
         {
-            if (conventions == null)
-                throw new ArgumentNullException(nameof(conventions));
-            if (context == null)
-                throw new ArgumentNullException(nameof(context));
-            if (indexName == null)
-                throw new ArgumentNullException(nameof(indexName));
             if (indexQuery == null)
                 throw new ArgumentNullException(nameof(indexQuery));
 
-            _conventions = conventions;
-            _context = context;
-            _indexName = indexName;
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
             _indexQuery = indexQuery;
             _includes = includes;
             _metadataOnly = metadataOnly;

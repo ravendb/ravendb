@@ -1,10 +1,5 @@
-﻿using System.IO;
-using System.Net.Http;
-using System.Text;
+﻿using System.Net.Http;
 using Raven.Client.Http;
-using Raven.Client.Json;
-using Raven.Client.Json.Converters;
-using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Client.Server.Commands

@@ -28,13 +28,16 @@ namespace Raven.Client.Http
         public TResult Result;
         public int AuthenticationRetries;
         public abstract bool IsReadRequest { get; }
-        public HttpStatusCode StatusCode;
+        public HttpStatusCode StatusCode;      
 
-        public bool AvoidFailover;        
-
-        public RavenCommandResponseType ResponseType { get; protected set; } = RavenCommandResponseType.Object;
+        public RavenCommandResponseType ResponseType { get; protected set; }
 
         public TimeSpan? Timeout { get; protected set; }
+
+        protected RavenCommand()
+        {
+            ResponseType = RavenCommandResponseType.Object;
+        }
 
         public abstract HttpRequestMessage CreateRequest(ServerNode node, out string url);
 

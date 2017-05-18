@@ -17,10 +17,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         public GetIndexPerformanceStatisticsOperation(string[] indexNames)
         {
-            if (indexNames == null)
-                throw new ArgumentNullException(nameof(indexNames));
-
-            _indexNames = indexNames;
+            _indexNames = indexNames ?? throw new ArgumentNullException(nameof(indexNames));
         }
 
         public RavenCommand<IndexPerformanceStats[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)

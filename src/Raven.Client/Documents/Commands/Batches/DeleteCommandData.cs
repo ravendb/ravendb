@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -10,10 +9,7 @@ namespace Raven.Client.Documents.Commands.Batches
     {
         public DeleteCommandData(string id, long? etag)
         {
-            if (id == null)
-                throw new ArgumentNullException(nameof(id));
-
-            Key = id;
+            Key = id ?? throw new ArgumentNullException(nameof(id));
             Etag = etag;
         }
 

@@ -7,7 +7,6 @@
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Identity
 {

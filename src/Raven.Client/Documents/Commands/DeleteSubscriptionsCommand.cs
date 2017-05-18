@@ -1,6 +1,5 @@
 ﻿using System.Net.Http;
 using Raven.Client.Http;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {

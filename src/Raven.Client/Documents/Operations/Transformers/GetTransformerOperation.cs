@@ -14,10 +14,7 @@ namespace Raven.Client.Documents.Operations.Transformers
 
         public GetTransformerOperation(string transformerName)
         {
-            if (transformerName == null)
-                throw new ArgumentNullException(nameof(transformerName));
-
-            _transformerName = transformerName;
+            _transformerName = transformerName ?? throw new ArgumentNullException(nameof(transformerName));
         }
 
         public RavenCommand<TransformerDefinition> GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -31,10 +28,7 @@ namespace Raven.Client.Documents.Operations.Transformers
 
             public GetTransformerCommand(string transformerName)
             {
-                if (transformerName == null)
-                    throw new ArgumentNullException(nameof(transformerName));
-
-                _transformerName = transformerName;
+                _transformerName = transformerName ?? throw new ArgumentNullException(nameof(transformerName));
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)

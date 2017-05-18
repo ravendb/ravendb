@@ -23,18 +23,12 @@ namespace Raven.Client.Documents.Commands
 
         public ExplainQueryCommand(DocumentConventions conventions, JsonOperationContext context, string indexName, IndexQuery indexQuery)
         {
-            if (conventions == null)
-                throw new ArgumentNullException(nameof(conventions));
-            if (context == null)
-                throw new ArgumentNullException(nameof(context));
-            if (indexName == null)
-                throw new ArgumentNullException(nameof(indexName));
             if (indexQuery == null)
                 throw new ArgumentNullException(nameof(indexQuery));
 
-            _conventions = conventions;
-            _context = context;
-            _indexName = indexName;
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
             _indexQuery = indexQuery;
 
             ResponseType = RavenCommandResponseType.Array;

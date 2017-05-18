@@ -14,10 +14,7 @@ namespace Raven.Client.Documents.Operations.Transformers
 
         public SetTransformerLockOperation(string transformerName, TransformerLockMode mode)
         {
-            if (transformerName == null)
-                throw new ArgumentNullException(nameof(transformerName));
-
-            _transformerName = transformerName;
+            _transformerName = transformerName ?? throw new ArgumentNullException(nameof(transformerName));
             _mode = mode;
         }
 
@@ -33,10 +30,7 @@ namespace Raven.Client.Documents.Operations.Transformers
 
             public SetTransformerLockCommand(string transformerName, TransformerLockMode mode)
             {
-                if (transformerName == null)
-                    throw new ArgumentNullException(nameof(transformerName));
-
-                _transformerName = transformerName;
+                _transformerName = transformerName ?? throw new ArgumentNullException(nameof(transformerName));
                 _mode = mode;
             }
 

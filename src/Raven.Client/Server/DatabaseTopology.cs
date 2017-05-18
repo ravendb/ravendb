@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using Raven.Client.Documents.Replication;
 using Sparrow;
 using Sparrow.Json.Parsing;

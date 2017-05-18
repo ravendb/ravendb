@@ -27,8 +27,6 @@ namespace Raven.Client.Documents.Operations
 
         public PatchOperation(string id, long? etag, PatchRequest patch, PatchRequest patchIfMissing = null, bool skipPatchIfEtagMismatch = false)
         {
-            if (id == null)
-                throw new ArgumentNullException(nameof(id));
             if (patch == null)
                 throw new ArgumentNullException(nameof(patch));
             if (string.IsNullOrWhiteSpace(patch.Script))
@@ -36,7 +34,7 @@ namespace Raven.Client.Documents.Operations
             if (patchIfMissing != null && string.IsNullOrWhiteSpace(patchIfMissing.Script))
                 throw new ArgumentNullException(nameof(patchIfMissing.Script));
 
-            _id = id;
+            _id = id ?? throw new ArgumentNullException(nameof(id));
             _etag = etag;
             _patch = patch;
             _patchIfMissing = patchIfMissing;
@@ -61,10 +59,6 @@ namespace Raven.Client.Documents.Operations
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
-                if (context == null)
-                    throw new ArgumentNullException(nameof(context));
-                if (id == null)
-                    throw new ArgumentNullException(nameof(id));
                 if (patch == null)
                     throw new ArgumentNullException(nameof(patch));
                 if (string.IsNullOrWhiteSpace(patch.Script))
@@ -72,8 +66,8 @@ namespace Raven.Client.Documents.Operations
                 if (patchIfMissing != null && string.IsNullOrWhiteSpace(patchIfMissing.Script))
                     throw new ArgumentNullException(nameof(patchIfMissing.Script));
 
-                _context = context;
-                _id = id;
+                _context = context ?? throw new ArgumentNullException(nameof(context));
+                _id = id ?? throw new ArgumentNullException(nameof(id));
                 _etag = etag;
                 _patch = EntityToBlittable.ConvertEntityToBlittable(new
                 {

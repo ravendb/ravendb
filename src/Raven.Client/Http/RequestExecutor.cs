@@ -7,7 +7,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
@@ -457,9 +456,6 @@ namespace Raven.Client.Http
 
         private async Task<bool> HandleServerDown<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, HttpRequestException e)
         {
-            if (command.AvoidFailover)
-                return false;
-
             if (command.FailedNodes == null)
                 command.FailedNodes = new Dictionary<ServerNode, ExceptionDispatcher.ExceptionSchema>();
 
