@@ -247,22 +247,17 @@ namespace Raven.Client.Documents
 
         public string WhoseTaskIsIt(IDatabaseTask task)
         {
-            bool needCopy = true;
+            var topology = new List<DatabaseTopologyNode>(Members);
+            topology.AddRange(Promotables);
+            topology.Sort();
 
-            var topology = Members;
             var key = task.GetTaskKey();
             while (true)
             {
                 var index = (int)Hashing.JumpConsistentHash.Calculate(key, topology.Count);
                 var entry = topology[index];
-                if (entry.Disabled == false)
+                if (entry.Disabled == false && Members.Contains(entry))
                     return entry.NodeTag;
-
-                if (needCopy)
-                {
-                    needCopy = false; // copy so we can modify the list safely
-                    topology = new List<DatabaseTopologyNode>(Members);
-                }
 
                 topology.RemoveAt(index);
 
