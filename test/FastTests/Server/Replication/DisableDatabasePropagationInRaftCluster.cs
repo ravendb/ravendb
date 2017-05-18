@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -20,18 +21,18 @@ namespace FastTests.Server.Replication
         [Fact]
         public async Task DisableDatabaseToggleOperation_should_propagate_through_raft_cluster()
         {
-            var leaderServer = await CreateRaftClusterAndGetLeader(2, shouldRunInMemory: false);
+            var leaderServer = await CreateRaftClusterAndGetLeader(2, shouldRunInMemory:false);
             var slaveServer = Servers.First(srv => ReferenceEquals(srv, leaderServer) == false);
 
             const string databaseName = "DisableDatabaseToggleOperation_should_propagate_through_raft_cluster";
             using (var master = new DocumentStore
             {
-                Url = UseFiddler(leaderServer.WebUrls[0]),
+                Urls = leaderServer.WebUrls,
                 Database = databaseName
             })
             using (var slave = new DocumentStore
             {
-                Url = UseFiddler(slaveServer.WebUrls[0]),
+                Urls = leaderServer.WebUrls,
                 Database = databaseName
             })
             {
@@ -45,8 +46,8 @@ namespace FastTests.Server.Replication
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
 
                 var requestExecutor = master.GetRequestExecutor();
-                await Task.WhenAny(requestExecutor.UpdateTopologyAsync(), Task.Delay(TimeSpan.FromSeconds(10)));
-
+                //await Task.WhenAny(requestExecutor.UpdateTopologyAsync(), Task.Delay(TimeSpan.FromSeconds(10)));
+                
                 using (var session = master.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges();
@@ -94,7 +95,7 @@ namespace FastTests.Server.Replication
 
                 //now we enable all databases, so it should propagate as well and make them available for requests
                 result = master.Admin.Server.Send(new DisableDatabaseToggleOperation(master.Database, false));
-
+                
                 Assert.True(result.Success);
                 Assert.False(result.Disabled);
                 Assert.Equal(master.Database, result.Name);
@@ -108,6 +109,6 @@ namespace FastTests.Server.Replication
                     Assert.Equal("Shalom", user2.Name);
                 }
             }
-        }
+        }     
     }
 }

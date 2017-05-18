@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Voron;

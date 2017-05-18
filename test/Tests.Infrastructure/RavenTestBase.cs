@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -104,7 +105,7 @@ namespace FastTests
 
                 var store = new DocumentStore
                 {
-                    Url = UseFiddler(defaultServer.WebUrls[0]),
+                    Urls = UseFiddler(Server.WebUrls),
                     Database = name,
                     ApiKey = apiKey
                 };
@@ -331,10 +332,10 @@ namespace FastTests
             if (debug && Debugger.IsAttached == false)
                 return;
 
-            string url = documentStore.Url;
+            var urls = documentStore.Urls;
 
             var databaseNameEncoded = Uri.EscapeDataString(documentStore.Database);
-            var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+            var documentsPage = urls.First() + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
 
             OpenBrowser(documentsPage);// start the server
 

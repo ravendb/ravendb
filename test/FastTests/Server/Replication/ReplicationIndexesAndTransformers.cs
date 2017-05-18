@@ -1,26 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Transformers;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Transformers;
-using Raven.Client.Exceptions;
-using Raven.Client.Server;
-using Raven.Server.Documents;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Sparrow.Json.Parsing;
 using Xunit;
-using Raven.Client.Server.Operations;
 
 namespace FastTests.Server.Replication
 {
@@ -130,12 +120,12 @@ namespace FastTests.Server.Replication
             var follower = Servers.First(srv => ReferenceEquals(srv, leader) == false);
             var source = new DocumentStore
             {
-                Url = leader.WebUrls[0],
+                Urls = leader.WebUrls,
                 Database = caller
             };
             var destination = new DocumentStore
             {
-                Url = follower.WebUrls[0],
+                Urls = follower.WebUrls,
                 Database = caller
             };
 
@@ -146,9 +136,6 @@ namespace FastTests.Server.Replication
             return (source, destination);
         }
         
-
-
-
         [Fact]
         public async Task Can_replicate_index()
         {

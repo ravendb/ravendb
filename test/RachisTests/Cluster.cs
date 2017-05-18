@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -34,7 +35,7 @@ namespace SlowTests.Server.Rachis
             var databaseName = "test";
             using (var store = new DocumentStore()
             {
-                Url = leader.WebUrls[0],
+                Urls = leader.WebUrls,
                 Database = databaseName
             }.Initialize())
             {

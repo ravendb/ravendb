@@ -2,14 +2,11 @@
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Server.Commands;
 using Raven.Server.Documents.Handlers.Admin;
-using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -143,7 +140,7 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
         }
        
-        private async Task SendKeyToNodeAsync(string name, string base64, TransactionOperationContext ctx, Rachis.ClusterTopology clusterTopology, string node, string url)
+        private async Task SendKeyToNodeAsync(string name, string base64, TransactionOperationContext ctx, ClusterTopology clusterTopology, string node, string url)
         {
             using (var shortLived = RequestExecutor.CreateForSingleNode(url, name, clusterTopology.ApiKey))
             {

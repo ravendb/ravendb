@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Http;
 
 namespace Raven.Client.Server.Commands
@@ -12,6 +13,8 @@ namespace Raven.Client.Server.Commands
             _id = id;
         }
 
+        
+
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/tcp?id={_id}";
@@ -21,5 +24,5 @@ namespace Raven.Client.Server.Commands
                 Method = HttpMethod.Delete
             };
         }
-    }
+        }
 }

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Extensions;
@@ -22,7 +23,7 @@ namespace SlowTests.Bugs.Metadata
             var doc = MultiDatabase.CreateDatabaseDocument(name);
 
             DoNotReuseServer();
-            using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), Database = name }.Initialize())
+            using (var store = new DocumentStore { Urls = UseFiddler(Server.WebUrls), Database = name }.Initialize())
             {
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
@@ -50,7 +51,7 @@ namespace SlowTests.Bugs.Metadata
             var doc = MultiDatabase.CreateDatabaseDocument(name);
 
             DoNotReuseServer();
-            using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), Database = name }.Initialize())
+            using (var store = new DocumentStore { Urls = UseFiddler(Server.WebUrls), Database = name }.Initialize())
             {
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 

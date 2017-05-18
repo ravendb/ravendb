@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Net;
 using NDesk.Options;
 using Raven.Client.Util;
@@ -129,7 +130,7 @@ namespace Raven.Traffic
                     return TrafficArgsProcessStatus.InvalidMode;
             }
 
-            config.ConnectionString.Url = args[1];
+            config.ConnectionString.Urls = new List<string> { args[1] };
             config.ConnectionString.Database = args[2];
             config.ResourceName = args[2];
             config.RecordFilePath = args[3];

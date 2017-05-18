@@ -96,17 +96,17 @@ namespace FastTests.Server.Replication
             using (var store1 = new DocumentStore
             {
                 Database = databaseName,
-                Url = Servers[0].WebUrls[0]
+                Urls = Servers[0].WebUrls
             }.Initialize())
             using (var store2 = new DocumentStore
             {
                 Database = databaseName,
-                Url = Servers[1].WebUrls[0]
+                Urls = Servers[1].WebUrls
             }.Initialize())
             using (var store3 = new DocumentStore
             {
                 Database = databaseName,
-                Url = Servers[2].WebUrls[0]
+                Urls = Servers[2].WebUrls
             }.Initialize())
             {
                 await CreateAndWaitForClusterDatabase(databaseName, store1);

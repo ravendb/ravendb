@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Replication;
@@ -13,7 +14,6 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
-using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -66,7 +66,7 @@ namespace Raven.Server.Web.System
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var url = GetStringQueryString("url", false);
-            
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var dbId = Constants.Documents.Prefix + name;
@@ -78,6 +78,7 @@ namespace Raven.Server.Web.System
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                         using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
                         {
+                            Console.WriteLine("error");
                             context.Write(writer,
                                 new DynamicJsonValue
                                 {
@@ -114,7 +115,6 @@ namespace Raven.Server.Web.System
                     }
                 }
             }
-
             return Task.CompletedTask;
         }
 
@@ -122,7 +122,7 @@ namespace Raven.Server.Web.System
         {
             var url = (Server.ServerStore.NodeTag == node.NodeTag ? clientUrl : null) ??  clusterTopology.GetUrlFromTag(node.NodeTag);
             return ServerStore.EnsureValidExternalUrl(url);
-        }
+                }
 
         private Task DbInfo(string dbName)
         {
@@ -136,10 +136,10 @@ namespace Raven.Server.Web.System
                     {
                         WriteDatabaseInfo(dbName, dbRecord, context, writer);
                     }
-                    return Task.CompletedTask;
+                        return Task.CompletedTask;
+                    }
                 }
             }
-        }
 
         private void WriteDatabaseInfo(string databaseName, BlittableJsonReaderObject dbRecordBlittable,
             TransactionOperationContext context, BlittableJsonTextWriter writer)
@@ -154,7 +154,7 @@ namespace Raven.Server.Web.System
                 WriteFaultedDatabaseInfo(context, writer, dbTask, databaseName);
                 return;
             }
-
+           
             var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbRecordBlittable);
             var db = online ? dbTask.Result : null;
 
@@ -162,8 +162,8 @@ namespace Raven.Server.Web.System
             // Looking for disabled indexing flag inside the database settings for offline database status
             if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled),out var val) && val == "true")
             {
-                indexingStatus = IndexRunningStatus.Disabled;
-            }
+                    indexingStatus = IndexRunningStatus.Disabled;
+                }
             var disabled = dbRecord.Disabled;
             var topology = dbRecord.Topology;
 
@@ -173,13 +173,13 @@ namespace Raven.Server.Web.System
             {
                 foreach (var member in topology.Members)
                 {
-                    nodesTopology.Members.Add(GetNodeId(member));
-                }
+                        nodesTopology.Members.Add(GetNodeId(member));
+                    }
                 foreach (var promotable in topology.Promotables)
                 {
                     nodesTopology.Promotables.Add(GetNodeId(promotable, topology.WhoseTaskIsIt(promotable)));
+                    }
                 }
-            }
 
             if (online == false)
             {

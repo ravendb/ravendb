@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
 using Raven.Client.Exceptions;
+using Raven.Client.Http;
 
 namespace Raven.Server.Rachis
 {
