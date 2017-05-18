@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Replication
         {
             try
             {
-                var connectionInfo = ReplicationUtils.GetTcpInfo(MultiDatabase.GetRootDatabaseUrl(Destination.Url), Destination.NodeTag, GetApiKey());
+                var connectionInfo = ReplicationUtils.GetTcpInfo(MultiDatabase.GetRootDatabaseUrl(Destination.Url), Destination.NodeTag, GetApiKey(), "Replication");
 
                 if (_log.IsInfoEnabled)
                     _log.Info($"Will replicate to {Destination.NodeTag} @ {Destination.Url} via {connectionInfo.Url}");

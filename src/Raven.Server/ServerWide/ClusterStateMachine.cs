@@ -661,7 +661,7 @@ namespace Raven.Server.ServerWide
 
         public override async Task<Stream> ConnectToPeer(string url, string apiKey)
         {
-            var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey);
+            var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", apiKey, "Cluster");
             var authenticator = new ApiKeyAuthenticator();
 
             var tcpInfo = new Uri(info.Url);
