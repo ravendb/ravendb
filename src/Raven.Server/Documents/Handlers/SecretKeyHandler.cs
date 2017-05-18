@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Handlers
             var key = new byte[256 / 8];
             fixed (byte* pKey = key)
             {
-                Sodium.randombytes_buf(pKey, key.Length);
+                Sodium.randombytes_buf(pKey, (UIntPtr)key.Length);
 
                 var base64 = Convert.ToBase64String(key);
                 Sodium.ZeroMemory(pKey, key.Length);
