@@ -11,6 +11,6 @@ namespace Raven.Client.Documents.Operations
 
     public interface IAdminOperation
     {
-        RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context);
+        RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context);
     }
 }

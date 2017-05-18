@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 {
     public class StopIndexingOperation : IAdminOperation
     {
-        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new StopIndexingCommand();
         }

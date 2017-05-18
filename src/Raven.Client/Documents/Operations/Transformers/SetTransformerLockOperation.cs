@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Operations.Transformers
             _mode = mode;
         }
 
-        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new SetTransformerLockCommand(_transformerName, _mode);
         }

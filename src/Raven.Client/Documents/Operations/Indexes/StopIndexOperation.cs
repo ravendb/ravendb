@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
         }
 
-        public RavenCommand<object> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new StopIndexCommand(_indexName);
         }
