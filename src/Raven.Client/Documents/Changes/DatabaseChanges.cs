@@ -15,7 +15,7 @@ using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Changes
 {
-    public class DatabaseChanges : IDatabaseChanges, IDisposable
+    public class DatabaseChanges : IDatabaseChanges
     {
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         private readonly MemoryStream _ms = new MemoryStream();
@@ -52,7 +52,8 @@ namespace Raven.Client.Documents.Changes
             _task = DoWork();
         }
 
-        public bool Connected { get; private set; }
+        public bool Connected => _client.State == WebSocketState.Open;
+
         public event EventHandler ConnectionStatusChanged;
 
         public IObservable<IndexChange> ForIndex(string indexName)
@@ -229,6 +230,7 @@ namespace Raven.Client.Documents.Changes
             _cts.Cancel();
 
             _task.Wait();
+            _counters.Clear();
             _client?.Dispose();
 
             ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
@@ -242,13 +244,33 @@ namespace Raven.Client.Documents.Changes
             {
                 async Task OnDisconnect()
                 {
-                    await Send(unwatchCommand, value).ConfigureAwait(false);
+                    try
+                    {
+                        if (Connected)
+                            await Send(unwatchCommand, value).ConfigureAwait(false);
+                    }
+                    catch (WebSocketException)
+                    {
+                        // if we are not connected then we unsubscribed already
+                        // because connections drops with all subscribtions
+                    }
+
                     _counters.Remove(s);
                 }
 
                 Task OnConnect()
                 {
-                    return Send(watchCommand, value);
+                    try
+                    {
+                        if (Connected)
+                            return Send(watchCommand, value);
+                    }
+                    catch (WebSocketException)
+                    {
+                        // if we are not connected then we will subscribe again after connection be established
+                    }
+
+                    return Task.CompletedTask;
                 }
 
                 return new DatabaseConnectionState(OnConnect, OnDisconnect);
@@ -286,8 +308,8 @@ namespace Raven.Client.Documents.Changes
             }
             finally
             {
-                _semaphore.Release();
                 _ms.SetLength(0);
+                _semaphore.Release();
             }
         }
 
@@ -300,7 +322,6 @@ namespace Raven.Client.Documents.Changes
                     if (Connected == false)
                     {
                         await _client.ConnectAsync(_url, _cts.Token).ConfigureAwait(false);
-                        Connected = true;
                         ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 
                         await Subscribe().ConfigureAwait(false);
@@ -310,8 +331,6 @@ namespace Raven.Client.Documents.Changes
                 }
                 catch (OperationCanceledException)
                 {
-                    Connected = false;
-                    ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
                     return;
                 }
                 catch (ChangeProcessingException e)
@@ -321,7 +340,6 @@ namespace Raven.Client.Documents.Changes
                 }
                 catch (Exception e)
                 {
-                    Connected = false;
                     ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 
                     NotifyAboutError(e);

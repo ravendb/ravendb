@@ -12,13 +12,6 @@ namespace Raven.Client.Documents.Changes
 {
     public class DocumentChange : DatabaseChange
     {
-        private string _key;
-
-        [Newtonsoft.Json.JsonIgnore]
-        public Func<object, string> MaterializeKey;
-
-        public object MaterializeKeyState;
-
         /// <summary>
         /// Type of change that occurred on document.
         /// </summary>
@@ -27,20 +20,7 @@ namespace Raven.Client.Documents.Changes
         /// <summary>
         /// Identifier of document for which notification was created.
         /// </summary>
-        public string Key
-        {
-            get
-            {
-                if (_key == null && MaterializeKey != null)
-                {
-                    _key = MaterializeKey(MaterializeKeyState);
-                    MaterializeKey = null;
-                    MaterializeKeyState = null;
-                }
-                return _key;
-            }
-            set { _key = value; }
-        }
+        public string Key { get; set; }
 
         /// <summary>
         /// Document collection name.

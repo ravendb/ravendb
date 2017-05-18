@@ -125,7 +125,7 @@ namespace FastTests.Server.Documents.Notifications
                 }
 
                 DocumentChange documentChange;
-                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(2)));
+                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(15)));
 
                 observableWithTask = taskObservable.ForDocument("users/2");
                 //await observableWithTask.Task;
@@ -137,12 +137,12 @@ namespace FastTests.Server.Documents.Notifications
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(2)));
+                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(15)));
             }
         }
 
         [Fact]
-        public async Task NotificationOnWrongDatabase_ShouldNotCrashServer()
+        public void NotificationOnWrongDatabase_ShouldNotCrashServer()
         {
             using (var store = GetDocumentStore())
             {
@@ -151,7 +151,7 @@ namespace FastTests.Server.Documents.Notifications
                 var taskObservable = store.Changes("does-not-exists");
                 taskObservable.OnError += e => mre.Set();
 
-                Assert.True(mre.Wait(5000));
+                Assert.True(mre.Wait(TimeSpan.FromSeconds(15)));
 
                 // ensure the db still works
                 store.Admin.Send(new GetStatisticsOperation());

@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Changes
             lock (this)
             {
                 if (--_value == 0)
-                    AsyncHelpers.RunSync(() => _onDisconnect());
+                    _onDisconnect();
             }
         }
 
