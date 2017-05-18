@@ -25,24 +25,21 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public override string GetItemId()
         {
             if (_subscriptionId.HasValue)
-                return SubscriptionRaftState.GenerateSubscriptionItemName(DatabaseName, _subscriptionId.Value);
+                return SubscriptionState.GenerateSubscriptionItemName(DatabaseName, _subscriptionId.Value);
             return $"noValue";
         }
 
-        public override DynamicJsonValue GetUpdatedValue(long index, DatabaseRecord record, BlittableJsonReaderObject existingValue)
+        public override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
         {
-            if (existingValue != null)
-                throw new InvalidOperationException(); // todo: should not happen
             _subscriptionId = index;
-            var rafValue = new SubscriptionRaftState()
+            var rafValue = new SubscriptionState()
             {
                 Criteria = Criteria,
                 ChangeVector = InitialChangeVector,
-                SubscriptionId = index
+                SubscriptionId = SubscriptionState.GenerateSubscriptionItemName(record.DatabaseName, index)
             };
 
-            return rafValue.ToJson();
-
+            return context.ReadObject(rafValue.ToJson(), GetItemId());
         }
 
         public override void FillJson(DynamicJsonValue json)

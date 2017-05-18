@@ -10,15 +10,15 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class SubscriptionState:IDisposable
+    public class SubscriptionConnectionState:IDisposable
     {
         private readonly SubscriptionStorage _storage;
-        private readonly AsyncManualResetEvent _connectionInUse = new AsyncManualResetEvent();
+        internal readonly AsyncManualResetEvent ConnectionInUse = new AsyncManualResetEvent();
 
-        public SubscriptionState(SubscriptionStorage storage)
+        public SubscriptionConnectionState(SubscriptionStorage storage)
         {
             _storage = storage;
-            _connectionInUse.Set();
+            ConnectionInUse.Set();
         }
 
         private SubscriptionConnection _currentConnection;
@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Subscriptions
         {
             try
             {
-                if (await _connectionInUse.WaitAsync(TimeSpan.FromMilliseconds(timeToWait)) == false)
+                if (await ConnectionInUse.WaitAsync(TimeSpan.FromMilliseconds(timeToWait)) == false)
                 {
                     switch (incomingConnection.Strategy)
                     {
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Subscriptions
             if (subscriptionConnection != null && subscriptionConnection != incomingConnection)
                 throw new TimeoutException();
 
-            _connectionInUse.Reset();
+            ConnectionInUse.Reset();
 
             return new DisposableAction(() => {
                 while (_recentConnections.Count > 10)
@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Subscriptions
                     _recentConnections.TryDequeue(out options);
                 }
                 _recentConnections.Enqueue(incomingConnection);
-                _connectionInUse.SetByAsyncCompletion();
+                ConnectionInUse.SetByAsyncCompletion();
                 Interlocked.CompareExchange(ref _currentConnection, null, incomingConnection);
             });
         }

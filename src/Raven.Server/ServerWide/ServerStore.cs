@@ -30,6 +30,7 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
 {
@@ -771,6 +772,8 @@ namespace Raven.Server.ServerWide
         {
             while (true)
             {
+                ServerShutdown.ThrowIfCancellationRequested();
+
                 var logChange = _engine.WaitForHeartbeat();
 
                 if (_engine.CurrentState == RachisConsensus.State.Leader)
@@ -787,10 +790,25 @@ namespace Raven.Server.ServerWide
                 {
                     if (Logger.IsInfoEnabled)
                         Logger.Info("Tried to send message to leader, retrying", ex);
+
+                    if (_engine.LeaderTag != engineLeaderTag)
+                        continue;
+
                 }
 
-                await logChange;
+                ServerShutdown.ThrowIfCancellationRequested();
+                while (true)
+                {
+                    var result = await Task.WhenAny(logChange,
+                        TimeoutManager.WaitFor(5000, ServerShutdown)).ConfigureAwait(false);
+
+                    if (result == logChange)
+                        break;
+
+                    ServerShutdown.ThrowIfCancellationRequested();
+                }
             }
+            
         }
 
         private async Task<long> SendToNodeAsync(TransactionOperationContext context, string engineLeaderTag, BlittableJsonReaderObject cmd)
