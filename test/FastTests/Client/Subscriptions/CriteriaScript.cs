@@ -96,8 +96,7 @@ namespace FastTests.Client.Subscriptions
                 var subsId = subscriptionManager.Create(subscriptionCreationParams);
                 using (var subscription = subscriptionManager.Open<BlittableJsonReaderObject>(new SubscriptionConnectionOptions(subsId)))
                 {
-                    JsonOperationContext context;
-                    using (store.GetRequestExecuter().ContextPool.AllocateOperationContext(out context))
+                    using (store.GetRequestExecuter().ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
                         var list = new BlockingCollection<BlittableJsonReaderObject>();
                         subscription.Subscribe(x =>

@@ -58,8 +58,7 @@ namespace FastTests.Issues
 
                 var requestExecuter = store.GetRequestExecuter();
 
-                JsonOperationContext context;
-                using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+                using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var command = new QueryCommand(store.Conventions, context, "Users/ByName", new IndexQuery() { Query = "Name:* AND -Name:First" });
 
@@ -98,8 +97,7 @@ namespace FastTests.Issues
 
                 var requestExecuter = store.GetRequestExecuter();
 
-                JsonOperationContext context;
-                using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+                using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var command = new QueryCommand(store.Conventions, context, "Users/ByName", new IndexQuery() { Query = "Name:* AND NOT Name:Second" });
 

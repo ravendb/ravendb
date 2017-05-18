@@ -58,14 +58,14 @@ namespace FastTests.Client
                     await bulkInsert.StoreAsync(fooBars[2]);
                     await bulkInsert.StoreAsync(fooBars[3]);
                 }
-                JsonOperationContext context;
-                store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out context);
+
 
                 var getDocumentCommand = new GetDocumentCommand
                 {
                     Ids = new[] { "FooBars/1", "FooBars/2", "FooBars/3", "FooBars/4"}
                 };
 
+                store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out JsonOperationContext context);
                 store.GetRequestExecuter(store.DefaultDatabase).Execute(getDocumentCommand, context);
 
                 var results = getDocumentCommand.Result.Results;

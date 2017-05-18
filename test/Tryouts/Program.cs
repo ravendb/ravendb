@@ -2,7 +2,9 @@
 using System.Diagnostics;
 using FastTests.Client.Indexing;
 using FastTests.Client.Subscriptions;
+using FastTests.Server.Documents;
 using FastTests.Server.Documents.Queries;
+using SlowTests.Issues;
 using SlowTests.MailingList;
 using SlowTests.Tests.Faceted;
 
@@ -15,20 +17,17 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            for (int i = 0; i < 199; i++)
+            for (int i = 0; i < 800; i++)
             {
                 Console.WriteLine(i);
 
-                using (var a = new WaitingForNonStaleResults())
+                using (var a = new FastTests.Client.IndexesDeleteByIndexTests())
                 {
-                    a.Throws_if_exceeds_timeout();
-                }
-
-                using (var a = new FastTests.Server.Replication.ReplicationIndexesAndTransformers())
-                {
-                    a.Can_replicate_multiple_indexes().Wait();
+                    a.Delete_By_Index_Async().Wait();
                 }
             }
+
+            
         }
     }
 }

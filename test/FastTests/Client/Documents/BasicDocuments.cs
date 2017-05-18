@@ -48,8 +48,7 @@ namespace FastTests.Client.Documents
                 var requestExecuter = store
                     .GetRequestExecuter();
 
-                JsonOperationContext context;
-                using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+                using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var getDocumentCommand = new GetDocumentCommand
                     {
