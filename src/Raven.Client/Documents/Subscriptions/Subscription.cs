@@ -239,7 +239,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         private async Task<Stream> ConnectToServer()
         {
-            var command = new GetTcpInfoCommand();
+            var command = new GetTcpInfoCommand("Subscription/"+_dbName);
 
             JsonOperationContext context;
             var requestExecuter = _store.GetRequestExecuter(_dbName ?? _store.DefaultDatabase);

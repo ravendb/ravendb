@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Replication
             using (_pool.AllocateOperationContext(out context))
             {
                 //TODO:
-                _tcpConnectionInfo = await ReplicationUtils.GetTcpInfoAsync(_destination.Url, _destination.Database,null);
+                _tcpConnectionInfo = await ReplicationUtils.GetTcpInfoAsync(_destination.Url, _destination.Database,null, "Topology");
                 var token = await _authenticator.GetAuthenticationTokenAsync(null, _destination.Url, context);
                 await ConnectSocketAsync();
                 using (var stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, _tcpConnectionInfo))

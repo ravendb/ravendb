@@ -27,7 +27,7 @@ namespace Raven.Client.Server.Commands
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/secrets/&name={_name}";
+            url = $"{node.Url}/admin/secrets?name={_name}";
 
             if (_overwrite == true)
             {
