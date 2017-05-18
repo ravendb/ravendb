@@ -38,9 +38,6 @@ namespace FastTests.Client
                     indexName = stats.IndexName;
                 }
 
-                JsonOperationContext context;
-                store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out context);
-
                 var operation = store.Operations.Send(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(60));
@@ -66,18 +63,14 @@ namespace FastTests.Client
                 string indexName;
                 using (var session = store.OpenSession())
                 {
-                    QueryStatistics stats;
                     var people = session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
-                        .Statistics(out stats)
+                        .Statistics(out QueryStatistics stats)
                         .Where(x => x.Name == "Arek")
                         .ToList();
 
                     indexName = stats.IndexName;
                 }
-
-                JsonOperationContext context;
-                store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out context);
 
                 var operation = await store.Operations.SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
 
