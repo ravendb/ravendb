@@ -160,7 +160,8 @@ namespace FastTests
                 configuration.Core.DataDirectory =
                     configuration.Core.DataDirectory.Combine(partialPath??$"Tests{Interlocked.Increment(ref _serverCounter)}");
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
-                
+                configuration.Replication.ReplicationMinimalHeartbeat = new TimeSetting(100,TimeUnit.Milliseconds);
+
                 if (deletePrevious)
                     IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);                
 

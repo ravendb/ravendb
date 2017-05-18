@@ -76,6 +76,7 @@ class databaseCreationModel {
         encryptionConfig.enabled.subscribe(enabled => {
             if (enabled) {
                 this.replication.manualMode(true);
+                this.replication.replicationFactor(this.replication.nodes().length);
             }
         });
 

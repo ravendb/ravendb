@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
+using Raven.Server.Json;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -246,15 +247,8 @@ namespace Raven.Server.Documents
         {
             var value = new DynamicJsonValue
             {
-                ["Type"] = "DocumentChange",
-                ["Value"] = new DynamicJsonValue
-                {
-                    [nameof(DocumentChange.Type)] = change.Type.ToString(),
-                    [nameof(DocumentChange.Key)] = change.Key,
-                    [nameof(DocumentChange.CollectionName)] = change.CollectionName,
-                    [nameof(DocumentChange.TypeName)] = change.TypeName,
-                    [nameof(DocumentChange.Etag)] = change.Etag,
-                },
+                ["Type"] = nameof(DocumentChange),
+                ["Value"] = change.ToJson()
             };
 
             if (_disposeToken.IsCancellationRequested == false)
@@ -269,13 +263,8 @@ namespace Raven.Server.Documents
         {
             var value = new DynamicJsonValue
             {
-                ["Type"] = "IndexChange",
-                ["Value"] = new DynamicJsonValue
-                {
-                    [nameof(IndexChange.Etag)] = change.Etag,
-                    [nameof(IndexChange.Name)] = change.Name,
-                    [nameof(IndexChange.Type)] = change.Type.ToString()
-                }
+                ["Type"] = nameof(IndexChange),
+                ["Value"] = change.ToJson()
             };
 
             if (_disposeToken.IsCancellationRequested == false)
@@ -290,13 +279,8 @@ namespace Raven.Server.Documents
         {
             var value = new DynamicJsonValue
             {
-                ["Type"] = "TransformerChange",
-                ["Value"] = new DynamicJsonValue
-                {
-                    [nameof(TransformerChange.Etag)] = change.Etag,
-                    [nameof(TransformerChange.Name)] = change.Name,
-                    [nameof(TransformerChange.Type)] = change.Type.ToString()
-                }
+                ["Type"] = nameof(TransformerChange),
+                ["Value"] = change.ToJson()
             };
 
             if (_disposeToken.IsCancellationRequested == false)
@@ -345,12 +329,8 @@ namespace Raven.Server.Documents
         {
             var value = new DynamicJsonValue
             {
-                ["Type"] = "OperationStatusChange",
-                ["Value"] = new DynamicJsonValue
-                {
-                    [nameof(OperationStatusChange.OperationId)] = (int)change.OperationId,
-                    [nameof(OperationStatusChange.State)] = change.State.ToJson()
-                },
+                ["Type"] = nameof(OperationStatusChange),
+                ["Value"] = change.ToJson()
             };
 
             if (_disposeToken.IsCancellationRequested == false)
@@ -378,29 +358,33 @@ namespace Raven.Server.Documents
                         using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
                             sp.Restart();
+
+                            var first = true;
+                            writer.WriteStartArray();
+
                             do
                             {
                                 var value = await GetNextMessage(throttleConnection);
                                 if (value == null || _disposeToken.IsCancellationRequested)
                                     break;
 
+                                if (first == false)
+                                    writer.WriteComma();
+
+                                first = false;
                                 context.Write(writer, value);
-                                writer.WriteNewLine();
+
+                                writer.Flush();
+
                                 if (ms.Length > 16 * 1024)
                                     break;
                             } while (_sendQueue.Count > 0 && sp.Elapsed < TimeSpan.FromSeconds(5));
+
+                            writer.WriteEndArray();
                         }
 
                         if (_disposeToken.IsCancellationRequested)
                             break;
-
-                        if (ms.Length == 0)
-                        {
-                            // ensure that we send _something_ over the network, to keep the 
-                            // connection alive
-                            ms.WriteByte((byte)'\r');
-                            ms.WriteByte((byte)'\n');
-                        }
 
                         ArraySegment<byte> bytes;
                         ms.TryGetBuffer(out bytes);
@@ -552,38 +536,6 @@ namespace Raven.Server.Documents
             {
                 UnwatchAllOperations();
             }
-            /*else if (Match(command, "watch-replication-conflicts"))
-            {
-                WatchAllReplicationConflicts();
-            }
-            else if (Match(command, "unwatch-replication-conflicts"))
-            {
-                UnwatchAllReplicationConflicts();
-            }
-            else if (Match(command, "watch-bulk-operation"))
-            {
-                WatchBulkInsert(commandParameter);
-            }
-            else if (Match(command, "unwatch-bulk-operation"))
-            {
-                UnwatchBulkInsert(commandParameter);
-            }
-            else if (Match(command, "watch-data-subscriptions"))
-            {
-                WatchAllDataSubscriptions();
-            }
-            else if (Match(command, "unwatch-data-subscriptions"))
-            {
-                UnwatchAllDataSubscriptions();
-            }
-            else if (Match(command, "watch-data-subscription"))
-            {
-                WatchDataSubscription(long.Parse(commandParameter));
-            }
-            else if (Match(command, "unwatch-data-subscription"))
-            {
-                UnwatchDataSubscription(long.Parse(commandParameter));
-            }*/
             else
             {
                 throw new ArgumentOutOfRangeException(nameof(command), "Command argument is not valid");

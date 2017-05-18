@@ -8,7 +8,7 @@ import EVENTS = require("common/constants/events");
 
 import eventsWebSocketClient = require("common/eventsWebSocketClient");
 
-class changesApi extends eventsWebSocketClient<changesApiEventDto> {
+class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
 
     constructor(db: database) {
         super(db);
@@ -37,7 +37,11 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto> {
         ko.postbox.publish(EVENTS.ChangesApi.Reconnected, this.db);
     }
 
-    protected onMessage(eventDto: changesApiEventDto) {
+    protected onMessage(eventsDto: changesApiEventDto[]) {
+        eventsDto.forEach(event => this.onSingleMessage(event));
+    }
+
+    private onSingleMessage(eventDto: changesApiEventDto) {
         const eventType = eventDto.Type;
         const value = eventDto.Value;
 

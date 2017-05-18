@@ -11,6 +11,7 @@ using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.Operations.ApiKeys;
 using Raven.Server.Config.Attributes;
+using Sparrow.Logging;
 using Xunit;
 
 namespace RachisTests.DatabaseCluster
@@ -70,6 +71,15 @@ namespace RachisTests.DatabaseCluster
                 var topology = databaseResult.Topology;
                 Assert.Equal(clusterSize, topology.AllReplicationNodes().Count());
 
+                await WaitForValueOnGroupAsync(topology,  s =>
+                {
+                    var db = s.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                    return db.ReplicationLoader?.OutgoingConnections.Count();
+                }, clusterSize - 1);
+
+                WaitForUserToContinueTheTest((DocumentStore)store);
+
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User {Name = "Karmel"}, "users/1");
@@ -82,16 +92,15 @@ namespace RachisTests.DatabaseCluster
                     TimeSpan.FromSeconds(clusterSize + 5)));
 
                 topology.RemoveFromTopology(leader.ServerStore.NodeTag);
-
+                await Task.Delay(200); // twice the heartbeat
                 await Assert.ThrowsAsync<Exception>(async () =>
                 {
                     await WaitForValueOnGroupAsync(topology, (s) =>
                     {
-                        var replicationPerformance = s.Admin.Send(new GetReplicationPerformanceStatisticsOperation());
-                        return replicationPerformance.Outgoing.Any(o=>o.Performance.Any(p=> p.SendLastEtag > 0));
+                        var db = s.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                        return db.ReplicationLoader?.OutgoingHandlers.Any(o=>o.GetReplicationPerformance().Any(p=>p.Network.DocumentOutputCount > 0)) ?? false;
                     }, true);
                 });
-
             }
         }
 

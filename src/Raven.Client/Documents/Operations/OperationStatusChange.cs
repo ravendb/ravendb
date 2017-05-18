@@ -1,4 +1,6 @@
 ﻿using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Conventions;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
@@ -13,8 +15,20 @@ namespace Raven.Client.Documents.Operations
         {
             return new DynamicJsonValue
             {
-                ["OperationId"] = OperationId,
-                ["State"] = State.ToJson()
+                [nameof(OperationId)] = OperationId,
+                [nameof(State)] = State.ToJson()
+            };
+        }
+
+        internal static OperationStatusChange FromJson(BlittableJsonReaderObject value, DocumentConventions conventions)
+        {
+            value.TryGet(nameof(OperationId), out long operationId);
+            value.TryGet(nameof(State), out BlittableJsonReaderObject stateAsJson);
+
+            return new OperationStatusChange
+            {
+                OperationId = operationId,
+                State = (OperationState)conventions.DeserializeEntityFromBlittable(typeof(OperationState), stateAsJson)
             };
         }
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
@@ -10,16 +11,16 @@ namespace FastTests.Server.Documents.Notifications
 {
     public class ChangesTests : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-6285")]
+        [Fact]
         public async Task CanGetNotificationAboutDocumentPut()
         {
             using (var store = GetDocumentStore())
             {
                 var list = new BlockingCollection<DocumentChange>();
                 var taskObservable = store.Changes();
-                await taskObservable.ConnectionTask;
+                await taskObservable.EnsureConnectedNow();
                 var observableWithTask = taskObservable.ForDocument("users/1");
-                await observableWithTask.Task;
+                //await observableWithTask.Task;
                 observableWithTask.Subscribe(list.Add);
 
                 using (var session = store.OpenAsyncSession())
@@ -37,16 +38,16 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
-        [Fact(Skip = "RavenDB-6285")]
+        [Fact]
         public async Task CanGetAllNotificationAboutDocument_ALotOfDocuments()
         {
             using (var store = GetDocumentStore())
             {
                 var list = new BlockingCollection<DocumentChange>();
                 var taskObservable = store.Changes();
-                await taskObservable.ConnectionTask;
+                await taskObservable.EnsureConnectedNow();
                 var observableWithTask = taskObservable.ForAllDocuments();
-                await observableWithTask.Task;
+                //await observableWithTask.Task;
                 observableWithTask.Subscribe(list.Add);
 
                 const int docsCount = 10000;
@@ -70,16 +71,16 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
-        [Fact(Skip = "RavenDB-6285")]
+        [Fact]
         public async Task CanGetNotificationAboutDocumentDelete()
         {
             using (var store = GetDocumentStore())
             {
                 var list = new BlockingCollection<DocumentChange>();
                 var taskObservable = store.Changes();
-                await taskObservable.ConnectionTask;
+                await taskObservable.EnsureConnectedNow();
                 var observableWithTask = taskObservable.ForDocument("users/1");
-                await observableWithTask.Task;
+                //await observableWithTask.Task;
                 observableWithTask
                     .Where(x => x.Type == DocumentChangeTypes.Delete)
                     .Subscribe(list.Add);
@@ -105,16 +106,16 @@ namespace FastTests.Server.Documents.Notifications
             }
         }
 
-        [Fact(Skip = "RavenDB-6285")]
+        [Fact]
         public async Task CanCreateMultipleNotificationsOnSingleConnection()
         {
             using (var store = GetDocumentStore())
             {
                 var list = new BlockingCollection<DocumentChange>();
                 var taskObservable = store.Changes();
-                await taskObservable.ConnectionTask;
+                await taskObservable.EnsureConnectedNow();
                 var observableWithTask = taskObservable.ForDocument("users/1");
-                await observableWithTask.Task;
+                //await observableWithTask.Task;
                 observableWithTask.Subscribe(list.Add);
 
                 using (var session = store.OpenAsyncSession())
@@ -124,10 +125,10 @@ namespace FastTests.Server.Documents.Notifications
                 }
 
                 DocumentChange documentChange;
-                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(2)));
+                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(15)));
 
                 observableWithTask = taskObservable.ForDocument("users/2");
-                await observableWithTask.Task;
+                //await observableWithTask.Task;
                 observableWithTask.Subscribe(list.Add);
 
                 using (var session = store.OpenAsyncSession())
@@ -136,21 +137,21 @@ namespace FastTests.Server.Documents.Notifications
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(2)));
+                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(15)));
             }
         }
 
-        [Fact(Skip = "RavenDB-6285")]
-        public async Task NotificationOnWrongDatabase_ShouldNotCrashServer()
+        [Fact]
+        public void NotificationOnWrongDatabase_ShouldNotCrashServer()
         {
             using (var store = GetDocumentStore())
             {
-                var taskObservable = store.Changes("does-not-exists");
+                var mre = new ManualResetEventSlim();
 
-                var exception = await Assert.ThrowsAsync<AggregateException>(async () =>
-                {
-                    await taskObservable.ConnectionTask;
-                });
+                var taskObservable = store.Changes("does-not-exists");
+                taskObservable.OnError += e => mre.Set();
+
+                Assert.True(mre.Wait(TimeSpan.FromSeconds(15)));
 
                 // ensure the db still works
                 store.Admin.Send(new GetStatisticsOperation());

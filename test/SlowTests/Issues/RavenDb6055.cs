@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Documents.Notifications;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Linq;
@@ -19,7 +21,7 @@ namespace SlowTests.Issues
 #pragma warning restore 169,649
         }
 
-        [Fact(Skip = "RavenDB-6285")]
+        [Fact(Skip = "RavenDB-6571")]
         public async Task CreatingNewAutoIndexWillDeleteSmallerOnes()
         {
             using (var store = GetDocumentStore())
@@ -35,11 +37,14 @@ namespace SlowTests.Issues
                     Assert.Equal("Auto/Users/ByFirstName", indexes[0].Name);
                 }
 
-                var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var mre = new ManualResetEventSlim();
 
-                using ((await (await store.Changes().ConnectionTask)
-                        .ForAllIndexes().Task)
-                    .Subscribe(new SetTaskOnIndexDelete(tcs)))
+                using (store.Changes().ForAllIndexes()
+                    .Subscribe(x =>
+                    {
+                        if (x.Type == IndexChangeTypes.IndexRemoved)
+                            mre.Set();
+                    }))
                 {
                     using (var session = store.OpenAsyncSession())
                     {
@@ -48,36 +53,11 @@ namespace SlowTests.Issues
                             .ToListAsync();
                     }
 
-                    await Task.WhenAny(Task.Delay(TimeSpan.FromSeconds(45)), tcs.Task);
+                    Assert.True(mre.Wait(TimeSpan.FromSeconds(15)));
 
                     var indexes = await store.Admin.SendAsync(new GetIndexesOperation(0, 25));
                     Assert.Equal("Auto/Users/ByFirstNameAndLastName", indexes[0].Name);
                 }
-            }
-        }
-
-        private class SetTaskOnIndexDelete : IObserver<IndexChange>
-        {
-            private readonly TaskCompletionSource<object> _tcs;
-
-            public SetTaskOnIndexDelete(TaskCompletionSource<object> tcs)
-            {
-                _tcs = tcs;
-            }
-
-            public void OnCompleted()
-            {
-
-            }
-
-            public void OnError(Exception error)
-            {
-            }
-
-            public void OnNext(IndexChange value)
-            {
-                if (value.Type == IndexChangeTypes.IndexRemoved)
-                    _tcs.TrySetResult(value);
             }
         }
     }

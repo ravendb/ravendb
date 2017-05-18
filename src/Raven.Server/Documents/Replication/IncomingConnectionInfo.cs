@@ -13,6 +13,8 @@ namespace Raven.Server.Documents.Replication
 
         public string SourceMachineName { get; set; }
 
+        public string SourceTag { get; set; }
+
         public string RemoteIp { get; set; }
 
         public static IncomingConnectionInfo FromGetLatestEtag(ReplicationLatestEtagRequest message)
@@ -22,7 +24,8 @@ namespace Raven.Server.Documents.Replication
                 SourceDatabaseName = message.SourceDatabaseName,
                 SourceUrl = message.SourceUrl,
                 SourceMachineName = message.SourceMachineName,
-                SourceDatabaseId = message.SourceDatabaseId
+                SourceDatabaseId = message.SourceDatabaseId,
+                SourceTag = message.SourceTag
             };
         }
 
