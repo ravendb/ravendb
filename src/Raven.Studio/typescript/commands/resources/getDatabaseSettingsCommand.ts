@@ -14,10 +14,6 @@ class getDatabaseSettingsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<document> {
-        if (this.reportRefreshProgress) {
-            this.reportInfo("Fetching Database Settings for '" + this.db.name + "'");
-        }
-
         const resultsSelector = (queryResult: queryResultDto<documentDto>) => new document(queryResult);
         const args = {
             name: this.db.name
