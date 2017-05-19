@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Commands
 {
-    public class PutSecretKeyCommand : RavenCommand<PutSecretKeyCommand.CommandResult>
+    public class PutSecretKeyCommand : RavenCommand
     {
         private readonly string _name;
         private readonly string _base64Key;
@@ -24,7 +24,7 @@ namespace Raven.Client.Server.Commands
         {
             url = $"{node.Url}/admin/secrets?name={_name}";
 
-            if (_overwrite == true)
+            if (_overwrite)
             {
                 url += $"&overwrite={_overwrite}";
             }
@@ -44,9 +44,5 @@ namespace Raven.Client.Server.Commands
         }
         
         public override bool IsReadRequest => false;
-
-        public class CommandResult
-        {
-        }
     }
 }

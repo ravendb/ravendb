@@ -141,82 +141,82 @@ If you really want to do in memory filtering on the data returned from the query
         ///     Adds matches highlighting for the specified field.
         /// </summary>
         /// <remarks>
-        ///     The specified field should be analysed and stored for highlighter to work.
+        ///     The specified field should be analyzed and stored for highlighter to work.
         ///     For each match it creates a fragment that contains matched text surrounded by highlighter tags.
         /// </remarks>
         /// <param name="fieldName">The field name to highlight.</param>
         /// <param name="fragmentLength">The fragment length.</param>
         /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
-        /// <param name="fragmentsField">The field in query results item to put highlightings into.</param>
+        /// <param name="fragmentsField">The field in query results item to put highlights into.</param>
         TSelf Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField);
 
         /// <summary>
         ///     Adds matches highlighting for the specified field.
         /// </summary>
         /// <remarks>
-        ///     The specified field should be analysed and stored for highlighter to work.
+        ///     The specified field should be analyzed and stored for highlighter to work.
         ///     For each match it creates a fragment that contains matched text surrounded by highlighter tags.
         /// </remarks>
         /// <param name="fieldName">The field name to highlight.</param>
         /// <param name="fragmentLength">The fragment length.</param>
         /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
-        /// <param name="highlightings">Field highlightings for all results.</param>
+        /// <param name="highlightings">Field highlights for all results.</param>
         TSelf Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
 
         /// <summary>
         ///     Adds matches highlighting for the specified field on a Map/Reduce Index.
         /// </summary>
         /// <remarks>
-        ///     This is only valid for Map/Reduce Index querys.
-        ///     The specified field and key should be analysed and stored for highlighter to work.
+        ///     This is only valid for Map/Reduce Index queries.
+        ///     The specified field and key should be analyzed and stored for highlighter to work.
         ///     For each match it creates a fragment that contains matched text surrounded by highlighter tags.
         /// </remarks>
         /// <param name="fieldName">The field name to highlight.</param>
         /// <param name="fieldKeyName">The field key name to associate highlights with.</param>
         /// <param name="fragmentLength">The fragment length.</param>
         /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
-        /// <param name="highlightings">Field highlightings for all results.</param>
+        /// <param name="highlightings">Field highlights for all results.</param>
         TSelf Highlight(string fieldName, string fieldKeyName, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
 
         /// <summary>
         ///     Adds matches highlighting for the specified field.
         /// </summary>
         /// <remarks>
-        ///     The specified field should be analysed and stored for highlighter to work.
+        ///     The specified field should be analyzed and stored for highlighter to work.
         ///     For each match it creates a fragment that contains matched text surrounded by highlighter tags.
         /// </remarks>
         /// <param name="propertySelector">The property to highlight.</param>
         /// <param name="fragmentLength">The fragment length.</param>
         /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
-        /// <param name="fragmentsPropertySelector">The property to put highlightings into.</param>
+        /// <param name="fragmentsPropertySelector">The property to put highlights into.</param>
         TSelf Highlight<TValue>(Expression<Func<T, TValue>> propertySelector, int fragmentLength, int fragmentCount, Expression<Func<T, IEnumerable>> fragmentsPropertySelector);
 
         /// <summary>
         ///     Adds matches highlighting for the specified field.
         /// </summary>
         /// <remarks>
-        ///     The specified field should be analysed and stored for highlighter to work.
+        ///     The specified field should be analyzed and stored for highlighter to work.
         ///     For each match it creates a fragment that contains matched text surrounded by highlighter tags.
         /// </remarks>
         /// <param name="propertySelector">The property to highlight.</param>
         /// <param name="fragmentLength">The fragment length.</param>
         /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
-        /// <param name="highlightings">Field highlightings for all results.</param>
+        /// <param name="highlightings">Field highlights for all results.</param>
         TSelf Highlight<TValue>(Expression<Func<T, TValue>> propertySelector, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
 
         /// <summary>
         ///     Adds matches highlighting for the specified field on a Map/Reduce Index.
         /// </summary>
         /// <remarks>
-        ///     This is only valid for Map/Reduce Index querys.
-        ///     The specified fields should be analysed and stored for highlighter to work.
+        ///     This is only valid for Map/Reduce Index queries.
+        ///     The specified fields should be analyzed and stored for highlighter to work.
         ///     For each match it creates a fragment that contains matched text surrounded by highlighter tags.
         /// </remarks>
         /// <param name="propertySelector">The property to highlight.</param>
         /// <param name="keyPropertySelector">The key property to associate highlights with.</param>
         /// <param name="fragmentLength">The fragment length.</param>
         /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
-        /// <param name="highlightings">Field highlightings for all results.</param>
+        /// <param name="highlightings">Field highlights for all results.</param>
         TSelf Highlight<TValue>(Expression<Func<T, TValue>> propertySelector, Expression<Func<T, TValue>> keyPropertySelector, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
 
         /// <summary>
@@ -485,7 +485,7 @@ If you really want to do in memory filtering on the data returned from the query
         ///     <para>etag belong to is actually considered for the results. </para>
         ///     <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
         ///     <para>Since map/reduce queries, by their nature, tend to be far less susceptible to issues with staleness, this is </para>
-        ///     <para>considered to be an acceptable tradeoff.</para>
+        ///     <para>considered to be an acceptable trade-off.</para>
         ///     <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
         ///     <para>use the Cutoff date option, instead.</para>
         /// </param>
@@ -502,8 +502,8 @@ If you really want to do in memory filtering on the data returned from the query
         ///     <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
         ///     <para>etag belong to is actually considered for the results. </para>
         ///     <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
-        ///     <para>Since map/reduce queries, by their nature,vtend to be far less susceptible to issues with staleness, this is </para>
-        ///     <para>considered to be an acceptable tradeoff.</para>
+        ///     <para>Since map/reduce queries, by their nature, tend to be far less susceptible to issues with staleness, this is </para>
+        ///     <para>considered to be an acceptable trade-off.</para>
         ///     <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
         ///     <para>use the Cutoff date option, instead.</para>
         /// </param>
@@ -707,8 +707,8 @@ If you really want to do in memory filtering on the data returned from the query
         ///     Filter matches to be inside the specified radius
         /// </summary>
         /// <param name="radius">Radius (measured in units passed to radiusUnits parameter) in which matches should be found.</param>
-        /// <param name="latitude">Latitude poiting to a circle center.</param>
-        /// <param name="longitude">Longitude poiting to a circle center.</param>
+        /// <param name="latitude">Latitude pointing to a circle center.</param>
+        /// <param name="longitude">Longitude pointing to a circle center.</param>
         /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
         TSelf WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
 
@@ -717,8 +717,8 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name="fieldName">Spatial field name.</param>
         /// <param name="radius">Radius (measured in units passed to radiusUnits parameter) in which matches should be found.</param>
-        /// <param name="latitude">Latitude poiting to a circle center.</param>
-        /// <param name="longitude">Longitude poiting to a circle center.</param>
+        /// <param name="latitude">Latitude pointing to a circle center.</param>
+        /// <param name="longitude">Longitude pointing to a circle center.</param>
         /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
         TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
 

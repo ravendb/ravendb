@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         public bool RequiresRetry { get; private set; }
         public void HandleResponse(GetResponse response)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("This feature is not yet implemented");
 
             /*if (response.Status != 200 && response.Status != 304)
             {

@@ -32,7 +32,7 @@ namespace Raven.Traffic
                         store = new DocumentStore
                         {
                             Url = config.ConnectionString.Url,
-                            DefaultDatabase = config.ResourceName
+                            Database = config.ResourceName
                         }.Initialize();
                     }
                     catch (Exception e)

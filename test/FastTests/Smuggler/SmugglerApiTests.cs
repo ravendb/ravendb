@@ -169,7 +169,7 @@ namespace FastTests.Smuggler
                 {
                     using (var session = store1.OpenAsyncSession())
                     {
-                        await VersioningHelper.SetupVersioning(Server.ServerStore, store1.DefaultDatabase);
+                        await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database);
 
                         await session.StoreAsync(new Person { Name = "Name1" });
                         await session.StoreAsync(new Person { Name = "Name2" });
@@ -208,7 +208,7 @@ namespace FastTests.Smuggler
 
                 using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
                 {
-                    await VersioningHelper.SetupVersioning(Server.ServerStore, store2.DefaultDatabase);
+                    await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database);
 
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
 
@@ -236,7 +236,7 @@ namespace FastTests.Smuggler
                 {
                     using (var session = store1.OpenAsyncSession())
                     {
-                        await VersioningHelper.SetupVersioning(Server.ServerStore, store1.DefaultDatabase);
+                        await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database);
 
                         await session.StoreAsync(new Person { Name = "Name1" });
                         await session.StoreAsync(new Person { Name = "Name2" });

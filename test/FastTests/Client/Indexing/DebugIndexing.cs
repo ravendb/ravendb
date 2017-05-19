@@ -47,7 +47,6 @@ namespace FastTests.Client.Indexing
                     Start = q.Start,
                     AllowMultipleIndexEntriesForSameDocumentToResultTransformer = q.AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
                     CutoffEtag = q.CutoffEtag,
-                    DebugOptionGetIndexEntries = q.DebugOptionGetIndexEntries,
                     DefaultField = q.DefaultField,
                     DefaultOperator = q.DefaultOperator,
                     DisableCaching = q.DisableCaching,
@@ -83,7 +82,7 @@ namespace FastTests.Client.Indexing
                 var database = await Server
                     .ServerStore
                     .DatabasesLandlord
-                    .TryGetOrCreateResourceStore(new StringSegment(store.DefaultDatabase));
+                    .TryGetOrCreateResourceStore(new StringSegment(store.Database));
 
                 var index = database.IndexStore.GetIndexes().First();
 

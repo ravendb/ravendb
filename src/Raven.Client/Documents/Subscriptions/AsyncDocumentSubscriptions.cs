@@ -19,47 +19,42 @@ namespace Raven.Client.Documents.Subscriptions
     public class AsyncDocumentSubscriptions : IAsyncReliableSubscriptions
     {
         private readonly IDocumentStore _store;
-        private readonly ConcurrentSet<IDisposableAsync> _subscriptions = new ConcurrentSet<IDisposableAsync>();
+        private readonly ConcurrentSet<IAsyncDisposable> _subscriptions = new ConcurrentSet<IAsyncDisposable>();
 
         public AsyncDocumentSubscriptions(IDocumentStore store)
         {
             _store = store;
         }
 
-        public Task<long> CreateAsync<T>(SubscriptionCreationParams<T> subscriptionCreationParams, string database = null)
+        public Task<long> CreateAsync<T>(SubscriptionCreationOptions<T> options, string database = null)
         {
-            if (subscriptionCreationParams == null)
+            if (options == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
             
             var nonGenericCriteria = new SubscriptionCriteria(_store.Conventions.GetCollectionName(typeof(T)))
             {
-                FilterJavaScript = subscriptionCreationParams.Criteria.FilterJavaScript,
+                FilterJavaScript = options.Criteria.FilterJavaScript,
             };
 
-            var subscriptionCreationDto = new SubscriptionCreationParams()
+            var subscriptionCreationDto = new SubscriptionCreationOptions
             {
                 Criteria =  nonGenericCriteria,
-                ChangeVector =  subscriptionCreationParams.ChangeVector
+                ChangeVector =  options.ChangeVector
             };
 
             return CreateAsync(subscriptionCreationDto, database);
         }
 
-        public async Task<long> CreateAsync(SubscriptionCreationParams subscriptionCreationParams, string database = null)
+        public async Task<long> CreateAsync(SubscriptionCreationOptions options, string database = null)
         {
-            if (subscriptionCreationParams == null)
+            if (options == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
 
-            JsonOperationContext jsonOperationContext;
-            var requestExecuter = _store.GetRequestExecuter(database ?? _store.DefaultDatabase);
-            requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
+            var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
+            requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
 
-            var command = new CreateSubscriptionCommand()
-            {
-                Context = jsonOperationContext,
-                SubscriptionCreationParams =  subscriptionCreationParams
-            };
-            await requestExecuter.ExecuteAsync(command, jsonOperationContext);
+            var command = new CreateSubscriptionCommand(options, context);
+            await requestExecutor.ExecuteAsync(command, context);
 
             return command.Result.Id;
         }
@@ -88,11 +83,11 @@ namespace Raven.Client.Documents.Subscriptions
         public async Task<List<SubscriptionRaftState>> GetSubscriptionsAsync(int start, int take, string database = null)
         {
             JsonOperationContext jsonOperationContext;
-            var requestExecuter = _store.GetRequestExecuter(database ?? _store.DefaultDatabase);
-            requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
+            var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
+            requestExecutor.ContextPool.AllocateOperationContext(out jsonOperationContext);
 
             var command = new GetSubscriptionsCommand(start, take);
-            await requestExecuter.ExecuteAsync(command, jsonOperationContext);
+            await requestExecutor.ExecuteAsync(command, jsonOperationContext);
 
             return command.Result.ToList();
         }
@@ -100,11 +95,11 @@ namespace Raven.Client.Documents.Subscriptions
         public async Task DeleteAsync(long id, string database = null)
         {
             JsonOperationContext jsonOperationContext;
-            var requestExecuter = _store.GetRequestExecuter(database ?? _store.DefaultDatabase);
-            requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
+            var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
+            requestExecutor.ContextPool.AllocateOperationContext(out jsonOperationContext);
 
             var command = new DeleteSubscriptionCommand(id);
-            await requestExecuter.ExecuteAsync(command, jsonOperationContext);
+            await requestExecutor.ExecuteAsync(command, jsonOperationContext);
         }
 
         public void Dispose()

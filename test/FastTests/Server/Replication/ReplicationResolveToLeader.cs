@@ -31,7 +31,7 @@ namespace FastTests.Server.Replication
                
                 Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar").Results.Length);
 
-                var documentDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.DefaultDatabase).Result;
+                var documentDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database).Result;
 
                 await UpdateConflictResolver(store2, 
                         resovlerDbId: documentDatabase.DbId.ToString());
@@ -74,7 +74,7 @@ namespace FastTests.Server.Replication
                 Assert.Equal(3, WaitUntilHasConflict(store3, "foo/bar", 3).Results.Length);
 
                 // store2 <--> store1 <--> store3*               
-                var documentDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store3.DefaultDatabase).Result;
+                var documentDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store3.Database).Result;
                 //this waits for the information to propagate in the cluster
                 await UpdateConflictResolver(store3,
                     resovlerDbId: documentDatabase.DbId.ToString());
@@ -95,17 +95,17 @@ namespace FastTests.Server.Replication
 
             using (var store1 = new DocumentStore
             {
-                DefaultDatabase = databaseName,
+                Database = databaseName,
                 Url = Servers[0].WebUrls[0]
             }.Initialize())
             using (var store2 = new DocumentStore
             {
-                DefaultDatabase = databaseName,
+                Database = databaseName,
                 Url = Servers[1].WebUrls[0]
             }.Initialize())
             using (var store3 = new DocumentStore
             {
-                DefaultDatabase = databaseName,
+                Database = databaseName,
                 Url = Servers[2].WebUrls[0]
             }.Initialize())
             {
@@ -184,7 +184,7 @@ namespace FastTests.Server.Replication
                 }
 
                 // store1* --> store2
-                var documentDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.DefaultDatabase).Result;
+                var documentDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
                 var databaseResovlerId = documentDatabase.DbId.ToString();
                 await UpdateConflictResolver(store2, databaseResovlerId);
                 await SetupReplicationAsync(store1, store2);

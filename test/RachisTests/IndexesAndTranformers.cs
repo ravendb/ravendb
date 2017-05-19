@@ -42,7 +42,7 @@ namespace SlowTests.Server.Rachis
             using (var store = new DocumentStore()
             {
                 Url = leasderUrl,
-                DefaultDatabase = databaseName
+                Database = databaseName
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
@@ -80,7 +80,7 @@ namespace SlowTests.Server.Rachis
             using (var store = new DocumentStore()
             {
                 Url =  databaseCreationResult.Item2[0].WebUrls[0],
-                DefaultDatabase = defaultDatabase
+                Database = defaultDatabase
             }.Initialize())
             {
                 var relevantServers = databaseCreationResult.Item2;
@@ -99,7 +99,7 @@ namespace SlowTests.Server.Rachis
                     using (var serverToStoreAtStore = new DocumentStore
                     {
                         Url = serverToStoreAt.WebUrls[0],
-                        DefaultDatabase = store.DefaultDatabase
+                        Database = store.Database
                     })
                     {
                         var putTransformerResult = await serverToStoreAtStore.Admin.SendAsync(new PutTransformerOperation(curTransformerDefinition),
@@ -107,13 +107,13 @@ namespace SlowTests.Server.Rachis
 
                         foreach (var serverToCheckAt in relevantServers)
                         {
-                            var db = await serverToCheckAt.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+                            var db = await serverToCheckAt.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
                             Assert.True(await db.WaitForIndexNotification(putTransformerResult.Etag).WaitAsync(WaitInterval));
                             using (var currentServerStore = new DocumentStore
                             {
                                 Url = serverToCheckAt.WebUrls[0],
-                                DefaultDatabase = store.DefaultDatabase
+                                Database = store.Database
                             })
                             {
                                 var transformerDefinition = db.TransformerStore.GetTransformer(curTransformerDefinition.Name);

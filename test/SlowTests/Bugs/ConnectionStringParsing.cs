@@ -32,38 +32,10 @@ namespace SlowTests.Bugs
         }
 
         [Fact]
-        public void EnsureWellFormedConnectionStrings_ParsingWithEmbeddedOptionTypes_Successful()
-        {
-            var parser = ConnectionStringParser<EmbeddedRavenConnectionStringOptions>.FromConnectionString("Url=http://localhost:8080;user=beam;password=up;memory=true");
-            parser.Parse();
-            var options = parser.ConnectionStringOptions;
-
-            Assert.Equal("http://localhost:8080", options.Url);
-            Assert.True(options.RunInMemory);
-        }
-
-        [Fact]
-        public void EnsureWellFormedConnectionStrings_ParsingWithFilesOptionTypes_Successful()
-        {
-            var parser = ConnectionStringParser<FilesConnectionStringOptions>.FromConnectionString("Url=http://localhost:8080;user=beam;password=up;filesystem=test");
-            parser.Parse();
-            var options = parser.ConnectionStringOptions;
-
-            Assert.Equal("http://localhost:8080", options.Url);
-            Assert.Equal("test", options.DefaultFileSystem);
-        }
-
-        [Fact]
         public void EnsureWellFormedConnectionStrings_Parsing_FailWithUnknownParameter()
         {
-            var filesParser = ConnectionStringParser<FilesConnectionStringOptions>.FromConnectionString("ResourceManagerId=d5723e19-92ad-4531-adad-8611e6e05c8a;");
-            Assert.Throws<ArgumentException>(() => filesParser.Parse());
-
             var dbParser = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString("memory=true");
             Assert.Throws<ArgumentException>(() => dbParser.Parse());
-
-            var embeddedParser = ConnectionStringParser<EmbeddedRavenConnectionStringOptions>.FromConnectionString("filesystem=test;");
-            Assert.Throws<ArgumentException>(() => embeddedParser.Parse());
         }
     }
 }

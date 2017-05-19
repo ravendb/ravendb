@@ -24,7 +24,7 @@ namespace SlowTests.Bugs
                     var storedUrl = session.Advanced.GetDocumentUrl(entity);
                     var serverUrl = documentStore.Url;
                     
-                    Assert.Equal(serverUrl + "/databases/"+documentStore.DefaultDatabase+"/docs?id=users/1", storedUrl);
+                    Assert.Equal(serverUrl + "/databases/"+documentStore.Database+"/docs?id=users/1", storedUrl);
                 }
             }
         }

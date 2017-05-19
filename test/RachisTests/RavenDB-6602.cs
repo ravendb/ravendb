@@ -26,7 +26,7 @@ namespace RachisTests
             const string databaseName = "RequestExecutor_failover_with_only_one_database_should_properly_fail";
             using (var store = new DocumentStore
             {
-                DefaultDatabase = databaseName,
+                Database = databaseName,
                 Url = leader.WebUrls[0]
             }.Initialize())
             {
@@ -60,7 +60,7 @@ namespace RachisTests
             const string databaseName = "RequestExecutor_failover_to_database_topology_should_work";
             using (var store = new DocumentStore
             {
-                DefaultDatabase = databaseName,
+                Database = databaseName,
                 Url = leader.WebUrls[0]
             }.Initialize())
             {
@@ -71,7 +71,7 @@ namespace RachisTests
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
 
                 await ((DocumentStore)store).ForceUpdateTopologyFor(databaseName);
-                var requestExecutor = ((DocumentStore)store).GetRequestExecuter(databaseName);
+                var requestExecutor = ((DocumentStore)store).GetRequestExecutor(databaseName);
 
                 using (var session = store.OpenSession(databaseName))
                 {

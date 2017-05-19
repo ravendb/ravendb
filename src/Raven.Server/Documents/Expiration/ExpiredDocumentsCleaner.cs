@@ -12,6 +12,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Server;
 using Raven.Client.Server.Expiration;
 using Raven.Server.Json;
 using Raven.Server.Background;

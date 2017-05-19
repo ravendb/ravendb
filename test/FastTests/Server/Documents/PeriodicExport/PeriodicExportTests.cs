@@ -41,7 +41,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                     FullExportIntervalMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds,
                     IntervalMilliseconds = (long)TimeSpan.FromDays(50).TotalMilliseconds
                 };
-                await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.DefaultDatabase));
+                await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));
 
                 var periodicExportRunner = (await GetDocumentDatabaseInstanceFor(store)).BundleLoader.PeriodicExportRunner;
                 Assert.Equal(50, periodicExportRunner.IncrementalInterval.TotalDays);
@@ -63,7 +63,7 @@ namespace FastTests.Server.Documents.PeriodicExport
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
                     };
-                    await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.DefaultDatabase));
+                    await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));
                     await session.SaveChangesAsync();
 
                 }

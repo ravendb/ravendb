@@ -340,7 +340,7 @@ namespace Raven.Client.Http
                         throw new AllTopologyNodesDownException("Received unsuccessful response and couldn't recover from it.",
                             new AggregateException(command.FailedNodes.Select(x => new UnsuccessfulRequestException(x.Key.Url, x.Value))));
                     }
-                    return; // we either handled this already in the unsuccessul response or we are throwing
+                    return; // we either handled this already in the unsuccessful response or we are throwing
                 }
                 await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
             }

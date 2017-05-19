@@ -11,8 +11,8 @@ namespace Raven.Client.Server.Operations
 {
     public class ConfigurePeriodicBackupOperation : IServerOperation<ConfigurePeriodicBackupOperationResult>
     {
-        private PeriodicBackupConfiguration _configuration;
-        private string _databaseName;
+        private readonly PeriodicBackupConfiguration _configuration;
+        private readonly string _databaseName;
 
         public ConfigurePeriodicBackupOperation(PeriodicBackupConfiguration configuration, string databaseName)
         {
@@ -27,9 +27,9 @@ namespace Raven.Client.Server.Operations
 
     public class ConfigurePeriodicBackupCommand : RavenCommand<ConfigurePeriodicBackupOperationResult>
     {
-        private PeriodicBackupConfiguration _configuration;
+        private readonly PeriodicBackupConfiguration _configuration;
         private readonly string _databaseName;
-        private JsonOperationContext _context;
+        private readonly JsonOperationContext _context;
 
         public ConfigurePeriodicBackupCommand(PeriodicBackupConfiguration configuration, string databaseName, JsonOperationContext context)
         {

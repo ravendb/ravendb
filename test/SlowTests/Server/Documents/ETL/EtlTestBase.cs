@@ -38,14 +38,14 @@ namespace SlowTests.Server.Documents.ETL
                     {
                         Destination = new RavenDestination
                         {
-                            Database = dst.DefaultDatabase,
+                            Database = dst.Database,
                             Url = dst.Url
                         },
                         Transforms =
                         {
                             new Transformation
                             {
-                                Name = $"ETL : {src.DefaultDatabase}@{src.Url} to {dst.DefaultDatabase}@{dst.Url}",
+                                Name = $"ETL : {src.Database}@{src.Url} to {dst.Database}@{dst.Url}",
                                 Collections = new List<string>(collections),
                                 Script = script,
                                 ApplyToAllDocuments = applyToAllDocuments,
@@ -60,7 +60,7 @@ namespace SlowTests.Server.Documents.ETL
 
         protected ManualResetEventSlim WaitForEtl(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
         {
-            var database = GetDatabase(store.DefaultDatabase).Result;
+            var database = GetDatabase(store.Database).Result;
 
             var mre = new ManualResetEventSlim();
 

@@ -15,6 +15,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Http.OAuth;
+using Raven.Client.Server;
 using Raven.Client.Server.Tcp;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
@@ -422,7 +423,7 @@ namespace Raven.Server.ServerWide
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
-                    TaskExecuter.Execute(_ =>
+                    TaskExecutor.Execute(_ =>
                     {
                         try
                         {
@@ -718,7 +719,7 @@ namespace Raven.Server.ServerWide
             if (onDatabaseChanged != null)
             {
                 _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex);
-                TaskExecuter.Execute(_ =>
+                TaskExecutor.Execute(_ =>
                 {
                     foreach (var db in listOfDatabaseName)
                         onDatabaseChanged.Invoke(this, (db, lastIncludedIndex));

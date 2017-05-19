@@ -7,6 +7,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
+using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;

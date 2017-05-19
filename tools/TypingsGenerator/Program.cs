@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
@@ -26,7 +25,6 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.Versioning;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Replication;
@@ -42,9 +40,9 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using TypeScripter;
 using TypeScripter.TypeScript;
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 using Voron.Data.BTrees;
 using Voron.Debugging;
-using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace TypingsGenerator
 {

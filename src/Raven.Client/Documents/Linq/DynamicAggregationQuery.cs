@@ -103,7 +103,7 @@ namespace Raven.Client.Documents.Linq
                 return;
             }
             if ((string.IsNullOrEmpty(last.AggregationField) == false) && (!last.AggregationField.Equals(path.ToPropertyPath())))
-                throw new InvalidOperationException("Cannot call different aggregation function with differentt parameters at the same aggregation. Use AndAggregateOn");
+                throw new InvalidOperationException("Cannot call different aggregation function with different parameters at the same aggregation. Use AndAggregateOn");
 
             last.AggregationField = path.ToPropertyPath();
             last.AggregationType = path.ExtractTypeFromPath().FullName;

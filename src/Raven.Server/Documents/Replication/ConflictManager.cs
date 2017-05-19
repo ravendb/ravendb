@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Server;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;

@@ -53,7 +53,7 @@ namespace FastTests.Issues
                     //add non-etl destination
                     replicationDocument.Destinations.Add(new ReplicationNode
                     {
-                        Database = storeD.DefaultDatabase,
+                        Database = storeD.Database,
                         Url = storeD.Url
                     });
 

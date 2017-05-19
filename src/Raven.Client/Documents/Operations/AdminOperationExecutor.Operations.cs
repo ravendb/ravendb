@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public partial class AdminOperationExecuter
+    public partial class AdminOperationExecutor
     {
         public Operation Send(IAdminOperation<OperationIdResult> operation)
         {

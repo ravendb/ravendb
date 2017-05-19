@@ -114,7 +114,7 @@ namespace SlowTests.Bugs.MultiTenancy
             {
                 var doc = MultiDatabase.CreateDatabaseDocument("Northwind");
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
-                store.DefaultDatabase = "Northwind";
+                store.Database = "Northwind";
 
                 string userId;
 

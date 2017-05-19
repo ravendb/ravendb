@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Tests.Core.Utils.Entities;
@@ -42,7 +41,7 @@ namespace FastTests.Server.Basic
         {
             using (var store = GetDocumentStore())
             {
-                var requestExecuter = store.GetRequestExecuter();
+                var requestExecuter = store.GetRequestExecutor();
 
                 using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
@@ -60,12 +59,7 @@ namespace FastTests.Server.Basic
 
                     var json = context.ReadObject(djv, "users/1");
 
-                    var putCommand = new PutDocumentCommand
-                    {
-                        Context = context,
-                        Id = "users/1",
-                        Document = json
-                    };
+                    var putCommand = new PutDocumentCommand("users/1", null, json, context);
 
                     requestExecuter.Execute(putCommand, context);
 
@@ -76,12 +70,7 @@ namespace FastTests.Server.Basic
 
                     json = context.ReadObject(djv, "users/1");
 
-                    putCommand = new PutDocumentCommand
-                    {
-                        Context = context,
-                        Id = "users/1",
-                        Document = json
-                    };
+                    putCommand = new PutDocumentCommand("users/1", null, json, context);
 
                     requestExecuter.Execute(putCommand, context);
                 }

@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Subscriptions
 
     public delegate void SubscriptionConnectionInterrupted(Exception ex, bool willReconnect);
 
-    public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class
+    public class Subscription<T> : IObservable<T>, IAsyncDisposable, IDisposable where T : class
     {
         private readonly Logger _logger;
         private readonly IDocumentStore _store;
@@ -69,7 +69,7 @@ namespace Raven.Client.Documents.Subscriptions
         public Exception LastSubscriberException { get; private set; }
 
         /// <summary>
-        /// Task that will be completed when the subscription connection will close and self dispose, or errorous if subscription connection is entirely interrupted
+        /// Task that will be completed when the subscription connection will close and self dispose, or error if subscription connection is entirely interrupted
         /// </summary>
         public Task SubscriptionLifetimeTask { private set; get; }
 
@@ -79,12 +79,12 @@ namespace Raven.Client.Documents.Subscriptions
         public bool IsConnectionClosed { get; private set; }
 
         /// <summary>
-        /// Called before received batch starts to be proccessed by subscribers
+        /// Called before received batch starts to be processed by subscribers
         /// </summary>
         public event BeforeBatch BeforeBatch = delegate { };
 
         /// <summary>
-        /// Called after received batch finished being proccessed by subscribers
+        /// Called after received batch finished being processed by subscribers
         /// </summary>
         public event AfterBatch AfterBatch = delegate { };
 
@@ -201,7 +201,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         /// <summary>
-        /// allows the user to define stuff that happens after the confirm was recieved from the server (this way we know we won't
+        /// allows the user to define stuff that happens after the confirm was received from the server (this way we know we won't
         /// get those documents again)
         /// </summary>
         public event AfterAcknowledgment AfterAcknowledgment = delegate { };
@@ -241,12 +241,12 @@ namespace Raven.Client.Documents.Subscriptions
             var command = new GetTcpInfoCommand("Subscription/"+_dbName);
 
             JsonOperationContext context;
-            var requestExecuter = _store.GetRequestExecuter(_dbName ?? _store.DefaultDatabase);
+            var requestExecutor = _store.GetRequestExecutor(_dbName ?? _store.Database);
 
-            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+            using (requestExecutor.ContextPool.AllocateOperationContext(out context))
             {
-                await requestExecuter.ExecuteAsync(command, context).ConfigureAwait(false);
-                var apiToken = await requestExecuter.GetAuthenticationToken(context, command.RequestedNode).ConfigureAwait(false);
+                await requestExecutor.ExecuteAsync(command, context).ConfigureAwait(false);
+                var apiToken = await requestExecutor.GetAuthenticationToken(context, command.RequestedNode).ConfigureAwait(false);
                 var uri = new Uri(command.Result.Url);
 
                 await _tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
@@ -260,7 +260,7 @@ namespace Raven.Client.Documents.Subscriptions
                 var header = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
                 {
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
-                    DatabaseName = _dbName ?? _store.DefaultDatabase,
+                    DatabaseName = _dbName ?? _store.Database,
                     AuthorizationToken = apiToken
                 }));
 
@@ -292,7 +292,7 @@ namespace Raven.Client.Documents.Subscriptions
         private void AssertConnectionState(SubscriptionConnectionServerMessage connectionStatus)
         {
             if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.CoonectionStatus)
-                throw new Exception("Server returned illegal type message when excpecting connection status, was: " +
+                throw new Exception("Server returned illegal type message when expecting connection status, was: " +
                                     connectionStatus.Type);
 
             switch (connectionStatus.Status)
@@ -319,7 +319,7 @@ namespace Raven.Client.Documents.Subscriptions
             try
             {
                 _proccessingCts.Token.ThrowIfCancellationRequested();
-                var contextPool = _store.GetRequestExecuter(_dbName).ContextPool;
+                var contextPool = _store.GetRequestExecutor(_dbName).ContextPool;
                 using (var buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                 {
                     using (var tcpStream = await ConnectToServer().ConfigureAwait(false))

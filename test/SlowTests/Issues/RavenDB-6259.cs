@@ -96,7 +96,7 @@ namespace SlowTests.Issues
 
                 Assert.True(WaitForDocument(slave, "marker2"));
 
-                var slaveServer = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(slave.DefaultDatabase);
+                var slaveServer = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(slave.Database);
                 DocumentsOperationContext context;
                 using (slaveServer.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 using (context.OpenReadTransaction())

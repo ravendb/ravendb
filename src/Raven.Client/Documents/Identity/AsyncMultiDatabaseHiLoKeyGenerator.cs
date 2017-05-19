@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Identity
         public Task<string> GenerateDocumentKeyAsync(string dbName,
                                                      object entity)
         {
-            var db = dbName ?? _store.DefaultDatabase;
+            var db = dbName ?? _store.Database;
             var generator = _generators.GetOrAdd(db, GenrateAsyncMultiTypeHiLoFunc);
             return generator.GenerateDocumentKeyAsync(entity);
         }

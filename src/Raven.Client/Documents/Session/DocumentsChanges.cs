@@ -25,12 +25,12 @@ namespace Raven.Client.Documents.Session
         public BlittableJsonToken FieldNewType { get; set; }
 
         /// <summary>
-        /// Type of change that occured.
+        /// Type of change that occurred.
         /// </summary>
         public ChangeType Change { get; set; }
 
         /// <summary>
-        /// Name of field on which the change occured.
+        /// Name of field on which the change occurred.
         /// </summary>
         public string FieldName { get; set; }
 

@@ -392,7 +392,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public static SuggestionQueryResult Suggest(this IQueryable queryable, SuggestionQuery query)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("This feature is not yet implemented");
             /*var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
             return ravenQueryInspector.DatabaseCommands.Suggest(ravenQueryInspector.IndexQueried, query);*/
@@ -403,7 +403,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable queryable)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("This feature is not yet implemented");
             //return SuggestLazy(queryable, new SuggestionQuery());
         }
 
@@ -412,7 +412,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable queryable, SuggestionQuery query)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("This feature is not yet implemented");
             //var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             //SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
 
@@ -440,7 +440,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public static Task<SuggestionQueryResult> SuggestAsync(this IQueryable queryable, SuggestionQuery query, CancellationToken token = default(CancellationToken))
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException("This feature is not yet implemented");
             /* var ravenQueryInspector = ((IRavenQueryInspector)queryable);
              SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query, true);
 

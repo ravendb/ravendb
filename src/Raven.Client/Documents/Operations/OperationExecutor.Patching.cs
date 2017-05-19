@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public partial class OperationExecuter
+    public partial class OperationExecutor
     {
         public PatchStatus Send(PatchOperation operation)
         {

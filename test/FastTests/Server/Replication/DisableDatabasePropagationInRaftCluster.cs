@@ -27,12 +27,12 @@ namespace FastTests.Server.Replication
             using (var master = new DocumentStore
             {
                 Url = leaderServer.WebUrls[0],
-                DefaultDatabase = databaseName
+                Database = databaseName
             })
             using (var slave = new DocumentStore
             {
                 Url = slaveServer.WebUrls[0],
-                DefaultDatabase = databaseName
+                Database = databaseName
             })
             {
                 master.Initialize();
@@ -44,7 +44,7 @@ namespace FastTests.Server.Replication
                 var databaseResult = master.Admin.Server.Send(new CreateDatabaseOperation(doc, 2));
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.ETag ?? 0, TimeSpan.FromSeconds(5));
 
-                var requestExecutor = master.GetRequestExecuter();
+                var requestExecutor = master.GetRequestExecutor();
                 await Task.WhenAny(requestExecutor.UpdateTopologyAsync(), Task.Delay(TimeSpan.FromSeconds(10)));
                 
                 using (var session = master.OpenSession())
@@ -68,11 +68,11 @@ namespace FastTests.Server.Replication
                     Assert.Equal("Shalom", user2.Name);
                 }
 
-                var result = master.Admin.Server.Send(new DisableDatabaseToggleOperation(master.DefaultDatabase, true));
+                var result = master.Admin.Server.Send(new DisableDatabaseToggleOperation(master.Database, true));
 
                 Assert.True(result.Success);
                 Assert.True(result.Disabled);
-                Assert.Equal(master.DefaultDatabase, result.Name);
+                Assert.Equal(master.Database, result.Name);
 
                 //wait until disabled databases unload, this is an immediate operation
                 Assert.True(await WaitUntilDatabaseHasState(master, TimeSpan.FromSeconds(10), isLoaded: false));
@@ -93,11 +93,11 @@ namespace FastTests.Server.Replication
                 }
 
                 //now we enable all databases, so it should propagate as well and make them available for requests
-                result = master.Admin.Server.Send(new DisableDatabaseToggleOperation(master.DefaultDatabase, false));
+                result = master.Admin.Server.Send(new DisableDatabaseToggleOperation(master.Database, false));
                 
                 Assert.True(result.Success);
                 Assert.False(result.Disabled);
-                Assert.Equal(master.DefaultDatabase, result.Name);
+                Assert.Equal(master.Database, result.Name);
                 using (var session = master.OpenSession())
                 {
                     var user1 = session.Load<User>("users/1");

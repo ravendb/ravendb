@@ -26,7 +26,7 @@ namespace SlowTests.Voron.Bugs
 
                 WaitForIndexing(store);
 
-                Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.DefaultDatabase);
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.Database);
 
                 store.Operations.Send(new PatchCollectionOperation("Orders", new PatchRequest()
                 {
@@ -35,7 +35,7 @@ namespace SlowTests.Voron.Bugs
 
                 WaitForIndexing(store);
 
-                var errors = store.Admin.ForDatabase(store.DefaultDatabase).Send(new GetIndexErrorsOperation());
+                var errors = store.Admin.ForDatabase(store.Database).Send(new GetIndexErrorsOperation());
 
                 Assert.Empty(errors.SelectMany(x => x.Errors));
             }

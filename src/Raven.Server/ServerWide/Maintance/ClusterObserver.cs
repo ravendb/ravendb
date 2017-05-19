@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Server;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;

@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, IAdvancedSessionOperation, IDocumentSessionImpl
     {
-        private OperationExecuter _operations;
+        private OperationExecutor _operations;
 
         /// <summary>
         /// Get the accessor for advanced operations
@@ -100,11 +100,7 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException("Cannot refresh a transient instance");
             IncrementRequestCount();
 
-            var command = new GetDocumentCommand
-            {
-                Ids = new[] { documentInfo.Id },
-                Context = Context
-            };
+            var command = new GetDocumentCommand(new[] { documentInfo.Id }, includes: null, transformer: null, transformerParameters: null, metadataOnly: false, context: Context);
             RequestExecutor.Execute(command, Context);
 
             RefreshInternal(entity, command, documentInfo);

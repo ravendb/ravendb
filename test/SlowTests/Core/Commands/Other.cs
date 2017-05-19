@@ -47,7 +47,7 @@ namespace SlowTests.Core.Commands
             using (var store = GetDocumentStore())
             {
                 var names = await store.Admin.Server.SendAsync(new GetDatabaseNamesOperation(0, 25));
-                Assert.Contains(store.DefaultDatabase, names);
+                Assert.Contains(store.Database, names);
             }
         }
 
@@ -79,8 +79,8 @@ namespace SlowTests.Core.Commands
                         null);
                 }
 
-                using (var commands1 = store1.Commands(store2.DefaultDatabase))
-                using (var commands2 = store2.Commands(store1.DefaultDatabase))
+                using (var commands1 = store1.Commands(store2.Database))
+                using (var commands2 = store2.Commands(store1.Database))
                 {
                     dynamic doc = commands1.Get("items/2");
                     Assert.NotNull(doc);
@@ -98,7 +98,7 @@ namespace SlowTests.Core.Commands
         {
             using (var store = GetDocumentStore())
             {
-                Assert.Equal(store.Url + "/databases/" + store.DefaultDatabase + "/docs?id=items/1", store.GetRequestExecuter().UrlFor("items/1"));
+                Assert.Equal(store.Url + "/databases/" + store.Database + "/docs?id=items/1", store.GetRequestExecutor().UrlFor("items/1"));
             }
         }
 

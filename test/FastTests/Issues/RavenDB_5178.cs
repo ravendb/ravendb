@@ -18,7 +18,7 @@ namespace FastTests.Issues
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
                 try
                 {
-                    store.DefaultDatabase = longName;
+                    store.Database = longName;
 
                     var db = GetDocumentDatabaseInstanceFor(store).Result;
 

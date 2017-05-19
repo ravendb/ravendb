@@ -64,11 +64,25 @@ namespace FastTests.Issues
             {
                 foreach (var commandType in assembly
                     .GetTypes()
-                    .Where(x => x.GetTypeInfo().IsSubclassOf(typeof(RavenCommand))))
+                    .Where(x => IsSubclassOfGenericType(typeof(RavenCommand<>), x)))
                 {
                     yield return commandType;
                 }
             }
+        }
+
+        private static bool IsSubclassOfGenericType(Type genericType, Type type)
+        {
+            while (type != null && type != typeof(object))
+            {
+                var current = type.GetTypeInfo().IsGenericType ? type.GetGenericTypeDefinition() : type;
+                if (genericType == current)
+                    return true;
+
+                type = type.GetTypeInfo().BaseType;
+            }
+
+            return false;
         }
     }
 }

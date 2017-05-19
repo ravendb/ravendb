@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// The session id 
         /// </summary>
-        public Guid Id { get; private set; }
+        public Guid Id { get; }
 
         /// <summary>
         /// The entities waiting to be deleted
@@ -561,7 +561,7 @@ more responsive application.
             }
             else
             {
-                // Store it back into the Id field so the client has access to to it                    
+                // Store it back into the Id field so the client has access to it                    
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
             }
 
@@ -642,7 +642,7 @@ more responsive application.
                     return id;
 
                 var key = await GenerateKeyAsync(entity).ConfigureAwait(false);
-                // If we generated a new id, store it back into the Id field so the client has access to to it                    
+                // If we generated a new id, store it back into the Id field so the client has access to it                    
                 if (key != null)
                     GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, key);
                 return key;
@@ -827,13 +827,13 @@ more responsive application.
         private static void ThrowInvalidDeletedDocumentWithDefferredCommand(ICommandData resultCommand)
         {
             throw new InvalidOperationException(
-                $"Cannot perfrom save because document {resultCommand.Key} has been deleted by the session and is also taking part in deferred {resultCommand.Type} command");
+                $"Cannot perform save because document {resultCommand.Key} has been deleted by the session and is also taking part in deferred {resultCommand.Type} command");
         }
 
         private static void ThrowInvalidModifiedDocumentWithDefferredCommand(ICommandData resultCommand)
         {
             throw new InvalidOperationException(
-                $"Cannot perfrom save because document {resultCommand.Key} has been modified by the session and is also taking part in deferred {resultCommand.Type} command");
+                $"Cannot perform save because document {resultCommand.Key} has been modified by the session and is also taking part in deferred {resultCommand.Type} command");
         }
 
         protected bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)
@@ -964,7 +964,7 @@ more responsive application.
         ///     Defer commands to be executed on SaveChanges()
         /// </summary>
         /// <param name="command">Command to be executed</param>
-        /// <param name="commands">Array of comands to be executed.</param>
+        /// <param name="commands">Array of commands to be executed.</param>
         public void Defer(ICommandData command, params ICommandData[] commands)
         {
             _deferedCommands.Add(command);

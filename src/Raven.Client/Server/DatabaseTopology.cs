@@ -6,7 +6,7 @@ using Raven.Client.Documents.Replication;
 using Sparrow;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Documents
+namespace Raven.Client.Server
 {
     public class ConflictSolver
     {

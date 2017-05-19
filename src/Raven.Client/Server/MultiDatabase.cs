@@ -1,11 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Raven.Client.Documents;
 
 namespace Raven.Client.Server
 {
     ///<summary>
-    /// Methods to create multitenant databases
+    /// Methods to create multi-tenant databases
     ///</summary>
     public static class MultiDatabase
     {
@@ -15,10 +15,9 @@ namespace Raven.Client.Server
 
             return new DatabaseRecord(name)
             {
-                Settings = new System.Collections.Generic.Dictionary<string, string>(),
+                Settings = new Dictionary<string, string>()
             };
         }
-
 
         private const string ValidDbNameChars = @"([A-Za-z0-9_\-\.]+)";
 

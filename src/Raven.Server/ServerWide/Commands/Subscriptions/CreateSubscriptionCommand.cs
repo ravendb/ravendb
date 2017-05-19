@@ -4,6 +4,7 @@ using System.Text;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Server;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

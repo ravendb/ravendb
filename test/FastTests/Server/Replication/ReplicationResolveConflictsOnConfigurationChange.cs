@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Server;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -87,7 +88,7 @@ namespace FastTests.Server.Replication
             using (var store2 = GetDocumentStore())
             {
                 await GenerateConflicts(store1, store2);
-                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.DefaultDatabase).Result;
+                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
 
                 var config = new ConflictSolver
                 {
@@ -110,7 +111,7 @@ namespace FastTests.Server.Replication
                 await SetupReplicationAsync(store1);
                 await SetupReplicationAsync(store2);
                 await GenerateConflicts(store1, store2, "users/2");
-                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.DefaultDatabase).Result;
+                var storage1 = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
                 await UpdateConflictResolver(store1, storage1.DbId.ToString());
 
                 Assert.True(WaitForDocument<User>(store1, "users/1", u => u.Name == "Store1"));

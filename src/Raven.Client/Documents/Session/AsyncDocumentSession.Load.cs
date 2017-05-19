@@ -100,7 +100,7 @@ namespace Raven.Client.Documents.Session
         /// Begins the async load operation
         /// </summary>
         /// <param name="id">The id.</param>
-        /// <param name="token">The canecllation token.</param>
+        /// <param name="token">The cancellation token.</param>
         /// <returns></returns>
         public async Task<T> LoadAsync<T>(string id, CancellationToken token = default(CancellationToken))
         {
