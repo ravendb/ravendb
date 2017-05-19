@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
 using Raven.Client.Util;
-using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Server;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Commercial;
@@ -208,7 +208,7 @@ namespace Raven.Server.ServerWide
 
             options.OnNonDurableFileSystemError += (obj, e) =>
             {
-                var alert = AlertRaised.Create("Non Durable File System - System Database",
+                var alert = AlertRaised.Create("Non Durable File System - System Storage",
                     e.Message,
                     AlertType.NonDurableFileSystem,
                     NotificationSeverity.Warning,
@@ -226,7 +226,7 @@ namespace Raven.Server.ServerWide
 
             options.OnRecoveryError += (obj, e) =>
             {
-                var alert = AlertRaised.Create("Database Recovery Error - System Database",
+                var alert = AlertRaised.Create("Recovery Error - System Storage",
                     e.Message,
                     AlertType.NonDurableFileSystem,
                     NotificationSeverity.Error,
@@ -253,7 +253,7 @@ namespace Raven.Server.ServerWide
                 }
                 catch (Exception e)
                 {
-                    throw new DatabaseLoadFailureException("Failed to load system database " + Environment.NewLine + $"At {options.BasePath}", e);
+                    throw new ServerLoadFailureException("Failed to load system storage " + Environment.NewLine + $"At {options.BasePath}", e);
                 }
             }
             catch (Exception e)
