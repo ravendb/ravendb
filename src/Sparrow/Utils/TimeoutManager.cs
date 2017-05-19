@@ -14,8 +14,7 @@ namespace Sparrow.Utils
 {
     public static class TimeoutManager
     {
-        private static readonly ConcurrentDictionary<uint, TimerTaskHolder> Values 
-            = new ConcurrentDictionary<uint, TimerTaskHolder>(NumericEqualityComparer.Instance);
+        private static readonly ConcurrentDictionary<int, TimerTaskHolder> Values = new ConcurrentDictionary<int, TimerTaskHolder>();
 
         private class TimerTaskHolder  : IDisposable
         {
@@ -69,7 +68,7 @@ namespace Sparrow.Utils
             if (mod != 0)
                 duration += 50 - mod;
 
-            var value = GetHolderForDuration(duration);
+            var value = GetHolderForDuration((int)duration);
 
             var sp = Stopwatch.StartNew();
             await value.NextTask;
@@ -79,7 +78,7 @@ namespace Sparrow.Utils
             if (sp.ElapsedMilliseconds >= (duration - step))
                 return;
 
-            value = GetHolderForDuration(step);
+            value = GetHolderForDuration((int)step);
 
             do
             {
@@ -89,11 +88,11 @@ namespace Sparrow.Utils
 
         }
 
-        private static TimerTaskHolder GetHolderForDuration(uint duration)
+        private static TimerTaskHolder GetHolderForDuration(int duration)
         {
             if (Values.TryGetValue(duration, out var value) == false)
             {
-                value = Values.GetOrAdd(duration, d => new TimerTaskHolder(d));
+                value = Values.GetOrAdd(duration, d => new TimerTaskHolder((uint)d));
             }
             return value;
         }

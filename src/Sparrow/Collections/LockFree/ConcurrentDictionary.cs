@@ -12,7 +12,7 @@ using static Sparrow.Collections.LockFree.DictionaryImpl;
 
 namespace Sparrow.Collections.LockFree
 {
-    public class ConcurrentDictionary<TKey, TValue> :
+    public sealed class ConcurrentDictionary<TKey, TValue> :
         IDictionary<TKey, TValue>,
         IReadOnlyDictionary<TKey, TValue>,
         IDictionary,
@@ -177,6 +177,9 @@ namespace Sparrow.Collections.LockFree
             }
             else
             {
+                if (typeof(TKey) == typeof(uint) || typeof(TKey) == typeof(ulong))
+                    throw new NotSupportedException("Unsupported until we have confirmation of how to by-pass the code-gen issue with the casting of Boxed<TKey>. Use int or long instead.");
+
                 if (typeof(TKey) == typeof(int))
                 {
                     if (comparer == null)
@@ -315,7 +318,7 @@ namespace Sparrow.Collections.LockFree
                     return value;
                 }
 
-                throw new KeyNotFoundException();
+                return ThrowKeyNotFound();
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
@@ -324,6 +327,11 @@ namespace Sparrow.Collections.LockFree
                 object newValObj = ToObjectValue(value);
                 _table.PutIfMatch(key, newValObj, ref oldValObj, ValueMatch.Any);
             }
+        }
+
+        private TValue ThrowKeyNotFound()
+        {
+            throw new KeyNotFoundException();
         }
 
         public bool ContainsKey(TKey key)
@@ -471,13 +479,7 @@ namespace Sparrow.Collections.LockFree
             throw new ArgumentNullException(nameof(array));
         }
 
-        public object SyncRoot
-        {
-            get
-            {
-                throw new NotSupportedException();
-            }
-        }
+        public object SyncRoot => throw new NotSupportedException();
 
         object IDictionary.this[object key]
         {
