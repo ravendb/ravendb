@@ -83,9 +83,12 @@ class document implements documentBase {
             return null;
         }
 
-        const slashIndex = id.lastIndexOf("/");
-        if (slashIndex >= 1) {
-            return id.substring(0, 1).toUpperCase() + id.substring(1, slashIndex);
+        // get first index of '/' or '|'. Otherwise return -1;
+        const indexes = [id.indexOf("/"), id.indexOf("|")].filter(x => x !== -1);
+        const separatorIndex = _.min(indexes.length ? indexes : [-1]);
+
+        if (separatorIndex >= 1) {
+            return id.substring(0, 1).toUpperCase() + id.substring(1, separatorIndex);
         }
 
         return id;
