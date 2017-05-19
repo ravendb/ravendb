@@ -473,6 +473,20 @@ namespace Voron
                     if (journal.Value.IsValueCreated)
                         journal.Value.Value.Dispose();
                 }
+
+                lock (_journalsForReuse)
+                {
+                    foreach (var reusableFile in _journalsForReuse.Values)
+                    {
+                        try
+                        {
+                            File.Delete(reusableFile);
+                        }
+                        catch (Exception)
+                        {
+                        }
+                    }
+                }
             }
 
             public override bool TryDeleteJournal(long number)
