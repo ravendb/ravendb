@@ -75,7 +75,8 @@ namespace Sparrow.Collections.LockFree
                 return boxed.Value;
             }
 
-            return ThrowNotSupported<TKey>();
+            ThrowNotSupported();
+            return default(TKey); // Will never execute
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -89,7 +90,11 @@ namespace Sparrow.Collections.LockFree
                 var boxed = (Boxed<TKey>)(object)entryKey;
                 other = boxed.Value;
             }
-            else return ThrowNotSupported<bool>();
+            else
+            {
+                ThrowNotSupported();
+                return false; // Will never execute                
+            }
 
             if (_keyComparer == null)
             {
@@ -108,7 +113,8 @@ namespace Sparrow.Collections.LockFree
                 if (typeof(TKey) == typeof(ulong))
                     return (ulong)(object)key == (ulong)(object)other;
 
-                return ThrowNotSupported<bool>();
+                ThrowNotSupported();
+                return false; // Will never execute
             }
             else
             {
@@ -132,9 +138,9 @@ namespace Sparrow.Collections.LockFree
             }            
         }
 
-        private T ThrowNotSupported<T>()
+        private void ThrowNotSupported()
         {
-            throw new NotSupportedException("TKeyStore not supported. This shouldnt happen.");
+            throw new NotSupportedException("TKeyStore not supported. This shouldn't happen.");
         }
 
         // claiming (by writing atomically to the entryKey location) 
@@ -190,7 +196,6 @@ namespace Sparrow.Collections.LockFree
 
             if (typeof(TKey) == typeof(int) || typeof(TKey) == typeof(uint) || typeof(TKey) == typeof(short) || typeof(TKey) == typeof(ushort) || typeof(TKey) == typeof(byte))
             {
-                // This is a fast hash combiner using a constant as seed. 
                 uint k;
 
                 if (typeof(TKey) == typeof(int))
@@ -201,13 +206,12 @@ namespace Sparrow.Collections.LockFree
                     k = (uint)(short)(object)key;
                 else if (typeof(TKey) == typeof(ushort))
                     k = (ushort)(object)key;
-                else // if (typeof(TKey) == typeof(byte))
+                else 
                     k = (byte)(object)key;
 
                 if (k == 0) return ZEROHASH;
 
-                uint rol5 = (k << 5) | (k >> 27);
-                h = (int)((rol5 + k) ^ 0xdeadbeef);
+                h = (int)Hashing.Mix(k);
             }
             else if (typeof(TKey) == typeof(long) || typeof(TKey) == typeof(ulong))
             {
@@ -215,16 +219,12 @@ namespace Sparrow.Collections.LockFree
                 ulong k;
                 if (typeof(TKey) == typeof(long))
                     k = (ulong)(long)(object)key;
-                else // if (typeof(TKey) == typeof(ulong))
+                else 
                     k = (ulong)(object)key;
 
                 if (k == 0) return ZEROHASH;
 
-                uint k1 = (uint) k;
-                uint k2 = (uint) (k >> 32);
-
-                uint rol5 = (k1 << 5) | (k1 >> 27);
-                h = (int)((rol5 + k1) ^ k2);
+                h = (int)Hashing.Mix(k);
             }
             else
             {
