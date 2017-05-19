@@ -20,7 +20,7 @@ namespace FastTests.Client.Subscriptions
         {
             if (useSsl)
             {
-                DoNotReuseServer(new global::Sparrow.Collections.LockFree.ConcurrentDictionary<string, string> { { "Raven/UseSsl", "true" } });
+                DoNotReuseServer(new ConcurrentDictionary<string, string> { ["Raven/UseSsl"] = "true" });
             }
             using (var store = GetDocumentStore())
             using (var subscriptionManager = new DocumentSubscriptions(store))
@@ -63,8 +63,9 @@ namespace FastTests.Client.Subscriptions
         {
             if (useSsl)
             {
-                DoNotReuseServer(new global::Sparrow.Collections.LockFree.ConcurrentDictionary<string, string> { { "Raven/UseSsl", "true" } });
+                DoNotReuseServer(new ConcurrentDictionary<string, string> { ["Raven/UseSsl"] = "true" });
             }
+
             using (var store = GetDocumentStore())
             using (var subscriptionManager = new DocumentSubscriptions(store))
             {
