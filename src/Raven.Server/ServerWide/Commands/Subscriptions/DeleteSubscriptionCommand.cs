@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Server;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

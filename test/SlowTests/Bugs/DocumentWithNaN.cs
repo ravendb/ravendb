@@ -29,7 +29,7 @@ namespace SlowTests.Bugs
                     BaseAddress = new Uri(store.Url)
                 };
 
-                var httpResponseMessage = await httpClient.PutAsync($"/databases/{store.DefaultDatabase}/docs?id=items/1",
+                var httpResponseMessage = await httpClient.PutAsync($"/databases/{store.Database}/docs?id=items/1",
                     new StringContent("{'item': NaN}"));
                 Assert.True(httpResponseMessage.IsSuccessStatusCode);
 

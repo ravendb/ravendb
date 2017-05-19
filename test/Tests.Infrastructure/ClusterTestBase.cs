@@ -75,7 +75,7 @@ namespace Tests.Infrastructure
 
         protected async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, bool isLoaded, string databaseName = null)
         {
-            var requestExecutor = store.GetRequestExecuter();
+            var requestExecutor = store.GetRequestExecutor();
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var shouldContinue = true;
@@ -168,7 +168,7 @@ namespace Tests.Infrastructure
                 stores.Add(new DocumentStore
                 {
                     Url = node.Url,
-                    DefaultDatabase = node.Database
+                    Database = node.Database
                 });
             }
             return stores;
@@ -234,7 +234,7 @@ namespace Tests.Infrastructure
 
                 var store = new DocumentStore
                 {
-                    DefaultDatabase = node.Database,
+                    Database = node.Database,
                     Url = url
                 };
 
@@ -336,8 +336,8 @@ namespace Tests.Infrastructure
         {
             //var index = FindStoreIndex(store);
             //Assert.False(index == -1, "Didn't find store index, most likely it doesn't belong to the cluster. Did you setup Raft cluster properly?");
-            //return Servers[index].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+            //return Servers[index].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
         }
 
         public async Task WaitForRaftIndexToBeAppliedInCluster(long index,  TimeSpan timeout)

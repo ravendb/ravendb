@@ -81,7 +81,7 @@ namespace Raven.Client.Util.RateLimiting
         }
 
         // Callback for the exit timer that exits the semaphore based on exit times 
-        // in the queue and then sets the timer for the nextexit time.
+        // in the queue and then sets the timer for the next exit time.
         private void ExitTimerCallback(object state)
         {
             // While there are exit times that are passed due still in the queue,

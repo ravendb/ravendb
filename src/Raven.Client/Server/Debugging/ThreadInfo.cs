@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace Raven.Client.Server.Debugging
 {
-    public class ThreadInfo
+    internal class ThreadInfo
     {
         public int Id { get; set; }
         public string Name { get; set; }

@@ -45,7 +45,7 @@ namespace BulkInsert.Benchmark
             store = new DocumentStore
             {
                 Url = url,
-                DefaultDatabase = "test"
+                Database = "test"
             };
 
             store.Initialize();

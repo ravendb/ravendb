@@ -31,7 +31,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var requestExecuter = store.GetRequestExecuter();
+                var requestExecuter = store.GetRequestExecutor();
                 using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var command = new TestQueryCommand(store.Conventions, context, new Users_ByName().IndexName, new IndexQuery() { WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(100), WaitForNonStaleResults = true });

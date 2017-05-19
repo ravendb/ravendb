@@ -61,10 +61,6 @@ namespace Raven.Client.Server.Operations
             {
                 Result = JsonDeserializationClient.DeleteDatabaseResult(response);
             }
-            /*
-            public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
-            {
-            }*/
             
             public override bool IsReadRequest => false;
         }

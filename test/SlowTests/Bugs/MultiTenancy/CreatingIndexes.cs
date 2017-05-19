@@ -28,7 +28,7 @@ namespace SlowTests.Bugs.MultiTenancy
             {
                 var doc = MultiDatabase.CreateDatabaseDocument("Test");
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
-                store.DefaultDatabase = "Test";
+                store.Database = "Test";
 
                 var indexDefinition = new IndexDefinitionBuilder<Test, Test>("TestIndex")
                                                         {

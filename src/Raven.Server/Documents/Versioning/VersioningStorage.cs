@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Server;
 using Raven.Client.Server.Versioning;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;

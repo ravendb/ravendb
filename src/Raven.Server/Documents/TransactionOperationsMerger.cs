@@ -562,13 +562,13 @@ namespace Raven.Server.Documents
 
         private void NotifyOnThreadPool(MergedTransactionCommand cmd)
         {
-            TaskExecuter.Execute(DoCommandNotification, cmd);
+            TaskExecutor.Execute(DoCommandNotification, cmd);
         }
 
 
         private void NotifyOnThreadPool(List<MergedTransactionCommand> cmds)
         {
-            TaskExecuter.Execute(DoCommandsNotification, cmds);
+            TaskExecutor.Execute(DoCommandsNotification, cmds);
         }
 
 

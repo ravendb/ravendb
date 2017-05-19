@@ -35,7 +35,7 @@ namespace SlowTests.Server.Rachis
             using (var store = new DocumentStore()
             {
                 Url = leader.WebUrls[0],
-                DefaultDatabase = databaseName
+                Database = databaseName
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);

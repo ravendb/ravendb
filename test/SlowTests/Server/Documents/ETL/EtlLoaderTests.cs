@@ -15,7 +15,7 @@ namespace SlowTests.Server.Documents.ETL
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDatabase(store.DefaultDatabase);
+                var database = await GetDatabase(store.Database);
 
                 var notifications = new AsyncQueue<Notification>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
@@ -57,7 +57,7 @@ namespace SlowTests.Server.Documents.ETL
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDatabase(store.DefaultDatabase);
+                var database = await GetDatabase(store.Database);
 
                 var notifications = new AsyncQueue<Notification>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
@@ -104,7 +104,7 @@ namespace SlowTests.Server.Documents.ETL
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDatabase(store.DefaultDatabase);
+                var database = await GetDatabase(store.Database);
 
                 var notifications = new AsyncQueue<Notification>();
                 using (database.NotificationCenter.TrackActions(notifications, null))

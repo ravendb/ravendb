@@ -39,7 +39,7 @@ namespace SlowTests.Server.Documents.PeriodicExport
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
                     };
-                    await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.DefaultDatabase));                    
+                    await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));                    
                     await session.SaveChangesAsync();
                 }
 
@@ -55,7 +55,7 @@ namespace SlowTests.Server.Documents.PeriodicExport
                     .SetValue(periodicExportRunner, TimeSpan.FromMilliseconds(5));
 
                 var operation = new GetPeriodicBackupStatusOperation();
-                    //await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.DefaultDatabase));
+                    //await store.Admin.Server.SendAsync(new ConfigurePeriodicBackupOperation(config, store.Database));
                 SpinWait.SpinUntil(() =>
                 {
                     var result = store.Admin.Server.Send(operation);
@@ -106,7 +106,7 @@ namespace SlowTests.Server.Documents.PeriodicExport
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
                     };
-                    var operation = new ConfigurePeriodicBackupOperation(config, store.DefaultDatabase);
+                    var operation = new ConfigurePeriodicBackupOperation(config, store.Database);
                     await store.Admin.Server.SendAsync(operation);
                     await session.SaveChangesAsync();
                 }
@@ -152,7 +152,7 @@ namespace SlowTests.Server.Documents.PeriodicExport
                         LocalFolderName = _exportPath,
                         IntervalMilliseconds = 25
                     };
-                    var operation = new ConfigurePeriodicBackupOperation(config, store.DefaultDatabase);
+                    var operation = new ConfigurePeriodicBackupOperation(config, store.Database);
                     await store.Admin.Server.SendAsync(operation);
                     await session.SaveChangesAsync();
                 }

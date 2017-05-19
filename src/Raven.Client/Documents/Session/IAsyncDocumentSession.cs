@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Session
         Task StoreAsync(object entity, string id, CancellationToken token = default (CancellationToken));
 
         /// <summary>
-        ///     Check if document exisits
+        ///     Check if document exists
         /// </summary>
         /// <param name="id">Document id</param>
         Task<bool> ExistsAsync(string id);

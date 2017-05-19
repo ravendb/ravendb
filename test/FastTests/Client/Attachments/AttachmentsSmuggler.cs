@@ -20,7 +20,7 @@ namespace FastTests.Client.Attachments
             {
                 using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
                 {
-                    await VersioningHelper.SetupVersioning(Server.ServerStore, store1.DefaultDatabase, false, 4);
+                    await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database, false, 4);
                     AttachmentsVersioning.CreateDocumentWithAttachments(store1);
                     using (var bigStream = new MemoryStream(Enumerable.Range(1, 999 * 1024).Select(x => (byte)x).ToArray()))
                         store1.Operations.Send(new PutAttachmentOperation("users/1", "big-file", bigStream, "image/png"));
@@ -37,7 +37,7 @@ namespace FastTests.Client.Attachments
 
                 using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
                 {
-                    await VersioningHelper.SetupVersioning(Server.ServerStore, store2.DefaultDatabase);
+                    await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database);
 
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
 
@@ -264,7 +264,7 @@ namespace FastTests.Client.Attachments
             {
                 using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
                 {
-                    await VersioningHelper.SetupVersioning(Server.ServerStore, store1.DefaultDatabase, false, 4);
+                    await VersioningHelper.SetupVersioning(Server.ServerStore, store1.Database, false, 4);
                     using (var session = store1.OpenSession())
                     {
                         session.Store(new User { Name = "Fitzchak" }, "users/1");
@@ -292,7 +292,7 @@ namespace FastTests.Client.Attachments
 
                 using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
                 {
-                    await VersioningHelper.SetupVersioning(Server.ServerStore, store2.DefaultDatabase);
+                    await VersioningHelper.SetupVersioning(Server.ServerStore, store2.Database);
 
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
 

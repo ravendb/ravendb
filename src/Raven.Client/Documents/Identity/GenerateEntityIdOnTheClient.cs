@@ -71,7 +71,7 @@ namespace Raven.Client.Documents.Identity
                 if (TryGetIdFromDynamic(entity, out id) == false || id == null)
                 {
                     id = _generateKey(entity);
-                    // If we generated a new id, store it back into the Id field so the client has access to to it                    
+                    // If we generated a new id, store it back into the Id field so the client has access to it                    
                     if (id != null)
                         TrySetIdOnDynamic(entity, id);
                 }

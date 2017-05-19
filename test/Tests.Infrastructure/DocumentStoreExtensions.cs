@@ -37,12 +37,9 @@ namespace FastTests
 
             public DatabaseCommands(IDocumentStore store, string databaseName)
             {
-                if (store == null)
-                    throw new ArgumentNullException(nameof(store));
+                _store = store ?? throw new ArgumentNullException(nameof(store));
 
-                _store = store;
-
-                RequestExecutor = store.GetRequestExecuter(databaseName);
+                RequestExecutor = store.GetRequestExecutor(databaseName);
 
                 _returnContext = RequestExecutor.ContextPool.AllocateOperationContext(out Context);
             }
@@ -109,13 +106,7 @@ namespace FastTests
                     }
 
 
-                    var command = new PutDocumentCommand
-                    {
-                        Id = id,
-                        Etag = etag,
-                        Context = Context,
-                        Document = documentJson
-                    };
+                    var command = new PutDocumentCommand(id, etag, documentJson, Context);
 
                     await RequestExecutor.ExecuteAsync(command, Context, cancellationToken);
 
@@ -173,11 +164,7 @@ namespace FastTests
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));
 
-                var command = new GetDocumentCommand
-                {
-                    Id = id,
-                    MetadataOnly = metadataOnly
-                };
+                var command = new GetDocumentCommand(id, includes: null, transformer: null, transformerParameters: null, metadataOnly: metadataOnly);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
 
@@ -193,10 +180,7 @@ namespace FastTests
                 if (ids == null)
                     throw new ArgumentNullException(nameof(ids));
 
-                var command = new GetDocumentCommand
-                {
-                    Ids = ids
-                };
+                var command = new GetDocumentCommand(ids, includes: null, transformer: null, transformerParameters: null, metadataOnly: false, context: Context);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
 
@@ -205,11 +189,7 @@ namespace FastTests
 
             public async Task<DynamicArray> GetAsync(int start, int pageSize)
             {
-                var command = new GetDocumentCommand
-                {
-                    Start = start,
-                    PageSize = pageSize
-                };
+                var command = new GetDocumentCommand(start, pageSize);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
 

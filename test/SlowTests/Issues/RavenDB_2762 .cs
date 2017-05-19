@@ -36,7 +36,7 @@ namespace SlowTests.Issues
 
                 Assert.NotEmpty(errors);
          
-                Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.DefaultDatabase);
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.Database);
 
                 var recoveredErrors = store.Admin.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
 

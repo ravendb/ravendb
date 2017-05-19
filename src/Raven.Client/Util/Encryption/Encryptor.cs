@@ -16,31 +16,5 @@ namespace Raven.Client.Util.Encryption
         }
 
         public static IEncryptor Current { get; private set; }
-
-        public static Lazy<bool> IsFipsEnabled
-        {
-            get
-            {
-                return new Lazy<bool>(() =>
-                {
-                    try
-                    {
-                        var defaultEncryptor = new DefaultEncryptor();
-                        defaultEncryptor.Hash.Compute16(new byte[] { 1 });
-
-                        return false;
-                    }
-                    catch (Exception)
-                    {
-                        return true;
-                    }
-                });
-            }
-        }
-
-        public static void Initialize(bool useFips)
-        {
-            Current = useFips ? (IEncryptor)new FipsEncryptor() : new DefaultEncryptor();
-        }
     }
 }

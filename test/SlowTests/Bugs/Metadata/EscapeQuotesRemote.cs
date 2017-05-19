@@ -22,7 +22,7 @@ namespace SlowTests.Bugs.Metadata
             var doc = MultiDatabase.CreateDatabaseDocument(name);
 
             DoNotReuseServer();
-            using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), DefaultDatabase = name }.Initialize())
+            using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), Database = name }.Initialize())
             {
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
@@ -50,7 +50,7 @@ namespace SlowTests.Bugs.Metadata
             var doc = MultiDatabase.CreateDatabaseDocument(name);
 
             DoNotReuseServer();
-            using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), DefaultDatabase = name }.Initialize())
+            using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), Database = name }.Initialize())
             {
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 

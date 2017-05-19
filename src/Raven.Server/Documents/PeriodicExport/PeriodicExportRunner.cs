@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Server;
 using Raven.Client.Server.PeriodicExport;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;

@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var requestExecuter = store.GetRequestExecuter(store.DefaultDatabase);
+                var requestExecuter = store.GetRequestExecutor(store.Database);
                 requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context);
                 var getStatsCommand = new GetStatisticsCommand();
                 if (getStatsCommand != null)

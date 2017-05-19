@@ -2,6 +2,7 @@
 using FastTests.Server.Documents.Versioning;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Server;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -18,8 +19,8 @@ namespace FastTests.Server.Replication
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, master.DefaultDatabase);
-                //await VersioningHelper.SetupVersioning(Server.ServerStore, slave.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, master.Database);
+                //await VersioningHelper.SetupVersioning(Server.ServerStore, slave.Database);
 
                 await SetupReplicationAsync(master, slave);
 
@@ -51,8 +52,8 @@ namespace FastTests.Server.Replication
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, master.DefaultDatabase);
-                //await VersioningHelper.SetupVersioning(Server.ServerStore, slave.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, master.Database);
+                //await VersioningHelper.SetupVersioning(Server.ServerStore, slave.Database);
 
                 using (var session = master.OpenAsyncSession())
                 {
@@ -136,8 +137,8 @@ namespace FastTests.Server.Replication
             var user = new User { Name = "Name" };
             var user2 = new User { Name = "Name2" };
             
-            await VersioningHelper.SetupVersioning(Server.ServerStore, storeA.DefaultDatabase);
-            //await VersioningHelper.SetupVersioning(Server.ServerStore, storeB.DefaultDatabase);
+            await VersioningHelper.SetupVersioning(Server.ServerStore, storeA.Database);
+            //await VersioningHelper.SetupVersioning(Server.ServerStore, storeB.Database);
 
             using (var session = storeA.OpenAsyncSession())
             {
@@ -162,9 +163,9 @@ namespace FastTests.Server.Replication
             using (var storeB = GetDocumentStore())
             using (var storeC = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, storeA.DefaultDatabase);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, storeB.DefaultDatabase);
-                await VersioningHelper.SetupVersioning(Server.ServerStore, storeC.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, storeA.Database);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, storeB.Database);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, storeC.Database);
 
                 await SetupReplicationAsync(storeA, storeB);
 

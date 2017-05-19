@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             _store = store;
             _databaseName = databaseName;
-            _requestExecutor = store.GetRequestExecuter(databaseName);
+            _requestExecutor = store.GetRequestExecutor(databaseName);
         }
 
         public DatabaseSmuggler ForDatabase(string databaseName)

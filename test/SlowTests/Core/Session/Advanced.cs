@@ -244,7 +244,7 @@ namespace SlowTests.Core.Session
                     var company = session.Load<Company>("companies/1");
                     Assert.NotNull(company);
                     var uri = new Uri(session.Advanced.GetDocumentUrl(company));
-                    Assert.Equal(store.Url + "/databases/" + store.DefaultDatabase + "/docs?id=companies/1", uri.AbsoluteUri);
+                    Assert.Equal(store.Url + "/databases/" + store.Database + "/docs?id=companies/1", uri.AbsoluteUri);
                 }
             }
         }

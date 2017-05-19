@@ -45,8 +45,8 @@ namespace Raven.Client.Documents.Queries.Facets
         /// </summary>
         public string DisplayName
         {
-            get { return _displayName ?? Name; }
-            set { _displayName = value; }
+            get => _displayName ?? Name;
+            set => _displayName = value;
         }
 
         /// <summary>

@@ -18,17 +18,17 @@ namespace Raven.Client.Http.OAuth
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ApiKeyAuthenticator>("Client");
         private static readonly HttpClient Client = new HttpClient();
 
-        private readonly ConcurrentDictionary<string, byte[]> _ServersPublicKeys = new ConcurrentDictionary<string, byte[]>();
+        private readonly ConcurrentDictionary<string, byte[]> _serverPublicKeys = new ConcurrentDictionary<string, byte[]>();
 
         public async Task<string> GetAuthenticationTokenAsync(string apiKey, string serverUrl, JsonOperationContext context)
         {
             if (string.IsNullOrEmpty(apiKey))
                 return null;
 
-            if (_ServersPublicKeys.TryGetValue(serverUrl, out var serverPk) == false)
+            if (_serverPublicKeys.TryGetValue(serverUrl, out var serverPk) == false)
             {
                 serverPk = await GetServerPublicKey(context, serverUrl);
-                _ServersPublicKeys.TryAdd(serverUrl, serverPk);
+                _serverPublicKeys.TryAdd(serverUrl, serverPk);
             }
 
             try
@@ -45,7 +45,7 @@ namespace Raven.Client.Http.OAuth
 
                     var oldServerPk = serverPk;
                     serverPk = await GetServerPublicKey(context, serverUrl);
-                    _ServersPublicKeys.TryUpdate(serverUrl, serverPk, oldServerPk);
+                    _serverPublicKeys.TryUpdate(serverUrl, serverPk, oldServerPk);
                     request = BuildGetTokenRequest(context, apiKey, serverUrl, serverPk, privateKey, publicKey);
                     response = await Client.SendAsync(request);
                 }
@@ -132,7 +132,7 @@ namespace Raven.Client.Http.OAuth
 
 
                 if (Sodium.crypto_generichash(c, (UIntPtr)hashLen, bytes, (ulong)apiSecretBytes.Length, client_pk, (UIntPtr)publicKey.Length) != 0)
-                    throw new InvalidOperationException("Unable ot generate hash");
+                    throw new InvalidOperationException("Unable to generate hash");
 
                 if (Sodium.crypto_box_easy(
                         c,

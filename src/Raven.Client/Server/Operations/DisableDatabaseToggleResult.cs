@@ -9,10 +9,12 @@
         ///  If database disabled.
         /// </summary>
         public bool Disabled;
+
         /// <summary>
         ///  Name of the database.
         /// </summary>
         public string Name;
+
         /// <summary>
         ///  If request succeed.
         /// </summary>

@@ -112,7 +112,7 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
         public string AdditionalQuery { get; set; }
 
         /// <summary>
-        /// Values for the the mapping group fields to use as the basis for comparison
+        /// Values for the mapping group fields to use as the basis for comparison
         /// </summary>
         public Dictionary<string, string> MapGroupFields { get; set; }
 

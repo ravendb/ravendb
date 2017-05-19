@@ -128,7 +128,7 @@ namespace Raven.Client.Documents.Linq
         }
 
         /// <summary>
-        /// Implementation of the Contains ALL operatior
+        /// Implementation of the Contains ALL operator
         /// </summary>
         public static bool ContainsAll<T>(this IEnumerable<T> list, IEnumerable<T> items)
         {

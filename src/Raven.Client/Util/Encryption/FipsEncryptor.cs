@@ -164,41 +164,23 @@ namespace Raven.Client.Util.Encryption
 
             public byte[] Key
             {
-                get
-                {
-                    return _algorithm.Key;
-                }
+                get => _algorithm.Key;
 
-                set
-                {
-                    _algorithm.Key = value;
-                }
+                set => _algorithm.Key = value;
             }
 
             public byte[] IV
             {
-                get
-                {
-                    return _algorithm.IV;
-                }
+                get => _algorithm.IV;
 
-                set
-                {
-                    _algorithm.IV = value;
-                }
+                set => _algorithm.IV = value;
             }
 
             public int KeySize
             {
-                get
-                {
-                    return _algorithm.KeySize;
-                }
+                get => _algorithm.KeySize;
 
-                set
-                {
-                    _algorithm.KeySize = value;
-                }
+                set => _algorithm.KeySize = value;
             }
 
             public void GenerateKey()
@@ -231,6 +213,7 @@ namespace Raven.Client.Util.Encryption
                 _algorithm?.Dispose();
             }
         }
+
         internal class FipsAsymmetricalEncryptor : IAsymmetricalEncryptor
         {
             private readonly RSACng _algorithm;
@@ -248,15 +231,9 @@ namespace Raven.Client.Util.Encryption
 
             public int KeySize
             {
-                get
-                {
-                    return _algorithm.KeySize;
-                }
+                get => _algorithm.KeySize;
 
-                set
-                {
-                    _algorithm.KeySize = value;
-                }
+                set => _algorithm.KeySize = value;
             }
 
             public AsymmetricAlgorithm Algorithm => _algorithm;
@@ -279,7 +256,6 @@ namespace Raven.Client.Util.Encryption
             {
                 return _algorithm.Decrypt(bytes, RSAEncryptionPadding.OaepSHA256);
             }
-
 
             public void ImportParameters(RSAParameters parameters)
             {

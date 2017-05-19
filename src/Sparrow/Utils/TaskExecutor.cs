@@ -9,7 +9,7 @@ namespace Sparrow.Utils
     /// Allow to raise a task completion source with minimal costs
     /// and attempt to avoid stalls due to thread pool starvation
     /// </summary>
-    public static class TaskExecuter
+    public static class TaskExecutor
     {
         private static readonly Runner Instance = new Runner();
 

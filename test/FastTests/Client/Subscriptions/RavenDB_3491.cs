@@ -36,7 +36,7 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
 
                     var user2ChangeVector = session.Advanced.GetChangeVectorFor(us2);
-                    var subscriptionCreationParams = new SubscriptionCreationParams
+                    var subscriptionCreationParams = new SubscriptionCreationOptions
                     {
                         Criteria = new SubscriptionCriteria("Users"),
                         ChangeVector = user2ChangeVector
@@ -117,7 +117,7 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
 
                     var user2ChangeVector = session.Advanced.GetChangeVectorFor(us2);
-                    var subscriptionCreationParams = new SubscriptionCreationParams<User>
+                    var subscriptionCreationParams = new SubscriptionCreationOptions<User>
                     {
                         Criteria = new SubscriptionCriteria<User>(),
                         ChangeVector = user2ChangeVector
@@ -197,7 +197,7 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
 
                     var user2ChangeVector = session.Advanced.GetChangeVectorFor(us2);
-                    var subscriptionCreationParams = new SubscriptionCreationParams
+                    var subscriptionCreationParams = new SubscriptionCreationOptions
                     {
                         Criteria = new SubscriptionCriteria("Users"),
                         ChangeVector = user2ChangeVector

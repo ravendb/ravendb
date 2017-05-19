@@ -20,7 +20,7 @@ namespace FastTests.Server.Documents.Versioning
             var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -48,7 +48,7 @@ namespace FastTests.Server.Documents.Versioning
             var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -70,7 +70,7 @@ namespace FastTests.Server.Documents.Versioning
 
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>("companies/1");
@@ -99,7 +99,7 @@ namespace FastTests.Server.Documents.Versioning
             var comment = new Comment { Name = "foo" };
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(user);
@@ -123,7 +123,7 @@ namespace FastTests.Server.Documents.Versioning
             var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore(path: path))
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -137,7 +137,7 @@ namespace FastTests.Server.Documents.Versioning
                 }
 
                 var old = GetDocumentDatabaseInstanceFor(store).Result;
-                Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.DefaultDatabase, null, db => false);
+                Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.Database, null, db => false);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -158,7 +158,7 @@ namespace FastTests.Server.Documents.Versioning
             var product = new User { Name = "Hibernating" };
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(product);
@@ -194,7 +194,7 @@ namespace FastTests.Server.Documents.Versioning
             var product = new Product { Description = "A fine document db", Quantity = 5 };
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(product);
@@ -227,7 +227,7 @@ namespace FastTests.Server.Documents.Versioning
             var company = new Company { Name = "Company #1" };
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -254,7 +254,7 @@ namespace FastTests.Server.Documents.Versioning
         {
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -318,7 +318,7 @@ namespace FastTests.Server.Documents.Versioning
         {
             using (var store = GetDocumentStore())
             {
-                await VersioningHelper.SetupVersioning(Server.ServerStore, store.DefaultDatabase);
+                await VersioningHelper.SetupVersioning(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Hibernating" }, "users/1");

@@ -26,7 +26,7 @@ namespace SlowTests.Issues
 
                 using (Server.ServerStore.NotificationCenter.TrackActions(notifications, null))
                 {
-                    var database = await GetDatabase(store.DefaultDatabase);
+                    var database = await GetDatabase(store.Database);
 
                     Assert.Equal(1, Server.ServerStore.DatabasesLandlord.DatabasesCache.Count());
 

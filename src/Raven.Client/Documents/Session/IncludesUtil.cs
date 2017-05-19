@@ -89,7 +89,7 @@ namespace Raven.Client.Documents.Session
                 var value = (string)token;
 
                 // we need to check on both of them, with id & without id
-                // because people will do products/1 and detaisl/products/1 and want to be able
+                // because people will do products/1 and details/products/1 and want to be able
                 // to include on that
                 loadId(value, addition);
 
@@ -101,7 +101,7 @@ namespace Raven.Client.Documents.Session
                 var value = token.ToString();
 
                 // we need to check on both of them, with id & without id
-                // because people will do products/1 and detaisl/products/1 and want to be able
+                // because people will do products/1 and details/products/1 and want to be able
                 // to include on that
                 loadId(value, addition);
 

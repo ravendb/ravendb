@@ -44,7 +44,7 @@ namespace Indexing.Benchmark
             _store = new DocumentStore
             {
                 Url = url,
-                DefaultDatabase = DbName
+                Database = DbName
             }.Initialize();
 
             if (_store.Admin.Server.Send(new GetDatabaseNamesOperation(0, 100)).Contains(DbName))

@@ -70,12 +70,12 @@ namespace Raven.Client.Documents.Indexes
         public Dictionary<string, SortOptions> SortOptionsStrings { get; set; }
 
         /// <summary>
-        /// Get os set the analyzers
+        /// Get or set the analyzers
         /// </summary>
         public IDictionary<Expression<Func<TReduceResult, object>>, string> Analyzers { get; set; }
 
         /// <summary>
-        /// Get os set the analyzers
+        /// Get or set the analyzers
         /// </summary>
         public IDictionary<string, string> AnalyzersStrings { get; set; }
 

@@ -13,8 +13,8 @@ namespace Raven.Client.Documents.Indexes
 
         public new string this[string key]
         {
-            get { return base[key]; }
-            set { Add(key, value); }
+            get => base[key];
+            set => Add(key, value);
         }
 
         public string GetValue(string key)

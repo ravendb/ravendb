@@ -163,7 +163,7 @@ namespace FastTests.Client.Attachments
                     session.Delete(user);
 
                     var exception = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
-                    Assert.Equal("Cannot perfrom save because document users/1 has been deleted by the session and is also taking part in deferred AttachmentPUT command", exception.Message);
+                    Assert.Equal("Cannot perform save because document users/1 has been deleted by the session and is also taking part in deferred AttachmentPUT command", exception.Message);
                 }
             }
         }
@@ -188,7 +188,7 @@ namespace FastTests.Client.Attachments
                     session.Delete(user);
 
                     var exception = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
-                    Assert.Equal("Cannot perfrom save because document users/1 has been deleted by the session and is also taking part in deferred AttachmentPUT command", exception.Message);
+                    Assert.Equal("Cannot perform save because document users/1 has been deleted by the session and is also taking part in deferred AttachmentPUT command", exception.Message);
                 }
             }
         }

@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace Raven.Client.Documents.Queries.Spatial
 {
     /// <summary>
-    /// Santizes WKT strings, reducing them to 2D (discarding 3D and 4D values).
+    /// Sanitizes WKT strings, reducing them to 2D (discarding 3D and 4D values).
     /// We do this because we only index and query in 2D,
     /// but its nice to allow users to store shapes in 3D and 4D if they need to.
     /// </summary>

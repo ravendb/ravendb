@@ -11,10 +11,7 @@ namespace Raven.Client.Documents.Operations
         /// </summary>
         public int? MaxOpsPerSecond
         {
-            get
-            {
-                return _maxOpsPerSecond;
-            }
+            get => _maxOpsPerSecond;
 
             set
             {

@@ -43,7 +43,7 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore())
             {
-                var db = await GetDatabase(store.DefaultDatabase);
+                var db = await GetDatabase(store.Database);
                 db.Configuration.PerformanceHints.MaxWarnIndexOutputsPerDocument = 2;
 
                 using (var session = store.OpenSession())

@@ -22,7 +22,7 @@ namespace RachisTests.DatabaseCluster
             using (var store = new DocumentStore()
             {
                 Url = leader.WebUrls[0],
-                DefaultDatabase = databaseName
+                Database = databaseName
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
@@ -46,7 +46,7 @@ namespace RachisTests.DatabaseCluster
             using (var store = new DocumentStore()
             {
                 Url = leader.WebUrls[0],
-                DefaultDatabase = databaseName
+                Database = databaseName
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
@@ -60,7 +60,7 @@ namespace RachisTests.DatabaseCluster
                 using (var dbStore = new DocumentStore
                 {
                     Url = dbServer.WebUrls[0],
-                    DefaultDatabase = databaseName
+                    Database = databaseName
                 }.Initialize())
                 {
                     using (var session = dbStore.OpenAsyncSession())
@@ -92,7 +92,7 @@ namespace RachisTests.DatabaseCluster
             using (var store = new DocumentStore()
             {
                 Url = leader.WebUrls[0],
-                DefaultDatabase = databaseName
+                Database = databaseName
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
@@ -106,7 +106,7 @@ namespace RachisTests.DatabaseCluster
             using (var store = new DocumentStore()
             {
                 Url = Servers[1].WebUrls[0],
-                DefaultDatabase = databaseName
+                Database = databaseName
             }.Initialize())
             {
                 var val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 2);

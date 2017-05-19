@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Util.Helpers
 {
-    public class DevelopmentTimebombException : Exception
+    internal class DevelopmentTimebombException : Exception
     {
         public DevelopmentTimebombException()
         {
