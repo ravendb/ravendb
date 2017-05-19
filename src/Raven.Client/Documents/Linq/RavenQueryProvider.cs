@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Linq
         private readonly QueryStatistics _queryStatistics;
         private readonly QueryHighlightings _highlightings;
         private readonly bool _isMapReduce;
-        private readonly Dictionary<string, object> _transformerParamaters = new Dictionary<string, object>();
+        private readonly Dictionary<string, object> _transformerParameters = new Dictionary<string, object>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
@@ -80,7 +80,7 @@ namespace Raven.Client.Documents.Linq
         /// Gets the results transformer to use
         /// </summary>
         public string ResultTransformer { get; private set; }
-        public Dictionary<string, object> TransformerParameters => _transformerParamaters;
+        public Dictionary<string, object> TransformerParameters => _transformerParameters;
 
         public void AddQueryInput(string name, object value)
         {
@@ -89,7 +89,7 @@ namespace Raven.Client.Documents.Linq
 
         public void AddTransformerParameter(string name, object value)
         {
-            _transformerParamaters[name] = value;
+            _transformerParameters[name] = value;
         }
 
         public void AddTransformerParameter(string name, DateTime value)
@@ -119,7 +119,7 @@ namespace Raven.Client.Documents.Linq
             };
 
             ravenQueryProvider.Customize(_customizeQuery);
-            foreach (var transformerParam in _transformerParamaters)
+            foreach (var transformerParam in _transformerParameters)
             {
                 ravenQueryProvider.AddTransformerParameter(transformerParam.Key, transformerParam.Value);
             }
@@ -332,7 +332,7 @@ namespace Raven.Client.Documents.Linq
             return new RavenQueryProviderProcessor<TS>(_queryGenerator, _customizeQuery, _afterQueryExecuted, _afterStreamExecuted, _indexName,
                 FieldsToFetch,
                 FieldsToRename,
-                _isMapReduce, ResultTransformer, _transformerParamaters, OriginalQueryType);
+                _isMapReduce, ResultTransformer, _transformerParameters, OriginalQueryType);
         }
 
         /// <summary>

@@ -257,10 +257,10 @@ namespace Raven.Client.Http
             }
         }
 
-        public async Task ExecuteAsync<TResult>(ServerNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command, CancellationToken token = default(CancellationToken), bool shouldRetry = true)
+        public async Task ExecuteAsync<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, CancellationToken token = default(CancellationToken), bool shouldRetry = true)
         {         
             string url;
-            var request = CreateRequest(choosenNode, command, out url);
+            var request = CreateRequest(chosenNode, command, out url);
 
             long cachedEtag;
             BlittableJsonReaderObject cachedValue;
@@ -313,7 +313,7 @@ namespace Raven.Client.Http
                     if (shouldRetry == false)
                         throw;
 
-                    if (await HandleServerDown(choosenNode, context, command, request, response, e) == false)
+                    if (await HandleServerDown(chosenNode, context, command, request, response, e) == false)
                         throw new AllTopologyNodesDownException("Tried to send request to all configured nodes in the topology, all of them seem to be down or not responding.", _nodeSelector.Topology, e);
 
                     return;
@@ -332,7 +332,7 @@ namespace Raven.Client.Http
                 }
                 if (response.IsSuccessStatusCode == false)
                 {
-                    if (await HandleUnsuccessfulResponse(choosenNode, context, command, request, response, url).ConfigureAwait(false) == false)
+                    if (await HandleUnsuccessfulResponse(chosenNode, context, command, request, response, url).ConfigureAwait(false) == false)
                     {
                         if (command.FailedNodes.Count == 0) //precaution, should never happen at this point
                             throw new InvalidOperationException("Received unsuccessful response and couldn't recover from it. Also, no record of exceptions per failed nodes. This is weird and should not happen.");
@@ -376,7 +376,7 @@ namespace Raven.Client.Http
             return request;
         }
 
-        private async Task<bool> HandleUnsuccessfulResponse<TResult>(ServerNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, string url)
+        private async Task<bool> HandleUnsuccessfulResponse<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, string url)
         {
             switch (response.StatusCode)
             {
@@ -402,8 +402,8 @@ namespace Raven.Client.Http
                     oauthSource = oauthSource.Replace("localhost:", "localhost.fiddler:");
 #endif
 
-                    await HandleUnauthorized(choosenNode, context).ConfigureAwait(false);
-                    await ExecuteAsync(choosenNode, context, command).ConfigureAwait(false);
+                    await HandleUnauthorized(chosenNode, context).ConfigureAwait(false);
+                    await ExecuteAsync(chosenNode, context, command).ConfigureAwait(false);
                     return true;
                 case HttpStatusCode.Forbidden:
                     throw AuthorizationException.Forbidden(url);
@@ -411,7 +411,7 @@ namespace Raven.Client.Http
                 case HttpStatusCode.RequestTimeout:
                 case HttpStatusCode.BadGateway:
                 case HttpStatusCode.ServiceUnavailable:
-                    await HandleServerDown(choosenNode, context, command, request,response,  null).ConfigureAwait(false);
+                    await HandleServerDown(chosenNode, context, command, request,response,  null).ConfigureAwait(false);
                     break;
                 case HttpStatusCode.Conflict:
                     await HandleConflict(context, response).ConfigureAwait(false);

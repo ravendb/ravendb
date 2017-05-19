@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         protected readonly IDocumentQueryGenerator QueryGenerator;
         private readonly Action<QueryResult> _afterQueryExecuted;
-        private readonly Action<object> _afterStreamExcuted;
+        private readonly Action<object> _afterStreamExecuted;
         private bool _chainedWhere;
         private int _insideWhere;
         private IAbstractDocumentQuery<T> _documentQuery;
@@ -80,7 +80,7 @@ namespace Raven.Client.Documents.Linq
             IndexName = indexName;
             _isMapReduce = isMapReduce;
             _afterQueryExecuted = afterQueryExecuted;
-            _afterStreamExcuted = afterStreamExecuted;
+            _afterStreamExecuted = afterStreamExecuted;
             _customizeQuery = customizeQuery;
             _resultsTransformer = resultsTransformer;
             _transformerParameters = transformerParameters;
@@ -1288,7 +1288,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     if (_documentQuery.IndexName.StartsWith("dynamic/") == false)
                         throw new NotSupportedException("GroupBy method is only supported in dynamic map-reduce queries");
 
-                    if (expression.Arguments.Count == 5) // GroupBy(x => keySelector, x => elementSelector, x => resultSelecor, IEqualityComparer)
+                    if (expression.Arguments.Count == 5) // GroupBy(x => keySelector, x => elementSelector, x => resultSelector, IEqualityComparer)
                         throw new NotSupportedException("Dynamic map-reduce queries does not support a custom equality comparer");
 
                     VisitExpression(expression.Arguments[0]);

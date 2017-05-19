@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                         [nameof(ThreadInfo.State)] = thread.ThreadState,
                                         [nameof(ThreadInfo.WaitReason)] = thread.ThreadState == ThreadState.Wait ? thread.WaitReason : (ThreadWaitReason?)null,
                                         [nameof(ThreadInfo.TotalProcessorTime)] = thread.TotalProcessorTime,
-                                        [nameof(ThreadInfo.PriviligedProcessorTime)] = thread.PrivilegedProcessorTime,
+                                        [nameof(ThreadInfo.PrivilegedProcessorTime)] = thread.PrivilegedProcessorTime,
                                         [nameof(ThreadInfo.UserProcessorTime)] = thread.UserProcessorTime
                                     })));
                     write.Flush();

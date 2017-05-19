@@ -47,10 +47,10 @@ namespace Raven.Client.Documents.Session
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentNullException(nameof(name));
 
-            if (_deferedCommands.OfType<DeleteCommandData>().Any(c => c.Key == documentId))
+            if (_deferredCommands.OfType<DeleteCommandData>().Any(c => c.Key == documentId))
                 throw new InvalidOperationException($"Can't store attachment {name} on document {documentId}, there is a deferred command registered for this document to be deleted.");
 
-            if (_deferedCommands.OfType<PutAttachmentCommandData>().Any(c => c.Key == documentId && c.Name == name))
+            if (_deferredCommands.OfType<PutAttachmentCommandData>().Any(c => c.Key == documentId && c.Name == name))
                 throw new InvalidOperationException($"Can't store attachment {name} on document {documentId}, there is a deferred command registered for this document to be deleted.");
 
             if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&

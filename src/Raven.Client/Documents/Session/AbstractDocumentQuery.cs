@@ -1739,7 +1739,7 @@ If you really want to do in memory filtering on the data returned from the query
             ContainsAnyAllProcessor(fieldName, values, "AND");
         }
 
-        private void ContainsAnyAllProcessor(string fieldName, IEnumerable<object> values, string seperator)
+        private void ContainsAnyAllProcessor(string fieldName, IEnumerable<object> values, string separator)
         {
             AppendSpaceIfNeeded(QueryText.Length > 0 && char.IsWhiteSpace(QueryText[QueryText.Length - 1]) == false);
             NegateIfNeeded();
@@ -1757,7 +1757,7 @@ If you really want to do in memory filtering on the data returned from the query
             {
                 if (first == false)
                 {
-                    QueryText.Append(" " + seperator + " ");
+                    QueryText.Append(" " + separator + " ");
                 }
                 first = false;
                 var whereParams = new WhereParams

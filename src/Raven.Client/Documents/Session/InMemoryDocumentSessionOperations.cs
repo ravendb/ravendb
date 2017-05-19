@@ -138,7 +138,7 @@ namespace Raven.Client.Documents.Session
         /// <value></value>
         public bool UseOptimisticConcurrency { get; set; }
 
-        protected readonly List<ICommandData> _deferedCommands = new List<ICommandData>();
+        protected readonly List<ICommandData> _deferredCommands = new List<ICommandData>();
         public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; }
         public EntityToBlittable EntityToBlittable { get; }
 
@@ -565,7 +565,7 @@ more responsive application.
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
             }
 
-            if (_deferedCommands.Any(c => c.Key == id))
+            if (_deferredCommands.Any(c => c.Key == id))
                 throw new InvalidOperationException("Can't store document, there is a deferred command registered for this document in the session. Document id: " + id);
 
             if (DeletedEntities.Contains(entity))
@@ -707,10 +707,10 @@ more responsive application.
         {
             var result = new SaveChangesData
             {
-                DeferedCommands = new List<ICommandData>(_deferedCommands),
+                DeferredCommands = new List<ICommandData>(_deferredCommands),
                 Options = _saveChangesOptions
             };
-            _deferedCommands.Clear();
+            _deferredCommands.Clear();
 
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
@@ -754,10 +754,10 @@ more responsive application.
                 }
                 else
                 {
-                    foreach (var resultCommand in result.DeferedCommands)
+                    foreach (var resultCommand in result.DeferredCommands)
                     {
                         if (resultCommand.Key == documentInfo.Id)
-                            ThrowInvalidDeletedDocumentWithDefferredCommand(resultCommand);
+                            ThrowInvalidDeletedDocumentWithDeferredCommand(resultCommand);
                     }
 
                     long? etag = null;
@@ -794,11 +794,11 @@ more responsive application.
                 if (entity.Value.IgnoreChanges || EntityChanged(document, entity.Value, null) == false)
                     continue;
 
-                foreach (var resultCommand in result.DeferedCommands)
+                foreach (var resultCommand in result.DeferredCommands)
                 {
                     if (resultCommand.Type != CommandType.AttachmentPUT &&
                         resultCommand.Key == entity.Value.Id)
-                        ThrowInvalidModifiedDocumentWithDefferredCommand(resultCommand);
+                        ThrowInvalidModifiedDocumentWithDeferredCommand(resultCommand);
                 }
 
                 var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
@@ -824,13 +824,13 @@ more responsive application.
             }
         }
 
-        private static void ThrowInvalidDeletedDocumentWithDefferredCommand(ICommandData resultCommand)
+        private static void ThrowInvalidDeletedDocumentWithDeferredCommand(ICommandData resultCommand)
         {
             throw new InvalidOperationException(
                 $"Cannot perform save because document {resultCommand.Key} has been deleted by the session and is also taking part in deferred {resultCommand.Type} command");
         }
 
-        private static void ThrowInvalidModifiedDocumentWithDefferredCommand(ICommandData resultCommand)
+        private static void ThrowInvalidModifiedDocumentWithDeferredCommand(ICommandData resultCommand)
         {
             throw new InvalidOperationException(
                 $"Cannot perform save because document {resultCommand.Key} has been modified by the session and is also taking part in deferred {resultCommand.Type} command");
@@ -967,8 +967,8 @@ more responsive application.
         /// <param name="commands">Array of commands to be executed.</param>
         public void Defer(ICommandData command, params ICommandData[] commands)
         {
-            _deferedCommands.Add(command);
-            _deferedCommands.AddRange(commands);
+            _deferredCommands.Add(command);
+            _deferredCommands.AddRange(commands);
         }
 
         /// <summary>
@@ -977,7 +977,7 @@ more responsive application.
         /// <param name="commands">The commands to be executed</param>
         public void Defer(ICommandData[] commands)
         {
-            _deferedCommands.AddRange(commands);
+            _deferredCommands.AddRange(commands);
         }
 
         private void Dispose(bool isDisposing)
@@ -1241,7 +1241,7 @@ more responsive application.
         /// </summary>
         public class SaveChangesData
         {
-            public List<ICommandData> DeferedCommands;
+            public List<ICommandData> DeferredCommands;
             public readonly List<ICommandData> SessionCommands = new List<ICommandData>();
             public readonly List<object> Entities = new List<object>();
             public BatchOptions Options;
