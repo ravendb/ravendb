@@ -172,11 +172,12 @@ namespace Raven.Server.Web.System
            
             var db = online ? dbTask.Result : null;
 
-            IndexRunningStatus indexingStatus = db != null ? db.IndexStore.Status : IndexRunningStatus.Running;
+            IndexRunningStatus indexingStatus = db?.IndexStore.Status ?? IndexRunningStatus.Running;
 
             // Looking for disabled indexing flag inside the database settings for offline database status
-            if (data.TryGet("Settings", out BlittableJsonReaderObject settings))
+            if (data.TryGet("Settings", out BlittableJsonReaderObject settings) && settings != null)
             {
+
                 if (settings.TryGet(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out bool indexingDisable) &&
                     indexingDisable)
                 {
