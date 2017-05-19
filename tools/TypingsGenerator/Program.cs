@@ -13,6 +13,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicExport;
 using Raven.Client.Server.Versioning;
@@ -105,6 +106,7 @@ namespace TypingsGenerator
 
             scripter.AddType(typeof(BatchRequestParser.CommandData));
 
+            scripter.AddType(typeof(DatabasePutResult));
             scripter.AddType(typeof(DatabaseRecord));
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(FooterStatistics));

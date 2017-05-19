@@ -182,7 +182,7 @@ class createDatabase extends dialogViewModelBase {
             });
     }
 
-    private createDatabaseInternal(): JQueryPromise<void> {
+    private createDatabaseInternal(): JQueryPromise<Raven.Server.Web.System.DatabasePutResult> {
         this.spinners.create(true);
 
         const databaseDocument = this.databaseModel.toDto();

@@ -89,6 +89,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-custom-functions',
             dynamicHash: appUrls.customFunctionsEditor
+        }),
+        new leafMenuItem({
+            route: 'databases/manageDatabaseGroup',
+            moduleId: 'viewmodels/resources/manageDatabaseGroup',
+            title: 'Manage database group',
+            nav: false,
+            css: 'icon-topology',
+            dynamicHash: appUrls.manageDatabaseGroup
         })
         /*TODO
         new leafMenuItem({

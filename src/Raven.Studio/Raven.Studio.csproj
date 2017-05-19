@@ -25,6 +25,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="wwwroot\App\views\database\settings\customFunctionsEditor.html" />
+    <Content Include="wwwroot\App\views\resources\manageDatabaseGroup.html">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
     <Content Include="wwwroot\Content\css\feedback.less" />
     <Content Include="wwwroot\Content\css\notification-center.less" />
     <Content Include="wwwroot\Content\css\pages\conflicts.less" />

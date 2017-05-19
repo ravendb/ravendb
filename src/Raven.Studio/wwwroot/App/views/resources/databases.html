@@ -113,12 +113,7 @@
 
                         <div class="actions">
                             <div class="btn-toolbar pull-right-sm" role="toolbar">
-                                <a class="btn btn-default" href="#">
-                                    <!-- TODO:
-                                        
-                                        connect me 
-
-                                        -->
+                                <a class="btn btn-default" href="#" data-bind="attr: { href: $root.createManageDbGroupUrlObsevable($data), target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' }">
                                     <i class="icon-topology"></i> <span>Manage group</span>
                                 </a>
                                 <div class="btn-group">

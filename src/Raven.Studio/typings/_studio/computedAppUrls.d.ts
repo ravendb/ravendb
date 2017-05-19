@@ -6,6 +6,7 @@ interface computedAppUrls {
     hasApiKey: KnockoutComputed<string>;
 
     databases: KnockoutComputed<string>;
+    manageDatabaseGroup: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;
     patch: KnockoutComputed<string>;
