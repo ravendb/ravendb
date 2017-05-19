@@ -4,6 +4,7 @@ using System.Reflection;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Configuration;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Config.Categories
 {
@@ -50,7 +51,15 @@ namespace Raven.Server.Config.Categories
         {
             get
             {
-                return _indexStoragePath ?? (_indexStoragePath = _root.Core.DataDirectory.Combine("Indexes"));
+
+                if (_indexStoragePath == null)
+                {
+                    _indexStoragePath = _root.ResourceType == ResourceType.Server 
+                        ? null 
+                        : _root.Core.DataDirectory.Combine("Indexes");
+                }
+
+                return _indexStoragePath;
             }
             protected set
             {
