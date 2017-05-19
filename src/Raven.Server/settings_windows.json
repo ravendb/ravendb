@@ -1,6 +1,6 @@
 ﻿{
   "Raven/ServerUrl": "http://localhost:8080",
-  "Raven/DataDir": "APPDRIVE:/Raven/Data",
+  "Raven/DataDir": "APPDRIVE:/Raven",
   "Raven/AllowAnonymousUserToAccessTheServer": false,
   "Raven/AnonymousUserAccessMode": "Admin",
   "Raven/RunInMemory": false
