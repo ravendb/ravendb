@@ -155,19 +155,19 @@ namespace Raven.Server.Smuggler.Documents.Data
         {
             public long LastEtag { get; set; }
 
-            public Counts Attachemnts { get; set; } = new Counts();
+            public Counts Attachments { get; set; } = new Counts();
 
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
                 json[nameof(LastEtag)] = LastEtag;
-                json[nameof(Attachemnts)] = Attachemnts.ToJson();
+                json[nameof(Attachments)] = Attachments.ToJson();
                 return json;
             }
 
             public override string ToString()
             {
-                return $"{base.ToString()} Attachments: {Attachemnts}";
+                return $"{base.ToString()} Attachments: {Attachments}";
             }
         }
 

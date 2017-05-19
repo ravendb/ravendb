@@ -15,6 +15,13 @@ type smugglerListItem = {
     erroredCount: string;
     hasSkippedCount: boolean;
     skippedCount: string;
+    hasAttachments: boolean;
+    attachments: attachmentsListItem;
+}
+
+type attachmentsListItem = {
+    readCount: string;
+    erroredCount: string;
 }
 
 class smugglerDatabaseDetails extends abstractOperationDetails {
@@ -48,8 +55,8 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             }
 
             const result = [] as Array<smugglerListItem>;
-            result.push(this.mapToExportListItem("Documents", status.Documents));
-            result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments));
+            result.push(this.mapToExportListItem("Documents", status.Documents, true));
+            result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments, true));
             result.push(this.mapToExportListItem("Indexes", status.Indexes));
             result.push(this.mapToExportListItem("Transformers", status.Transformers));
             result.push(this.mapToExportListItem("Identities", status.Identities));
@@ -71,6 +78,12 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                     item.readCount = "-";
                     item.erroredCount = "-";
                     item.skippedCount = "-";
+
+                    if (item.hasAttachments) {
+                        const attachments = item.attachments;
+                        attachments.erroredCount = "-";
+                        attachments.readCount = "-";
+                    }
                 }
             });
 
@@ -126,12 +139,21 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         this.detailsVisible(!this.detailsVisible());
     }
 
-    private mapToExportListItem(name: string, item: Raven.Server.Smuggler.Documents.Data.SmugglerProgressBase.Counts): smugglerListItem {
+    private mapToExportListItem(name: string, item: Raven.Server.Smuggler.Documents.Data.SmugglerProgressBase.Counts, hasAttachments: boolean = false): smugglerListItem {
         let stage: smugglerListItemStatus = "processing";
         if (item.Skipped) {
             stage = "skipped";
         } else if (item.Processed) {
             stage = "processed";
+        }
+
+        let attachmentsItem = null as attachmentsListItem;
+        if (hasAttachments) {
+            const attachments = (item as Raven.Server.Smuggler.Documents.Data.SmugglerProgressBase.CountsWithLastEtag).Attachments;
+            attachmentsItem = {
+                readCount: attachments.ReadCount.toLocaleString(),
+                erroredCount: attachments.ErroredCount.toLocaleString()
+            }
         }
 
         return {
@@ -142,7 +164,9 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             hasSkippedCount: name === "Documents",
             skippedCount: name === "Documents" ? (item as Raven.Server.Smuggler.Documents.Data.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag).SkippedCount.toLocaleString() : "-",
             hasErroredCount: true, // it will be reassigned in post-processing
-            erroredCount: item.ErroredCount.toLocaleString()
+            erroredCount: item.ErroredCount.toLocaleString(),
+            hasAttachments: hasAttachments,
+            attachments: attachmentsItem
         } as smugglerListItem;
     }
 
